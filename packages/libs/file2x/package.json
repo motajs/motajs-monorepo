@@ -1,0 +1,19 @@
+{
+  "name": "@motajs/file2x",
+  "version": "1.0.0",
+  "description": "",
+  "main": "lib/index.ts",
+  "type": "module",
+  "scripts": {
+  },
+  "keywords": [],
+  "author": "",
+  "license": "BSD-3-Clause",
+  "dependencies": {
+    "lodash-es": "catalog:default"
+  },
+  "devDependencies": {
+    "@motajs/config": "workspace:*",
+    "@types/lodash-es": "catalog:default"
+  }
+}

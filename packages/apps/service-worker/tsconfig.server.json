@@ -1,0 +1,10 @@
+{
+  "extends": "@motajs/config/tsconfig.app.base.json",
+  "compilerOptions": {
+  },
+  "include": [
+    "${configDir}/src/vite-env.d.ts",
+    "${configDir}/src/idl",
+    "${configDir}/src/server"
+  ],
+}

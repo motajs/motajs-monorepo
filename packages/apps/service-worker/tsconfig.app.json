@@ -1,0 +1,5 @@
+{
+  "extends": "@motajs/config/tsconfig.app.base.json",
+  "include": ["${configDir}/src"],
+  "exclude": ["${configDir}/src/server"]
+}
