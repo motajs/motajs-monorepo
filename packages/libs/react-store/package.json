@@ -1,0 +1,26 @@
+{
+  "name": "@motajs/react-store",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src",
+  "type": "module",
+  "exports": {
+    ".": "./lib/index.ts"
+  },
+  "scripts": {},
+  "keywords": [],
+  "author": "",
+  "license": "BSD-3-Clause",
+  "dependencies": {
+    "lodash-es": "catalog:default"
+  },
+  "optionalDependencies": {
+    "@motajs/utils": "workspace:*",
+    "@motajs/react-hooks": "workspace:*"
+  },
+  "devDependencies": {
+    "@motajs/config": "workspace:*",
+    "@types/lodash-es": "catalog:default",
+    "@types/react": "catalog:default"
+  }
+}

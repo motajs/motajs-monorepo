@@ -1,0 +1,28 @@
+{
+  "name": "@motajs/react-monaco-editor",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src",
+  "type": "module",
+  "exports": {
+    ".": "./lib/index.ts",
+    "./DarkModeButton": "./lib/DarkModeButton/index.tsx",
+    "./DarkModeEffect/*": "./lib/DarkModeEffect/*.tsx"
+  },
+  "scripts": {},
+  "keywords": [],
+  "author": "",
+  "license": "BSD-3-Clause",
+  "dependencies": {
+    "@motajs/react-hooks": "workspace:*",
+    "monaco-editor": "catalog:default",
+    "monaco-editor-textmate": "catalog:default",
+    "monaco-textmate": "catalog:default",
+    "onigasm": "catalog:default"
+  },
+  "devDependencies": {
+    "@motajs/config": "workspace:*",
+    "@types/lodash-es": "catalog:default",
+    "@types/react": "catalog:default"
+  }
+}

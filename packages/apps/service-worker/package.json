@@ -1,0 +1,41 @@
+{
+  "name": "@motajs/service-worker",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "BSD-3-Clause",
+  "dependencies": {
+    "@douyinfe/semi-icons": "catalog:default",
+    "@douyinfe/semi-illustrations": "catalog:default",
+    "@douyinfe/semi-ui": "catalog:default",
+    "@motajs/react-hooks": "workspace:*",
+    "@motajs/react-dark-mode": "workspace:*",
+    "@motajs/utils": "workspace:*",
+    "dexie": "catalog:default",
+    "lodash-es": "catalog:default",
+    "memfs": "catalog:default",
+    "mime": "catalog:default",
+    "react": "catalog:default",
+    "react-dom": "catalog:default",
+    "react-query": "catalog:default",
+    "ts-pattern": "catalog:default",
+    "typescript": "catalog:default",
+    "universal-router": "catalog:default"
+  },
+  "devDependencies": {
+    "@motajs/config": "workspace:*",
+    "@types/lodash-es": "catalog:default",
+    "@types/node": "catalog:default",
+    "@types/react": "catalog:default",
+    "@types/react-dom": "catalog:default",
+    "@types/serviceworker": "catalog:default",
+    "@types/wicg-file-system-access": "catalog:default"
+  }
+}

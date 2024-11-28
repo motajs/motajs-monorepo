@@ -1,0 +1,31 @@
+{
+  "name": "@motajs/react-dark-mode",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src",
+  "type": "module",
+  "exports": {
+    ".": "./lib/index.ts",
+    "./DarkModeButton": "./lib/DarkModeButton/index.tsx",
+    "./DarkModeEffect/*": "./lib/DarkModeEffect/*.tsx"
+  },
+  "scripts": {},
+  "keywords": [],
+  "author": "",
+  "license": "BSD-3-Clause",
+  "dependencies": {
+    "@motajs/react-store": "workspace:*",
+    "@motajs/react-hooks": "workspace:*",
+    "lodash-es": "catalog:default"
+  },
+  "optionalDependencies": {
+    "@douyinfe/semi-icons": "catalog:default",
+    "@douyinfe/semi-ui": "catalog:default",
+    "monaco-editor": "catalog:default"
+  },
+  "devDependencies": {
+    "@motajs/config": "workspace:*",
+    "@types/lodash-es": "catalog:default",
+    "@types/react": "catalog:default"
+  }
+}

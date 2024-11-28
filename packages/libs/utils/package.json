@@ -1,0 +1,20 @@
+{
+  "name": "@motajs/utils",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "exports": {
+    ".": "./lib/index.ts",
+    "./advance/*": "./lib/advance/*/index.ts"
+  },
+  "scripts": {},
+  "keywords": [],
+  "author": "",
+  "license": "BSD-3-Clause",
+  "dependencies": {
+    "ts-pattern": "catalog:default"
+  },
+  "devDependencies": {
+    "@motajs/config": "workspace:*"
+  }
+}
