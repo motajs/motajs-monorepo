@@ -4,14 +4,14 @@ import UniversalRouter, { Route, RouteContext, RouteParams, RouteResult, RouterC
 import { ResponseUtils } from "./utils";
 import mime from "mime";
 import fsScript from "./fsClient.js?raw";
-import { zip } from "lodash-es";
+import { zip } from "es-toolkit";
 import { cacheFirst, networkFirst } from "./cache";
 import { accessProjectById, forgetProject, listProject, registerProject } from "./project";
 import { defineRoute, MessageServer } from "@motajs/utils/advance/message";
 import { ForgetProjectMessage, ListProjectMessage, RegisterProjectMessage } from "@/idl";
 import { parseTSConfig, transpileTS } from "./transpiler";
 
-const sw = self as ServiceWorkerGlobalScope;
+const sw = self as unknown as ServiceWorkerGlobalScope;
 
 const BASE = pathUtils.dirname(sw.location.pathname);
 
@@ -67,7 +67,7 @@ const router = new UniversalRouter<Response, SWRouterContext>([
     path: "/api",
     children: [
       {
-        path: "/(.*)",
+        path: "/*path",
         action: handler(() => ResponseUtils.create404()),
       },
     ],
@@ -103,7 +103,7 @@ const router = new UniversalRouter<Response, SWRouterContext>([
               .with("readFile", async () => {
                 const path = p("name"), encoding = p("type") as BufferEncoding;
                 const file = await fs.promises.readFile(path, { encoding }).catch(() => "");
-                return new Response(file);
+                return new Response(file as string);
               })
               .with("writeFile", async () => {
                 const path = p("name"), data = p("value"), encoding = p("type") as BufferEncoding;
@@ -148,10 +148,10 @@ const router = new UniversalRouter<Response, SWRouterContext>([
         }),
       },
       {
-        path: "(.*)",
+        path: "/*path",
         action: handler(async (context) => {
           const id = Number(context.params.id);
-          const pathname = fixPathName(String(context.params[0]));
+          const pathname = fixPathName((context.params.path as string[]).join("/"));
           const project = await accessProjectById(id);
           if (!project) return Response.redirect(BASE);
           const [fs] = project;
@@ -170,9 +170,9 @@ const router = new UniversalRouter<Response, SWRouterContext>([
               })
               .catch(() => ResponseUtils.create404());
           }
-          return fs.promises.readFile(pathname)
+          return fs.openAsBlob(pathname)
             .then((e) => {
-              return ResponseUtils.buffer(e as Buffer, {
+              return ResponseUtils.blob(e, {
                 headers: [
                   ["content-type", mime.getType(pathUtils.extname(pathname)) ?? ""],
                 ],
@@ -184,7 +184,7 @@ const router = new UniversalRouter<Response, SWRouterContext>([
     ],
   },
   {
-    path: "(.*)",
+    path: "*path",
     action: handler((context) => {
       const { pathname, request } = context;
       if (import.meta.env.DEV) return fetch(request);

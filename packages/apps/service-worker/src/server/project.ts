@@ -1,5 +1,5 @@
 import { Dexie, EntityTable } from "dexie";
-import { random } from "lodash-es";
+import { random } from "es-toolkit";
 import { FsaNodeFs } from "memfs/lib/fsa-to-node";
 import { idempotentByKey } from "@motajs/utils";
 import { ProjectRecord } from "@/idl";

@@ -6,7 +6,7 @@ import { match } from "ts-pattern";
 import { useQuery } from "react-query";
 import { ForgetProjectMessage, ListProjectMessage, RegisterProjectMessage } from "@/idl";
 import { TreeNodeData } from "@douyinfe/semi-ui/lib/es/tree";
-import { useServiceWorker, useCurrentFn, useStatic, useServiceWorkerContainerEventAsEffect } from "@motajs/react-hooks";
+import { useServiceWorker, useCurrentFn, useStatic, useServiceWorkerContainerEventAsEffect, useStateAsPromise } from "@motajs/react-hooks";
 import { MessageClient } from "@motajs/utils/advance/message";
 import DarkModeButton from "@motajs/react-dark-mode/DarkModeButton";
 
@@ -20,9 +20,11 @@ const MainView: FC = () => {
     type: "module",
   });
 
+  const controllerPromise = useStateAsPromise(serviceWorker.controller);
+
   const messageClient = useStatic(() => new MessageClient(async (msg) => {
-    await navigator.serviceWorker.ready;
-    navigator.serviceWorker.controller!.postMessage(msg);
+    const controller = await controllerPromise;
+    controller.postMessage(msg);
   }));
 
   useServiceWorkerContainerEventAsEffect(navigator.serviceWorker, "message", (e) => {
@@ -72,7 +74,7 @@ const MainView: FC = () => {
         const modal = Modal.confirm({
           content: (
             <div>
-              <p>文件夹 {handle.name} 可能不是一个工程，是否选择错了？</p>
+              <p>文件夹{handle.name}可能不是一个工程，是否选择错了？</p>
               <p>你可以<Text link onClick={changeOne}>换一个</Text>, 或者双击选择它的子文件夹</p>
               <Tree
                 treeData={fileTreeData}
@@ -119,24 +121,20 @@ const MainView: FC = () => {
   };
 
   return (
-    <>
+    <div>
       <div className={styles.topbar}>
         <DarkModeButton dropdown={{ position: "bottomRight" }} />
       </div>
-      <div className={styles.title}>
-        <div>
-          <h1>Mota Service Worker</h1>
-          <h2>在线版启动服务</h2>
-        </div>
-        <div>
-          {isSupportLocalFS ? (
-            <Button loading={!serviceWorker.isReady} onClick={selectLocalProject}>
-              {serviceWorker.isReady ? "打开本地工程" : "启动服务加载中"}
-            </Button>
-          ) : (
-            <p>你的浏览器不支持读写本地文件，请使用最新的桌面版 Chrome / Edge</p>
-          )}
-        </div>
+      <div>
+        <h2>Mota Service Worker</h2>
+        <h2>在线版启动服务</h2>
+      </div>
+      <div>
+        {isSupportLocalFS ? (
+          <Button loading={!serviceWorker.isReady} onClick={selectLocalProject}>{serviceWorker.isReady ? "打开本地工程" : "启动服务加载中"}</Button>
+        ) : (
+          <p>你的浏览器不支持读写本地文件，请使用最新的桌面版 Chrome / Edge</p>
+        )}
       </div>
       <div className={styles.container}>
         <div className={styles.left}>
@@ -171,7 +169,7 @@ const MainView: FC = () => {
           <Text link={{ href: "https://h5mota.com" }}>H5mota主站</Text>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

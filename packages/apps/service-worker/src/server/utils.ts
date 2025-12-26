@@ -3,11 +3,11 @@ export class ResponseUtils {
     return new Response(text, response);
   }
 
-  static buffer(buffer: Buffer, response?: ResponseInit) {
-    return new Response(buffer, response);
+  static blob(blob: Blob, response?: ResponseInit) {
+    return new Response(blob, response);
   }
 
-  static answer(code: number, message: string, data: any) {
+  static answer(code: number, message: string, data: unknown) {
     return Response.json({
       code,
       data,
