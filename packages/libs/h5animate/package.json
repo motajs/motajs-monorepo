@@ -1,0 +1,22 @@
+{
+  "name": "@motajs/h5animate",
+  "version": "1.0.0",
+  "description": "H5Animate 编解码器",
+  "main": "lib/index.ts",
+  "type": "module",
+  "scripts": {
+    "test": "vitest --run",
+    "test:watch": "vitest"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "BSD-3-Clause",
+  "dependencies": {
+    "sharp": "catalog:default",
+    "zod": "catalog:default"
+  },
+  "devDependencies": {
+    "@motajs/config": "workspace:*",
+    "@types/node": "catalog:default"
+  }
+}

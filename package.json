@@ -18,6 +18,7 @@
     "eslint-plugin-react-hooks": "catalog:default",
     "eslint-plugin-react-hooks-better-stable": "catalog:default",
     "eslint-plugin-react-refresh": "catalog:default",
+    "fast-check": "catalog:default",
     "globals": "catalog:default",
     "typescript": "catalog:default",
     "typescript-eslint": "catalog:default",
@@ -25,6 +26,7 @@
     "vite": "catalog:default",
     "vite-bundle-analyzer": "catalog:default",
     "vite-plugin-node-polyfills": "catalog:default",
-    "vite-plugin-svgr": "catalog:default"
+    "vite-plugin-svgr": "catalog:default",
+    "vitest": "catalog:default"
   }
 }
