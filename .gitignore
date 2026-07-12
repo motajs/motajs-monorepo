@@ -26,4 +26,5 @@ dist-ssr
 playwright-report
 test-results
 
-/packages/external
+/packages/external/*
+!/packages/external/mota-js

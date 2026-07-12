@@ -1,0 +1,3 @@
+[submodule "packages/external/mota-js"]
+	path = packages/external/mota-js
+	url = git@github.com:ckcz123/mota-js.git
