@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { createStore } from '@/utils/store/store';
+import { createStore } from '@motajs/react-store';
 
 /**
  * FoldStore - Manages fold/unfold state for table gap rows

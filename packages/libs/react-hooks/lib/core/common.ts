@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore } from "react";
 
 export const useRefFrom = <S>(source: S) => {
   const ref = useRef(source);
@@ -10,7 +10,7 @@ export const useRefFrom = <S>(source: S) => {
 export const useCurrentFn = <A extends unknown[], R>(fn: (...args: A) => R) => {
   const fnRef = useRefFrom(fn);
 
-  return (...args: A) => fnRef.current(...args);
+  return useCallback((...args: A) => fnRef.current(...args), [fnRef]);
 };
 
 const updater = (x: number) => x + 1;
@@ -24,9 +24,11 @@ export const useForceUpdate = () => {
 export const useNode = <T>() => {
   const [node, setNode] = useState<T | null>(null);
 
-  const mount = (val: T | null) => {
-    setNode(val);
-  };
+  const mount = useCallback((value: T | null) => {
+    setNode(value);
+    if (value === null) return;
+    return () => setNode((current) => current === value ? null : current);
+  }, []);
 
   return [node, mount] as const;
 };

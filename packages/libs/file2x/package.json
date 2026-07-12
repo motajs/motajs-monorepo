@@ -5,15 +5,17 @@
   "main": "lib/index.ts",
   "type": "module",
   "scripts": {
+    "test": "vitest run"
   },
   "keywords": [],
   "author": "",
   "license": "BSD-3-Clause",
   "dependencies": {
-    "lodash-es": "catalog:default"
+    "acorn": "8.17.0",
+    "json5": "2.2.3"
   },
   "devDependencies": {
     "@motajs/config": "workspace:*",
-    "@types/lodash-es": "catalog:default"
+    "vitest": "catalog:default"
   }
 }

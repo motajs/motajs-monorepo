@@ -5,7 +5,7 @@
  */
 
 import { useState } from 'react';
-import { createStore } from '@/utils/store/store';
+import { createStore } from '@motajs/react-store';
 
 /**
  * 面板 ID 类型

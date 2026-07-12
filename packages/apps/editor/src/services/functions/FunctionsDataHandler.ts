@@ -12,10 +12,8 @@
 
 import {
   ScriptDataHandler,
-  toFunctionStrings,
   stringifyScriptData,
   type ScriptData,
-  type ScriptRaw,
 } from "@/fs/ScriptDataHandler";
 import type { FileHandler } from "@/fs/FileHandler";
 
@@ -24,9 +22,6 @@ const FUNCTIONS_VAR_NAME = "functions_d6ad677b_427a_4623_b50f_a445a3b0ef8a";
 
 /** 类型别名：兼容旧代码 */
 export type { ScriptData as FunctionsData };
-
-// 重导出测试用的工具函数
-export { toFunctionStrings, type ScriptRaw as FunctionsRaw };
 
 /**
  * 序列化脚本函数数据为文件内容（使用 Functions 变量名）

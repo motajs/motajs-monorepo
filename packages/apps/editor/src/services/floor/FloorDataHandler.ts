@@ -8,8 +8,8 @@
 
 import { DataHandler } from "@/fs/DataHandler";
 import type { FileHandler } from "@/fs/FileHandler";
-import { serializeToJsMapFile } from "@/utils/serialize";
 import type { FloorData } from "@/types";
+import { decodeGameMapData2x, encodeGameMapData2x } from "@motajs/file2x";
 
 /**
  * 解析楼层文件内容
@@ -18,14 +18,11 @@ import type { FloorData } from "@/types";
  */
 function parseFloorContent(content: string, floorId: string): FloorData {
   try {
-    let jsonStr = content.trim();
-
-    // 使用正则匹配 "main.floors.{floorId}" 后跟可选空白和等号
-    const prefixPattern = new RegExp(`^main\\.floors\\.${floorId}\\s*=\\s*`);
-    jsonStr = jsonStr.replace(prefixPattern, '');
-
-    // 解析 JSON
-    const data = JSON.parse(jsonStr) as FloorData;
+    const decoded = decodeGameMapData2x<FloorData>(content);
+    if (decoded.prefix.join(".") !== "main.floors" || decoded.mapId !== floorId) {
+      throw new Error(`Expected main.floors.${floorId}, received ${[...decoded.prefix, decoded.mapId].join(".")}`);
+    }
+    const data = decoded.data;
 
     // 确保 floorId 字段存在
     if (!data.floorId) {
@@ -44,7 +41,7 @@ function parseFloorContent(content: string, floorId: string): FloorData {
  * 序列化楼层数据为文件内容
  */
 function stringifyFloorData(data: FloorData): string {
-  return serializeToJsMapFile(data.floorId, data);
+  return encodeGameMapData2x({ prefix: ["main", "floors"], mapId: data.floorId, data });
 }
 
 /**

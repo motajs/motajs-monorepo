@@ -7,7 +7,9 @@
   "exports": {
     ".": "./lib/index.ts"
   },
-  "scripts": {},
+  "scripts": {
+    "test": "vitest run"
+  },
   "keywords": [],
   "author": "",
   "license": "BSD-3-Clause",
@@ -23,7 +25,13 @@
   },
   "devDependencies": {
     "@motajs/config": "workspace:*",
+    "@testing-library/react": "16.3.2",
     "@types/lodash-es": "catalog:default",
-    "@types/react": "catalog:default"
+    "@types/react": "catalog:default",
+    "@types/react-dom": "catalog:default",
+    "jsdom": "26.1.0",
+    "react": "catalog:default",
+    "react-dom": "catalog:default",
+    "vitest": "catalog:default"
   }
 }

@@ -5,7 +5,7 @@
  */
 
 import { useState, useCallback } from "react";
-import { createStore } from "@/utils/store/store";
+import { createStore } from "@motajs/react-store";
 import type { LocPOD, GridPOD, RectPOD } from "@/utils/coordinate";
 import type { SelectedBlock, BlockInfo } from "./MaterialPanel/types";
 

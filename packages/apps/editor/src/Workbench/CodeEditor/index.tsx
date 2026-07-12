@@ -1,4 +1,4 @@
-import { useCurrentFn } from "@/hooks/useCurrentFn";
+import { useCurrentFn } from "@motajs/react-hooks";
 import { useConfigItem } from "@/stores/useEditorConfig";
 import { useState, useCallback, type FC, useRef, useEffect } from "react";
 import CodeMirror from "codemirror";

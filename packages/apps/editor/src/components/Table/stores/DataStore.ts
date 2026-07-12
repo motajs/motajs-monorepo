@@ -1,5 +1,5 @@
 import { useMemo, useCallback } from 'react';
-import { createStore } from '@/utils/store/store';
+import { createStore } from '@motajs/react-store';
 import { noop } from '@/utils/empty';
 import type { CommentObject, EditMode, FieldConfig, FieldType, TableNode, TableAction } from '../types';
 import { buildTableTree } from '../utils/traversal';

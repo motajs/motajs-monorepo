@@ -1,4 +1,4 @@
-import { ComponentType, createContext, FC, ReactNode, useContext } from "react";
+import { createContext, useContext, type ComponentType, type FC, type ReactNode } from "react";
 import { EMPTY } from "./empty";
 
 export interface StoreProviderProps {
@@ -26,8 +26,8 @@ export function createStore<Value, Argument>(useHook: (() => Value) | ((arg: Arg
   const Context = createContext<Value | typeof EMPTY>(EMPTY);
 
   const Provider: FC<StoreProviderProps | ParameterfulStoreProviderProps<Argument>> = (props) => {
-    // @ts-ignore
-    const value = useHook(props.argument);
+    const argument = "argument" in props ? props.argument : undefined;
+    const value = (useHook as (argument: Argument | undefined) => Value)(argument);
     return <Context.Provider value={value}>{props.children}</Context.Provider>;
   };
 

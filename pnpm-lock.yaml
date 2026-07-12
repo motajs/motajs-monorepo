@@ -209,6 +209,15 @@ importers:
       '@blockly/field-multilineinput':
         specifier: 6.0.8
         version: 6.0.8(blockly@12.3.1)
+      '@motajs/file2x':
+        specifier: workspace:*
+        version: link:../../libs/file2x
+      '@motajs/react-hooks':
+        specifier: workspace:*
+        version: link:../../libs/react-hooks
+      '@motajs/react-store':
+        specifier: workspace:*
+        version: link:../../libs/react-store
       '@tanstack/react-query':
         specifier: 5.90.20
         version: 5.90.20(react@19.2.3)
@@ -285,6 +294,9 @@ importers:
       '@eslint/js':
         specifier: 9.39.2
         version: 9.39.2
+      '@motajs/config':
+        specifier: workspace:*
+        version: link:../../libs/config
       '@pandacss/dev':
         specifier: 1.8.1
         version: 1.8.1(jsdom@26.1.0)(typescript@5.9.3)
@@ -447,16 +459,19 @@ importers:
 
   packages/libs/file2x:
     dependencies:
-      lodash-es:
-        specifier: catalog:default
-        version: 4.17.22
+      acorn:
+        specifier: 8.17.0
+        version: 8.17.0
+      json5:
+        specifier: 2.2.3
+        version: 2.2.3
     devDependencies:
       '@motajs/config':
         specifier: workspace:*
         version: link:../config
-      '@types/lodash-es':
+      vitest:
         specifier: catalog:default
-        version: 4.17.12
+        version: 4.0.16(@types/node@25.0.3)(jsdom@26.1.0)(less@4.5.1)(lightningcss@1.31.1)(sass@1.97.1)(stylus@0.62.0)(terser@5.44.1)
 
   packages/libs/h5animate:
     dependencies:
@@ -545,19 +560,34 @@ importers:
       lodash-es:
         specifier: catalog:default
         version: 4.17.22
-      react:
-        specifier: catalog:default
-        version: 19.2.3
     devDependencies:
       '@motajs/config':
         specifier: workspace:*
         version: link:../config
+      '@testing-library/react':
+        specifier: 16.3.2
+        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@types/lodash-es':
         specifier: catalog:default
         version: 4.17.12
       '@types/react':
         specifier: catalog:default
         version: 19.2.7
+      '@types/react-dom':
+        specifier: catalog:default
+        version: 19.2.3(@types/react@19.2.7)
+      jsdom:
+        specifier: 26.1.0
+        version: 26.1.0
+      react:
+        specifier: catalog:default
+        version: 19.2.3
+      react-dom:
+        specifier: catalog:default
+        version: 19.2.3(react@19.2.3)
+      vitest:
+        specifier: catalog:default
+        version: 4.0.16(@types/node@25.0.3)(jsdom@26.1.0)(less@4.5.1)(lightningcss@1.31.1)(sass@1.97.1)(stylus@0.62.0)(terser@5.44.1)
 
   packages/libs/react-monaco-editor:
     dependencies:
@@ -592,19 +622,34 @@ importers:
       lodash-es:
         specifier: catalog:default
         version: 4.17.22
-      react:
-        specifier: catalog:default
-        version: 19.2.3
     devDependencies:
       '@motajs/config':
         specifier: workspace:*
         version: link:../config
+      '@testing-library/react':
+        specifier: 16.3.2
+        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@types/lodash-es':
         specifier: catalog:default
         version: 4.17.12
       '@types/react':
         specifier: catalog:default
         version: 19.2.7
+      '@types/react-dom':
+        specifier: catalog:default
+        version: 19.2.3(@types/react@19.2.7)
+      jsdom:
+        specifier: 26.1.0
+        version: 26.1.0
+      react:
+        specifier: catalog:default
+        version: 19.2.3
+      react-dom:
+        specifier: catalog:default
+        version: 19.2.3(react@19.2.3)
+      vitest:
+        specifier: catalog:default
+        version: 4.0.16(@types/node@25.0.3)(jsdom@26.1.0)(less@4.5.1)(lightningcss@1.31.1)(sass@1.97.1)(stylus@0.62.0)(terser@5.44.1)
     optionalDependencies:
       '@motajs/react-hooks':
         specifier: workspace:*
@@ -7657,6 +7702,16 @@ snapshots:
       lz-string: 1.5.0
       picocolors: 1.1.1
       pretty-format: 27.5.1
+
+  '@testing-library/react@16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)':
+    dependencies:
+      '@babel/runtime': 7.29.7
+      '@testing-library/dom': 10.4.1
+      react: 19.2.3
+      react-dom: 19.2.3(react@19.2.3)
+    optionalDependencies:
+      '@types/react': 19.2.7
+      '@types/react-dom': 19.2.3(@types/react@19.2.7)
 
   '@testing-library/react@16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.9))(@types/react@19.2.9)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)':
     dependencies:

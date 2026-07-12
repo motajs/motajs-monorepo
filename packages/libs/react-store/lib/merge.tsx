@@ -1,5 +1,5 @@
-import { FC, ReactNode } from "react";
-import { Store } from "./store";
+import type { FC, ReactNode } from "react";
+import type { Store } from "./store";
 
 export const mergeStores = (stores: Store<unknown>[]) => {
   const providers = stores

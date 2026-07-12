@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useCallback, useMemo, type FC } from "react";
-import { useNode } from "@/hooks/useNode";
+import { useNode } from "@motajs/react-hooks";
 import { useFloorDataSuspense, useTowerDataSuspense } from "@/hooks/suspense";
 import { MapEditorStore } from "./MapEditorStore";
 import { useModelResourceSuspense } from "@/hooks/suspense";

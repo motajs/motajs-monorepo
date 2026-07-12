@@ -14,7 +14,7 @@ import {
 } from '@/blockly/session/BlocklyEditorSession';
 import { useConfigItem } from '@/stores/useEditorConfig';
 import { projectData } from '@/project/data/projectData';
-import { useCurrentFn } from '@/hooks/useCurrentFn';
+import { useCurrentFn } from '@motajs/react-hooks';
 
 function currentEntryProjectContext() {
   const content = projectData.tower().content();

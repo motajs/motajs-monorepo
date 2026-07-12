@@ -1,7 +1,7 @@
-import { Optional, combine } from "@motajs/utils";
-import { State } from "../utils/type";
+import { combine, type Optional } from "@motajs/utils";
+import type { State } from "../utils/type";
 import { useCurrentFn } from "./common";
-import { SetStateAction } from "react";
+import type { SetStateAction } from "react";
 import { isFunction } from "lodash-es";
 
 type Unserialize<S> = (raw: string) => Optional<S>;

@@ -11,8 +11,7 @@
 
 import { DataHandler } from "./DataHandler";
 import type { FileHandler } from "./FileHandler";
-import { serializeToJsDataFile } from "@/utils/serialize";
-import JSON5 from "json5";
+import { decodeGameData2x, encodeGameData2x } from "@motajs/file2x";
 
 /**
  * Json2xDataHandler - 通用 JSON 数据处理器
@@ -39,21 +38,11 @@ export class Json2xDataHandler<T> extends DataHandler<T> {
    */
   protected parse(text: string): T {
     try {
-      // 移除 "var xxx =" 前缀
-      const prefix = `var ${this.varName} =`;
-      let jsonStr = text.trim();
-
-      if (jsonStr.startsWith(prefix)) {
-        jsonStr = jsonStr.substring(prefix.length).trim();
+      const decoded = decodeGameData2x<T>(text);
+      if (decoded.uuid !== this.varName) {
+        throw new Error(`Expected ${this.varName}, received ${decoded.uuid}`);
       }
-
-      // 移除可能的结尾分号
-      if (jsonStr.endsWith(";")) {
-        jsonStr = jsonStr.slice(0, -1).trim();
-      }
-
-      // 解析 JSON
-      return JSON5.parse(jsonStr) as T;
+      return decoded.data;
     } catch (err) {
       throw new Error(
         `Failed to parse JSON data file: ${(err as Error).message}`,
@@ -67,6 +56,6 @@ export class Json2xDataHandler<T> extends DataHandler<T> {
    * 输出格式：var varName = \n{json}
    */
   protected stringify(data: T): string {
-    return serializeToJsDataFile(this.varName, data);
+    return encodeGameData2x({ uuid: this.varName, data });
   }
 }

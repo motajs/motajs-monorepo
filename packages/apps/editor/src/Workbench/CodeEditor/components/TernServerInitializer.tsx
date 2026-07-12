@@ -20,7 +20,7 @@ import {
 import type { CodeMirrorInstance } from "../types";
 import { projectModel } from "@/project/model/projectModel";
 import { useSignal } from "@/hooks/useFs";
-import { useCurrentFn } from "@/hooks/useCurrentFn";
+import { useCurrentFn } from "@motajs/react-hooks";
 
 /**
  * TernServerInitializer 组件属性

@@ -6,7 +6,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FC, type MouseEvent } from "react";
-import { useNode } from "@/hooks/useNode";
+import { useNode } from "@motajs/react-hooks";
 import { useModelResourceSuspense, useTowerDataSuspense } from "@/hooks/suspense";
 import { useSignal } from "@/hooks/useFs";
 import { mapCommands, type MapLayer } from "@/project/commands/mapCommands";
