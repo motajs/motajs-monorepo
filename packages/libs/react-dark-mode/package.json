@@ -18,6 +18,10 @@
     "@motajs/react-hooks": "workspace:*",
     "lodash-es": "catalog:default"
   },
+  "peerDependencies": {
+    "react": "catalog:default",
+    "react-dom": "catalog:default"
+  },
   "optionalDependencies": {
     "@douyinfe/semi-icons": "catalog:default",
     "@douyinfe/semi-ui": "catalog:default",

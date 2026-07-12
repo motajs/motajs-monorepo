@@ -1,5 +1,5 @@
 import { Optional, combine } from "@motajs/utils";
-import { State } from "@/utils/type";
+import { State } from "../utils/type";
 import { useCurrentFn } from "./common";
 import { SetStateAction } from "react";
 import { isFunction } from "lodash-es";

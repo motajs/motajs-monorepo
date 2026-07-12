@@ -1,4 +1,4 @@
-import { DarkModeStore } from "@/store";
+import { DarkModeStore } from "../store";
 import { FC, useLayoutEffect } from "react";
 import * as monaco from "monaco-editor";
 

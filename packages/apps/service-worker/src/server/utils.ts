@@ -22,6 +22,13 @@ export class ResponseUtils {
     });
   }
 
+  static error(status: number, code: string, message: string, path?: string) {
+    return Response.json({ error: { code, message, ...(path ? { path } : {}) } }, {
+      status,
+      headers: { "cache-control": "no-store" },
+    });
+  }
+
   static create500(reason = "500 Internal Server Error") {
     return new Response(reason, {
       status: 500,
@@ -29,3 +36,28 @@ export class ResponseUtils {
     });
   }
 }
+
+export class HttpError extends Error {
+  constructor(
+    public readonly status: number,
+    public readonly code: string,
+    message: string,
+    public readonly path?: string,
+  ) {
+    super(message);
+  }
+}
+
+export const errorResponse = (error: unknown) => {
+  if (error instanceof HttpError) {
+    return ResponseUtils.error(error.status, error.code, error.message, error.path);
+  }
+  const candidate = error as { name?: string; code?: string; message?: string };
+  if (candidate?.name === "NotAllowedError" || candidate?.code === "EACCES") {
+    return ResponseUtils.error(403, "project-permission-required", "Project permission is required");
+  }
+  if (candidate?.name === "NotFoundError" || candidate?.code === "ENOENT") {
+    return ResponseUtils.error(404, "file-not-found", candidate.message ?? "File not found");
+  }
+  return ResponseUtils.error(500, "internal-error", candidate?.message ?? String(error));
+};

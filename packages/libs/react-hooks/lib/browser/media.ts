@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useSyncExternalStoreFrom } from "@/core/common";
+import { useSyncExternalStoreFrom } from "../core/common";
 
 export function useMediaQuery(query: string) {
   return useSyncExternalStoreFrom(useMemo(() => {

@@ -1,4 +1,4 @@
-import { tryDo } from "@/exception";
+import { tryDo } from "../../exception";
 import { isMatching, P } from "ts-pattern";
 
 export class MessageType<ReqT, ResT> {

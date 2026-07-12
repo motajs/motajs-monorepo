@@ -58,7 +58,7 @@ export function useSyncExternalStoreFrom<Snapshot>(store?: SyncExternalStore<Sna
 }
 
 export const useWatch = <T>(source: T, handler: (newValue: T, oldValue?: T) => void) => {
-  const oldValueRef = useRef<T>();
+  const oldValueRef = useRef<T | undefined>(undefined);
 
   if (!Object.is(source, oldValueRef.current)) {
     handler(source, oldValueRef.current);

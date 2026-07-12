@@ -1,6 +1,6 @@
 import { Dispatch, SetStateAction, useMemo, useState } from "react";
-import { calValue } from "@/utils/common";
-import { State } from "@/utils/type";
+import { calValue } from "../utils/common";
+import { State } from "../utils/type";
 import { useCurrentFn, useForceUpdate } from "./common";
 
 export const useStatic = <T>(initializer: () => T) => {

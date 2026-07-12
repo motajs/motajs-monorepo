@@ -1,4 +1,4 @@
-import { DarkModeStore } from "@/store";
+import { DarkModeStore } from "../store";
 import { FC, useLayoutEffect } from "react";
 
 const ATTRIBUTE_NAME = "theme-mode";

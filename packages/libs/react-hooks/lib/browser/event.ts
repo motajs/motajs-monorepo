@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from "react";
-import { useCurrentFn, useSyncExternalStoreFrom } from "@/core/common";
+import { useCurrentFn, useSyncExternalStoreFrom } from "../core/common";
 
 export interface IEventTarget<M> {
   addEventListener<K extends keyof M>(type: K, listener: (ev: M[K]) => void, options?: boolean | AddEventListenerOptions): void;

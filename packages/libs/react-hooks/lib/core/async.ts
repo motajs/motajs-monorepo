@@ -1,4 +1,4 @@
-import { useDependentState } from "@/core/state";
+import { useDependentState } from "./state";
 import { useRef, useEffect, useMemo } from "react";
 
 export const usePromiseValue = <T>(promise: Promise<T>) => {

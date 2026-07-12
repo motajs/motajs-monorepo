@@ -1,47 +1,89 @@
+.shell {
+  min-height: 100vh;
+  background: var(--semi-color-bg-0);
+}
+
 .topbar {
-  position: absolute;
+  position: sticky;
   top: 0;
-  left: 0;
-  right: 0;
+  z-index: 10;
   height: 48px;
-  padding: 0 20px;
+  padding: 0 24px;
   display: flex;
-  flex-direction: row;
   align-items: center;
-  justify-content: end;
-  background-color: var(--semi-color-bg-3);
-  .item {
-    margin-left: 6px;
-  }
+  justify-content: space-between;
+  border-bottom: 1px solid var(--semi-color-border);
+  background: var(--semi-color-bg-1);
 }
 
-.title {
-  text-align: center;
+.content {
+  width: min(960px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 36px 0 64px;
 }
 
-.container {
-  margin-top: 20px;
+.headingBand,
+.projectHeader {
   display: flex;
-  justify-content: center;
-  gap: 20px;
-  .left {
-    min-width: 240px;
-    display: flex;
-    flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 28px;
+}
 
-    .header {
-      margin: 0;
-      margin-left: 20px;
-      text-align: left;
-    }
+.headingBand h2,
+.projectHeader h2 {
+  margin: 0 0 6px;
+}
+
+.projectList {
+  margin-top: 32px;
+}
+
+.projectList h4 {
+  margin-bottom: 12px;
+}
+
+.projectMain {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.breadcrumb {
+  margin-bottom: 28px;
+}
+
+.descriptions {
+  margin: 24px 0 32px;
+  padding: 20px 0;
+  border-top: 1px solid var(--semi-color-border);
+  border-bottom: 1px solid var(--semi-color-border);
+}
+
+.actions {
+  width: 100%;
+}
+
+.center {
+  min-height: 50vh;
+  display: grid;
+  place-items: center;
+}
+
+@media (max-width: 640px) {
+  .topbar {
+    padding: 0 16px;
   }
-  .line {
-    width: 1px;
-    background-color: rgba(var(--semi-grey-2), 1);
+
+  .content {
+    padding-top: 24px;
   }
-  .right {
-    display: flex;
+
+  .headingBand,
+  .projectHeader {
+    align-items: flex-start;
     flex-direction: column;
-    gap: 10px;
   }
 }

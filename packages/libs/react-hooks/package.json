@@ -14,6 +14,9 @@
     "@motajs/utils": "workspace:*",
     "lodash-es": "catalog:default"
   },
+  "peerDependencies": {
+    "react": "catalog:default"
+  },
   "devDependencies": {
     "@motajs/config": "workspace:*",
     "@types/lodash-es": "catalog:default",

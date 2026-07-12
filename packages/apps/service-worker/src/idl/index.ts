@@ -4,11 +4,11 @@ export interface RegisterProjectRequest {
   handle: FileSystemDirectoryHandle;
 }
 
-export interface ListProjectResponse {
+export interface RegisterProjectResponse {
   id: number;
 }
 
-export const RegisterProjectMessage = new MessageType<RegisterProjectRequest, ListProjectResponse>("project.register");
+export const RegisterProjectMessage = new MessageType<RegisterProjectRequest, RegisterProjectResponse>("project.register");
 
 export interface ForgetProjectRequest {
   id: number;
@@ -23,8 +23,33 @@ export interface ProjectRecord {
   lastTime: number;
 }
 
-export interface ListProjectResponse {
-  list: [ProjectRecord, boolean][];
+export interface ProjectSummary {
+  id: number;
+  name: string;
+  lastTime: number;
+  permission: PermissionState;
+  active: boolean;
+  hasIndex?: boolean;
 }
 
-export const ListProjectMessage = new MessageType<void, ListProjectResponse>("project.list");
+export type ProjectAccessResult
+  = | { status: "ready"; project: ProjectSummary }
+    | { status: "permission-required"; project: ProjectSummary }
+    | { status: "not-found" };
+
+export interface ProjectReferenceRequest {
+  id: number;
+}
+
+export interface ProjectDetailsResponse {
+  access: ProjectAccessResult;
+  handle?: FileSystemDirectoryHandle;
+}
+
+export interface ListProjectsResponse {
+  list: ProjectSummary[];
+}
+
+export const ListProjectMessage = new MessageType<void, ListProjectsResponse>("project.list");
+export const GetProjectMessage = new MessageType<ProjectReferenceRequest, ProjectDetailsResponse>("project.get");
+export const ActivateProjectMessage = new MessageType<ProjectReferenceRequest, ProjectAccessResult>("project.activate");

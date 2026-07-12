@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useDependentState, useSetStateWithOnChange } from "@/core/state";
+import { useDependentState, useSetStateWithOnChange } from "../core/state";
 import { State } from "../utils/type";
 import { Optional } from "@motajs/utils";
 
