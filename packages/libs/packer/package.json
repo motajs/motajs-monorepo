@@ -1,19 +1,37 @@
 {
-  "name": "@motajs/file2x",
-  "version": "1.0.0",
-  "description": "",
-  "main": "lib/index.ts",
+  "name": "@motajs/packer",
+  "version": "0.1.0",
+  "description": "魔塔游戏打包器 - 压缩和优化 mota-js 项目",
   "type": "module",
-  "scripts": {
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
   },
-  "keywords": [],
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
   "author": "",
   "license": "BSD-3-Clause",
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
-    "lodash-es": "catalog:default"
+    "es-toolkit": "catalog:default",
+    "iconv-lite": "catalog:default",
+    "jszip": "catalog:default",
+    "sharp": "catalog:default",
+    "terser": "catalog:default"
   },
   "devDependencies": {
     "@motajs/config": "workspace:*",
-    "@types/lodash-es": "catalog:default"
+    "@types/node": "catalog:default"
   }
 }

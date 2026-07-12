@@ -3,6 +3,12 @@ packages:
   - packages/apps/*
   - packages/external/*
 
+allowBuilds:
+  '@parcel/watcher': set this to true or false
+  esbuild: set this to true or false
+  less: set this to true or false
+  sharp: set this to true or false
+
 catalog:
   '@douyinfe/semi-icons': ^2.90.0
   '@douyinfe/semi-illustrations': ^2.90.0
@@ -30,6 +36,8 @@ catalog:
   fast-check: 4.5.2
   filesize: ^10.1.6
   globals: ^16.5.0
+  iconv-lite: ^0.7.1
+  jszip: ^3.10.1
   lodash-es: ^4.17.22
   memfs: ^4.51.1
   mime: ^4.1.0
@@ -44,6 +52,7 @@ catalog:
   react-query: ^3.39.3
   react-reconciler: ^0.29.2
   sharp: ^0.34.5
+  terser: ^5.44.1
   three: ^0.170.0
   ts-pattern: ^5.9.0
   typescript: ^5.9.3

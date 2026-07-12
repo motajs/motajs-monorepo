@@ -1,0 +1,12 @@
+{
+  "extends": "@motajs/config/tsconfig.lib.base.json",
+  "compilerOptions": {
+    "allowImportingTsExtensions": false,
+    "declaration": true,
+    "declarationMap": true,
+    "noEmit": false,
+    "outDir": "dist",
+    "rootDir": "src"
+  },
+  "include": ["src"],
+}
