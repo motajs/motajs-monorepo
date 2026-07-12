@@ -22,6 +22,32 @@
 - props 在函数体内解构：`const { ... } = props;`
 - 样式使用 CSS Modules（`.module.less`）
 
+## TypeScript 规范
+
+- 启用 strict 模式
+- 优先使用 `interface` 而非 `type`（除非需要联合类型）
+- 避免 `any`，必要时使用 `unknown`
+- 函数参数和返回值必须有类型注解
+
+## 命名规范
+
+- 文件名：camelCase（如 `tilesetCompressor.ts`）
+- 函数名：camelCase
+- 类型/接口：PascalCase
+- 常量：UPPER_SNAKE_CASE
+
+## 异步处理
+
+- 使用 `async/await` 而非回调
+- 文件操作使用 `fs/promises`
+- 并行操作使用 `Promise.all`
+
+## 错误处理
+
+- 使用自定义错误类型
+- 提供清晰的错误信息（中文）
+- 不静默吞掉错误
+
 ## ESLint 规则要点
 
 - 使用双引号
