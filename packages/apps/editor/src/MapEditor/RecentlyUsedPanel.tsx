@@ -9,6 +9,7 @@ export interface LastUsedItem {
   x: number;
   y: number;
   isTile?: boolean;
+  materialPath?: string;
   recent: number;
   frequent: number;
   istop?: number;
@@ -27,6 +28,7 @@ export interface RecentlyUsedPanelProps {
 }
 
 function materialPath(item: LastUsedItem): string {
+  if (item.materialPath) return item.materialPath;
   if (item.isTile) return `project/tilesets/${item.images}`;
   if (item.images === "autotile") return `project/autotiles/${item.id}.png`;
   return `project/materials/${item.images}.png`;
@@ -50,11 +52,11 @@ const RecentTile: FC<{
       if (!context) return;
       context.clearRect(0, 0, 32, 32);
       context.imageSmoothingEnabled = false;
-      const sourceHeight = item.isTile || item.images === "autotile"
+      const sourceHeight = item.materialPath || item.isTile || item.images === "autotile"
         ? 32
         : item.images.endsWith("48") ? 48 : 32;
-      const sourceX = item.isTile ? item.x * 32 : 0;
-      const sourceY = item.isTile ? item.y * 32 : item.images === "autotile" ? 0 : item.y * sourceHeight;
+      const sourceX = item.materialPath ? item.x * 32 : item.isTile ? item.x * 32 : 0;
+      const sourceY = item.materialPath ? item.y * sourceHeight : item.isTile ? item.y * 32 : item.images === "autotile" ? 0 : item.y * sourceHeight;
       context.drawImage(image, sourceX, sourceY, 32, sourceHeight, 0, 0, 32, 32);
     };
     image.src = url;
@@ -78,11 +80,24 @@ const RecentTile: FC<{
         width: 32,
         height: 32,
         padding: 0,
-        border: selected ? "3px solid rgba(255,128,0,0.85)" : "1px solid transparent",
+        border: 0,
         background: "transparent",
       }}
     >
       <canvas ref={canvasRef} width={32} height={32} style={{ display: "block" }} />
+      {selected ? (
+        <span
+          aria-hidden="true"
+          data-test-id={`recent-material-selection-${item.idnum}`}
+          style={{
+            position: "absolute",
+            inset: 0,
+            border: "3px solid rgba(255,128,0,0.85)",
+            boxSizing: "border-box",
+            pointerEvents: "none",
+          }}
+        />
+      ) : null}
       {item.istop ? (
         <span style={{ position: "absolute", left: 0, bottom: 0, width: 8, height: 8, background: "red" }} />
       ) : null}

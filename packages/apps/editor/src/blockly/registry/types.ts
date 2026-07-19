@@ -37,6 +37,8 @@ export interface DeclarativeEventMapping {
   match: EventMatcher;
   template: unknown;
   bindings: BlockBinding[];
+  /** Preserve fields that are not represented by bindings on each block instance. */
+  preserveUnbound?: boolean;
 }
 
 export type MaterialKind =
@@ -57,6 +59,8 @@ export type BlocklyPreviewAdapterId =
   | 'floorImage';
 
 export type BlocklyCompletionSourceId =
+  | 'auto'
+  | 'contextual'
   | 'expression'
   | 'id'
   | 'enemy'
@@ -68,6 +72,11 @@ export type BlocklyCompletionSourceId =
   | 'animate'
   | 'bgm'
   | 'sound'
+  | 'font'
+  | 'color'
+  | 'flag'
+  | 'status'
+  | 'core'
   | 'textEscape';
 
 export type TrustedBlocklyCommandId = 'showKeyCodes';
@@ -85,6 +94,7 @@ export type DeclarativeInteraction =
       yField: string;
       floorField?: string;
       floorPolicy?: 'current' | 'explicit' | 'relative';
+      multiple?: boolean;
     }
   | {
       type: 'selectMaterial';

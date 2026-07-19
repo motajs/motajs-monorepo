@@ -17,6 +17,7 @@ import "codemirror/addon/comment/comment";
 // 搜索功能
 import "codemirror/addon/search/search";
 import "codemirror/addon/search/searchcursor";
+import "codemirror/addon/search/match-highlighter";
 
 // 对话框
 import "codemirror/addon/dialog/dialog";
@@ -27,11 +28,23 @@ import "codemirror/addon/fold/foldcode";
 
 // 代码检查
 import "codemirror/addon/lint/lint";
+import "codemirror/addon/lint/javascript-lint";
+import "codemirror/addon/lint/lint.css";
+import { JSHINT } from "jshint";
 
 // Tern 集成
 import "tern/plugin/doc_comment";
 import "tern/plugin/complete_strings";
+import "codemirror/addon/hint/show-hint";
 import "codemirror/addon/tern/tern";
+import "codemirror/addon/hint/show-hint.css";
+import "codemirror/addon/tern/tern.css";
 
 // 编辑器样式
 import "@/css/editor.css";
+
+// CodeMirror 5's JavaScript lint addon deliberately looks up JSHINT on the
+// browser global instead of importing it. Keep that legacy contract contained
+// in this setup module so every CodeMirror surface gets a working lint helper.
+const lintGlobal = globalThis as typeof globalThis & { JSHINT?: typeof JSHINT };
+lintGlobal.JSHINT = JSHINT;

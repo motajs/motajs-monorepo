@@ -16,6 +16,7 @@ export interface BlockInfo {
   y: number;
   x?: number;
   isTile?: boolean;
+  materialPath?: string;
 }
 
 /** 选中的素材 */

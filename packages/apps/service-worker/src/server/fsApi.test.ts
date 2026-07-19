@@ -75,7 +75,7 @@ describe("project fs api", () => {
     expect(await missing.json()).toMatchObject({ error: { code: "file-not-found" } });
   });
 
-  it.each(["../secret", "/absolute", "a\\b", "a/../../b"])("rejects unsafe path %s", (path) => {
+  it.each(["../secret", "/absolute", "a\\b", "a/../../b", "bad\u0093name.png"])("rejects unsafe path %s", (path) => {
     expect(() => normalizeProjectPath(path)).toThrow();
   });
 

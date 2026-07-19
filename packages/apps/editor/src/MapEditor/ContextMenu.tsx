@@ -84,16 +84,9 @@ export const ContextMenu: FC<ContextMenuProps> = ({
   const floorIds = (tower.main?.floorIds ?? []) as string[];
 
   // 获取当前图层的地图数据
-  const getLayerMap = useCallback(() => {
-    switch (layerMod) {
-      case "bgmap":
-        return floor.bgmap ?? [];
-      case "fgmap":
-        return floor.fgmap ?? [];
-      default:
-        return floor.map ?? [];
-    }
-  }, [floor, layerMod]);
+  const getLayerMap = useCallback(() => (
+    Array.isArray(floor[layerMod]) ? floor[layerMod] as unknown[][] : []
+  ), [floor, layerMod]);
 
   // 获取当前位置的图块
   const getCurrentBlock = useCallback(() => {

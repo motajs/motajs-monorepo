@@ -46,6 +46,7 @@ describe("locModel", () => {
       afterGetItem: null,
       afterOpenDoor: null,
       cannotMove: ["up"],
+      cannotMoveIn: null,
     });
   });
 
@@ -59,6 +60,7 @@ describe("locModel", () => {
       afterGetItem: {},
       afterOpenDoor: "open",
       cannotMove: ["up"],
+      cannotMoveIn: null,
     };
 
     expect(getAutoEventPageIds(locData)).toEqual(["2", "3"]);

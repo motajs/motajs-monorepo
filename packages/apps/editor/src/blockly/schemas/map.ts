@@ -10,6 +10,7 @@ import type { PointValue } from '../fields';
 import type { BlockState, EventObject, ParseContext } from '../parser/types';
 import type { BlockSchema } from '../registry/types';
 import { legacyMapSchemas } from './mapLegacy';
+import { expressionValue } from './legacyHelpers';
 
 // ============================================
 // 辅助函数
@@ -56,10 +57,10 @@ function generateLocArray(
   x: string,
   y: string,
   locs: string,
-): [number, number] | [number, number][] | undefined {
+): unknown[] | undefined {
   if (single) {
     if (x || y) {
-      return [parseInt(x) || 0, parseInt(y) || 0];
+      return [expressionValue(x), expressionValue(y)];
     }
     return undefined;
   }
@@ -342,7 +343,7 @@ export const battleSchema: BlockSchema = {
     if (id) {
       event.id = id;
     } else if (x || y) {
-      event.loc = [parseInt(x) || 0, parseInt(y) || 0];
+      event.loc = [expressionValue(x), expressionValue(y)];
     }
 
     return JSON.stringify(event) + ',\n';
@@ -399,7 +400,7 @@ export const openDoorSchema: BlockSchema = {
     const event: Record<string, unknown> = { type: 'openDoor' };
 
     if (x || y) {
-      event.loc = [parseInt(x) || 0, parseInt(y) || 0];
+      event.loc = [expressionValue(x), expressionValue(y)];
     }
     if (floorId) {
       event.floorId = floorId;
@@ -465,7 +466,7 @@ export const closeDoorSchema: BlockSchema = {
     const event: Record<string, unknown> = { type: 'closeDoor', id };
 
     if (x || y) {
-      event.loc = [parseInt(x) || 0, parseInt(y) || 0];
+      event.loc = [expressionValue(x), expressionValue(y)];
     }
     if (floorId) {
       event.floorId = floorId;
@@ -492,12 +493,22 @@ export const changeFloorSchema: BlockSchema = {
   eventType: 'changeFloor',
   definition: {
     type: 'mota_changeFloor_s',
-    message0: '切换楼层 %1 朝向 %2 动画时间 %3',
+    message0: '切换楼层 %1 目标楼层 %2 楼梯落点 %3 朝向 %4 动画时间 %5',
     args0: [
       {
         type: 'field_point',
         name: 'POSITION',
         includeFloor: true,
+      },
+      {
+        type: 'field_input',
+        name: 'FLOOR_ID',
+        text: '',
+      },
+      {
+        type: 'field_dropdown',
+        name: 'STAIR',
+        options: [['坐标', ''], ['上楼梯', 'upFloor'], ['下楼梯', 'downFloor'], ['保持原位置', ':now']],
       },
       {
         type: 'field_dropdown',
@@ -530,7 +541,9 @@ export const changeFloorSchema: BlockSchema = {
     return {
       type: 'mota_changeFloor_s',
       fields: {
-        POSITION: position,
+        POSITION: event.stair ? null : position,
+        FLOOR_ID: (event.floorId as string) || '',
+        STAIR: (event.stair as string) || '',
         DIRECTION: (event.direction as string) || '',
         TIME: (event.time as number)?.toString() || '',
       },
@@ -538,15 +551,16 @@ export const changeFloorSchema: BlockSchema = {
   },
   generator: (block: Blockly.Block): string => {
     const position = block.getFieldValue('POSITION') as PointValue | null;
+    const floorId = block.getFieldValue('FLOOR_ID');
+    const stair = block.getFieldValue('STAIR');
     const direction = block.getFieldValue('DIRECTION');
     const time = block.getFieldValue('TIME');
 
     const event: Record<string, unknown> = { type: 'changeFloor' };
 
-    if (position) {
-      if (position.floorId) {
-        event.floorId = position.floorId;
-      }
+    if (floorId || position?.floorId) event.floorId = floorId || position?.floorId;
+    if (stair) event.stair = stair;
+    else if (position) {
       event.loc = [position.x, position.y];
     }
     if (direction) {
@@ -614,7 +628,7 @@ export const changePosSchema: BlockSchema = {
     const event: Record<string, unknown> = { type: 'changePos' };
 
     if (x || y) {
-      event.loc = [parseInt(x) || 0, parseInt(y) || 0];
+      event.loc = [expressionValue(x), expressionValue(y)];
     }
     if (direction) {
       event.direction = direction;
@@ -678,7 +692,7 @@ export const moveSchema: BlockSchema = {
     const event: Record<string, unknown> = { type: 'move' };
 
     if (x || y) {
-      event.loc = [parseInt(x) || 0, parseInt(y) || 0];
+      event.loc = [expressionValue(x), expressionValue(y)];
     }
     try {
       event.steps = JSON.parse(stepsStr);
@@ -770,10 +784,11 @@ export const jumpSchema: BlockSchema = {
   eventType: 'jump',
   definition: {
     type: 'mota_jump_s',
-    message0: '跳跃事件 从 [%1,%2] 到 [%3,%4] 动画时间 %5 保留移动 %6 异步 %7',
+    message0: '跳跃事件 从 [%1,%2] 终点模式 %3 坐标 [%4,%5] 动画时间 %6 保留移动 %7 异步 %8',
     args0: [
       { type: 'field_input', name: 'FROM_X', text: '' },
       { type: 'field_input', name: 'FROM_Y', text: '' },
+      { type: 'field_dropdown', name: 'TO_MODE', options: [['绝对位置', 'to'], ['坐标增量', 'dxy']] },
       { type: 'field_input', name: 'TO_X', text: '' },
       { type: 'field_input', name: 'TO_Y', text: '' },
       { type: 'field_input', name: 'TIME', text: '' },
@@ -789,12 +804,14 @@ export const jumpSchema: BlockSchema = {
   category: 'map',
   parser: (event: EventObject, _context: ParseContext): BlockState => {
     const from = event.from as [number, number] | undefined;
-    const to = event.to as [number, number] | undefined;
+    const mode = Array.isArray(event.dxy) ? 'dxy' : 'to';
+    const to = event[mode] as unknown[] | undefined;
     return {
       type: 'mota_jump_s',
       fields: {
         FROM_X: from?.[0]?.toString() || '',
         FROM_Y: from?.[1]?.toString() || '',
+        TO_MODE: mode,
         TO_X: to?.[0]?.toString() || '',
         TO_Y: to?.[1]?.toString() || '',
         TIME: (event.time as number)?.toString() || '',
@@ -806,6 +823,7 @@ export const jumpSchema: BlockSchema = {
   generator: (block: Blockly.Block): string => {
     const fromX = block.getFieldValue('FROM_X');
     const fromY = block.getFieldValue('FROM_Y');
+    const toMode = block.getFieldValue('TO_MODE');
     const toX = block.getFieldValue('TO_X');
     const toY = block.getFieldValue('TO_Y');
     const time = block.getFieldValue('TIME');
@@ -815,10 +833,10 @@ export const jumpSchema: BlockSchema = {
     const event: Record<string, unknown> = { type: 'jump' };
 
     if (fromX || fromY) {
-      event.from = [parseInt(fromX) || 0, parseInt(fromY) || 0];
+      event.from = [expressionValue(fromX), expressionValue(fromY)];
     }
     if (toX || toY) {
-      event.to = [parseInt(toX) || 0, parseInt(toY) || 0];
+      event[toMode] = [expressionValue(toX), expressionValue(toY)];
     }
     if (time) {
       event.time = parseInt(time) || 0;
@@ -846,8 +864,9 @@ export const jumpHeroSchema: BlockSchema = {
   eventType: 'jumpHero',
   definition: {
     type: 'mota_jumpHero_s',
-    message0: '跳跃勇士 到 [%1,%2] 动画时间 %3 异步 %4',
+    message0: '跳跃勇士 %1 坐标 [%2,%3] 动画时间 %4 异步 %5',
     args0: [
+      { type: 'field_dropdown', name: 'MODE', options: [['绝对位置', 'loc'], ['坐标增量', 'dxy']] },
       { type: 'field_input', name: 'X', text: '' },
       { type: 'field_input', name: 'Y', text: '' },
       { type: 'field_input', name: 'TIME', text: '' },
@@ -861,10 +880,12 @@ export const jumpHeroSchema: BlockSchema = {
   },
   category: 'map',
   parser: (event: EventObject, _context: ParseContext): BlockState => {
-    const loc = event.loc as [number, number] | undefined;
+    const mode = Array.isArray(event.dxy) ? 'dxy' : 'loc';
+    const loc = event[mode] as unknown[] | undefined;
     return {
       type: 'mota_jumpHero_s',
       fields: {
+        MODE: mode,
         X: loc?.[0]?.toString() || '',
         Y: loc?.[1]?.toString() || '',
         TIME: (event.time as number)?.toString() || '',
@@ -873,6 +894,7 @@ export const jumpHeroSchema: BlockSchema = {
     };
   },
   generator: (block: Blockly.Block): string => {
+    const mode = block.getFieldValue('MODE');
     const x = block.getFieldValue('X');
     const y = block.getFieldValue('Y');
     const time = block.getFieldValue('TIME');
@@ -881,7 +903,7 @@ export const jumpHeroSchema: BlockSchema = {
     const event: Record<string, unknown> = { type: 'jumpHero' };
 
     if (x || y) {
-      event.loc = [parseInt(x) || 0, parseInt(y) || 0];
+      event[mode] = [expressionValue(x), expressionValue(y)];
     }
     if (time) {
       event.time = parseInt(time) || 0;

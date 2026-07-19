@@ -448,6 +448,24 @@ export class TernDefinitionModelResource implements ModelResource<TernDefinition
     }
   }
 
+  async ensureLoaded(): Promise<void> {
+    const base = ternDefsService.getHandler();
+    await Promise.all([
+      base.getContent().status === "idle" ? base.refetch() : base.waitForSettled(),
+      projectData.tower().ensureLoaded(),
+      projectData.items().ensureLoaded(),
+      projectData.enemys().ensureLoaded(),
+      projectData.functions().ensureLoaded(),
+      projectData.plugins().ensureLoaded(),
+      projectData.tableMetaSource("dataComment").ensureLoaded(),
+      projectAssets.materialCollection("autotile").ensureLoaded(),
+    ]);
+    const tower = projectData.tower().content();
+    if (tower.status === "loaded") {
+      await Promise.all(tower.value.main.floorIds.map((id) => projectData.floor(id).ensureLoaded()));
+    }
+  }
+
   async waitForSettled(): Promise<void> {
     await waitUntil(() => {
       const status = this.content().status;

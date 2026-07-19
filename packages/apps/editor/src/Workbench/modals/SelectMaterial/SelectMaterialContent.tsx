@@ -49,7 +49,7 @@ function useAssetUrl(path: string, mime: string): string {
       currentUrl = URL.createObjectURL(new Blob([bytes.buffer as ArrayBuffer], { type: mime }));
       setUrl(currentUrl);
     });
-    void resource.reload();
+    void resource.ensureLoaded();
     return () => {
       dispose();
       if (currentUrl) URL.revokeObjectURL(currentUrl);

@@ -114,6 +114,7 @@ blocklyInteractionRegistry.register('selectPoint', async (block, interaction, ca
     floorId: interaction.floorField ? String(block.getFieldValue(interaction.floorField) ?? '') : undefined,
     x: block.getFieldValue(interaction.xField),
     y: block.getFieldValue(interaction.yField),
+    multiple: interaction.multiple ?? true,
   });
   if (!result) return { ok: true };
   block.setFieldValue(String(result.x), interaction.xField);

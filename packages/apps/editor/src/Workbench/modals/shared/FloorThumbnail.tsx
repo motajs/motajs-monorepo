@@ -2,13 +2,17 @@ import { useMemo, type FC } from "react";
 import { useModelResourceSuspense, useResourceSuspense } from "@/hooks/suspense";
 import { projectData } from "@/project/data/projectData";
 import { projectModel } from "@/project/model/projectModel";
+import { useMapLayerSettings } from "@/project/settings/mapLayerSettings";
 import { MapPixiRenderer } from "@/MapEditor/rendering/MapPixiRenderer";
+import type { FloorData } from "@/types";
 
 interface FloorThumbnailProps {
   floorId: string;
   style?: React.CSSProperties;
   bigmap?: boolean;
   viewportOffset?: readonly [number, number];
+  viewportSize?: readonly [number, number];
+  floorOverride?: FloorData;
 }
 
 export const FloorThumbnail: FC<FloorThumbnailProps> = (props) => {
@@ -17,8 +21,12 @@ export const FloorThumbnail: FC<FloorThumbnailProps> = (props) => {
     style,
     bigmap = true,
     viewportOffset = [0, 0],
+    viewportSize = [416, 416],
+    floorOverride,
   } = props;
-  const [floor] = useResourceSuspense(projectData.floor(floorId));
+  const [loadedFloor] = useResourceSuspense(projectData.floor(floorId));
+  const floor = floorOverride ?? loadedFloor;
+  const layerSettings = useMapLayerSettings();
   const [tower] = useResourceSuspense(projectData.tower());
   const blockResource = useMemo(() => projectModel.blockRegistry(), []);
   const blocks = useModelResourceSuspense(blockResource);
@@ -32,16 +40,18 @@ export const FloorThumbnail: FC<FloorThumbnailProps> = (props) => {
     : {};
 
   return (
-    <div style={{ position: "relative", width: 416, height: 416, marginLeft: -10, marginTop: 5, ...style }}>
+    <div style={{ position: "relative", width: viewportSize[0], height: viewportSize[1], marginLeft: -10, marginTop: 5, ...style }}>
       <MapPixiRenderer
         floor={floor}
         blockRegistry={blocks}
         spriteRegistry={sprites}
         tilesets={tilesets}
         imageNameMap={imageNameMap}
+        layers={layerSettings.layers}
         activeLayer="map"
         bigmap={bigmap}
         viewportOffset={viewportOffset}
+        viewportSize={viewportSize}
       />
     </div>
   );

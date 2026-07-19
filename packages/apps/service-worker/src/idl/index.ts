@@ -53,3 +53,18 @@ export interface ListProjectsResponse {
 export const ListProjectMessage = new MessageType<void, ListProjectsResponse>("project.list");
 export const GetProjectMessage = new MessageType<ProjectReferenceRequest, ProjectDetailsResponse>("project.get");
 export const ActivateProjectMessage = new MessageType<ProjectReferenceRequest, ProjectAccessResult>("project.activate");
+
+export type EditorHostStatus =
+  | {
+    status: "ready";
+    buildId: string;
+    editorVersion: string;
+    source: "network" | "validated-cache" | "cache";
+  }
+  | {
+    status: "unavailable";
+    reason: "not-installed" | "offline" | "invalid-artifact" | "incompatible-environment";
+    message: string;
+  };
+
+export const GetEditorHostStatusMessage = new MessageType<void, EditorHostStatus>("editor.status");

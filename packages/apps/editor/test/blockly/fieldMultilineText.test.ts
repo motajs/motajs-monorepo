@@ -1,6 +1,8 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import {
   FieldMultilineText,
+  readTextControlCharacters,
+  showTextControlCharacters,
   softWrapMultilineText,
 } from "@/blockly/fields/FieldMultilineText";
 import { parseEvent } from "@/blockly/parser/eventToState";
@@ -40,6 +42,18 @@ describe("FieldMultilineText", () => {
     const field = FieldMultilineText.fromJson({ text: "line one\nline two" });
     expect(field).toBeInstanceOf(FieldMultilineText);
     expect(field.getValue()).toBe("line one\nline two");
+  });
+
+  it("shows runtime directives without flattening real newlines", () => {
+    const runtime = "第一行\r[red]\n第二行\f[face.png,0,0]";
+    expect(showTextControlCharacters(runtime)).toBe(
+      "第一行\\r[red]\n第二行\\f[face.png,0,0]",
+    );
+  });
+
+  it("restores visible directives before storing the field value", () => {
+    const visible = "正文\\r[red]\n下一行\\r[]";
+    expect(readTextControlCharacters(visible)).toBe("正文\r[red]\n下一行\r[]");
   });
 });
 

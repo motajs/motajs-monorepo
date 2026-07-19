@@ -1,14 +1,15 @@
 import type { ModelResource } from "@/project/model/projectModel";
 import { useSignal } from "../useFs";
+import { deferredEnsureLoaded } from "./deferredEnsureLoaded";
 
 export function useModelResourceSuspense<T>(resource: ModelResource<T>): T {
   const content = useSignal(resource.content);
 
   if (content.status === "idle") {
-    void resource.reload();
+    throw deferredEnsureLoaded(resource);
   }
 
-  if (content.status === "loading" || content.status === "idle") {
+  if (content.status === "loading") {
     throw resource.waitForSettled();
   }
 

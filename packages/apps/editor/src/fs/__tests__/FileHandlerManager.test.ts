@@ -7,12 +7,14 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { FileHandlerManager } from "../FileHandlerManager";
 import { MemoryFileSystem } from "@test/utils/MemoryFileSystem";
 import { wait } from "@test/utils/testHelpers";
+import { persistenceMonitor } from "../PersistenceMonitor";
 
 describe("FileHandlerManager", () => {
   let memoryFs: MemoryFileSystem;
 
   beforeEach(() => {
     memoryFs = new MemoryFileSystem();
+    persistenceMonitor.resetForTests();
     FileHandlerManager.clear();
   });
 
@@ -203,7 +205,7 @@ describe("FileHandlerManager", () => {
   });
 
   describe("delete 方法", () => {
-    it("应该删除文件和 handler", async () => {
+    it("应该把 handler 标记为已删除并异步删除文件", async () => {
       memoryFs.setFile("test.txt", "content");
 
       const handler = FileHandlerManager.get("test.txt", );
@@ -216,7 +218,9 @@ describe("FileHandlerManager", () => {
 
       await FileHandlerManager.delete("test.txt", true);
 
-      expect(FileHandlerManager.has("test.txt")).toBe(false);
+      expect(FileHandlerManager.has("test.txt")).toBe(true);
+      expect(handler.getContent().status).toBe("not-found");
+      await persistenceMonitor.flush(["test.txt"]);
       expect(memoryFs.hasFile("test.txt")).toBe(false);
     });
 
@@ -241,7 +245,7 @@ describe("FileHandlerManager", () => {
       ).resolves.not.toThrow();
     });
 
-    it("应该支持 force 参数", async () => {
+    it("pending 写入不会阻止 memory-first 删除", async () => {
       memoryFs.setFile("test.txt", "content");
       memoryFs.setWriteDelay(100);
 
@@ -253,15 +257,11 @@ describe("FileHandlerManager", () => {
       // 触发写入（不等待）
       handler.update("new content");
 
-      // 非强制删除应该失败
       await expect(
         FileHandlerManager.delete("test.txt", false)
-      ).rejects.toThrow("unsaved changes");
-
-      // 强制删除应该成功
-      await expect(
-        FileHandlerManager.delete("test.txt", true)
       ).resolves.not.toThrow();
+      await persistenceMonitor.flush(["test.txt"]);
+      expect(memoryFs.hasFile("test.txt")).toBe(false);
     });
   });
 

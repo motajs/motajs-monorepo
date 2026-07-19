@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
+const withEditor = process.env.MOTA_WITH_EDITOR !== "0";
+
 async function registerOpfsProject(page: Page): Promise<{ id: number; directoryName: string }> {
   return page.evaluate(async () => {
     const registration = await navigator.serviceWorker.ready;
@@ -50,6 +52,8 @@ test("registers an OPFS project, serves preview and persists through the canonic
   await page.goto(`/service/${id}/project/`);
   await expect(page.getByRole("heading", { name: directoryName })).toBeVisible();
   await expect(page.getByTestId("open-preview")).toBeEnabled();
+  if (withEditor) await expect(page.getByTestId("open-editor")).toBeEnabled();
+  else await expect(page.getByTestId("open-editor")).toHaveCount(0);
   await expect(page.getByText("index.html")).toBeVisible();
 
   await page.goto(`/service/${id}/preview/`);

@@ -1,0 +1,311 @@
+{
+  "kind": "field-bundle",
+  "formatVersion": 1,
+  "schemaId": "floor.fields",
+  "revision": 1,
+  "fields": {
+    "floor.floorId": {
+      "type": "string",
+      "title": "楼层 ID",
+      "description": "工程内唯一的楼层标识，同时也是楼层文件名；请通过右侧重命名操作修改。",
+      "editor": {
+        "kind": "readonly"
+      },
+      "diagnostics": {
+        "floor.id.invalid": "必须是合法且唯一的楼层 ID"
+      }
+    },
+    "floor.title": {
+      "type": "string",
+      "title": "楼层标题",
+      "description": "切换楼层和浏览地图时显示的楼层名称。",
+      "editor": {
+        "kind": "text"
+      }
+    },
+    "floor.name": {
+      "type": "string",
+      "title": "状态栏名称",
+      "description": "显示在状态栏中的楼层名称或层数。",
+      "editor": {
+        "kind": "text"
+      }
+    },
+    "floor.size": {
+      "type": "object",
+      "title": "地图尺寸",
+      "description": "地图横向与纵向的图块数量；请通过右侧调整操作修改。",
+      "editor": {
+        "kind": "dimensions"
+      },
+      "diagnostics": {
+        "floor.size.range": "宽和高必须是 1 到 128 的整数"
+      }
+    },
+    "floor.defaultGround": {
+      "type": "string",
+      "title": "默认地面",
+      "description": "地图空白位置使用的默认图块；未设置时使用 ground。",
+      "editor": {
+        "kind": "block"
+      }
+    },
+    "floor.ratio": {
+      "type": "number",
+      "title": "宝石血瓶倍率",
+      "description": "本层获得宝石和血瓶时应用的效果倍率。",
+      "editor": {
+        "kind": "number"
+      },
+      "diagnostics": {
+        "floor.ratio.range": "必须是非负有限数字"
+      }
+    },
+    "floor.canFlyTo": {
+      "type": "boolean",
+      "title": "可楼传到达",
+      "description": "该楼层能否成为楼层传送器的目的地。",
+      "editor": {
+        "kind": "checkbox"
+      }
+    },
+    "floor.canFlyFrom": {
+      "type": "boolean",
+      "title": "可从此楼传出",
+      "description": "能否在该楼层使用楼层传送器离开。",
+      "editor": {
+        "kind": "checkbox"
+      }
+    },
+    "floor.canUseQuickShop": {
+      "type": "boolean",
+      "title": "可使用快捷商店",
+      "description": "是否允许在该楼层打开快捷商店。",
+      "editor": {
+        "kind": "checkbox"
+      }
+    },
+    "floor.cannotViewMap": {
+      "type": "boolean",
+      "title": "不可浏览地图",
+      "description": "启用后，浏览地图时会跳过该楼层。",
+      "editor": {
+        "kind": "checkbox"
+      }
+    },
+    "floor.cannotMoveDirectly": {
+      "type": "boolean",
+      "title": "不可瞬移",
+      "description": "启用后，不能在该楼层进行瞬间移动。",
+      "editor": {
+        "kind": "checkbox"
+      }
+    },
+    "floor.underGround": {
+      "type": "boolean",
+      "title": "地下层",
+      "description": "启用后，同层传送默认落到上楼梯。",
+      "editor": {
+        "kind": "checkbox"
+      }
+    },
+    "floor.upFloor": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "title": "上楼落点",
+      "description": "覆盖 stair:upFloor 和楼传器通常使用的上楼梯落点。",
+      "normalizer": "optionalPoint",
+      "editor": {
+        "kind": "point",
+        "floorId": {
+          "ref": "params:floorId"
+        }
+      },
+      "diagnostics": {
+        "floor.point.bounds": "点位必须在地图范围内"
+      }
+    },
+    "floor.downFloor": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "title": "下楼落点",
+      "description": "覆盖 stair:downFloor 和楼传器通常使用的下楼梯落点。",
+      "normalizer": "optionalPoint",
+      "editor": {
+        "kind": "point",
+        "floorId": {
+          "ref": "params:floorId"
+        }
+      },
+      "diagnostics": {
+        "floor.point.bounds": "点位必须在地图范围内"
+      }
+    },
+    "floor.flyPoint": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "title": "楼传落点",
+      "description": "强制指定楼层传送器到达该楼层时的落点。",
+      "normalizer": "optionalPoint",
+      "editor": {
+        "kind": "point",
+        "floorId": {
+          "ref": "params:floorId"
+        }
+      },
+      "diagnostics": {
+        "floor.point.bounds": "点位必须在地图范围内"
+      }
+    },
+    "floor.firstArrive": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "title": "首次到达事件",
+      "description": "第一次到达该楼层时触发的事件。",
+      "editor": {
+        "kind": "event",
+        "entryType": "firstArrive"
+      }
+    },
+    "floor.eachArrive": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "title": "每次到达事件",
+      "description": "每次到达该楼层时触发，并在首次到达事件之后执行。",
+      "editor": {
+        "kind": "event",
+        "entryType": "eachArrive"
+      }
+    },
+    "floor.parallelDo": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "title": "并行脚本",
+      "description": "停留在该楼层时持续执行的并行脚本，通常约每 16.6ms 调用一次。",
+      "editor": {
+        "kind": "code",
+        "lint": true,
+        "template": "function () {\n  \n}"
+      }
+    },
+    "floor.images": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "title": "楼层贴图",
+      "description": "配置覆盖在地图背景层或前景层上的图片。",
+      "editor": {
+        "kind": "floorImages",
+        "floorId": {
+          "ref": "params:floorId"
+        }
+      }
+    },
+    "floor.color": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "title": "色调",
+      "description": "进入该楼层时默认应用的画面色调；清空表示无色调。",
+      "normalizer": "optionalColor",
+      "editor": {
+        "kind": "color"
+      },
+      "diagnostics": {
+        "floor.color.range": "必须是合法 RGB 或 RGBA 数组"
+      }
+    },
+    "floor.weather": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "title": "天气",
+      "description": "进入该楼层时默认显示的天气类型与强度；清空表示无天气。",
+      "normalizer": "optionalWeather",
+      "editor": {
+        "kind": "combine",
+        "inputs": [
+          {
+            "key": "type",
+            "label": "天气类型",
+            "editor": {
+              "kind": "suggestion",
+              "suggestions": [
+                {
+                  "value": "rain",
+                  "label": "雨"
+                },
+                {
+                  "value": "snow",
+                  "label": "雪"
+                },
+                {
+                  "value": "fog",
+                  "label": "雾"
+                },
+                {
+                  "value": "cloud",
+                  "label": "云"
+                },
+                {
+                  "value": "sun",
+                  "label": "晴"
+                }
+              ]
+            }
+          },
+          {
+            "key": "level",
+            "label": "强度",
+            "editor": {
+              "kind": "number",
+              "min": 1,
+              "max": 10,
+              "step": 1,
+              "integer": true
+            }
+          }
+        ]
+      },
+      "diagnostics": {
+        "floor.weather.shape": "必须是 [天气类型, 强度] 二元数组",
+        "floor.weather.level": "强度必须是 1 到 10 的整数"
+      }
+    },
+    "floor.bgm": {
+      "type": [
+        "null",
+        "string",
+        "array"
+      ],
+      "title": "背景音乐",
+      "description": "进入该楼层后默认播放的背景音乐列表。",
+      "normalizer": "nullableScalarOrList",
+      "editor": {
+        "kind": "bgmList",
+        "reference": {
+          "ref": "project:materials.bgms"
+        },
+        "directory": "project/bgms"
+      },
+      "diagnostics": {
+        "floor.bgm.shape": "必须是 null、单个文件名或文件名数组"
+      }
+    }
+  }
+}

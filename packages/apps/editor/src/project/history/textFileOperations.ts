@@ -21,7 +21,6 @@ async function readText(path: string): Promise<string | undefined> {
 async function writeText(path: string, text: string, options: TextFileOperationOptions): Promise<void> {
   const handler = FileHandlerManager.get(path);
   handler.update(text);
-  await handler.waitForIdle();
   options.invalidate?.();
 }
 

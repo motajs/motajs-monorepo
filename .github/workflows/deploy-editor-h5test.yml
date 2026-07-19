@@ -1,0 +1,64 @@
+name: Deploy editor to h5test
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: h5test-doc-server
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: h5test
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.10.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Verify service worker host
+        run: |
+          pnpm --filter @motajs/service-worker typecheck
+          pnpm --filter @motajs/service-worker test
+
+      - name: Build editor deployment
+        run: pnpm --filter @motajs/service-worker build:with-editor
+
+      - name: Install deployment browser
+        run: pnpm --filter @motajs/service-worker exec playwright install --with-deps chromium
+
+      - name: Configure h5test SSH
+        env:
+          H5TEST_SSH_HOST: ${{ secrets.H5TEST_SSH_HOST }}
+          H5TEST_SSH_PORT: ${{ secrets.H5TEST_SSH_PORT }}
+          H5TEST_SSH_PRIVATE_KEY: ${{ secrets.H5TEST_SSH_PRIVATE_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$H5TEST_SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          port="${H5TEST_SSH_PORT:-22}"
+          ssh-keyscan -p "$port" "$H5TEST_SSH_HOST" >> ~/.ssh/known_hosts
+
+      - name: Deploy atomically and verify
+        env:
+          H5TEST_SSH_HOST: ${{ secrets.H5TEST_SSH_HOST }}
+          H5TEST_SSH_PORT: ${{ secrets.H5TEST_SSH_PORT }}
+          H5TEST_SSH_USER: ${{ secrets.H5TEST_SSH_USER }}
+        run: |
+          DEPLOY_HOST="$H5TEST_SSH_USER@$H5TEST_SSH_HOST" \
+          DEPLOY_SSH_PORT="${H5TEST_SSH_PORT:-22}" \
+          DEPLOY_ROOT=/var/www/doc/server \
+          DEPLOY_URL=https://mota.press/server/ \
+          SKIP_BUILD=1 \
+          pnpm --filter @motajs/service-worker deploy:h5test

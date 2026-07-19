@@ -7,6 +7,28 @@ import {
 // Match Blockly's legacy maxDisplayLength, but wrap instead of truncating.
 const DEFAULT_WRAP_COLUMNS = 50;
 
+const VISIBLE_CONTROL_CHARACTERS: Readonly<Record<string, string>> = {
+  "\b": "\\b",
+  "\t": "\\t",
+  "\f": "\\f",
+  "\r": "\\r",
+};
+
+/** Keep runtime text directives visible without changing real line breaks. */
+export function showTextControlCharacters(value: string): string {
+  return value.replace(/[\b\t\f\r]/g, (character) => VISIBLE_CONTROL_CHARACTERS[character]);
+}
+
+/** Restore visible directives before writing the Blockly field value. */
+export function readTextControlCharacters(value: string): string {
+  return value.replace(/\\([btfr])/g, (_match, directive: string) => {
+    if (directive === "b") return "\b";
+    if (directive === "t") return "\t";
+    if (directive === "f") return "\f";
+    return "\r";
+  });
+}
+
 /** Soft-wrap text for SVG display without adding newlines to the field value. */
 export function softWrapMultilineText(
   value: string,
@@ -47,7 +69,7 @@ export class FieldMultilineText extends FieldMultilineInput {
       throw new Error("The multiline field must be attached before rendering.");
     }
 
-    const value = this.getText();
+    const value = showTextControlCharacters(this.getText());
     if (!value) return Blockly.Field.NBSP;
 
     let lines = softWrapMultilineText(value);
@@ -91,6 +113,14 @@ export class FieldMultilineText extends FieldMultilineInput {
     input.style.overflowWrap = "anywhere";
     input.style.tabSize = "2";
     return input;
+  }
+
+  protected override getEditorText_(value: string): string {
+    return showTextControlCharacters(value);
+  }
+
+  protected override getValueFromEditorText_(value: string): string {
+    return readTextControlCharacters(value);
   }
 
   static override fromJson(options: FieldMultilineInputFromJsonConfig): FieldMultilineText {

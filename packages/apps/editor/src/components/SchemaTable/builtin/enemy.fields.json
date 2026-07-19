@@ -1,0 +1,414 @@
+{
+  "kind": "field-bundle",
+  "formatVersion": 1,
+  "schemaId": "enemy.fields",
+  "revision": 1,
+  "fields": {
+    "enemy.id": {
+      "type": "string",
+      "title": "怪物 ID",
+      "description": "怪物的唯一字符串标识；修改 ID 属于素材操作。",
+      "editor": {
+        "kind": "readonly"
+      }
+    },
+    "enemy.name": {
+      "type": "string",
+      "title": "怪物名称",
+      "description": "怪物在手册、战斗信息和编辑器中显示的名称。",
+      "editor": {
+        "kind": "text"
+      }
+    },
+    "enemy.description": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "title": "怪物描述",
+      "description": "怪物详细信息页显示的描述，支持引擎文本转义。",
+      "editor": {
+        "kind": "text"
+      }
+    },
+    "enemy.displayIdInBook": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "title": "手册映射 ID",
+      "description": "手册中改用另一个怪物 ID 的图像和信息，常用于多朝向怪物。",
+      "editor": {
+        "kind": "text"
+      }
+    },
+    "enemy.faceIds": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "title": "行走朝向",
+      "description": "移动或碰撞时按方向切换到对应怪物图块。",
+      "editor": {
+        "kind": "event",
+        "entryType": "faceIds"
+      }
+    },
+    "enemy.bigImage": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "title": "绑定贴图",
+      "description": "绑定 project/images 中的 PNG 怪物贴图。",
+      "normalizer": "optionalJson",
+      "editor": {
+        "kind": "material",
+        "reference": {
+          "ref": "project:materials.images"
+        },
+        "directory": "project/images/:images",
+        "selection": "single"
+      }
+    },
+    "enemy.hp": {
+      "type": "number",
+      "title": "生命值",
+      "description": "怪物的基础生命值。",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "enemy.atk": {
+      "type": "number",
+      "title": "攻击力",
+      "description": "怪物的基础攻击力。",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "enemy.def": {
+      "type": "number",
+      "title": "防御力",
+      "description": "怪物的基础防御力。",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "enemy.money": {
+      "type": "number",
+      "title": "金币",
+      "description": "击败怪物后获得的金币。",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "enemy.exp": {
+      "type": "number",
+      "title": "经验",
+      "description": "击败怪物后获得的经验。",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "enemy.point": {
+      "type": "number",
+      "title": "加点",
+      "description": "击败怪物后获得的加点数值。",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "enemy.special": {
+      "type": [
+        "number",
+        "array",
+        "null"
+      ],
+      "title": "特殊属性",
+      "description": "特殊属性列表来自工程 functions.js 的 enemys.getSpecials。历史单值、0 和 null 会正规化为列表编辑。",
+      "normalizer": "numericScalarOrList",
+      "editor": {
+        "kind": "checkboxSet",
+        "reference": {
+          "ref": "project:enemySpecials"
+        }
+      }
+    },
+    "enemy.value": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "title": "兼容数值",
+      "description": "旧工程可能使用的通用特殊属性数值；新逻辑优先使用下面的具名字段。",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "enemy.zone": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "title": "领域伤害",
+      "description": "领域怪每次造成的伤害。",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "enemy.repulse": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "title": "阻击伤害",
+      "description": "阻击触发时造成的伤害。",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "enemy.laser": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "title": "激光伤害",
+      "description": "激光在同行或同列造成的伤害。",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "enemy.range": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "title": "领域范围",
+      "description": "领域影响范围；未设置时默认为 1。",
+      "editor": {
+        "kind": "number"
+      },
+      "diagnostics": {
+        "enemy.range.positive": "设置时应为正整数"
+      }
+    },
+    "enemy.zoneSquare": {
+      "type": [
+        "boolean",
+        "null"
+      ],
+      "title": "九宫格范围",
+      "description": "领域、阻击或捕捉按九宫格而不是十字范围生效。",
+      "editor": {
+        "kind": "checkbox"
+      }
+    },
+    "enemy.n": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "title": "连击数",
+      "description": "多连击怪每回合的攻击次数。",
+      "editor": {
+        "kind": "number"
+      },
+      "diagnostics": {
+        "enemy.n.positive": "设置时应为正整数"
+      }
+    },
+    "enemy.breakArmor": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "title": "破甲比例",
+      "description": "破甲附加角色防御的比例，例如 0.1 表示 10%。",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "enemy.counterAttack": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "title": "反击比例",
+      "description": "反击附加角色攻击的比例，例如 0.1 表示 10%。",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "enemy.purify": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "title": "净化倍率",
+      "description": "净化附加角色护盾的倍率。",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "enemy.vampire": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "title": "吸血比例",
+      "description": "战前吸取角色生命的比例。",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "enemy.add": {
+      "type": [
+        "boolean",
+        "null"
+      ],
+      "title": "吸血加到自身",
+      "description": "吸血造成的伤害是否同时增加到怪物生命。",
+      "editor": {
+        "kind": "checkbox"
+      }
+    },
+    "enemy.atkValue": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "title": "退化扣攻",
+      "description": "退化在战后永久扣除的攻击点数。",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "enemy.defValue": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "title": "退化扣防",
+      "description": "退化在战后永久扣除的防御点数。",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "enemy.damage": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "title": "固定伤害",
+      "description": "战前直接造成的固定伤害。",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "enemy.hpBuff": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "title": "光环加血",
+      "description": "光环提高怪物生命的百分比数值。",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "enemy.atkBuff": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "title": "光环加攻",
+      "description": "光环提高怪物攻击的百分比数值。",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "enemy.defBuff": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "title": "光环加防",
+      "description": "光环提高怪物防御的百分比数值。",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "enemy.haloRange": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "title": "光环范围",
+      "description": "光环影响范围；未设置表示全图。",
+      "editor": {
+        "kind": "number"
+      },
+      "diagnostics": {
+        "enemy.haloRange.positive": "设置时应为正整数"
+      }
+    },
+    "enemy.haloSquare": {
+      "type": [
+        "boolean",
+        "null"
+      ],
+      "title": "光环九宫格",
+      "description": "局部光环按九宫格而不是十字范围生效。",
+      "editor": {
+        "kind": "checkbox"
+      }
+    },
+    "enemy.haloAdd": {
+      "type": [
+        "boolean",
+        "null"
+      ],
+      "title": "光环可叠加",
+      "description": "相同怪物 ID 的多个光环是否可以叠加。",
+      "editor": {
+        "kind": "checkbox"
+      }
+    },
+    "enemy.notBomb": {
+      "type": [
+        "boolean",
+        "null"
+      ],
+      "title": "不可炸",
+      "description": "该怪物是否不受炸弹类道具影响。",
+      "editor": {
+        "kind": "checkbox"
+      }
+    },
+    "enemy.beforeBattle": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "title": "战前事件",
+      "description": "与该怪物战斗前执行的事件。",
+      "editor": {
+        "kind": "event",
+        "entryType": "beforeBattle"
+      }
+    },
+    "enemy.afterBattle": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "title": "战后事件",
+      "description": "与该怪物战斗后执行的事件。",
+      "editor": {
+        "kind": "event",
+        "entryType": "afterBattle"
+      }
+    }
+  }
+}

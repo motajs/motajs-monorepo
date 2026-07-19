@@ -145,48 +145,38 @@ describe("PersistExecutor", () => {
     });
   });
 
-  describe("删除意图", () => {
-    it("标记删除后应该拒绝新任务", async () => {
-      const executor = new PersistExecutor(async () => {
-        await wait(10);
-      });
+  describe("期望状态意图", () => {
+    it("写入执行中收到删除时最终执行删除", async () => {
+      const executor = new PersistExecutor();
+      const results: string[] = [];
+      executor.schedule({ kind: "write", execute: async () => {
+        await wait(20);
+        results.push("write");
+      } });
+      executor.schedule({ kind: "delete", execute: async () => {
+        results.push("delete");
+      } });
 
-      executor.markDeletionPending();
-
-      expect(() => {
-        executor.exec();
-      }).toThrow("deletion pending");
+      await executor.whenQuiescent();
+      expect(results).toEqual(["write", "delete"]);
     });
 
-    it("标记删除前触发的任务应该继续执行", async () => {
-      const results: number[] = [];
-      let counter = 0;
-      const executor = new PersistExecutor(async () => {
-        await wait(10);
-        results.push(++counter);
-      });
+    it("尚未执行的删除可以被更新的写入覆盖", async () => {
+      const executor = new PersistExecutor();
+      const results: string[] = [];
+      executor.schedule({ kind: "write", execute: async () => {
+        await wait(20);
+        results.push("first");
+      } });
+      executor.schedule({ kind: "delete", execute: async () => {
+        results.push("delete");
+      } });
+      executor.schedule({ kind: "write", execute: async () => {
+        results.push("latest");
+      } });
 
-      executor.exec();
-      executor.exec();
-
-      executor.markDeletionPending();
-
-      await executor.waitForIdle();
-
-      // 已触发的任务应该执行完成
-      expect(results).toEqual([1, 2]);
-    });
-
-    it("isDeletionPending 应该返回正确状态", () => {
-      const executor = new PersistExecutor(async () => {
-        await wait(10);
-      });
-
-      expect(executor.isDeletionPending()).toBe(false);
-
-      executor.markDeletionPending();
-
-      expect(executor.isDeletionPending()).toBe(true);
+      await executor.whenQuiescent();
+      expect(results).toEqual(["first", "latest"]);
     });
   });
 

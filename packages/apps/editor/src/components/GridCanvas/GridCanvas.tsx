@@ -18,6 +18,7 @@ export const GridCanvas: FC<GridCanvasProps> = (props) => {
     markers = [],
     showCheckboard = false,
     onClick,
+    onDoubleClick,
     onContextMenu,
     style,
     className,
@@ -73,6 +74,17 @@ export const GridCanvas: FC<GridCanvasProps> = (props) => {
     [onClick, gridSize, offset],
   );
 
+  const handleDoubleClick = useCallback(
+    (event: MouseEvent<HTMLCanvasElement>) => {
+      if (!onDoubleClick) return;
+
+      const { offsetX, offsetY } = event.nativeEvent;
+      const gridPos = Grid.unmapLoc([offsetX - offset[0], offsetY - offset[1]], gridSize);
+      onDoubleClick(gridPos, event);
+    },
+    [onDoubleClick, gridSize, offset],
+  );
+
   // 处理右键菜单事件
   const handleContextMenu = useCallback(
     (event: MouseEvent<HTMLCanvasElement>) => {
@@ -96,6 +108,7 @@ export const GridCanvas: FC<GridCanvasProps> = (props) => {
       className={className}
       data-test-id={testId}
       onClick={handleClick}
+      onDoubleClick={handleDoubleClick}
       onContextMenu={handleContextMenu}
     />
   );

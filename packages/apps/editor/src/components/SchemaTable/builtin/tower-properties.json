@@ -1,0 +1,778 @@
+{
+  "kind": "table-schema",
+  "formatVersion": 1,
+  "schemaId": "tower-properties",
+  "revision": 1,
+  "nodes": [
+    {
+      "kind": "group",
+      "id": "tower-project",
+      "label": "工程信息",
+      "children": [
+        {
+          "kind": "field",
+          "fieldSchema": "tower.title",
+          "source": {
+            "ref": "tower:firstData.title"
+          },
+          "id": "tower-title"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.name",
+          "source": {
+            "ref": "tower:firstData.name"
+          },
+          "id": "tower-name"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.version",
+          "source": {
+            "ref": "tower:firstData.version"
+          },
+          "id": "tower-version"
+        }
+      ]
+    },
+    {
+      "kind": "group",
+      "id": "tower-structure",
+      "label": "游戏结构",
+      "children": [
+        {
+          "kind": "field",
+          "fieldSchema": "tower.levelChoose",
+          "source": {
+            "ref": "tower:main.levelChoose"
+          },
+          "id": "tower-levelChoose"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.equipName",
+          "source": {
+            "ref": "tower:main.equipName"
+          },
+          "id": "tower-equipName"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.nameMap",
+          "source": {
+            "ref": "tower:main.nameMap"
+          },
+          "id": "tower-nameMap"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.startBgm",
+          "source": {
+            "ref": "tower:main.startBgm"
+          },
+          "id": "tower-startBgm"
+        }
+      ]
+    },
+    {
+      "kind": "group",
+      "id": "tower-opening",
+      "label": "标题与开场",
+      "children": [
+        {
+          "kind": "field",
+          "fieldSchema": "tower.startCanvas",
+          "source": {
+            "ref": "tower:firstData.startCanvas"
+          },
+          "condition": {
+            "when": {
+              "operator": "eq",
+              "args": [
+                {
+                  "ref": "tower:flags.startUsingCanvas"
+                },
+                {
+                  "literal": true
+                }
+              ]
+            },
+            "otherwise": "inactive"
+          },
+          "id": "tower-startCanvas"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.startText",
+          "source": {
+            "ref": "tower:firstData.startText"
+          },
+          "id": "tower-startText"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.shops",
+          "source": {
+            "ref": "tower:firstData.shops"
+          },
+          "id": "tower-shops"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.levelUp",
+          "source": {
+            "ref": "tower:firstData.levelUp"
+          },
+          "id": "tower-levelUp"
+        }
+      ]
+    },
+    {
+      "kind": "group",
+      "id": "tower-hero",
+      "label": "初始勇士",
+      "children": [
+        {
+          "kind": "field",
+          "fieldSchema": "tower.hero.image",
+          "source": {
+            "ref": "tower:firstData.hero.image"
+          },
+          "id": "tower-hero-image"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.hero.animate",
+          "source": {
+            "ref": "tower:firstData.hero.animate"
+          },
+          "id": "tower-hero-animate"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.hero.name",
+          "source": {
+            "ref": "tower:firstData.hero.name"
+          },
+          "id": "tower-hero-name"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.hero.lv",
+          "source": {
+            "ref": "tower:firstData.hero.lv"
+          },
+          "id": "tower-hero-lv"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.hero.hpmax",
+          "source": {
+            "ref": "tower:firstData.hero.hpmax"
+          },
+          "id": "tower-hero-hpmax"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.hero.hp",
+          "source": {
+            "ref": "tower:firstData.hero.hp"
+          },
+          "id": "tower-hero-hp"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.hero.manamax",
+          "source": {
+            "ref": "tower:firstData.hero.manamax"
+          },
+          "id": "tower-hero-manamax"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.hero.mana",
+          "source": {
+            "ref": "tower:firstData.hero.mana"
+          },
+          "id": "tower-hero-mana"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.hero.atk",
+          "source": {
+            "ref": "tower:firstData.hero.atk"
+          },
+          "id": "tower-hero-atk"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.hero.def",
+          "source": {
+            "ref": "tower:firstData.hero.def"
+          },
+          "id": "tower-hero-def"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.hero.mdef",
+          "source": {
+            "ref": "tower:firstData.hero.mdef"
+          },
+          "id": "tower-hero-mdef"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.hero.money",
+          "source": {
+            "ref": "tower:firstData.hero.money"
+          },
+          "id": "tower-hero-money"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.hero.exp",
+          "source": {
+            "ref": "tower:firstData.hero.exp"
+          },
+          "id": "tower-hero-exp"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.hero.position",
+          "sources": {
+            "floorId": {
+              "ref": "tower:firstData.floorId"
+            },
+            "x": {
+              "ref": "tower:firstData.hero.loc.x"
+            },
+            "y": {
+              "ref": "tower:firstData.hero.loc.y"
+            },
+            "direction": {
+              "ref": "tower:firstData.hero.loc.direction"
+            }
+          },
+          "id": "tower-hero-position"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.hero.equipment",
+          "source": {
+            "ref": "tower:firstData.hero.equipment"
+          },
+          "id": "tower-hero-equipment"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.hero.constants",
+          "source": {
+            "ref": "tower:firstData.hero.items.constants"
+          },
+          "id": "tower-hero-constants"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.hero.tools",
+          "source": {
+            "ref": "tower:firstData.hero.items.tools"
+          },
+          "id": "tower-hero-tools"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.hero.equips",
+          "source": {
+            "ref": "tower:firstData.hero.items.equips"
+          },
+          "id": "tower-hero-equips"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.hero.flags",
+          "source": {
+            "ref": "tower:firstData.hero.flags"
+          },
+          "id": "tower-hero-flags"
+        }
+      ]
+    },
+    {
+      "kind": "group",
+      "id": "tower-values",
+      "label": "系统数值",
+      "children": [
+        {
+          "kind": "field",
+          "fieldSchema": "tower.value.lavaDamage",
+          "source": {
+            "ref": "tower:values.lavaDamage"
+          },
+          "id": "tower-value-lavaDamage"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.value.poisonDamage",
+          "source": {
+            "ref": "tower:values.poisonDamage"
+          },
+          "id": "tower-value-poisonDamage"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.value.weakValue",
+          "source": {
+            "ref": "tower:values.weakValue"
+          },
+          "id": "tower-value-weakValue"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.value.redGem",
+          "source": {
+            "ref": "tower:values.redGem"
+          },
+          "id": "tower-value-redGem"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.value.blueGem",
+          "source": {
+            "ref": "tower:values.blueGem"
+          },
+          "id": "tower-value-blueGem"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.value.greenGem",
+          "source": {
+            "ref": "tower:values.greenGem"
+          },
+          "id": "tower-value-greenGem"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.value.redPotion",
+          "source": {
+            "ref": "tower:values.redPotion"
+          },
+          "id": "tower-value-redPotion"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.value.bluePotion",
+          "source": {
+            "ref": "tower:values.bluePotion"
+          },
+          "id": "tower-value-bluePotion"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.value.yellowPotion",
+          "source": {
+            "ref": "tower:values.yellowPotion"
+          },
+          "id": "tower-value-yellowPotion"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.value.greenPotion",
+          "source": {
+            "ref": "tower:values.greenPotion"
+          },
+          "id": "tower-value-greenPotion"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.value.breakArmor",
+          "source": {
+            "ref": "tower:values.breakArmor"
+          },
+          "id": "tower-value-breakArmor"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.value.counterAttack",
+          "source": {
+            "ref": "tower:values.counterAttack"
+          },
+          "id": "tower-value-counterAttack"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.value.purify",
+          "source": {
+            "ref": "tower:values.purify"
+          },
+          "id": "tower-value-purify"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.value.hatred",
+          "source": {
+            "ref": "tower:values.hatred"
+          },
+          "id": "tower-value-hatred"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.value.animateSpeed",
+          "source": {
+            "ref": "tower:values.animateSpeed"
+          },
+          "id": "tower-value-animateSpeed"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.value.moveSpeed",
+          "source": {
+            "ref": "tower:values.moveSpeed"
+          },
+          "id": "tower-value-moveSpeed"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.value.floorChangeTime",
+          "source": {
+            "ref": "tower:values.floorChangeTime"
+          },
+          "id": "tower-value-floorChangeTime"
+        }
+      ]
+    },
+    {
+      "kind": "group",
+      "id": "tower-status",
+      "label": "状态栏",
+      "children": [
+        {
+          "kind": "field",
+          "fieldSchema": "tower.status.items",
+          "source": {
+            "ref": "tower:flags.statusBarItems"
+          },
+          "id": "tower-status-items"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.flag.statusCanvas",
+          "source": {
+            "ref": "tower:flags.statusCanvas"
+          },
+          "id": "tower-flag-statusCanvas"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.status.canvasRows",
+          "source": {
+            "ref": "tower:values.statusCanvasRowsOnMobile"
+          },
+          "condition": {
+            "when": {
+              "operator": "eq",
+              "args": [
+                {
+                  "ref": "tower:flags.statusCanvas"
+                },
+                {
+                  "literal": true
+                }
+              ]
+            },
+            "otherwise": "inactive"
+          },
+          "id": "tower-status-canvasRows"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.flag.autoScale",
+          "source": {
+            "ref": "tower:flags.autoScale"
+          },
+          "id": "tower-flag-autoScale"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.flag.extendToolbar",
+          "source": {
+            "ref": "tower:flags.extendToolbar"
+          },
+          "id": "tower-flag-extendToolbar"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.flag.hideLeftStatusBar",
+          "source": {
+            "ref": "tower:flags.hideLeftStatusBar"
+          },
+          "id": "tower-flag-hideLeftStatusBar"
+        }
+      ]
+    },
+    {
+      "kind": "group",
+      "id": "tower-flags",
+      "label": "系统开关",
+      "children": [
+        {
+          "kind": "field",
+          "fieldSchema": "tower.flag.flyNearStair",
+          "source": {
+            "ref": "tower:flags.flyNearStair"
+          },
+          "id": "tower-flag-flyNearStair"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.flag.flyRecordPosition",
+          "source": {
+            "ref": "tower:flags.flyRecordPosition"
+          },
+          "id": "tower-flag-flyRecordPosition"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.flag.itemFirstText",
+          "source": {
+            "ref": "tower:flags.itemFirstText"
+          },
+          "id": "tower-flag-itemFirstText"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.flag.equipboxButton",
+          "source": {
+            "ref": "tower:flags.equipboxButton"
+          },
+          "id": "tower-flag-equipboxButton"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.flag.enableAddPoint",
+          "source": {
+            "ref": "tower:flags.enableAddPoint"
+          },
+          "id": "tower-flag-enableAddPoint"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.flag.enableNegativeDamage",
+          "source": {
+            "ref": "tower:flags.enableNegativeDamage"
+          },
+          "id": "tower-flag-enableNegativeDamage"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.flag.betweenAttackMax",
+          "source": {
+            "ref": "tower:flags.betweenAttackMax"
+          },
+          "id": "tower-flag-betweenAttackMax"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.flag.useLoop",
+          "source": {
+            "ref": "tower:flags.useLoop"
+          },
+          "id": "tower-flag-useLoop"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.flag.startUsingCanvas",
+          "source": {
+            "ref": "tower:flags.startUsingCanvas"
+          },
+          "id": "tower-flag-startUsingCanvas"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.flag.enableEnemyPoint",
+          "source": {
+            "ref": "tower:flags.enableEnemyPoint"
+          },
+          "id": "tower-flag-enableEnemyPoint"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.flag.enableGentleClick",
+          "source": {
+            "ref": "tower:flags.enableGentleClick"
+          },
+          "id": "tower-flag-enableGentleClick"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.flag.ignoreChangeFloor",
+          "source": {
+            "ref": "tower:flags.ignoreChangeFloor"
+          },
+          "id": "tower-flag-ignoreChangeFloor"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.flag.canGoDeadZone",
+          "source": {
+            "ref": "tower:flags.canGoDeadZone"
+          },
+          "id": "tower-flag-canGoDeadZone"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.flag.enableMoveDirectly",
+          "source": {
+            "ref": "tower:flags.enableMoveDirectly"
+          },
+          "id": "tower-flag-enableMoveDirectly"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.flag.enableRouteFolding",
+          "source": {
+            "ref": "tower:flags.enableRouteFolding"
+          },
+          "id": "tower-flag-enableRouteFolding"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.flag.disableShopOnDamage",
+          "source": {
+            "ref": "tower:flags.disableShopOnDamage"
+          },
+          "id": "tower-flag-disableShopOnDamage"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.flag.blurFg",
+          "source": {
+            "ref": "tower:flags.blurFg"
+          },
+          "id": "tower-flag-blurFg"
+        }
+      ]
+    },
+    {
+      "kind": "group",
+      "id": "tower-styles",
+      "label": "主样式",
+      "children": [
+        {
+          "kind": "field",
+          "fieldSchema": "tower.style.startBackground",
+          "source": {
+            "ref": "tower:main.styles.startBackground"
+          },
+          "id": "tower-style-startBackground"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.style.startVerticalBackground",
+          "source": {
+            "ref": "tower:main.styles.startVerticalBackground"
+          },
+          "id": "tower-style-startVerticalBackground"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.style.startLogoStyle",
+          "source": {
+            "ref": "tower:main.styles.startLogoStyle"
+          },
+          "id": "tower-style-startLogoStyle"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.style.startButtonsStyle",
+          "source": {
+            "ref": "tower:main.styles.startButtonsStyle"
+          },
+          "id": "tower-style-startButtonsStyle"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.style.statusLeftBackground",
+          "source": {
+            "ref": "tower:main.styles.statusLeftBackground"
+          },
+          "id": "tower-style-statusLeftBackground"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.style.statusTopBackground",
+          "source": {
+            "ref": "tower:main.styles.statusTopBackground"
+          },
+          "id": "tower-style-statusTopBackground"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.style.toolsBackground",
+          "source": {
+            "ref": "tower:main.styles.toolsBackground"
+          },
+          "id": "tower-style-toolsBackground"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.style.borderColor",
+          "source": {
+            "ref": "tower:main.styles.borderColor"
+          },
+          "id": "tower-style-borderColor"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.style.statusBarColor",
+          "source": {
+            "ref": "tower:main.styles.statusBarColor"
+          },
+          "id": "tower-style-statusBarColor"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.style.selectColor",
+          "source": {
+            "ref": "tower:main.styles.selectColor"
+          },
+          "id": "tower-style-selectColor"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.style.floorChangingStyle",
+          "source": {
+            "ref": "tower:main.styles.floorChangingStyle"
+          },
+          "id": "tower-style-floorChangingStyle"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "tower.style.font",
+          "source": {
+            "ref": "tower:main.styles.font"
+          },
+          "id": "tower-style-font"
+        }
+      ]
+    },
+    {
+      "kind": "rest",
+      "id": "tower-rest",
+      "label": "其他字段",
+      "path": {
+        "ref": "tower:"
+      },
+      "hide": [
+        "main.floorIds",
+        "main.floorPartitions",
+        "main.images",
+        "main.tilesets",
+        "main.animates",
+        "main.bgms",
+        "main.sounds",
+        "main.fonts",
+        "main.splitImages"
+      ]
+    }
+  ]
+}

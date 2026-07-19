@@ -4,6 +4,10 @@ import { cacheFirst, networkFirst } from "./cache";
 import { handleFsRequest } from "./fsApi";
 import { serveProjectPreview } from "./preview";
 import { ResponseUtils } from "./utils";
+import { serveEditorUpdateStatus, serveProjectEditor } from "./editorHost";
+import { serveEditorReleaseAsset } from "./editorRelease";
+
+export type BackgroundTaskScheduler = (task: Promise<unknown>) => void;
 
 const withSlash = (value: string) => value.endsWith("/") ? value : `${value}/`;
 
@@ -42,11 +46,17 @@ const routeService = async (
   scopeUrl: URL,
   projectId: number,
   tail: string,
+  schedule?: BackgroundTaskScheduler,
 ): Promise<Response> => {
   const serviceRoot = `${withSlash(scopeUrl.pathname)}service/${projectId}/`;
   const projectUrl = new URL(`${serviceRoot}project/`, url.origin).href;
   if (!tail) return redirect(url, `${serviceRoot}project/`);
   if (tail === "project" || tail === "project/") return appShell(scopeUrl);
+  if (tail === "editor") return redirect(url, `${serviceRoot}editor/`);
+  if (tail === "editor/") return serveProjectEditor(request, scopeUrl, projectId, projectUrl, schedule);
+  if (tail === "api/editor-update" || tail === "api/editor-update/") {
+    return serveEditorUpdateStatus(request, scopeUrl);
+  }
 
   const apiMatch = /^api\/fs\/([^/]+)\/?$/.exec(tail);
   if (apiMatch) return handleFsRequest(projectId, apiMatch[1]!, request);
@@ -96,6 +106,7 @@ const routeLegacyTower = async (
 export const routeRequest = async (
   request: Request,
   scopeUrl: URL,
+  schedule?: BackgroundTaskScheduler,
 ): Promise<Response | null> => {
   const url = new URL(request.url);
   if (url.origin !== scopeUrl.origin) return null;
@@ -104,12 +115,16 @@ export const routeRequest = async (
   const pathname = url.pathname.slice(scopePath.length);
 
   const service = /^service\/(\d+)(?:\/(.*))?$/.exec(pathname);
-  if (service) return routeService(request, url, scopeUrl, Number(service[1]), service[2] ?? "");
+  if (service) return routeService(request, url, scopeUrl, Number(service[1]), service[2] ?? "", schedule);
 
   const tower = /^tower\/(\d+)(?:\/(.*))?$/.exec(pathname);
   if (tower) return routeLegacyTower(request, url, scopeUrl, Number(tower[1]), tower[2] ?? "");
 
   if (pathname.startsWith("api/")) return ResponseUtils.create404();
+  if (/^static\/editor\/releases\/[a-f0-9]{64}\//.test(pathname)) {
+    return serveEditorReleaseAsset(request, scopeUrl);
+  }
+  if (pathname.startsWith("static/editor/")) return fetch(request, { cache: "no-store" });
   if (import.meta.env.DEV) return fetch(request);
   if (!pathname || pathname === "index.html" || pathname.endsWith("/")) return networkFirst(request);
   if (pathname.startsWith("assets/") && /\.(js|css)$/.test(pathname)) return cacheFirst(request);

@@ -50,7 +50,14 @@ export const ModalShell: FC<ModalShellProps> = (props) => {
   const showSelect = selectOptions && selectOptions.length > 0;
 
   return (
-    <div id="uieventDiv" data-test-id={testId} style={{ display: "block" }}>
+    <div
+      aria-label={title}
+      aria-modal="true"
+      id="uieventDiv"
+      data-test-id={testId}
+      role="dialog"
+      style={{ display: "block" }}
+    >
       <div id="uieventDialog">
         <div id="uieventHead">
           <span id="uieventTitle">{title}</span>

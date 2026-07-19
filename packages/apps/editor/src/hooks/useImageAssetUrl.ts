@@ -11,7 +11,7 @@ export function useImageAssetUrl(path: string): { url: string | null; revision: 
   });
 
   useEffect(() => {
-    if (content.status === "idle") void resource.reload();
+    if (content.status === "idle") void resource.ensureLoaded();
   }, [content.status, resource]);
 
   useEffect(() => {

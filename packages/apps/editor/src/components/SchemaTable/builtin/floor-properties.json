@@ -1,0 +1,239 @@
+{
+  "kind": "table-schema",
+  "formatVersion": 1,
+  "schemaId": "floor-properties",
+  "revision": 1,
+  "nodes": [
+    {
+      "kind": "group",
+      "id": "basic",
+      "label": "基本信息",
+      "children": [
+        {
+          "kind": "field",
+          "fieldSchema": "floor.floorId",
+          "source": {
+            "ref": "floor:floorId"
+          },
+          "id": "floor-floorId"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "floor.title",
+          "source": {
+            "ref": "floor:title"
+          },
+          "id": "floor-title"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "floor.name",
+          "source": {
+            "ref": "floor:name"
+          },
+          "id": "floor-name"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "floor.size",
+          "sources": {
+            "width": {
+              "ref": "floor:width"
+            },
+            "height": {
+              "ref": "floor:height"
+            }
+          },
+          "id": "floor-size"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "floor.defaultGround",
+          "source": {
+            "ref": "floor:defaultGround"
+          },
+          "id": "floor-defaultGround"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "floor.ratio",
+          "source": {
+            "ref": "floor:ratio"
+          },
+          "id": "floor-ratio"
+        }
+      ]
+    },
+    {
+      "kind": "group",
+      "id": "travel",
+      "label": "通行与传送",
+      "children": [
+        {
+          "kind": "field",
+          "fieldSchema": "floor.canFlyTo",
+          "source": {
+            "ref": "floor:canFlyTo"
+          },
+          "id": "floor-canFlyTo"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "floor.canFlyFrom",
+          "source": {
+            "ref": "floor:canFlyFrom"
+          },
+          "id": "floor-canFlyFrom"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "floor.canUseQuickShop",
+          "source": {
+            "ref": "floor:canUseQuickShop"
+          },
+          "id": "floor-canUseQuickShop"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "floor.cannotViewMap",
+          "source": {
+            "ref": "floor:cannotViewMap"
+          },
+          "id": "floor-cannotViewMap"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "floor.cannotMoveDirectly",
+          "source": {
+            "ref": "floor:cannotMoveDirectly"
+          },
+          "id": "floor-cannotMoveDirectly"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "floor.underGround",
+          "source": {
+            "ref": "floor:underGround"
+          },
+          "id": "floor-underGround"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "floor.upFloor",
+          "source": {
+            "ref": "floor:upFloor"
+          },
+          "id": "floor-upFloor"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "floor.downFloor",
+          "source": {
+            "ref": "floor:downFloor"
+          },
+          "id": "floor-downFloor"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "floor.flyPoint",
+          "source": {
+            "ref": "floor:flyPoint"
+          },
+          "id": "floor-flyPoint"
+        }
+      ]
+    },
+    {
+      "kind": "group",
+      "id": "arrival",
+      "label": "到达与脚本",
+      "children": [
+        {
+          "kind": "field",
+          "fieldSchema": "floor.firstArrive",
+          "source": {
+            "ref": "floor:firstArrive"
+          },
+          "id": "floor-firstArrive"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "floor.eachArrive",
+          "source": {
+            "ref": "floor:eachArrive"
+          },
+          "id": "floor-eachArrive"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "floor.parallelDo",
+          "source": {
+            "ref": "floor:parallelDo"
+          },
+          "id": "floor-parallelDo"
+        }
+      ]
+    },
+    {
+      "kind": "group",
+      "id": "visual",
+      "label": "视觉与音频",
+      "children": [
+        {
+          "kind": "field",
+          "fieldSchema": "floor.images",
+          "source": {
+            "ref": "floor:images"
+          },
+          "id": "floor-images"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "floor.color",
+          "source": {
+            "ref": "floor:color"
+          },
+          "id": "floor-color"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "floor.weather",
+          "source": {
+            "ref": "floor:weather"
+          },
+          "id": "floor-weather"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "floor.bgm",
+          "source": {
+            "ref": "floor:bgm"
+          },
+          "id": "floor-bgm"
+        }
+      ]
+    },
+    {
+      "kind": "rest",
+      "id": "rest",
+      "label": "其他字段",
+      "path": {
+        "ref": "floor:"
+      },
+      "hide": [
+        "map",
+        "bgmap",
+        "fgmap",
+        "events",
+        "autoEvent",
+        "changeFloor",
+        "beforeBattle",
+        "afterBattle",
+        "afterGetItem",
+        "afterOpenDoor",
+        "cannotMove",
+        "cannotMoveIn"
+      ]
+    }
+  ]
+}

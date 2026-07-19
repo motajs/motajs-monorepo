@@ -82,6 +82,28 @@ describe('project configuration Blockly entries', () => {
     expect(roundTrip('floorImage', value)).toEqual(value);
   });
 
+  it('round-trips all three legacy global shop shapes', () => {
+    const value = [
+      {
+        id: 'shop1', text: '\t[贪婪之神,moneyShop]金币商店', textInList: '金币商店',
+        mustEnable: false, disablePreview: true,
+        choices: [{ text: '攻击+1', need: 'status:money>=20', icon: 'yellowKey', color: [255, 255, 255, 1], condition: 'flag:shop', action: [{ type: 'comment', text: 'buy' }] }],
+      },
+      {
+        id: 'itemShop', item: true, textInList: '道具商店', use: 'experience', mustEnable: true,
+        choices: [
+          { id: 'yellowKey', number: 3, money: '10+flag:price', condition: 'flag:enable' },
+          { id: 'blueKey', sell: '5' },
+        ],
+      },
+      {
+        id: 'recycleShop', textInList: '回收钥匙商店', mustEnable: false,
+        commonEvent: '回收钥匙商店', args: [1, 'yellowKey'],
+      },
+    ];
+    expect(roundTrip('shop', value)).toEqual(value);
+  });
+
   it('round-trips sparse faceIds', () => {
     expect(roundTrip('faceIds', { down: 'npc0', up: 'npc3' }))
       .toEqual({ down: 'npc0', up: 'npc3' });

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { FileHandlerManager } from "@/fs/FileHandlerManager";
+import { persistenceMonitor } from "@/fs/PersistenceMonitor";
 import { projectData } from "@/project/data/projectData";
 import { tableCommands } from "@/project/commands/tableCommands";
 import { operationHistory } from "../operationHistory";
@@ -72,6 +73,25 @@ describe("OperationHistory", () => {
     await operationHistory.redo();
     expect(projectData.floor("sample0").value().title).toBe("History title");
     expect(currentViewport.floorId).toBe("sample0");
+  });
+
+  it("finishes memory history before persistence and allows undo while a write is pending", async () => {
+    const floorResource = projectData.floor("sample0");
+    const floor = await project.loadResource(floorResource);
+    const originalTitle = floor.title;
+    project.fs.setWriteDelay(80);
+
+    expect(await tableCommands.patchFloor("sample0", [
+      ["change", "['title']", "Memory first title"],
+    ])).toEqual({ ok: true });
+
+    expect(floorResource.value().title).toBe("Memory first title");
+    expect(persistenceMonitor.hasUnsavedChanges()).toBe(true);
+
+    await operationHistory.undo();
+    expect(floorResource.value().title).toBe(originalTitle);
+    await persistenceMonitor.flush([floorResource.path]);
+    expect(project.readText(floorResource.path)).not.toContain("Memory first title");
   });
 
   it("restores the temporary checkpoint when apply fails after a mutation", async () => {

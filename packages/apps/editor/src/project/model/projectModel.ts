@@ -1,10 +1,12 @@
-import { computed, effect } from "alien-signals";
 import type { Content } from "@/fs/types";
 import { ContentUtils } from "@/fs/ContentUtils";
-import type { ReadonlySignal } from "@/fs/interfaces";
-import { waitUntil } from "@/utils/base/signal";
 import { projectData } from "@/project/data/projectData";
-import type { TowerData } from "@/services/tower";
+import {
+  aggregateResource,
+  computedResource,
+  optional,
+  type LoadableResource,
+} from "@/project/resources";
 import type { BlockInfo, MapsBlocksData } from "@/services/mapBlock";
 import type { EnemysData } from "@/services/enemy";
 import type { ItemsData } from "@/services/item";
@@ -81,6 +83,7 @@ export interface RegistryBlockInfo extends BlockInfo {
   y?: number;
   isTile?: boolean;
   materialPath?: string;
+  editorDisplay?: BlockInfo["editorDisplay"];
 }
 
 export type BlockRegistry = Map<number, RegistryBlockInfo>;
@@ -118,96 +121,7 @@ export interface MaterialCatalog {
   diagnostics: ProjectDiagnostic[];
 }
 
-export interface ModelResource<T> {
-  readonly id: string;
-  readonly content: ReadonlySignal<Content<T>>;
-  snapshot(): Content<T>;
-  value(): T;
-  reload(): Promise<void>;
-  waitForSettled(): Promise<void>;
-  subscribe(listener: (content: Content<T>) => void): () => void;
-}
-
-class ComputedModelResource<T> implements ModelResource<T> {
-  readonly content: ReadonlySignal<Content<T>>;
-  readonly id: string;
-  private readonly reloadDependencies: () => Promise<void>;
-
-  constructor(
-    id: string,
-    computeValue: () => Content<T>,
-    reloadDependencies: () => Promise<void> = async () => undefined,
-  ) {
-    this.id = id;
-    this.content = computed(computeValue);
-    this.reloadDependencies = reloadDependencies;
-  }
-
-  snapshot(): Content<T> {
-    return this.content();
-  }
-
-  value(): T {
-    return ContentUtils.unwrap(this.content(), this.id);
-  }
-
-  async reload(): Promise<void> {
-    await this.reloadDependencies();
-  }
-
-  async waitForSettled(): Promise<void> {
-    await waitUntil(() => {
-      const status = this.content().status;
-      return status !== "loading" && status !== "idle";
-    });
-  }
-
-  subscribe(listener: (content: Content<T>) => void): () => void {
-    return effect(() => {
-      listener(this.content());
-    });
-  }
-}
-
-function contentOrEmpty<T extends object>(content: Content<T>, fallback: T): Content<T> {
-  if (content.status === "not-found") {
-    return { status: "loaded", value: fallback };
-  }
-  return content;
-}
-
-function combineFourObjectContents<A extends object, B extends object, C extends object, D extends object, R>(
-  a: Content<A>,
-  b: Content<B>,
-  c: Content<C>,
-  d: Content<D>,
-  project: (a: A, b: B, c: C, d: D) => R,
-  fallbacks: [A, B, C, D],
-): Content<R> {
-  const normalized = [
-    contentOrEmpty(a, fallbacks[0]),
-    contentOrEmpty(b, fallbacks[1]),
-    contentOrEmpty(c, fallbacks[2]),
-    contentOrEmpty(d, fallbacks[3]),
-  ] as const;
-
-  const error = normalized.find((content) => content.status === "error");
-  if (error?.status === "error") return { status: "error", error: error.error };
-
-  if (normalized.some((content) => content.status === "loading")) return { status: "loading" };
-  if (normalized.some((content) => content.status === "idle")) return { status: "idle" };
-
-  const [loadedA, loadedB, loadedC, loadedD] = normalized;
-  return {
-    status: "loaded",
-    value: project(
-      (loadedA as { status: "loaded"; value: A }).value,
-      (loadedB as { status: "loaded"; value: B }).value,
-      (loadedC as { status: "loaded"; value: C }).value,
-      (loadedD as { status: "loaded"; value: D }).value,
-    ),
-  };
-}
+export type ModelResource<T> = LoadableResource<T>;
 
 function spriteKey(images: string, id: string): string {
   return `${images}:${id}`;
@@ -274,6 +188,21 @@ function mergeSpriteMetadata(
   };
 }
 
+function mergeEditorDisplayMetadata(
+  display: BlockInfo["editorDisplay"],
+  idnum: number,
+): Partial<RegistryBlockInfo> {
+  if (display?.type !== "image" || !display.path) return {};
+  return {
+    materialPath: display.path,
+    x: display.x ?? 0,
+    y: display.y ?? 0,
+    width: display.width ?? 32,
+    height: display.height ?? 32,
+    idnum,
+  };
+}
+
 function addMapBlocks(
   registry: BlockRegistry,
   spriteRegistry: SpriteRegistry,
@@ -302,6 +231,7 @@ function addMapBlocks(
       images,
       y,
       kind: blockKind(info.cls),
+      ...mergeEditorDisplayMetadata(info.editorDisplay, numericId),
     });
   }
 }
@@ -504,6 +434,12 @@ export function resolveMaterialCatalogEntry(
 }
 
 class ProjectModelImpl {
+  private floorListResource: ModelResource<FloorListItem[]> | null = null;
+  private blockRegistryResource: ModelResource<BlockRegistry> | null = null;
+  private spriteRegistryResource: ModelResource<SpriteRegistry> | null = null;
+  private materialCatalogResource: ModelResource<MaterialCatalog> | null = null;
+  private tilesetCatalogResource: ModelResource<TilesetCatalog> | null = null;
+  private readonly floorPassabilityResources = new Map<string, ModelResource<FloorPassability>>();
   private ternDefinitionsResource: ModelResource<TernDefinitionBundle> | null = null;
   private blocklyCompletionsResource: ModelResource<BlocklyCompletionCatalog> | null = null;
   private flagUsageResource: ModelResource<FlagUsageIndex> | null = null;
@@ -516,8 +452,9 @@ class ProjectModelImpl {
   }
 
   floorList(): ModelResource<FloorListItem[]> {
-    return new ComputedModelResource(
+    return this.floorListResource ??= computedResource(
       "floorList",
+      [projectData.tower()],
       () =>
         ContentUtils.map(projectData.tower().content(), (tower) =>
           tower.main.floorIds.map((id) => {
@@ -531,42 +468,27 @@ class ProjectModelImpl {
             };
           }),
         ),
-      async () => {
-        await projectData.tower().reload();
-      },
     );
   }
 
   blockRegistry(): ModelResource<BlockRegistry> {
-    return new ComputedModelResource(
+    return this.blockRegistryResource ??= aggregateResource(
       "blockRegistry",
-      () =>
-        combineFourObjectContents(
-          projectData.mapBlocks().content(),
-          projectData.items().content(),
-          projectData.enemys().content(),
-          projectData.icons().content(),
-          buildBlockRegistry,
-          [{}, {}, {}, {}],
-        ),
-      async () => {
-        await Promise.all([
-          projectData.mapBlocks().reload(),
-          projectData.items().reload(),
-          projectData.enemys().reload(),
-          projectData.icons().reload(),
-        ]);
-      },
+      [
+        optional(projectData.mapBlocks(), {}),
+        optional(projectData.items(), {}),
+        optional(projectData.enemys(), {}),
+        optional(projectData.icons(), {}),
+      ] as const,
+      buildBlockRegistry,
     );
   }
 
   spriteRegistry(): ModelResource<SpriteRegistry> {
-    return new ComputedModelResource(
+    return this.spriteRegistryResource ??= aggregateResource(
       "spriteRegistry",
-      () => ContentUtils.map(projectData.icons().content(), buildSpriteRegistry),
-      async () => {
-        await projectData.icons().reload();
-      },
+      [projectData.icons()] as const,
+      buildSpriteRegistry,
     );
   }
 
@@ -575,23 +497,32 @@ class ProjectModelImpl {
   }
 
   materialCatalog(): ModelResource<MaterialCatalog> {
-    return new ComputedModelResource(
+    const dependencies = [
+      projectData.icons(),
+      projectData.mapBlocks(),
+      ...[...MATERIAL_SHEET_IMAGES, "autotile"].map((images) =>
+        projectAssets.materialCollection(images)),
+    ];
+    return this.materialCatalogResource ??= computedResource(
       "materialCatalog",
+      dependencies,
       materialCatalogContent,
-      async () => {
-        await Promise.all([
-          projectData.icons().reload(),
-          projectData.mapBlocks().reload(),
-          ...[...MATERIAL_SHEET_IMAGES, "autotile"].map((images) =>
-            projectAssets.materialCollection(images).reload()),
-        ]);
-      },
     );
   }
 
   tilesetCatalog(): ModelResource<TilesetCatalog> {
-    return new ComputedModelResource(
+    const dependencies = () => {
+      const tower = projectData.tower();
+      const towerContent = tower.content();
+      if (towerContent.status !== "loaded") return [tower];
+      const names = Array.isArray(towerContent.value.main.tilesets)
+        ? towerContent.value.main.tilesets.filter((name): name is string => typeof name === "string")
+        : [];
+      return [tower, ...names.map((name) => projectAssets.image(`project/tilesets/${name}`))];
+    };
+    return this.tilesetCatalogResource ??= computedResource(
       "tilesetCatalog",
+      dependencies,
       () => {
         const towerContent = projectData.tower().content();
         if (towerContent.status !== "loaded") return towerContent as Content<TilesetCatalog>;
@@ -604,21 +535,16 @@ class ProjectModelImpl {
         }));
         return buildTilesetCatalog(names, contents);
       },
-      async () => {
-        await projectData.tower().reload();
-        const tower = projectData.tower().value();
-        const names = Array.isArray(tower.main.tilesets)
-          ? tower.main.tilesets.filter((name): name is string => typeof name === "string")
-          : [];
-        await Promise.all(names.map((name) => projectAssets.image(`project/tilesets/${name}`).reload()));
-      },
     );
   }
 
   floorPassability(floorId: string): ModelResource<FloorPassability> {
     const blockRegistry = this.blockRegistry();
-    return new ComputedModelResource(
+    let resource = this.floorPassabilityResources.get(floorId);
+    if (resource) return resource;
+    resource = computedResource(
       `floorPassability:${floorId}`,
+      [projectData.floor(floorId), blockRegistry],
       () => {
         const floorContent = projectData.floor(floorId).content();
         const registryContent = blockRegistry.content();
@@ -632,10 +558,9 @@ class ProjectModelImpl {
           ),
         };
       },
-      async () => {
-        await Promise.all([projectData.floor(floorId).reload(), blockRegistry.reload()]);
-      },
     );
+    this.floorPassabilityResources.set(floorId, resource);
+    return resource;
   }
 
   enemySpecialCatalog(): ModelResource<EnemySpecialCatalog> {
@@ -664,39 +589,21 @@ class ProjectModelImpl {
 
   blocklyCompletions(): ModelResource<BlocklyCompletionCatalog> {
     if (!this.blocklyCompletionsResource) {
-      this.blocklyCompletionsResource = new ComputedModelResource<BlocklyCompletionCatalog>(
+      this.blocklyCompletionsResource = aggregateResource(
         "blocklyCompletions",
-        (): Content<BlocklyCompletionCatalog> => {
-          const resources = [
-            projectData.tower().content(), projectData.items().content(),
-            projectData.enemys().content(), projectData.mapBlocks().content(),
-            projectData.commonEvents().content(),
-          ];
-          const error = resources.find((content) => content.status === "error");
-          if (error?.status === "error") return { status: "error", error: error.error };
-          if (resources.some((content) => content.status === "loading")) return { status: "loading" };
-          if (resources.some((content) => content.status === "idle")) return { status: "idle" };
-          if (resources.some((content) => content.status === "not-found")) return { status: "not-found" };
-          const loaded = resources as Array<{ status: "loaded"; value: unknown }>;
-          const [tower, items, enemys, mapBlocks, commonEvents] = loaded;
-          if (!tower || !items || !enemys || !mapBlocks || !commonEvents) return { status: "idle" };
-          const towerValue = tower.value as TowerData;
-          return {
-            status: "loaded",
-            value: buildBlocklyCompletionCatalog({
-              tower: tower.value, items: items.value, enemys: enemys.value,
-              mapBlocks: mapBlocks.value, commonEvents: commonEvents.value,
-              floorIds: towerValue.main.floorIds,
-            }),
-          };
-        },
-        async () => {
-          await Promise.all([
-            projectData.tower().reload(), projectData.items().reload(),
-            projectData.enemys().reload(), projectData.mapBlocks().reload(),
-            projectData.commonEvents().reload(),
-          ]);
-        },
+        [
+          projectData.tower(), projectData.items(), projectData.enemys(),
+          projectData.mapBlocks(), projectData.commonEvents(),
+        ] as const,
+        (tower, items, enemys, mapBlocks, commonEvents) =>
+          buildBlocklyCompletionCatalog({
+            tower,
+            items,
+            enemys,
+            mapBlocks,
+            commonEvents,
+            floorIds: tower.main.floorIds,
+          }),
       );
     }
     return this.blocklyCompletionsResource!;
@@ -704,8 +611,20 @@ class ProjectModelImpl {
 
   flagUsage(): ModelResource<FlagUsageIndex> {
     if (!this.flagUsageResource) {
-      this.flagUsageResource = new ComputedModelResource<FlagUsageIndex>(
+      const dependencies = () => {
+        const tower = projectData.tower();
+        const towerContent = tower.content();
+        const core = [
+          tower, projectData.items(), projectData.enemys(),
+          projectData.mapBlocks(), projectData.commonEvents(),
+        ];
+        return towerContent.status === "loaded"
+          ? [...core, ...towerContent.value.main.floorIds.map((id) => projectData.floor(id))]
+          : core;
+      };
+      this.flagUsageResource = computedResource(
         "flagUsage",
+        dependencies,
         () => {
           const towerContent = projectData.tower().content();
           if (towerContent.status !== "loaded") return towerContent as Content<FlagUsageIndex>;
@@ -734,15 +653,6 @@ class ProjectModelImpl {
               ))),
             }),
           };
-        },
-        async () => {
-          await Promise.all([
-            projectData.tower().reload(), projectData.items().reload(),
-            projectData.enemys().reload(), projectData.mapBlocks().reload(),
-            projectData.commonEvents().reload(),
-          ]);
-          const tower = projectData.tower().value();
-          await Promise.all(tower.main.floorIds.map((id) => projectData.floor(id).reload()));
         },
       );
     }
@@ -793,6 +703,21 @@ class ProjectModelImpl {
       });
     }
     return diagnostics;
+  }
+
+  resetForTests(): void {
+    this.floorListResource = null;
+    this.blockRegistryResource = null;
+    this.spriteRegistryResource = null;
+    this.materialCatalogResource = null;
+    this.tilesetCatalogResource = null;
+    this.floorPassabilityResources.clear();
+    this.ternDefinitionsResource = null;
+    this.blocklyCompletionsResource = null;
+    this.flagUsageResource = null;
+    this.enemySpecialResource = null;
+    this.projectImageResource = null;
+    this.tableSchemaResources.clear();
   }
 }
 

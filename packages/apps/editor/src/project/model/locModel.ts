@@ -13,6 +13,7 @@ export const LOC_FIELDS = [
   "afterGetItem",
   "afterOpenDoor",
   "cannotMove",
+  "cannotMoveIn",
 ] as const;
 
 export type LocField = (typeof LOC_FIELDS)[number];

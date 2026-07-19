@@ -184,6 +184,7 @@ export type BlockArg =
   | FieldMultilineArg
   | FieldCheckboxArg
   | FieldDropdownArg
+  | FieldActionArg
   | FieldPointArg
   | InputValueArg
   | InputStatementArg
@@ -233,6 +234,13 @@ export interface FieldDropdownArg {
   type: 'field_dropdown';
   name: string;
   options: Array<[string, string]>;
+}
+
+export interface FieldActionArg {
+  type: 'field_mota_action';
+  name?: string;
+  text: string;
+  action: 'registerUnknownEvent';
 }
 
 /**

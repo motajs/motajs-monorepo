@@ -54,6 +54,11 @@ dist/
   assets/
 ```
 
-`index.html` 中的 `script#mota-editor-environment` 是唯一宿主配置入口。宿主通过该节点注入 FS、runtime、preview、docs 和 project URL；编辑器不识别宿主类型或工程 ID。
+`index.html` 中的 `script#mota-editor-environment` 是唯一宿主配置入口。宿主通过该节点注入 FS、runtime、preview、docs 和 project URL；编辑器不识别宿主类型或工程 ID。宿主还可选注入当前 `release` 与只读的 `endpoints.update` 能力：检测到不同 buildId 后，编辑器只提示用户刷新，不直接执行平台更新操作。
 
 `runtime.html` 只包含隔离 bridge。引擎由 Runtime v2 握手中的 `previewUrl` 提供，工程数据和素材通过 ResourceGateway 传输。`editor-manifest.json` schema v2 列出全部 artifact 文件及 SHA-256，供宿主验证和独立版本发布。
+
+## Design Documents
+
+- [Table Schema 设计草案](./docs/table-schema-design.md)
+- [Table Schema 现有场景审计](./docs/table-schema-audit.md)

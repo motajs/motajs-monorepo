@@ -1,14 +1,16 @@
-import { Application as PixiApplication, Container, Graphics, Rectangle, Sprite, Texture } from "pixi.js";
-import { useEffect, useMemo, useRef, useState, type FC } from "react";
+import { type ImageAssetSnapshot, projectAssets } from "@/project/assets";
+import type { BlockRegistry, SpriteRegistry } from "@/project/model/projectModel";
 import type { FloorData } from "@/types";
-import type { BlockRegistry, RegistrySpriteInfo, SpriteRegistry } from "@/project/model/projectModel";
-import { projectAssets, type ImageAssetSnapshot } from "@/project/assets";
+import type { MapLayerDefinition } from "@/project/settings/mapLayerSettings";
+import { Application as PixiApplication, Container, Graphics, Rectangle, Sprite, Texture } from "pixi.js";
+import { type FC, useEffect, useMemo, useRef, useState } from "react";
 import { CANVAS_SIZE, GRID_COUNT, TILE_SIZE } from "../utils/coordinate";
+import { collectFloorImagePaths, type FloorImagePart, resolveFloorImageParts } from "./floorImages";
 import {
-  collectFloorImagePaths,
-  resolveFloorImageParts,
-  type FloorImagePart,
-} from "./floorImages";
+  resolveCellSprite,
+  resolveDefaultGroundSprite,
+  type ResolvedSpriteInfo,
+} from "./spriteResolver";
 
 type MapCell = unknown;
 
@@ -39,14 +41,9 @@ interface TextureState {
   loading: boolean;
 }
 
-interface ResolvedSpriteInfo extends RegistrySpriteInfo {
-  tilesetLocalIndex?: number;
-}
+type MapLayerName = string;
 
-type MapLayerName = "bgmap" | "map" | "fgmap";
-
-const TILESET_START_OFFSET = 10000;
-const TILESET_OFFSET_STEP = 10000;
+const DEFAULT_VIEWPORT_SIZE = [CANVAS_SIZE, CANVAS_SIZE] as const;
 
 const frameTextureCache = new Map<string, Texture>();
 
@@ -83,11 +80,52 @@ function destroyTextureFrames(texture: Texture): void {
   }
 }
 
-function destroyPixiApp(app: PixiApplication): void {
-  try {
-    app.destroy(true);
-  } catch (error) {
-    console.warn("Pixi renderer cleanup failed", error);
+function destroyMaterialTexture(texture: Texture): void {
+  if (texture.destroyed) return;
+  destroyTextureFrames(texture);
+  texture.destroy(true);
+}
+
+interface PooledPixiApplication {
+  app: PixiApplication;
+  scene: Container;
+}
+
+const pixiApplicationPool: PooledPixiApplication[] = [];
+const pooledPixiApps = new WeakSet<PixiApplication>();
+
+function acquirePixiApplication(): PooledPixiApplication | undefined {
+  const entry = pixiApplicationPool.pop();
+  if (entry) pooledPixiApps.delete(entry.app);
+  return entry;
+}
+
+function releasePixiApplication(app: PixiApplication, scene: Container): void {
+  if (pooledPixiApps.has(app)) return;
+  app.stop();
+  app.canvas.remove();
+  app.canvas.style.visibility = "hidden";
+  pooledPixiApps.add(app);
+  pixiApplicationPool.push({ app, scene });
+}
+
+function abandonPixiApplication(app: PixiApplication): void {
+  app.stop();
+  app.canvas.remove();
+  app.canvas.style.visibility = "hidden";
+}
+
+interface PixiRenderSession {
+  app: PixiApplication;
+  generation: number;
+  scene: Container | null;
+  disposed: boolean;
+  reusable: boolean;
+}
+
+function destroyDisplayObjects(children: Container[]): void {
+  for (const child of children) {
+    child.destroy({ children: true, context: true });
   }
 }
 
@@ -97,9 +135,11 @@ export interface MapPixiRendererProps {
   spriteRegistry: SpriteRegistry;
   tilesets: readonly string[];
   imageNameMap?: Readonly<Record<string, string>>;
+  layers: readonly MapLayerDefinition[];
   activeLayer: MapLayerName;
   bigmap: boolean;
   viewportOffset: readonly [number, number];
+  viewportSize?: readonly [number, number];
 }
 
 function getMapCell(map: unknown, x: number, y: number): MapCell {
@@ -117,66 +157,6 @@ function cellIdnum(cell: MapCell): number {
     return typeof idnum === "number" ? idnum : Number.NaN;
   }
   return Number(cell);
-}
-
-function spriteKey(images: string, id: string): string {
-  return `${images}:${id}`;
-}
-
-function resolveDefaultGround(
-  floor: FloorData,
-  spriteRegistry: SpriteRegistry,
-): RegistrySpriteInfo | undefined {
-  const defaultGround = typeof floor.defaultGround === "string" ? floor.defaultGround : "";
-  if (!defaultGround) return undefined;
-  return spriteRegistry.get(spriteKey("terrains", defaultGround));
-}
-
-function resolveCellSprite(
-  idnum: number,
-  blockRegistry: BlockRegistry,
-  tilesets: readonly string[],
-): ResolvedSpriteInfo | string | undefined {
-  if (idnum === 0) return undefined;
-  if (!Number.isFinite(idnum)) return `Invalid map cell idnum: ${String(idnum)}`;
-
-  if (idnum >= TILESET_START_OFFSET) {
-    const zeroBased = idnum - TILESET_START_OFFSET;
-    const tilesetIndex = Math.floor(zeroBased / TILESET_OFFSET_STEP);
-    const tilesetName = tilesets[tilesetIndex];
-    if (!tilesetName) return `Missing tileset for idnum ${idnum}`;
-    return {
-      key: `tileset:${idnum}`,
-      id: `X${idnum}`,
-      images: tilesetName,
-      path: `project/tilesets/${tilesetName}`,
-      x: 0,
-      y: 0,
-      width: 32,
-      height: 32,
-      isTile: true,
-      idnum,
-      tilesetLocalIndex: zeroBased % TILESET_OFFSET_STEP,
-    };
-  }
-
-  const block = blockRegistry.get(idnum);
-  if (!block) return `Missing block registry entry for idnum ${idnum}`;
-  if (!block.materialPath) return `Missing sprite metadata for idnum ${idnum} (${block.id ?? "unknown"})`;
-  if (typeof block.y !== "number") return `Missing sprite index for idnum ${idnum} (${block.id ?? "unknown"})`;
-
-  return {
-    key: `${block.images}:${block.id}`,
-    id: block.id ?? String(idnum),
-    images: block.images ?? "",
-    path: block.materialPath,
-    x: block.x ?? 0,
-    y: block.y,
-    width: 32,
-    height: block.images?.endsWith("48") ? 48 : 32,
-    isTile: block.isTile,
-    idnum,
-  };
 }
 
 function textureFrame(
@@ -198,10 +178,10 @@ function textureFrame(
   const sourceHeight = sprite.height;
 
   if (
-    sourceX < 0 ||
-    sourceY < 0 ||
-    sourceX + sourceWidth > texture.width ||
-    sourceY + sourceHeight > texture.height
+    sourceX < 0
+    || sourceY < 0
+    || sourceX + sourceWidth > texture.width
+    || sourceY + sourceHeight > texture.height
   ) {
     return `Sprite crop outside ${sprite.path}: ${sprite.id} (${sourceX},${sourceY},${sourceWidth},${sourceHeight})`;
   }
@@ -227,10 +207,10 @@ function frameTexture(
   diagnosticLabel: string,
 ): Texture | string {
   if (
-    sourceX < 0 ||
-    sourceY < 0 ||
-    sourceX + sourceWidth > texture.width ||
-    sourceY + sourceHeight > texture.height
+    sourceX < 0
+    || sourceY < 0
+    || sourceX + sourceWidth > texture.width
+    || sourceY + sourceHeight > texture.height
   ) {
     return `Sprite crop outside ${diagnosticLabel}: (${sourceX},${sourceY},${sourceWidth},${sourceHeight})`;
   }
@@ -253,12 +233,14 @@ function collectPaths(
   spriteRegistry: SpriteRegistry,
   tilesets: readonly string[],
   imageNameMap: Readonly<Record<string, string>>,
+  layers: readonly MapLayerDefinition[],
 ): string[] {
   const paths = new Set<string>();
-  const defaultGround = resolveDefaultGround(floor, spriteRegistry);
-  if (defaultGround) paths.add(defaultGround.path);
+  const defaultGround = resolveDefaultGroundSprite(floor, blockRegistry, spriteRegistry, tilesets);
+  if (defaultGround && typeof defaultGround !== "string") paths.add(defaultGround.path);
 
-  for (const layer of [floor.bgmap, floor.map, floor.fgmap]) {
+  for (const definition of layers) {
+    const layer = floor[definition.property];
     if (!Array.isArray(layer)) continue;
     for (const row of layer) {
       if (!Array.isArray(row)) continue;
@@ -279,6 +261,7 @@ function floorImageViewportRect(
   floor: FloorData,
   bigmap: boolean,
   viewportOffset: readonly [number, number],
+  viewportSize: readonly [number, number],
 ): { x: number; y: number; width: number; height: number } {
   if (!bigmap) {
     return {
@@ -291,9 +274,12 @@ function floorImageViewportRect(
 
   const floorWidth = (floor.width ?? GRID_COUNT) as number;
   const floorHeight = (floor.height ?? GRID_COUNT) as number;
-  const tileSize = CANVAS_SIZE / Math.max(floorWidth, floorHeight, 1);
-  const left = Math.max(0, (CANVAS_SIZE - floorWidth * tileSize) / 2);
-  const top = Math.max(0, (CANVAS_SIZE - floorHeight * tileSize) / 2);
+  const tileSize = Math.min(
+    viewportSize[0] / Math.max(floorWidth, 1),
+    viewportSize[1] / Math.max(floorHeight, 1),
+  );
+  const left = Math.max(0, (viewportSize[0] - floorWidth * tileSize) / 2);
+  const top = Math.max(0, (viewportSize[1] - floorHeight * tileSize) / 2);
   const scale = tileSize / TILE_SIZE;
   return {
     x: left + part.x * scale,
@@ -320,8 +306,7 @@ function useMaterialTextures(paths: string[]): TextureState {
     const nextPaths = pathsKey ? pathsKey.split("\n") : [];
     if (nextPaths.length === 0) {
       for (const texture of texturesRef.current.values()) {
-        destroyTextureFrames(texture);
-        texture.destroy(true);
+        destroyMaterialTexture(texture);
       }
       texturesRef.current = new Map();
       loadedRevisions.current.clear();
@@ -333,8 +318,7 @@ function useMaterialTextures(paths: string[]): TextureState {
     const wanted = new Set(nextPaths);
     for (const [path, texture] of texturesRef.current) {
       if (wanted.has(path)) continue;
-      destroyTextureFrames(texture);
-      texture.destroy(true);
+      destroyMaterialTexture(texture);
       texturesRef.current.delete(path);
       loadedRevisions.current.delete(path);
       requestedRevisions.current.delete(path);
@@ -358,7 +342,7 @@ function useMaterialTextures(paths: string[]): TextureState {
       if (content.status === "idle") {
         pending.add(path);
         publish();
-        void resource.reload();
+        void resource.ensureLoaded();
         return;
       }
       if (content.status === "loading") {
@@ -383,18 +367,15 @@ function useMaterialTextures(paths: string[]): TextureState {
       publish();
       void loadImageTexture(path, content.value).then((texture) => {
         if (cancelled) {
-          texture.destroy(true);
+          destroyMaterialTexture(texture);
           return;
         }
         if (requestedRevisions.current.get(path) !== content.value.revision) {
-          texture.destroy(true);
+          destroyMaterialTexture(texture);
           return;
         }
         const old = texturesRef.current.get(path);
-        if (old) {
-          destroyTextureFrames(old);
-          old.destroy(true);
-        }
+        if (old) destroyMaterialTexture(old);
         texturesRef.current.set(path, texture);
         loadedRevisions.current.set(path, content.value.revision);
         pending.delete(path);
@@ -408,8 +389,7 @@ function useMaterialTextures(paths: string[]): TextureState {
       });
     };
 
-    const unsubscribes = nextPaths.map((path) =>
-      projectAssets.image(path).subscribe(() => loadResource(path)));
+    const unsubscribes = nextPaths.map((path) => projectAssets.image(path).subscribe(() => loadResource(path)));
 
     return () => {
       cancelled = true;
@@ -419,8 +399,7 @@ function useMaterialTextures(paths: string[]): TextureState {
 
   useEffect(() => () => {
     for (const texture of texturesRef.current.values()) {
-      destroyTextureFrames(texture);
-      texture.destroy(true);
+      destroyMaterialTexture(texture);
     }
     texturesRef.current.clear();
     loadedRevisions.current.clear();
@@ -430,15 +409,23 @@ function useMaterialTextures(paths: string[]): TextureState {
   return state;
 }
 
-function visibleCells(floor: FloorData, bigmap: boolean, viewportOffset: readonly [number, number]) {
+function visibleCells(
+  floor: FloorData,
+  bigmap: boolean,
+  viewportOffset: readonly [number, number],
+  viewportSize: readonly [number, number],
+) {
   const floorWidth = (floor.width ?? GRID_COUNT) as number;
   const floorHeight = (floor.height ?? GRID_COUNT) as number;
   const cells: Array<{ cellX: number; cellY: number; drawX: number; drawY: number; size: number }> = [];
 
   if (bigmap) {
-    const size = CANVAS_SIZE / Math.max(floorWidth, floorHeight, 1);
-    const left = Math.max(0, (CANVAS_SIZE - floorWidth * size) / 2);
-    const top = Math.max(0, (CANVAS_SIZE - floorHeight * size) / 2);
+    const size = Math.min(
+      viewportSize[0] / Math.max(floorWidth, 1),
+      viewportSize[1] / Math.max(floorHeight, 1),
+    );
+    const left = Math.max(0, (viewportSize[0] - floorWidth * size) / 2);
+    const top = Math.max(0, (viewportSize[1] - floorHeight * size) / 2);
     for (let y = 0; y < floorHeight; y += 1) {
       for (let x = 0; x < floorWidth; x += 1) {
         cells.push({ cellX: x, cellY: y, drawX: left + x * size, drawY: top + y * size, size });
@@ -449,8 +436,10 @@ function visibleCells(floor: FloorData, bigmap: boolean, viewportOffset: readonl
 
   const offsetX = Math.floor(viewportOffset[0] / TILE_SIZE);
   const offsetY = Math.floor(viewportOffset[1] / TILE_SIZE);
-  for (let y = 0; y < GRID_COUNT; y += 1) {
-    for (let x = 0; x < GRID_COUNT; x += 1) {
+  const rows = Math.ceil(viewportSize[1] / TILE_SIZE);
+  const columns = Math.ceil(viewportSize[0] / TILE_SIZE);
+  for (let y = 0; y < rows; y += 1) {
+    for (let x = 0; x < columns; x += 1) {
       const mapX = offsetX + x;
       const mapY = offsetY + y;
       if (mapX >= floorWidth || mapY >= floorHeight) continue;
@@ -480,16 +469,70 @@ function sameAutotileId(currId: number | undefined, x: number, y: number, map: u
 function autotileIndexData(status: number, index: number, x: number, y: number, size: number): number[][] | undefined {
   return [
     [[96 * status, 0, 32, 32, x, y, size, size]],
-    [[96 * status, 3 * 32, 16, 32, x, y, size / 2, size], [96 * status + 2 * 32 + 16, 3 * 32, 16, 32, x + size / 2, y, size / 2, size]],
-    [[96 * status + 2 * 32, 32, 32, 16, x, y, size, size / 2], [96 * status + 2 * 32, 3 * 32 + 16, 32, 16, x, y + size / 2, size, size / 2]],
+    [[96 * status, 3 * 32, 16, 32, x, y, size / 2, size], [
+      96 * status + 2 * 32 + 16,
+      3 * 32,
+      16,
+      32,
+      x + size / 2,
+      y,
+      size / 2,
+      size,
+    ]],
+    [[96 * status + 2 * 32, 32, 32, 16, x, y, size, size / 2], [
+      96 * status + 2 * 32,
+      3 * 32 + 16,
+      32,
+      16,
+      x,
+      y + size / 2,
+      size,
+      size / 2,
+    ]],
     [[96 * status + 2 * 32, 3 * 32, 32, 32, x, y, size, size]],
-    [[96 * status, 32, 16, 32, x, y, size / 2, size], [96 * status + 2 * 32 + 16, 32, 16, 32, x + size / 2, y, size / 2, size]],
-    [[96 * status, 2 * 32, 16, 32, x, y, size / 2, size], [96 * status + 2 * 32 + 16, 2 * 32, 16, 32, x + size / 2, y, size / 2, size]],
+    [[96 * status, 32, 16, 32, x, y, size / 2, size], [
+      96 * status + 2 * 32 + 16,
+      32,
+      16,
+      32,
+      x + size / 2,
+      y,
+      size / 2,
+      size,
+    ]],
+    [[96 * status, 2 * 32, 16, 32, x, y, size / 2, size], [
+      96 * status + 2 * 32 + 16,
+      2 * 32,
+      16,
+      32,
+      x + size / 2,
+      y,
+      size / 2,
+      size,
+    ]],
     [[96 * status + 2 * 32, 32, 32, 32, x, y, size, size]],
     [[96 * status + 2 * 32, 2 * 32, 32, 32, x, y, size, size]],
-    [[96 * status, 32, 32, 16, x, y, size, size / 2], [96 * status, 3 * 32 + 16, 32, 16, x, y + size / 2, size, size / 2]],
+    [[96 * status, 32, 32, 16, x, y, size, size / 2], [
+      96 * status,
+      3 * 32 + 16,
+      32,
+      16,
+      x,
+      y + size / 2,
+      size,
+      size / 2,
+    ]],
     [[96 * status, 3 * 32, 32, 32, x, y, size, size]],
-    [[96 * status + 32, 32, 32, 16, x, y, size, size / 2], [96 * status + 32, 3 * 32 + 16, 32, 16, x, y + size / 2, size, size / 2]],
+    [[96 * status + 32, 32, 32, 16, x, y, size, size / 2], [
+      96 * status + 32,
+      3 * 32 + 16,
+      32,
+      16,
+      x,
+      y + size / 2,
+      size,
+      size / 2,
+    ]],
     [[96 * status + 32, 3 * 32, 32, 32, x, y, size, size]],
     [[96 * status, 32, 32, 32, x, y, size, size]],
     [[96 * status, 2 * 32, 32, 32, x, y, size, size]],
@@ -502,7 +545,10 @@ function autotileIndexData(status: number, index: number, x: number, y: number, 
   ][index];
 }
 
-function renderAutotileCut(data: number[][], done: Record<number, true>): Array<{ sx: number; sy: number; dx: number; dy: number; width: number; height: number }> {
+function renderAutotileCut(
+  data: number[][],
+  done: Record<number, true>,
+): Array<{ sx: number; sy: number; dx: number; dy: number; width: number; height: number }> {
   const drawData: Array<[number, number] | undefined> = [];
 
   if (data.length === 2) {
@@ -602,18 +648,22 @@ function buildRenderCells(
   activeLayer: MapLayerName,
   bigmap: boolean,
   viewportOffset: readonly [number, number],
+  viewportSize: readonly [number, number],
   imageNameMap: Readonly<Record<string, string>>,
+  layers: readonly MapLayerDefinition[],
 ): { renderCells: RenderCell[]; missingCells: MissingCell[]; diagnostics: string[] } {
   const renderCells: RenderCell[] = [];
   const missingCells: MissingCell[] = [];
   const diagnostics = new Set<string>();
-  const defaultGround = resolveDefaultGround(floor, spriteRegistry);
+  const defaultGround = resolveDefaultGroundSprite(floor, blockRegistry, spriteRegistry, tilesets);
 
   const textureSizes = new Map(
     [...textures].map(([path, texture]) => [path, { width: texture.width, height: texture.height }]),
   );
   const floorImages = resolveFloorImageParts(floor.images, textureSizes, imageNameMap);
   for (const diagnostic of floorImages.diagnostics) diagnostics.add(diagnostic);
+  const eventLayerIndex = Math.max(0, layers.findIndex((layer) => layer.property === "map"));
+  const foregroundImageOrder = 25 + eventLayerIndex * 10;
   for (const part of floorImages.parts) {
     const baseTexture = textures.get(part.path);
     if (!baseTexture) continue;
@@ -629,25 +679,31 @@ function buildRenderCells(
       diagnostics.add(frame);
       continue;
     }
-    const rect = floorImageViewportRect(part, floor, bigmap, viewportOffset);
+    const rect = floorImageViewportRect(part, floor, bigmap, viewportOffset, viewportSize);
     renderCells.push({
       key: part.key,
       texture: frame,
       ...rect,
       alpha: layerAlpha(part.layer === "bg" ? "bgmap" : "fgmap", activeLayer),
-      order: part.layer === "bg" ? 10 : 40,
+      order: part.layer === "bg" ? 10 : foregroundImageOrder,
       reverse: part.reverse,
     });
   }
 
-  for (const loc of visibleCells(floor, bigmap, viewportOffset)) {
-    const defaultSprite = defaultGround ?? (floor.defaultGround ? `Missing default ground sprite: ${String(floor.defaultGround)}` : undefined);
+  for (const loc of visibleCells(floor, bigmap, viewportOffset, viewportSize)) {
+    const defaultSprite = defaultGround;
     if (defaultSprite) {
       const sprite = defaultSprite;
       if (!sprite) continue;
       if (typeof sprite === "string") {
         diagnostics.add(sprite);
-        missingCells.push({ key: `${loc.cellX},${loc.cellY}:${sprite}`, x: loc.drawX, y: loc.drawY, size: loc.size, message: sprite });
+        missingCells.push({
+          key: `${loc.cellX},${loc.cellY}:${sprite}`,
+          x: loc.drawX,
+          y: loc.drawY,
+          size: loc.size,
+          message: sprite,
+        });
         continue;
       }
 
@@ -655,14 +711,26 @@ function buildRenderCells(
       if (!baseTexture) {
         const message = `Missing material texture: ${sprite.path}`;
         diagnostics.add(message);
-        missingCells.push({ key: `${loc.cellX},${loc.cellY}:${message}`, x: loc.drawX, y: loc.drawY, size: loc.size, message });
+        missingCells.push({
+          key: `${loc.cellX},${loc.cellY}:${message}`,
+          x: loc.drawX,
+          y: loc.drawY,
+          size: loc.size,
+          message,
+        });
         continue;
       }
 
       const frame = textureFrame(baseTexture, sprite);
       if (typeof frame === "string") {
         diagnostics.add(frame);
-        missingCells.push({ key: `${loc.cellX},${loc.cellY}:${frame}`, x: loc.drawX, y: loc.drawY, size: loc.size, message: frame });
+        missingCells.push({
+          key: `${loc.cellX},${loc.cellY}:${frame}`,
+          x: loc.drawX,
+          y: loc.drawY,
+          size: loc.size,
+          message: frame,
+        });
         continue;
       }
 
@@ -678,12 +746,9 @@ function buildRenderCells(
       });
     }
 
-    for (const layer of [
-      ["bgmap", floor.bgmap],
-      ["map", floor.map],
-      ["fgmap", floor.fgmap],
-    ] as const) {
-      const [layerName, layerMap] = layer;
+    for (const [layerIndex, definition] of layers.entries()) {
+      const layerName = definition.property;
+      const layerMap = floor[layerName];
       const idnum = cellIdnum(getMapCell(layerMap, loc.cellX, loc.cellY));
       const sprite = resolveCellSprite(idnum, blockRegistry, tilesets);
       const alpha = layerAlpha(layerName, activeLayer);
@@ -691,7 +756,13 @@ function buildRenderCells(
       if (!sprite) continue;
       if (typeof sprite === "string") {
         diagnostics.add(sprite);
-        missingCells.push({ key: `${loc.cellX},${loc.cellY}:${layerName}:${sprite}`, x: loc.drawX, y: loc.drawY, size: loc.size, message: sprite });
+        missingCells.push({
+          key: `${loc.cellX},${loc.cellY}:${layerName}:${sprite}`,
+          x: loc.drawX,
+          y: loc.drawY,
+          size: loc.size,
+          message: sprite,
+        });
         continue;
       }
 
@@ -699,16 +770,38 @@ function buildRenderCells(
       if (!baseTexture) {
         const message = `Missing material texture: ${sprite.path}`;
         diagnostics.add(message);
-        missingCells.push({ key: `${loc.cellX},${loc.cellY}:${layerName}:${message}`, x: loc.drawX, y: loc.drawY, size: loc.size, message });
+        missingCells.push({
+          key: `${loc.cellX},${loc.cellY}:${layerName}:${message}`,
+          x: loc.drawX,
+          y: loc.drawY,
+          size: loc.size,
+          message,
+        });
         continue;
       }
 
       if (isAutotileSprite(sprite)) {
-        for (const [partIndex, part] of autotileParts(layerMap, loc.cellX, loc.cellY, loc.drawX, loc.drawY, loc.size, idnum).entries()) {
+        for (
+          const [partIndex, part] of autotileParts(
+            layerMap,
+            loc.cellX,
+            loc.cellY,
+            loc.drawX,
+            loc.drawY,
+            loc.size,
+            idnum,
+          ).entries()
+        ) {
           const frame = frameTexture(baseTexture, part.sx, part.sy, 16, 16, sprite.path);
           if (typeof frame === "string") {
             diagnostics.add(frame);
-            missingCells.push({ key: `${loc.cellX},${loc.cellY}:${layerName}:${frame}`, x: loc.drawX, y: loc.drawY, size: loc.size, message: frame });
+            missingCells.push({
+              key: `${loc.cellX},${loc.cellY}:${layerName}:${frame}`,
+              x: loc.drawX,
+              y: loc.drawY,
+              size: loc.size,
+              message: frame,
+            });
             continue;
           }
           renderCells.push({
@@ -719,7 +812,7 @@ function buildRenderCells(
             width: part.width,
             height: part.height,
             alpha,
-            order: layerName === "bgmap" ? 20 : layerName === "map" ? 30 : 50,
+            order: 20 + layerIndex * 10,
           });
         }
         continue;
@@ -728,7 +821,13 @@ function buildRenderCells(
       const frame = textureFrame(baseTexture, sprite);
       if (typeof frame === "string") {
         diagnostics.add(frame);
-        missingCells.push({ key: `${loc.cellX},${loc.cellY}:${layerName}:${frame}`, x: loc.drawX, y: loc.drawY, size: loc.size, message: frame });
+        missingCells.push({
+          key: `${loc.cellX},${loc.cellY}:${layerName}:${frame}`,
+          x: loc.drawX,
+          y: loc.drawY,
+          size: loc.size,
+          message: frame,
+        });
         continue;
       }
 
@@ -740,7 +839,7 @@ function buildRenderCells(
         width: loc.size,
         height: sprite.height * (loc.size / 32),
         alpha,
-        order: layerName === "bgmap" ? 20 : layerName === "map" ? 30 : 50,
+        order: 20 + layerIndex * 10,
       });
     }
   }
@@ -755,36 +854,61 @@ export const MapPixiRenderer: FC<MapPixiRendererProps> = ({
   spriteRegistry,
   tilesets,
   imageNameMap = {},
+  layers,
   activeLayer,
   bigmap,
   viewportOffset,
+  viewportSize: requestedViewportSize = DEFAULT_VIEWPORT_SIZE,
 }) => {
+  const viewportWidth = requestedViewportSize[0];
+  const viewportHeight = requestedViewportSize[1];
+  const viewportSize = useMemo(
+    () => [viewportWidth, viewportHeight] as const,
+    [viewportHeight, viewportWidth],
+  );
   const rootRef = useRef<HTMLDivElement>(null);
-  const appRef = useRef<PixiApplication | null>(null);
-  const sceneRef = useRef<Container | null>(null);
-  const [appReady, setAppReady] = useState(false);
+  const sessionRef = useRef<PixiRenderSession | null>(null);
+  const generationRef = useRef(0);
+  const [readyGeneration, setReadyGeneration] = useState(0);
+  const [initializationError, setInitializationError] = useState<Error | null>(null);
   const paths = useMemo(
-    () => collectPaths(floor, blockRegistry, spriteRegistry, tilesets, imageNameMap),
-    [floor, blockRegistry, spriteRegistry, tilesets, imageNameMap],
+    () => collectPaths(floor, blockRegistry, spriteRegistry, tilesets, imageNameMap, layers),
+    [floor, blockRegistry, spriteRegistry, tilesets, imageNameMap, layers],
   );
   const textureState = useMaterialTextures(paths);
   const pathsKey = paths.join("\n");
   const renderReady = textureState.pathsKey === pathsKey && !textureState.loading;
   const { renderCells, missingCells, diagnostics } = useMemo(
-    () => renderReady
-      ? buildRenderCells(
-        floor,
-        blockRegistry,
-        spriteRegistry,
-        textureState.textures,
-        tilesets,
-        activeLayer,
-        bigmap,
-        viewportOffset,
-        imageNameMap,
-      )
-      : { renderCells: [], missingCells: [], diagnostics: [] },
-    [renderReady, floor, blockRegistry, spriteRegistry, textureState.textures, tilesets, activeLayer, bigmap, viewportOffset, imageNameMap],
+    () =>
+      renderReady
+        ? buildRenderCells(
+          floor,
+          blockRegistry,
+          spriteRegistry,
+          textureState.textures,
+          tilesets,
+          activeLayer,
+          bigmap,
+          viewportOffset,
+          viewportSize,
+          imageNameMap,
+          layers,
+        )
+        : { renderCells: [], missingCells: [], diagnostics: [] },
+    [
+      renderReady,
+      floor,
+      blockRegistry,
+      spriteRegistry,
+      textureState.textures,
+      tilesets,
+      activeLayer,
+      bigmap,
+      viewportOffset,
+      viewportSize,
+      imageNameMap,
+      layers,
+    ],
   );
 
   const allDiagnostics = textureState.pathsKey === pathsKey && !textureState.loading
@@ -792,24 +916,42 @@ export const MapPixiRenderer: FC<MapPixiRendererProps> = ({
     : [];
 
   useEffect(() => {
-    let cancelled = false;
     let initialized = false;
-    let destroyed = false;
     const root = rootRef.current;
     if (!root) return undefined;
 
-    const app = new PixiApplication();
-    appRef.current = app;
+    const pooled = acquirePixiApplication();
+    const app = pooled?.app ?? new PixiApplication();
+    const session: PixiRenderSession = {
+      app,
+      generation: generationRef.current + 1,
+      scene: pooled?.scene ?? null,
+      disposed: false,
+      reusable: true,
+    };
+    generationRef.current = session.generation;
+    sessionRef.current = session;
 
-    const destroyInitializedApp = () => {
-      if (!initialized || destroyed) return;
-      destroyed = true;
-      destroyPixiApp(app);
+    const activate = (scene: Container) => {
+      initialized = true;
+      session.scene = scene;
+      if (session.disposed || sessionRef.current !== session) {
+        releasePixiApplication(app, scene);
+        return;
+      }
+      app.renderer.resize(viewportWidth, viewportHeight);
+      app.canvas.style.display = "block";
+      app.canvas.style.imageRendering = "pixelated";
+      app.canvas.style.visibility = "hidden";
+      root.appendChild(app.canvas);
+      setReadyGeneration(session.generation);
     };
 
-    void app.init({
-      width: CANVAS_SIZE,
-      height: CANVAS_SIZE,
+    if (pooled) {
+      activate(pooled.scene);
+    } else void app.init({
+      width: viewportWidth,
+      height: viewportHeight,
       backgroundAlpha: 0,
       antialias: false,
       autoDensity: false,
@@ -817,38 +959,41 @@ export const MapPixiRenderer: FC<MapPixiRendererProps> = ({
       preserveDrawingBuffer: true,
       autoStart: false,
     }).then(() => {
-      initialized = true;
-      if (cancelled) {
-        destroyInitializedApp();
-        return;
-      }
       const scene = new Container();
-      sceneRef.current = scene;
       app.stage.addChild(scene);
-      app.canvas.style.display = "block";
-      app.canvas.style.imageRendering = "pixelated";
-      root.appendChild(app.canvas);
-      setAppReady(true);
+      activate(scene);
+    }).catch((error: unknown) => {
+      if (session.disposed || sessionRef.current !== session) return;
+      session.disposed = true;
+      sessionRef.current = null;
+      setInitializationError(error instanceof Error ? error : new Error(String(error)));
     });
 
     return () => {
-      cancelled = true;
-      sceneRef.current = null;
-      appRef.current = null;
-      setAppReady(false);
-      destroyInitializedApp();
+      session.disposed = true;
+      if (sessionRef.current === session) sessionRef.current = null;
+      if (initialized && session.scene) {
+        if (session.reusable) releasePixiApplication(app, session.scene);
+        else abandonPixiApplication(app);
+      }
     };
-  }, []);
+  }, [viewportHeight, viewportWidth]);
 
   useEffect(() => {
-    if (!appReady || !renderReady) return;
-    const scene = sceneRef.current;
-    if (!scene) return;
+    if (!renderReady) return;
+    const session = sessionRef.current;
+    if (
+      !session
+      || session.disposed
+      || session.generation !== readyGeneration
+      || !session.scene
+    ) return;
+    const { app, scene } = session;
 
-    scene.removeChildren();
+    const previousChildren = scene.removeChildren();
 
     const background = new Graphics();
-    background.rect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+    background.rect(0, 0, viewportWidth, viewportHeight);
     background.fill({ color: 0xf4f5f7 });
     scene.addChild(background);
 
@@ -872,7 +1017,7 @@ export const MapPixiRenderer: FC<MapPixiRendererProps> = ({
 
     const grid = new Graphics();
     grid.setStrokeStyle({ color: 0x242f42, alpha: 0.16, width: 1 });
-    for (const loc of visibleCells(floor, bigmap, viewportOffset)) {
+    for (const loc of visibleCells(floor, bigmap, viewportOffset, viewportSize)) {
       grid.rect(loc.drawX + 0.5, loc.drawY + 0.5, loc.size - 1, loc.size - 1);
     }
     grid.stroke();
@@ -892,8 +1037,30 @@ export const MapPixiRenderer: FC<MapPixiRendererProps> = ({
       scene.addChild(missing);
     }
 
-    appRef.current?.render();
-  }, [appReady, renderReady, renderCells, missingCells, floor, bigmap, viewportOffset]);
+    if (sessionRef.current === session && !session.disposed) {
+      try {
+        app.render();
+      } catch (error) {
+        session.reusable = false;
+        throw error;
+      }
+      app.canvas.style.visibility = "visible";
+      destroyDisplayObjects(previousChildren);
+    }
+  }, [
+    readyGeneration,
+    renderReady,
+    renderCells,
+    missingCells,
+    floor,
+    bigmap,
+    viewportOffset,
+    viewportSize,
+    viewportHeight,
+    viewportWidth,
+  ]);
+
+  if (initializationError) throw initializationError;
 
   return (
     <div
@@ -901,7 +1068,7 @@ export const MapPixiRenderer: FC<MapPixiRendererProps> = ({
       className="gameCanvas"
       id="ebm"
       data-test-id="map-pixi-renderer"
-      style={{ width: CANVAS_SIZE, height: CANVAS_SIZE, lineHeight: 0 }}
+      style={{ width: viewportWidth, height: viewportHeight, lineHeight: 0 }}
     >
       {allDiagnostics.length > 0 && (
         <div
@@ -911,7 +1078,7 @@ export const MapPixiRenderer: FC<MapPixiRendererProps> = ({
             left: 4,
             top: 4,
             zIndex: 80,
-            maxWidth: CANVAS_SIZE - 8,
+            maxWidth: viewportWidth - 8,
             padding: "3px 5px",
             color: "#e60012",
             background: "rgba(255,255,255,0.9)",

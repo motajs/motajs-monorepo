@@ -16,7 +16,7 @@ function useObjectUrl(path: string): string {
       current = URL.createObjectURL(new Blob([content.value.bytes.slice().buffer]));
       setUrl(current);
     });
-    void resource.reload();
+    void resource.ensureLoaded();
     return () => {
       dispose();
       if (current) URL.revokeObjectURL(current);
@@ -87,7 +87,7 @@ export const AnimationPreviewEditor: FC<{ name: string; path: string }> = ({ nam
       });
       frameRef.current = 0;
     });
-    void resource.reload();
+    void resource.ensureLoaded();
     return dispose;
   }, [path]);
 
@@ -96,7 +96,7 @@ export const AnimationPreviewEditor: FC<{ name: string; path: string }> = ({ nam
     const dispose = directory.subscribe((content) => {
       if (content.status === "loaded") setSounds(content.value.entries);
     });
-    void directory.reload();
+    void directory.ensureLoaded();
     return dispose;
   }, []);
 

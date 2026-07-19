@@ -24,20 +24,20 @@ const ITEMS_DATA_PATH = "project/items.js";
  */
 export interface ItemInfo {
   cls?: string;
-  name?: string;
-  text?: string;
-  hideInToolbox?: boolean;
-  hideInReplay?: boolean;
-  itemEffect?: string;
-  itemEffectTip?: string;
-  useItemEffect?: string;
-  canUseItemEffect?: string;
-  useItemEvent?: unknown[];
+  name?: string | null;
+  text?: string | null;
+  hideInToolbox?: boolean | null;
+  hideInReplay?: boolean | null;
+  itemEffect?: string | null;
+  itemEffectTip?: string | null;
+  useItemEffect?: string | null;
+  canUseItemEffect?: string | null;
+  useItemEvent?: unknown[] | null;
   equip?: {
     type?: number;
     animate?: string;
     value?: Record<string, number>;
-  };
+  } | null;
   [key: string]: unknown;
 }
 

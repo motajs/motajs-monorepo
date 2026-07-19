@@ -23,22 +23,24 @@ function toError(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error));
 }
 
+function isNotFoundError(error: Error): boolean {
+  return /not[- ]found|ENOENT|no such file/i.test(error.message);
+}
+
 export class ImageAssetResource implements ImageAssetResourceLike {
   readonly id: string;
   readonly path: string;
   readonly content: ReadonlySignal<Content<ImageAssetSnapshot>>;
-  private readonly mutableContent: ReturnType<typeof signal<Content<ImageAssetSnapshot>>>;
+  private readonly mutableContent = signal<Content<ImageAssetSnapshot>>({ status: "idle" });
   private readonly fs: Fs;
-  private readonly persistExecutor;
   private revision = 0;
+  private mutationVersion = 0;
 
   constructor(path: string, fs: Fs = defaultFs) {
     this.id = `image:${path}`;
     this.path = path;
     this.fs = fs;
-    this.mutableContent = signal<Content<ImageAssetSnapshot>>({ status: "idle" });
     this.content = this.mutableContent as ReadonlySignal<Content<ImageAssetSnapshot>>;
-    this.persistExecutor = persistenceMonitor.createExecutor(path, () => this.persist());
   }
 
   snapshot(): Content<ImageAssetSnapshot> {
@@ -58,65 +60,76 @@ export class ImageAssetResource implements ImageAssetResourceLike {
       await this.waitForSettled();
       return;
     }
+    const version = this.mutationVersion;
     this.mutableContent({ status: "loading" });
     try {
       const bytes = new Uint8Array(await this.fs.promises.readFileBinary(this.path));
+      if (version !== this.mutationVersion) return;
       this.revision += 1;
       this.mutableContent({ status: "loaded", value: { bytes, revision: this.revision } });
     } catch (error) {
+      if (version !== this.mutationVersion) return;
       const normalized = toError(error);
-      if (normalized.message.includes("not found")) this.mutableContent({ status: "not-found" });
-      else this.mutableContent({ status: "error", error: normalized });
+      this.mutableContent(isNotFoundError(normalized)
+        ? { status: "not-found" }
+        : { status: "error", error: normalized });
     }
+  }
+
+  async ensureLoaded(): Promise<void> {
+    const content = this.mutableContent();
+    if (content.status === "idle") await this.reload();
+    else if (content.status === "loading") await this.waitForSettled();
   }
 
   async waitForSettled(): Promise<void> {
     await waitUntil(() => !["idle", "loading"].includes(this.mutableContent().status));
   }
 
-  async waitForIdle(): Promise<void> {
-    await this.persistExecutor.waitForIdle();
-  }
-
   persistStatus(): PersistStatus {
-    const status = this.persistExecutor.status();
-    if (status.status === "executing") return { status: "persisting", pending: status.pending };
-    if (status.status === "error") return { status: "error", error: status.error, pending: status.pending };
+    const status = persistenceMonitor.statusFor(this.path);
+    if (status === "persisting") return { status: "persisting" };
+    if (status === "error") return { status: "error", error: persistenceMonitor.errorFor(this.path) ?? new Error("Persist failed") };
     return { status: "idle" };
   }
 
   setBytes(bytes: Uint8Array): void {
     const current = this.mutableContent();
-    if (current.status === "loading" || current.status === "error") {
+    if (current.status === "error") {
       throw new Error(`Cannot update image ${this.path}: current status is ${current.status}`);
     }
-    if (this.persistExecutor.isDeletionPending()) {
-      throw new Error(`Cannot update image ${this.path}: deletion pending`);
-    }
+    const immutableBytes = new Uint8Array(bytes);
+    const encoded = encodeBase64(immutableBytes);
+    this.mutationVersion += 1;
     this.revision += 1;
     this.mutableContent({
       status: "loaded",
-      value: { bytes: new Uint8Array(bytes), revision: this.revision },
+      value: { bytes: immutableBytes, revision: this.revision },
     });
-    this.persistExecutor.exec();
+    const path = this.path;
+    const fs = this.fs;
+    persistenceMonitor.schedule(path, {
+      kind: "write",
+      execute: () => fs.promises.writeFile(path, encoded, "base64"),
+    });
   }
 
   async delete(): Promise<void> {
-    this.persistExecutor.markDeletionPending();
-    await this.waitForIdle();
-    try {
-      await this.fs.promises.deleteFile(this.path);
-    } catch (error) {
-      const normalized = toError(error);
-      if (!normalized.message.includes("not found")) throw normalized;
-    }
+    this.mutationVersion += 1;
     this.revision += 1;
     this.mutableContent({ status: "not-found" });
-  }
-
-  private async persist(): Promise<void> {
-    const current = this.mutableContent();
-    if (current.status !== "loaded") return;
-    await this.fs.promises.writeFile(this.path, encodeBase64(current.value.bytes), "base64");
+    const path = this.path;
+    const fs = this.fs;
+    persistenceMonitor.schedule(path, {
+      kind: "delete",
+      execute: async () => {
+        try {
+          await fs.promises.deleteFile(path);
+        } catch (error) {
+          const normalized = toError(error);
+          if (!isNotFoundError(normalized)) throw normalized;
+        }
+      },
+    });
   }
 }

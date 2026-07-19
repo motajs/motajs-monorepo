@@ -42,7 +42,6 @@ function dataResourceTarget<T>(resource: DataResource<T>): OperationTarget {
         throw new Error(`Cannot restore ${resource.path} from ${content.status}`);
       }
       await Promise.resolve(raw.update(content.value));
-      await raw.waitForIdle();
     },
   };
 }
@@ -128,7 +127,6 @@ class ResourcePatchOperation<T> implements EditorOperation {
         this.actions as Action[],
       );
     });
-    await this.resource.waitForIdle();
 
     return {
       value: undefined,

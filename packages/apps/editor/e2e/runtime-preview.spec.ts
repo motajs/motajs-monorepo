@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { ProjectSandbox } from "./utils/projectSandbox";
-import { selectPanel } from "./utils/tableEditing";
+import { selectPanel, selectScript } from "./utils/tableEditing";
 
 test("runtime iframe renders Blockly UI through the resource gateway", async ({ page }) => {
   const pageErrors: string[] = [];
@@ -72,10 +72,8 @@ test("status bar preview executes only inside the runtime iframe", async ({ page
   await page.goto("/");
   await expect(page.getByTestId("runtime-host")).toHaveAttribute("data-runtime-status", "ready", { timeout: 20_000 });
 
-  const functions = await selectPanel(page, "functions", "panel-functions");
-  await functions.getByTestId("table-input-ui-drawStatusBar").locator("textarea").dblclick();
-  await expect(page.getByTestId("code-editor")).toBeVisible();
-  await page.getByTestId("code-editor-preview").click();
+  const scripts = await selectScript(page, "functions", "drawStatusBar");
+  await scripts.getByTestId("script-preview").click();
   await expect(page.getByTestId("status-bar-preview-modal")).toBeVisible();
   await expect(page.getByTestId("runtime-status-bar-preview")).toBeVisible();
   const canvas = page.frameLocator('[data-test-id="runtime-iframe"]').locator("canvas#runtimeStatusPreview");

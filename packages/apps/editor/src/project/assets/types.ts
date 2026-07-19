@@ -1,6 +1,5 @@
-import type { ReadonlySignal } from "@/fs/interfaces";
-import type { Content } from "@/fs/types";
 import type { PersistStatus } from "@/project/data/DataResource";
+import type { LoadableResource } from "@/project/resources";
 
 export interface ImageAssetSnapshot {
   bytes: Uint8Array;
@@ -12,14 +11,9 @@ export interface AssetDirectorySnapshot {
   revision: number;
 }
 
-export interface AssetDirectoryResourceLike {
+export interface AssetDirectoryResourceLike extends LoadableResource<AssetDirectorySnapshot> {
   readonly id: string;
   readonly path: string;
-  readonly content: ReadonlySignal<Content<AssetDirectorySnapshot>>;
-  snapshot(): Content<AssetDirectorySnapshot>;
-  subscribe(listener: (content: Content<AssetDirectorySnapshot>) => void): () => void;
-  reload(): Promise<void>;
-  waitForSettled(): Promise<void>;
 }
 
 export interface RasterImage {
@@ -34,16 +28,9 @@ export interface RasterCodec {
   fromSource(source: CanvasImageSource): RasterImage;
 }
 
-export interface ImageAssetResourceLike {
+export interface ImageAssetResourceLike extends LoadableResource<ImageAssetSnapshot> {
   readonly id: string;
   readonly path: string;
-  readonly content: ReadonlySignal<Content<ImageAssetSnapshot>>;
-  snapshot(): Content<ImageAssetSnapshot>;
-  value(): ImageAssetSnapshot;
-  subscribe(listener: (content: Content<ImageAssetSnapshot>) => void): () => void;
-  reload(): Promise<void>;
-  waitForSettled(): Promise<void>;
-  waitForIdle(): Promise<void>;
   persistStatus(): PersistStatus;
   setBytes(bytes: Uint8Array): void;
   delete(): Promise<void>;
@@ -79,16 +66,9 @@ export interface MaterialCollectionAppendOptions {
   name?: string;
 }
 
-export interface MaterialCollectionResource {
+export interface MaterialCollectionResource extends LoadableResource<MaterialCollectionSnapshot> {
   readonly id: string;
   readonly images: string;
-  readonly content: ReadonlySignal<Content<MaterialCollectionSnapshot>>;
-  snapshot(): Content<MaterialCollectionSnapshot>;
-  value(): MaterialCollectionSnapshot;
-  subscribe(listener: (content: Content<MaterialCollectionSnapshot>) => void): () => void;
-  reload(): Promise<void>;
-  waitForSettled(): Promise<void>;
-  waitForIdle(): Promise<void>;
   persistStatus(): PersistStatus;
   entries(): MaterialAssetEntry[];
   read(entry: MaterialAssetEntry): Promise<RasterImage>;

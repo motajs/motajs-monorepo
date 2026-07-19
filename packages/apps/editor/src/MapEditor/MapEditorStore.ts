@@ -9,11 +9,11 @@ import { createStore } from "@motajs/react-store";
 import type { LocPOD, GridPOD, RectPOD } from "@/utils/coordinate";
 import type { SelectedBlock, BlockInfo } from "./MaterialPanel/types";
 
-/** 图层模式 */
-export type LayerMod = "map" | "bgmap" | "fgmap";
+/** 图层模式；属性名来自项目的地图图层配置。 */
+export type LayerMod = string;
 
 /** 画笔模式 */
-export type BrushMod = "line" | "rectangle" | "tileset" | "fill";
+export type BrushMod = "line" | "rectangle" | "fill";
 
 /** 复制的位置信息 */
 export interface CopiedInfo {

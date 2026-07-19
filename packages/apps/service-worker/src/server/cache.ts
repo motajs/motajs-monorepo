@@ -7,7 +7,7 @@ const fetchCachePromise = caches.open(CACHE_NAME);
 
 const fetchAndUpdate = async (request: Request) => {
   const networkResponse = await fetch(request);
-  if (networkResponse.ok) {
+  if (networkResponse.status === 200) {
     const fetchCache = await fetchCachePromise;
     fetchCache.put(request, networkResponse.clone());
   }

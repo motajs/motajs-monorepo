@@ -5,6 +5,7 @@
  */
 
 import { registerFieldPoint } from './FieldPoint';
+import { registerFieldActionButton } from './FieldActionButton';
 
 /**
  * 注册所有自定义字段
@@ -13,7 +14,9 @@ import { registerFieldPoint } from './FieldPoint';
  */
 export function registerCustomFields(): void {
   registerFieldPoint();
+  registerFieldActionButton();
 }
 
 // 导出所有字段类型
 export * from './FieldPoint';
+export * from './FieldActionButton';

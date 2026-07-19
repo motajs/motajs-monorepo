@@ -6,6 +6,7 @@
 
 import type { FC } from 'react';
 import { useRef, useImperativeHandle, useEffect } from 'react';
+import type * as Blockly from 'blockly';
 
 import { useBlocklyWorkspace } from '../hooks/useBlocklyWorkspace';
 import type { WorkspaceAPI, WorkspaceOptions } from '../hooks/useBlocklyWorkspace';
@@ -39,6 +40,8 @@ export interface BlocklyWorkspaceRef {
   loadEntryData: (data: unknown, entryType: string, project?: ParseContext['project']) => void;
   /** 获取顶层入口块类型 */
   getTopBlockType: () => string | null;
+  /** Rebuild the toolbox after project block definitions change. */
+  refreshToolbox: () => void;
 }
 
 /**
@@ -60,6 +63,7 @@ export function BlocklyWorkspace(props: BlocklyWorkspaceProps) {
       loadEventData: api.loadEventData,
       loadEntryData: api.loadEntryData,
       getTopBlockType: api.getTopBlockType,
+      refreshToolbox: api.refreshToolbox,
     }),
     [api],
   );
@@ -70,21 +74,28 @@ export function BlocklyWorkspace(props: BlocklyWorkspaceProps) {
 
     const workspace = api.getWorkspace();
     if (!workspace) return;
+    let pendingFrame: number | undefined;
 
-    const handleChange = () => {
-      // 使用代码生成器获取实际的 JSON 输出
-      const code = api.generateCode();
-      // 代码可能包含末尾换行，清理一下
-      const trimmedCode = code.trim();
-      onChange(trimmedCode || '[]');
+    const handleChange = (event: Blockly.Events.Abstract) => {
+      // Selection, viewport and toolbox changes do not alter the event data.
+      // Treating them as draft changes makes a freshly switched document dirty
+      // after centerOnBlock restores its viewport.
+      if (event.isUiEvent) return;
+      // clear + serialization.load 会在同一轮中产生多个变化事件。
+      // 只在帧尾读取最终状态，不要把中间的空工作区当成用户草稿。
+      if (pendingFrame !== undefined) window.cancelAnimationFrame(pendingFrame);
+      pendingFrame = window.requestAnimationFrame(() => {
+        pendingFrame = undefined;
+        const code = api.generateCode();
+        const trimmedCode = code.trim();
+        onChange(trimmedCode || '[]');
+      });
     };
 
     workspace.addChangeListener(handleChange);
 
-    // 初始触发一次，确保加载数据后能更新 preview
-    handleChange();
-
     return () => {
+      if (pendingFrame !== undefined) window.cancelAnimationFrame(pendingFrame);
       workspace.removeChangeListener(handleChange);
     };
   }, [api.isReady, api, onChange]);

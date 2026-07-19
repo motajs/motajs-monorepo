@@ -538,7 +538,8 @@ export const updateSchema: BlockSchema = {
   eventType: 'update',
   definition: {
     type: 'mota_update_s',
-    message0: '刷新状态栏和地图显示',
+    message0: '刷新状态栏和地图显示 不检查自动事件 %1',
+    args0: [{ type: 'field_checkbox', name: 'DO_NOT_CHECK_AUTO_EVENTS', checked: false }],
     previousStatement: null,
     nextStatement: null,
     colour: 'auto', // 使用 category 默认颜色 (130)
@@ -546,7 +547,13 @@ export const updateSchema: BlockSchema = {
     helpUrl: '',
   },
   category: 'data',
-  fieldMapping: {},
+  fieldMapping: {
+    DO_NOT_CHECK_AUTO_EVENTS: {
+      eventField: 'doNotCheckAutoEvents',
+      parse: (v) => v === true,
+      generate: (v) => v === 'TRUE' || v === true ? true : undefined,
+    },
+  },
 };
 
 // ============================================

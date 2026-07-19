@@ -35,6 +35,7 @@ function createFloorData(floorId: string, overrides: Partial<FloorData> = {}): F
     cannotMove: {},
     upFloor: [0, 0],
     downFloor: [1, 1],
+    flyPoint: [1, 0],
     ...overrides,
   };
 }
@@ -91,6 +92,7 @@ describe("floorCommands", () => {
     expect(floor.autoEvent).toEqual({ "1,2": { "2": null } });
     expect(floor.upFloor).toEqual([1, 1]);
     expect(floor.downFloor).toEqual([2, 2]);
+    expect(floor.flyPoint).toEqual([2, 1]);
   });
 
   it("crops maps and drops out-of-bounds coordinate fields with negative offsets", async () => {
@@ -114,7 +116,8 @@ describe("floorCommands", () => {
     expect(floor.afterBattle).toEqual({ "0,0": [{ type: "afterBattle" }] });
     expect(floor.changeFloor).toEqual({});
     expect(floor.autoEvent).toEqual({});
-    expect(floor.upFloor).toEqual([0, 0]);
+    expect(floor.upFloor).toBeNull();
     expect(floor.downFloor).toEqual([0, 0]);
+    expect(floor.flyPoint).toBeNull();
   });
 });

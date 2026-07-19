@@ -28,6 +28,17 @@ export function getShortcutKeys(): ShortcutKey[] {
   return Object.keys(commandsName) as ShortcutKey[];
 }
 
+/** Keep the search dialog open so Enter advances to the next match. */
+export const PERSISTENT_SEARCH_KEYS = {
+  "Cmd-F": "findPersistent",
+  "Ctrl-F": "findPersistent",
+} as const;
+
+/** A single completion candidate must still be confirmed by the user. */
+export const CODEMIRROR_HINT_OPTIONS = {
+  completeSingle: false,
+} as const;
+
 /**
  * 注释文件路径映射
  * 编辑模式 -> 对应的注释文件路径
@@ -62,6 +73,7 @@ export const DEFAULT_CODEMIRROR_OPTIONS = {
   ],
   lint: true,
   autocomplete: true,
+  hintOptions: CODEMIRROR_HINT_OPTIONS,
   autoCloseBrackets: true,
   styleActiveLine: true,
   foldGutter: true,
@@ -73,6 +85,8 @@ export const DEFAULT_CODEMIRROR_OPTIONS = {
  * JSHint lint 配置
  */
 export const JSHINT_OPTIONS = {
+  /** Let typing and Tern completion settle before checking the whole document. */
+  delay: 800,
   options: {
     esversion: 2021,
   },

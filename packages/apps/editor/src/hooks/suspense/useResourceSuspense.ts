@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import type { DataResource } from "@/project/data/DataResource";
 import { useSignal } from "../useFs";
+import { deferredEnsureLoaded } from "./deferredEnsureLoaded";
 
 export type ResourceUpdateFn<T> = {
   (value: T): void;
@@ -13,10 +14,10 @@ export function useResourceSuspense<T>(
   const content = useSignal(resource.content);
 
   if (content.status === "idle") {
-    void resource.reload();
+    throw deferredEnsureLoaded(resource);
   }
 
-  if (content.status === "loading" || content.status === "idle") {
+  if (content.status === "loading") {
     throw resource.waitForSettled();
   }
 
@@ -24,12 +25,12 @@ export function useResourceSuspense<T>(
     throw resource;
   }
 
-  const update = useCallback<ResourceUpdateFn<T>>(
-    ((valueOrTransform: T | ((current: T) => T)) => {
+  const updateCallback = useCallback(
+    (valueOrTransform: T | ((current: T) => T)) => {
       void resource.update(valueOrTransform as T);
-    }) as ResourceUpdateFn<T>,
+    },
     [resource],
   );
 
-  return [content.value, update];
+  return [content.value, updateCallback as ResourceUpdateFn<T>];
 }

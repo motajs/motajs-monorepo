@@ -1,0 +1,93 @@
+.commonEventsWorkspace {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  grid-template-columns: 230px minmax(0, 1fr);
+  background: #fff;
+}
+
+.commonEventList {
+  padding: 14px 9px;
+  border-right: 1px solid rgba(128, 128, 128, 0.2);
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.commonEventList > header {
+  display: flex;
+  margin: 0 4px 10px 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.commonEventList h1 { margin: 0; font-size: 18px; }
+.commonEventList button { border: 0; background: transparent; color: inherit; cursor: pointer; }
+.commonEventList > header button {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.commonEventItem {
+  display: flex;
+  margin: 1px 0;
+  border-radius: 5px;
+  align-items: center;
+}
+
+.commonEventItem:hover,
+.commonEventItem.is-active { background: rgba(22, 119, 255, 0.08); }
+.commonEventItem.is-active { color: #1677ff; }
+.commonEventSelect {
+  display: flex;
+  min-width: 0;
+  padding: 8px 7px 8px 10px;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  text-align: left;
+}
+.commonEventSelect span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.commonEventSelect i { color: #fa8c16; font-size: 8px; font-style: normal; }
+.commonEventDelete { display: none; padding: 7px; color: #999 !important; }
+.commonEventItem:hover .commonEventDelete { display: inline-flex; }
+
+.commonEventEditorPane,
+#common-event-editor-host {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.commonEventEmpty {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+}
+
+#left6.eventEditorEmbedded {
+  position: relative;
+  inset: auto;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+#left6.eventEditorEmbedded > div {
+  height: calc(100% - 8px) !important;
+}
+
+#left6.eventEditorEmbedded h3 {
+  margin: 8px 10px;
+  line-height: 30px;
+}

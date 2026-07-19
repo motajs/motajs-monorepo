@@ -29,6 +29,7 @@ import {
 } from "@/project/history";
 import type { Action } from "@/utils/action";
 import { commandError, commandOk, type CommandResult } from "./types";
+import { getMapLayerSettingsSnapshot } from "@/project/settings/mapLayerSettings";
 
 export interface MaterialTemplates {
   item?: Record<string, unknown>;
@@ -50,7 +51,7 @@ export interface MaterialAppendOptions extends MaterialRegisterOptions {
 
 export interface MaterialUsage {
   floorId: string;
-  layer: "map" | "bgmap" | "fgmap";
+  layer: string;
   x: number;
   y: number;
   idnum: number;
@@ -73,27 +74,17 @@ export type AppendAutotileResult =
   | { ok: false; stage: string; error: Error };
 
 async function ensureValue<T>(resource: DataResource<T>): Promise<T> {
-  const snapshot = resource.snapshot();
-  if (snapshot.status !== "loaded") {
-    await resource.reload();
-    await resource.waitForSettled();
-  }
+  await resource.ensureLoaded();
   return resource.value();
 }
 
 async function ensureModel<T>(resource: ModelResource<T>): Promise<T> {
-  if (resource.snapshot().status !== "loaded") {
-    await resource.reload();
-    await resource.waitForSettled();
-  }
+  await resource.ensureLoaded();
   return resource.value();
 }
 
 async function ensureCollection(resource: MaterialCollectionResource): Promise<MaterialCollectionResource> {
-  if (resource.snapshot().status !== "loaded") {
-    await resource.reload();
-    await resource.waitForSettled();
-  }
+  await resource.ensureLoaded();
   resource.value();
   return resource;
 }
@@ -174,10 +165,11 @@ async function findMaterialUsages(idnums: Set<number>): Promise<MaterialUsage[]>
   if (idnums.size === 0) return [];
   const tower = await ensureValue(projectData.tower());
   const usages: MaterialUsage[] = [];
+  const layers = getMapLayerSettingsSnapshot();
   for (const floorId of tower.main.floorIds) {
     const floor = await ensureValue(projectData.floor(floorId));
-    for (const layer of ["map", "bgmap", "fgmap"] as const) {
-      const matrix = floor[layer] as unknown;
+    for (const { property: layer } of layers) {
+      const matrix = floor[layer];
       if (!Array.isArray(matrix)) continue;
       matrix.forEach((row, y) => {
         if (!Array.isArray(row)) return;
@@ -189,14 +181,6 @@ async function findMaterialUsages(idnums: Set<number>): Promise<MaterialUsage[]>
     }
   }
   return usages;
-}
-
-async function waitForDataPersist(stage: string, resources: DataResource<unknown>[]): Promise<void> {
-  await Promise.all(resources.map((resource) => resource.waitForIdle()));
-  for (const resource of resources) {
-    const status = resource.persistStatus();
-    if (status.status === "error") throw Object.assign(status.error, { commandStage: stage });
-  }
 }
 
 async function readTemplates(options?: MaterialRegisterOptions): Promise<Required<MaterialTemplates>> {
@@ -451,11 +435,8 @@ export class MaterialCommands {
     try {
       stage = "material-append-image:write";
       const image = projectAssets.image(`project/materials/${images}.png`);
-      if (image.snapshot().status === "idle") await image.reload();
+      await image.ensureLoaded();
       image.setBytes(decodeBase64(pngBase64));
-      await image.waitForIdle();
-      const imageStatus = image.persistStatus();
-      if (imageStatus.status === "error") throw imageStatus.error;
       if (options?.autoRegister) {
         const result = await this.register({ images }, options);
         if (!result.ok) return result;
@@ -529,18 +510,6 @@ export class MaterialCommands {
       }));
       const mutation = values[0] as MaterialMutation;
       if (!mutation.entry) throw new Error("Material append did not create an entry");
-      await collection.waitForIdle();
-      const assetStatus = collection.persistStatus();
-      if (assetStatus.status === "error") throw assetStatus.error;
-
-      if (options.autoRegister !== false) {
-        await waitForDataPersist(stage, [
-          projectData.icons(),
-          projectData.mapBlocks(),
-          projectData.items(),
-          projectData.enemys(),
-        ]);
-      }
 
       return {
         ok: true,
@@ -566,9 +535,6 @@ export class MaterialCommands {
         image,
         { label: "替换素材", stage },
       ));
-      await collection.waitForIdle();
-      const status = collection.persistStatus();
-      if (status.status === "error") throw status.error;
       return commandOk();
     } catch (error) {
       return commandError(stage, error);
@@ -651,10 +617,6 @@ export class MaterialCommands {
         }));
       }
 
-      const persistedResources: DataResource<unknown>[] = [
-        projectData.icons(),
-        projectData.mapBlocks(),
-      ];
       if (isItemImages(entry.images)) {
         const items = await ensureValue(projectData.items());
         const itemActions: Action[] = [...aliases]
@@ -666,7 +628,6 @@ export class MaterialCommands {
             stage: "material-remove:items",
           }));
         }
-        persistedResources.push(projectData.items());
       }
       if (isEnemyImages(entry.images)) {
         const enemys = await ensureValue(projectData.enemys());
@@ -679,7 +640,6 @@ export class MaterialCommands {
             stage: "material-remove:enemys",
           }));
         }
-        persistedResources.push(projectData.enemys());
       }
 
       stage = "material-remove";
@@ -687,10 +647,6 @@ export class MaterialCommands {
         label: "删除素材",
         stage,
       }));
-      await collection.waitForIdle();
-      const assetStatus = collection.persistStatus();
-      if (assetStatus.status === "error") throw assetStatus.error;
-      await waitForDataPersist(stage, persistedResources);
       return { ok: true, warnings: usages.length > 0 ? usages : undefined };
     } catch (error) {
       const commandStage = (error as { commandStage?: string }).commandStage;

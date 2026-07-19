@@ -1,0 +1,141 @@
+.floorManagementPanel {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  padding: 6px 5px 8px;
+  overflow: hidden;
+  flex-direction: column;
+  gap: 6px;
+  contain: inline-size;
+}
+
+.floorManagementPanel > * {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  margin: 0 !important;
+  box-sizing: border-box;
+}
+.floorManagementHeader { display: flex; align-items: center; justify-content: space-between; }
+.floorManagementHeader > div { display: flex; min-width: 0; align-items: baseline; gap: 8px; }
+.floorManagementHeader h2 { margin: 0; font-size: 18px; }
+.floorManagementHeader span { color: #888; font-size: 12px; }
+
+.floorManagementList {
+  min-width: 0;
+  min-height: 0;
+  padding: 2px 0 8px;
+  box-sizing: border-box;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex: 1 1 auto;
+  scrollbar-gutter: stable;
+}
+
+.floorManagementRow {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  margin: 1px 0;
+  border-radius: 5px;
+  box-sizing: border-box;
+  align-items: center;
+}
+.floorManagementRow > * { min-width: 0; }
+.floorManagementRow.is-draggable { cursor: grab; }
+.floorManagementRow.is-draggable:active { cursor: grabbing; }
+.floorManagementRow:hover { background: rgba(22, 119, 255, 0.06); }
+.floorManagementRow.is-selected { background: rgba(22, 119, 255, 0.12); color: #1677ff; }
+.floorManagementRow.is-missing { color: #999; }
+.floorManagementSelect {
+  display: flex;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 0;
+  align-items: baseline;
+  gap: 8px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  flex: 1;
+  text-align: left;
+}
+.floorManagementSelect strong,
+.floorManagementSelect span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.floorManagementSelect strong { max-width: 58%; min-width: 0; font-size: 14px; font-weight: 600; flex: 0 1 auto; }
+.floorManagementSelect span { max-width: 42%; color: #888; font-size: 12px; flex: 0 1 auto; }
+.floorManagementMissing { display: inline-flex; color: #fa8c16; }
+.floorManagementMore {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  margin: 0 2px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.floorManagementMore:hover { background: rgba(0, 0, 0, 0.06); }
+
+.floorPartitionBoundary {
+  display: flex;
+  height: 25px;
+  margin: 3px 6px;
+  align-items: center;
+  gap: 4px;
+  color: #1677ff;
+  cursor: grab;
+  font-size: 12px;
+}
+.floorPartitionBoundary::after { height: 1px; background: currentColor; content: ""; flex: 1; opacity: 0.55; }
+.floorPartitionBoundary.is-end { flex-direction: row-reverse; }
+.floorPartitionBoundary.is-end::after { order: 2; }
+
+.floorOrganizationDiagnostic {
+  display: flex;
+  padding: 8px;
+  border: 1px solid rgba(250, 140, 22, 0.4);
+  border-radius: 5px;
+  align-items: flex-start;
+  gap: 7px;
+  background: rgba(250, 140, 22, 0.08);
+  color: #ad6800;
+}
+.floorOrganizationDiagnostic > div { display: flex; min-width: 0; flex: 1; flex-direction: column; }
+.floorOrganizationDiagnostic span { overflow: hidden; text-overflow: ellipsis; font-size: 11px; white-space: nowrap; }
+.floorManagementFilterHint { color: #888; font-size: 11px; }
+.floorManagementEmpty { padding: 36px 0; color: #999; text-align: center; }
+.floorOrganizationDropEnd {
+  margin: 4px 6px;
+  padding: 7px;
+  border: 1px dashed #1677ff;
+  border-radius: 4px;
+  color: #1677ff;
+  font-size: 11px;
+  text-align: center;
+}
+
+.mapCreateForm,
+.mapBatchCreateForm { display: flex; flex-direction: column; gap: 12px; }
+.mapCreateForm label,
+.mapBatchCreateForm label,
+.mapDialogField { display: flex; flex-direction: column; gap: 4px; }
+.mapCreateDimensions { display: flex; max-width: 330px; align-items: flex-end; gap: 9px; }
+.mapCreateDimensions label { flex: 1; }
+.mapCreateDimensions > span { padding-bottom: 6px; }
+.mapCreateForm > .ant-btn { align-self: flex-end; }
+.mapBatchRange { display: flex; max-width: 330px; align-items: flex-end; gap: 9px; }
+.mapBatchRange label { flex: 1; }
+.mapBatchRange > span { padding-bottom: 6px; }
+.mapBatchTemplateHint { margin: 0; color: #888; font-size: 12px; }
+.mapBatchCreateForm > .ant-btn { align-self: flex-end; }
+.mapDataTextarea { min-height: 390px !important; font-family: "Fira Code", monospace; white-space: pre; }
+
+:root[data-editor-theme="dark"] .floorManagementRow:hover { background: rgba(255, 255, 255, 0.06); }
+:root[data-editor-theme="dark"] .floorManagementRow.is-selected { background: rgba(22, 119, 255, 0.24); }
+:root[data-editor-theme="dark"] .floorManagementMore:hover { background: rgba(255, 255, 255, 0.08); }

@@ -43,6 +43,8 @@ export interface GridCanvasProps {
   showCheckboard?: boolean;
   /** 点击事件 */
   onClick?: (gridPos: LocPOD, event: MouseEvent<HTMLCanvasElement>) => void;
+  /** 双击事件 */
+  onDoubleClick?: (gridPos: LocPOD, event: MouseEvent<HTMLCanvasElement>) => void;
   /** 右键菜单事件 */
   onContextMenu?: (gridPos: LocPOD, event: MouseEvent<HTMLCanvasElement>) => void;
   /** 样式 */

@@ -1,0 +1,224 @@
+{
+  "kind": "field-bundle",
+  "formatVersion": 1,
+  "schemaId": "map-block.fields",
+  "revision": 1,
+  "fields": {
+    "mapBlock.id": {
+      "type": "string",
+      "title": "图块 ID",
+      "description": "图块的唯一字符串标识；修改 ID 属于素材操作，不在字段表内直接编辑。",
+      "editor": {
+        "kind": "readonly"
+      }
+    },
+    "mapBlock.idnum": {
+      "type": "integer",
+      "title": "数字 ID",
+      "description": "图块在地图数据中使用的数字编号。",
+      "editor": {
+        "kind": "readonly"
+      }
+    },
+    "mapBlock.cls": {
+      "type": "string",
+      "title": "图块类别",
+      "description": "图块所属的素材类别，由素材注册位置决定。",
+      "editor": {
+        "kind": "readonly"
+      }
+    },
+    "mapBlock.name": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "title": "图块名称",
+      "description": "在编辑器和相关界面中显示的图块名称；null 表示未指定。",
+      "editor": {
+        "kind": "text"
+      }
+    },
+    "mapBlock.canPass": {
+      "type": [
+        "boolean",
+        "null"
+      ],
+      "title": "可通行",
+      "description": "勇士是否可以直接走入该图块；null 表示未指定。",
+      "editor": {
+        "kind": "checkbox"
+      }
+    },
+    "mapBlock.canBreak": {
+      "type": [
+        "boolean",
+        "null"
+      ],
+      "title": "可破震",
+      "description": "该图块是否可被破墙镐或地震卷轴破坏；null 表示未指定。",
+      "editor": {
+        "kind": "checkbox"
+      }
+    },
+    "mapBlock.trigger": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        null,
+        "openDoor",
+        "pushBox",
+        "ski",
+        "custom"
+      ],
+      "title": "默认触发器",
+      "description": "触碰图块时执行的内置行为；未设置表示没有默认触发器。",
+      "normalizer": "optionalJson",
+      "editor": {
+        "kind": "select",
+        "options": [
+          {
+            "value": null,
+            "label": "未设定"
+          },
+          {
+            "value": "openDoor",
+            "label": "开门"
+          },
+          {
+            "value": "pushBox",
+            "label": "推箱子"
+          },
+          {
+            "value": "ski",
+            "label": "滑行"
+          },
+          {
+            "value": "custom",
+            "label": "自定义"
+          }
+        ]
+      }
+    },
+    "mapBlock.animate": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "enum": [
+        null,
+        1,
+        2,
+        3,
+        4
+      ],
+      "title": "动画帧数",
+      "description": "覆盖素材的默认动画帧数；未设置时使用素材默认值。",
+      "normalizer": "optionalJson",
+      "editor": {
+        "kind": "select",
+        "options": [
+          {
+            "value": null,
+            "label": "素材默认"
+          },
+          {
+            "value": 1
+          },
+          {
+            "value": 2
+          },
+          {
+            "value": 3
+          },
+          {
+            "value": 4
+          }
+        ]
+      }
+    },
+    "mapBlock.script": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "title": "碰触脚本",
+      "description": "碰触图块时、点位触发器执行前运行的脚本。",
+      "editor": {
+        "kind": "code",
+        "lint": true,
+        "template": "function () {\n  \n}"
+      }
+    },
+    "mapBlock.event": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "title": "碰触事件",
+      "description": "碰触图块时执行的事件；存在时不会再执行默认触发器。",
+      "editor": {
+        "kind": "event",
+        "entryType": "item"
+      }
+    },
+    "mapBlock.passability": {
+      "type": "object",
+      "title": "出入通行",
+      "description": "每条边的内侧控制能否从图块离开，外侧控制能否从该方向进入；红色边表示禁止。",
+      "normalizer": "passability",
+      "editor": {
+        "kind": "passability",
+        "block": {
+          "ref": "params:prefabIdnum"
+        }
+      },
+      "diagnostics": {
+        "mapBlock.passability.shape": "cannotOut 和 cannotIn 必须是方向字符串数组"
+      }
+    },
+    "mapBlock.doorInfo": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "title": "门信息",
+      "description": "开关门动画、音效和钥匙消耗配置，通常只适用于 animates 与 npc48。",
+      "editor": {
+        "kind": "event",
+        "entryType": "doorInfo"
+      }
+    },
+    "mapBlock.faceIds": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "title": "行走朝向",
+      "description": "移动或碰撞时按方向切换到对应图块 ID。",
+      "editor": {
+        "kind": "event",
+        "entryType": "faceIds"
+      }
+    },
+    "mapBlock.bigImage": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "title": "绑定贴图",
+      "description": "绑定 project/images 中的 PNG 贴图。",
+      "normalizer": "optionalJson",
+      "editor": {
+        "kind": "material",
+        "reference": {
+          "ref": "project:materials.images"
+        },
+        "directory": "project/images/:images",
+        "selection": "single"
+      }
+    }
+  }
+}

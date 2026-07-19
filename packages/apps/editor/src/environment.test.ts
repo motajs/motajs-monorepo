@@ -34,6 +34,36 @@ describe("editor environment", () => {
     });
   });
 
+  it("accepts optional release identity and update capability", () => {
+    const result = parseEditorEnvironment(environmentDocument({
+      protocolVersion: 1,
+      release: { buildId: "build-2", version: "2.0.0" },
+      endpoints: {
+        fs: "../api/fs/",
+        runtime: "./runtime.html",
+        preview: "../preview/",
+        docs: "../preview/_docs/",
+        project: "../project/",
+        update: "../api/editor-update/",
+      },
+    }));
+    expect(result.release).toEqual({ buildId: "build-2", version: "2.0.0" });
+    expect(result.endpoints.update).toBe("https://example.test/api/editor-update/");
+  });
+
+  it("accepts an environment without project documentation", () => {
+    const result = parseEditorEnvironment(environmentDocument({
+      protocolVersion: 1,
+      endpoints: {
+        fs: "/api/fs/",
+        runtime: "/runtime.html",
+        preview: "/preview/",
+        project: "/project/",
+      },
+    }));
+    expect(result.endpoints.docs).toBeUndefined();
+  });
+
   it("rejects missing, duplicate, and incompatible configuration", () => {
     expect(() => parseEditorEnvironment(document.implementation.createHTMLDocument())).toThrow("exactly one");
     const duplicate = environmentDocument({ protocolVersion: 1, endpoints: {} });
@@ -47,5 +77,28 @@ describe("editor environment", () => {
       protocolVersion: 1,
       endpoints: { fs: "/", runtime: "/runtime.html" },
     }))).toThrow("endpoint 'preview'");
+  });
+
+  it("rejects malformed optional update capabilities", () => {
+    const endpoints = {
+      fs: "/api/fs/",
+      runtime: "/runtime.html",
+      preview: "/preview/",
+      docs: "/docs/",
+      project: "/project/",
+    };
+    expect(() => parseEditorEnvironment(environmentDocument({
+      protocolVersion: 1,
+      release: { buildId: "", version: "2.0.0" },
+      endpoints,
+    }))).toThrow("buildId");
+    expect(() => parseEditorEnvironment(environmentDocument({
+      protocolVersion: 1,
+      endpoints: { ...endpoints, update: "" },
+    }))).toThrow("endpoint 'update'");
+    expect(() => parseEditorEnvironment(environmentDocument({
+      protocolVersion: 1,
+      endpoints: { ...endpoints, docs: "" },
+    }))).toThrow("endpoint 'docs'");
   });
 });

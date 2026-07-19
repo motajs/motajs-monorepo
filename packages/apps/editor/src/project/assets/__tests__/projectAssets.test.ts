@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { MemoryFileSystem } from "@test/utils/MemoryFileSystem";
 import { ProjectAssets } from "../projectAssets";
 import {
@@ -15,6 +15,9 @@ import {
   replaceRasterRow,
 } from "../raster";
 import type { RasterCodec, RasterImage } from "../types";
+import { persistenceMonitor } from "@/fs/PersistenceMonitor";
+
+beforeEach(() => persistenceMonitor.resetForTests());
 
 const PNG_SIGNATURE = [137, 80, 78, 71, 13, 10, 26, 10];
 
@@ -110,7 +113,7 @@ describe("ProjectAssets", () => {
       se: { 2: "zone.mp3" },
       pitch: { 2: 150 },
     });
-    await animation.waitForIdle();
+    await persistenceMonitor.whenQuiescent([animation.path]);
     const persisted = JSON.parse(Buffer.from(memory.getFile("project/animates/test.animate")!, "base64").toString());
     expect(persisted.custom).toEqual({ keep: true });
     expect(persisted.bitmaps).toEqual(document.bitmaps);
@@ -128,13 +131,13 @@ describe("ProjectAssets", () => {
 
     memory.setWriteErrorForPath(path, new Error("animation disk unavailable"));
     animation.setDocument({ ...animation.value().document, se: { 1: "first.mp3" } });
-    await animation.waitForIdle();
+    await persistenceMonitor.whenQuiescent([animation.path]);
     expect(animation.persistStatus().status).toBe("error");
     expect(animation.value().document.se).toEqual({ 1: "first.mp3" });
 
     memory.clearWriteErrorForPath(path);
     animation.setDocument({ ...animation.value().document, se: { 2: "second.mp3" } });
-    await animation.waitForIdle();
+    await persistenceMonitor.whenQuiescent([animation.path]);
     expect(animation.persistStatus().status).toBe("idle");
     expect(JSON.parse(Buffer.from(memory.getFile(path)!, "base64").toString()).se).toEqual({ 2: "second.mp3" });
   });
@@ -174,7 +177,7 @@ describe("ProjectAssets", () => {
       collection.append(raster(32, 32, 2)),
       collection.append(raster(32, 32, 3)),
     ]);
-    await collection.waitForIdle();
+    await persistenceMonitor.whenQuiescent();
 
     expect(first.entry?.slot).toEqual({ kind: "sheet-row", row: 2 });
     expect(second.entry?.slot).toEqual({ kind: "sheet-row", row: 3 });
@@ -209,13 +212,13 @@ describe("ProjectAssets", () => {
     await image.reload();
     memory.setWriteErrorForPath(path, new Error("disk unavailable"));
     image.setBytes(await codec.encode(raster(32, 32, 2)));
-    await image.waitForIdle();
+    await persistenceMonitor.whenQuiescent([image.path]);
     expect(image.persistStatus().status).toBe("error");
     expect((await codec.decode(image.value().bytes)).data[0]).toBe(2);
 
     memory.clearWriteErrorForPath(path);
     image.setBytes(await codec.encode(raster(32, 32, 3)));
-    await image.waitForIdle();
+    await persistenceMonitor.whenQuiescent([image.path]);
     expect(image.persistStatus().status).toBe("idle");
     expect((await codec.decode(new Uint8Array(await memory.readFileBinary(path)))).data[0]).toBe(3);
   });
@@ -310,12 +313,12 @@ describe("ProjectAssets", () => {
       { name: "historyAutotile" },
       { label: "append autotile", stage: "append-autotile" },
     ));
-    await collection.waitForIdle();
+    await persistenceMonitor.whenQuiescent();
     expect(memory.hasFile("project/autotiles/historyAutotile.png")).toBe(true);
     await operationHistory.undo();
     expect(memory.hasFile("project/autotiles/historyAutotile.png")).toBe(false);
     await operationHistory.redo();
-    await collection.waitForIdle();
+    await persistenceMonitor.whenQuiescent();
     expect(memory.hasFile("project/autotiles/historyAutotile.png")).toBe(true);
 
     operationHistory.clear();

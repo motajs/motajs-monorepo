@@ -7,11 +7,13 @@ import { FileHandler } from "../FileHandler";
 import { ContentUtils } from "../ContentUtils";
 import { MemoryFileSystem } from "@test/utils/MemoryFileSystem";
 import { wait } from "@test/utils/testHelpers";
+import { persistenceMonitor } from "../PersistenceMonitor";
 
 describe("FileHandler", () => {
   let memoryFs: MemoryFileSystem;
 
   beforeEach(() => {
+    persistenceMonitor.resetForTests();
     memoryFs = new MemoryFileSystem();
   });
 
@@ -75,7 +77,7 @@ describe("FileHandler", () => {
       handler.update("new");
 
       // 等待落盘
-      await handler.waitForIdle();
+      await persistenceMonitor.whenQuiescent(["test.txt"]);
 
       // 检查文件系统
       expect(memoryFs.getFile("test.txt")).toBe("new");
@@ -94,7 +96,7 @@ describe("FileHandler", () => {
         expect(content.value).toBe("hello world");
       }
 
-      await handler.waitForIdle();
+      await persistenceMonitor.whenQuiescent(["test.txt"]);
       expect(memoryFs.getFile("test.txt")).toBe("hello world");
     });
 
@@ -114,7 +116,7 @@ describe("FileHandler", () => {
         expect(content.value).toBe("hello async");
       }
 
-      await handler.waitForIdle();
+      await persistenceMonitor.whenQuiescent(["test.txt"]);
       expect(memoryFs.getFile("test.txt")).toBe("hello async");
     });
   });
@@ -131,7 +133,7 @@ describe("FileHandler", () => {
       handler.update("2");
       handler.update("3");
 
-      await handler.waitForIdle();
+      await persistenceMonitor.whenQuiescent(["test.txt"]);
 
       // 最后一次写入应该生效
       expect(memoryFs.getFile("test.txt")).toBe("3");
@@ -150,7 +152,7 @@ describe("FileHandler", () => {
       handler.update("4");
       handler.update("5");
 
-      await handler.waitForIdle();
+      await persistenceMonitor.whenQuiescent(["test.txt"]);
 
       // 应该只保留最后一次写入
       expect(memoryFs.getFile("test.txt")).toBe("5");
@@ -173,7 +175,7 @@ describe("FileHandler", () => {
       handler.update("new1");
       handler.update("new2");
 
-      await handler.waitForIdle();
+      await persistenceMonitor.whenQuiescent(["test.txt"]);
 
       // 应该收到所有更新
       expect(changes).toContain("new1");
@@ -238,10 +240,52 @@ describe("FileHandler", () => {
 
       unsubscribe();
     });
+
+    it("丢弃 refetch 期间已经被内存编辑取代的磁盘结果", async () => {
+      memoryFs.setFile("test.txt", "old disk value");
+      const fs = memoryFs.createFsInterface();
+      const handler = new FileHandler("test.txt", fs);
+      await handler.load();
+
+      let finishRead!: (value: string) => void;
+      fs.promises.readFile = () => new Promise<string>((resolve) => {
+        finishRead = resolve;
+      });
+
+      const refetch = handler.refetch();
+      handler.update("new memory value");
+      finishRead("stale disk value");
+      await refetch;
+
+      expect(handler.getContent()).toEqual({ status: "loaded", value: "new memory value" });
+      await persistenceMonitor.flush(["test.txt"]);
+      expect(memoryFs.getFile("test.txt")).toBe("new memory value");
+    });
+
+    it("丢弃 refetch 期间已经被内存删除取代的磁盘结果", async () => {
+      memoryFs.setFile("test.txt", "old disk value");
+      const fs = memoryFs.createFsInterface();
+      const handler = new FileHandler("test.txt", fs);
+      await handler.load();
+
+      let finishRead!: (value: string) => void;
+      fs.promises.readFile = () => new Promise<string>((resolve) => {
+        finishRead = resolve;
+      });
+
+      const refetch = handler.refetch();
+      await handler.delete();
+      finishRead("stale disk value");
+      await refetch;
+
+      expect(ContentUtils.isNotFound(handler.getContent())).toBe(true);
+      await persistenceMonitor.flush(["test.txt"]);
+      expect(memoryFs.hasFile("test.txt")).toBe(false);
+    });
   });
 
   describe("删除管理", () => {
-    it("删除时应该等待写入队列清空", async () => {
+    it("删除立即更新内存并在后台排到旧写入之后", async () => {
       memoryFs.setFile("test.txt", "content");
       memoryFs.setWriteDelay(50); // 模拟慢速写入
       const handler = new FileHandler("test.txt",  memoryFs.createFsInterface());
@@ -250,60 +294,28 @@ describe("FileHandler", () => {
       // 触发一个写入
       handler.update("new content");
 
-      // 立即尝试删除（应该等待写入完成）
+      // 删除立即返回，内存先进入 not-found。
       await handler.delete();
+      expect(ContentUtils.isNotFound(handler.getContent())).toBe(true);
+      expect(memoryFs.hasFile("test.txt")).toBe(true);
 
-      // 文件应该被删除
+      await persistenceMonitor.flush(["test.txt"]);
       expect(memoryFs.hasFile("test.txt")).toBe(false);
-
-      // 状态应该是 not-found
-      const content = handler.getContent();
-      expect(ContentUtils.isNotFound(content)).toBe(true);
     });
 
-    it("有未保存修改时应该拒绝删除", async () => {
+    it("删除后更新会把最新写入排到删除之后", async () => {
       memoryFs.setFile("test.txt", "content");
       memoryFs.setWriteDelay(100); // 模拟慢速写入
       const handler = new FileHandler("test.txt",  memoryFs.createFsInterface());
       await handler.load();
 
-      // 触发一个写入（不等待完成）
       handler.update("new content");
+      await handler.delete();
+      handler.update("restored");
 
-      // 立即尝试删除（应该失败）
-      await expect(handler.delete(false)).rejects.toThrow("unsaved changes");
-    });
-
-    it("强制删除应该忽略未保存的修改", async () => {
-      memoryFs.setFile("test.txt", "content");
-      memoryFs.setWriteDelay(100); // 模拟慢速写入
-      const handler = new FileHandler("test.txt",  memoryFs.createFsInterface());
-      await handler.load();
-
-      // 触发一个写入（不等待完成）
-      handler.update("new content");
-
-      // 强制删除（应该成功）
-      await handler.delete(true);
-
-      // 文件应该被删除
-      expect(memoryFs.hasFile("test.txt")).toBe(false);
-    });
-
-    it("删除后应该阻止新的写入", async () => {
-      memoryFs.setFile("test.txt", "content");
-      const handler = new FileHandler("test.txt",  memoryFs.createFsInterface());
-      await handler.load();
-
-      // 开始删除（不等待完成）
-      const deletePromise = handler.delete();
-
-      // 尝试写入（应该失败）
-      expect(() => {
-        handler.update("new");
-      }).toThrow("deletion pending");
-
-      await deletePromise;
+      expect(handler.getContent()).toEqual({ status: "loaded", value: "restored" });
+      await persistenceMonitor.flush(["test.txt"]);
+      expect(memoryFs.getFile("test.txt")).toBe("restored");
     });
   });
 
@@ -319,7 +331,7 @@ describe("FileHandler", () => {
         expect(content.value).toBe("new");
       }
 
-      await handler.waitForIdle();
+      await persistenceMonitor.whenQuiescent(["test.txt"]);
       expect(memoryFs.getFile("test.txt")).toBe("new");
     });
 
@@ -341,7 +353,7 @@ describe("FileHandler", () => {
       handler.update("new");
 
       // 等待写入尝试
-      await handler.waitForIdle();
+      await persistenceMonitor.whenQuiescent(["test.txt"]);
 
       const content = handler.getContent();
       // 注意：持久化失败不应该影响内存状态

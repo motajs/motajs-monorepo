@@ -1,0 +1,20 @@
+import enemyFields from "./builtin/enemy.fields.json";
+import enemyProperties from "./builtin/enemy-properties.json";
+import floorFields from "./builtin/floor.fields.json";
+import floorProperties from "./builtin/floor-properties.json";
+import itemFields from "./builtin/item.fields.json";
+import itemProperties from "./builtin/item-properties.json";
+import locFields from "./builtin/loc.fields.json";
+import locProperties from "./builtin/loc-properties.json";
+import mapBlockFields from "./builtin/map-block.fields.json";
+import mapBlockProperties from "./builtin/map-block-properties.json";
+import towerFields from "./builtin/tower.fields.json";
+import towerProperties from "./builtin/tower-properties.json";
+import { defineBuiltinSchema } from "./projectSchema";
+
+export const enemySchemaDefinition = defineBuiltinSchema(enemyFields, enemyProperties);
+export const floorSchemaDefinition = defineBuiltinSchema(floorFields, floorProperties);
+export const itemSchemaDefinition = defineBuiltinSchema(itemFields, itemProperties);
+export const locSchemaDefinition = defineBuiltinSchema(locFields, locProperties);
+export const mapBlockSchemaDefinition = defineBuiltinSchema(mapBlockFields, mapBlockProperties);
+export const towerSchemaDefinition = defineBuiltinSchema(towerFields, towerProperties);

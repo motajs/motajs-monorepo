@@ -6,6 +6,7 @@ export const serviceWorkerUrl = () => appUrl("service-worker.js");
 export const serviceWorkerScope = () => basePath;
 export const projectUrl = (id: number) => appUrl(`service/${id}/project/`);
 export const previewUrl = (id: number) => appUrl(`service/${id}/preview/`);
+export const editorUrl = (id: number) => appUrl(`service/${id}/editor/`);
 
 export type ViewRoute = { kind: "home" } | { kind: "project"; id: number };
 

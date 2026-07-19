@@ -17,6 +17,7 @@ import type {
 } from '../parser/types';
 import type { BlockSchema } from '../registry/types';
 import { createExpressionBlock, parseEventList } from '../registry/utils';
+import { checkbox, expression, expressionValue } from './legacyHelpers';
 
 // ============================================
 // trigger 块
@@ -43,7 +44,7 @@ export const triggerSchema: BlockSchema = {
   },
   category: 'misc',
   parser: (event: EventObject, _context: ParseContext): BlockState => {
-    const loc = event.loc as [number, number] | undefined;
+    const loc = event.loc as unknown[] | undefined;
     return {
       type: 'mota_trigger_s',
       fields: {
@@ -59,7 +60,7 @@ export const triggerSchema: BlockSchema = {
     const event: Record<string, unknown> = { type: 'trigger' };
 
     if (x || y) {
-      event.loc = [parseInt(x) || 0, parseInt(y) || 0];
+      event.loc = [expressionValue(x), expressionValue(y)];
     }
 
     return JSON.stringify(event) + ',\n';
@@ -78,9 +79,17 @@ export const insertSchema: BlockSchema = {
   eventType: 'insert',
   definition: {
     type: 'mota_insert_s',
-    message0: '插入公共事件 %1 参数 %2',
+    message0: '插入 %1 公共事件 %2 位置 [%3,%4] 类型 %5 楼层 %6',
     args0: [
+      { type: 'field_dropdown', name: 'MODE', options: [['公共事件', 'common'], ['坐标事件', 'point']] },
       { type: 'field_input', name: 'NAME', text: '' },
+      { type: 'field_input', name: 'X', text: '' },
+      { type: 'field_input', name: 'Y', text: '' },
+      { type: 'field_input', name: 'WHICH', text: '' },
+      { type: 'field_input', name: 'FLOOR_ID', text: '' },
+    ],
+    message1: '参数列表 JSON %1',
+    args1: [
       { type: 'field_input', name: 'ARGS', text: '' },
     ],
     previousStatement: null,
@@ -92,27 +101,40 @@ export const insertSchema: BlockSchema = {
   category: 'misc',
   parser: (event: EventObject, _context: ParseContext): BlockState => {
     const args = event.args as unknown[] | undefined;
+    const loc = event.loc as unknown[] | undefined;
     return {
       type: 'mota_insert_s',
       fields: {
+        MODE: event.name == null ? 'point' : 'common',
         NAME: (event.name as string) || '',
-        ARGS: args ? args.join(',') : '',
+        X: expression(loc?.[0]),
+        Y: expression(loc?.[1]),
+        WHICH: (event.which as string) || '',
+        FLOOR_ID: (event.floorId as string) || '',
+        ARGS: args ? JSON.stringify(args) : '',
       },
     };
   },
   generator: (block: Blockly.Block): string => {
+    const mode = block.getFieldValue('MODE');
     const name = block.getFieldValue('NAME');
+    const x = block.getFieldValue('X');
+    const y = block.getFieldValue('Y');
+    const which = block.getFieldValue('WHICH');
+    const floorId = block.getFieldValue('FLOOR_ID');
     const argsStr = block.getFieldValue('ARGS');
 
-    const event: Record<string, unknown> = { type: 'insert', name };
+    const event: Record<string, unknown> = { type: 'insert' };
+    if (mode === 'common') event.name = name;
+    else {
+      if (x !== '' && y !== '') event.loc = [expressionValue(x), expressionValue(y)];
+      if (which) event.which = which;
+      if (floorId) event.floorId = floorId;
+    }
 
     if (argsStr) {
-      // 解析参数，尝试转换数字
-      const args = argsStr.split(',').map((s: string) => {
-        const trimmed = s.trim();
-        const num = Number(trimmed);
-        return isNaN(num) ? trimmed : num;
-      });
+      const args = JSON5.parse(argsStr);
+      if (!Array.isArray(args)) throw new Error('参数列表必须是数组');
       event.args = args;
     }
 
@@ -132,8 +154,9 @@ export const functionSchema: BlockSchema = {
   eventType: 'function',
   definition: {
     type: 'mota_function_s',
-    message0: '执行代码 %1',
+    message0: '执行代码 异步 %1 %2',
     args0: [
+      { type: 'field_checkbox', name: 'ASYNC', checked: false },
       {
         type: 'field_multilinetext',
         name: 'CODE',
@@ -149,6 +172,7 @@ export const functionSchema: BlockSchema = {
   category: 'misc',
   fieldMapping: {
     CODE: 'function',
+    ASYNC: { eventField: 'async', parse: (v) => v === true, generate: (v) => v === 'TRUE' || v === true ? true : undefined },
   },
 };
 
@@ -164,10 +188,12 @@ export const setViewportSchema: BlockSchema = {
   eventType: 'setViewport',
   definition: {
     type: 'mota_setViewport_s',
-    message0: '设置视角 位置 [%1,%2] 动画时间 %3 异步 %4',
+    message0: '设置视角 %1 坐标 [%2,%3] 移动方式 %4 动画时间 %5 异步 %6',
     args0: [
+      { type: 'field_dropdown', name: 'MODE', options: [['绝对位置', 'loc'], ['坐标增量', 'dxy']] },
       { type: 'field_input', name: 'X', text: '' },
       { type: 'field_input', name: 'Y', text: '' },
+      { type: 'field_input', name: 'MOVE_MODE', text: '' },
       { type: 'field_input', name: 'TIME', text: '' },
       { type: 'field_checkbox', name: 'ASYNC', checked: false },
     ],
@@ -179,28 +205,34 @@ export const setViewportSchema: BlockSchema = {
   },
   category: 'misc',
   parser: (event: EventObject, _context: ParseContext): BlockState => {
-    const loc = event.loc as [number, number] | undefined;
+    const mode = Array.isArray(event.dxy) ? 'dxy' : 'loc';
+    const loc = (event[mode] as unknown[] | undefined);
     return {
       type: 'mota_setViewport_s',
       fields: {
+        MODE: mode,
         X: loc?.[0]?.toString() || '',
         Y: loc?.[1]?.toString() || '',
+        MOVE_MODE: (event.moveMode as string) || '',
         TIME: (event.time as number)?.toString() || '',
         ASYNC: (event.async as boolean) || false,
       },
     };
   },
   generator: (block: Blockly.Block): string => {
+    const mode = block.getFieldValue('MODE');
     const x = block.getFieldValue('X');
     const y = block.getFieldValue('Y');
+    const moveMode = block.getFieldValue('MOVE_MODE');
     const time = block.getFieldValue('TIME');
     const async = block.getFieldValue('ASYNC') === 'TRUE';
 
     const event: Record<string, unknown> = { type: 'setViewport' };
 
     if (x || y) {
-      event.loc = [parseInt(x) || 0, parseInt(y) || 0];
+      event[mode] = [expressionValue(x), expressionValue(y)];
     }
+    if (moveMode) event.moveMode = moveMode;
     if (time) {
       event.time = parseInt(time) || 0;
     }
@@ -224,7 +256,8 @@ export const lockViewportSchema: BlockSchema = {
   eventType: 'lockViewport',
   definition: {
     type: 'mota_lockViewport_s',
-    message0: '锁定视角跟随',
+    message0: '锁定视角跟随 %1',
+    args0: [{ type: 'field_checkbox', name: 'LOCK', checked: false }],
     previousStatement: null,
     nextStatement: null,
     colour: 'auto', // 使用 category 默认颜色 (330)
@@ -232,7 +265,9 @@ export const lockViewportSchema: BlockSchema = {
     helpUrl: '',
   },
   category: 'misc',
-  fieldMapping: {},
+  fieldMapping: {
+    LOCK: { eventField: 'lock', parse: (v) => v === true, generate: (v) => v === 'TRUE' || v === true ? true : undefined },
+  },
 };
 
 // ============================================
@@ -247,16 +282,28 @@ export const showImageSchema: BlockSchema = {
   eventType: 'showImage',
   definition: {
     type: 'mota_showImage_s',
-    message0: '显示图片 编号 %1 文件名 %2',
+    message0: '显示图片 编号 %1 文件名 %2 翻转 %3',
     args0: [
       { type: 'field_input', name: 'CODE', text: '0' },
-      { type: 'field_input', name: 'NAME', text: '' },
+      { type: 'field_input', name: 'IMAGE', text: '' },
+      { type: 'field_input', name: 'REVERSE', text: '' },
     ],
-    message1: '位置 [%1,%2] 不透明度 %3',
+    message1: '裁剪 [%1,%2,%3,%4] 绘制 [%5,%6,%7,%8]',
     args1: [
+      { type: 'field_input', name: 'SX', text: '' },
+      { type: 'field_input', name: 'SY', text: '' },
+      { type: 'field_input', name: 'SW', text: '' },
+      { type: 'field_input', name: 'SH', text: '' },
       { type: 'field_input', name: 'X', text: '' },
       { type: 'field_input', name: 'Y', text: '' },
+      { type: 'field_input', name: 'W', text: '' },
+      { type: 'field_input', name: 'H', text: '' },
+    ],
+    message2: '不透明度 %1 时间 %2 异步 %3',
+    args2: [
       { type: 'field_input', name: 'OPACITY', text: '1' },
+      { type: 'field_input', name: 'TIME', text: '0' },
+      { type: 'field_checkbox', name: 'ASYNC', checked: false },
     ],
     previousStatement: null,
     nextStatement: null,
@@ -266,37 +313,54 @@ export const showImageSchema: BlockSchema = {
   },
   category: 'misc',
   parser: (event: EventObject, _context: ParseContext): BlockState => {
-    const loc = event.loc as [number, number] | undefined;
+    const loc = event.loc as unknown[] | undefined;
     return {
       type: 'mota_showImage_s',
       fields: {
         CODE: (event.code as number)?.toString() || '0',
-        NAME: (event.name as string) || '',
+        IMAGE: (event.image as string) || '',
+        REVERSE: (event.reverse as string) || '',
+        SX: expression((event.sloc as unknown[] | undefined)?.[0]),
+        SY: expression((event.sloc as unknown[] | undefined)?.[1]),
+        SW: expression((event.sloc as unknown[] | undefined)?.[2]),
+        SH: expression((event.sloc as unknown[] | undefined)?.[3]),
         X: loc?.[0]?.toString() || '',
         Y: loc?.[1]?.toString() || '',
+        W: expression(loc?.[2]),
+        H: expression(loc?.[3]),
         OPACITY: (event.opacity as number)?.toString() || '1',
+        TIME: expression(event.time),
+        ASYNC: event.async === true,
       },
     };
   },
   generator: (block: Blockly.Block): string => {
     const code = block.getFieldValue('CODE');
-    const name = block.getFieldValue('NAME');
+    const image = block.getFieldValue('IMAGE');
+    const reverse = block.getFieldValue('REVERSE');
+    const sx = block.getFieldValue('SX');
+    const sy = block.getFieldValue('SY');
+    const sw = block.getFieldValue('SW');
+    const sh = block.getFieldValue('SH');
     const x = block.getFieldValue('X');
     const y = block.getFieldValue('Y');
+    const w = block.getFieldValue('W');
+    const h = block.getFieldValue('H');
     const opacity = block.getFieldValue('OPACITY');
+    const time = block.getFieldValue('TIME');
 
     const event: Record<string, unknown> = {
       type: 'showImage',
       code: parseInt(code) || 0,
-      name,
+      image,
     };
 
-    if (x || y) {
-      event.loc = [parseInt(x) || 0, parseInt(y) || 0];
-    }
-    if (opacity && opacity !== '1') {
-      event.opacity = parseFloat(opacity) || 1;
-    }
+    if (reverse) event.reverse = reverse;
+    if (sx !== '' || sy !== '' || sw !== '' || sh !== '') event.sloc = [sx, sy, sw, sh].map(expressionValue);
+    if (x !== '' || y !== '' || w !== '' || h !== '') event.loc = [x, y, ...(w !== '' || h !== '' ? [w, h] : [])].map(expressionValue);
+    event.opacity = Number(opacity);
+    event.time = Number(time);
+    if (checkbox(block, 'ASYNC')) event.async = true;
 
     return JSON.stringify(event) + ',\n';
   },
@@ -376,9 +440,10 @@ export const moveImageSchema: BlockSchema = {
       { type: 'field_input', name: 'X', text: '' },
       { type: 'field_input', name: 'Y', text: '' },
     ],
-    message1: '不透明度 %1 动画时间 %2 异步 %3',
+    message1: '不透明度 %1 移动方式 %2 动画时间 %3 异步 %4',
     args1: [
       { type: 'field_input', name: 'OPACITY', text: '' },
+      { type: 'field_input', name: 'MOVE_MODE', text: '' },
       { type: 'field_input', name: 'TIME', text: '' },
       { type: 'field_checkbox', name: 'ASYNC', checked: false },
     ],
@@ -398,6 +463,7 @@ export const moveImageSchema: BlockSchema = {
         X: to?.[0]?.toString() || '',
         Y: to?.[1]?.toString() || '',
         OPACITY: (event.opacity as number)?.toString() || '',
+        MOVE_MODE: (event.moveMode as string) || '',
         TIME: (event.time as number)?.toString() || '',
         ASYNC: (event.async as boolean) || false,
       },
@@ -408,6 +474,7 @@ export const moveImageSchema: BlockSchema = {
     const x = block.getFieldValue('X');
     const y = block.getFieldValue('Y');
     const opacity = block.getFieldValue('OPACITY');
+    const moveMode = block.getFieldValue('MOVE_MODE');
     const time = block.getFieldValue('TIME');
     const async = block.getFieldValue('ASYNC') === 'TRUE';
 
@@ -417,11 +484,12 @@ export const moveImageSchema: BlockSchema = {
     };
 
     if (x || y) {
-      event.to = [parseInt(x) || 0, parseInt(y) || 0];
+      event.to = [expressionValue(x), expressionValue(y)];
     }
     if (opacity) {
-      event.opacity = parseFloat(opacity) || 1;
+      event.opacity = Number(opacity);
     }
+    if (moveMode) event.moveMode = moveMode;
     if (time) {
       event.time = parseInt(time) || 0;
     }
@@ -471,8 +539,11 @@ export const openShopSchema: BlockSchema = {
   eventType: 'openShop',
   definition: {
     type: 'mota_openShop_s',
-    message0: '打开商店 %1',
-    args0: [{ type: 'field_input', name: 'ID', text: '' }],
+    message0: '启用商店 %1 同时打开 %2',
+    args0: [
+      { type: 'field_input', name: 'ID', text: '' },
+      { type: 'field_checkbox', name: 'OPEN', checked: false },
+    ],
     previousStatement: null,
     nextStatement: null,
     colour: 'auto', // 使用 category 默认颜色 (330)
@@ -482,6 +553,7 @@ export const openShopSchema: BlockSchema = {
   category: 'misc',
   fieldMapping: {
     ID: 'id',
+    OPEN: { eventField: 'open', parse: (v) => v === true, generate: (v) => v === 'TRUE' || v === true ? true : undefined },
   },
 };
 
@@ -592,7 +664,8 @@ export const autoSaveSchema: BlockSchema = {
   eventType: 'autoSave',
   definition: {
     type: 'mota_autoSave_s',
-    message0: '自动存档',
+    message0: '自动存档 移除上一存档 %1',
+    args0: [{ type: 'field_checkbox', name: 'REMOVE_LAST', checked: false }],
     previousStatement: null,
     nextStatement: null,
     colour: 'auto', // 使用 category 默认颜色 (330)
@@ -600,7 +673,9 @@ export const autoSaveSchema: BlockSchema = {
     helpUrl: '',
   },
   category: 'misc',
-  fieldMapping: {},
+  fieldMapping: {
+    REMOVE_LAST: { eventField: 'removeLast', parse: (v) => v === true, generate: (v) => v === 'TRUE' || v === true ? true : undefined },
+  },
 };
 
 // ============================================
@@ -616,7 +691,7 @@ export const forbidSaveSchema: BlockSchema = {
   definition: {
     type: 'mota_forbidSave_s',
     message0: '禁止存档 %1',
-    args0: [{ type: 'field_checkbox', name: 'FORBID', checked: true }],
+    args0: [{ type: 'field_checkbox', name: 'FORBID', checked: false }],
     previousStatement: null,
     nextStatement: null,
     colour: 'auto', // 使用 category 默认颜色 (330)
@@ -624,13 +699,14 @@ export const forbidSaveSchema: BlockSchema = {
     helpUrl: '',
   },
   category: 'misc',
-  fieldMapping: {
-    FORBID: {
-      eventField: 'forbid',
-      parse: (v) => v !== false,
-      generate: (v) => v === 'TRUE' || v === true,
-    },
-  },
+  parser: (event: EventObject): BlockState => ({
+    type: 'mota_forbidSave_s',
+    fields: { FORBID: event.forbid === true },
+  }),
+  generator: (block: Blockly.Block): string => JSON.stringify({
+    type: 'forbidSave',
+    forbid: checkbox(block, 'FORBID'),
+  }) + ',\n',
 };
 
 // ============================================
@@ -664,7 +740,8 @@ export const hideStatusBarSchema: BlockSchema = {
   eventType: 'hideStatusBar',
   definition: {
     type: 'mota_hideStatusBar_s',
-    message0: '隐藏状态栏',
+    message0: '隐藏状态栏 同时隐藏工具栏 %1',
+    args0: [{ type: 'field_checkbox', name: 'TOOLBOX', checked: false }],
     previousStatement: null,
     nextStatement: null,
     colour: 'auto', // 使用 category 默认颜色 (330)
@@ -672,7 +749,9 @@ export const hideStatusBarSchema: BlockSchema = {
     helpUrl: '',
   },
   category: 'misc',
-  fieldMapping: {},
+  fieldMapping: {
+    TOOLBOX: { eventField: 'toolbox', parse: (v) => v === true, generate: (v) => v === 'TRUE' || v === true ? true : undefined },
+  },
 };
 
 // ============================================
@@ -687,9 +766,10 @@ export const setHeroOpacitySchema: BlockSchema = {
   eventType: 'setHeroOpacity',
   definition: {
     type: 'mota_setHeroOpacity_s',
-    message0: '设置勇士不透明度 %1 动画时间 %2 异步 %3',
+    message0: '设置勇士不透明度 %1 移动方式 %2 动画时间 %3 异步 %4',
     args0: [
       { type: 'field_input', name: 'OPACITY', text: '1' },
+      { type: 'field_input', name: 'MOVE_MODE', text: '' },
       { type: 'field_input', name: 'TIME', text: '' },
       { type: 'field_checkbox', name: 'ASYNC', checked: false },
     ],
@@ -705,6 +785,7 @@ export const setHeroOpacitySchema: BlockSchema = {
       type: 'mota_setHeroOpacity_s',
       fields: {
         OPACITY: (event.opacity as number)?.toString() || '1',
+        MOVE_MODE: (event.moveMode as string) || '',
         TIME: (event.time as number)?.toString() || '',
         ASYNC: (event.async as boolean) || false,
       },
@@ -712,6 +793,7 @@ export const setHeroOpacitySchema: BlockSchema = {
   },
   generator: (block: Blockly.Block): string => {
     const opacity = block.getFieldValue('OPACITY');
+    const moveMode = block.getFieldValue('MOVE_MODE');
     const time = block.getFieldValue('TIME');
     const async = block.getFieldValue('ASYNC') === 'TRUE';
 
@@ -720,6 +802,7 @@ export const setHeroOpacitySchema: BlockSchema = {
       opacity: parseFloat(opacity) || 1,
     };
 
+    if (moveMode) event.moveMode = moveMode;
     if (time) {
       event.time = parseInt(time) || 0;
     }

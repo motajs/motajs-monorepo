@@ -3,6 +3,7 @@ import { defineRoute, MessageServer } from "@motajs/utils/advance/message";
 import {
   ActivateProjectMessage,
   ForgetProjectMessage,
+  GetEditorHostStatusMessage,
   GetProjectMessage,
   ListProjectMessage,
   RegisterProjectMessage,
@@ -17,6 +18,7 @@ import {
   toProjectAccessResult,
 } from "./project";
 import { routeRequest } from "./router";
+import { getEditorHostStatus } from "./editorRelease";
 
 const sw = self as unknown as ServiceWorkerGlobalScope;
 const scopeUrl = new URL("./", sw.location.href);
@@ -35,6 +37,7 @@ const messageServer = new MessageServer([
   defineRoute(ListProjectMessage, async () => ({ list: await listProject() })),
   defineRoute(GetProjectMessage, async ({ id }) => getProjectDetails(id)),
   defineRoute(ActivateProjectMessage, async ({ id }) => toProjectAccessResult(await activateProject(id))),
+  defineRoute(GetEditorHostStatusMessage, async () => await getEditorHostStatus(scopeUrl)),
 ]);
 
 sw.addEventListener("message", (event) => {
@@ -49,6 +52,11 @@ sw.addEventListener("message", (event) => {
 });
 
 sw.addEventListener("fetch", (event) => {
-  const task = routeRequest(event.request, scopeUrl).then((response) => response ?? fetch(event.request));
+  const backgroundTasks: Promise<unknown>[] = [];
+  const task = routeRequest(event.request, scopeUrl, (background) => backgroundTasks.push(background))
+    .then((response) => response ?? fetch(event.request));
   event.respondWith(task);
+  event.waitUntil(task.then(async () => {
+    await Promise.allSettled(backgroundTasks);
+  }));
 });

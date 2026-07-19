@@ -10,6 +10,20 @@
 import type { IDataHandler } from "@/fs/interfaces";
 import { useHandlerUpdate, useSignal, type UpdateFn } from "../useFs";
 
+const deferredRefetches = new WeakMap<object, Promise<void>>();
+
+function deferredRefetch(handler: IDataHandler<unknown>): Promise<void> {
+  const pending = deferredRefetches.get(handler);
+  if (pending) return pending;
+  const loading = Promise.resolve()
+    .then(() => handler.refetch())
+    .finally(() => {
+      if (deferredRefetches.get(handler) === loading) deferredRefetches.delete(handler);
+    });
+  deferredRefetches.set(handler, loading);
+  return loading;
+}
+
 export function useDataSuspense<T>(
   handler: IDataHandler<T>,
 ): [T, UpdateFn<T>] {
@@ -17,11 +31,11 @@ export function useDataSuspense<T>(
 
   // idle → loading
   if (content.status === "idle") {
-    handler.refetch();
+    throw deferredRefetch(handler);
   }
 
   // loading → throw Promise → Suspense
-  if (content.status === "loading" || content.status === "idle") {
+  if (content.status === "loading") {
     throw handler.waitForSettled();
   }
 

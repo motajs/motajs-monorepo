@@ -43,8 +43,10 @@ export interface FloorData {
   changeFloor?: Record<string, unknown>;
   autoEvent?: Record<string, unknown>;
   cannotMove?: Record<string, unknown>;
-  upFloor?: [number, number];
-  downFloor?: [number, number];
+  cannotMoveIn?: Record<string, unknown>;
+  upFloor?: [number, number] | null;
+  downFloor?: [number, number] | null;
+  flyPoint?: [number, number] | null;
   [key: string]: unknown;
 }
 

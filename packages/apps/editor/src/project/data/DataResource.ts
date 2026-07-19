@@ -8,6 +8,9 @@ import type {
   RecoverableResource,
 } from "@/fs/interfaces";
 import { ContentUtils } from "@/fs/ContentUtils";
+import { persistenceMonitor } from "@/fs/PersistenceMonitor";
+import { FileHandlerManager } from "@/fs/FileHandlerManager";
+import type { LoadableResource } from "@/project/resources";
 import { applyActions, type Action } from "@/utils/action";
 
 export type PersistStatus =
@@ -16,7 +19,7 @@ export type PersistStatus =
   | { status: "error"; error: Error; pending?: number }
   | { status: "unknown" };
 
-export interface DataResource<T> extends RecoverableResource<T> {
+export interface DataResource<T> extends RecoverableResource<T>, LoadableResource<T> {
   readonly id: string;
   readonly path: string;
 
@@ -71,6 +74,10 @@ export class HandlerDataResource<T> implements DataResource<T> {
     await this.refetch();
   }
 
+  async ensureLoaded(): Promise<void> {
+    await FileHandlerManager.load(this.path);
+  }
+
   getPath(): string {
     return this.path;
   }
@@ -81,10 +88,6 @@ export class HandlerDataResource<T> implements DataResource<T> {
 
   recoverable(): RecoverableResource<T> {
     return this;
-  }
-
-  async waitForIdle(): Promise<void> {
-    await this.handler.waitForIdle();
   }
 
   async waitForLoaded(): Promise<void> {
@@ -128,16 +131,10 @@ export class HandlerDataResource<T> implements DataResource<T> {
   }
 
   persistStatus(): PersistStatus {
-    const raw = this.raw() as IContentHandler<string> & {
-      persistExecutor?: { status?: ReadonlySignal<{ status: string; error?: Error; pending?: number }> };
-    };
-    const status = raw.persistExecutor?.status?.();
-    if (!status) return { status: "unknown" };
-    if (status.status === "executing") {
-      return { status: "persisting", pending: status.pending };
-    }
-    if (status.status === "error") {
-      return { status: "error", error: status.error ?? new Error("Persist failed"), pending: status.pending };
+    const status = persistenceMonitor.statusFor(this.path);
+    if (status === "persisting") return { status: "persisting" };
+    if (status === "error") {
+      return { status: "error", error: persistenceMonitor.errorFor(this.path) ?? new Error("Persist failed") };
     }
     return { status: "idle" };
   }
@@ -197,6 +194,10 @@ export class MappedDataResource<TParent, TChild> implements DataResource<TChild>
     await this.parent.reload();
   }
 
+  async ensureLoaded(): Promise<void> {
+    await this.parent.ensureLoaded();
+  }
+
   getPath(): string {
     return this.path;
   }
@@ -207,10 +208,6 @@ export class MappedDataResource<TParent, TChild> implements DataResource<TChild>
 
   recoverable(): RecoverableResource<TChild> {
     return this;
-  }
-
-  async waitForIdle(): Promise<void> {
-    await this.parent.waitForIdle();
   }
 
   async waitForLoaded(): Promise<void> {

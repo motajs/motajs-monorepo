@@ -23,7 +23,11 @@ import type {
 import { createExpressionBlock, generateEventJson, isEmpty, parseEventList, setParseEventListFn } from './utils';
 import { editorConfigService } from '@/services/editorConfig';
 import { replaceExpressionForDisplay, replaceExpressionFromDisplay } from '../representation';
-import { editorEndpoint } from '@/environment';
+import { editorDocsEndpoint } from '@/environment';
+import {
+  PROJECT_EVENT_PASSTHROUGH_EXTENSION,
+  readProjectEventRaw,
+} from '../extensions/projectEventPassthrough';
 
 const SAFE_EXTENSION_FIELDS = new Set([
   'field_input',
@@ -50,8 +54,8 @@ const SAFE_PREVIEW_ADAPTERS = new Set([
   'event', 'text', 'textDrawing', 'setText', 'waitRect', 'floorImage',
 ]);
 const SAFE_COMPLETION_SOURCES = new Set([
-  'expression', 'id', 'enemy', 'item', 'floor', 'shop', 'commonEvent',
-  'image', 'animate', 'bgm', 'sound', 'textEscape',
+  'auto', 'contextual', 'expression', 'id', 'enemy', 'item', 'floor', 'shop', 'commonEvent',
+  'image', 'animate', 'bgm', 'sound', 'font', 'color', 'flag', 'status', 'core', 'textEscape',
 ]);
 const WORKSPACE_STATE_EVENTS = new Set([
   'text', 'if', 'confirm', 'switch', 'choices', 'for', 'forEach',
@@ -162,6 +166,15 @@ function inferBuiltinInteractions(schema: BlockSchema): BlockSchema {
   if (PREVIEW_EVENT_TYPES.has(schema.eventType) && !interactions.some((item) => item.type === 'preview')) {
     interactions.push({ type: 'preview', adapter: 'event' });
   }
+  const materialCompletion = interactions.find((item) => item.type === 'selectMaterial');
+  if (materialCompletion?.type === 'selectMaterial'
+    && !interactions.some((item) => item.type === 'autocomplete' && item.field === materialCompletion.field)) {
+    const source = materialCompletion.materialKind === 'hero' || materialCompletion.materialKind === 'tileset'
+      || materialCompletion.materialKind === 'autotile'
+      ? 'image'
+      : materialCompletion.materialKind;
+    interactions.push({ type: 'autocomplete', field: materialCompletion.field, source });
+  }
   args.forEach((arg, index) => {
     const previous = args[index - 1];
     if (arg.type === 'field_colour' && arg.name && previous?.type === 'field_input' && previous.name
@@ -177,6 +190,17 @@ function inferBuiltinInteractions(schema: BlockSchema): BlockSchema {
       : null;
     if (source) interactions.push({ type: 'autocomplete', field: binding.input, source });
   }
+  for (const arg of args) {
+    if (arg.type !== 'field_input' || !arg.name
+      || interactions.some((item) => item.type === 'autocomplete' && item.field === arg.name)) continue;
+    const source = arg.name === 'FLOOR_ID' ? 'floor'
+      : arg.name === 'ID' ? (schema.eventType === 'useItem' ? 'item'
+        : schema.eventType === 'openShop' || schema.eventType === 'disableShop' ? 'shop'
+        : schema.eventType === 'insert' ? 'commonEvent'
+        : 'id')
+      : null;
+    if (source) interactions.push({ type: 'autocomplete', field: arg.name, source });
+  }
   return interactions.length ? {
     ...schema,
     interactions,
@@ -185,20 +209,20 @@ function inferBuiltinInteractions(schema: BlockSchema): BlockSchema {
   } : schema;
 }
 
-function applyInteractionFields(schema: BlockSchema): BlockSchema['definition'] {
+function applyInteractionFields(schema: BlockSchema, completeAllTextInputs: boolean): BlockSchema['definition'] {
   const completionByField = new Map(
     (schema.interactions ?? []).flatMap((interaction) => (
       interaction.type === 'autocomplete' ? [[interaction.field, interaction.source] as const] : []
     )),
   );
-  if (completionByField.size === 0) return schema.definition;
+  if (completionByField.size === 0 && !completeAllTextInputs) return schema.definition;
   const definition = { ...schema.definition } as unknown as Record<string, unknown>;
   for (const [key, value] of Object.entries(definition)) {
     if (!/^args\d+$/.test(key) || !Array.isArray(value)) continue;
     definition[key] = value.map((raw: Record<string, unknown>) => {
       const source = typeof raw.name === 'string' ? completionByField.get(raw.name) : undefined;
-      return source && raw.type === 'field_input'
-        ? { ...raw, type: 'field_mota_autocomplete', completionSource: source }
+      return raw.type === 'field_input' && (source || completeAllTextInputs)
+        ? { ...raw, type: 'field_mota_autocomplete', completionSource: source ?? 'contextual' }
         : raw;
     });
   }
@@ -329,9 +353,9 @@ function coerceFromField(value: unknown, type: BindingValueType = 'raw'): unknow
 }
 
 function coerceToField(value: unknown, type: BindingValueType = 'raw'): unknown {
+  if (type === 'json') return JSON.stringify(value);
   if (value == null) return '';
   if (type === 'boolean') return checkboxValue(value);
-  if (type === 'json') return typeof value === 'string' ? value : JSON.stringify(value);
   if (type === 'colour') return Array.isArray(value) ? value.join(',') : String(value);
   if (type === 'json-or-string') return Array.isArray(value) ? JSON.stringify(value) : String(value);
   if (type === 'string' || type === 'number') return String(value);
@@ -354,6 +378,25 @@ function parseGeneratedStatements(code: string): unknown[] {
   return JSON5.parse(`[${trimmed}]`) as unknown[];
 }
 
+export function roundTripDeclarativeEvent(schema: BlockSchema, input: EventObject): EventObject {
+  if (!schema.event) throw new Error(`Block ${schema.definition.type} has no declarative event mapping`);
+  let event = schema.event.preserveUnbound
+    ? cloneJson(input)
+    : cloneJson(schema.event.template);
+  for (const binding of schema.event.bindings) {
+    const source = getAtPath(input, binding.path);
+    let value = source === undefined ? cloneJson(binding.default) : source;
+    if (binding.kind === 'field') {
+      value = coerceFromField(coerceToField(value, binding.valueType), binding.valueType);
+    }
+    const shouldOmit = (binding.optional && (value === undefined || value === ''))
+      || (binding.omitWhenDefault && Object.is(value, binding.default));
+    if (shouldOmit) deleteAtPath(event, binding.path);
+    else event = setAtPath(event, binding.path, value);
+  }
+  return event as EventObject;
+}
+
 export class BlockRegistry {
   private schemas = new Map<string, BlockSchema>();
   private blockTypes = new Map<string, BlockSchema>();
@@ -361,6 +404,10 @@ export class BlockRegistry {
   private codecs = new Map<string, BlockCodec>();
   private packSources = new Map<string, RegisterPackOptions['source']>();
   private categories = new Map<string, ToolboxCategoryDefinition>();
+  private packs = new Map<string, {
+    pack: BlocklyBlockPack & { blocks: BlockSchema[] };
+    options: RegisterPackOptions;
+  }>();
   private initialized = false;
 
   register(schema: BlockSchema, options: RegisterOptions = {}): void {
@@ -416,8 +463,54 @@ export class BlockRegistry {
       if (this.initialized) this.registerToBlockly(schema);
     }
     for (const category of pack.categories ?? []) this.categories.set(category.id, category);
+    this.packs.set(pack.id, { pack: normalizedPack, options });
 
     return { ok: true, diagnostics, registeredBlockTypes };
+  }
+
+  replacePack(
+    pack: BlocklyBlockPack,
+    options: RegisterPackOptions = { source: 'extension' },
+  ): RegisterPackResult {
+    const previous = this.packs.get(pack.id);
+    if (previous && previous.options.source !== options.source) {
+      return {
+        ok: false,
+        registeredBlockTypes: [],
+        diagnostics: [{
+          level: 'error',
+          code: 'pack.source',
+          message: `Pack ${pack.id} cannot replace a ${previous.options.source} pack`,
+          packId: pack.id,
+        }],
+      };
+    }
+    if (previous) this.removePack(pack.id);
+    const result = this.registerPack(pack, options);
+    if (!result.ok && previous) this.registerPack(previous.pack, previous.options);
+    return result;
+  }
+
+  removePack(packId: string): boolean {
+    const registered = this.packs.get(packId);
+    if (!registered) return false;
+    for (const schema of registered.pack.blocks) {
+      if (this.schemas.get(schema.eventType) === schema) this.schemas.delete(schema.eventType);
+      if (this.blockTypes.get(schema.definition.type) === schema) this.blockTypes.delete(schema.definition.type);
+      const key = matcherKey(schema);
+      if (key && this.matcherSchemas.get(key) === schema) this.matcherSchemas.delete(key);
+      this.packSources.delete(schema.definition.type);
+      this.codecs.delete(schema.definition.type);
+      if (this.initialized) {
+        delete Blockly.Blocks[schema.definition.type];
+        delete javascriptGenerator.forBlock[schema.definition.type];
+      }
+    }
+    for (const category of registered.pack.categories ?? []) {
+      if (this.categories.get(category.id) === category) this.categories.delete(category.id);
+    }
+    this.packs.delete(packId);
+    return true;
   }
 
   registerPackJson(
@@ -644,14 +737,25 @@ export class BlockRegistry {
   }
 
   private registerToBlockly(schema: BlockSchema): void {
-    const withInteractions = applyInteractionFields(schema);
+    const isBuiltin = this.packSources.get(schema.definition.type) === 'builtin';
+    const withInteractions = applyInteractionFields(schema, isBuiltin);
     const withLayout = this.packSources.get(schema.definition.type) === 'builtin'
       ? normalizeBuiltinStatementLayout(withInteractions)
       : withInteractions;
-    const definition = this.applyColourInheritance(withLayout, schema.category);
-    const registeredDefinition = typeof definition.helpUrl === 'string' && definition.helpUrl.startsWith('/_docs/')
-      ? { ...definition, helpUrl: editorEndpoint('docs', definition.helpUrl.slice('/_docs/'.length)) }
-      : definition;
+    const definitionWithState = schema.event?.preserveUnbound
+      ? {
+          ...withLayout,
+          mutator: PROJECT_EVENT_PASSTHROUGH_EXTENSION,
+        }
+      : withLayout;
+    const definition = this.applyColourInheritance(definitionWithState, schema.category);
+    const projectDocsPath = typeof definition.helpUrl === 'string' && definition.helpUrl.startsWith('/_docs/')
+      ? definition.helpUrl.slice('/_docs/'.length)
+      : undefined;
+    const docsHelpUrl = projectDocsPath === undefined ? undefined : editorDocsEndpoint(projectDocsPath);
+    const registeredDefinition = projectDocsPath === undefined
+      ? definition
+      : { ...definition, helpUrl: docsHelpUrl ?? '' };
     Blockly.common.defineBlocksWithJsonArray([registeredDefinition]);
     javascriptGenerator.forBlock[registeredDefinition.type] = this.getOrCreateGenerator(schema);
   }
@@ -717,13 +821,16 @@ export class BlockRegistry {
         ...(preserveState && event._disabled === true ? { enabled: false } : {}),
         ...(Object.keys(fields).length ? { fields } : {}),
         ...(Object.keys(inputs).length ? { inputs } : {}),
+        ...(schema.event!.preserveUnbound ? { extraState: { raw: cloneJson(event) } } : {}),
       };
     };
   }
 
   private createDeclarativeGenerator(schema: BlockSchema): BlockGenerator {
     return (block: Blockly.Block): string => {
-      let event = cloneJson(schema.event!.template);
+      let event = schema.event!.preserveUnbound
+        ? readProjectEventRaw(block) ?? cloneJson(schema.event!.template)
+        : cloneJson(schema.event!.template);
       for (const binding of schema.event!.bindings) {
         let value: unknown;
         if (binding.kind === 'field') {

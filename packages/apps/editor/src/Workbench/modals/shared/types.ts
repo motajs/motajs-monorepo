@@ -35,9 +35,12 @@ export interface SelectMaterialOptions {
 // SelectPoint
 export interface SelectPointOptions {
   floorId?: string;
+  floorSelection?: "selectable" | "fixed";
   x?: number | string;
   y?: number | string;
   bigmap?: boolean;
+  /** 是否允许通过右键选择多个坐标，默认 false。 */
+  multiple?: boolean;
 }
 
 export interface SelectPointResult {

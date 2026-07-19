@@ -20,7 +20,11 @@ function rasterCanvas(raster: RasterImage): HTMLCanvasElement {
   return context.canvas;
 }
 
-export const AppendPicPanel: FC = () => {
+export interface AppendPicPanelProps {
+  embedded?: boolean;
+}
+
+export const AppendPicPanel: FC<AppendPicPanelProps> = ({ embedded = false }) => {
   const { uiRatio } = EditorStore.useStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const appendTemplate = useAppendPicTemplate();
@@ -47,7 +51,7 @@ export const AppendPicPanel: FC = () => {
   }, [materialType, targetCollectionContent]);
 
   useEffect(() => {
-    if (targetCollectionContent.status === "idle") void targetCollection.reload();
+    if (targetCollectionContent.status === "idle") void targetCollection.ensureLoaded();
   }, [targetCollection, targetCollectionContent.status]);
 
   // hueRotate 后的图像
@@ -184,8 +188,7 @@ export const AppendPicPanel: FC = () => {
         let source: HTMLCanvasElement;
         const grid = getGridSizeForMaterial(info.images);
         const collection = projectAssets.materialCollection(info.images);
-        if (collection.snapshot().status !== "loaded") await collection.reload();
-        await collection.waitForSettled();
+        await collection.ensureLoaded();
         const entry = collection.entries().find((candidate) =>
           info.images === "autotile"
             ? candidate.slot.kind === "file" && candidate.slot.name === info.id
@@ -206,7 +209,11 @@ export const AppendPicPanel: FC = () => {
   }, [appendTemplate]);
 
   return (
-    <div id="left1" className="leftTab" data-test-id="panel-appendpic">
+    <div
+      id={embedded ? undefined : "left1"}
+      className={embedded ? "appendPicEmbedded" : "leftTab leftTabLayout"}
+      data-test-id="panel-appendpic"
+    >
       {/* appendpic */}
       <h3 className="leftTabHeader">追加素材</h3>
       <div className="leftTabContent">

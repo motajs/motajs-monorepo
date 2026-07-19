@@ -4,7 +4,7 @@
  * 封装 Blockly V12 Workspace 的初始化、销毁和常用操作
  */
 
-import { useEffect, useRef, useCallback, useSyncExternalStore, useMemo } from 'react';
+import { useEffect, useRef, useCallback, useMemo, useState } from 'react';
 import type { RefObject } from 'react';
 import * as Blockly from 'blockly';
 import { javascriptGenerator } from 'blockly/javascript';
@@ -82,6 +82,7 @@ export interface WorkspaceAPI {
   getViewport: () => BlocklyViewport;
   restoreViewport: (viewport: BlocklyViewport, selectedBlockId?: string) => void;
   getSelectedBlockId: () => string | undefined;
+  refreshToolbox: () => void;
 }
 
 // 用于追踪积木块是否已注册
@@ -110,25 +111,24 @@ function getDisconnectedBlocks(workspace: Blockly.WorkspaceSvg): Blockly.Block[]
   return topBlocks.filter((block) => !isEntryBlock(block));
 }
 
-// 工作区就绪状态订阅管理
-type ReadyListener = () => void;
-const readyListeners = new Set<ReadyListener>();
-let workspaceReadyState = false;
-
-function subscribeToReady(callback: ReadyListener) {
-  readyListeners.add(callback);
-  return () => {
-    readyListeners.delete(callback);
-  };
-}
-
-function getReadySnapshot() {
-  return workspaceReadyState;
-}
-
-function setReadyState(ready: boolean) {
-  workspaceReadyState = ready;
-  readyListeners.forEach((listener) => listener());
+/**
+ * Replacing an editor document is not a user edit. Keep Blockly from emitting
+ * draft changes or recording the previous document in the next document's
+ * undo stack.
+ */
+function replaceWorkspaceContents(
+  workspace: Blockly.WorkspaceSvg,
+  load: () => void,
+): void {
+  const eventsWereEnabled = Blockly.Events.isEnabled();
+  if (eventsWereEnabled) Blockly.Events.disable();
+  try {
+    workspace.clear();
+    load();
+  } finally {
+    if (eventsWereEnabled) Blockly.Events.enable();
+  }
+  workspace.clearUndo();
 }
 
 /**
@@ -151,7 +151,9 @@ export function useBlocklyWorkspace(
 
   const workspaceRef = useRef<Blockly.WorkspaceSvg | null>(null);
   const interactionControllerRef = useRef<BlocklyInteractionController | null>(null);
-  const isReady = useSyncExternalStore(subscribeToReady, getReadySnapshot);
+  // ready 必须属于当前 hook 实例。全局 ready 会让新建的
+  // BlocklyWorkspace 借用已销毁实例的 true，从而在 inject 之前吞掉 import。
+  const [isReady, setIsReady] = useState(false);
 
   // 初始化 Workspace
   useEffect(() => {
@@ -167,7 +169,7 @@ export function useBlocklyWorkspace(
 
     // 创建工具箱配置
     const toolbox = showToolbox
-      ? generateToolboxConfig(options.entryType)
+      ? generateToolboxConfig(entryType)
       : undefined;
 
     // 创建 Workspace
@@ -192,7 +194,7 @@ export function useBlocklyWorkspace(
     });
 
     workspaceRef.current = workspace;
-    setReadyState(true);
+    setIsReady(true);
 
     const trackCreatedBlocks = (event: Blockly.Events.Abstract) => {
       if (event.type !== Blockly.Events.BLOCK_CREATE) return;
@@ -247,7 +249,7 @@ export function useBlocklyWorkspace(
       window.removeEventListener('keydown', handleToolboxShortcut);
       workspace.dispose();
       workspaceRef.current = null;
-      setReadyState(false);
+      setIsReady(false);
     };
   }, [containerRef, readOnly, showToolbox, mediaPath, entryType]);
 
@@ -293,6 +295,7 @@ export function useBlocklyWorkspace(
 
     // 只为入口块生成代码
     return withDisabledBlocksEnabled(workspace, () => {
+      javascriptGenerator.init(workspace);
       const codeBlocks: string[] = [];
       for (const block of entryBlocks) {
         const code = javascriptGenerator.blockToCode(block);
@@ -321,14 +324,10 @@ export function useBlocklyWorkspace(
     const workspace = workspaceRef.current;
     if (!workspace) return;
 
-    // 清空工作区
-    workspace.clear();
-
-    // 使用解析器将事件转换为 Blockly State
     const state = eventsToWorkspaceState(events);
-
-    // 加载到工作区
-    Blockly.serialization.workspaces.load(state, workspace);
+    replaceWorkspaceContents(workspace, () => {
+      Blockly.serialization.workspaces.load(state, workspace);
+    });
     interactionControllerRef.current?.refresh();
   }, []);
 
@@ -337,14 +336,10 @@ export function useBlocklyWorkspace(
     const workspace = workspaceRef.current;
     if (!workspace) return;
 
-    // 清空工作区
-    workspace.clear();
-
-    // 使用解析器将数据转换为带入口块的 Blockly State
     const state = dataToWorkspaceStateWithEntry(data, entryType, project);
-
-    // 加载到工作区
-    Blockly.serialization.workspaces.load(state, workspace);
+    replaceWorkspaceContents(workspace, () => {
+      Blockly.serialization.workspaces.load(state, workspace);
+    });
     interactionControllerRef.current?.refresh();
 
     // clear/load 不会重置 Blockly 的平移位置。新事件的入口块固定生成在
@@ -421,6 +416,18 @@ export function useBlocklyWorkspace(
     toolbox.refreshSelection();
   }, []);
 
+  const refreshToolbox = useCallback(() => {
+    const workspace = workspaceRef.current;
+    if (!workspace || !showToolbox) return;
+    const previous = workspace.getToolbox() as Blockly.Toolbox | null;
+    const selectedId = previous?.getSelectedItem()?.getId();
+    workspace.updateToolbox(generateToolboxConfig(entryType));
+    if (!selectedId) return;
+    const next = workspace.getToolbox() as Blockly.Toolbox | null;
+    const selected = next?.getToolboxItems().find((item) => item.getId() === selectedId);
+    if (selected) next?.setSelectedItem(selected);
+  }, [entryType, showToolbox]);
+
   const runSelectedPointInteraction = useCallback(async () => (
     interactionControllerRef.current?.runSelectedPointInteraction() ?? false
   ), []);
@@ -460,6 +467,7 @@ export function useBlocklyWorkspace(
       getViewport,
       restoreViewport,
       getSelectedBlockId,
+      refreshToolbox,
     }),
     [
       getWorkspace,
@@ -477,6 +485,7 @@ export function useBlocklyWorkspace(
       getViewport,
       restoreViewport,
       getSelectedBlockId,
+      refreshToolbox,
     ],
   );
 }

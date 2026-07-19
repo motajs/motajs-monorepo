@@ -10,6 +10,7 @@ interface TerrainMaterialGroupProps {
   selection: MaterialImageProps["selection"];
   onClear(): void;
   onClick: MaterialImageProps["onClick"];
+  airwallPath?: string;
 }
 
 const GRID: GridPOD = [32, 32];
@@ -40,10 +41,11 @@ export const TerrainMaterialGroup: FC<TerrainMaterialGroupProps> = ({
   selection,
   onClear,
   onClick,
+  airwallPath = "project/materials/airwall.png",
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const { image: terrain, revision: terrainRevision } = useLoadedImage("project/materials/terrains.png");
-  const { image: airwall, revision: airwallRevision } = useLoadedImage("project/materials/airwall.png");
+  const { image: airwall, revision: airwallRevision } = useLoadedImage(airwallPath);
   const terrainRows = terrain ? Math.floor(terrain.height / 32) : 0;
   const layout = useMemo(() => createMaterialLayout({
     sourceSize: [32, (terrainRows + 2) * 32],

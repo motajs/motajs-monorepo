@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { FileHandlerManager } from "@/fs/FileHandlerManager";
+import { persistenceMonitor } from "@/fs/PersistenceMonitor";
 import { projectData } from "@/project/data/projectData";
 import { projectAssets } from "@/project/assets";
 import { operationHistory } from "@/project/history";
@@ -79,8 +80,14 @@ describe("ProjectData + Commands with real sample project", () => {
       project.fs.setFile(filePath, await readFile(path.join(MOTA_JS_ROOT, filePath), "utf-8"));
       await project.registerPath(filePath);
     }
+    const tower = projectData.tower();
+    await project.loadResource(tower);
+    const towerStatuses: string[] = [];
+    const unsubscribe = tower.subscribe((content) => towerStatuses.push(content.status));
     const images = projectModel.projectImageCatalog();
     await images.reload();
+    unsubscribe();
+    expect(towerStatuses).not.toContain("loading");
     const imageCatalog = images.value();
     expect(imageCatalog.entries.filter((entry) => entry.kind === "split").map((entry) => entry.name))
       .toEqual(expect.arrayContaining(["dragon_0.png", "dragon_1.png", "dragon_2.png", "dragon_3.png"]));
@@ -136,7 +143,7 @@ describe("ProjectData + Commands with real sample project", () => {
     ]);
 
     expect(result).toEqual({ ok: true });
-    await projectData.functions().waitForIdle();
+    await persistenceMonitor.whenQuiescent([projectData.functions().path]);
     await projectData.functions().reload();
     const updated = projectData.functions().value();
     expect(updated.events?.__commandTest).toContain("function __commandTest");
@@ -176,7 +183,7 @@ describe("ProjectData + Commands with real sample project", () => {
     ]);
 
     expect(result).toEqual({ ok: true });
-    await projectData.commonEvents().waitForIdle();
+    await persistenceMonitor.whenQuiescent([projectData.commonEvents().path]);
     await projectData.events().reload();
     const events = projectData.events().value();
     expect(events.__commandSentinel).toEqual({ keep: true });
@@ -193,7 +200,7 @@ describe("ProjectData + Commands with real sample project", () => {
     ]);
 
     expect(result).toEqual({ ok: true });
-    await projectData.plugins().waitForIdle();
+    await persistenceMonitor.whenQuiescent([projectData.plugins().path]);
     await projectData.plugins().reload();
     const plugins = projectData.plugins().value();
     expect(plugins.__commandPlugin).toContain("function __commandPlugin");
@@ -209,7 +216,7 @@ describe("ProjectData + Commands with real sample project", () => {
     ]);
 
     expect(result).toEqual({ ok: true });
-    await projectData.floor("sample0").waitForIdle();
+    await persistenceMonitor.whenQuiescent([projectData.floor("sample0").path]);
     await projectData.floor("sample0").reload();
     expect(projectData.floor("sample0").value().title).toBe("Commands Sample 0");
     expect(project.readText("project/floors/sample0.js")).toContain("Commands Sample 0");
@@ -286,7 +293,7 @@ describe("ProjectData + Commands with real sample project", () => {
     const result = await mapCommands.bindStartPoint("sample1", { x: 3, y: 4 });
 
     expect(result).toEqual({ ok: true });
-    await projectData.tower().waitForIdle();
+    await persistenceMonitor.whenQuiescent([projectData.tower().path]);
     await projectData.tower().reload();
     const tower = projectData.tower().value();
     expect(tower.firstData.floorId).toBe("sample1");
@@ -454,7 +461,7 @@ describe("ProjectData + Commands with real sample project", () => {
     });
 
     expect(result).toEqual({ ok: true });
-    await projectData.floor("sample0").waitForIdle();
+    await persistenceMonitor.whenQuiescent([projectData.floor("sample0").path]);
     await projectData.floor("sample0").reload();
     const floor = projectData.floor("sample0").value();
     expect(floor.map[5][6]).toBe(21);
@@ -473,7 +480,7 @@ describe("ProjectData + Commands with real sample project", () => {
     const result = await mapCommands.replaceLayer("sample0", "map", nextMap);
 
     expect(result).toEqual({ ok: true });
-    await projectData.floor("sample0").waitForIdle();
+    await persistenceMonitor.whenQuiescent([projectData.floor("sample0").path]);
     await projectData.floor("sample0").reload();
     expect(projectData.floor("sample0").value().map[5][6]).toBe(21);
     expect(project.readText("project/floors/sample0.js")).toContain("21");
@@ -805,24 +812,27 @@ describe("ProjectData + Commands with real sample project", () => {
     await project.registerPath("project/floors/MT0_RENAMED.js");
     await projectData.tower().mutate((draft) => {
       draft.firstData.floorId = "MT0";
+      draft.main.floorPartitions = [["MT0", "MT0"]];
     });
 
     const result = await floorCommands.rename("MT0", "MT0_RENAMED");
 
     expect(result).toEqual({ ok: true });
-    await projectData.tower().waitForIdle();
+    await persistenceMonitor.whenQuiescent([projectData.tower().path]);
     expect(project.hasFile("project/floors/MT0.js")).toBe(false);
     expect(project.hasFile("project/floors/MT0_RENAMED.js")).toBe(true);
     const tower = projectData.tower().value();
     expect(tower.main.floorIds).toContain("MT0_RENAMED");
     expect(tower.main.floorIds).not.toContain("MT0");
     expect(tower.firstData.floorId).toBe("MT0_RENAMED");
+    expect(tower.main.floorPartitions).toEqual([["MT0_RENAMED", "MT0_RENAMED"]]);
 
     await operationHistory.undo();
     expect(project.hasFile("project/floors/MT0.js")).toBe(true);
     expect(project.hasFile("project/floors/MT0_RENAMED.js")).toBe(false);
     expect(projectData.tower().value().main.floorIds).toContain("MT0");
     expect(projectData.tower().value().firstData.floorId).toBe("MT0");
+    expect(projectData.tower().value().main.floorPartitions).toEqual([["MT0", "MT0"]]);
 
     await operationHistory.redo();
     expect(project.hasFile("project/floors/MT0.js")).toBe(false);
@@ -896,6 +906,74 @@ describe("ProjectData + Commands with real sample project", () => {
     );
   });
 
+  it("updates floor order and partitions atomically with undo and redo", async () => {
+    await project.loadResource(projectData.tower());
+    const originalIds = [...projectData.tower().value().main.floorIds];
+
+    const result = await floorCommands.updateOrganization({
+      floorIds: ["sample1", "sample0", "sample2", "MT0"],
+      floorPartitions: [["sample1", "sample0"]],
+    });
+
+    expect(result).toEqual({ ok: true });
+    expect(projectData.tower().value().main.floorIds).toEqual(["sample1", "sample0", "sample2", "MT0"]);
+    expect(projectData.tower().value().main.floorPartitions).toEqual([["sample1", "sample0"]]);
+
+    await operationHistory.undo();
+    expect(projectData.tower().value().main.floorIds).toEqual(originalIds);
+    expect(projectData.tower().value().main.floorPartitions).toEqual([]);
+    await operationHistory.redo();
+    expect(projectData.tower().value().main.floorIds).toEqual(["sample1", "sample0", "sample2", "MT0"]);
+  });
+
+  it("copies complete and blank floors while preserving partition membership", async () => {
+    await project.loadResource(projectData.tower());
+    await project.loadResource(projectData.floor("sample0"));
+    await project.registerPath("project/floors/COPY_FULL.js");
+    await project.registerPath("project/floors/COPY_BLANK.js");
+    await projectData.tower().mutate((draft) => {
+      draft.main.floorPartitions = [["sample0", "sample1"]];
+    });
+    await projectData.floor("sample0").mutate((draft) => {
+      draft.eachArrive = [{ type: "tip", text: "each" }];
+      draft.parallelDo = "flag:test = true;";
+      draft.cannotMoveIn = { "1,1": ["up"] };
+    });
+
+    expect(await floorCommands.copy("sample0", "COPY_FULL", "full")).toEqual({ ok: true });
+    const full = projectData.floor("COPY_FULL").value();
+    expect(full.floorId).toBe("COPY_FULL");
+    expect(full.map).toEqual(projectData.floor("sample0").value().map);
+    expect(full.events).toEqual(projectData.floor("sample0").value().events);
+
+    expect(await floorCommands.copy("sample0", "COPY_BLANK", "blank")).toEqual({ ok: true });
+    const blank = projectData.floor("COPY_BLANK").value();
+    expect(blank.map).toHaveLength(blank.height!);
+    expect(blank.map.every((row) => row.every((cell) => cell === 0))).toBe(true);
+    expect(blank.bgmap.every((row) => row.every((cell) => cell === 0))).toBe(true);
+    expect(blank.fgmap.every((row) => row.every((cell) => cell === 0))).toBe(true);
+    expect(blank.events).toEqual({});
+    expect(blank.changeFloor).toEqual({});
+    expect(blank.cannotMoveIn).toEqual({});
+    expect(blank.firstArrive).toEqual(projectData.floor("sample0").value().firstArrive);
+    expect(blank.eachArrive).toEqual([{ type: "tip", text: "each" }]);
+    expect(blank.parallelDo).toBe("flag:test = true;");
+    expect(projectData.tower().value().main.floorIds.slice(0, 4)).toEqual([
+      "sample0",
+      "COPY_BLANK",
+      "COPY_FULL",
+      "sample1",
+    ]);
+    expect(projectData.tower().value().main.floorPartitions).toEqual([["sample0", "sample1"]]);
+
+    await operationHistory.undo();
+    expect(project.hasFile("project/floors/COPY_BLANK.js")).toBe(false);
+    expect(projectData.tower().value().main.floorIds).not.toContain("COPY_BLANK");
+    await operationHistory.redo();
+    expect(project.hasFile("project/floors/COPY_BLANK.js")).toBe(true);
+    expect(projectData.tower().value().main.floorIds).toContain("COPY_BLANK");
+  });
+
   it("rejects batch create precheck failures without writing earlier floors", async () => {
     await project.loadResource(projectData.tower());
     await project.registerPath("project/floors/COMMAND_BATCH_OK.js");
@@ -944,6 +1022,58 @@ describe("ProjectData + Commands with real sample project", () => {
     expect(floor.map[1][1]).toBe(0);
     expect(floor.events?.["3,11"]).toBeDefined();
     expect(floor.events?.["2,10"]).toBeUndefined();
+  });
+
+  it("uses the coordinate reference index to update project-wide floor targets", async () => {
+    await project.loadResource(projectData.tower());
+    await project.loadResource(projectData.floor("sample0"));
+    await project.loadResource(projectData.floor("sample1"));
+    await projectData.floor("sample1").mutate((draft) => {
+      draft.changeFloor = {
+        ...(draft.changeFloor ?? {}),
+        "0,0": { floorId: "sample0", loc: [2, 3] },
+      };
+    });
+    await projectData.tower().mutate((draft) => {
+      draft.firstData.floorId = "sample0";
+      const hero = draft.firstData.hero as Record<string, unknown>;
+      hero.loc = { x: 1, y: 2, direction: "up" };
+    });
+
+    expect(await floorCommands.resize("sample0", {
+      width: 14,
+      height: 14,
+      offsetX: 1,
+      offsetY: 1,
+    })).toEqual({ ok: true });
+
+    expect((projectData.floor("sample1").value().changeFloor?.["0,0"] as { loc: number[] }).loc)
+      .toEqual([3, 4]);
+    expect((projectData.tower().value().firstData.hero as { loc: unknown }).loc)
+      .toEqual({ x: 2, y: 3, direction: "up" });
+
+    await operationHistory.undo();
+    expect((projectData.floor("sample1").value().changeFloor?.["0,0"] as { loc: number[] }).loc)
+      .toEqual([2, 3]);
+    expect((projectData.tower().value().firstData.hero as { loc: unknown }).loc)
+      .toEqual({ x: 1, y: 2, direction: "up" });
+  });
+
+  it("refuses to delete the project's final floor", async () => {
+    await project.loadResource(projectData.tower());
+    await project.loadResource(projectData.floor("sample0"));
+    await projectData.tower().mutate((draft) => {
+      draft.main.floorIds = ["sample0"];
+      draft.main.floorPartitions = [];
+      draft.firstData.floorId = "sample0";
+    });
+
+    expect(await floorCommands.delete("sample0")).toMatchObject({
+      ok: false,
+      stage: "update-floorIds",
+    });
+    expect(project.hasFile("project/floors/sample0.js")).toBe(true);
+    expect(projectData.tower().value().firstData.floorId).toBe("sample0");
   });
 
   it("paints a repeating tileset pattern as one undoable command", async () => {

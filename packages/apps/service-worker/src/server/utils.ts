@@ -48,16 +48,26 @@ export class HttpError extends Error {
   }
 }
 
-export const errorResponse = (error: unknown) => {
+export const isNotFoundError = (error: unknown): boolean => {
+  const candidate = error as { name?: string; code?: string; message?: string };
+  return candidate?.name === "NotFoundError"
+    || candidate?.code === "ENOENT"
+    || (
+      candidate?.code === "ERR_INVALID_ARG_VALUE"
+      && candidate?.message === "Unable to open file as blob"
+    );
+};
+
+export const errorResponse = (error: unknown, path?: string) => {
   if (error instanceof HttpError) {
     return ResponseUtils.error(error.status, error.code, error.message, error.path);
   }
   const candidate = error as { name?: string; code?: string; message?: string };
   if (candidate?.name === "NotAllowedError" || candidate?.code === "EACCES") {
-    return ResponseUtils.error(403, "project-permission-required", "Project permission is required");
+    return ResponseUtils.error(403, "project-permission-required", "Project permission is required", path);
   }
-  if (candidate?.name === "NotFoundError" || candidate?.code === "ENOENT") {
-    return ResponseUtils.error(404, "file-not-found", candidate.message ?? "File not found");
+  if (isNotFoundError(error)) {
+    return ResponseUtils.error(404, "file-not-found", candidate.message ?? "File not found", path);
   }
-  return ResponseUtils.error(500, "internal-error", candidate?.message ?? String(error));
+  return ResponseUtils.error(500, "internal-error", candidate?.message ?? String(error), path);
 };

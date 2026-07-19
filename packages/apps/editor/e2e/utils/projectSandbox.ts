@@ -55,9 +55,13 @@ function isProjectPath(filePath: string): boolean {
   return normalizeFilePath(filePath).startsWith("project/");
 }
 
+function isMetaphysicsPath(filePath: string): boolean {
+  return normalizeFilePath(filePath).startsWith(".metaphysics/");
+}
+
 function isWritableSandboxPath(filePath: string): boolean {
   const normalized = normalizeFilePath(filePath);
-  return isProjectPath(normalized) || normalized === CONFIG_PATH;
+  return isProjectPath(normalized) || isMetaphysicsPath(normalized) || normalized === CONFIG_PATH;
 }
 
 async function readPublicFile(filePath: string, encoding: BufferEncoding): Promise<string> {
@@ -85,6 +89,8 @@ export class ProjectSandbox {
   private readVersions = new Map<string, number>();
   private writeListeners: WriteListener[] = [];
   private deleteListeners: WriteListener[] = [];
+  private writeDelayMs = 0;
+  private writeFailures = new Map<string, string>();
 
   static async create(page: Page): Promise<ProjectSandbox> {
     const sandbox = new ProjectSandbox();
@@ -134,6 +140,18 @@ export class ProjectSandbox {
     const normalized = normalizeFilePath(filePath);
     const version = this.deleteVersions.get(normalized) ?? 0;
     return this.waitForVersion(this.deleteListeners, normalized, version, timeoutMs, "delete");
+  }
+
+  setWriteDelay(delayMs: number): void {
+    this.writeDelayMs = Math.max(0, delayMs);
+  }
+
+  setWriteFailure(filePath: string, message: string = "simulated persistence failure"): void {
+    this.writeFailures.set(normalizeFilePath(filePath), message);
+  }
+
+  clearWriteFailure(filePath: string): void {
+    this.writeFailures.delete(normalizeFilePath(filePath));
   }
 
   private async loadProjectFiles(): Promise<void> {
@@ -224,12 +242,19 @@ export class ProjectSandbox {
       this.readVersions.set(name, (this.readVersions.get(name) ?? 0) + 1);
       return file.toString(encoding);
     }
+    if (isMetaphysicsPath(name)) return `error: File not found: ${name}`;
     return readPublicFile(name, encoding);
   }
 
-  private writeFile(params: URLSearchParams): string {
+  private async writeFile(params: URLSearchParams): Promise<string> {
     const name = normalizeFilePath(params.get("name") ?? "");
     if (!isWritableSandboxPath(name)) return `error: Refusing to write non-project file ${name}`;
+
+    if (this.writeDelayMs > 0) {
+      await new Promise<void>((resolve) => setTimeout(resolve, this.writeDelayMs));
+    }
+    const failure = this.writeFailures.get(name);
+    if (failure) return `error: ${failure}`;
 
     const encoding = params.get("type") === "base64" ? "base64" : "utf-8";
     const value = params.get("value") ?? "";
@@ -241,7 +266,7 @@ export class ProjectSandbox {
   private writeMultiFiles(params: URLSearchParams): string {
     const names = (params.get("name") ?? "").split(";").filter(Boolean).map(normalizeFilePath);
     const values = (params.get("value") ?? "").split(";");
-    if (names.some((name) => !isProjectPath(name))) {
+    if (names.some((name) => !isWritableSandboxPath(name))) {
       return "error: Refusing to write non-project file";
     }
 
@@ -255,7 +280,7 @@ export class ProjectSandbox {
 
   private async listFile(params: URLSearchParams): Promise<string> {
     const name = normalizeFilePath(params.get("name") ?? "");
-    if (!isProjectPath(`${name}/`) && name !== "project") {
+    if (!isProjectPath(`${name}/`) && !isMetaphysicsPath(`${name}/`) && name !== "project" && name !== ".metaphysics") {
       const absolute = path.resolve(PUBLIC_ROOT, name);
       const relative = path.relative(PUBLIC_ROOT, absolute);
       if (relative.startsWith("..") || path.isAbsolute(relative)) {
@@ -277,7 +302,7 @@ export class ProjectSandbox {
 
   private makeDir(params: URLSearchParams): string {
     const name = normalizeFilePath(params.get("name") ?? "");
-    if (!isProjectPath(`${name}/`) && name !== "project") {
+    if (!isProjectPath(`${name}/`) && !isMetaphysicsPath(`${name}/`) && name !== "project" && name !== ".metaphysics") {
       return `error: Refusing to create non-project directory ${name}`;
     }
     return "";
@@ -286,7 +311,7 @@ export class ProjectSandbox {
   private moveFile(params: URLSearchParams): string {
     const src = normalizeFilePath(params.get("src") ?? "");
     const dest = normalizeFilePath(params.get("dest") ?? "");
-    if (!isProjectPath(src) || !isProjectPath(dest)) {
+    if (!isWritableSandboxPath(src) || !isWritableSandboxPath(dest)) {
       return "error: Refusing to move non-project file";
     }
     const file = this.files.get(src);
@@ -300,7 +325,7 @@ export class ProjectSandbox {
 
   private deleteFile(params: URLSearchParams): string {
     const name = normalizeFilePath(params.get("name") ?? "");
-    if (!isProjectPath(name)) return `error: Refusing to delete non-project file ${name}`;
+    if (!isWritableSandboxPath(name)) return `error: Refusing to delete non-project file ${name}`;
     this.files.delete(name);
     this.notify(this.deleteListeners, this.deleteVersions, name);
     return "";

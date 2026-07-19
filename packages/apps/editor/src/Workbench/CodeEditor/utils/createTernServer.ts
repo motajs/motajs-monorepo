@@ -8,6 +8,8 @@ import CodeMirror, { TernServer } from "codemirror";
 import * as TernRuntime from "tern";
 import type * as Tern from "tern";
 import type { TernDefinitionDocument } from "@/project/model/projectModel";
+import ternWorkerUrl from "../workers/tern.worker?worker&url";
+import { registerSemanticTypesQuery } from "./semanticTypesQuery";
 
 /**
  * Tern Server 配置选项
@@ -19,6 +21,7 @@ export interface TernServerOptions {
   docComment?: boolean;
   /** 是否启用字符串补全插件 */
   completeStrings?: boolean;
+  workerScript?: string;
 }
 
 /**
@@ -26,6 +29,37 @@ export interface TernServerOptions {
  * 直接使用 @types/codemirror 提供的类型
  */
 export type TernServerInstance = TernServer;
+
+const workerBootstraps = new Map<string, string>();
+
+/**
+ * CodeMirror 5 always constructs a classic Worker. Vite serves `?worker&url`
+ * as an ES module in development, so bridge it through a classic script whose
+ * only job is to dynamically import the bundled worker entry.
+ */
+function classicWorkerBootstrap(workerModuleUrl: string): string {
+  if (
+    typeof window === "undefined" ||
+    typeof Blob === "undefined" ||
+    typeof URL.createObjectURL !== "function"
+  ) return workerModuleUrl;
+  const absoluteUrl = new URL(workerModuleUrl, window.location.href).href;
+  const existing = workerBootstraps.get(absoluteUrl);
+  if (existing) return existing;
+  const bootstrap = URL.createObjectURL(new Blob(
+    [
+      "const pending=[];",
+      "self.onmessage=(event)=>pending.push(event);",
+      `import(${JSON.stringify(absoluteUrl)}).then(()=>{`,
+      "const handler=self.onmessage;",
+      "for(const event of pending)handler(event);",
+      "});",
+    ],
+    { type: "text/javascript" },
+  ));
+  workerBootstraps.set(absoluteUrl, bootstrap);
+  return bootstrap;
+}
 
 /**
  * 创建 Tern Server 实例
@@ -58,14 +92,16 @@ export function createTernServer(options: {
   } = options;
 
   const {
-    useWorker = false,
+    useWorker = typeof globalThis.Worker !== "undefined",
     docComment = true,
     completeStrings = true,
+    workerScript = ternWorkerUrl,
   } = serverOptions;
 
   // CodeMirror 5's tern addon still resolves the engine from a global.
   const globalRecord = globalThis as typeof globalThis & { tern?: typeof TernRuntime };
   globalRecord.tern ??= TernRuntime;
+  registerSemanticTypesQuery();
 
   // 创建 TernServer 实例
   const ternServer = new TernServer({
@@ -74,14 +110,28 @@ export function createTernServer(options: {
       doc_comment: docComment,
       complete_strings: completeStrings,
     } as unknown as Tern.ConstructorOptions["plugins"],
+    queryOptions: {
+      completions: { filter: false },
+    },
     useWorker,
-  });
+    workerScript: useWorker ? classicWorkerBootstrap(workerScript) : undefined,
+  } as CodeMirror.TernOptions);
 
   for (const document of documents) {
     ternServer.addDoc(document.name, new CodeMirror.Doc(document.text, "javascript"));
   }
 
   return ternServer;
+}
+
+/**
+ * CodeMirror's Tern addon does not unregister Doc change listeners in
+ * `destroy()`. Remove every registered document first so rebuilding a server
+ * cannot leave stale listeners attached to the shared Docs.
+ */
+export function destroyTernServer(ternServer: TernServerInstance): void {
+  for (const name of Object.keys(ternServer.docs)) ternServer.delDoc(name);
+  ternServer.destroy();
 }
 
 /**

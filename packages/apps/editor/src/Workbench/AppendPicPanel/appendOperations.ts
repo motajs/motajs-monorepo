@@ -23,10 +23,7 @@ interface QuickAppendMaterialParams {
 
 async function ensureCollection(materialType: string) {
   const collection = projectAssets.materialCollection(materialType);
-  if (collection.snapshot().status !== "loaded") {
-    await collection.reload();
-    await collection.waitForSettled();
-  }
+  await collection.ensureLoaded();
   collection.value();
   return collection;
 }

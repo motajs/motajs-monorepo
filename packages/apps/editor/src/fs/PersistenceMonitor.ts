@@ -1,122 +1,145 @@
-/**
- * PersistenceMonitor - 全局持久化状态监控器
- *
- * 职责：
- * - 作为 PersistExecutor 的工厂，创建被监控的 executor
- * - 维护全局持久化状态（正在持久化的文件、失败的文件）
- * - 提供响应式 signal 供 UI 订阅
- */
+/** Project-scoped, path-owned persistence manager. */
 
-import { signal, effect } from "alien-signals";
-import { PersistExecutor } from "./PersistExecutor";
+import { effect, signal } from "alien-signals";
+import {
+  PersistExecutor,
+  type PersistenceIntent,
+} from "./PersistExecutor";
 import type { ReadonlySignal } from "./interfaces";
 
-/**
- * 持久化失败信息
- */
 export interface PersistFailure {
   path: string;
   error: Error;
 }
 
+function normalizePath(path: string): string {
+  return path.replace(/\\/g, "/").replace(/^\.\/+/, "");
+}
+
 export class PersistenceMonitor {
-  // 内部 Set 用于高效增删
-  private persistingSet = new Set<string>();
-  private failedMap = new Map<string, Error>();
+  private readonly controllers = new Map<string, PersistExecutor>();
+  private readonly persistingSet = new Set<string>();
+  private readonly failedMap = new Map<string, Error>();
+  private _persistingFiles = signal<string[]>([]);
+  private _failedFiles = signal<PersistFailure[]>([]);
+  private _retrying = signal(false);
 
-  // 对外暴露的 signal（存储数组）
-  private _persistingFiles: ReturnType<typeof signal<string[]>>;
-  private _failedFiles: ReturnType<typeof signal<PersistFailure[]>>;
+  readonly persistingFiles = this._persistingFiles as ReadonlySignal<string[]>;
+  readonly failedFiles = this._failedFiles as ReadonlySignal<PersistFailure[]>;
+  readonly retrying = this._retrying as ReadonlySignal<boolean>;
 
-  readonly persistingFiles: ReadonlySignal<string[]>;
-  readonly failedFiles: ReadonlySignal<PersistFailure[]>;
+  private controller(path: string, legacyOperation?: () => Promise<void>): PersistExecutor {
+    const normalized = normalizePath(path);
+    const existing = this.controllers.get(normalized);
+    if (existing) return existing;
 
-  constructor() {
-    this._persistingFiles = signal<string[]>([]);
-    this._failedFiles = signal<PersistFailure[]>([]);
-
-    this.persistingFiles = this._persistingFiles as ReadonlySignal<string[]>;
-    this.failedFiles = this._failedFiles as ReadonlySignal<PersistFailure[]>;
-  }
-
-  /**
-   * 创建一个被监控的 PersistExecutor
-   *
-   * @param path 文件路径（用于标识）
-   * @param operation 持久化操作
-   * @returns 被监控的 PersistExecutor 实例
-   */
-  createExecutor(path: string, operation: () => Promise<void>): PersistExecutor {
-    const executor = new PersistExecutor(operation);
-
-    // 订阅 executor 的状态变化
+    const controller = new PersistExecutor(legacyOperation);
+    this.controllers.set(normalized, controller);
     effect(() => {
-      const status = executor.status();
-
+      const status = controller.status();
       if (status.status === "executing") {
-        // 正在执行持久化
-        if (!this.persistingSet.has(path)) {
-          this.persistingSet.add(path);
-          this.failedMap.delete(path); // 清除之前的错误
-          this.updateSignals();
-        }
+        this.persistingSet.add(normalized);
+        // Keep an existing failure visible while its retry is in progress.
       } else if (status.status === "error") {
-        // 持久化失败
-        this.persistingSet.delete(path);
-        this.failedMap.set(path, status.error);
-        this.updateSignals();
-      } else if (status.status === "idle") {
-        // 持久化完成（成功）
-        const changed = this.persistingSet.delete(path) || this.failedMap.delete(path);
-        if (changed) {
-          this.updateSignals();
-        }
+        this.persistingSet.delete(normalized);
+        this.failedMap.set(normalized, status.error);
+      } else {
+        this.persistingSet.delete(normalized);
+        this.failedMap.delete(normalized);
       }
+      this.updateSignals();
     });
-
-    return executor;
+    return controller;
   }
 
-  /**
-   * 更新 signal（从 Set/Map 计算数组）
-   */
-  private updateSignals(): void {
-    this._persistingFiles(Array.from(this.persistingSet));
-    this._failedFiles(
-      Array.from(this.failedMap.entries()).map(([path, error]) => ({ path, error }))
-    );
+  /** Legacy/test adapter. Production resources submit immutable intents. */
+  createExecutor(path: string, operation: () => Promise<void>): PersistExecutor {
+    return this.controller(path, operation);
   }
 
-  /**
-   * 是否有未保存的修改（正在持久化）
-   */
+  schedule(path: string, intent: PersistenceIntent): void {
+    this.controller(path).schedule(intent);
+  }
+
+  async retryFailed(): Promise<PersistFailure[]> {
+    const paths = [...this.failedMap.keys()];
+    if (paths.length === 0) return [];
+    this._retrying(true);
+    try {
+      for (const path of paths) {
+        const controller = this.controllers.get(path);
+        if (controller?.status().status === "error") controller.retry();
+      }
+      await Promise.all(paths.map((path) => this.controllers.get(path)?.whenQuiescent()));
+      return this.failedFiles();
+    } finally {
+      this._retrying(false);
+    }
+  }
+
+  async flush(paths?: readonly string[]): Promise<void> {
+    const controllers = paths
+      ? paths.map((path) => this.controllers.get(normalizePath(path))).filter((item): item is PersistExecutor => !!item)
+      : [...this.controllers.values()];
+    await Promise.all(controllers.map((controller) => controller.whenQuiescent()));
+    const failures = paths
+      ? paths.flatMap((path) => {
+        const error = this.failedMap.get(normalizePath(path));
+        return error ? [{ path: normalizePath(path), error }] : [];
+      })
+      : this.failedFiles();
+    if (failures.length > 0) {
+      throw new AggregateError(failures.map((failure) => failure.error), "工程文件写入失败");
+    }
+  }
+
+  /** Test/low-level ordering primitive. It intentionally does not reject failures. */
+  async whenQuiescent(paths?: readonly string[]): Promise<void> {
+    const controllers = paths
+      ? paths.map((path) => this.controllers.get(normalizePath(path))).filter((item): item is PersistExecutor => !!item)
+      : [...this.controllers.values()];
+    await Promise.all(controllers.map((controller) => controller.whenQuiescent()));
+  }
+
+  statusFor(path: string): "idle" | "persisting" | "error" {
+    const normalized = normalizePath(path);
+    if (this.failedMap.has(normalized)) return "error";
+    if (this.persistingSet.has(normalized)) return "persisting";
+    return "idle";
+  }
+
+  errorFor(path: string): Error | undefined {
+    return this.failedMap.get(normalizePath(path));
+  }
+
   hasUnsavedChanges(): boolean {
     return this.persistingSet.size > 0;
   }
 
-  /**
-   * 是否有持久化错误
-   */
   hasPersistErrors(): boolean {
     return this.failedMap.size > 0;
   }
 
-  /**
-   * 获取正在持久化的文件数量
-   */
   getPersistingCount(): number {
     return this.persistingSet.size;
   }
 
-  /**
-   * 获取持久化失败的文件数量
-   */
   getFailedCount(): number {
     return this.failedMap.size;
   }
+
+  resetForTests(): void {
+    this.controllers.clear();
+    this.persistingSet.clear();
+    this.failedMap.clear();
+    this._retrying(false);
+    this.updateSignals();
+  }
+
+  private updateSignals(): void {
+    this._persistingFiles([...this.persistingSet]);
+    this._failedFiles([...this.failedMap].map(([path, error]) => ({ path, error })));
+  }
 }
 
-/**
- * 全局 PersistenceMonitor 实例
- */
 export const persistenceMonitor = new PersistenceMonitor();

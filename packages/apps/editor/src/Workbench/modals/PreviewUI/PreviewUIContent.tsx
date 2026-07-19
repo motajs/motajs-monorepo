@@ -39,7 +39,7 @@ function drawWrappedText(ctx: CanvasRenderingContext2D, text: string, x: number,
 async function loadProjectImage(name: string): Promise<ImageBitmap | null> {
   const path = name.includes('/') ? `project/${name.replace(/^project\//, '')}` : `project/images/${name}`;
   const resource = projectAssets.image(path);
-  if (resource.snapshot().status === 'idle') await resource.reload();
+  await resource.ensureLoaded();
   const content = resource.snapshot();
   if (content.status !== 'loaded') return null;
   const bytes = new Uint8Array(content.value.bytes);

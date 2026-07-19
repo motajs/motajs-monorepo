@@ -1,0 +1,192 @@
+{
+  "kind": "table-schema",
+  "formatVersion": 1,
+  "schemaId": "map-block-properties",
+  "revision": 1,
+  "nodes": [
+    {
+      "kind": "group",
+      "id": "identity",
+      "label": "基本信息",
+      "children": [
+        {
+          "kind": "field",
+          "fieldSchema": "mapBlock.id",
+          "source": {
+            "ref": "prefab:id"
+          },
+          "id": "mapBlock-id"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "mapBlock.idnum",
+          "source": {
+            "ref": "prefab:idnum"
+          },
+          "id": "mapBlock-idnum"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "mapBlock.cls",
+          "source": {
+            "ref": "prefab:cls"
+          },
+          "id": "mapBlock-cls"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "mapBlock.name",
+          "source": {
+            "ref": "prefab:name"
+          },
+          "id": "mapBlock-name"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "mapBlock.canPass",
+          "source": {
+            "ref": "prefab:canPass"
+          },
+          "id": "mapBlock-canPass"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "mapBlock.canBreak",
+          "source": {
+            "ref": "prefab:canBreak"
+          },
+          "id": "mapBlock-canBreak"
+        }
+      ]
+    },
+    {
+      "kind": "group",
+      "id": "behavior",
+      "label": "触发与行为",
+      "children": [
+        {
+          "kind": "field",
+          "fieldSchema": "mapBlock.trigger",
+          "source": {
+            "ref": "prefab:trigger"
+          },
+          "id": "mapBlock-trigger"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "mapBlock.animate",
+          "source": {
+            "ref": "prefab:animate"
+          },
+          "id": "mapBlock-animate"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "mapBlock.script",
+          "source": {
+            "ref": "prefab:script"
+          },
+          "id": "mapBlock-script"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "mapBlock.event",
+          "source": {
+            "ref": "prefab:event"
+          },
+          "id": "mapBlock-event"
+        }
+      ]
+    },
+    {
+      "kind": "group",
+      "id": "movement",
+      "label": "通行方向",
+      "children": [
+        {
+          "kind": "field",
+          "fieldSchema": "mapBlock.passability",
+          "sources": {
+            "cannotOut": {
+              "ref": "prefab:cannotOut"
+            },
+            "cannotIn": {
+              "ref": "prefab:cannotIn"
+            }
+          },
+          "id": "mapBlock-passability"
+        }
+      ]
+    },
+    {
+      "kind": "group",
+      "id": "appearance",
+      "label": "形态与素材",
+      "children": [
+        {
+          "kind": "field",
+          "fieldSchema": "mapBlock.doorInfo",
+          "source": {
+            "ref": "prefab:doorInfo"
+          },
+          "condition": {
+            "when": {
+              "operator": "in",
+              "args": [
+                {
+                  "ref": "prefab:cls"
+                },
+                {
+                  "literal": [
+                    "animates",
+                    "npc48"
+                  ]
+                }
+              ]
+            },
+            "otherwise": "hidden-if-empty"
+          },
+          "id": "mapBlock-doorInfo"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "mapBlock.faceIds",
+          "source": {
+            "ref": "prefab:faceIds"
+          },
+          "condition": {
+            "when": {
+              "operator": "eq",
+              "args": [
+                {
+                  "ref": "prefab:cls"
+                },
+                {
+                  "literal": "npc48"
+                }
+              ]
+            },
+            "otherwise": "hidden-if-empty"
+          },
+          "id": "mapBlock-faceIds"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "mapBlock.bigImage",
+          "source": {
+            "ref": "prefab:bigImage"
+          },
+          "id": "mapBlock-bigImage"
+        }
+      ]
+    },
+    {
+      "kind": "rest",
+      "id": "rest",
+      "label": "其他字段",
+      "path": {
+        "ref": "prefab:"
+      }
+    }
+  ]
+}

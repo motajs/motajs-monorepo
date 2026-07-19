@@ -35,8 +35,7 @@ function toError(error: unknown): Error {
 }
 
 async function ensureImage(resource: ImageAssetResourceLike): Promise<void> {
-  if (resource.snapshot().status === "idle") await resource.reload();
-  await resource.waitForSettled();
+  await resource.ensureLoaded();
 }
 
 abstract class BaseMaterialCollection implements MaterialCollectionResource {
@@ -44,8 +43,8 @@ abstract class BaseMaterialCollection implements MaterialCollectionResource {
   abstract readonly images: string;
   abstract readonly content: ReadonlySignal<Content<MaterialCollectionSnapshot>>;
   abstract snapshot(): Content<MaterialCollectionSnapshot>;
+  abstract ensureLoaded(): Promise<void>;
   abstract reload(): Promise<void>;
-  abstract waitForIdle(): Promise<void>;
   abstract persistStatus(): PersistStatus;
   abstract read(entry: MaterialAssetEntry): Promise<RasterImage>;
   abstract append(image: RasterImage, options?: MaterialCollectionAppendOptions): Promise<MaterialMutation>;
@@ -118,9 +117,8 @@ export class SpriteSheetMaterialCollection extends BaseMaterialCollection {
     await this.image.reload();
   }
 
-  async waitForIdle(): Promise<void> {
-    await this.mutationQueue;
-    await this.image.waitForIdle();
+  async ensureLoaded(): Promise<void> {
+    await this.image.ensureLoaded();
   }
 
   persistStatus(): PersistStatus {
@@ -240,6 +238,10 @@ export class AutotileMaterialCollection extends BaseMaterialCollection {
   }
 
   async reload(): Promise<void> {
+    if (this.mutableContent().status === "loading") {
+      await this.waitForSettled();
+      return;
+    }
     this.mutableContent({ status: "loading" });
     try {
       const files = (await this.dependencies.fs.promises.readdir("project/autotiles"))
@@ -260,10 +262,10 @@ export class AutotileMaterialCollection extends BaseMaterialCollection {
     }
   }
 
-  async waitForIdle(): Promise<void> {
-    await this.mutationQueue;
-    if (this.snapshot().status !== "loaded") return;
-    await Promise.all(this.entries().map((entry) => this.dependencies.image(entry.path).waitForIdle()));
+  async ensureLoaded(): Promise<void> {
+    const content = this.snapshot();
+    if (content.status === "idle") await this.reload();
+    else if (content.status === "loading") await this.waitForSettled();
   }
 
   persistStatus(): PersistStatus {
@@ -287,7 +289,7 @@ export class AutotileMaterialCollection extends BaseMaterialCollection {
   append(image: RasterImage, options?: MaterialCollectionAppendOptions): Promise<MaterialMutation> {
     return this.enqueue(async () => {
       this.assertAutotile(image);
-      await this.ensureLoaded();
+      await this.ensureValueLoaded();
       const name = options?.name ?? this.nextName();
       if (this.entries().some((entry) => entry.slot.kind === "file" && entry.slot.name === name)) {
         throw new Error(`Autotile already exists: ${name}`);
@@ -332,9 +334,8 @@ export class AutotileMaterialCollection extends BaseMaterialCollection {
     });
   }
 
-  private async ensureLoaded(): Promise<void> {
-    if (this.snapshot().status === "idle") await this.reload();
-    await this.waitForSettled();
+  private async ensureValueLoaded(): Promise<void> {
+    await this.ensureLoaded();
     this.value();
   }
 

@@ -1,62 +1,128 @@
 /**
- * PanelStore - 面板状态管理
+ * 应用工作区与地图子面板状态。
  *
- * 管理左侧面板的激活状态，控制哪个面板当前可见。
+ * `PanelId` 和 `setActivePanel` 保留为迁移期兼容层：历史记录与少量旧组件
+ * 仍然使用旧的九面板命名，但新的应用壳只暴露五个一级工作区。
  */
 
-import { useState } from 'react';
-import { createStore } from '@motajs/react-store';
+import { useCallback, useMemo, useState } from "react";
+import { createStore } from "@motajs/react-store";
 
-/**
- * 面板 ID 类型
- * 与 editModeSelect 的 value 保持一致
- */
+export type WorkspaceId =
+  | "map"
+  | "resources"
+  | "tower"
+  | "common-events"
+  | "scripts";
+
+export type MapPanelId = "map" | "loc" | "enemyitem" | "floor";
+export type ScriptWorkspaceId = "functions" | "plugins";
+
 export type PanelId =
-  | 'map'
-  | 'loc'
-  | 'enemyitem'
-  | 'floor'
-  | 'tower'
-  | 'functions'
-  | 'appendpic'
-  | 'commonevent'
-  | 'plugins';
+  | MapPanelId
+  | "tower"
+  | "functions"
+  | "appendpic"
+  | "commonevent"
+  | "plugins";
 
-interface PanelStoreValue {
-  /** 当前激活的面板 */
+export interface PanelStoreValue {
+  activeWorkspace: WorkspaceId;
+  activeMapPanel: MapPanelId;
+  activeScriptWorkspace: ScriptWorkspaceId;
+  /** 旧面板标识的兼容投影。 */
   activePanel: PanelId;
-  /** 设置激活面板 */
-  setActivePanel: (panelId: PanelId) => void;
+  setActiveWorkspace: (workspace: WorkspaceId) => void;
+  setActiveMapPanel: (panel: MapPanelId) => void;
+  setActiveScriptWorkspace: (workspace: ScriptWorkspaceId) => void;
+  /** 使用旧面板标识导航到对应的新工作区。 */
+  setActivePanel: (panel: PanelId) => void;
 }
 
-/**
- * 面板状态 Hook
- * 默认显示全塔属性面板
- */
+function legacyPanelFor(
+  workspace: WorkspaceId,
+  mapPanel: MapPanelId,
+  scriptWorkspace: ScriptWorkspaceId,
+): PanelId {
+  switch (workspace) {
+    case "map":
+      return mapPanel;
+    case "resources":
+      return "appendpic";
+    case "tower":
+      return "tower";
+    case "common-events":
+      return "commonevent";
+    case "scripts":
+      return scriptWorkspace;
+  }
+}
+
 function usePanelStore(): PanelStoreValue {
-  const [activePanel, setActivePanel] = useState<PanelId>('tower');
+  const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceId>("map");
+  const [activeMapPanel, setActiveMapPanelState] = useState<MapPanelId>("map");
+  const [activeScriptWorkspace, setActiveScriptWorkspaceState] =
+    useState<ScriptWorkspaceId>("functions");
+
+  const setActiveMapPanel = useCallback((panel: MapPanelId) => {
+    setActiveMapPanelState(panel);
+    setActiveWorkspace("map");
+  }, []);
+
+  const setActiveScriptWorkspace = useCallback((workspace: ScriptWorkspaceId) => {
+    setActiveScriptWorkspaceState(workspace);
+    setActiveWorkspace("scripts");
+  }, []);
+
+  const setActivePanel = useCallback((panel: PanelId) => {
+    switch (panel) {
+      case "map":
+      case "loc":
+      case "enemyitem":
+      case "floor":
+        setActiveMapPanelState(panel);
+        setActiveWorkspace("map");
+        break;
+      case "tower":
+        setActiveWorkspace("tower");
+        break;
+      case "appendpic":
+        setActiveWorkspace("resources");
+        break;
+      case "commonevent":
+        setActiveWorkspace("common-events");
+        break;
+      case "functions":
+      case "plugins":
+        setActiveScriptWorkspaceState(panel);
+        setActiveWorkspace("scripts");
+        break;
+    }
+  }, []);
+
+  const activePanel = useMemo(
+    () => legacyPanelFor(activeWorkspace, activeMapPanel, activeScriptWorkspace),
+    [activeMapPanel, activeScriptWorkspace, activeWorkspace],
+  );
 
   return {
+    activeWorkspace,
+    activeMapPanel,
+    activeScriptWorkspace,
     activePanel,
+    setActiveWorkspace,
+    setActiveMapPanel,
+    setActiveScriptWorkspace,
     setActivePanel,
   };
 }
 
-/**
- * 面板状态 Store
- */
 export const PanelStore = createStore(usePanelStore);
 
-/**
- * 获取当前激活面板的 Hook
- */
 export function useActivePanel(): PanelId {
   return PanelStore.useStore().activePanel;
 }
 
-/**
- * 判断指定面板是否激活的 Hook
- */
 export function useIsPanelActive(panelId: PanelId): boolean {
   return PanelStore.useStore().activePanel === panelId;
 }

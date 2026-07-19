@@ -107,8 +107,8 @@ export class AnimationAssetResource {
     return effect(() => listener(this.content()));
   }
   reload(): Promise<void> { return this.binary.reload(); }
+  ensureLoaded(): Promise<void> { return this.binary.ensureLoaded(); }
   waitForSettled(): Promise<void> { return this.binary.waitForSettled(); }
-  waitForIdle(): Promise<void> { return this.binary.waitForIdle(); }
   persistStatus(): PersistStatus { return this.binary.persistStatus(); }
   setDocument(document: AnimationDocument): void {
     this.binary.setBytes(new TextEncoder().encode(JSON.stringify(document)));

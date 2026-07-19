@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 
 import { FileHandlerManager } from "@/fs/FileHandlerManager";
+import { persistenceMonitor } from "@/fs/PersistenceMonitor";
 import { projectData } from "@/project/data/projectData";
 import { projectAssets } from "@/project/assets";
 import { projectModel } from "@/project/model/projectModel";
+import { migrateLegacyAirwall } from "@/project/migrations";
 import { fs as browserFs } from "@/services/fs";
 import { loadSampleProject, type SampleProjectContext } from "@test/utils/sampleProject";
 
@@ -54,8 +56,54 @@ describe("ProjectModel computed resources", () => {
     ]);
 
     expect(registry.value().get(21)?.name).toBe("模型层黄钥匙");
-    await projectData.mapBlocks().waitForIdle();
+    await persistenceMonitor.whenQuiescent([projectData.mapBlocks().path]);
     expect(project.readText("project/maps.js")).toContain("模型层黄钥匙");
+  });
+
+  it("uses editorDisplay metadata instead of requiring an icon-sheet row", async () => {
+    await projectData.mapBlocks().reload();
+    await projectData.mapBlocks().patch([
+      ["add", "['17']", {
+        cls: "terrains",
+        id: "airwall",
+        noPass: true,
+        editorDisplay: { type: "image", path: "project/materials/airwall.png" },
+      }],
+    ]);
+
+    const registry = projectModel.blockRegistry();
+    await registry.reload();
+    await registry.waitForSettled();
+    expect(registry.value().get(17)).toMatchObject({
+      id: "airwall",
+      materialPath: "project/materials/airwall.png",
+      x: 0,
+      y: 0,
+      width: 32,
+      height: 32,
+    });
+  });
+
+  it("persists the airwall registration when a floor still uses idnum 17", async () => {
+    const tower = await project.loadResource(projectData.tower());
+    const floorId = tower.main.floorIds[0];
+    const floor = projectData.floor(floorId);
+    await project.loadResource(floor);
+    await project.loadResource(projectData.mapBlocks());
+    await floor.mutate((draft) => {
+      draft.map![0][0] = 17;
+    });
+    expect(floor.value().map?.[0]?.[0]).toBe(17);
+
+    await expect(migrateLegacyAirwall()).resolves.toEqual({ status: "migrated" });
+    expect(projectData.mapBlocks().value()["17"]).toMatchObject({
+      cls: "terrains",
+      id: "airwall",
+      noPass: true,
+      editorDisplay: { type: "image", path: "project/materials/airwall.png" },
+    });
+    expect(project.readText("project/maps.js")).toContain('"editorDisplay"');
+    await expect(migrateLegacyAirwall()).resolves.toEqual({ status: "already-current" });
   });
 
   it("materialRegistry uses the same computed projection as blockRegistry", async () => {

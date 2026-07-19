@@ -55,9 +55,6 @@ export function useTableMetaEditor(key: MetaFileKey): UseTableMetaEditorResult {
       lint: true,
       onConfirm: async (newContent: string) => {
         raw.update(newContent);
-        await raw.waitForIdle();
-        const persist = resource.persistStatus();
-        if (persist.status === 'error') throw persist.error;
         notifySuccess(`${key} 配置已更新`);
       },
     });

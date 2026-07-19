@@ -6,6 +6,7 @@
 
 import type * as Blockly from 'blockly';
 import { javascriptGenerator } from 'blockly/javascript';
+import JSON5 from 'json5';
 
 import type { BlockState, ConnectionState, EventData, ParseContext } from '../parser/types';
 import type { BlockSchema } from '../registry/types';
@@ -806,7 +807,7 @@ function parseShopText(text: string): { title: string; icon: string; content: st
   let icon = '';
   let content = text;
 
-  const match = /\\t\[([^\]]*)\]/.exec(content);
+  const match = /(?:\\t|\t)\[([^\]]*)\]/.exec(content);
   if (match) {
     const parts = match[1].split(',');
     title = parts[0] || '';
@@ -821,6 +822,9 @@ function parseShopText(text: string): { title: string; icon: string; content: st
  * 解析单个商店配置
  */
 function parseShopSub(shop: Record<string, unknown>, context: ParseContext): BlockState {
+  if (shop.item === true) return parseItemShop(shop);
+  if (typeof shop.commonEvent === 'string') return parseCommonEventShop(shop);
+
   const id = (shop.id as string) || 'shop1';
   const textRaw = (shop.text as string) || '';
   const textInList = (shop.textInList as string) || '';
@@ -867,6 +871,52 @@ function parseShopSub(shop: Record<string, unknown>, context: ParseContext): Blo
       DISABLE_PREVIEW: disablePreview,
     },
     inputs: choicesInputs,
+  };
+}
+
+function parseItemShop(shop: Record<string, unknown>): BlockState {
+  const choices = Array.isArray(shop.choices) ? shop.choices : [];
+  let first: BlockState | null = null;
+  let previous: BlockState | null = null;
+  for (const raw of choices) {
+    if (!raw || typeof raw !== 'object') continue;
+    const choice = raw as Record<string, unknown>;
+    const state: BlockState = {
+      type: 'mota_shopItemChoice',
+      fields: {
+        ID: String(choice.id ?? ''),
+        NUMBER: choice.number == null ? '' : String(choice.number),
+        MONEY: String(choice.money ?? ''),
+        SELL: String(choice.sell ?? ''),
+        CONDITION: String(choice.condition ?? ''),
+      },
+    };
+    if (!first) first = state;
+    if (previous) previous.next = { block: state };
+    previous = state;
+  }
+  return {
+    type: 'mota_shopitem',
+    fields: {
+      ID: String(shop.id ?? 'itemShop'),
+      TEXT_IN_LIST: String(shop.textInList ?? ''),
+      USE: String(shop.use ?? 'money'),
+      MUST_ENABLE: shop.mustEnable === true,
+    },
+    inputs: first ? { CHOICES: { block: first } } : {},
+  };
+}
+
+function parseCommonEventShop(shop: Record<string, unknown>): BlockState {
+  return {
+    type: 'mota_shopcommonevent',
+    fields: {
+      ID: String(shop.id ?? 'shop1'),
+      TEXT_IN_LIST: String(shop.textInList ?? ''),
+      MUST_ENABLE: shop.mustEnable === true,
+      COMMON_EVENT: String(shop.commonEvent ?? ''),
+      ARGS: Array.isArray(shop.args) ? JSON.stringify(shop.args) : '',
+    },
   };
 }
 
@@ -1031,6 +1081,112 @@ export const shopChoicesSchema: BlockSchema = {
   },
 };
 
+export const shopItemSchema: BlockSchema = {
+  eventType: '_shopitem',
+  definition: {
+    type: 'mota_shopitem',
+    message0: '道具商店 id %1 快捷名称 %2 使用 %3 未开启不显示 %4',
+    args0: [
+      { type: 'field_input', name: 'ID', text: 'itemShop' },
+      { type: 'field_input', name: 'TEXT_IN_LIST', text: '道具商店' },
+      { type: 'field_dropdown', name: 'USE', options: [['金币', 'money'], ['经验', 'experience']] },
+      { type: 'field_checkbox', name: 'MUST_ENABLE', checked: false },
+    ],
+    message1: '%1',
+    args1: [{ type: 'input_statement', name: 'CHOICES', check: 'shopItemChoice' }],
+    previousStatement: 'shopsub',
+    nextStatement: 'shopsub',
+    colour: BlockColours.SHOP,
+    tooltip: '道具商店',
+    helpUrl: '/_docs/#/instruction',
+  },
+  category: 'entry',
+  generator: (block: Blockly.Block): string => {
+    const choicesCode = javascriptGenerator.statementToCode(block, 'CHOICES');
+    const choices = choicesCode ? JSON5.parse(`[${choicesCode}]`) : [];
+    return JSON.stringify({
+      id: block.getFieldValue('ID') || '',
+      item: true,
+      textInList: block.getFieldValue('TEXT_IN_LIST') || '',
+      use: block.getFieldValue('USE') || 'money',
+      mustEnable: block.getFieldValue('MUST_ENABLE') === 'TRUE',
+      choices,
+    }) + ',\n';
+  },
+};
+
+export const shopItemChoiceSchema: BlockSchema = {
+  eventType: '_shopItemChoice',
+  definition: {
+    type: 'mota_shopItemChoice',
+    message0: '道具名 %1 存量 %2 买入价格 %3 卖出价格 %4 出现条件 %5',
+    args0: [
+      { type: 'field_input', name: 'ID', text: 'yellowKey' },
+      { type: 'field_input', name: 'NUMBER', text: '' },
+      { type: 'field_input', name: 'MONEY', text: '' },
+      { type: 'field_input', name: 'SELL', text: '' },
+      { type: 'field_input', name: 'CONDITION', text: '' },
+    ],
+    previousStatement: 'shopItemChoice',
+    nextStatement: 'shopItemChoice',
+    colour: BlockColours.SHOP,
+    tooltip: '道具商店选项',
+    helpUrl: '/_docs/#/instruction',
+  },
+  category: 'entry',
+  generator: (block: Blockly.Block): string => {
+    const result: Record<string, unknown> = { id: block.getFieldValue('ID') || '' };
+    const number = block.getFieldValue('NUMBER');
+    const money = block.getFieldValue('MONEY');
+    const sell = block.getFieldValue('SELL');
+    const condition = block.getFieldValue('CONDITION');
+    if (number !== '') result.number = /^-?\d+(?:\.\d+)?$/.test(number) ? Number(number) : number;
+    if (money) result.money = money;
+    if (sell) result.sell = sell;
+    if (condition) result.condition = condition;
+    return JSON.stringify(result) + ',\n';
+  },
+};
+
+export const shopCommonEventSchema: BlockSchema = {
+  eventType: '_shopcommonevent',
+  definition: {
+    type: 'mota_shopcommonevent',
+    message0: '公共事件商店 id %1 快捷名称 %2 未开启不显示 %3',
+    args0: [
+      { type: 'field_input', name: 'ID', text: 'shop1' },
+      { type: 'field_input', name: 'TEXT_IN_LIST', text: '' },
+      { type: 'field_checkbox', name: 'MUST_ENABLE', checked: false },
+    ],
+    message1: '执行公共事件 %1 参数列表 JSON %2',
+    args1: [
+      { type: 'field_input', name: 'COMMON_EVENT', text: '' },
+      { type: 'field_input', name: 'ARGS', text: '' },
+    ],
+    previousStatement: 'shopsub',
+    nextStatement: 'shopsub',
+    colour: BlockColours.SHOP,
+    tooltip: '执行公共事件的全局商店',
+    helpUrl: '/_docs/#/instruction',
+  },
+  category: 'entry',
+  generator: (block: Blockly.Block): string => {
+    const result: Record<string, unknown> = {
+      id: block.getFieldValue('ID') || '',
+      textInList: block.getFieldValue('TEXT_IN_LIST') || '',
+      mustEnable: block.getFieldValue('MUST_ENABLE') === 'TRUE',
+      commonEvent: block.getFieldValue('COMMON_EVENT') || '',
+    };
+    const args = block.getFieldValue('ARGS');
+    if (args) {
+      const parsed = JSON5.parse(args);
+      if (!Array.isArray(parsed)) throw new Error('参数列表必须是数组');
+      result.args = parsed;
+    }
+    return JSON.stringify(result) + ',\n';
+  },
+};
+
 // ============================================
 // 导出所有入口 Schema
 // ============================================
@@ -1057,4 +1213,7 @@ export const entrySchemas: BlockSchema[] = [
   shopEntrySchema,
   shopSubSchema,
   shopChoicesSchema,
+  shopItemSchema,
+  shopItemChoiceSchema,
+  shopCommonEventSchema,
 ];

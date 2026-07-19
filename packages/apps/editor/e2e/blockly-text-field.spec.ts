@@ -65,5 +65,6 @@ test("Blockly multiline text wraps and keeps its editor aligned", async ({ page 
   await detailedBlock.click();
   await page.getByTestId("event-editor-select-point").click();
   await expect(page.getByTestId("select-point-modal")).toBeVisible();
+  await expect(page.getByTestId("select-point-modal").getByText("右键多选")).toBeVisible();
   await page.getByTestId("select-point-cancel").click();
 });

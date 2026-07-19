@@ -1,0 +1,661 @@
+{
+  "kind": "table-schema",
+  "formatVersion": 1,
+  "schemaId": "enemy-properties",
+  "revision": 1,
+  "nodes": [
+    {
+      "kind": "group",
+      "id": "identity",
+      "label": "基本信息",
+      "children": [
+        {
+          "kind": "field",
+          "fieldSchema": "enemy.id",
+          "source": {
+            "ref": "prefab:id"
+          },
+          "id": "enemy-id"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "enemy.name",
+          "source": {
+            "ref": "prefab:name"
+          },
+          "id": "enemy-name"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "enemy.description",
+          "source": {
+            "ref": "prefab:description"
+          },
+          "id": "enemy-description"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "enemy.displayIdInBook",
+          "source": {
+            "ref": "prefab:displayIdInBook"
+          },
+          "id": "enemy-displayIdInBook"
+        }
+      ]
+    },
+    {
+      "kind": "group",
+      "id": "appearance",
+      "label": "形态与素材",
+      "children": [
+        {
+          "kind": "field",
+          "fieldSchema": "enemy.faceIds",
+          "source": {
+            "ref": "prefab:faceIds"
+          },
+          "id": "enemy-faceIds"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "enemy.bigImage",
+          "source": {
+            "ref": "prefab:bigImage"
+          },
+          "id": "enemy-bigImage"
+        }
+      ]
+    },
+    {
+      "kind": "group",
+      "id": "stats",
+      "label": "战斗数值",
+      "children": [
+        {
+          "kind": "field",
+          "fieldSchema": "enemy.hp",
+          "source": {
+            "ref": "prefab:hp"
+          },
+          "id": "enemy-hp"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "enemy.atk",
+          "source": {
+            "ref": "prefab:atk"
+          },
+          "id": "enemy-atk"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "enemy.def",
+          "source": {
+            "ref": "prefab:def"
+          },
+          "id": "enemy-def"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "enemy.money",
+          "source": {
+            "ref": "prefab:money"
+          },
+          "id": "enemy-money"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "enemy.exp",
+          "source": {
+            "ref": "prefab:exp"
+          },
+          "id": "enemy-exp"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "enemy.point",
+          "source": {
+            "ref": "prefab:point"
+          },
+          "id": "enemy-point"
+        }
+      ]
+    },
+    {
+      "kind": "group",
+      "id": "specials",
+      "label": "特殊属性",
+      "children": [
+        {
+          "kind": "field",
+          "fieldSchema": "enemy.special",
+          "source": {
+            "ref": "prefab:special"
+          },
+          "id": "enemy-special"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "enemy.value",
+          "source": {
+            "ref": "prefab:value"
+          },
+          "condition": {
+            "when": {
+              "call": "enemy.hasAnySpecial",
+              "args": [
+                {
+                  "ref": "prefab:special"
+                }
+              ]
+            },
+            "otherwise": "inactive"
+          },
+          "id": "enemy-value"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "enemy.n",
+          "source": {
+            "ref": "prefab:n"
+          },
+          "condition": {
+            "when": {
+              "call": "enemy.hasSpecial",
+              "args": [
+                {
+                  "ref": "prefab:special"
+                },
+                {
+                  "literal": 6
+                }
+              ]
+            },
+            "otherwise": "inactive"
+          },
+          "id": "enemy-n"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "enemy.breakArmor",
+          "source": {
+            "ref": "prefab:breakArmor"
+          },
+          "condition": {
+            "when": {
+              "call": "enemy.hasSpecial",
+              "args": [
+                {
+                  "ref": "prefab:special"
+                },
+                {
+                  "literal": 7
+                }
+              ]
+            },
+            "otherwise": "inactive"
+          },
+          "id": "enemy-breakArmor"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "enemy.counterAttack",
+          "source": {
+            "ref": "prefab:counterAttack"
+          },
+          "condition": {
+            "when": {
+              "call": "enemy.hasSpecial",
+              "args": [
+                {
+                  "ref": "prefab:special"
+                },
+                {
+                  "literal": 8
+                }
+              ]
+            },
+            "otherwise": "inactive"
+          },
+          "id": "enemy-counterAttack"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "enemy.purify",
+          "source": {
+            "ref": "prefab:purify"
+          },
+          "condition": {
+            "when": {
+              "call": "enemy.hasSpecial",
+              "args": [
+                {
+                  "ref": "prefab:special"
+                },
+                {
+                  "literal": 9
+                }
+              ]
+            },
+            "otherwise": "inactive"
+          },
+          "id": "enemy-purify"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "enemy.vampire",
+          "source": {
+            "ref": "prefab:vampire"
+          },
+          "condition": {
+            "when": {
+              "call": "enemy.hasSpecial",
+              "args": [
+                {
+                  "ref": "prefab:special"
+                },
+                {
+                  "literal": 11
+                }
+              ]
+            },
+            "otherwise": "inactive"
+          },
+          "id": "enemy-vampire"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "enemy.add",
+          "source": {
+            "ref": "prefab:add"
+          },
+          "condition": {
+            "when": {
+              "call": "enemy.hasSpecial",
+              "args": [
+                {
+                  "ref": "prefab:special"
+                },
+                {
+                  "literal": 11
+                }
+              ]
+            },
+            "otherwise": "inactive"
+          },
+          "id": "enemy-add"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "enemy.atkValue",
+          "source": {
+            "ref": "prefab:atkValue"
+          },
+          "condition": {
+            "when": {
+              "call": "enemy.hasSpecial",
+              "args": [
+                {
+                  "ref": "prefab:special"
+                },
+                {
+                  "literal": 21
+                }
+              ]
+            },
+            "otherwise": "inactive"
+          },
+          "id": "enemy-atkValue"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "enemy.defValue",
+          "source": {
+            "ref": "prefab:defValue"
+          },
+          "condition": {
+            "when": {
+              "call": "enemy.hasSpecial",
+              "args": [
+                {
+                  "ref": "prefab:special"
+                },
+                {
+                  "literal": 21
+                }
+              ]
+            },
+            "otherwise": "inactive"
+          },
+          "id": "enemy-defValue"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "enemy.damage",
+          "source": {
+            "ref": "prefab:damage"
+          },
+          "condition": {
+            "when": {
+              "call": "enemy.hasSpecial",
+              "args": [
+                {
+                  "ref": "prefab:special"
+                },
+                {
+                  "literal": 22
+                }
+              ]
+            },
+            "otherwise": "inactive"
+          },
+          "id": "enemy-damage"
+        },
+        {
+          "kind": "group",
+          "id": "map-effects",
+          "label": "地图范围效果",
+          "condition": {
+            "when": {
+              "operator": "or",
+              "args": [
+                {
+                  "call": "enemy.hasSpecial",
+                  "args": [
+                    {
+                      "ref": "prefab:special"
+                    },
+                    {
+                      "literal": 15
+                    }
+                  ]
+                },
+                {
+                  "call": "enemy.hasSpecial",
+                  "args": [
+                    {
+                      "ref": "prefab:special"
+                    },
+                    {
+                      "literal": 18
+                    }
+                  ]
+                },
+                {
+                  "call": "enemy.hasSpecial",
+                  "args": [
+                    {
+                      "ref": "prefab:special"
+                    },
+                    {
+                      "literal": 24
+                    }
+                  ]
+                },
+                {
+                  "call": "enemy.hasSpecial",
+                  "args": [
+                    {
+                      "ref": "prefab:special"
+                    },
+                    {
+                      "literal": 27
+                    }
+                  ]
+                }
+              ]
+            },
+            "otherwise": "inactive"
+          },
+          "children": [
+            {
+              "kind": "field",
+              "fieldSchema": "enemy.zone",
+              "source": {
+                "ref": "prefab:zone"
+              },
+              "condition": {
+                "when": {
+                  "call": "enemy.hasSpecial",
+                  "args": [
+                    {
+                      "ref": "prefab:special"
+                    },
+                    {
+                      "literal": 15
+                    }
+                  ]
+                },
+                "otherwise": "inactive"
+              },
+              "id": "enemy-zone"
+            },
+            {
+              "kind": "field",
+              "fieldSchema": "enemy.repulse",
+              "source": {
+                "ref": "prefab:repulse"
+              },
+              "condition": {
+                "when": {
+                  "call": "enemy.hasSpecial",
+                  "args": [
+                    {
+                      "ref": "prefab:special"
+                    },
+                    {
+                      "literal": 18
+                    }
+                  ]
+                },
+                "otherwise": "inactive"
+              },
+              "id": "enemy-repulse"
+            },
+            {
+              "kind": "field",
+              "fieldSchema": "enemy.laser",
+              "source": {
+                "ref": "prefab:laser"
+              },
+              "condition": {
+                "when": {
+                  "call": "enemy.hasSpecial",
+                  "args": [
+                    {
+                      "ref": "prefab:special"
+                    },
+                    {
+                      "literal": 24
+                    }
+                  ]
+                },
+                "otherwise": "inactive"
+              },
+              "id": "enemy-laser"
+            },
+            {
+              "kind": "field",
+              "fieldSchema": "enemy.range",
+              "source": {
+                "ref": "prefab:range"
+              },
+              "condition": {
+                "when": {
+                  "call": "enemy.hasSpecial",
+                  "args": [
+                    {
+                      "ref": "prefab:special"
+                    },
+                    {
+                      "literal": 15
+                    }
+                  ]
+                },
+                "otherwise": "inactive"
+              },
+              "id": "enemy-range"
+            },
+            {
+              "kind": "field",
+              "fieldSchema": "enemy.zoneSquare",
+              "source": {
+                "ref": "prefab:zoneSquare"
+              },
+              "condition": {
+                "when": {
+                  "operator": "or",
+                  "args": [
+                    {
+                      "call": "enemy.hasSpecial",
+                      "args": [
+                        {
+                          "ref": "prefab:special"
+                        },
+                        {
+                          "literal": 15
+                        }
+                      ]
+                    },
+                    {
+                      "call": "enemy.hasSpecial",
+                      "args": [
+                        {
+                          "ref": "prefab:special"
+                        },
+                        {
+                          "literal": 18
+                        }
+                      ]
+                    },
+                    {
+                      "call": "enemy.hasSpecial",
+                      "args": [
+                        {
+                          "ref": "prefab:special"
+                        },
+                        {
+                          "literal": 27
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "otherwise": "inactive"
+              },
+              "id": "enemy-zoneSquare"
+            }
+          ]
+        },
+        {
+          "kind": "group",
+          "id": "halo",
+          "label": "光环",
+          "condition": {
+            "when": {
+              "call": "enemy.hasSpecial",
+              "args": [
+                {
+                  "ref": "prefab:special"
+                },
+                {
+                  "literal": 25
+                }
+              ]
+            },
+            "otherwise": "inactive"
+          },
+          "children": [
+            {
+              "kind": "field",
+              "fieldSchema": "enemy.hpBuff",
+              "source": {
+                "ref": "prefab:hpBuff"
+              },
+              "id": "enemy-hpBuff"
+            },
+            {
+              "kind": "field",
+              "fieldSchema": "enemy.atkBuff",
+              "source": {
+                "ref": "prefab:atkBuff"
+              },
+              "id": "enemy-atkBuff"
+            },
+            {
+              "kind": "field",
+              "fieldSchema": "enemy.defBuff",
+              "source": {
+                "ref": "prefab:defBuff"
+              },
+              "id": "enemy-defBuff"
+            },
+            {
+              "kind": "field",
+              "fieldSchema": "enemy.haloRange",
+              "source": {
+                "ref": "prefab:haloRange"
+              },
+              "id": "enemy-haloRange"
+            },
+            {
+              "kind": "field",
+              "fieldSchema": "enemy.haloSquare",
+              "source": {
+                "ref": "prefab:haloSquare"
+              },
+              "id": "enemy-haloSquare"
+            },
+            {
+              "kind": "field",
+              "fieldSchema": "enemy.haloAdd",
+              "source": {
+                "ref": "prefab:haloAdd"
+              },
+              "id": "enemy-haloAdd"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "group",
+      "id": "events",
+      "label": "行为与事件",
+      "children": [
+        {
+          "kind": "field",
+          "fieldSchema": "enemy.notBomb",
+          "source": {
+            "ref": "prefab:notBomb"
+          },
+          "id": "enemy-notBomb"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "enemy.beforeBattle",
+          "source": {
+            "ref": "prefab:beforeBattle"
+          },
+          "id": "enemy-beforeBattle"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "enemy.afterBattle",
+          "source": {
+            "ref": "prefab:afterBattle"
+          },
+          "id": "enemy-afterBattle"
+        }
+      ]
+    },
+    {
+      "kind": "rest",
+      "id": "rest",
+      "label": "其他字段",
+      "path": {
+        "ref": "prefab:"
+      }
+    }
+  ]
+}

@@ -130,26 +130,8 @@ class FileHandlerManagerImpl {
    * await FileHandlerManager.delete('file.txt', true); // 强制删除
    */
   async delete(path: string, force: boolean = false): Promise<void> {
-    const handler = this.handlers.get(path);
-
-    if (!handler) {
-      // handler 不存在，直接删除文件
-      try {
-        await fs.promises.deleteFile(path);
-      } catch (err) {
-        const error = err as Error;
-        if (!error.message || !error.message.includes("not found")) {
-          throw error;
-        }
-      }
-      return;
-    }
-
-    // 委托给 FileHandler 处理删除逻辑
+    const handler = this.get(path);
     await handler.delete(force);
-
-    // 移除 handler
-    this.handlers.delete(path);
   }
 
   /**

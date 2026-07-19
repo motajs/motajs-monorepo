@@ -29,7 +29,7 @@ async function recoverResource<T>(
   project.fs.clearWriteError();
   project.fs.clearWriteErrorForPath(resource.path);
   await resource.patch(actions);
-  await resource.waitForIdle();
+  await persistenceMonitor.whenQuiescent([resource.path]);
   expect(resource.persistStatus().status).toBe("idle");
   expectNoFailureFor(resource.path);
 }
@@ -61,7 +61,7 @@ describe("ProjectData persist status integration", () => {
     expect(tower.persistStatus().status).toBe("persisting");
     expect(persistenceMonitor.persistingFiles()).toContain(TOWER_PATH);
 
-    await tower.waitForIdle();
+    await persistenceMonitor.whenQuiescent([tower.path]);
 
     expect(tower.persistStatus().status).toBe("idle");
     expect(persistenceMonitor.persistingFiles()).not.toContain(TOWER_PATH);
@@ -82,7 +82,7 @@ describe("ProjectData persist status integration", () => {
       expect(result).toEqual({ ok: true });
       expect(tower.value().firstData.title).toBe("Failed Persist Title");
 
-      await tower.waitForIdle();
+      await persistenceMonitor.whenQuiescent([tower.path]);
 
       const status = tower.persistStatus();
       expect(status.status).toBe("error");
@@ -114,7 +114,7 @@ describe("ProjectData persist status integration", () => {
     expect(events.persistStatus().status).toBe("persisting");
     expect(persistenceMonitor.persistingFiles()).toContain(EVENTS_PATH);
 
-    await commonEvents.waitForIdle();
+    await persistenceMonitor.whenQuiescent([commonEvents.path]);
 
     expect(commonEvents.persistStatus().status).toBe("idle");
     expect(events.persistStatus().status).toBe("idle");
@@ -141,7 +141,7 @@ describe("ProjectData persist status integration", () => {
       persistenceMonitor.persistingFiles().includes(FLOOR_PATH)
     );
 
-    await Promise.all([tower.waitForIdle(), floor.waitForIdle()]);
+    await persistenceMonitor.whenQuiescent([tower.path, floor.path]);
 
     expect(persistenceMonitor.persistingFiles()).not.toContain(TOWER_PATH);
     expect(persistenceMonitor.persistingFiles()).not.toContain(FLOOR_PATH);
@@ -165,14 +165,14 @@ describe("ProjectData persist status integration", () => {
       expect(floorResult).toEqual({ ok: true });
       expect(floor.value().title).toBe("Failed Floor Persist");
 
-      await floor.waitForIdle();
+      await persistenceMonitor.whenQuiescent([floor.path]);
       expect(floor.persistStatus().status).toBe("error");
       expect(failedFor(FLOOR_PATH)[0]?.error.message).toBe("floor-only persist failed");
 
       await tower.patch([
         ["change", "['firstData']['title']", "Tower Still Persists"],
       ]);
-      await tower.waitForIdle();
+      await persistenceMonitor.whenQuiescent([tower.path]);
 
       expect(tower.persistStatus().status).toBe("idle");
       expectNoFailureFor(TOWER_PATH);

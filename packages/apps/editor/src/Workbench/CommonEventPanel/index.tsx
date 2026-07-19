@@ -8,7 +8,6 @@
 import { useCallback, useState, type FC } from "react";
 import { ContentLeftTab } from "../components/ContentLeftTab";
 import { Table, EditModeSegmented } from "@/components/Table";
-import { useTableMetaEditor } from "@/components/Table/hooks";
 import { useTableMetaSuspense } from "@/hooks";
 import { useResourceSuspense } from "@/hooks/suspense";
 import { projectData } from "@/project/data/projectData";
@@ -66,22 +65,7 @@ export const CommonEventPanel: FC = () => {
   // 在 Panel 层维护 editMode（不依赖数据）
   const [editMode, setEditMode] = useState<EditMode>("change");
 
-  // 使用 useTableMetaEditor 获取编辑器打开函数
-  const { openEditor } = useTableMetaEditor("eventsComment");
-
-  // 配置表格按钮点击处理
-  const handleConfigure = useCallback(() => {
-    openEditor();
-  }, [openEditor]);
-
-  // 操作按钮区域（始终显示）
-  const actions = (
-    <>
-      <EditModeSegmented value={editMode} onChange={setEditMode} />
-      &nbsp;&nbsp;
-      <button onClick={handleConfigure}>配置表格</button>
-    </>
-  );
+  const actions = <EditModeSegmented value={editMode} onChange={setEditMode} />;
 
   return (
     <ContentLeftTab id="left9" testId="panel-common-event" title="公共事件" actions={actions}>

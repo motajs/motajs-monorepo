@@ -12,15 +12,15 @@ test("development assets do not fall back to the editor HTML", async ({ request 
 });
 
 const panels = [
-  { mode: "map", testId: "panel-map", title: "", contentTestId: "map-panel-textarea" },
-  { mode: "tower", testId: "panel-tower", title: "全塔属性", contentTestId: "data-table-grid" },
-  { mode: "functions", testId: "panel-functions", title: "脚本编辑", contentTestId: "data-table-grid" },
-  { mode: "commonevent", testId: "panel-common-event", title: "公共事件", contentTestId: "data-table-grid" },
-  { mode: "plugins", testId: "panel-plugins", title: "插件编写", contentTestId: "data-table-grid" },
-  { mode: "floor", testId: "panel-floor", title: "楼层属性", contentTestId: "floor-resize" },
+  { mode: "map", testId: "panel-map", title: "", contentTestId: "floor-management-list" },
+  { mode: "tower", testId: "panel-tower", title: "全塔属性", contentTestId: "schema-table" },
+  { mode: "functions", testId: "scripts-workspace", title: "函数" },
+  { mode: "commonevent", testId: "common-events-workspace", title: "公共事件" },
+  { mode: "plugins", testId: "scripts-workspace", title: "插件" },
+  { mode: "floor", testId: "panel-floor", title: "楼层属性", contentTestId: "schema-table" },
   { mode: "loc", testId: "panel-loc", title: "地图选点", contentTestId: "loc-empty-state" },
   { mode: "enemyitem", testId: "panel-prefab", title: "图块属性", contentTestId: "prefab-empty-state" },
-  { mode: "appendpic", testId: "panel-appendpic", title: "追加素材", contentTestId: "appendpic-canvas" },
+  { mode: "appendpic", testId: "resources-workspace", title: "资源管理" },
 ] as const;
 
 async function expectNoFatalFallback(page: Page): Promise<void> {
@@ -154,8 +154,8 @@ test("a delayed panel resource does not suspend the workbench", async ({ page })
 
   releaseFunctions();
   await navigation;
-  await expect(page.getByTestId("panel-functions")).toBeVisible();
-  await expect(page.getByTestId("panel-functions").getByTestId("data-table-grid")).toBeVisible();
+  await expect(page.getByTestId("scripts-workspace")).toBeVisible();
+  await expect(page.getByTestId("scripts-workspace")).toContainText("函数");
 });
 
 test("missing table metadata and current floor stay inside local boundaries", async ({ page }) => {
@@ -186,16 +186,10 @@ test("missing table metadata and current floor stay inside local boundaries", as
   await expect(page.getByTestId("map-editor-mid")).toBeVisible();
 
   await page.getByTestId("edit-mode-select").selectOption("tower");
-  await expect(page.getByTestId("map-editor-mid")).toBeVisible();
-  const panelError = page.getByTestId("panel-error-tower");
-  await expect(panelError).toBeVisible();
-  const [errorBox, mapBox] = await Promise.all([
-    panelError.boundingBox(),
-    page.getByTestId("map-editor-mid").boundingBox(),
-  ]);
-  expect(errorBox).not.toBeNull();
-  expect(mapBox).not.toBeNull();
-  expect(errorBox!.x + errorBox!.width).toBeLessThanOrEqual(mapBox!.x);
+  await expect(page.getByTestId("map-editor-mid")).toBeHidden();
+  await expect(page.getByTestId("panel-tower")).toBeVisible();
+  await expect(page.getByTestId("panel-tower").getByTestId("schema-table")).toBeVisible();
+  await expect(page.getByTestId("panel-error-tower")).toHaveCount(0);
   await expect(page.getByText("编辑器启动失败")).toHaveCount(0);
   expect(pageErrors).toEqual([]);
 });
@@ -215,16 +209,48 @@ test("core data panels open without runtime fatal errors", async ({ page }) => {
     const panelRoot = page.getByTestId(panel.testId);
     await expect(panelRoot).toBeVisible();
     if (panel.title) await expect(panelRoot).toContainText(panel.title);
-    await expect(panelRoot.getByTestId(panel.contentTestId)).toBeVisible();
+    if ("contentTestId" in panel) {
+      await expect(panelRoot.getByTestId(panel.contentTestId)).toBeVisible();
+    }
     if (panel.mode === "tower") {
-      await expect(
-        panelRoot.getByTestId("table-input-main-floorIds").locator("textarea"),
-      ).toHaveValue(/sample0/);
+      await expect(panelRoot.getByTestId("schema-input-floorPartitions")).toHaveCount(0);
     }
     await expectNoFatalFallback(page);
   }
 
   expect(pageErrors).toEqual([]);
+});
+
+test("map subpanels use the persistent tab bar", async ({ page }) => {
+  await page.goto("/");
+
+  await expect(page.getByTestId("map-panel-select")).toHaveCount(0);
+  const tabs = page.getByRole("tablist", { name: "地图编辑面板" });
+  await expect(tabs.getByRole("tab")).toHaveCount(4);
+
+  const cases = [
+    { id: "map", panel: "panel-map" },
+    { id: "loc", panel: "panel-loc" },
+    { id: "enemyitem", panel: "panel-prefab" },
+    { id: "floor", panel: "panel-floor" },
+  ] as const;
+
+  for (const item of cases) {
+    const tab = page.getByTestId(`map-panel-tab-${item.id}`);
+    await tab.click();
+    await expect(tab).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByTestId(item.panel)).toBeVisible();
+    await expect(page.getByTestId("edit-mode-select")).toHaveValue(item.id);
+  }
+
+  const mapTab = page.getByTestId("map-panel-tab-map");
+  await mapTab.click();
+  await expect(mapTab).toContainText("楼层列表");
+  const floorList = page.getByTestId("floor-management-list");
+  await expect(floorList).toBeVisible();
+  expect(await floorList.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+  const mapPanel = page.getByTestId("panel-map");
+  expect(await mapPanel.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
 });
 
 test("map renderer draws real material pixels without diagnostics", async ({ page }) => {
@@ -236,7 +262,7 @@ test("map renderer draws real material pixels without diagnostics", async ({ pag
   await page.goto("/");
   for (const floorId of ["sample0", "sample1"]) {
     await page.getByTestId("floor-select").selectOption(floorId);
-    await page.getByTestId("layer-mode-map").check();
+    await page.getByTestId("layer-mode-map").click();
     await expect(page.getByTestId("map-pixi-renderer").locator("canvas")).toBeVisible();
     await expect(page.getByTestId("map-render-diagnostics")).toHaveCount(0);
 
@@ -248,9 +274,9 @@ test("map renderer draws real material pixels without diagnostics", async ({ pag
   }
 
   await page.getByTestId("floor-select").selectOption("sample1");
-  await page.getByTestId("layer-mode-map").check();
+  await page.getByTestId("layer-mode-map").click();
   const eventLayerStats = await readPixiCanvasStats(page);
-  await page.getByTestId("layer-mode-bgmap").check();
+  await page.getByTestId("layer-mode-bgmap").click();
   await expect.poll(async () => (await readPixiCanvasStats(page)).checksum).not.toBe(eventLayerStats.checksum);
 
   await expectNoFatalFallback(page);
@@ -310,7 +336,7 @@ test("map click selects a loc for the Loc panel without runtime", async ({ page 
   await expect(panel).toBeVisible();
   await expect(panel.getByTestId("loc-selected-position")).toHaveText("2,10");
   await expect(panel.getByTestId("loc-summary")).toBeVisible();
-  await expect(panel.getByTestId("data-table-grid")).toBeVisible();
+  await expect(panel.getByTestId("schema-table")).toBeVisible();
   await expectNoFatalFallback(page);
   expect(pageErrors).toEqual([]);
 });
@@ -330,25 +356,21 @@ test("map double click selects a prefab for the Prefab panel without runtime", a
   await expect(page.getByTestId("edit-mode-select")).toHaveValue("enemyitem");
   const panel = page.getByTestId("panel-prefab");
   await expect(panel).toBeVisible();
-  await expect(panel.getByTestId("data-table-grid")).toBeVisible();
+  await expect(panel.getByTestId("schema-table")).toBeVisible();
   await expect(panel.getByTestId("prefab-empty-state")).toHaveCount(0);
   await expectNoFatalFallback(page);
   expect(pageErrors).toEqual([]);
 });
 
-test("floor navigation modal, wheel and static passability work without runtime", async ({ page }) => {
+test("floor list, wheel and static passability work without runtime", async ({ page }) => {
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
   await page.goto("/");
   await expect(page.getByTestId("floor-select")).toBeVisible();
 
-  await page.getByTestId("open-floor-select").click();
-  await expect(page.getByTestId("floor-search")).toBeVisible();
-  await expect(page.getByTestId("floor-option-sample0")).toBeVisible();
-  await page.getByTestId("floor-preview-sample0").click();
-  await expect(page.getByTestId("floor-option-sample0").getByTestId("map-pixi-renderer").locator("canvas"))
-    .toBeVisible();
-  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("open-floor-select")).toHaveCount(0);
+  await page.getByTestId("map-panel-tab-map").click();
+  await expect(page.getByTestId("floor-management-list")).toBeVisible();
 
   await page.getByTestId("floor-select").selectOption("sample0");
   await page.getByTestId("map-editor-mid").hover({ position: { x: 8, y: 8 } });

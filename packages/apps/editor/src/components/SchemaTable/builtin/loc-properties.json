@@ -1,0 +1,105 @@
+{
+  "kind": "table-schema",
+  "formatVersion": 1,
+  "schemaId": "loc-properties",
+  "revision": 1,
+  "nodes": [
+    {
+      "kind": "group",
+      "id": "events",
+      "label": "普通与楼层转换",
+      "children": [
+        {
+          "kind": "field",
+          "fieldSchema": "loc.events",
+          "source": {
+            "ref": "loc:events"
+          },
+          "id": "loc-events"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "loc.changeFloor",
+          "source": {
+            "ref": "loc:changeFloor"
+          },
+          "id": "loc-changeFloor"
+        }
+      ]
+    },
+    {
+      "kind": "group",
+      "id": "auto-event",
+      "label": "自动事件",
+      "children": [
+        {
+          "kind": "field",
+          "fieldSchema": "loc.autoEvent",
+          "source": {
+            "ref": "loc:autoEvent"
+          },
+          "id": "loc-autoEvent"
+        }
+      ]
+    },
+    {
+      "kind": "group",
+      "id": "interactions",
+      "label": "战斗与交互",
+      "children": [
+        {
+          "kind": "field",
+          "fieldSchema": "loc.beforeBattle",
+          "source": {
+            "ref": "loc:beforeBattle"
+          },
+          "id": "loc-beforeBattle"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "loc.afterBattle",
+          "source": {
+            "ref": "loc:afterBattle"
+          },
+          "id": "loc-afterBattle"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "loc.afterGetItem",
+          "source": {
+            "ref": "loc:afterGetItem"
+          },
+          "id": "loc-afterGetItem"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "loc.afterOpenDoor",
+          "source": {
+            "ref": "loc:afterOpenDoor"
+          },
+          "id": "loc-afterOpenDoor"
+        }
+      ]
+    },
+    {
+      "kind": "group",
+      "id": "passability",
+      "label": "通行限制",
+      "children": [
+        {
+          "kind": "field",
+          "fieldSchema": "loc.passability",
+          "sources": {
+            "cannotOut": {
+              "ref": "loc:cannotMove"
+            },
+            "cannotIn": {
+              "ref": "loc:cannotMoveIn"
+            }
+          },
+          "id": "loc-passability"
+        }
+      ]
+    }
+  ]
+}

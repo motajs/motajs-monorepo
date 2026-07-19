@@ -80,36 +80,6 @@ export function drawSelectionRect(
 }
 
 /**
- * 绘制路径点标记
- *
- * @param ctx - Canvas 2D 上下文
- * @param pos - 格子位置
- * @param offset - 视口偏移
- */
-export function fillPathPoint(
-  ctx: CanvasRenderingContext2D,
-  pos: LocPOD,
-  offset: LocPOD = [0, 0]
-): void {
-  // 随机颜色
-  const r = Math.floor(Math.random() * 8);
-  const g = Math.floor(Math.random() * 8);
-  const b = Math.floor(Math.random() * 8);
-  ctx.fillStyle = `#${r}${g}${b}`;
-
-  const [ox, oy] = offset;
-  const x = pos[0] * TILE_SIZE - ox;
-  const y = pos[1] * TILE_SIZE - oy;
-
-  ctx.fillRect(
-    x + (TILE_SIZE * 3) / 8,
-    y + (TILE_SIZE * 3) / 8,
-    TILE_SIZE / 4,
-    TILE_SIZE / 4
-  );
-}
-
-/**
  * 大地图模式下绘制选区矩形
  */
 export function drawSelectionRectBigmap(

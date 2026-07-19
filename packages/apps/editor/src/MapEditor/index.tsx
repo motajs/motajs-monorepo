@@ -10,6 +10,10 @@ import { useSignal } from "@/hooks/useFs";
 import { mapCommands, type MapRect, readMapInfo } from "@/project/commands/mapCommands";
 import { projectData } from "@/project/data/projectData";
 import { type EditorViewport, operationHistory, registerEditorViewportProvider } from "@/project/history";
+import {
+  captureSchemaCustomizationViewport,
+  restoreSchemaCustomizationViewport,
+} from "@/components/SchemaTable/schemaCustomizationState";
 import { projectModel } from "@/project/model/projectModel";
 import type { PrefabInfo } from "@/services/prefab";
 import { getCurrentFloorId, setCurrentFloorId, useCurrentFloorId } from "@/stores/editorState";
@@ -24,6 +28,7 @@ import { type ComponentProps, type FC, useCallback, useEffect, useMemo, useRef, 
 import { flushSync } from "react-dom";
 import { ContextMenu } from "./ContextMenu";
 import { MapCanvas } from "./MapCanvas";
+import { MapEditorErrorBoundary } from "./MapEditorErrorBoundary";
 import { MapEditorStore } from "./MapEditorStore";
 import { MaterialPanel } from "./MaterialPanel";
 import type { BlockInfo, SelectedBlock } from "./MaterialPanel/types";
@@ -45,13 +50,24 @@ const ValidatedRecentlyUsedPanel: FC<ComponentProps<typeof RecentlyUsedPanel>> =
   const tilesetCatalogResource = useMemo(() => projectModel.tilesetCatalog(), []);
   const tilesetCatalog = useModelResourceSuspense(tilesetCatalogResource);
   const validItems = useMemo(() =>
-    props.items.filter((item) => {
-      if (!Number.isInteger(item.idnum) || item.idnum <= 0) return false;
-      if (item.idnum < 10000) return blockRegistry.has(item.idnum);
+    props.items.flatMap((item) => {
+      if (!Number.isInteger(item.idnum) || item.idnum <= 0) return [];
+      if (item.idnum < 10000) {
+        const block = blockRegistry.get(item.idnum);
+        if (!block) return [];
+        return [{
+          ...item,
+          materialPath: block.editorDisplay?.type === "image"
+            ? block.materialPath
+            : item.materialPath,
+          x: block.editorDisplay?.x ?? item.x,
+          y: block.editorDisplay?.y ?? item.y,
+        }];
+      }
       return tilesetCatalog.entries.some((entry) => (
         item.idnum >= entry.startIdnum
         && item.idnum < entry.startIdnum + entry.columns * entry.rows
-      ));
+      )) ? [item] : [];
     }), [blockRegistry, props.items, tilesetCatalog]);
 
   return <RecentlyUsedPanel {...props} items={validItems} />;
@@ -62,11 +78,6 @@ const PANEL_SHORTCUTS = {
   x: "loc",
   c: "enemyitem",
   v: "floor",
-  b: "tower",
-  n: "functions",
-  m: "appendpic",
-  ",": "commonevent",
-  ".": "plugins",
 } as const;
 
 function shortcutDigit(event: KeyboardEvent): string | null {
@@ -126,7 +137,16 @@ const MapEditorInner: FC = () => {
   const towerContent = useSignal(towerResource.content);
 
   const store = MapEditorStore.useStore();
-  const { activePanel, setActivePanel } = PanelStore.useStore();
+  const {
+    activeWorkspace,
+    activeMapPanel,
+    activeScriptWorkspace,
+    activePanel,
+    setActivePanel,
+    setActiveWorkspace,
+    setActiveMapPanel,
+    setActiveScriptWorkspace,
+  } = PanelStore.useStore();
   const { state } = store;
   const { currentFloorId, selectedBlock } = state;
   const externalFloorId = useCurrentFloorId();
@@ -146,7 +166,7 @@ const MapEditorInner: FC = () => {
   const floorIdRef = useRef(floorId);
 
   useEffect(() => {
-    if (towerContent.status === "idle") void towerResource.reload();
+    if (towerContent.status === "idle") void towerResource.ensureLoaded();
   }, [towerContent.status, towerResource]);
 
   useEffect(() => {
@@ -173,6 +193,9 @@ const MapEditorInner: FC = () => {
   useEffect(() =>
     registerEditorViewportProvider({
       capture: (): EditorViewport => ({
+        activeWorkspace,
+        activeMapPanel,
+        activeScriptWorkspace,
         activePanel,
         floorId: getCurrentFloorId() || state.currentFloorId,
         map: {
@@ -189,10 +212,19 @@ const MapEditorInner: FC = () => {
         },
         locSelection: cloneDeep(getCurrentLocSelection()),
         prefabSelection: cloneDeep(getCurrentPrefabSelection()),
+        schemaCustomization: captureSchemaCustomizationViewport(),
       }),
       restore: (viewport) => {
         flushSync(() => {
-          setActivePanel(viewport.activePanel);
+          if (viewport.activeWorkspace) {
+            if (viewport.activeMapPanel) setActiveMapPanel(viewport.activeMapPanel);
+            if (viewport.activeScriptWorkspace) {
+              setActiveScriptWorkspace(viewport.activeScriptWorkspace);
+            }
+            setActiveWorkspace(viewport.activeWorkspace);
+          } else {
+            setActivePanel(viewport.activePanel);
+          }
           if (viewport.floorId) {
             setCurrentFloorId(viewport.floorId);
             store.setCurrentFloorId(viewport.floorId, { preserveViewport: true });
@@ -219,9 +251,21 @@ const MapEditorInner: FC = () => {
             setCurrentLocPos(null);
           }
           setCurrentPrefabSelection(cloneDeep(viewport.prefabSelection));
+          restoreSchemaCustomizationViewport(viewport.schemaCustomization);
         });
       },
-    }), [activePanel, setActivePanel, state, store]);
+    }), [
+      activeMapPanel,
+      activePanel,
+      activeScriptWorkspace,
+      activeWorkspace,
+      setActiveMapPanel,
+      setActivePanel,
+      setActiveScriptWorkspace,
+      setActiveWorkspace,
+      state,
+      store,
+    ]);
 
   useEffect(() => {
     const handleHistoryShortcut = (event: KeyboardEvent) => {
@@ -238,12 +282,10 @@ const MapEditorInner: FC = () => {
     return () => window.removeEventListener("keydown", handleHistoryShortcut);
   }, []);
 
-  useEffect(() => {
-    return subscribeNotifications(({ level, message }) => {
+  useEffect(() => subscribeNotifications(({ level, message }) => {
       setTipMessage(message);
       setTipClass(level === "success" ? "successText" : level === "error" ? "warnText" : "infoText");
-    });
-  }, []);
+    }), []);
 
   // 处理素材选中变化
   const handleSelectedBlockChange = useCallback(
@@ -278,9 +320,11 @@ const MapEditorInner: FC = () => {
   // 双击选中素材
   const handleDoubleClickSelect = useCallback(
     (block: BlockInfo | 0) => {
-      store.setSelectedBlock(block === 0 ? undefined : block);
-      setCurrentPrefabInfo(toPrefabInfo(block), "map");
-      setActivePanel("enemyitem");
+      flushSync(() => {
+        store.setSelectedBlock(block === 0 ? undefined : block);
+        setCurrentPrefabInfo(toPrefabInfo(block), "map");
+        setActivePanel("enemyitem");
+      });
     },
     [store, setActivePanel],
   );
@@ -316,6 +360,7 @@ const MapEditorInner: FC = () => {
     store.pushRecentFloor(current);
     store.setCurrentFloorId(next);
     setCurrentFloorId(next);
+    setCurrentLocFloorId(next);
   }, [store]);
 
   useEffect(() => {
@@ -334,6 +379,7 @@ const MapEditorInner: FC = () => {
 
   useEffect(() => {
     const handleMapShortcut = (event: KeyboardEvent) => {
+      if (activeWorkspace !== "map") return;
       if (isTextEditorTarget(event.target)) return;
       const key = event.key.toLowerCase();
       const commandKey = event.ctrlKey || event.metaKey;
@@ -429,10 +475,20 @@ const MapEditorInner: FC = () => {
 
     window.addEventListener("keydown", handleMapShortcut);
     return () => window.removeEventListener("keydown", handleMapShortcut);
-  }, [floorId, handleFloorStep, legacyMaterialShortcuts, materialShortcuts, setActivePanel, state, store]);
+  }, [
+    activeWorkspace,
+    floorId,
+    handleFloorStep,
+    legacyMaterialShortcuts,
+    materialShortcuts,
+    setActivePanel,
+    state,
+    store,
+  ]);
 
   useEffect(() => {
     const handleMaterialShortcutSave = (event: KeyboardEvent) => {
+      if (activeWorkspace !== "map") return;
       if (!event.altKey || event.ctrlKey || event.metaKey || isTextEditorTarget(event.target)) return;
       const digit = shortcutDigit(event);
       if (digit === null) return;
@@ -452,7 +508,7 @@ const MapEditorInner: FC = () => {
     };
     window.addEventListener("keydown", handleMaterialShortcutSave);
     return () => window.removeEventListener("keydown", handleMaterialShortcutSave);
-  }, [materialShortcuts, setMaterialShortcuts, state.selectedBlock, state.tileSize]);
+  }, [activeWorkspace, materialShortcuts, setMaterialShortcuts, state.selectedBlock, state.tileSize]);
 
   // 最近使用面板的选中回调
   const handleRecentlyUsedSelect = useCallback(
@@ -464,6 +520,7 @@ const MapEditorInner: FC = () => {
         y: item.y,
         x: item.x,
         isTile: item.isTile,
+        materialPath: item.materialPath,
       };
       store.setSelectedBlock(block);
       setCurrentPrefabInfo(toPrefabInfo(block), "material");
@@ -483,6 +540,7 @@ const MapEditorInner: FC = () => {
       x: block.x ?? 0,
       y: block.y,
       isTile: block.isTile,
+      materialPath: block.materialPath,
       recent: now,
       frequent: (existing?.frequent ?? 0) + 1,
       istop: existing?.istop,
@@ -572,12 +630,12 @@ const MapEditorInner: FC = () => {
 /**
  * MapEditor 导出组件
  *
- * 包装 Provider 提供状态管理
+ * Store Provider 位于 Workbench，供地图画布和同级楼层面板共享导航状态。
  */
 export const MapEditor: FC = () => (
-  <MapEditorStore.Provider>
+  <MapEditorErrorBoundary>
     <MapEditorInner />
-  </MapEditorStore.Provider>
+  </MapEditorErrorBoundary>
 );
 
 export default MapEditor;

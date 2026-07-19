@@ -1,0 +1,189 @@
+.floorResizeForm {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-top: 6px;
+  color: var(--editor-fg, #24292f);
+}
+
+.floorResizeDimensions {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+}
+
+.floorResizeDimensions label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: var(--editor-muted, #656d76);
+  font-size: 12px;
+}
+
+.floorResizeDimensions > span {
+  padding-bottom: 6px;
+  color: var(--editor-muted, #656d76);
+}
+
+.floorResizeSectionTitle {
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.floorResizeHint {
+  margin: -3px 0 9px;
+  color: var(--editor-muted, #656d76);
+  font-size: 12px;
+}
+
+.floorResizeGrid {
+  display: flex;
+  min-height: 300px;
+  padding: 10px;
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+  border: 1px solid var(--editor-border, #d0d7de);
+  background-color: var(--editor-bg, #f6f8fa);
+}
+
+.floorResizeGridStage {
+  position: relative;
+  flex: none;
+  background-color: var(--editor-surface, #fff);
+  background-image:
+    linear-gradient(var(--editor-grid, #d8dee4) 1px, transparent 1px),
+    linear-gradient(90deg, var(--editor-grid, #d8dee4) 1px, transparent 1px);
+  background-position: -1px -1px;
+  touch-action: none;
+  user-select: none;
+}
+
+.floorResizeOldMap,
+.floorResizeNewMap {
+  position: absolute;
+  box-sizing: border-box;
+}
+
+.floorResizeOldMap {
+  z-index: 1;
+  overflow: hidden;
+  border: 0;
+  background: rgb(87 96 106 / 18%);
+  pointer-events: none;
+}
+
+.floorResizeOldMap::after {
+  position: absolute;
+  z-index: 1;
+  border: 2px solid #57606a;
+  content: "";
+  inset: 0;
+  pointer-events: none;
+}
+
+.floorResizeNewMap {
+  z-index: 2;
+  border: 2px solid #1677ff;
+  background: rgb(22 119 255 / 12%);
+  cursor: move;
+  touch-action: none;
+}
+
+.floorResizeOldMap > span,
+.floorResizeNewMap > span {
+  position: absolute;
+  top: 4px;
+  left: 6px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  color: var(--editor-fg, #24292f);
+  background: rgb(255 255 255 / 78%);
+  font-size: 11px;
+  line-height: 16px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.floorResizeOldMap > span {
+  z-index: 2;
+}
+
+.floorResizeNewMap > span {
+  color: #0958d9;
+}
+
+.floorResizeHandle {
+  position: absolute;
+  z-index: 3;
+  display: block;
+  width: 10px;
+  height: 10px;
+  border: 1px solid #fff;
+  border-radius: 2px;
+  background: #1677ff;
+}
+
+.floorResizeHandle.n,
+.floorResizeHandle.s {
+  left: 50%;
+  margin-left: -5px;
+  cursor: ns-resize;
+}
+
+.floorResizeHandle.e,
+.floorResizeHandle.w {
+  top: 50%;
+  margin-top: -5px;
+  cursor: ew-resize;
+}
+
+.floorResizeHandle.n { top: -6px; }
+.floorResizeHandle.ne { top: -6px; right: -6px; cursor: nesw-resize; }
+.floorResizeHandle.e { right: -6px; }
+.floorResizeHandle.se { right: -6px; bottom: -6px; cursor: nwse-resize; }
+.floorResizeHandle.s { bottom: -6px; }
+.floorResizeHandle.sw { bottom: -6px; left: -6px; cursor: nesw-resize; }
+.floorResizeHandle.w { left: -6px; }
+.floorResizeHandle.nw { top: -6px; left: -6px; cursor: nwse-resize; }
+
+.floorResizeHandle:hover {
+  background: #4096ff;
+}
+
+.floorResizeLegend {
+  display: flex;
+  gap: 14px;
+  margin-top: 7px;
+  color: var(--editor-muted, #656d76);
+  font-size: 12px;
+}
+
+.floorResizeLegend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.floorResizeLegend i {
+  width: 10px;
+  height: 10px;
+  box-sizing: border-box;
+}
+
+.floorResizeLegend i.old {
+  border: 2px solid #57606a;
+  background: rgb(87 96 106 / 18%);
+}
+
+.floorResizeLegend i.next {
+  border: 2px solid #1677ff;
+  background: rgb(22 119 255 / 12%);
+}
+
+.floorResizeWarning {
+  padding: 8px 10px;
+  border-radius: 4px;
+  color: #874d00;
+  background: #fff7e6;
+}

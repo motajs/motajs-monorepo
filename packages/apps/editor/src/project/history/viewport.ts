@@ -1,4 +1,9 @@
-import type { PanelId } from "@/stores/PanelStore";
+import type {
+  MapPanelId,
+  PanelId,
+  ScriptWorkspaceId,
+  WorkspaceId,
+} from "@/stores/PanelStore";
 import type { LocSelection } from "@/stores/locState";
 import type { PrefabSelection } from "@/stores/prefabState";
 import type { GridPOD, LocPOD, RectPOD } from "@/utils/coordinate";
@@ -7,8 +12,13 @@ import type {
   LayerMod,
 } from "@/MapEditor/MapEditorStore";
 import type { SelectedBlock } from "@/MapEditor/MaterialPanel/types";
+import type { SchemaCustomizationViewport } from "@/components/SchemaTable/schemaCustomizationState";
 
 export interface EditorViewport {
+  activeWorkspace: WorkspaceId;
+  activeMapPanel: MapPanelId;
+  activeScriptWorkspace: ScriptWorkspaceId;
+  /** 兼容旧 history fixture；新记录同时保存上面的结构化状态。 */
   activePanel: PanelId;
   floorId?: string;
   map: {
@@ -25,6 +35,7 @@ export interface EditorViewport {
   };
   locSelection: LocSelection | null;
   prefabSelection: PrefabSelection | null;
+  schemaCustomization?: SchemaCustomizationViewport;
 }
 
 export interface EditorViewportProvider {

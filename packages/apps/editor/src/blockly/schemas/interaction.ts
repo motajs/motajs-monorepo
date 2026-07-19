@@ -18,6 +18,7 @@ import type {
 import type { BlockSchema } from '../registry/types';
 import { parseEventList } from '../registry/utils';
 import { BlockColours } from './colours';
+import { checkbox, expression, expressionValue } from './legacyHelpers';
 
 // ============================================
 // choice_item 块（选项子块）
@@ -59,6 +60,9 @@ export const choiceItemSchema: BlockSchema = {
     helpUrl: '',
   },
   category: 'interaction',
+  interactions: [
+    { type: 'autocomplete', field: 'ICON', source: 'id' },
+  ],
   // 这是一个内部块，不需要独立的 parser/generator
   // 由 choices 块统一处理
   fieldMapping: {},
@@ -415,10 +419,11 @@ export const winSchema: BlockSchema = {
   eventType: 'win',
   definition: {
     type: 'mota_win_s',
-    message0: '游戏胜利 原因 %1 不计入榜单 %2',
+    message0: '游戏胜利 原因 %1 不计入榜单 %2 不退出游戏 %3',
     args0: [
       { type: 'field_input', name: 'REASON', text: '' },
       { type: 'field_checkbox', name: 'NO_RANK', checked: false },
+      { type: 'field_checkbox', name: 'NO_EXIT', checked: false },
     ],
     previousStatement: null,
     colour: BlockColours.GAME_FLOW,
@@ -430,8 +435,13 @@ export const winSchema: BlockSchema = {
     REASON: 'reason',
     NO_RANK: {
       eventField: 'norank',
-      parse: (v) => (v as boolean) || false,
-      generate: (v) => (v === 'TRUE' || v === true ? true : undefined),
+      parse: (v) => Boolean(v),
+      generate: (v) => (v === 'TRUE' || v === true ? 1 : undefined),
+    },
+    NO_EXIT: {
+      eventField: 'noexit',
+      parse: (v) => Boolean(v),
+      generate: (v) => (v === 'TRUE' || v === true ? 1 : undefined),
     },
   },
 };
@@ -495,7 +505,7 @@ export const setTextSchema: BlockSchema = {
   eventType: 'setText',
   definition: {
     type: 'mota_setText_s',
-    message0: '设置文本属性 位置 %1 偏移 [%2,%3]',
+    message0: '设置文本属性 位置 %1 偏移像素 %2 对齐 %3 粗体 %4',
     args0: [
       {
         type: 'field_dropdown',
@@ -507,11 +517,7 @@ export const setTextSchema: BlockSchema = {
           ['下', 'down'],
         ],
       },
-      { type: 'field_input', name: 'OFFSET_X', text: '' },
-      { type: 'field_input', name: 'OFFSET_Y', text: '' },
-    ],
-    message1: '对齐 %1 标题色 %2 正文色 %3',
-    args1: [
+      { type: 'field_input', name: 'OFFSET', text: '' },
       {
         type: 'field_dropdown',
         name: 'ALIGN',
@@ -522,14 +528,22 @@ export const setTextSchema: BlockSchema = {
           ['右', 'right'],
         ],
       },
-      { type: 'field_input', name: 'TITLE_COLOR', text: '' },
-      { type: 'field_input', name: 'TEXT_COLOR', text: '' },
-    ],
-    message2: '背景色 %1 边框色 %2 粗体 %3',
-    args2: [
-      { type: 'field_input', name: 'BACKGROUND', text: '' },
-      { type: 'field_input', name: 'BORDER', text: '' },
       { type: 'field_checkbox', name: 'BOLD', checked: false },
+    ],
+    message1: '标题颜色 %1 正文颜色 %2 背景 %3',
+    args1: [
+      { type: 'field_input', name: 'TITLE', text: '' },
+      { type: 'field_input', name: 'TEXT_COLOR', text: '' },
+      { type: 'field_input', name: 'BACKGROUND', text: '' },
+    ],
+    message2: '标题大小 %1 正文大小 %2 行距 %3 打字间隔 %4 字符间距 %5 淡入淡出 %6',
+    args2: [
+      { type: 'field_input', name: 'TITLE_FONT', text: '' },
+      { type: 'field_input', name: 'TEXT_FONT', text: '' },
+      { type: 'field_input', name: 'LINE_HEIGHT', text: '' },
+      { type: 'field_input', name: 'TIME', text: '' },
+      { type: 'field_input', name: 'LETTER_SPACING', text: '' },
+      { type: 'field_input', name: 'ANIMATE_TIME', text: '' },
     ],
     previousStatement: null,
     nextStatement: null,
@@ -539,45 +553,54 @@ export const setTextSchema: BlockSchema = {
   },
   category: 'interaction',
   parser: (event: EventObject, _context: ParseContext): BlockState => {
-    const offset = event.offset as [number, number] | undefined;
     return {
       type: 'mota_setText_s',
       fields: {
         POSITION: (event.position as string) || '',
-        OFFSET_X: offset?.[0]?.toString() || '',
-        OFFSET_Y: offset?.[1]?.toString() || '',
+        OFFSET: expression(event.offset),
         ALIGN: (event.align as string) || '',
-        TITLE_COLOR: (event.titlefont as string) || '',
-        TEXT_COLOR: (event.textfont as string) || '',
-        BACKGROUND: (event.background as string) || '',
-        BORDER: (event.border as string) || '',
+        TITLE: Array.isArray(event.title) ? JSON.stringify(event.title) : '',
+        TEXT_COLOR: Array.isArray(event.text) ? JSON.stringify(event.text) : '',
+        BACKGROUND: Array.isArray(event.background) ? JSON.stringify(event.background) : expression(event.background),
+        TITLE_FONT: expression(event.titlefont),
+        TEXT_FONT: expression(event.textfont),
+        LINE_HEIGHT: expression(event.lineHeight),
+        TIME: expression(event.time),
+        LETTER_SPACING: expression(event.letterSpacing),
+        ANIMATE_TIME: expression(event.animateTime),
         BOLD: (event.bold as boolean) || false,
       },
     };
   },
   generator: (block: Blockly.Block): string => {
     const position = block.getFieldValue('POSITION');
-    const offsetX = block.getFieldValue('OFFSET_X');
-    const offsetY = block.getFieldValue('OFFSET_Y');
+    const offset = block.getFieldValue('OFFSET');
     const align = block.getFieldValue('ALIGN');
-    const titleColor = block.getFieldValue('TITLE_COLOR');
+    const title = block.getFieldValue('TITLE');
     const textColor = block.getFieldValue('TEXT_COLOR');
     const background = block.getFieldValue('BACKGROUND');
-    const border = block.getFieldValue('BORDER');
-    const bold = block.getFieldValue('BOLD') === 'TRUE';
+    const titleFont = block.getFieldValue('TITLE_FONT');
+    const textFont = block.getFieldValue('TEXT_FONT');
+    const lineHeight = block.getFieldValue('LINE_HEIGHT');
+    const time = block.getFieldValue('TIME');
+    const letterSpacing = block.getFieldValue('LETTER_SPACING');
+    const animateTime = block.getFieldValue('ANIMATE_TIME');
 
     const event: Record<string, unknown> = { type: 'setText' };
 
     if (position) event.position = position;
-    if (offsetX || offsetY) {
-      event.offset = [parseInt(offsetX) || 0, parseInt(offsetY) || 0];
-    }
+    if (offset) event.offset = expressionValue(offset);
     if (align) event.align = align;
-    if (titleColor) event.titlefont = titleColor;
-    if (textColor) event.textfont = textColor;
-    if (background) event.background = background;
-    if (border) event.border = border;
-    if (bold) event.bold = true;
+    if (title) event.title = JSON5.parse(title);
+    if (textColor) event.text = JSON5.parse(textColor);
+    if (background) event.background = background.trim().startsWith('[') ? JSON5.parse(background) : background;
+    if (titleFont) event.titlefont = expressionValue(titleFont);
+    if (textFont) event.textfont = expressionValue(textFont);
+    if (lineHeight) event.lineHeight = expressionValue(lineHeight);
+    if (time) event.time = expressionValue(time);
+    if (letterSpacing) event.letterSpacing = expressionValue(letterSpacing);
+    if (animateTime) event.animateTime = expressionValue(animateTime);
+    if (checkbox(block, 'BOLD')) event.bold = true;
 
     return JSON.stringify(event) + ',\n';
   },
@@ -595,10 +618,13 @@ export const moveTextBoxSchema: BlockSchema = {
   eventType: 'moveTextBox',
   definition: {
     type: 'mota_moveTextBox_s',
-    message0: '移动文本框到 [%1,%2] 时间 %3 异步 %4',
+    message0: '移动文本框 编号 %1 到 [%2,%3] 使用增量 %4 移动方式 %5 时间 %6 异步 %7',
     args0: [
+      { type: 'field_input', name: 'CODE', text: '1' },
       { type: 'field_input', name: 'X', text: '' },
       { type: 'field_input', name: 'Y', text: '' },
+      { type: 'field_checkbox', name: 'RELATIVE', checked: false },
+      { type: 'field_input', name: 'MOVE_MODE', text: '' },
       { type: 'field_input', name: 'TIME', text: '' },
       { type: 'field_checkbox', name: 'ASYNC', checked: false },
     ],
@@ -614,24 +640,31 @@ export const moveTextBoxSchema: BlockSchema = {
     return {
       type: 'mota_moveTextBox_s',
       fields: {
+        CODE: expression(event.code),
         X: loc?.[0]?.toString() || '',
         Y: loc?.[1]?.toString() || '',
+        RELATIVE: event.relative === true,
+        MOVE_MODE: (event.moveMode as string) || '',
         TIME: (event.time as number)?.toString() || '',
         ASYNC: (event.async as boolean) || false,
       },
     };
   },
   generator: (block: Blockly.Block): string => {
+    const code = block.getFieldValue('CODE');
     const x = block.getFieldValue('X');
     const y = block.getFieldValue('Y');
+    const moveMode = block.getFieldValue('MOVE_MODE');
     const time = block.getFieldValue('TIME');
     const async = block.getFieldValue('ASYNC') === 'TRUE';
 
-    const event: Record<string, unknown> = { type: 'moveTextBox' };
+    const event: Record<string, unknown> = { type: 'moveTextBox', code: expressionValue(code) };
 
     if (x || y) {
-      event.loc = [parseInt(x) || 0, parseInt(y) || 0];
+      event.loc = [expressionValue(x), expressionValue(y)];
     }
+    if (checkbox(block, 'RELATIVE')) event.relative = true;
+    if (moveMode) event.moveMode = moveMode;
     if (time) {
       event.time = parseInt(time) || 0;
     }
@@ -655,7 +688,8 @@ export const clearTextBoxSchema: BlockSchema = {
   eventType: 'clearTextBox',
   definition: {
     type: 'mota_clearTextBox_s',
-    message0: '清除文本框',
+    message0: '清除文本框 编号列表 %1',
+    args0: [{ type: 'field_input', name: 'CODE', text: '' }],
     previousStatement: null,
     nextStatement: null,
     colour: 'auto', // 使用 category 默认颜色 (160)
@@ -663,7 +697,16 @@ export const clearTextBoxSchema: BlockSchema = {
     helpUrl: '',
   },
   category: 'interaction',
-  fieldMapping: {},
+  parser: (event: EventObject): BlockState => ({
+    type: 'mota_clearTextBox_s',
+    fields: { CODE: Array.isArray(event.code) ? event.code.join(',') : '' },
+  }),
+  generator: (block: Blockly.Block): string => {
+    const code = String(block.getFieldValue('CODE') || '').trim();
+    const event: Record<string, unknown> = { type: 'clearTextBox' };
+    if (code) event.code = code.split(',').map((part) => Number(part.trim()));
+    return JSON.stringify(event) + ',\n';
+  },
 };
 
 // ============================================

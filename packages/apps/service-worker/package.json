@@ -6,6 +6,10 @@
   "scripts": {
     "dev": "vite build && vite",
     "build": "vite build",
+    "build:with-editor": "pnpm --filter @motajs/editor build && pnpm build && pnpm stage:editor",
+    "deploy:h5test": "bash scripts/deploy-h5test.sh",
+    "verify:deployment": "node scripts/verify-deployment.mjs",
+    "stage:editor": "node scripts/stage-editor.mjs",
     "preview": "vite preview",
     "typecheck": "tsc -b",
     "test": "vitest run",

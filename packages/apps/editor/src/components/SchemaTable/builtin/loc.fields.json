@@ -1,0 +1,182 @@
+{
+  "kind": "field-bundle",
+  "formatVersion": 1,
+  "schemaId": "loc.fields",
+  "revision": 2,
+  "fields": {
+    "loc.events": {
+      "type": [
+        "array",
+        "object",
+        "null"
+      ],
+      "properties": {
+        "data": {
+          "type": [
+            "array",
+            "null"
+          ]
+        }
+      },
+      "title": "普通事件",
+      "description": "勇士到达该点时执行的事件；入口配置为默认值时保存为数组，否则保存为带 data 的配置对象。",
+      "normalizer": "optionalEvent",
+      "editor": {
+        "kind": "event",
+        "entryType": "event",
+        "floorId": {
+          "ref": "params:floorId"
+        },
+        "position": {
+          "ref": "params:position"
+        }
+      },
+      "diagnostics": {
+        "loc.changeFloor.conflict": "不应与楼层转换同时存在"
+      }
+    },
+    "loc.changeFloor": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "title": "楼层转换",
+      "description": "到达该点时执行的楼层转换；与普通事件同时存在时，普通事件会覆盖楼层转换。",
+      "normalizer": "optionalJson",
+      "editor": {
+        "kind": "event",
+        "entryType": "changeFloor",
+        "floorId": {
+          "ref": "params:floorId"
+        },
+        "position": {
+          "ref": "params:position"
+        }
+      },
+      "diagnostics": {
+        "loc.changeFloor.conflict": "不应与普通事件同时存在"
+      }
+    },
+    "loc.autoEvent": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "title": "自动事件",
+      "description": "按页管理该点的自动事件；拖动、插入或删除时按列表顺序重编号。",
+      "normalizer": "autoEventPages",
+      "editor": {
+        "kind": "autoEventList",
+        "floorId": {
+          "ref": "params:floorId"
+        },
+        "position": {
+          "ref": "params:position"
+        }
+      },
+      "diagnostics": {
+        "loc.autoEvent.shape": "必须是以非负整数页码为 key 的自动事件对象"
+      }
+    },
+    "loc.beforeBattle": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "title": "战前事件",
+      "description": "在该点触发战斗前执行的事件。",
+      "normalizer": "optionalEventList",
+      "editor": {
+        "kind": "event",
+        "entryType": "beforeBattle",
+        "floorId": {
+          "ref": "params:floorId"
+        },
+        "position": {
+          "ref": "params:position"
+        }
+      }
+    },
+    "loc.afterBattle": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "title": "战后事件",
+      "description": "在该点战斗结束后执行的事件。",
+      "normalizer": "optionalEventList",
+      "editor": {
+        "kind": "event",
+        "entryType": "afterBattle",
+        "floorId": {
+          "ref": "params:floorId"
+        },
+        "position": {
+          "ref": "params:position"
+        }
+      }
+    },
+    "loc.afterGetItem": {
+      "type": [
+        "array",
+        "object",
+        "null"
+      ],
+      "properties": {
+        "data": {
+          "type": [
+            "array",
+            "null"
+          ]
+        }
+      },
+      "title": "道具后事件",
+      "description": "在该点获得道具后执行的事件；开启“轻按时不触发”时保存为带 data 的配置对象。",
+      "normalizer": "optionalEvent",
+      "editor": {
+        "kind": "event",
+        "entryType": "afterGetItem",
+        "floorId": {
+          "ref": "params:floorId"
+        },
+        "position": {
+          "ref": "params:position"
+        }
+      }
+    },
+    "loc.afterOpenDoor": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "title": "开门后事件",
+      "description": "在该点开门完成后执行的事件。",
+      "normalizer": "optionalEventList",
+      "editor": {
+        "kind": "event",
+        "entryType": "afterOpenDoor",
+        "floorId": {
+          "ref": "params:floorId"
+        },
+        "position": {
+          "ref": "params:position"
+        }
+      }
+    },
+    "loc.passability": {
+      "type": "object",
+      "title": "出入通行",
+      "description": "每条边的内侧控制能否从该点离开，外侧控制能否从相邻点进入；红色边表示禁止。",
+      "normalizer": "passability",
+      "editor": {
+        "kind": "passability",
+        "block": {
+          "ref": "params:blockIdnum"
+        }
+      },
+      "diagnostics": {
+        "loc.passability.shape": "不可出和不可入方向必须是方向字符串数组"
+      }
+    }
+  }
+}

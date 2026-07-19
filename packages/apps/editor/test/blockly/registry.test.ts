@@ -332,7 +332,7 @@ describe('BlockRegistry', () => {
 
       expect(state.type).toBe('mota_insert_s');
       expect(state.fields?.NAME).toBe('加点事件');
-      expect(state.fields?.ARGS).toBe('1,2');
+      expect(state.fields?.ARGS).toBe('[1,2]');
     });
 
     it('应该解析 function 事件', () => {

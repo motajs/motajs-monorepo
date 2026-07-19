@@ -162,6 +162,7 @@ export const MaterialPanel: FC<MaterialPanelProps> = ({
             selection={displayedSelection}
             onClear={handleClearSelect}
             onClick={handleMaterialClick}
+            airwallPath={blockRegistry.get(17)?.materialPath}
           />
 
           {/* 其他素材类型 */}
@@ -283,11 +284,13 @@ function resolveSelectedBlock(
   }
 
   if (id === "airwall") {
-    return {
+    const registered = registry.get(17);
+    return registered ? toBlockInfo(registered) : {
       idnum: 17,
       id: "airwall",
       images: "terrains",
       y: 0,
+      materialPath: "project/materials/airwall.png",
     };
   }
 

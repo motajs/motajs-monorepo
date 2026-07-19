@@ -292,6 +292,20 @@ describe('Blockly editor session', () => {
     expect(reopened.snapshot().viewport).toEqual({ x: -20, y: 30, scale: 1.2 });
     expect(reopened.snapshot().selectedBlockId).toBe('b1');
   });
+
+  it('can restore only presentation state while keeping current event content', () => {
+    const store = new BlocklySessionStore();
+    const first = new BlocklyEditorSession('common-event:a', 'commonEvent', '[{"type":"comment","text":"old"}]');
+    first.setViewport({ x: -12, y: 24, scale: 1.1 }, 'old-block');
+    store.save(first);
+    const reopened = new BlocklyEditorSession('common-event:a', 'commonEvent', '[{"type":"comment","text":"current"}]');
+    expect(store.restoreViewport(reopened)).toBe(true);
+    expect(reopened.snapshot()).toMatchObject({
+      sourceText: '[{"type":"comment","text":"current"}]',
+      viewport: { x: -12, y: 24, scale: 1.1 },
+      selectedBlockId: 'old-block',
+    });
+  });
 });
 
 describe('Blockly static project models', () => {

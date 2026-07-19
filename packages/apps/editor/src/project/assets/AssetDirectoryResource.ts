@@ -1,5 +1,6 @@
 import { effect, signal } from "alien-signals";
 
+import { ContentUtils } from "@/fs/ContentUtils";
 import type { ReadonlySignal } from "@/fs/interfaces";
 import type { Content } from "@/fs/types";
 import type { Fs } from "@/services/fs";
@@ -30,6 +31,10 @@ export class AssetDirectoryResource implements AssetDirectoryResourceLike {
     return this.mutableContent();
   }
 
+  value(): AssetDirectorySnapshot {
+    return ContentUtils.unwrap(this.mutableContent(), this.id);
+  }
+
   subscribe(listener: (content: Content<AssetDirectorySnapshot>) => void): () => void {
     return effect(() => listener(this.mutableContent()));
   }
@@ -53,6 +58,12 @@ export class AssetDirectoryResource implements AssetDirectoryResourceLike {
       if (normalized.message.includes("not found")) this.mutableContent({ status: "not-found" });
       else this.mutableContent({ status: "error", error: normalized });
     }
+  }
+
+  async ensureLoaded(): Promise<void> {
+    const content = this.mutableContent();
+    if (content.status === "idle") await this.reload();
+    else if (content.status === "loading") await this.waitForSettled();
   }
 
   async waitForSettled(): Promise<void> {

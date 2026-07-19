@@ -15,6 +15,7 @@ export interface EventEditorOpenRequest {
   floorId?: string;
   position?: { x: number; y: number };
   onConfirm(value: unknown): void | Promise<void>;
+  onDraftChange?(value: unknown): void;
   onCancel?(): void;
 }
 

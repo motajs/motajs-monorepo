@@ -4,8 +4,11 @@ import { cloneDeep } from "es-toolkit";
 import { executePatchCommand } from "@/project/history";
 import { commandError, type CommandResult } from "./types";
 import { assertMapMatrixSize, type MapMatrix } from "./mapMatrix";
+import { buildFieldPath } from "@/utils/fieldPath";
+import { getMapLayerSettingsSnapshot } from "@/project/settings/mapLayerSettings";
 
-export type MapLayer = "map" | "bgmap" | "fgmap";
+/** 楼层上的图块矩阵属性名。map 是唯一携带坐标事件的图层。 */
+export type MapLayer = string;
 
 export interface MapPosition {
   x: number;
@@ -62,20 +65,22 @@ export interface MapRect {
   y1: number;
 }
 
+export interface TilesetPaintPattern {
+  startIdnum: number;
+  sourceX: number;
+  sourceY: number;
+  width: number;
+  height: number;
+  columns: number;
+  rows: number;
+}
+
 export interface PaintPatternOptions {
   floorId: string;
   layer?: MapLayer;
   targetPositions: MapPosition[];
   anchor: MapPosition;
-  tileset: {
-    startIdnum: number;
-    sourceX: number;
-    sourceY: number;
-    width: number;
-    height: number;
-    columns: number;
-    rows: number;
-  };
+  tileset: TilesetPaintPattern;
 }
 
 export interface ChangeFloorTarget {
@@ -96,10 +101,11 @@ export const MAP_EVENT_FIELDS = [
   "changeFloor",
   "autoEvent",
   "cannotMove",
+  "cannotMoveIn",
 ] as const;
 
 function layerPath(layer: MapLayer, pos: MapPosition): string {
-  return `['${layer}']['${pos.y}']['${pos.x}']`;
+  return buildFieldPath([layer, String(pos.y), String(pos.x)]);
 }
 
 function locKey(pos: MapPosition): string {
@@ -122,6 +128,18 @@ function normalizePositions(options: Pick<PaintOptions, "positions" | "pos">): M
   }
 
   return [...unique.values()];
+}
+
+export function tilesetPatternIdnum(
+  pattern: TilesetPaintPattern,
+  anchor: MapPosition,
+  position: MapPosition,
+): number {
+  const dx = ((position.x - anchor.x) % pattern.width + pattern.width) % pattern.width;
+  const dy = ((position.y - anchor.y) % pattern.height + pattern.height) % pattern.height;
+  return pattern.startIdnum
+    + (pattern.sourceY + dy) * pattern.columns
+    + pattern.sourceX + dx;
 }
 
 function resolvePaintValue(options: PaintOptions): number {
@@ -183,6 +201,24 @@ function getMatrixSize(floor: Record<string, unknown>): { width: number; height:
 
 function createZeroMatrix(width: number, height: number): number[][] {
   return Array.from({ length: height }, () => Array.from({ length: width }, () => 0));
+}
+
+function normalizedLayerMatrix(floor: Record<string, unknown>, layer: MapLayer): unknown[][] {
+  const { width, height } = getMatrixSize(floor);
+  const source = Array.isArray(floor[layer]) ? floor[layer] as unknown[] : [];
+  return Array.from({ length: height }, (_, y) => {
+    const row = source[y];
+    return Array.from({ length: width }, (_, x) => Array.isArray(row) ? row[x] ?? 0 : 0);
+  });
+}
+
+function initializeLayerActions(floor: Record<string, unknown>, layer: MapLayer): Action[] {
+  const { width, height } = getMatrixSize(floor);
+  const current = floor[layer];
+  const valid = Array.isArray(current)
+    && current.length === height
+    && current.every((row) => Array.isArray(row) && row.length === width);
+  return valid ? [] : [["change", buildFieldPath([layer]), normalizedLayerMatrix(floor, layer)]];
 }
 
 function readLayerCell(floor: Record<string, unknown>, layer: MapLayer, pos: MapPosition): unknown {
@@ -303,7 +339,8 @@ class MapCommands {
       const layer = options.layer ?? "map";
       const positions = normalizePositions(options);
       const value = resolvePaintValue(options);
-      const actions: Action[] = [];
+      const floor = projectData.floor(options.floorId).value() as unknown as Record<string, unknown>;
+      const actions: Action[] = initializeLayerActions(floor, layer);
 
       for (const pos of positions) {
         actions.push(["change", layerPath(layer, pos), value]);
@@ -342,14 +379,12 @@ class MapCommands {
         throw new Error("Tileset pattern source is outside the image");
       }
 
-      const actions: Action[] = positions.map((pos) => {
-        const dx = ((pos.x - options.anchor.x) % pattern.width + pattern.width) % pattern.width;
-        const dy = ((pos.y - options.anchor.y) % pattern.height + pattern.height) % pattern.height;
-        const idnum = pattern.startIdnum
-          + (pattern.sourceY + dy) * pattern.columns
-          + pattern.sourceX + dx;
-        return ["change", layerPath(layer, pos), idnum];
-      });
+      const floor = projectData.floor(options.floorId).value() as unknown as Record<string, unknown>;
+      const actions: Action[] = [...initializeLayerActions(floor, layer), ...positions.map((pos): Action => [
+        "change",
+        layerPath(layer, pos),
+        tilesetPatternIdnum(pattern, options.anchor, pos),
+      ])];
       return this.patchFloor(
         options.floorId,
         actions,
@@ -402,16 +437,18 @@ class MapCommands {
   }
 
   async clearBlock(floorId: string, layer: MapLayer, pos: MapPosition): Promise<CommandResult> {
+    const floor = projectData.floor(floorId).value() as unknown as Record<string, unknown>;
     return this.patchFloor(
       floorId,
-      [["change", layerPath(layer, pos), 0]],
+      [...initializeLayerActions(floor, layer), ["change", layerPath(layer, pos), 0]],
       `清除图块 ${floorId} (${pos.x},${pos.y})`,
       "clear-map-block",
     );
   }
 
   async clearLoc(floorId: string, layer: MapLayer, pos: MapPosition): Promise<CommandResult> {
-    const actions: Action[] = [["change", layerPath(layer, pos), 0]];
+    const floor = projectData.floor(floorId).value() as unknown as Record<string, unknown>;
+    const actions: Action[] = [...initializeLayerActions(floor, layer), ["change", layerPath(layer, pos), 0]];
     if (layer === "map") actions.push(...clearEventActions(pos));
 
     return this.patchFloor(
@@ -435,8 +472,8 @@ class MapCommands {
       }
 
       const floor = projectData.floor(options.floorId).value() as Record<string, unknown>;
-      const layerMap = floor[targetLayer];
-      const actions: Action[] = [];
+      const layerMap = normalizedLayerMatrix(floor, targetLayer);
+      const actions: Action[] = initializeLayerActions(floor, targetLayer);
       let index = 0;
 
       for (let y = options.pos.y; y < options.pos.y + height; y++) {
@@ -494,12 +531,11 @@ class MapCommands {
   async clearFloorMap(floorId: string): Promise<CommandResult> {
     try {
       const record = projectData.floor(floorId).value() as unknown as Record<string, unknown>;
+      const layers = getMapLayerSettingsSnapshot();
       const { width, height } = getMatrixSize(record);
       const zero = createZeroMatrix(width, height);
       const actions: Action[] = [
-        ["change", "['map']", zero],
-        ["change", "['bgmap']", cloneDeep(zero)],
-        ["change", "['fgmap']", cloneDeep(zero)],
+        ...layers.map(({ property }): Action => ["change", buildFieldPath([property]), cloneDeep(zero)]),
         ["change", "['firstArrive']", []],
         ["change", "['eachArrive']", []],
         ...MAP_EVENT_FIELDS.map((field): Action => ["change", `['${field}']`, {}]),
@@ -515,7 +551,7 @@ class MapCommands {
     try {
       const record = projectData.floor(options.floorId).value() as unknown as Record<string, unknown>;
       const value = cloneDeep(readLayerCell(record, layer, options.from));
-      const actions: Action[] = [
+      const actions: Action[] = [...initializeLayerActions(record, layer),
         ["change", layerPath(layer, options.from), 0],
         ["change", layerPath(layer, options.to), value],
       ];
@@ -538,7 +574,7 @@ class MapCommands {
     const layer = options.layer ?? "map";
     try {
       const record = projectData.floor(options.floorId).value() as unknown as Record<string, unknown>;
-      const actions: Action[] = [
+      const actions: Action[] = [...initializeLayerActions(record, layer),
         ["change", layerPath(layer, options.from), cloneDeep(readLayerCell(record, layer, options.to))],
         ["change", layerPath(layer, options.to), cloneDeep(readLayerCell(record, layer, options.from))],
       ];

@@ -256,7 +256,7 @@ export default function motaServerPlugin(options: MotaServerPluginOptions = {}):
               const info = await fs.readFile(dir, { encoding });
               res.end(info);
             } catch {
-              res.end();
+              res.end(`error: File not found: ${name}`);
             }
             return;
           }

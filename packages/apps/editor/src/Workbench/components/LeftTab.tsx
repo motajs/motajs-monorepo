@@ -44,7 +44,7 @@ export const LeftTab: FC<LeftTabProps> = (props) => {
   };
 
   return (
-    <div id={id} className="leftTab">
+    <div id={id} className="leftTab leftTabLayout">
       <h3 className="leftTabHeader">
         {title}
         {actions && <>&nbsp;&nbsp;{actions}</>}

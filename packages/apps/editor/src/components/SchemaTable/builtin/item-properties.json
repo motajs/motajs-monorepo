@@ -1,0 +1,213 @@
+{
+  "kind": "table-schema",
+  "formatVersion": 1,
+  "schemaId": "item-properties",
+  "revision": 1,
+  "nodes": [
+    {
+      "kind": "group",
+      "id": "identity",
+      "label": "基本信息",
+      "children": [
+        {
+          "kind": "field",
+          "fieldSchema": "item.id",
+          "source": {
+            "ref": "prefab:id"
+          },
+          "id": "item-id"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "item.cls",
+          "source": {
+            "ref": "prefab:cls"
+          },
+          "id": "item-cls"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "item.name",
+          "source": {
+            "ref": "prefab:name"
+          },
+          "id": "item-name"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "item.text",
+          "source": {
+            "ref": "prefab:text"
+          },
+          "id": "item-text"
+        }
+      ]
+    },
+    {
+      "kind": "group",
+      "id": "visibility",
+      "label": "显示与回放",
+      "children": [
+        {
+          "kind": "field",
+          "fieldSchema": "item.hideInToolbox",
+          "source": {
+            "ref": "prefab:hideInToolbox"
+          },
+          "id": "item-hideInToolbox"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "item.hideInReplay",
+          "source": {
+            "ref": "prefab:hideInReplay"
+          },
+          "id": "item-hideInReplay"
+        }
+      ]
+    },
+    {
+      "kind": "group",
+      "id": "pickup",
+      "label": "拾取效果",
+      "children": [
+        {
+          "kind": "field",
+          "fieldSchema": "item.itemEffect",
+          "source": {
+            "ref": "prefab:itemEffect"
+          },
+          "condition": {
+            "when": {
+              "operator": "eq",
+              "args": [
+                {
+                  "ref": "prefab:cls"
+                },
+                {
+                  "literal": "items"
+                }
+              ]
+            },
+            "otherwise": "inactive"
+          },
+          "id": "item-itemEffect"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "item.itemEffectTip",
+          "source": {
+            "ref": "prefab:itemEffectTip"
+          },
+          "condition": {
+            "when": {
+              "operator": "eq",
+              "args": [
+                {
+                  "ref": "prefab:cls"
+                },
+                {
+                  "literal": "items"
+                }
+              ]
+            },
+            "otherwise": "inactive"
+          },
+          "id": "item-itemEffectTip"
+        }
+      ]
+    },
+    {
+      "kind": "group",
+      "id": "use",
+      "label": "使用与装备",
+      "children": [
+        {
+          "kind": "field",
+          "fieldSchema": "item.useItemEvent",
+          "source": {
+            "ref": "prefab:useItemEvent"
+          },
+          "id": "item-useItemEvent"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "item.useItemEffect",
+          "source": {
+            "ref": "prefab:useItemEffect"
+          },
+          "condition": {
+            "when": {
+              "operator": "in",
+              "args": [
+                {
+                  "ref": "prefab:cls"
+                },
+                {
+                  "literal": [
+                    "constants",
+                    "tools"
+                  ]
+                }
+              ]
+            },
+            "otherwise": "inactive"
+          },
+          "id": "item-useItemEffect"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "item.canUseItemEffect",
+          "source": {
+            "ref": "prefab:canUseItemEffect"
+          },
+          "condition": {
+            "when": {
+              "operator": "ne",
+              "args": [
+                {
+                  "ref": "prefab:cls"
+                },
+                {
+                  "literal": "items"
+                }
+              ]
+            },
+            "otherwise": "inactive"
+          },
+          "id": "item-canUseItemEffect"
+        },
+        {
+          "kind": "field",
+          "fieldSchema": "item.equip",
+          "source": {
+            "ref": "prefab:equip"
+          },
+          "condition": {
+            "when": {
+              "operator": "eq",
+              "args": [
+                {
+                  "ref": "prefab:cls"
+                },
+                {
+                  "literal": "equips"
+                }
+              ]
+            },
+            "otherwise": "inactive"
+          },
+          "id": "item-equip"
+        }
+      ]
+    },
+    {
+      "kind": "rest",
+      "id": "rest",
+      "label": "其他字段",
+      "path": {
+        "ref": "prefab:"
+      }
+    }
+  ]
+}

@@ -5,19 +5,12 @@ import type { RuntimePreviewContext } from "./protocol";
 import { projectModel, type ModelResource, type BlockRegistry } from "@/project/model/projectModel";
 
 async function loadValue<T>(resource: DataResource<T>): Promise<T> {
-  const current = resource.snapshot();
-  if (current.status !== "loaded") {
-    await resource.reload();
-    await resource.waitForSettled();
-  }
+  await resource.ensureLoaded();
   return resource.value();
 }
 
 async function loadModelValue<T>(resource: ModelResource<T>): Promise<T> {
-  if (resource.snapshot().status !== "loaded") {
-    await resource.reload();
-    await resource.waitForSettled();
-  }
+  await resource.ensureLoaded();
   return resource.value();
 }
 

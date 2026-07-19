@@ -9,12 +9,14 @@ import { FileHandler } from "@/fs/FileHandler";
 import { MemoryFileSystem } from "@test/utils/MemoryFileSystem";
 import { ContentUtils } from "@/fs/ContentUtils";
 import { encode64 } from "@/utils/encoding";
+import { persistenceMonitor } from "@/fs/PersistenceMonitor";
 
 describe("tableMetaService", () => {
   let memoryFs: MemoryFileSystem;
 
   beforeEach(() => {
     memoryFs = new MemoryFileSystem();
+    persistenceMonitor.resetForTests();
     FileHandlerManager.clear();
     clearDataHandlerCache();
   });
@@ -138,7 +140,7 @@ describe("tableMetaService", () => {
 
       // 等待持久化
       const handler = tableMetaService.getHandler("comment");
-      await handler.waitForIdle();
+      await persistenceMonitor.whenQuiescent([handler.getPath()]);
 
       // 验证 - 内存中的数据应该立即更新
       const content = tableMetaService.getTableMetaContent("comment");

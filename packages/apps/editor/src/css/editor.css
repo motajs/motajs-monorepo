@@ -2,6 +2,25 @@
 
 :root {
     --pixel: 416px;
+    --editor-bg: #f5f6f8;
+    --editor-surface: #fff;
+    --editor-toolbar-bg: #fff;
+    --editor-fg: #202124;
+    --editor-muted: #656d76;
+    --editor-border: #d0d7de;
+    --editor-grid: #d8dee4;
+    --editor-selected: #dbeafe;
+}
+
+:root[data-editor-theme="dark"] {
+    --editor-bg: #242424;
+    --editor-surface: #303035;
+    --editor-toolbar-bg: #2b2b30;
+    --editor-fg: #d4d4d4;
+    --editor-muted: #9da5b4;
+    --editor-border: #4b4b52;
+    --editor-grid: #44444b;
+    --editor-selected: #163a5f;
 }
 
 html, body, div, img {
@@ -15,17 +34,388 @@ html, body {
     overflow: hidden;
 }
 
+#root {
+    width: 100%;
+    height: 100%;
+}
+
 body {
     font-family: Roboto, "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", Arial, sans-serif;;
+}
+
+/* CodeMirror appends lint tooltips to body; keep them above full-screen workspaces. */
+.CodeMirror-lint-tooltip {
+    z-index: 400;
+}
+
+/* show-hint also appends its popup to body. The full-screen workspace is a
+ * z-index 160 sibling, so CodeMirror's default z-index 10 renders underneath
+ * the editor even though the popup itself is otherwise visible. */
+.CodeMirror-hints {
+    z-index: 10001;
+}
+
+.CodeMirror-Tern-tooltip {
+    z-index: 10002;
 }
 
 /* ::-webkit-scrollbar {
     width: 5px;
 } */
-.main {
+.main,
+.mapWorkspace {
     max-width: 100%;
     min-height: 500px;
     margin: 0 auto;
+}
+
+.editorAppShell {
+    --app-topbar-height: 48px;
+    display: flex;
+    width: 100%;
+    height: 100%;
+    min-width: 720px;
+    flex-direction: column;
+    background: var(--editor-bg, #f5f6f8);
+    color: var(--editor-fg, #202124);
+}
+
+.appTopBar {
+    position: relative;
+    z-index: 220;
+    display: flex;
+    flex: 0 0 var(--app-topbar-height);
+    align-items: center;
+    gap: 12px;
+    height: var(--app-topbar-height);
+    padding: 0 12px;
+    border-bottom: 1px solid rgba(128, 128, 128, 0.22);
+    box-sizing: border-box;
+    background: var(--editor-toolbar-bg, #fff);
+}
+
+.appLegacyPanelSelect {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.appBrand,
+.appWorkspaceButton {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.appBrand {
+    flex: 0 0 auto;
+    padding: 6px 8px;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+}
+
+.appWorkspaceNav {
+    display: flex;
+    min-width: 0;
+    align-self: stretch;
+    align-items: stretch;
+}
+
+.appWorkspaceButton {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 12px;
+    color: rgba(60, 60, 60, 0.75);
+    white-space: nowrap;
+}
+
+.appWorkspaceButton:hover,
+.appWorkspaceButton.is-active {
+    color: #1677ff;
+    background: rgba(22, 119, 255, 0.06);
+}
+
+.appWorkspaceButton.is-active::after {
+    position: absolute;
+    right: 10px;
+    bottom: 0;
+    left: 10px;
+    height: 2px;
+    background: #1677ff;
+    content: "";
+}
+
+.appProjectTitle {
+    min-width: 0;
+    flex: 1 1 auto;
+    padding: 0 8px;
+    overflow: hidden;
+    color: rgba(60, 60, 60, 0.62);
+    font-size: 13px;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.appTopActions {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 1px;
+}
+
+.appUpdateButton {
+    color: #1677ff;
+}
+
+.editorUpdateDialog dl {
+    display: grid;
+    gap: 8px;
+    margin: 16px 0;
+}
+
+.editorUpdateDialog dl > div {
+    display: grid;
+    grid-template-columns: 72px minmax(0, 1fr);
+    gap: 12px;
+}
+
+.editorUpdateDialog dt {
+    color: rgba(60, 60, 60, 0.62);
+}
+
+.editorUpdateDialog dd {
+    margin: 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.editorUpdateWarning {
+    margin-bottom: 0;
+    color: #d46b08;
+}
+
+:root[data-editor-theme="dark"] .editorUpdateDialog dt {
+    color: rgba(255, 255, 255, 0.58);
+}
+
+.appHistoryList {
+    width: 560px;
+    max-width: calc(100vw - 48px);
+    max-height: 360px;
+    overflow-y: auto;
+}
+
+.appHistoryEmpty {
+    padding: 8px 4px;
+    color: #888;
+}
+
+.appHistoryEntry {
+    display: grid;
+    grid-template-columns: 14px minmax(120px, 180px) minmax(0, 1fr) 64px;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 4px;
+    border-bottom: 1px solid rgba(128, 128, 128, 0.2);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.appHistoryEntry > span:nth-child(2),
+.appHistoryEntry > span:nth-child(3) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.appHistoryEntry > span:nth-child(3),
+.appHistoryEntry > span:nth-child(4) {
+    color: #888;
+}
+
+.appHistoryEntry > span:last-child {
+    text-align: right;
+}
+
+.appHistoryEntry.is-undone {
+    opacity: 0.5;
+}
+
+.editorAppContent {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.mapWorkspace {
+    position: absolute;
+    inset: 0;
+}
+
+.mapWorkspace.is-inactive {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.mapPanelTabs {
+    position: absolute;
+    z-index: 20;
+    top: 10px;
+    left: 5px;
+    display: flex;
+    width: 435px;
+    height: 36px;
+    align-items: stretch;
+    border-bottom: 1px solid rgba(128, 128, 128, 0.25);
+    box-sizing: border-box;
+}
+
+.mapPanelTab {
+    position: relative;
+    display: flex;
+    min-width: 0;
+    padding: 0 12px;
+    border: 0;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    flex: 1 1 0;
+    appearance: none;
+    background: transparent;
+    color: rgba(60, 60, 60, 0.72);
+    cursor: pointer;
+    font: inherit;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.mapPanelTab::after {
+    position: absolute;
+    right: 8px;
+    bottom: -1px;
+    left: 8px;
+    height: 2px;
+    border-radius: 2px 2px 0 0;
+    background: transparent;
+    content: "";
+}
+
+.mapPanelTab:hover,
+.mapPanelTab.is-active {
+    color: #1677ff;
+}
+
+.mapPanelTab.is-active::after {
+    background: #1677ff;
+}
+
+.mapPanelTab kbd {
+    color: inherit;
+    font: 10px/1 inherit;
+    opacity: 0.55;
+}
+
+:root[data-editor-theme="dark"] .mapPanelTab {
+    color: rgba(230, 230, 230, 0.7);
+}
+
+:root[data-editor-theme="dark"] .mapPanelTab:hover,
+:root[data-editor-theme="dark"] .mapPanelTab.is-active {
+    color: #69b1ff;
+}
+
+:root[data-editor-theme="dark"] .mapPanelTab.is-active::after {
+    background: #69b1ff;
+}
+
+.mapWorkspace #left,
+.mapWorkspace .leftTab {
+    top: 46px;
+    bottom: 10px;
+    height: auto;
+}
+
+.workspaceSurface {
+    position: absolute;
+    z-index: 160;
+    inset: 0;
+    overflow: auto;
+    background: var(--editor-bg, #f5f6f8);
+}
+
+.legacyWorkspaceBridge {
+    position: relative;
+    min-height: 100%;
+    padding: 18px 22px 32px;
+    box-sizing: border-box;
+}
+
+.workspacePageHeader {
+    display: flex;
+    min-height: 42px;
+    margin-bottom: 16px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.workspacePageHeader h1 {
+    margin: 0;
+    font-size: 20px;
+}
+
+.workspacePageHeader p {
+    margin: 4px 0 0;
+    color: #888;
+    font-size: 12px;
+}
+
+.workspaceSegmented {
+    display: inline-flex;
+    padding: 2px;
+    border-radius: 6px;
+    background: rgba(128, 128, 128, 0.12);
+}
+
+.workspaceSegmented button {
+    padding: 5px 12px;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    cursor: pointer;
+}
+
+.workspaceSegmented button.is-active {
+    background: var(--editor-surface);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+:root[data-editor-theme="dark"] .appWorkspaceButton { color: rgba(255, 255, 255, 0.72); }
+:root[data-editor-theme="dark"] .appProjectTitle { color: rgba(255, 255, 255, 0.58); }
+:root[data-editor-theme="dark"] .workspaceSurface,
+:root[data-editor-theme="dark"] .resourcesWorkspace,
+:root[data-editor-theme="dark"] .commonEventsWorkspace,
+:root[data-editor-theme="dark"] .scriptsWorkspace,
+:root[data-editor-theme="dark"] .towerWorkspace,
+:root[data-editor-theme="dark"] .scriptRootTabs,
+:root[data-editor-theme="dark"] .scriptTab.is-active {
+    background: var(--editor-surface);
+    color: var(--editor-fg);
+}
+
+@media (max-width: 1080px) {
+    .appWorkspaceButton { padding: 0 8px; }
+    .appWorkspaceButton span { display: none; }
 }
 
 .cp-app {
@@ -43,73 +433,6 @@ body {
     top: 10px;
     width: 435px;
     height: 630px;
-}
-
-#mapEditArea {
-    position: absolute;
-    width: 100%;
-    height: 400px;
-    left: 0;
-    top: 0;
-    /* padding: 10px 5px; */
-    box-sizing: border-box;
-}
-
-#pout {
-    display: block;
-    width: 410px;
-    height: 380px;
-    box-sizing: border-box;
-    margin-left: 22px;
-    margin-top: 23px;
-    line-height: 20px;
-    font-size: 12.3px;
-    font-family: 'Lucida Console', Monaco, monospace;
-    white-space: pre;
-    border-radius: 2px;
-    overflow: auto;
-}
-
-#editTip {
-    position: absolute;
-    width: 100%;
-    left: 10px;
-    top: 430px;
-}
-
-#editBtns {
-    position: absolute;
-    width: 100%;
-    left: 10px;
-    top: 465px;
-}
-
-#newMaps {
-    position: absolute;
-    left: 10px;
-    top: 505px;
-}
-
-#newFloors {
-    position: absolute;
-    width: 100%;
-    left: 10px;
-    top: 530px;
-}
-
-#mapEditArea p {
-    margin: 10px;
-    display: block;
-    width: 70%;
-    line-height: 20px;
-    text-align: left;
-    font-size: 14px;
-}
-
-#editTip .btn {
-    float: right;
-    margin-right: 20px;
-    margin-top: 5px;
 }
 
 #mid {
@@ -150,6 +473,9 @@ body {
 
 #mid .tools {
     position: absolute;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
     width: calc(var(--pixel) + 9px);
     height: calc(388px - var(--pixel) / 2);
     left: 0;
@@ -159,12 +485,205 @@ body {
     box-sizing: border-box;
 }
 
+#mid .tools .ant-segmented-item-label > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.map-layer-picker-row {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 2px;
+    width: 100%;
+    max-width: 100%;
+}
+
+.map-layer-picker-scroll {
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: thin;
+}
+
+.map-layer-picker-row > .ant-btn {
+    flex: none;
+}
+
+.map-toolbar-body {
+    display: grid;
+    flex: 1;
+    grid-template-columns: minmax(0, 1fr) 48%;
+    gap: 12px;
+    min-height: 0;
+}
+
+.map-toolbar-controls {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+}
+
+.map-passability-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 12px;
+}
+
+.map-passability-toggle input {
+    margin: 0;
+}
+
+#viewportButtons {
+    white-space: nowrap;
+}
+
+#viewportButtons #bigmapBtn {
+    margin-left: 5px;
+}
+
+.map-floor-controls {
+    display: flex;
+    max-width: 100%;
+    align-items: center;
+    gap: 4px;
+}
+
+.map-layer-settings-help {
+    margin: 0 0 12px;
+    color: var(--editor-muted);
+    font-size: 13px;
+}
+
+.map-layer-settings-header,
+.map-layer-settings-row {
+    display: grid;
+    grid-template-columns: 28px minmax(120px, 1fr) minmax(140px, 1fr) 32px;
+    gap: 8px;
+    align-items: center;
+}
+
+.map-layer-settings-header {
+    margin-bottom: 4px;
+    color: var(--editor-muted);
+    font-size: 12px;
+}
+
+.map-layer-settings-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.map-layer-settings-row {
+    padding: 4px;
+    border: 1px solid var(--editor-border);
+    border-radius: 6px;
+    background: var(--editor-surface);
+}
+
+.map-layer-drag-handle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    color: var(--editor-muted);
+    background: transparent;
+    cursor: grab;
+}
+
+.map-layer-drag-handle:active {
+    cursor: grabbing;
+}
+
+.map-layer-settings-error {
+    margin-top: 10px;
+    color: #ff4d4f;
+    white-space: pre-wrap;
+}
+
+.CodeMirror-tern-hover-token {
+    position: absolute;
+    z-index: 3;
+    border-bottom: 1px solid rgba(22, 119, 255, 0.75);
+    background: rgba(22, 119, 255, 0.1);
+    box-sizing: border-box;
+    pointer-events: none;
+}
+
+.CodeMirror .cm-matchhighlight {
+    border-radius: 2px;
+    background: rgba(22, 119, 255, 0.16);
+}
+
+.cm-s-default .CodeMirror-Tern-semantic,
+.cm-s-default .CodeMirror-Tern-semantic * {
+    color: var(--tern-semantic-color) !important;
+}
+
+.cm-s-default .CodeMirror-Tern-semantic-function { --tern-semantic-color: #795e26; }
+.cm-s-default .CodeMirror-Tern-semantic-number { --tern-semantic-color: #26734d; }
+.cm-s-default .CodeMirror-Tern-semantic-string { --tern-semantic-color: #a31515; }
+.cm-s-default .CodeMirror-Tern-semantic-boolean { --tern-semantic-color: #005cc5; }
+.cm-s-default .CodeMirror-Tern-semantic-array { --tern-semantic-color: #0b7285; }
+.cm-s-default .CodeMirror-Tern-semantic-object { --tern-semantic-color: #005fb8; }
+.cm-s-default .CodeMirror-Tern-semantic-union { --tern-semantic-color: #9c5d00; }
+
+:root[data-editor-theme="dark"] .cm-s-default .CodeMirror-Tern-semantic-function { --tern-semantic-color: #dcdcaa; }
+:root[data-editor-theme="dark"] .cm-s-default .CodeMirror-Tern-semantic-number { --tern-semantic-color: #b5cea8; }
+:root[data-editor-theme="dark"] .cm-s-default .CodeMirror-Tern-semantic-string { --tern-semantic-color: #ce9178; }
+:root[data-editor-theme="dark"] .cm-s-default .CodeMirror-Tern-semantic-boolean { --tern-semantic-color: #569cd6; }
+:root[data-editor-theme="dark"] .cm-s-default .CodeMirror-Tern-semantic-array { --tern-semantic-color: #4ec9b0; }
+:root[data-editor-theme="dark"] .cm-s-default .CodeMirror-Tern-semantic-object { --tern-semantic-color: #9cdcfe; }
+:root[data-editor-theme="dark"] .cm-s-default .CodeMirror-Tern-semantic-union { --tern-semantic-color: #c586c0; }
+
+.editorTernHoverTooltip {
+    position: fixed;
+    z-index: 10000;
+    max-width: min(520px, calc(100vw - 24px));
+    padding: 6px 9px;
+    border: 1px solid rgba(128, 128, 128, 0.35);
+    border-radius: 4px;
+    background: var(--editor-surface, #fff);
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.2);
+    color: var(--editor-fg, #202124);
+    font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    pointer-events: none;
+    white-space: pre-wrap;
+}
+
+.blocklyWidgetDiv .blocklyAutocomplete {
+    width: 100%;
+}
+
+.blocklyWidgetDiv .blocklyAutocomplete > ul {
+    z-index: 10001;
+    width: max-content;
+    min-width: min(260px, calc(100vw - 24px));
+    max-width: min(360px, calc(100vw - 24px));
+    max-height: 240px;
+    overflow-y: auto;
+    color: #202124;
+    font: 13px/1.4 Roboto, "Microsoft YaHei", sans-serif;
+}
+
+.blocklyWidgetDiv .blocklyAutocomplete > ul > li {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 #tip {
-    float: right;
-    width: 48%;
-    height: 95%;
+    min-width: 0;
+    height: 100%;
     padding: 5px 10px 10px 10px;
-    margin-right: 0;
     box-sizing: border-box;
     border-radius: 2px;
     font-size: 15px;
@@ -437,6 +956,17 @@ table.row {
     width: 560px;
 }
 
+#uieventDialog.selectPointDialog {
+    width: max-content;
+    max-width: calc(100vw - 32px);
+}
+
+.selectPointDialog .selectPointViewport {
+    max-width: calc(100vw - 52px);
+    max-height: calc(100vh - 180px);
+    margin-right: 10px;
+}
+
 #uieventHead {
     margin: 10px 20px;
 }
@@ -523,15 +1053,25 @@ table.row {
     width: 435px;
 }
 
-.leftTab .leftTabHeader {
-    position: fixed;
-    top: 15px;
-    left: 15px;
-    z-index: 20;
+.leftTabLayout {
+    display: flex;
+    overflow: hidden;
+    flex-direction: column;
 }
 
-.leftTab .leftTabContent {
-    padding-top: 50px;
+.leftTabLayout > .leftTabHeader {
+    position: relative;
+    z-index: 1;
+    flex: 0 0 auto;
+    margin: 5px 5px 2.5px;
+}
+
+.leftTabLayout > .leftTabContent {
+    min-height: 0;
+    margin: 2.5px 5px 5px;
+    padding-top: 0;
+    overflow: auto;
+    flex: 1 1 auto;
 }
 
 #appendPicSelection span {
@@ -573,12 +1113,14 @@ table.row {
 
 #left7 {
     /* height: 440px; width: 375px;float:left; */
-    left: 5px;
-    top: 5px;
+    left: 0;
+    top: var(--app-topbar-height);
     z-index: 200;
     position: fixed;
     width: 100%;
-    height: 100%;
+    height: calc(100% - var(--app-topbar-height));
+    box-sizing: border-box;
+    background: var(--editor-bg, #fff);
 }
 
 #left7 .CodeMirror {

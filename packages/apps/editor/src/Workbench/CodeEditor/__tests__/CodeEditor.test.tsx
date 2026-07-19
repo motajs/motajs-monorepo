@@ -5,7 +5,13 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { getShortcutKeys, commandsName } from "../config/commands";
+import {
+  CODEMIRROR_HINT_OPTIONS,
+  DEFAULT_CODEMIRROR_OPTIONS,
+  PERSISTENT_SEARCH_KEYS,
+  getShortcutKeys,
+  commandsName,
+} from "../config/commands";
 
 describe("CodeEditor Component Utilities", () => {
   describe("getShortcutKeys", () => {
@@ -16,5 +22,14 @@ describe("CodeEditor Component Utilities", () => {
         expect(typeof commandsName[key]).toBe("string");
       });
     });
+  });
+
+  it("keeps search persistent and never auto-commits a single hint", () => {
+    expect(PERSISTENT_SEARCH_KEYS).toEqual({
+      "Cmd-F": "findPersistent",
+      "Ctrl-F": "findPersistent",
+    });
+    expect(CODEMIRROR_HINT_OPTIONS.completeSingle).toBe(false);
+    expect(DEFAULT_CODEMIRROR_OPTIONS.hintOptions).toBe(CODEMIRROR_HINT_OPTIONS);
   });
 });

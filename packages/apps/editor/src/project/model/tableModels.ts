@@ -1,11 +1,9 @@
-import { computed, effect } from "alien-signals";
 import { parseExpressionAt } from "acorn";
 import type { CommentObject } from "@/components/Table";
 import type { Content } from "@/fs/types";
-import type { ReadonlySignal } from "@/fs/interfaces";
-import { waitUntil } from "@/utils/base/signal";
 import { projectData } from "@/project/data/projectData";
 import { projectAssets } from "@/project/assets";
+import { computedResource } from "@/project/resources";
 import { META_FILE_CONFIG, type MetaFileKey } from "@/services/tableMeta";
 import { createTableMetaRuntimeContext } from "@/project/tableMeta/TableMetaRuntimeContext";
 import { parseTableMetaSource } from "@/project/tableMeta/TableMetaEvaluator";
@@ -37,34 +35,6 @@ export interface ProjectImageCatalog {
 export interface TableSchemaBundle {
   schema: CommentObject;
   diagnostics: ProjectDiagnostic[];
-}
-
-class ComputedResource<T> implements ModelResource<T> {
-  readonly content: ReadonlySignal<Content<T>>;
-  readonly id: string;
-  private readonly load: () => Promise<void>;
-  constructor(
-    id: string,
-    compute: () => Content<T>,
-    load: () => Promise<void>,
-  ) {
-    this.id = id;
-    this.load = load;
-    this.content = computed(compute);
-  }
-  snapshot(): Content<T> { return this.content(); }
-  value(): T {
-    const content = this.content();
-    if (content.status !== "loaded") throw new Error(`${this.id} is ${content.status}`);
-    return content.value;
-  }
-  reload(): Promise<void> { return this.load(); }
-  waitForSettled(): Promise<void> {
-    return waitUntil(() => !["idle", "loading"].includes(this.content().status));
-  }
-  subscribe(listener: (content: Content<T>) => void): () => void {
-    return effect(() => listener(this.content()));
-  }
 }
 
 type Node = Record<string, any>;
@@ -240,7 +210,7 @@ export function projectImageCatalogContent(): Content<ProjectImageCatalog> {
 }
 
 export function createEnemySpecialResource(): ModelResource<EnemySpecialCatalog> {
-  return new ComputedResource("enemySpecialCatalog", () => {
+  return computedResource("enemySpecialCatalog", [projectData.functions()], () => {
     const content = projectData.functions().content();
     if (content.status === "idle" || content.status === "loading") return content as Content<EnemySpecialCatalog>;
     if (content.status !== "loaded") return {
@@ -255,19 +225,28 @@ export function createEnemySpecialResource(): ModelResource<EnemySpecialCatalog>
       },
     };
     return { status: "loaded", value: buildEnemySpecialCatalog(content.value) };
-  }, () => projectData.functions().reload());
+  });
 }
 
 export function createProjectImageResource(): ModelResource<ProjectImageCatalog> {
-  return new ComputedResource("projectImageCatalog", projectImageCatalogContent, async () => {
-    await Promise.all([projectData.tower().reload(), projectAssets.directory("project/images").reload()]);
-    const directory = projectAssets.directory("project/images").snapshot();
-    if (directory.status === "loaded") {
-      await Promise.all(directory.value.entries
-        .filter((name) => /\.png$/i.test(name))
-        .map((name) => projectAssets.image(`project/images/${name}`).reload()));
-    }
-  });
+  const dependencies = () => {
+    const tower = projectData.tower();
+    const directory = projectAssets.directory("project/images");
+    const towerContent = tower.content();
+    if (towerContent.status !== "loaded") return [tower, directory];
+    const sources = splitDefinitions(towerContent.value as unknown as Record<string, unknown>)
+      .flatMap((definition) => typeof definition.name === "string" && definition.name
+        ? [projectAssets.image(`project/images/${definition.name}`)]
+        : []);
+    return [tower, directory, ...sources];
+  };
+  const reloadDependencies = () => dependencies().filter((dependency) => dependency !== projectData.tower());
+  return computedResource(
+    "projectImageCatalog",
+    dependencies,
+    projectImageCatalogContent,
+    reloadDependencies,
+  );
 }
 
 export function createTableSchemaResource(
@@ -275,7 +254,9 @@ export function createTableSchemaResource(
   specials: ModelResource<EnemySpecialCatalog>,
   images: ModelResource<ProjectImageCatalog>,
 ): ModelResource<TableSchemaBundle> {
-  return new ComputedResource(`tableSchema:${key}`, () => {
+  return computedResource(`tableSchema:${key}`, [
+    projectData.tableMetaSource(key), projectData.tower(), specials, images,
+  ], () => {
     const raw = projectData.tableMetaSource(key).raw().content();
     if (raw.status !== "loaded") return raw as Content<TableSchemaBundle>;
     if (!["comment", "dataComment"].includes(key)) {
@@ -325,10 +306,5 @@ export function createTableSchemaResource(
     } catch (error) {
       return { status: "error", error: error instanceof Error ? error : new Error(String(error)) };
     }
-  }, async () => {
-    await Promise.all([
-      projectData.tableMetaSource(key).reload(), projectData.tower().reload(),
-      specials.reload(), images.reload(),
-    ]);
   });
 }

@@ -98,7 +98,7 @@ export const ContentLeftTab: FC<ContentLeftTabProps> = (props) => {
   };
 
   return (
-    <div id={id} className="leftTab" data-test-id={testId}>
+    <div id={id} className="leftTab leftTabLayout" data-test-id={testId}>
       <h3 className="leftTabHeader" data-test-id={testId ? `${testId}-header` : undefined}>
         {title}
         {actions && <>&nbsp;&nbsp;{actions}</>}

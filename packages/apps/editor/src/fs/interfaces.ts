@@ -44,9 +44,6 @@ export interface IContentHandler<T> extends IContentView<T> {
   update(transform: (current: T) => T): void;
   update(transform: (current: T) => Promise<T>): Promise<void>;
 
-  /** 等待写入队列清空 */
-  waitForIdle(): Promise<void>;
-
   /** 等待内容加载完成（包括解析成功） */
   waitForLoaded(): Promise<void>;
 

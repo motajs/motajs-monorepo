@@ -25,10 +25,92 @@ function nameAnonymousFunction(source: string, key: string): string {
   );
 }
 
+interface SourceRange {
+  start: number;
+  end: number;
+}
+
+function isAstNode(value: unknown): value is AstNode {
+  return value != null && typeof value === "object"
+    && typeof (value as AstNode).type === "string"
+    && typeof (value as AstNode).start === "number"
+    && typeof (value as AstNode).end === "number";
+}
+
+/** Multiline string whitespace is runtime data, not source formatting. */
+function multilineStringRanges(source: string, root: AstNode, offset = 0): SourceRange[] {
+  const ranges: SourceRange[] = [];
+  const visit = (node: AstNode): void => {
+    if ((node.type === "TemplateElement" || (
+      node.type === "Literal" && typeof node.value === "string"
+    )) && source.slice(node.start, node.end).includes("\n")) {
+      ranges.push({ start: node.start - offset, end: node.end - offset });
+    }
+
+    for (const value of Object.values(node)) {
+      if (isAstNode(value)) visit(value);
+      else if (Array.isArray(value)) {
+        for (const item of value) if (isAstNode(item)) visit(item);
+      }
+    }
+  };
+  visit(root);
+  return ranges;
+}
+
+function isProtectedLineStart(offset: number, ranges: SourceRange[]): boolean {
+  return ranges.some((range) => range.start <= offset && offset < range.end);
+}
+
+function commonWhitespacePrefix(left: string, right: string): string {
+  let length = 0;
+  while (length < left.length && length < right.length && left[length] === right[length]) length += 1;
+  return left.slice(0, length);
+}
+
+function transformContinuationLines(
+  source: string,
+  protectedRanges: SourceRange[],
+  transform: (line: string) => string,
+): string {
+  const lines = source.split("\n");
+  let offset = lines[0]?.length ?? 0;
+  for (let index = 1; index < lines.length; index += 1) {
+    offset += 1;
+    const line = lines[index];
+    if (!isProtectedLineStart(offset, protectedRanges)) lines[index] = transform(line);
+    offset += line.length;
+  }
+  return lines.join("\n");
+}
+
+function normalizeFunctionIndent(source: string, node: AstNode): string {
+  const protectedRanges = multilineStringRanges(source, node, node.start);
+  const functionSource = source.slice(node.start, node.end);
+  const lines = functionSource.split("\n");
+  let commonPrefix: string | undefined;
+  let offset = lines[0]?.length ?? 0;
+
+  for (let index = 1; index < lines.length; index += 1) {
+    offset += 1;
+    const line = lines[index];
+    if (!isProtectedLineStart(offset, protectedRanges) && line.trim().length > 0) {
+      const prefix = line.match(/^[\t ]*/)?.[0] ?? "";
+      commonPrefix = commonPrefix === undefined ? prefix : commonWhitespacePrefix(commonPrefix, prefix);
+    }
+    offset += line.length;
+  }
+
+  return transformContinuationLines(functionSource, protectedRanges, (line) => {
+    if (line.trim().length === 0) return "";
+    return commonPrefix && line.startsWith(commonPrefix) ? line.slice(commonPrefix.length) : line;
+  });
+}
+
 function decodeScriptValue(source: string, node: AstNode, key: string): ScriptData {
   if (node.type === "ObjectExpression") return decodeScriptObject(source, node);
   if (node.type === "FunctionExpression" || node.type === "ArrowFunctionExpression") {
-    return nameAnonymousFunction(source.slice(node.start, node.end), key);
+    return nameAnonymousFunction(normalizeFunctionIndent(source, node), key);
   }
   throw new File2xSyntaxError(`Unsupported script value for ${key}: ${node.type}`);
 }
@@ -48,8 +130,9 @@ function decodeScriptObject(source: string, node: AstNode): ScriptDataObject {
   }));
 }
 
-function validateFunctionExpression(source: string, key: string): void {
-  const program = parseProgram(`(${source})`);
+function parseFunctionExpression(source: string, key: string): { node: AstNode; wrapper: string } {
+  const wrapper = `(${source})`;
+  const program = parseProgram(wrapper);
   const statements = significantStatements(program);
   const expression = statements[0]?.expression as AstNode | undefined;
   if (statements.length !== 1 || expression == null || (
@@ -57,14 +140,23 @@ function validateFunctionExpression(source: string, key: string): void {
   )) {
     throw new File2xSyntaxError(`Script leaf ${key} must be a function expression`);
   }
+  return { node: expression, wrapper };
 }
 
 function anonymousFunction(source: string, key: string): string {
-  validateFunctionExpression(source, key);
   const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return source.replace(
+  const anonymous = source.replace(
     new RegExp(`^(\\s*(?:async\\s+)?function\\s*\\*?)\\s+${escapedKey}(?=\\s*\\()`),
     "$1",
+  );
+  return anonymous;
+}
+
+function indentFunction(source: string, indent: string, key: string): string {
+  const { node, wrapper } = parseFunctionExpression(source, key);
+  const protectedRanges = multilineStringRanges(wrapper, node, 1);
+  return transformContinuationLines(source, protectedRanges, (line) =>
+    line.trim().length === 0 ? line : `${indent}${line}`,
   );
 }
 
@@ -72,7 +164,7 @@ function encodeScriptObject(data: ScriptDataObject, indent: string): string {
   const nextIndent = `${indent}\t`;
   const lines = Object.entries(data).map(([key, value]) => {
     const expression = typeof value === "string"
-      ? anonymousFunction(value, key)
+      ? indentFunction(anonymousFunction(value, key), nextIndent, key)
       : encodeScriptObject(value, nextIndent);
     return `${nextIndent}${JSON.stringify(key)}: ${expression}`;
   });

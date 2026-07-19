@@ -225,4 +225,66 @@ describe("PersistenceMonitor", () => {
       expect(executionCount).toBe(2);
     });
   });
+
+  describe("memory-first intents", () => {
+    it("normalizes paths and keeps one controller for recreated resources", async () => {
+      const values: string[] = [];
+      monitor.schedule("./project\\data.js", {
+        kind: "write",
+        execute: async () => {
+          await wait(20);
+          values.push("old resource");
+        },
+      });
+      monitor.schedule("project/data.js", {
+        kind: "write",
+        execute: async () => {
+          values.push("new resource");
+        },
+      });
+
+      await monitor.flush(["project/data.js"]);
+      expect(values).toEqual(["old resource", "new resource"]);
+    });
+
+    it("retries the latest failed intent and clears the failure only after success", async () => {
+      let shouldFail = true;
+      let attempts = 0;
+      monitor.schedule("project/data.js", {
+        kind: "write",
+        execute: async () => {
+          attempts += 1;
+          if (shouldFail) throw new Error("disk unavailable");
+        },
+      });
+      await monitor.whenQuiescent(["project/data.js"]);
+      expect(monitor.failedFiles()).toHaveLength(1);
+
+      shouldFail = false;
+      await monitor.retryFailed();
+      expect(attempts).toBe(2);
+      expect(monitor.failedFiles()).toEqual([]);
+    });
+
+    it("keeps partial retry failures in the aggregate", async () => {
+      let recoverFirst = false;
+      monitor.schedule("first.js", {
+        kind: "write",
+        execute: async () => {
+          if (!recoverFirst) throw new Error("first failed");
+        },
+      });
+      monitor.schedule("second.js", {
+        kind: "write",
+        execute: async () => {
+          throw new Error("second failed");
+        },
+      });
+      await monitor.whenQuiescent();
+
+      recoverFirst = true;
+      const remaining = await monitor.retryFailed();
+      expect(remaining.map((failure) => failure.path)).toEqual(["second.js"]);
+    });
+  });
 });

@@ -49,7 +49,11 @@ vi.mock("codemirror", () => {
 });
 
 // 在 mock 之后导入被测模块
-import { addTernDocument, createTernServer } from "../utils/createTernServer";
+import {
+  addTernDocument,
+  createTernServer,
+  destroyTernServer,
+} from "../utils/createTernServer";
 
 // 创建 Mock core 对象
 function createMockCore(): CoreType {
@@ -185,6 +189,9 @@ describe("createTernServer", () => {
             doc_comment: true,
             complete_strings: true,
           },
+          queryOptions: {
+            completions: { filter: false },
+          },
           useWorker: false,
         })
       );
@@ -210,6 +217,7 @@ describe("createTernServer", () => {
             complete_strings: false,
           },
           useWorker: true,
+          workerScript: expect.any(String),
         })
       );
     });
@@ -272,6 +280,25 @@ describe("createTernServer", () => {
       addTernDocument(mockTernServer, "test", "code", "json");
 
       expect(mockDocConstructor).toHaveBeenCalledWith("code", "json");
+    });
+  });
+
+  describe("destroyTernServer", () => {
+    it("应该先解除全部 Doc 监听再销毁实例", () => {
+      const ternServer = {
+        docs: {
+          "functions:first": {},
+          "plugins:second": {},
+        },
+        delDoc: vi.fn(),
+        destroy: vi.fn(),
+      } as unknown as TernServerInstance;
+
+      destroyTernServer(ternServer);
+
+      expect(ternServer.delDoc).toHaveBeenNthCalledWith(1, "functions:first");
+      expect(ternServer.delDoc).toHaveBeenNthCalledWith(2, "plugins:second");
+      expect(ternServer.destroy).toHaveBeenCalledOnce();
     });
   });
 });

@@ -197,10 +197,4 @@ export abstract class DataHandler<T> implements IDataHandler<T> {
     }
   }
 
-  /**
-   * 等待写入队列清空（委托给 FileHandler）
-   */
-  async waitForIdle(): Promise<void> {
-    return this.fileHandler.waitForIdle();
-  }
 }

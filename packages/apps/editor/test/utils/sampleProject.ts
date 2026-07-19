@@ -4,7 +4,9 @@ import { MOTA_JS_ROOT } from "../../mota-root";
 
 import { FileHandler } from "@/fs/FileHandler";
 import { FileHandlerManager } from "@/fs/FileHandlerManager";
+import { persistenceMonitor } from "@/fs/PersistenceMonitor";
 import { projectData } from "@/project/data/projectData";
+import { projectModel } from "@/project/model/projectModel";
 import type { DataResource } from "@/project/data/DataResource";
 import { MemoryFileSystem } from "./MemoryFileSystem";
 
@@ -50,8 +52,10 @@ function injectHandler(filePath: string, handler: FileHandler): void {
 
 export async function loadSampleProject(): Promise<SampleProjectContext> {
   const fs = new MemoryFileSystem();
+  persistenceMonitor.resetForTests();
   FileHandlerManager.clear();
   projectData.resetForTests();
+  projectModel.resetForTests();
 
   for (const absolute of await collectProjectFiles()) {
     const filePath = toProjectPath(absolute);
@@ -80,7 +84,7 @@ export async function loadSampleProject(): Promise<SampleProjectContext> {
   }
 
   async function reloadResource<T>(resource: DataResource<T>): Promise<T> {
-    await resource.raw().waitForIdle();
+    await persistenceMonitor.flush([resource.path]);
     projectData.resetForTests();
     await resource.reload();
     await resource.waitForSettled();

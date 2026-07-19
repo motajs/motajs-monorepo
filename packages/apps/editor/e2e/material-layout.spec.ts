@@ -1,6 +1,39 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { ProjectSandbox } from "./utils/projectSandbox";
 import { clickMaterialCell } from "./utils/tableEditing";
+
+async function countPaintPreviewPixels(page: Page): Promise<number> {
+  return page.getByTestId("map-canvas-input").evaluate((element) => {
+    const canvas = element as HTMLCanvasElement;
+    const context = canvas.getContext("2d");
+    if (!context) return 0;
+    const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+    let count = 0;
+    for (let index = 3; index < pixels.length; index += 4) {
+      if (pixels[index] !== 0) count += 1;
+    }
+    return count;
+  });
+}
+
+test("selecting a material does not reuse a previous map click as a paint gesture", async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  await ProjectSandbox.create(page);
+  await page.goto("/");
+
+  const canvas = page.getByTestId("map-canvas-input");
+  await expect(canvas).toBeVisible();
+  await canvas.click({ position: { x: 32 + 16, y: 32 + 16 } });
+  await clickMaterialCell(page, "terrains", 0, 1);
+
+  const canvasBox = await canvas.boundingBox();
+  expect(canvasBox).not.toBeNull();
+  await page.mouse.move(canvasBox!.x + 5 * 32 + 16, canvasBox!.y + 5 * 32 + 16);
+
+  await expect.poll(() => countPaintPreviewPixels(page)).toBe(0);
+  expect(pageErrors).toEqual([]);
+});
 
 test("material palette preserves full sheets and folds rows with fixed controls", async ({ page }) => {
   const pageErrors: string[] = [];

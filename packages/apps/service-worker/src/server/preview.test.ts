@@ -56,4 +56,34 @@ describe("project preview server", () => {
     expect(response.status).toBe(403);
     expect(await response.json()).toMatchObject({ error: { code: "project-permission-required" } });
   });
+
+  it("maps the memfs openAsBlob missing-file wrapper back to a structured 404", async () => {
+    openAsBlob.mockRejectedValue(Object.assign(
+      new TypeError("Unable to open file as blob"),
+      { code: "ERR_INVALID_ARG_VALUE" },
+    ));
+    const response = await serveProjectPreview(context(new Request(
+      "https://example.test/service/1055/preview/missing.png",
+    ), "missing.png"));
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({
+      error: {
+        code: "file-not-found",
+        message: "Unable to open file as blob",
+        path: "missing.png",
+      },
+    });
+  });
+
+  it("returns a plain 404 when navigating to a missing preview file", async () => {
+    openAsBlob.mockRejectedValue(Object.assign(
+      new TypeError("Unable to open file as blob"),
+      { code: "ERR_INVALID_ARG_VALUE" },
+    ));
+    const request = new Request("https://example.test/service/1055/preview/missing.html");
+    Object.defineProperty(request, "mode", { value: "navigate" });
+    const response = await serveProjectPreview(context(request, "missing.html"));
+    expect(response.status).toBe(404);
+    expect(await response.text()).toBe("404 not found");
+  });
 });

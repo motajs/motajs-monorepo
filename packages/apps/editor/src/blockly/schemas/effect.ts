@@ -10,6 +10,7 @@ import type { BlockState, EventObject, ParseContext } from '../parser/types';
 import type { BlockSchema } from '../registry/types';
 import { BlockColours } from './colours';
 import { legacyEffectSchemas } from './effectLegacy';
+import { checkbox, expression, expressionValue } from './legacyHelpers';
 
 // ============================================
 // animate 块
@@ -23,11 +24,13 @@ export const animateSchema: BlockSchema = {
   eventType: 'animate',
   definition: {
     type: 'mota_animate_s',
-    message0: '播放动画 %1 位置 [%2,%3] 异步 %4',
+    message0: '播放动画 %1 位置模式 %2 [%3,%4] 相对窗口 %5 异步 %6',
     args0: [
       { type: 'field_input', name: 'NAME', text: '' },
+      { type: 'field_dropdown', name: 'LOC_MODE', options: [['坐标', 'loc'], ['跟随勇士', 'hero']] },
       { type: 'field_input', name: 'X', text: '' },
       { type: 'field_input', name: 'Y', text: '' },
+      { type: 'field_checkbox', name: 'ALIGN_WINDOW', checked: false },
       { type: 'field_checkbox', name: 'ASYNC', checked: false },
     ],
     previousStatement: null,
@@ -38,34 +41,47 @@ export const animateSchema: BlockSchema = {
   },
   category: 'effect',
   parser: (event: EventObject, _context: ParseContext): BlockState => {
-    const loc = event.loc as [number, number] | undefined;
+    const loc = Array.isArray(event.loc) ? event.loc : undefined;
     return {
       type: 'mota_animate_s',
       fields: {
         NAME: (event.name as string) || '',
+        LOC_MODE: event.loc === 'hero' ? 'hero' : 'loc',
         X: loc?.[0]?.toString() || '',
         Y: loc?.[1]?.toString() || '',
+        ALIGN_WINDOW: event.alignWindow === true,
         ASYNC: (event.async as boolean) || false,
       },
     };
   },
   generator: (block: Blockly.Block): string => {
     const name = block.getFieldValue('NAME');
+    const locMode = block.getFieldValue('LOC_MODE');
     const x = block.getFieldValue('X');
     const y = block.getFieldValue('Y');
     const async = block.getFieldValue('ASYNC') === 'TRUE';
 
     const event: Record<string, unknown> = { type: 'animate', name };
 
-    if (x || y) {
-      event.loc = [parseInt(x) || 0, parseInt(y) || 0];
-    }
+    if (locMode === 'hero') event.loc = 'hero';
+    else if (x || y) event.loc = [expressionValue(x), expressionValue(y)];
+    if (checkbox(block, 'ALIGN_WINDOW')) event.alignWindow = true;
     if (async) {
       event.async = true;
     }
 
     return JSON.stringify(event) + ',\n';
   },
+  interactions: [
+    {
+      type: 'selectMaterial',
+      field: 'NAME',
+      materialKind: 'animate',
+      transform: 'strip-animate-extension',
+    },
+    { type: 'autocomplete', field: 'NAME', source: 'animate' },
+  ],
+  defaultInteraction: 'selectMaterial',
 };
 
 // ============================================
@@ -80,7 +96,8 @@ export const stopAnimateSchema: BlockSchema = {
   eventType: 'stopAnimate',
   definition: {
     type: 'mota_stopAnimate_s',
-    message0: '停止所有动画',
+    message0: '停止所有动画 执行动画回调 %1',
+    args0: [{ type: 'field_checkbox', name: 'DO_CALLBACK', checked: false }],
     previousStatement: null,
     nextStatement: null,
     colour: 'auto', // 使用 category 默认颜色 (20)
@@ -91,7 +108,9 @@ export const stopAnimateSchema: BlockSchema = {
   event: {
     match: { path: 'type', equals: 'stopAnimate' },
     template: { type: 'stopAnimate' },
-    bindings: [],
+    bindings: [
+      { input: 'DO_CALLBACK', kind: 'field', path: 'doCallback', valueType: 'boolean', default: false, omitWhenDefault: true },
+    ],
   },
 };
 
@@ -107,11 +126,12 @@ export const playSoundSchema: BlockSchema = {
   eventType: 'playSound',
   definition: {
     type: 'mota_playSound_s',
-    message0: '播放音效 %1 音调 %2 停止之前的 %3',
+    message0: '播放音效 %1 音调 %2 停止之前的 %3 同步等待 %4',
     args0: [
       { type: 'field_input', name: 'NAME', text: '' },
       { type: 'field_input', name: 'PITCH', text: '' },
       { type: 'field_checkbox', name: 'STOP', checked: false },
+      { type: 'field_checkbox', name: 'SYNC', checked: false },
     ],
     previousStatement: null,
     nextStatement: null,
@@ -127,6 +147,7 @@ export const playSoundSchema: BlockSchema = {
         NAME: (event.name as string) || '',
         PITCH: (event.pitch as number)?.toString() || '',
         STOP: (event.stop as boolean) || false,
+        SYNC: event.sync === true,
       },
     };
   },
@@ -143,6 +164,7 @@ export const playSoundSchema: BlockSchema = {
     if (stop) {
       event.stop = true;
     }
+    if (checkbox(block, 'SYNC')) event.sync = true;
 
     return JSON.stringify(event) + ',\n';
   },
@@ -187,9 +209,10 @@ export const playBgmSchema: BlockSchema = {
   eventType: 'playBgm',
   definition: {
     type: 'mota_playBgm_s',
-    message0: '播放背景音乐 %1 保持不变 %2',
+    message0: '播放背景音乐 %1 开始秒数 %2 保持不变 %3',
     args0: [
       { type: 'field_input', name: 'NAME', text: '' },
+      { type: 'field_input', name: 'START_TIME', text: '0' },
       { type: 'field_checkbox', name: 'KEEP', checked: false },
     ],
     previousStatement: null,
@@ -204,6 +227,7 @@ export const playBgmSchema: BlockSchema = {
     template: { type: 'playBgm' },
     bindings: [
       { input: 'NAME', kind: 'field', path: 'name', valueType: 'string' },
+      { input: 'START_TIME', kind: 'field', path: 'startTime', valueType: 'number', default: 0, omitWhenDefault: true },
       { input: 'KEEP', kind: 'field', path: 'keep', valueType: 'boolean', default: false, omitWhenDefault: true },
     ],
   },
@@ -244,7 +268,8 @@ export const resumeBgmSchema: BlockSchema = {
   eventType: 'resumeBgm',
   definition: {
     type: 'mota_resumeBgm_s',
-    message0: '恢复背景音乐',
+    message0: '恢复背景音乐 从暂停处继续 %1',
+    args0: [{ type: 'field_checkbox', name: 'RESUME', checked: false }],
     previousStatement: null,
     nextStatement: null,
     colour: BlockColours.SOUND,
@@ -252,7 +277,9 @@ export const resumeBgmSchema: BlockSchema = {
     helpUrl: '',
   },
   category: 'effect',
-  fieldMapping: {},
+  fieldMapping: {
+    RESUME: { eventField: 'resume', parse: (v) => v === true, generate: (v) => v === 'TRUE' || v === true ? true : undefined },
+  },
 };
 
 // ============================================
@@ -267,8 +294,12 @@ export const setVolumeSchema: BlockSchema = {
   eventType: 'setVolume',
   definition: {
     type: 'mota_setVolume_s',
-    message0: '设置音量 %1',
-    args0: [{ type: 'field_input', name: 'VALUE', text: '100' }],
+    message0: '设置音量 %1 渐变时间 %2 异步 %3',
+    args0: [
+      { type: 'field_input', name: 'VALUE', text: '100' },
+      { type: 'field_input', name: 'TIME', text: '0' },
+      { type: 'field_checkbox', name: 'ASYNC', checked: false },
+    ],
     previousStatement: null,
     nextStatement: null,
     colour: BlockColours.SOUND,
@@ -282,6 +313,8 @@ export const setVolumeSchema: BlockSchema = {
       parse: (v) => (v as number)?.toString() || '100',
       generate: (v) => parseInt(v as string) || 100,
     },
+    TIME: { eventField: 'time', parse: (v) => expression(v), generate: (v) => expressionValue(v as string) },
+    ASYNC: { eventField: 'async', parse: (v) => v === true, generate: (v) => v === 'TRUE' || v === true ? true : undefined },
   },
 };
 
@@ -297,12 +330,14 @@ export const setCurtainSchema: BlockSchema = {
   eventType: 'setCurtain',
   definition: {
     type: 'mota_setCurtain_s',
-    message0: '设置画面色调 [%1,%2,%3,%4] 渐变时间 %5 异步 %6 保持 %7',
+    message0: '设置画面色调 恢复原色 %1 [%2,%3,%4,%5] 移动方式 %6 渐变时间 %7 异步 %8 保持 %9',
     args0: [
+      { type: 'field_checkbox', name: 'RESTORE', checked: false },
       { type: 'field_input', name: 'R', text: '0' },
       { type: 'field_input', name: 'G', text: '0' },
       { type: 'field_input', name: 'B', text: '0' },
       { type: 'field_input', name: 'A', text: '0' },
+      { type: 'field_input', name: 'MOVE_MODE', text: '' },
       { type: 'field_input', name: 'TIME', text: '' },
       { type: 'field_checkbox', name: 'ASYNC', checked: false },
       { type: 'field_checkbox', name: 'KEEP', checked: false },
@@ -319,10 +354,12 @@ export const setCurtainSchema: BlockSchema = {
     return {
       type: 'mota_setCurtain_s',
       fields: {
+        RESTORE: !Array.isArray(color),
         R: color?.[0]?.toString() || '0',
         G: color?.[1]?.toString() || '0',
         B: color?.[2]?.toString() || '0',
         A: color?.[3]?.toString() || '0',
+        MOVE_MODE: (event.moveMode as string) || '',
         TIME: (event.time as number)?.toString() || '',
         ASYNC: (event.async as boolean) || false,
         KEEP: (event.keep as boolean) || false,
@@ -334,14 +371,14 @@ export const setCurtainSchema: BlockSchema = {
     const g = block.getFieldValue('G');
     const b = block.getFieldValue('B');
     const a = block.getFieldValue('A');
+    const moveMode = block.getFieldValue('MOVE_MODE');
     const time = block.getFieldValue('TIME');
     const async = block.getFieldValue('ASYNC') === 'TRUE';
     const keep = block.getFieldValue('KEEP') === 'TRUE';
 
-    const event: Record<string, unknown> = {
-      type: 'setCurtain',
-      color: [parseInt(r) || 0, parseInt(g) || 0, parseInt(b) || 0, parseInt(a) || 0],
-    };
+    const event: Record<string, unknown> = { type: 'setCurtain' };
+    if (!checkbox(block, 'RESTORE')) event.color = [Number(r), Number(g), Number(b), Number(a)];
+    if (moveMode) event.moveMode = moveMode;
 
     if (time) {
       event.time = parseInt(time) || 0;
@@ -369,12 +406,13 @@ export const screenFlashSchema: BlockSchema = {
   eventType: 'screenFlash',
   definition: {
     type: 'mota_screenFlash_s',
-    message0: '屏幕闪烁 颜色 [%1,%2,%3,%4] 单次时间 %5 次数 %6 异步 %7',
+    message0: '屏幕闪烁 颜色 [%1,%2,%3,%4] 移动方式 %5 单次时间 %6 次数 %7 异步 %8',
     args0: [
       { type: 'field_input', name: 'R', text: '255' },
       { type: 'field_input', name: 'G', text: '255' },
       { type: 'field_input', name: 'B', text: '255' },
       { type: 'field_input', name: 'A', text: '1' },
+      { type: 'field_input', name: 'MOVE_MODE', text: '' },
       { type: 'field_input', name: 'TIME', text: '100' },
       { type: 'field_input', name: 'TIMES', text: '3' },
       { type: 'field_checkbox', name: 'ASYNC', checked: false },
@@ -395,6 +433,7 @@ export const screenFlashSchema: BlockSchema = {
         G: color?.[1]?.toString() || '255',
         B: color?.[2]?.toString() || '255',
         A: color?.[3]?.toString() || '1',
+        MOVE_MODE: (event.moveMode as string) || '',
         TIME: (event.time as number)?.toString() || '100',
         TIMES: (event.times as number)?.toString() || '3',
         ASYNC: (event.async as boolean) || false,
@@ -406,6 +445,7 @@ export const screenFlashSchema: BlockSchema = {
     const g = block.getFieldValue('G');
     const b = block.getFieldValue('B');
     const a = block.getFieldValue('A');
+    const moveMode = block.getFieldValue('MOVE_MODE');
     const time = block.getFieldValue('TIME');
     const times = block.getFieldValue('TIMES');
     const async = block.getFieldValue('ASYNC') === 'TRUE';
@@ -414,6 +454,7 @@ export const screenFlashSchema: BlockSchema = {
       type: 'screenFlash',
       color: [parseInt(r) || 255, parseInt(g) || 255, parseInt(b) || 255, parseFloat(a) || 1],
     };
+    if (moveMode) event.moveMode = moveMode;
 
     if (time) {
       event.time = parseInt(time) || 100;
@@ -441,7 +482,7 @@ export const setWeatherSchema: BlockSchema = {
   eventType: 'setWeather',
   definition: {
     type: 'mota_setWeather_s',
-    message0: '设置天气 %1 强度 %2',
+    message0: '设置天气 %1 强度 %2 保持 %3',
     args0: [
       {
         type: 'field_dropdown',
@@ -456,6 +497,7 @@ export const setWeatherSchema: BlockSchema = {
         ],
       },
       { type: 'field_input', name: 'LEVEL', text: '5' },
+      { type: 'field_checkbox', name: 'KEEP', checked: false },
     ],
     previousStatement: null,
     nextStatement: null,
@@ -464,16 +506,24 @@ export const setWeatherSchema: BlockSchema = {
     helpUrl: '',
   },
   category: 'effect',
-  fieldMapping: {
-    NAME: 'name',
-    LEVEL: {
-      eventField: 'level',
-      parse: (v) => (v as number)?.toString() || '5',
-      generate: (v) => {
-        const level = parseInt(v as string);
-        return isNaN(level) ? undefined : level;
-      },
+  parser: (event: EventObject): BlockState => ({
+    type: 'mota_setWeather_s',
+    fields: {
+      NAME: String(event.name ?? ''),
+      LEVEL: event.level == null ? '5' : String(event.level),
+      KEEP: event.keep === true,
     },
+  }),
+  generator: (block: Blockly.Block): string => {
+    const name = block.getFieldValue('NAME');
+    if (!name) return '{"type":"setWeather"},\n';
+    const event: Record<string, unknown> = {
+      type: 'setWeather',
+      name,
+      level: Number(block.getFieldValue('LEVEL')),
+    };
+    if (checkbox(block, 'KEEP')) event.keep = true;
+    return JSON.stringify(event) + ',\n';
   },
 };
 
@@ -489,9 +539,12 @@ export const vibrateSchema: BlockSchema = {
   eventType: 'vibrate',
   definition: {
     type: 'mota_vibrate_s',
-    message0: '画面震动 时间 %1 异步 %2',
+    message0: '画面震动 方向 %1 时间 %2 速度 %3 振幅 %4 异步 %5',
     args0: [
+      { type: 'field_dropdown', name: 'DIRECTION', options: [['水平', 'horizontal'], ['垂直', 'vertical'], ['随机', 'random']] },
       { type: 'field_input', name: 'TIME', text: '' },
+      { type: 'field_input', name: 'SPEED', text: '10' },
+      { type: 'field_input', name: 'POWER', text: '10' },
       { type: 'field_checkbox', name: 'ASYNC', checked: false },
     ],
     previousStatement: null,
@@ -502,6 +555,7 @@ export const vibrateSchema: BlockSchema = {
   },
   category: 'effect',
   fieldMapping: {
+    DIRECTION: 'direction',
     TIME: {
       eventField: 'time',
       parse: (v) => (v as number)?.toString() || '',
@@ -510,6 +564,8 @@ export const vibrateSchema: BlockSchema = {
         return isNaN(time) ? undefined : time;
       },
     },
+    SPEED: { eventField: 'speed', parse: (v) => expression(v), generate: (v) => expressionValue(v as string) },
+    POWER: { eventField: 'power', parse: (v) => expression(v), generate: (v) => expressionValue(v as string) },
     ASYNC: {
       eventField: 'async',
       parse: (v) => (v as boolean) || false,
@@ -669,7 +725,11 @@ export const waitAsyncSchema: BlockSchema = {
   eventType: 'waitAsync',
   definition: {
     type: 'mota_waitAsync_s',
-    message0: '等待所有异步事件执行完毕',
+    message0: '等待所有异步事件执行完毕 排除动画 %1 包含音效 %2',
+    args0: [
+      { type: 'field_checkbox', name: 'EXCLUDE_ANIMATES', checked: false },
+      { type: 'field_checkbox', name: 'INCLUDE_SOUNDS', checked: false },
+    ],
     previousStatement: null,
     nextStatement: null,
     colour: 'auto', // 使用 category 默认颜色 (20)
@@ -677,7 +737,10 @@ export const waitAsyncSchema: BlockSchema = {
     helpUrl: '',
   },
   category: 'effect',
-  fieldMapping: {},
+  fieldMapping: {
+    EXCLUDE_ANIMATES: { eventField: 'excludeAnimates', parse: (v) => v === true, generate: (v) => v === 'TRUE' || v === true ? true : undefined },
+    INCLUDE_SOUNDS: { eventField: 'includeSounds', parse: (v) => v === true, generate: (v) => v === 'TRUE' || v === true ? true : undefined },
+  },
 };
 
 // ============================================

@@ -10,6 +10,7 @@ import {
   commandsName,
   getShortcutKeys,
   DEFAULT_CODEMIRROR_OPTIONS,
+  PERSISTENT_SEARCH_KEYS,
   FONT_SIZE_CONFIG_KEY,
   DEFAULT_FONT_SIZE,
   API_DOCS_PATH,
@@ -27,7 +28,8 @@ import {
   type CodeEditorOpenRequest,
 } from "./CodeEditorContext";
 import { notifyError, notifySuccess } from "@/utils/notify";
-import { editorEndpoint } from "@/environment";
+import { editorDocsEndpoint } from "@/environment";
+import { Modal } from "antd";
 
 export const CodeEditor: FC = () => {
   // ========== React State ==========
@@ -86,22 +88,15 @@ export const CodeEditor: FC = () => {
    */
   const setValue = useCurrentFn((val: string) => {
     const codeEditor = codeEditorRef.current;
-    const ternServer = ternServerRef.current;
     if (!codeEditor) return;
 
     codeEditor.setValue(val || "");
-    if (ternServer) {
-      ternServer.delDoc("doc");
-      ternServer.addDoc("doc", new CodeMirror.Doc(val || "", "javascript"));
-    }
   });
 
   /**
    * 获取编辑器值
    */
-  const getValue = useCurrentFn(() => {
-    return codeEditorRef.current?.getValue() || "";
-  });
+  const getValue = useCurrentFn(() => codeEditorRef.current?.getValue() || "");
 
   /**
    * 格式化代码
@@ -204,9 +199,18 @@ export const CodeEditor: FC = () => {
 
     // 统一的错误检查
     if (stateRef.current.lintAutocomplete) {
+      const value = codeEditorRef.current?.getValue() ?? "";
+      JSHINT(value, JSHINT_OPTIONS.options);
       const hasErrors = JSHINT.errors?.filter((e) => e?.code?.startsWith("E")).length > 0;
       if (hasErrors) {
-        alert("当前好像存在严重的语法错误，请处理后再保存。\n严重的语法错误可能会导致整个编辑器的崩溃。");
+        const first = JSHINT.errors?.find((error) => error?.code?.startsWith("E"));
+        Modal.error({
+          title: "代码无法保存",
+          content: first
+            ? `第 ${first.line} 行，第 ${first.character} 列：${first.reason}`
+            : "当前代码存在语法错误，请修改后再保存。",
+          okText: "返回修改",
+        });
         return;
       }
     }
@@ -271,6 +275,7 @@ export const CodeEditor: FC = () => {
     if (!textareaRef.current) return;
 
     // 创建 extraKeys 配置
+    const docsUrl = editorDocsEndpoint(API_DOCS_PATH);
     const extraKeys: CodeMirror.KeyMap = {
       "Ctrl-/": (cm) => {
         cm.toggleComment();
@@ -281,14 +286,13 @@ export const CodeEditor: FC = () => {
       "Ctrl-Q": (cm) => {
         ternServerRef.current?.rename(cm);
       },
-      "Cmd-F": CodeMirror.commands.findPersistent,
-      "Ctrl-F": CodeMirror.commands.findPersistent,
+      ...PERSISTENT_SEARCH_KEYS,
       "Ctrl-R": CodeMirror.commands.replaceAll,
       "Ctrl-D": (cm) => {
         const cursor = cm.getCursor();
         cm.foldCode(cursor);
       },
-      "Ctrl-O": () => openUrl(editorEndpoint("docs", API_DOCS_PATH)),
+      ...(docsUrl ? { "Ctrl-O": () => openUrl(docsUrl) } : {}),
       "Ctrl-P": () => openUrl(PLUGINS_URL),
     };
     extraKeysRef.current = extraKeys;

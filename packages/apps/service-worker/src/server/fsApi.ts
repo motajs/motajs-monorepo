@@ -10,7 +10,7 @@ const ENCODINGS = new Map<string, BufferEncoding>([
 ]);
 
 export const normalizeProjectPath = (input: string, allowEmpty = false): string => {
-  if (input.includes("\0") || input.includes("\\") || input.startsWith("/")) {
+  if (/[\u0000-\u001f\u007f-\u009f]/.test(input) || input.includes("\\") || input.startsWith("/")) {
     throw new HttpError(400, "invalid-path", "Project path must be relative", input);
   }
   const segments = input.split("/");
@@ -108,11 +108,13 @@ export const handleFsRequest = async (
   if (access.status === "permission-required") {
     return ResponseUtils.error(403, "project-permission-required", "Project permission is required");
   }
+  const params = new URLSearchParams(await request.text());
+  const requestPath = params.get("name") ?? undefined;
   try {
-    return await performOperation(access.fs, operation, new URLSearchParams(await request.text()));
+    return await performOperation(access.fs, operation, params);
   } catch (error) {
     const candidate = error as { name?: string; code?: string };
     if (candidate?.name === "NotAllowedError" || candidate?.code === "EACCES") invalidateProject(projectId);
-    return errorResponse(error);
+    return errorResponse(error, requestPath);
   }
 };

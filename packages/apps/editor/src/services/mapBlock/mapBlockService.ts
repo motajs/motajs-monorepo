@@ -25,9 +25,9 @@ const MAPS_BLOCKS_DATA_PATH = "project/maps.js";
 export interface BlockInfo {
   cls?: string;
   id?: string;
-  name?: string;
-  canBreak?: boolean;
-  canPass?: boolean;
+  name?: string | null;
+  canBreak?: boolean | null;
+  canPass?: boolean | null;
   animate?: number;
   trigger?: string;
   script?: string;
@@ -40,6 +40,18 @@ export interface BlockInfo {
   cannotOut?: string[];
   cannotIn?: string[];
   faceIds?: Record<string, string>;
+  /**
+   * Optional editor-only sprite metadata. The runtime ignores this field; it
+   * lets logical or invisible blocks remain visible while editing a map.
+   */
+  editorDisplay?: {
+    type: "image";
+    path: string;
+    x?: number;
+    y?: number;
+    width?: number;
+    height?: number;
+  };
   [key: string]: unknown;
 }
 

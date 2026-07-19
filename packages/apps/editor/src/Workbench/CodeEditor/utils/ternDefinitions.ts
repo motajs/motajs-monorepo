@@ -153,7 +153,7 @@ export function buildImagesDef(
  */
 export function buildItemsDef(
   coredef: TernCoreDef,
-  items: Record<string, { name?: string }>
+  items: Record<string, { name?: string | null }>
 ): void {
   Object.keys(items).forEach((name) => {
     coredef.core.material.items[name] = {

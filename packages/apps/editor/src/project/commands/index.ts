@@ -3,7 +3,9 @@ export {
   floorCommands,
   type BatchCreateFloorOptions,
   type BatchFloorPatch,
+  type CopyFloorMode,
   type CreateFloorOptions,
+  type FloorOrganizationOptions,
   type ResizeFloorOptions,
 } from "./floorCommands";
 export { locCommands } from "./locCommands";

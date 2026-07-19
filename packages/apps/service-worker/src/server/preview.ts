@@ -4,7 +4,7 @@ import mime from "mime";
 import { accessProjectById, invalidateProject } from "./project";
 import { normalizeProjectPath } from "./fsApi";
 import { parseTSConfig, transpileTS } from "./transpiler";
-import { errorResponse, ResponseUtils } from "./utils";
+import { errorResponse, isNotFoundError, ResponseUtils } from "./utils";
 
 const noStoreHeaders = { "cache-control": "no-store" };
 
@@ -101,6 +101,7 @@ export const serveProjectPreview = async (context: PreviewRouteContext): Promise
     if (pathname === "index.html" && request.mode === "navigate") {
       return Response.redirect(`${context.projectUrl}?reason=missing-index`, 302);
     }
-    return errorResponse(error);
+    if (request.mode === "navigate" && isNotFoundError(error)) return ResponseUtils.create404();
+    return errorResponse(error, pathname);
   }
 };

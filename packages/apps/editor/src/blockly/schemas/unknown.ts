@@ -19,7 +19,7 @@ export const unknownSchema: BlockSchema = {
   eventType: '_unknown', // 特殊内部类型
   definition: {
     type: 'mota_unknown',
-    message0: '未知事件 [%1] %2 %3',
+    message0: '未知事件 [%1] %2 %3 %4',
     args0: [
       {
         type: 'field_input',
@@ -35,6 +35,11 @@ export const unknownSchema: BlockSchema = {
         type: 'field_label',
         name: 'DIAGNOSTIC',
         text: '',
+      },
+      {
+        type: 'field_mota_action',
+        text: '注册自定义块',
+        action: 'registerUnknownEvent',
       },
     ],
     previousStatement: null,

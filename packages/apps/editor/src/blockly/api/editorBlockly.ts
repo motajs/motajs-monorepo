@@ -18,6 +18,8 @@ export interface EditorBlocklyCallbacks {
   /** 确认回调，接收已解析的值 */
   onConfirm: (value: unknown) => void | Promise<void>;
   onCancel?: () => void;
+  /** 工作区已完成导入并经过 Blockly 事件队列刷新。 */
+  onLoaded?: () => void;
 }
 
 /**
@@ -136,6 +138,10 @@ export function createEditorBlocklyApi(
         if (workspaceRef && workspaceApi?.isReady) {
           if (options.project) workspaceRef.loadEntryData(initialValue, entryType, options.project);
           else workspaceRef.loadEntryData(initialValue, entryType);
+          window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+            if (!currentContext || generation !== importGeneration) return;
+            currentContext.callbacks.onLoaded?.();
+          }));
           return;
         }
         setTimeout(loadWhenReady, 50);

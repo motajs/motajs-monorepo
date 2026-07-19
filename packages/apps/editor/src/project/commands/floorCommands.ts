@@ -1,4 +1,5 @@
 import { produce } from "immer";
+import { cloneDeep } from "es-toolkit";
 import { FileHandlerManager } from "@/fs/FileHandlerManager";
 import { projectData } from "@/project/data/projectData";
 import type { FloorData } from "@/types";
@@ -16,6 +17,17 @@ import {
   type PatchCommandOptions,
 } from "@/project/history";
 import { commandError, type CommandResult } from "./types";
+import {
+  partitionContainingFloor,
+  validateFloorOrganization,
+  type FloorPartition,
+} from "@/project/model/floorOrganization";
+import { buildFloorCoordinateTransformPlan } from "@/project/model/floorCoordinateReferences";
+import {
+  DEFAULT_MAP_LAYERS,
+  getMapLayerSettingsSnapshot,
+  type MapLayerDefinition,
+} from "@/project/settings/mapLayerSettings";
 
 export interface CreateFloorOptions {
   title?: string;
@@ -42,8 +54,14 @@ export interface ResizeFloorOptions {
   offsetY: number;
 }
 
-const MAP_FIELDS = ["map", "bgmap", "fgmap"] as const;
-const COORD_FIELDS = [
+export interface FloorOrganizationOptions {
+  floorIds: string[];
+  floorPartitions: FloorPartition[];
+}
+
+export type CopyFloorMode = "full" | "blank";
+
+const BLANK_COPY_EVENT_FIELDS = [
   "events",
   "beforeBattle",
   "afterBattle",
@@ -52,6 +70,7 @@ const COORD_FIELDS = [
   "changeFloor",
   "autoEvent",
   "cannotMove",
+  "cannotMoveIn",
 ] as const;
 
 function floorPath(floorId: string): string {
@@ -65,6 +84,7 @@ function floorFileOptions(floorId: string) {
 function createInitialFloorData(
   floorId: string,
   options: CreateFloorOptions = {},
+  layers: readonly MapLayerDefinition[] = DEFAULT_MAP_LAYERS,
 ): FloorData {
   const width = options.width ?? 13;
   const height = options.height ?? 13;
@@ -72,7 +92,7 @@ function createInitialFloorData(
     Array.from({ length: width }, () => 0)
   );
 
-  return {
+  const floor: FloorData = {
     floorId,
     title: options.title ?? floorId,
     name: options.name ?? floorId,
@@ -91,13 +111,45 @@ function createInitialFloorData(
     changeFloor: {},
     autoEvent: {},
     cannotMove: {},
+    cannotMoveIn: {},
   };
+  for (const layer of layers) {
+    if (!(layer.property in floor)) floor[layer.property] = [];
+  }
+  return floor;
 }
 
 function validateFloorSize(width: number, height: number): void {
   if (!Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0 || width > 128 || height > 128) {
     throw new Error("Floor width and height must be integers between 1 and 128");
   }
+}
+
+function createZeroMap(width: number, height: number): number[][] {
+  return Array.from({ length: height }, () => Array.from({ length: width }, () => 0));
+}
+
+function readPartitions(tower: { main: Record<string, unknown> }): unknown {
+  return tower.main.floorPartitions;
+}
+
+function sameFloorSet(current: readonly string[], next: readonly string[]): boolean {
+  if (current.length !== next.length) return false;
+  const expected = new Set(current);
+  return expected.size === current.length && next.every((floorId) => expected.has(floorId));
+}
+
+function partitionsAfterDelete(
+  floorIds: readonly string[],
+  partitions: readonly FloorPartition[],
+  deletedFloorId: string,
+): FloorPartition[] {
+  return partitions.flatMap(([startId, endId]) => {
+    const start = floorIds.indexOf(startId);
+    const end = floorIds.indexOf(endId);
+    const remaining = floorIds.slice(start, end + 1).filter((floorId) => floorId !== deletedFloorId);
+    return remaining.length ? [[remaining[0], remaining.at(-1)!] as FloorPartition] : [];
+  });
 }
 
 function resizeMap(
@@ -124,41 +176,6 @@ function resizeMap(
   return result;
 }
 
-function shiftCoordRecord(
-  current: unknown,
-  width: number,
-  height: number,
-  offsetX: number,
-  offsetY: number,
-): Record<string, unknown> {
-  const result: Record<string, unknown> = {};
-  if (!current || typeof current !== "object") return result;
-
-  for (const [key, value] of Object.entries(current as Record<string, unknown>)) {
-    const [oldXRaw, oldYRaw] = key.split(",");
-    const oldX = Number(oldXRaw);
-    const oldY = Number(oldYRaw);
-    if (!Number.isInteger(oldX) || !Number.isInteger(oldY)) continue;
-
-    const x = oldX + offsetX;
-    const y = oldY + offsetY;
-    if (x >= 0 && x < width && y >= 0 && y < height) {
-      result[`${x},${y}`] = value;
-    }
-  }
-
-  return result;
-}
-
-function shiftPoint(value: unknown, width: number, height: number, offsetX: number, offsetY: number): unknown {
-  if (!Array.isArray(value) || value.length !== 2) return value;
-  const x = Number(value[0]) + offsetX;
-  const y = Number(value[1]) + offsetY;
-  if (!Number.isInteger(x) || !Number.isInteger(y)) return value;
-  if (x < 0 || x >= width || y < 0 || y >= height) return value;
-  return [x, y];
-}
-
 class FloorCommands {
   async patch(
     floorId: string,
@@ -179,6 +196,85 @@ class FloorCommands {
     )), { label: "批量修改楼层", stage: "batch-patch-floor" });
   }
 
+  async updateOrganization(options: FloorOrganizationOptions): Promise<CommandResult> {
+    try {
+      const tower = projectData.tower().value();
+      if (!sameFloorSet(tower.main.floorIds, options.floorIds)) {
+        throw new Error("楼层排序只能改变现有楼层的顺序，不能增删楼层");
+      }
+      const validation = validateFloorOrganization(options.floorIds, options.floorPartitions);
+      if (!validation.valid) throw new Error(validation.diagnostics.join("；"));
+      return executePatchCommand(projectData.tower(), [
+        ["change", "['main']['floorIds']", options.floorIds],
+        ["change", "['main']['floorPartitions']", validation.partitions],
+      ], {
+        label: "调整楼层顺序与分区",
+        stage: "update-floor-organization",
+      });
+    } catch (error) {
+      return commandError("update-floor-organization", error);
+    }
+  }
+
+  async copy(sourceFloorId: string, targetFloorId: string, mode: CopyFloorMode): Promise<CommandResult> {
+    const path = floorPath(targetFloorId);
+    try {
+      if (!isValidFloorId(targetFloorId)) throw new Error(`Invalid floorId: ${targetFloorId}`);
+      const tower = projectData.tower().value();
+      if (tower.main.floorIds.some((floorId) => floorId.toLowerCase() === targetFloorId.toLowerCase())) {
+        throw new Error(`Floor ${targetFloorId} already exists`);
+      }
+      if (await FileHandlerManager.exists(path)) throw new Error(`Floor ${targetFloorId} already exists`);
+      if (!tower.main.floorIds.includes(sourceFloorId)) throw new Error(`Floor ${sourceFloorId} does not exist`);
+
+      const organization = validateFloorOrganization(tower.main.floorIds, readPartitions(tower));
+      if (!organization.valid) throw new Error(organization.diagnostics.join("；"));
+      const source = projectData.floor(sourceFloorId).value();
+      const copied = cloneDeep(source);
+      copied.floorId = targetFloorId;
+      if (mode === "blank") {
+        const layers = getMapLayerSettingsSnapshot();
+        const width = copied.width ?? copied.map?.[0]?.length ?? 13;
+        const height = copied.height ?? copied.map?.length ?? 13;
+        validateFloorSize(width, height);
+        for (const layer of layers) copied[layer.property] = createZeroMap(width, height);
+        for (const field of BLANK_COPY_EVENT_FIELDS) copied[field] = {};
+      }
+
+      const sourceIndex = tower.main.floorIds.indexOf(sourceFloorId);
+      const floorIds = [...tower.main.floorIds];
+      floorIds.splice(sourceIndex + 1, 0, targetFloorId);
+      const floorPartitions = organization.partitions.map((partition) => [...partition] as FloorPartition);
+      const partition = partitionContainingFloor(tower.main.floorIds, organization.partitions, sourceFloorId);
+      if (partition != null && floorPartitions[partition][1] === sourceFloorId) {
+        floorPartitions[partition][1] = targetFloorId;
+      }
+
+      return executeCompositeCommand([
+        writeTextFileOperation(path, serializeToJsMapFile(targetFloorId, copied), {
+          label: `复制楼层 ${sourceFloorId}`,
+          stage: `copy-floor:${targetFloorId}`,
+        }, floorFileOptions(targetFloorId)),
+        patchResourceOperation(projectData.tower(), [
+          ["change", "['main']['floorIds']", floorIds],
+          ["change", "['main']['floorPartitions']", floorPartitions],
+        ], {
+          label: `复制楼层 ${sourceFloorId}`,
+          stage: "copy-floor:update-organization",
+        }),
+        navigateFloorOperation(targetFloorId, {
+          label: `复制楼层 ${sourceFloorId}`,
+          stage: "copy-floor:navigate",
+        }),
+      ], {
+        label: `${mode === "blank" ? "复制空白地图" : "复制地图"} ${sourceFloorId} -> ${targetFloorId}`,
+        stage: "copy-floor",
+      });
+    } catch (error) {
+      return commandError("copy-floor", error);
+    }
+  }
+
   async create(floorId: string, options: CreateFloorOptions = {}): Promise<CommandResult> {
     const path = floorPath(floorId);
     try {
@@ -193,12 +289,13 @@ class FloorCommands {
 
     try {
       const tower = projectData.tower().value();
+      const layers = getMapLayerSettingsSnapshot();
       const floorIds = tower.main.floorIds.includes(floorId)
         ? tower.main.floorIds
         : [...tower.main.floorIds, floorId];
       const towerActions: Action[] = [["change", "['main']['floorIds']", floorIds]];
       if (!tower.firstData.floorId) towerActions.push(["change", "['firstData']['floorId']", floorId]);
-      const floorData = createInitialFloorData(floorId, options);
+      const floorData = createInitialFloorData(floorId, options, layers);
       return executeCompositeCommand([
         writeTextFileOperation(path, serializeToJsMapFile(floorId, floorData), {
           label: `新建楼层 ${floorId}`, stage: "write-new-floor",
@@ -244,9 +341,10 @@ class FloorCommands {
 
     try {
       const tower = projectData.tower().value();
+      const layers = getMapLayerSettingsSnapshot();
       const operations: EditorOperation<unknown>[] = floors.map((floor) => writeTextFileOperation(
         floorPath(floor.floorId),
-        serializeToJsMapFile(floor.floorId, createInitialFloorData(floor.floorId, floor)),
+        serializeToJsMapFile(floor.floorId, createInitialFloorData(floor.floorId, floor, layers)),
         { label: "批量新建楼层", stage: `batch-create-floor:${floor.floorId}` },
         floorFileOptions(floor.floorId),
       ));
@@ -285,7 +383,16 @@ class FloorCommands {
       const newData = produce(oldData, (draft) => { draft.floorId = newFloorId; });
       const tower = projectData.tower().value();
       const floorIds = tower.main.floorIds.map((id) => id === oldFloorId ? newFloorId : id);
-      const towerActions: Action[] = [["change", "['main']['floorIds']", floorIds]];
+      const organization = validateFloorOrganization(tower.main.floorIds, readPartitions(tower));
+      if (!organization.valid) throw new Error(organization.diagnostics.join("；"));
+      const floorPartitions = organization.partitions.map(([startId, endId]): FloorPartition => [
+        startId === oldFloorId ? newFloorId : startId,
+        endId === oldFloorId ? newFloorId : endId,
+      ]);
+      const towerActions: Action[] = [
+        ["change", "['main']['floorIds']", floorIds],
+        ["change", "['main']['floorPartitions']", floorPartitions],
+      ];
       if (tower.firstData.floorId === oldFloorId) {
         towerActions.push(["change", "['firstData']['floorId']", newFloorId]);
       }
@@ -311,22 +418,35 @@ class FloorCommands {
   async delete(floorId: string): Promise<CommandResult> {
     try {
       const tower = projectData.tower().value();
+      const organization = validateFloorOrganization(tower.main.floorIds, readPartitions(tower));
+      if (!organization.valid) throw new Error(organization.diagnostics.join("；"));
+      const deletedIndex = tower.main.floorIds.indexOf(floorId);
+      if (deletedIndex < 0) throw new Error(`Floor ${floorId} does not exist`);
+      if (tower.main.floorIds.length <= 1) throw new Error("工程必须至少保留一个楼层");
       const floorIds = tower.main.floorIds.filter((id) => id !== floorId);
-      const towerActions: Action[] = [["change", "['main']['floorIds']", floorIds]];
+      const floorPartitions = partitionsAfterDelete(tower.main.floorIds, organization.partitions, floorId);
+      const nextFloorId = floorIds[deletedIndex] ?? floorIds[deletedIndex - 1] ?? "";
+      const towerActions: Action[] = [
+        ["change", "['main']['floorIds']", floorIds],
+        ["change", "['main']['floorPartitions']", floorPartitions],
+      ];
       if (tower.firstData.floorId === floorId) {
-        towerActions.push(["change", "['firstData']['floorId']", floorIds[0] ?? ""]);
+        towerActions.push(["change", "['firstData']['floorId']", nextFloorId]);
       }
-      return executeCompositeCommand([
-        navigateFloorOperation(floorIds[0] ?? "", {
+      const operations: EditorOperation<unknown>[] = [
+        navigateFloorOperation(nextFloorId, {
           label: `删除楼层 ${floorId}`, stage: "navigate-after-delete",
         }, floorId),
         patchResourceOperation(projectData.tower(), towerActions, {
           label: `删除楼层 ${floorId}`, stage: "update-floorIds",
         }),
-        deleteTextFileOperation(floorPath(floorId), {
+      ];
+      if (await FileHandlerManager.exists(floorPath(floorId))) {
+        operations.push(deleteTextFileOperation(floorPath(floorId), {
           label: `删除楼层 ${floorId}`, stage: "delete-floor-file",
-        }, floorFileOptions(floorId)),
-      ], { label: `删除楼层 ${floorId}`, stage: "delete-floor" });
+        }, floorFileOptions(floorId)));
+      }
+      return executeCompositeCommand(operations, { label: `删除楼层 ${floorId}`, stage: "delete-floor" });
     } catch (error) {
       return commandError("update-floorIds", error);
     }
@@ -346,31 +466,43 @@ class FloorCommands {
 
     try {
       const record = projectData.floor(floorId).value() as unknown as Record<string, unknown>;
+      const layers = getMapLayerSettingsSnapshot();
       const actions: Action[] = [
         ["change", "['width']", width],
         ["change", "['height']", height],
       ];
 
-      for (const field of MAP_FIELDS) {
+      for (const { property: field } of layers) {
         actions.push([
           "change",
           `['${field}']`,
           resizeMap(record[field], width, height, offsetX, offsetY),
         ]);
       }
-      for (const field of COORD_FIELDS) {
-        actions.push([
-          "change",
-          `['${field}']`,
-          shiftCoordRecord(record[field], width, height, offsetX, offsetY),
-        ]);
+      const coordinatePlan = await buildFloorCoordinateTransformPlan(floorId, ([x, y]) => {
+        const nextX = x + offsetX;
+        const nextY = y + offsetY;
+        return nextX >= 0 && nextX < width && nextY >= 0 && nextY < height
+          ? [nextX, nextY]
+          : null;
+      });
+      actions.push(...coordinatePlan.targetActions);
+      if (coordinatePlan.blocked.length > 0) {
+        throw new Error(
+          `以下外部坐标会被裁掉，请先重新指定落点：${coordinatePlan.blocked.map((item) => `${item.owner}.${item.path}`).join("、")}`,
+        );
       }
-      actions.push(
-        ["change", "['upFloor']", shiftPoint(record.upFloor, width, height, offsetX, offsetY)],
-        ["change", "['downFloor']", shiftPoint(record.downFloor, width, height, offsetX, offsetY)],
-      );
 
-      return this.patch(floorId, actions, {
+      const operations: EditorOperation<unknown>[] = [patchResourceOperation(projectData.floor(floorId), actions, {
+        label: `调整楼层尺寸 ${floorId}`,
+        stage: "resize-floor",
+      })];
+      operations.push(...coordinatePlan.patches.map((patch) => patchResourceOperation(
+        patch.resource,
+        patch.actions,
+        { label: patch.label, stage: patch.stage },
+      )));
+      return executeCompositeCommand(operations, {
         label: `调整楼层尺寸 ${floorId}`,
         stage: "resize-floor",
       });

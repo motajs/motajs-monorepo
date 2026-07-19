@@ -65,19 +65,41 @@ export class BlocklyEditorSession {
     this.state.viewport = { ...viewport };
     this.state.selectedBlockId = selectedBlockId;
   }
+
+  restore(state: BlocklyEditorSessionState): void {
+    this.state = structuredClone(state);
+  }
 }
 
 export class BlocklySessionStore {
-  private readonly viewports = new Map<string, Pick<BlocklyEditorSessionState, 'viewport' | 'selectedBlockId'>>();
+  private readonly sessions = new Map<string, BlocklyEditorSessionState>();
 
-  restore(session: BlocklyEditorSession): void {
-    const saved = this.viewports.get(this.key(session.snapshot()));
-    if (saved) session.setViewport(saved.viewport, saved.selectedBlockId);
+  restore(session: BlocklyEditorSession): boolean {
+    const saved = this.sessions.get(this.key(session.snapshot()));
+    if (!saved) return false;
+    session.restore(saved);
+    return true;
+  }
+
+  restoreViewport(session: BlocklyEditorSession): boolean {
+    const saved = this.sessions.get(this.key(session.snapshot()));
+    if (!saved) return false;
+    const current = session.snapshot();
+    session.restore({
+      ...current,
+      viewport: saved.viewport,
+      selectedBlockId: saved.selectedBlockId,
+    });
+    return true;
   }
 
   save(session: BlocklyEditorSession): void {
     const state = session.snapshot();
-    this.viewports.set(this.key(state), { viewport: state.viewport, selectedBlockId: state.selectedBlockId });
+    this.sessions.set(this.key(state), state);
+  }
+
+  delete(contextId: string, entryType: string): void {
+    this.sessions.delete(`${contextId}:${entryType}`);
   }
 
   private key(state: Pick<BlocklyEditorSessionState, 'contextId' | 'entryType'>): string {

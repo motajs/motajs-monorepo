@@ -38,7 +38,6 @@ class WriteAnimationOperation implements EditorOperation {
       capture: () => structuredClone(resource.value().document),
       restore: async (checkpoint) => {
         resource.setDocument(checkpoint as AnimationDocument);
-        await resource.waitForIdle();
       },
     }];
   }
@@ -47,9 +46,6 @@ class WriteAnimationOperation implements EditorOperation {
     const nextText = JSON.stringify(this.document);
     if (JSON.stringify(previous) === nextText) return { value: undefined, inverse: this, changed: false };
     this.resource.setDocument(this.document);
-    await this.resource.waitForIdle();
-    const persist = this.resource.persistStatus();
-    if (persist.status === "error") throw persist.error;
     return {
       value: undefined,
       inverse: new WriteAnimationOperation(this.meta, this.resource, previous),
@@ -63,7 +59,7 @@ class AnimationCommands {
     const path = animationPath(name);
     const resource = projectAssets.animation(path);
     try {
-      if (resource.snapshot().status === "idle") await resource.reload();
+      await resource.ensureLoaded();
       const snapshot = resource.value();
       const frameMax = Number(snapshot.document.frame_max ?? snapshot.document.frames?.length ?? 0);
       for (const cue of cues) {

@@ -67,6 +67,9 @@ export function buildBlocklyCompletionCatalog(input: {
 
   addEntries(source('enemy'), input.enemys, 'enemy');
   addEntries(source('item'), input.items, 'item');
+  for (const [id, value] of Object.entries(record(input.items))) {
+    if (record(value).cls === 'equips') source('equip').push({ value: id, kind: 'equip' });
+  }
   addEntries(source('id'), input.mapBlocks, 'block');
   addEntries(source('commonEvent'), input.commonEvents, 'commonEvent');
   input.floorIds.forEach((id) => source('floor').push({ value: id, kind: 'floor' }));
@@ -85,6 +88,12 @@ export function buildBlocklyCompletionCatalog(input: {
   materialFields.forEach(([kind, values]) => stringArray(values).forEach((value) => {
     source(kind).push({ value, kind });
   }));
+  stringArray(main.fonts).forEach((value) => source('font').push({ value, kind: 'font' }));
+  const mainStyle = record(main.styles).font;
+  if (typeof mainStyle === 'string') source('font').push({ value: mainStyle, kind: 'font' });
+  ['aqua', 'black', 'blue', 'fuchsia', 'gray', 'green', 'lime', 'maroon', 'navy',
+    'gold', 'olive', 'orange', 'purple', 'red', 'silver', 'teal', 'white', 'yellow']
+    .forEach((value) => source('color').push({ value, kind: 'color' }));
 
   const expression = source('expression');
   ['status:hp', 'status:atk', 'status:def', 'status:mdef', 'status:money', 'status:exp',
@@ -92,7 +101,15 @@ export function buildBlocklyCompletionCatalog(input: {
     expression.push({ value, kind: 'expression' });
   });
   Object.keys(record(tower.values)).forEach((id) => expression.push({ value: `value:${id}`, kind: 'value' }));
-  Object.keys(record(tower.flags)).forEach((id) => expression.push({ value: `flag:${id}`, kind: 'flag' }));
+  Object.keys(record(tower.flags)).forEach((id) => {
+    source('flag').push({ value: id, kind: 'flag' });
+    expression.push({ value: `flag:${id}`, kind: 'flag' });
+  });
+  ['hp', 'atk', 'def', 'mdef', 'money', 'exp', 'lv', 'name', 'loc', 'direction', 'items', 'equipment']
+    .forEach((value) => source('status').push({ value, kind: 'status' }));
+  ['status', 'material', 'events', 'ui', 'maps', 'items', 'enemys', 'flags', 'values',
+    'getBlockInfo', 'insertAction', 'getFlag', 'setFlag', 'hasFlag', 'removeFlag']
+    .forEach((value) => source('core').push({ value, kind: 'core' }));
   Object.keys(record(main.nameMap)).forEach((alias) => source('id').push({ value: alias, kind: 'alias' }));
   ['bg', 'event', 'event2', 'fg', 'ui', 'data'].forEach((id) => source('id').push({ value: id, kind: 'canvas' }));
   const enemyAttributes = new Set<string>();
@@ -103,15 +120,21 @@ export function buildBlocklyCompletionCatalog(input: {
     expression.push({ value: `enemy:${enemy.value}:${attribute}`, kind: 'enemy-attribute' });
   }));
   source('textEscape').push(
+    { value: '\\n', kind: 'escape', label: '换行' },
     { value: '\\i[]', kind: 'escape', label: '图标' },
     { value: '\\f[]', kind: 'escape', label: '绘制图片' },
-    { value: '\\c[]', kind: 'escape', label: '文字颜色' },
-    { value: '\\r[]', kind: 'escape', label: '对话框位置' },
+    { value: '\\c[]', kind: 'escape', label: '字体大小' },
+    { value: '\\r[]', kind: 'escape', label: '文字颜色' },
     { value: '\\g[]', kind: 'escape', label: '字体' },
+    { value: '\\z', kind: 'escape', label: '暂停打字' },
+    { value: '\\t[]', kind: 'escape', label: '标题与图像' },
+    { value: '\\b[]', kind: 'escape', label: '对话框位置' },
+    { value: '\\d', kind: 'escape', label: '切换粗体' },
+    { value: '\\e', kind: 'escape', label: '切换斜体' },
   );
 
   const all = Array.from(new Map(
-    Object.values(bySource).flat().map((item) => [`${item.kind}:${item.value}`, item]),
+    Object.values(bySource).flat().map((item) => [item.value, item]),
   ).values());
   return { all, bySource, diagnostics: [] };
 }

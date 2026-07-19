@@ -14,7 +14,7 @@ import {
   Toast,
   Typography,
 } from "@douyinfe/semi-ui";
-import { IconDelete, IconFile, IconFolder, IconHome, IconMoon, IconPlay, IconRefresh, IconSun } from "@douyinfe/semi-icons";
+import { IconDelete, IconEdit, IconFile, IconFolder, IconHome, IconMoon, IconPlay, IconRefresh, IconSun } from "@douyinfe/semi-icons";
 import type { TreeNodeData } from "@douyinfe/semi-ui/lib/es/tree";
 import { Tree } from "@douyinfe/semi-ui";
 import { useQuery } from "react-query";
@@ -31,6 +31,7 @@ import { DarkModeStore } from "@motajs/react-dark-mode";
 import {
   ActivateProjectMessage,
   ForgetProjectMessage,
+  GetEditorHostStatusMessage,
   GetProjectMessage,
   ListProjectMessage,
   RegisterProjectMessage,
@@ -40,6 +41,7 @@ import styles from "./MainView.module.less";
 import {
   appUrl,
   currentViewRoute,
+  editorUrl,
   previewUrl,
   projectUrl,
   serviceWorkerScope,
@@ -229,6 +231,9 @@ const ProjectView: FC<{ host: HostClient; id: number }> = ({ host, id }) => {
   const details = useQuery(["project", id], () => host.client.request(GetProjectMessage, { id }), {
     enabled: host.ready,
   });
+  const editorStatus = useQuery(["editor-host"], () => host.client.request(GetEditorHostStatusMessage), {
+    enabled: host.ready,
+  });
   const access = details.data?.access;
   const project = access && access.status !== "not-found" ? access.project : undefined;
   const reason = new URLSearchParams(window.location.search).get("reason");
@@ -275,9 +280,18 @@ const ProjectView: FC<{ host: HostClient; id: number }> = ({ host, id }) => {
         <Breadcrumb.Item>{project.name}</Breadcrumb.Item>
       </Breadcrumb>
 
-      {reason === "permission" ? <Banner type="warning" description="预览需要重新授权工程目录。" /> : null}
+      {reason === "permission" ? <Banner type="warning" description="访问工程需要重新授权工程目录。" /> : null}
       {reason === "missing-index" || project.hasIndex === false ? (
         <Banner type="danger" description="工程根目录中没有 index.html，当前无法运行预览。" />
+      ) : null}
+      {editorStatus.data?.status === "unavailable" ? (
+        <Banner type="warning" description={`编辑器暂不可用：${editorStatus.data.message}`} />
+      ) : null}
+      {editorStatus.data?.status === "ready" && editorStatus.data.source === "cache" ? (
+        <Banner type="warning" description={`网络版本不可用，当前将使用已缓存的 Editor ${editorStatus.data.editorVersion}。`} />
+      ) : null}
+      {reason === "editor-unavailable" && !editorStatus.data ? (
+        <Banner type="warning" description="编辑器暂不可用，请检查 Editor release 是否已经发布。" />
       ) : null}
 
       <section className={styles.projectHeader}>
@@ -300,9 +314,19 @@ const ProjectView: FC<{ host: HostClient; id: number }> = ({ host, id }) => {
       />
 
       <Space className={styles.actions} spacing="medium" wrap>
+        {editorStatus.data?.status === "ready" ? (
+          <Button
+            theme="solid"
+            type="primary"
+            icon={<IconEdit />}
+            disabled={!ready}
+            onClick={() => window.location.assign(editorUrl(id))}
+            data-test-id="open-editor"
+          >
+            打开编辑器
+          </Button>
+        ) : null}
         <Button
-          theme="solid"
-          type="primary"
           icon={<IconPlay />}
           disabled={!ready}
           onClick={() => window.open(previewUrl(id), "_blank")}

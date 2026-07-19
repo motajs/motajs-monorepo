@@ -1,0 +1,721 @@
+{
+  "kind": "field-bundle",
+  "formatVersion": 1,
+  "schemaId": "tower.fields",
+  "revision": 1,
+  "fields": {
+    "tower.title": {
+      "type": "string",
+      "title": "游戏名",
+      "description": "显示在标题页面和楼层切换界面中的工程标题。",
+      "editor": {
+        "kind": "text"
+      }
+    },
+    "tower.name": {
+      "type": "string",
+      "title": "工程标识符",
+      "description": "存档隔离使用的唯一英文标识符，只能包含字母、数字和下划线。",
+      "editor": {
+        "kind": "text"
+      },
+      "diagnostics": {
+        "tower.name.invalid": "必须是 1 到 30 位字母、数字或下划线"
+      }
+    },
+    "tower.version": {
+      "type": "string",
+      "title": "游戏版本",
+      "description": "版本不同的存档默认不通用。",
+      "editor": {
+        "kind": "text"
+      }
+    },
+    "tower.floorPartitions": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "title": "楼层分区",
+      "description": "用于不可返回高层塔的楼层分区设置。",
+      "editor": {
+        "kind": "event",
+        "entryType": "floorPartition"
+      }
+    },
+    "tower.levelChoose": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "title": "难度分歧",
+      "description": "游戏开始前可供玩家选择的难度及其事件。",
+      "editor": {
+        "kind": "event",
+        "entryType": "levelChoose"
+      }
+    },
+    "tower.equipName": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "title": "装备孔",
+      "description": "装备位名称，是与 equip.type 数值对应的有序列表。",
+      "editor": {
+        "kind": "orderedStringList",
+        "placeholder": "装备孔名称",
+        "createLabel": "添加装备孔"
+      }
+    },
+    "tower.nameMap": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "title": "文件别名",
+      "description": "图片、动画、背景音乐和音效使用的稳定文件别名。",
+      "editor": {
+        "kind": "json"
+      }
+    },
+    "tower.startBgm": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "title": "标题音乐",
+      "description": "标题界面默认播放的背景音乐。",
+      "editor": {
+        "kind": "material",
+        "reference": {
+          "ref": "project:materials.bgms"
+        },
+        "directory": "project/bgms",
+        "selection": "single"
+      }
+    },
+    "tower.startCanvas": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "title": "标题事件",
+      "description": "开启标题事件化后，用事件流绘制和控制标题界面。",
+      "editor": {
+        "kind": "event",
+        "entryType": "firstArrive"
+      }
+    },
+    "tower.startText": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "title": "开场剧情",
+      "description": "正式进入初始楼层前执行的事件。",
+      "editor": {
+        "kind": "event",
+        "entryType": "firstArrive"
+      }
+    },
+    "tower.shops": {
+      "type": "array",
+      "title": "全局商店",
+      "description": "工程中定义的全局商店列表。",
+      "editor": {
+        "kind": "event",
+        "entryType": "shop"
+      }
+    },
+    "tower.levelUp": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "title": "等级提升",
+      "description": "经验升级阈值、名称与升级事件。",
+      "editor": {
+        "kind": "event",
+        "entryType": "level"
+      }
+    },
+    "tower.hero.image": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "title": "勇士行走图",
+      "description": "勇士使用的 PNG 行走图。",
+      "editor": {
+        "kind": "material",
+        "reference": {
+          "ref": "project:materials.images"
+        },
+        "directory": "project/images",
+        "selection": "single"
+      }
+    },
+    "tower.hero.animate": {
+      "type": "boolean",
+      "title": "停止帧动画",
+      "description": "是否在停止和对话框状态播放勇士帧动画。",
+      "editor": {
+        "kind": "checkbox"
+      }
+    },
+    "tower.hero.name": {
+      "type": "string",
+      "title": "勇士名",
+      "editor": {
+        "kind": "text"
+      }
+    },
+    "tower.hero.lv": {
+      "type": "number",
+      "title": "初始等级",
+      "editor": {
+        "kind": "number"
+      },
+      "diagnostics": {
+        "tower.hero.level": "必须是正整数"
+      }
+    },
+    "tower.hero.hpmax": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "title": "生命上限",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "tower.hero.hp": {
+      "type": "number",
+      "title": "初始生命",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "tower.hero.manamax": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "title": "魔力上限",
+      "description": "非负时生效；null 或负数表示不启用魔力上限。",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "tower.hero.mana": {
+      "type": "number",
+      "title": "初始魔力",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "tower.hero.atk": {
+      "type": "number",
+      "title": "初始攻击",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "tower.hero.def": {
+      "type": "number",
+      "title": "初始防御",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "tower.hero.mdef": {
+      "type": "number",
+      "title": "初始护盾",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "tower.hero.money": {
+      "type": "number",
+      "title": "初始金币",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "tower.hero.exp": {
+      "type": "number",
+      "title": "初始经验",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "tower.hero.position": {
+      "type": "object",
+      "title": "初始位置",
+      "description": "同时设置初始楼层、坐标和朝向。",
+      "editor": {
+        "kind": "initialPosition",
+        "floors": {
+          "ref": "project:registry.floorIds"
+        }
+      },
+      "diagnostics": {
+        "tower.initial-floor.invalid": "初始楼层必须存在于楼层列表中"
+      }
+    },
+    "tower.hero.equipment": {
+      "type": "array",
+      "title": "初始装备",
+      "description": "按装备孔逐项选择；可选装备由 equip.type 与装备孔序号决定。",
+      "editor": {
+        "kind": "equipmentSlots",
+        "slots": {
+          "ref": "tower:main.equipName"
+        },
+        "items": {
+          "ref": "project:registry.items"
+        }
+      }
+    },
+    "tower.hero.constants": {
+      "type": "object",
+      "title": "初始永久道具",
+      "description": "永久道具 ID 到初始数量的映射。",
+      "editor": {
+        "kind": "itemCountRecord",
+        "items": {
+          "ref": "project:registry.items"
+        },
+        "category": "constants"
+      }
+    },
+    "tower.hero.tools": {
+      "type": "object",
+      "title": "初始消耗道具",
+      "description": "消耗道具 ID 到初始数量的映射。",
+      "editor": {
+        "kind": "itemCountRecord",
+        "items": {
+          "ref": "project:registry.items"
+        },
+        "category": "tools"
+      }
+    },
+    "tower.hero.equips": {
+      "type": "object",
+      "title": "初始拥有装备",
+      "description": "装备 ID 到背包内初始数量的映射。",
+      "editor": {
+        "kind": "itemCountRecord",
+        "items": {
+          "ref": "project:registry.items"
+        },
+        "category": "equips"
+      }
+    },
+    "tower.hero.flags": {
+      "type": "object",
+      "title": "初始变量",
+      "editor": {
+        "kind": "json"
+      }
+    },
+    "tower.value.lavaDamage": {
+      "type": "number",
+      "title": "血网伤害",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "tower.value.poisonDamage": {
+      "type": "number",
+      "title": "中毒伤害",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "tower.value.weakValue": {
+      "type": "number",
+      "title": "衰弱效果",
+      "description": "大于等于 1 时为固定值，0 到 1 时为比例。",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "tower.value.redGem": {
+      "type": "number",
+      "title": "红宝石值",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "tower.value.blueGem": {
+      "type": "number",
+      "title": "蓝宝石值",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "tower.value.greenGem": {
+      "type": "number",
+      "title": "绿宝石值",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "tower.value.redPotion": {
+      "type": "number",
+      "title": "红血瓶值",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "tower.value.bluePotion": {
+      "type": "number",
+      "title": "蓝血瓶值",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "tower.value.yellowPotion": {
+      "type": "number",
+      "title": "黄血瓶值",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "tower.value.greenPotion": {
+      "type": "number",
+      "title": "绿血瓶值",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "tower.value.breakArmor": {
+      "type": "number",
+      "title": "破甲比例",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "tower.value.counterAttack": {
+      "type": "number",
+      "title": "反击比例",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "tower.value.purify": {
+      "type": "number",
+      "title": "净化比例",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "tower.value.hatred": {
+      "type": "number",
+      "title": "仇恨增值",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "tower.value.animateSpeed": {
+      "type": "number",
+      "title": "全局帧动画时间",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "tower.value.moveSpeed": {
+      "type": "number",
+      "title": "勇士移速",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "tower.value.floorChangeTime": {
+      "type": "number",
+      "title": "楼层切换时间",
+      "editor": {
+        "kind": "number"
+      }
+    },
+    "tower.status.items": {
+      "type": "array",
+      "title": "状态栏显示项",
+      "description": "状态栏中启用的项目 key。",
+      "editor": {
+        "kind": "stringList",
+        "placeholder": "输入项目 key 后回车"
+      }
+    },
+    "tower.status.canvasRows": {
+      "type": "number",
+      "title": "竖状态栏自绘行数",
+      "description": "仅开启自绘状态栏时生效，范围为 1 到 5。",
+      "editor": {
+        "kind": "select",
+        "options": [
+          {
+            "value": 1
+          },
+          {
+            "value": 2
+          },
+          {
+            "value": 3
+          },
+          {
+            "value": 4
+          },
+          {
+            "value": 5
+          }
+        ]
+      },
+      "diagnostics": {
+        "tower.status.rows": "必须是 1 到 5 的整数"
+      }
+    },
+    "tower.flag.statusCanvas": {
+      "type": "boolean",
+      "title": "开启自绘状态栏",
+      "editor": {
+        "kind": "checkbox"
+      }
+    },
+    "tower.flag.autoScale": {
+      "type": "boolean",
+      "title": "自动缩放",
+      "editor": {
+        "kind": "checkbox"
+      }
+    },
+    "tower.flag.extendToolbar": {
+      "type": "boolean",
+      "title": "画面下方道具栏",
+      "editor": {
+        "kind": "checkbox"
+      }
+    },
+    "tower.flag.hideLeftStatusBar": {
+      "type": "boolean",
+      "title": "隐藏左侧状态栏",
+      "editor": {
+        "kind": "checkbox"
+      }
+    },
+    "tower.flag.generic": {
+      "type": "boolean",
+      "title": "系统开关",
+      "editor": {
+        "kind": "checkbox"
+      }
+    },
+    "tower.flag.flyNearStair": {
+      "type": "boolean",
+      "title": "楼传需在楼梯边",
+      "editor": {
+        "kind": "checkbox"
+      }
+    },
+    "tower.flag.flyRecordPosition": {
+      "type": "boolean",
+      "title": "楼传平面塔模式",
+      "editor": {
+        "kind": "checkbox"
+      }
+    },
+    "tower.flag.itemFirstText": {
+      "type": "boolean",
+      "title": "首次道具提示",
+      "editor": {
+        "kind": "checkbox"
+      }
+    },
+    "tower.flag.equipboxButton": {
+      "type": "boolean",
+      "title": "状态栏装备按钮",
+      "editor": {
+        "kind": "checkbox"
+      }
+    },
+    "tower.flag.enableAddPoint": {
+      "type": "boolean",
+      "title": "开启加点",
+      "editor": {
+        "kind": "checkbox"
+      }
+    },
+    "tower.flag.enableNegativeDamage": {
+      "type": "boolean",
+      "title": "开启负伤",
+      "editor": {
+        "kind": "checkbox"
+      }
+    },
+    "tower.flag.betweenAttackMax": {
+      "type": "boolean",
+      "title": "夹击不超伤害值",
+      "editor": {
+        "kind": "checkbox"
+      }
+    },
+    "tower.flag.useLoop": {
+      "type": "boolean",
+      "title": "二分临界",
+      "editor": {
+        "kind": "checkbox"
+      }
+    },
+    "tower.flag.startUsingCanvas": {
+      "type": "boolean",
+      "title": "标题开启事件化",
+      "editor": {
+        "kind": "checkbox"
+      }
+    },
+    "tower.flag.enableEnemyPoint": {
+      "type": "boolean",
+      "title": "定点怪显",
+      "editor": {
+        "kind": "checkbox"
+      }
+    },
+    "tower.flag.enableGentleClick": {
+      "type": "boolean",
+      "title": "允许轻按",
+      "editor": {
+        "kind": "checkbox"
+      }
+    },
+    "tower.flag.ignoreChangeFloor": {
+      "type": "boolean",
+      "title": "允许穿透楼梯",
+      "editor": {
+        "kind": "checkbox"
+      }
+    },
+    "tower.flag.canGoDeadZone": {
+      "type": "boolean",
+      "title": "允许将死领域",
+      "editor": {
+        "kind": "checkbox"
+      }
+    },
+    "tower.flag.enableMoveDirectly": {
+      "type": "boolean",
+      "title": "允许瞬移",
+      "editor": {
+        "kind": "checkbox"
+      }
+    },
+    "tower.flag.enableRouteFolding": {
+      "type": "boolean",
+      "title": "录像折叠",
+      "editor": {
+        "kind": "checkbox"
+      }
+    },
+    "tower.flag.disableShopOnDamage": {
+      "type": "boolean",
+      "title": "伤害禁用商店",
+      "editor": {
+        "kind": "checkbox"
+      }
+    },
+    "tower.flag.blurFg": {
+      "type": "boolean",
+      "title": "虚化前景层",
+      "editor": {
+        "kind": "checkbox"
+      }
+    },
+    "tower.style.startBackground": {
+      "type": "string",
+      "title": "横屏标题背景",
+      "editor": {
+        "kind": "text"
+      }
+    },
+    "tower.style.startVerticalBackground": {
+      "type": "string",
+      "title": "竖屏标题背景",
+      "editor": {
+        "kind": "text"
+      }
+    },
+    "tower.style.startLogoStyle": {
+      "type": "string",
+      "title": "标题样式",
+      "editor": {
+        "kind": "text"
+      }
+    },
+    "tower.style.startButtonsStyle": {
+      "type": "string",
+      "title": "标题按钮样式",
+      "editor": {
+        "kind": "text"
+      }
+    },
+    "tower.style.statusLeftBackground": {
+      "type": "string",
+      "title": "横屏状态栏背景",
+      "editor": {
+        "kind": "text"
+      }
+    },
+    "tower.style.statusTopBackground": {
+      "type": "string",
+      "title": "竖屏状态栏背景",
+      "editor": {
+        "kind": "text"
+      }
+    },
+    "tower.style.toolsBackground": {
+      "type": "string",
+      "title": "工具栏背景",
+      "editor": {
+        "kind": "text"
+      }
+    },
+    "tower.style.borderColor": {
+      "type": "array",
+      "title": "边框颜色",
+      "editor": {
+        "kind": "color"
+      }
+    },
+    "tower.style.statusBarColor": {
+      "type": "array",
+      "title": "状态栏文字颜色",
+      "editor": {
+        "kind": "color"
+      }
+    },
+    "tower.style.selectColor": {
+      "type": "array",
+      "title": "选择项颜色",
+      "editor": {
+        "kind": "color"
+      }
+    },
+    "tower.style.floorChangingStyle": {
+      "type": "string",
+      "title": "楼层切换样式",
+      "editor": {
+        "kind": "text"
+      }
+    },
+    "tower.style.font": {
+      "type": "string",
+      "title": "默认字体",
+      "editor": {
+        "kind": "text"
+      }
+    }
+  }
+}

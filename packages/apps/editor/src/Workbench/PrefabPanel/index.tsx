@@ -6,13 +6,30 @@
  */
 
 import { useCallback, useMemo, useState, type FC } from "react";
+import { Button, Input, Modal, Segmented, Tooltip } from "antd";
+import { ImagePlus, Pencil, Trash2 } from "lucide-react";
 import { ContentLeftTab } from "../components/ContentLeftTab";
+import {
+  ContentValueSource,
+  ObjectReferenceRoot,
+  ProjectSchemaTable,
+  RegistryReferenceRoot,
+  SchemaCustomizationButton,
+  type ReferenceUpdate,
+  type SchemaScope,
+  type ValueSource,
+} from "@/components/SchemaTable";
+import {
+  enemySchemaDefinition,
+  itemSchemaDefinition,
+  mapBlockSchemaDefinition,
+} from "@/components/SchemaTable/builtinSchemas";
 import { Table, EditModeSegmented } from "@/components/Table";
-import { useTableMetaEditor } from "@/components/Table/hooks";
 import { useTableMetaSuspense } from "@/hooks";
 import { useResourceSuspense } from "@/hooks/suspense";
 import { materialCommands, prefabCommands } from "@/project/commands";
 import { projectModel } from "@/project/model/projectModel";
+import { buildFieldPath } from "@/utils/fieldPath";
 import { notifyCommandResult, notifyError, notifySuccess } from "@/utils/notify";
 import { type PrefabInfo } from "@/services/prefab";
 import { PanelStore } from "@/stores/PanelStore";
@@ -29,6 +46,8 @@ import type { Action } from "@/utils/action";
 import type { EditMode, TableAction } from "@/components/Table/types";
 import type { ClearPrefabTemplates, PrefabClipboardData } from "@/project/commands/prefabCommands";
 import type { CommentObject } from "@/components/Table";
+
+type PrefabTableVersion = "schema" | "legacy";
 
 function getClearPrefabTemplates(meta: CommentObject): ClearPrefabTemplates {
   const metaData = (meta as { _data?: { enemys_template?: Record<string, unknown> } })._data;
@@ -69,7 +88,6 @@ interface NewIdIdnumSectionProps {
 const NewIdIdnumSection: FC<NewIdIdnumSectionProps> = ({ info }) => {
   const [newId, setNewId] = useState("");
   const [newIdnum, setNewIdnum] = useState("");
-  const { setActivePanel } = PanelStore.useStore();
 
   const handleAddIdIdnum = useCallback(async () => {
     if (newId && newIdnum) {
@@ -89,7 +107,7 @@ const NewIdIdnumSection: FC<NewIdIdnumSectionProps> = ({ info }) => {
       }
       if (projectModel.hasStatusBarIcon(id)) {
         alert(
-          "警告！此ID在状态栏图标中被注册；仍然允许使用，但是\\i[]等绘制可能出现冲突。"
+          "警告！此ID在状态栏图标中被注册；仍然允许使用，但是\\i[]等绘制可能出现冲突。",
         );
       }
       const result = await materialCommands.changeIdAndIdnum(id, idnum, info);
@@ -105,20 +123,6 @@ const NewIdIdnumSection: FC<NewIdIdnumSectionProps> = ({ info }) => {
     const result = await materialCommands.register(info, { bindFaceIds });
     notifyCommandResult(result, "该列所有剩余项全部自动注册成功");
   }, [info]);
-
-  const handleRemoveMaterial = useCallback(async () => {
-    if (!confirm("警告！你确定要删除此素材吗？此过程不可逆！")) return;
-    await removeMaterialWithConfirmation(info);
-  }, [info]);
-
-  const handleAppendMaterial = useCallback(() => {
-    if (info.isTile) {
-      notifyError("额外素材不支持此功能！");
-      return;
-    }
-    setAppendPicTemplate(info);
-    setActivePanel("appendpic");
-  }, [info, setActivePanel]);
 
   return (
     <div id="newIdIdnum">
@@ -136,102 +140,6 @@ const NewIdIdnumSection: FC<NewIdIdnumSectionProps> = ({ info }) => {
       <br />
       <button onClick={handleAutoRegister} style={{ marginTop: 10 }}>
         自动注册
-      </button>
-      <button
-        data-test-id="prefab-remove-unregistered"
-        onClick={handleRemoveMaterial}
-        style={{ marginTop: 10, marginLeft: 5 }}
-      >
-        删除此素材
-      </button>
-      <button
-        onClick={handleAppendMaterial}
-        style={{ marginTop: 10, marginLeft: 5 }}
-      >
-        以此素材为模板追加
-      </button>
-    </div>
-  );
-};
-
-// ==================== 修改 ID 区域 ====================
-
-interface ChangeIdSectionProps {
-  info: PrefabInfo;
-}
-
-const ChangeIdSection: FC<ChangeIdSectionProps> = ({ info }) => {
-  const [changeIdValue, setChangeIdValue] = useState("");
-  const { setActivePanel } = PanelStore.useStore();
-
-  const handleChangeId = useCallback(async () => {
-    const id = changeIdValue;
-    if (id) {
-      if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(id)) {
-        notifyError("不合法的id，请使用字母、数字或下划线，且不能以数字开头");
-        return;
-      }
-      if (id === "hero" || id === "this" || id === "none" || id === "airwall") {
-        notifyError("不得使用保留关键字作为id！");
-        return;
-      }
-      if (info.images === "autotile") {
-        notifyError("自动元件不可修改id！");
-        return;
-      }
-      if (info.idnum !== undefined && info.idnum >= 10000) {
-        notifyError("额外素材不可修改id！");
-        return;
-      }
-      if (projectModel.hasStatusBarIcon(id)) {
-        alert(
-          "警告！此ID在状态栏图标中被注册；仍然允许使用，但是\\i[]等绘制可能出现冲突。"
-        );
-      }
-      const result = await materialCommands.changeIdAndIdnum(id, null, info);
-      notifyCommandResult(result, "修改id成功");
-    } else {
-      notifyError("请输入要修改到的ID");
-    }
-  }, [changeIdValue, info]);
-
-  const handleDeletePrefab = useCallback(async () => {
-    if (info.isTile) {
-      notifyError("额外素材不可删除！");
-      return;
-    }
-    if (
-      !confirm(
-        "警告！你确定要删除此素材吗？此过程不可逆！\n请务必首先进行备份操作，并保证此素材没有在地图的任何位置使用，否则可能会出现不可知的后果！"
-      )
-    )
-      return;
-    await removeMaterialWithConfirmation(info);
-  }, [info]);
-
-  const handleAppendPrefab = useCallback(() => {
-    if (info.isTile) {
-      notifyError("额外素材不支持此功能！");
-      return;
-    }
-    setAppendPicTemplate(info);
-    setActivePanel("appendpic");
-  }, [info, setActivePanel]);
-
-  return (
-    <div id="changeId">
-      <input
-        placeholder="修改图块id为"
-        style={{ width: 100 }}
-        value={changeIdValue}
-        onChange={(e) => setChangeIdValue(e.target.value)}
-      />
-      <button onClick={handleChangeId}>确定</button>
-      <button data-test-id="prefab-remove-registered" style={{ marginLeft: 5 }} onClick={handleDeletePrefab}>
-        删除此素材
-      </button>
-      <button style={{ marginLeft: 5 }} onClick={handleAppendPrefab}>
-        以此素材为模板追加
       </button>
     </div>
   );
@@ -256,13 +164,13 @@ const EnemyItemTableSection: FC<EnemyItemTableSectionProps> = ({
   // 获取当前图块的数据项
   const itemData = useMemo(
     () => getPrefabItemData(allData as Record<string, unknown>, target),
-    [allData, target]
+    [allData, target],
   );
 
   // 获取对应的 commentObj
   const commentObj = useMemo(
     () => getPrefabComment(meta, target),
-    [meta, target]
+    [meta, target],
   );
 
   // 统一的变更处理 - 即时保存
@@ -275,7 +183,7 @@ const EnemyItemTableSection: FC<EnemyItemTableSectionProps> = ({
         notifyError(err);
       }
     },
-    [info]
+    [info],
   );
 
   // 复制/粘贴/清空功能
@@ -343,7 +251,7 @@ const EnemyItemTableSection: FC<EnemyItemTableSectionProps> = ({
     if (target.type === "enemy") {
       if (
         confirm(
-          "你确定要批量清空【全塔怪物】的全部属性么？这是个不可逆操作！"
+          "你确定要批量清空【全塔怪物】的全部属性么？这是个不可逆操作！",
         )
       ) {
         const result = await prefabCommands.clearAll(info, templates, allData as Record<string, unknown>);
@@ -352,7 +260,7 @@ const EnemyItemTableSection: FC<EnemyItemTableSectionProps> = ({
     } else if (target.type === "item") {
       if (
         confirm(
-          "你确定要批量清空【全塔所有自动注册且未修改ID的道具】的全部属性么？这是个不可逆操作！"
+          "你确定要批量清空【全塔所有自动注册且未修改ID的道具】的全部属性么？这是个不可逆操作！",
         )
       ) {
         const result = await prefabCommands.clearAll(info, templates, allData as Record<string, unknown>);
@@ -396,13 +304,200 @@ const EnemyItemTableSection: FC<EnemyItemTableSectionProps> = ({
   );
 };
 
+const MapBlockSchemaSection: FC<{ target: PrefabTarget; onRename: () => void }> = ({ target, onRename }) => {
+  const [allData] = useResourceSuspense(target.resource);
+  const itemData = useMemo(
+    () => getPrefabItemData(allData as Record<string, unknown>, target),
+    [allData, target],
+  );
+  const schemaData = useMemo<Record<string, unknown>>(() => ({
+    ...(itemData ?? {}),
+    id: itemData?.id ?? target.displayId,
+    idnum: itemData?.idnum ?? Number(target.dataKey),
+  }), [itemData, target.dataKey, target.displayId]);
+  const imageResource = useMemo(() => projectModel.projectImageCatalog(), []);
+  const imageSource = useMemo(() => new ContentValueSource(
+    "project:materials.images",
+    () => imageResource.snapshot(),
+    (listener) => imageResource.subscribe(() => listener()),
+    () => imageResource.reload(),
+  ), [imageResource]);
+  const scope = useMemo<SchemaScope>(() => {
+    const writePrefabBatch = async (updates: readonly ReferenceUpdate[]) => {
+      const actions: Action[] = updates.map(({ path, slot }) => {
+        if (path.length === 0) throw new Error("不能直接替换整个图块对象");
+        return slot.present
+          ? ["change", buildFieldPath([...path]), slot.value]
+          : ["delete", buildFieldPath([...path]), undefined];
+      });
+      if (actions.length === 0) return;
+      const result = await prefabCommands.patch(target.info, actions);
+      if (!result.ok) throw new Error(`${result.stage}: ${result.error.message}`);
+      notifySuccess("保存成功！");
+    };
+    const writePrefab = (path: readonly string[], slot: ReferenceUpdate["slot"]) => (
+      writePrefabBatch([{ path, slot }])
+    );
+    return {
+      roots: {
+        prefab: new ObjectReferenceRoot("prefab", () => schemaData, writePrefab, writePrefabBatch),
+        params: new ObjectReferenceRoot("params", () => ({ prefabIdnum: Number(target.dataKey) })),
+        project: new RegistryReferenceRoot(new Map([["materials.images", imageSource]])),
+      },
+    };
+  }, [imageSource, schemaData, target.dataKey, target.info]);
+  const fieldActions = useMemo(() => new Map([
+    [
+      "prefab:id",
+      <button key="rename" type="button" data-test-id="prefab-rename-open" onClick={onRename}>修改</button>,
+    ],
+  ]), [onRename]);
+
+  if (!itemData) return <div>无数据</div>;
+  return (
+    <ProjectSchemaTable
+      definition={mapBlockSchemaDefinition}
+      scope={scope}
+      fieldActions={fieldActions}
+    />
+  );
+};
+
+const ItemSchemaSection: FC<{ target: PrefabTarget; onRename: () => void }> = ({ target, onRename }) => {
+  const [allData] = useResourceSuspense(target.resource);
+  const itemData = useMemo(
+    () => getPrefabItemData(allData as Record<string, unknown>, target),
+    [allData, target],
+  );
+  const schemaData = useMemo<Record<string, unknown>>(() => ({
+    ...(itemData ?? {}),
+    id: target.displayId,
+  }), [itemData, target.displayId]);
+  const scope = useMemo<SchemaScope>(() => {
+    const writeItem = async (
+      path: readonly string[],
+      slot: ReferenceUpdate["slot"],
+    ) => {
+      if (path.length === 0) throw new Error("不能直接替换整个道具对象");
+      const action: Action = slot.present
+        ? ["change", buildFieldPath([...path]), slot.value]
+        : ["delete", buildFieldPath([...path]), undefined];
+      const result = await prefabCommands.patch(target.info, [action]);
+      if (!result.ok) throw new Error(`${result.stage}: ${result.error.message}`);
+      notifySuccess("保存成功！");
+    };
+    return {
+      roots: {
+        prefab: new ObjectReferenceRoot("prefab", () => schemaData, writeItem),
+      },
+    };
+  }, [schemaData, target.info]);
+  const fieldActions = useMemo(() => new Map([
+    [
+      "prefab:id",
+      <button key="rename" type="button" data-test-id="prefab-rename-open" onClick={onRename}>修改</button>,
+    ],
+  ]), [onRename]);
+
+  if (!itemData) return <div>无数据</div>;
+  return (
+    <ProjectSchemaTable
+      definition={itemSchemaDefinition}
+      scope={scope}
+      fieldActions={fieldActions}
+    />
+  );
+};
+
+function enemyHasSpecial(raw: unknown, expected: unknown): boolean {
+  if (typeof expected !== "number" && typeof expected !== "string") return false;
+  if (Array.isArray(raw)) return raw.some((item) => Object.is(item, expected));
+  return Object.is(raw, expected);
+}
+
+function enemyHasAnySpecial(raw: unknown): boolean {
+  if (Array.isArray(raw)) return raw.length > 0;
+  return raw !== 0 && raw != null;
+}
+
+const EnemySchemaSection: FC<{ target: PrefabTarget; onRename: () => void }> = ({ target, onRename }) => {
+  const [allData] = useResourceSuspense(target.resource);
+  const itemData = useMemo(
+    () => getPrefabItemData(allData as Record<string, unknown>, target),
+    [allData, target],
+  );
+  const schemaData = useMemo<Record<string, unknown>>(() => ({
+    ...(itemData ?? {}),
+    id: target.displayId,
+  }), [itemData, target.displayId]);
+  const specialResource = useMemo(() => projectModel.enemySpecialCatalog(), []);
+  const imageResource = useMemo(() => projectModel.projectImageCatalog(), []);
+  const specialSource = useMemo(() => new ContentValueSource(
+    "project:enemySpecials",
+    () => specialResource.snapshot(),
+    (listener) => specialResource.subscribe(() => listener()),
+    () => specialResource.reload(),
+  ), [specialResource]);
+  const imageSource = useMemo(() => new ContentValueSource(
+    "project:materials.images",
+    () => imageResource.snapshot(),
+    (listener) => imageResource.subscribe(() => listener()),
+    () => imageResource.reload(),
+  ), [imageResource]);
+  const scope = useMemo<SchemaScope>(() => {
+    const writeEnemy = async (
+      path: readonly string[],
+      slot: ReferenceUpdate["slot"],
+    ) => {
+      if (path.length === 0) throw new Error("不能直接替换整个怪物对象");
+      const action: Action = slot.present
+        ? ["change", buildFieldPath([...path]), slot.value]
+        : ["delete", buildFieldPath([...path]), undefined];
+      const result = await prefabCommands.patch(target.info, [action]);
+      if (!result.ok) throw new Error(`${result.stage}: ${result.error.message}`);
+      notifySuccess("保存成功！");
+    };
+    const registry = new Map<string, ValueSource<unknown>>([
+      ["enemySpecials", specialSource],
+      ["materials.images", imageSource],
+    ]);
+    return {
+      roots: {
+        prefab: new ObjectReferenceRoot("prefab", () => schemaData, writeEnemy),
+        project: new RegistryReferenceRoot(registry),
+      },
+      calls: {
+        "enemy.hasSpecial": enemyHasSpecial,
+        "enemy.hasAnySpecial": enemyHasAnySpecial,
+      },
+    };
+  }, [imageSource, schemaData, specialSource, target.info]);
+  const fieldActions = useMemo(() => new Map([
+    [
+      "prefab:id",
+      <button key="rename" type="button" data-test-id="prefab-rename-open" onClick={onRename}>修改</button>,
+    ],
+  ]), [onRename]);
+
+  if (!itemData) return <div>无数据</div>;
+  return (
+    <ProjectSchemaTable
+      definition={enemySchemaDefinition}
+      scope={scope}
+      fieldActions={fieldActions}
+    />
+  );
+};
+
 // ==================== 主内容组件 ====================
 
 interface PrefabPanelContentProps {
   editMode: EditMode;
+  tableVersion: PrefabTableVersion;
+  onRename: () => void;
 }
 
-const PrefabPanelContent: FC<PrefabPanelContentProps> = ({ editMode }) => {
+const PrefabPanelContent: FC<PrefabPanelContentProps> = ({ editMode, tableVersion, onRename }) => {
   const selection = useCurrentPrefabSelection();
   const info = selection?.info ?? null;
   const target = useMemo(() => resolvePrefabTarget(info), [info]);
@@ -418,19 +513,19 @@ const PrefabPanelContent: FC<PrefabPanelContentProps> = ({ editMode }) => {
   }
 
   if (!target) {
-    return (
-      <>
-        <div>无法加载数据</div>
-        <ChangeIdSection info={info} />
-      </>
-    );
+    return <div>无法加载数据</div>;
   }
 
   // 否则显示编辑区域
   return (
     <>
-      <EnemyItemTableSection target={target} editMode={editMode} />
-      <ChangeIdSection info={info} />
+      {tableVersion === "schema" && target.type === "mapBlock"
+        ? <MapBlockSchemaSection target={target} onRename={onRename} />
+        : tableVersion === "schema" && target.type === "item"
+          ? <ItemSchemaSection target={target} onRename={onRename} />
+          : tableVersion === "schema" && target.type === "enemy"
+            ? <EnemySchemaSection target={target} onRename={onRename} />
+            : <EnemyItemTableSection target={target} editMode={editMode} />}
     </>
   );
 };
@@ -446,27 +541,189 @@ const PrefabPanelContent: FC<PrefabPanelContentProps> = ({ editMode }) => {
 export const PrefabPanel: FC = () => {
   // 在 Panel 层维护 editMode（不依赖数据）
   const [editMode, setEditMode] = useState<EditMode>("change");
+  const [tableVersion, setTableVersion] = useState<PrefabTableVersion>("schema");
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [renameValue, setRenameValue] = useState("");
+  const [renameSaving, setRenameSaving] = useState(false);
+  const selection = useCurrentPrefabSelection();
+  const info = selection?.info;
+  const target = useMemo(() => resolvePrefabTarget(info), [info]);
+  const schemaAvailable = target?.registered === true
+    && (target.type === "mapBlock" || target.type === "item" || target.type === "enemy");
+  const schemaDefinition = target?.type === "mapBlock"
+    ? mapBlockSchemaDefinition
+    : target?.type === "item"
+      ? itemSchemaDefinition
+      : target?.type === "enemy"
+        ? enemySchemaDefinition
+        : undefined;
+  const showingLegacy = !schemaAvailable || tableVersion === "legacy";
+  const { setActivePanel } = PanelStore.useStore();
 
-  // 使用 useTableMetaEditor 获取编辑器打开函数
-  const { openEditor } = useTableMetaEditor("comment");
+  const openRename = useCallback(() => {
+    if (!info?.id) return;
+    if (info.images === "autotile") {
+      notifyError("自动元件不可修改 ID！");
+      return;
+    }
+    if (info.idnum !== undefined && info.idnum >= 10000) {
+      notifyError("额外素材不可修改 ID！");
+      return;
+    }
+    setRenameValue(info.id);
+    setRenameOpen(true);
+  }, [info]);
 
-  // 配置表格按钮点击处理
-  const handleConfigure = useCallback(() => {
-    openEditor();
-  }, [openEditor]);
+  const closeRename = useCallback(() => {
+    if (!renameSaving) setRenameOpen(false);
+  }, [renameSaving]);
+
+  const handleRename = useCallback(async () => {
+    if (!info?.id || !selection) return;
+    const id = renameValue.trim();
+    if (!id) {
+      notifyError("请输入要修改到的 ID");
+      return;
+    }
+    if (id === info.id) {
+      setRenameOpen(false);
+      return;
+    }
+    if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(id)) {
+      notifyError("不合法的 ID，请使用字母、数字或下划线，且不能以数字开头");
+      return;
+    }
+    if (id === "hero" || id === "this" || id === "none" || id === "airwall") {
+      notifyError("不得使用保留关键字作为 ID！");
+      return;
+    }
+    if (projectModel.hasStatusBarIcon(id)) {
+      alert("警告！此 ID 在状态栏图标中被注册；仍然允许使用，但是\\i[]等绘制可能出现冲突。");
+    }
+
+    setRenameSaving(true);
+    try {
+      const result = await materialCommands.changeIdAndIdnum(id, null, info);
+      if (notifyCommandResult(result, "修改图块 ID 成功")) {
+        setCurrentPrefabSelection({ ...selection, info: { ...info, id } });
+        setRenameOpen(false);
+      }
+    } finally {
+      setRenameSaving(false);
+    }
+  }, [info, renameValue, selection]);
+
+  const handleRemoveMaterial = useCallback(async () => {
+    if (!info) return;
+    if (info.isTile) {
+      notifyError("额外素材不可删除！");
+      return;
+    }
+    if (!confirm("警告！你确定要删除此素材吗？此过程不可逆！")) return;
+    await removeMaterialWithConfirmation(info);
+  }, [info]);
+
+  const handleAppendMaterial = useCallback(() => {
+    if (!info) return;
+    if (info.isTile) {
+      notifyError("额外素材不支持此功能！");
+      return;
+    }
+    setAppendPicTemplate(info);
+    setActivePanel("appendpic");
+  }, [info, setActivePanel]);
 
   // 操作按钮区域（始终显示）
   const actions = (
     <>
-      <EditModeSegmented value={editMode} onChange={setEditMode} testId="prefab-edit-mode" />
-      &nbsp;&nbsp;
-      <button onClick={handleConfigure}>配置表格</button>
+      {schemaAvailable ? (
+        <Segmented
+          size="small"
+          data-test-id="prefab-table-version"
+          value={tableVersion}
+          onChange={(value) => setTableVersion(value as PrefabTableVersion)}
+          options={[
+            { label: "新版", value: "schema" },
+            { label: "旧版", value: "legacy" },
+          ]}
+        />
+      ) : null}
+      {info ? (
+        <>
+          {schemaAvailable ? <>&nbsp;</> : null}
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 2 }}>
+            {showingLegacy && target?.registered ? (
+              <Tooltip title="修改图块 ID">
+                <Button
+                  type="text"
+                  size="small"
+                  aria-label="修改图块 ID"
+                  data-test-id="prefab-rename-open"
+                  icon={<Pencil size={14} />}
+                  onClick={openRename}
+                />
+              </Tooltip>
+            ) : null}
+            <Tooltip title="以当前素材为模板追加">
+              <Button
+                size="small"
+                aria-label="追加素材"
+                data-test-id="prefab-append"
+                icon={<ImagePlus size={14} />}
+                onClick={handleAppendMaterial}
+              >
+                追加
+              </Button>
+            </Tooltip>
+            <Tooltip title="删除当前素材">
+              <Button
+                danger
+                size="small"
+                aria-label="删除素材"
+                data-test-id={target?.registered ? "prefab-remove-registered" : "prefab-remove-unregistered"}
+                icon={<Trash2 size={14} />}
+                onClick={() => void handleRemoveMaterial()}
+              >
+                删除
+              </Button>
+            </Tooltip>
+          </span>
+        </>
+      ) : null}
+      {showingLegacy ? (
+        <>
+          {schemaAvailable ? <>&nbsp;&nbsp;</> : null}
+          <EditModeSegmented value={editMode} onChange={setEditMode} testId="prefab-edit-mode" />
+        </>
+      ) : schemaDefinition ? <SchemaCustomizationButton definition={schemaDefinition} /> : null}
     </>
   );
 
   return (
-    <ContentLeftTab id="left3" testId="panel-prefab" title="图块属性" actions={actions}>
-      <PrefabPanelContent editMode={editMode} />
-    </ContentLeftTab>
+    <>
+      <ContentLeftTab id="left3" testId="panel-prefab" title="图块属性" actions={actions}>
+        <PrefabPanelContent editMode={editMode} tableVersion={tableVersion} onRename={openRename} />
+      </ContentLeftTab>
+      <Modal
+        title="修改图块 ID"
+        open={renameOpen}
+        okText="确定"
+        cancelText="取消"
+        confirmLoading={renameSaving}
+        onCancel={closeRename}
+        onOk={() => void handleRename()}
+        okButtonProps={{ "data-test-id": "prefab-rename-submit" }}
+        destroyOnHidden
+      >
+        <Input
+          autoFocus
+          aria-label="新的图块 ID"
+          data-test-id="prefab-rename-input"
+          value={renameValue}
+          onChange={(event) => setRenameValue(event.target.value)}
+          onPressEnter={() => void handleRename()}
+        />
+      </Modal>
+    </>
   );
 };
