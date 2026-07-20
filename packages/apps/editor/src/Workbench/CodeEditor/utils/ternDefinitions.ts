@@ -21,7 +21,7 @@ import type {
 export function extractFunctionParameters(fn: CallableFunction): string {
   const fnString = fn.toString();
   const parameterInfo = /^\s*function\s*[\w_$]*\(([\w_,$\s]*)\)\s*\{/.exec(
-    fnString
+    fnString,
   );
   if (parameterInfo === null) return "";
 
@@ -57,7 +57,7 @@ export function getImageCategoryDoc(name: string): string {
  */
 export function buildEnemysDef(
   coredef: TernCoreDef,
-  enemys: Record<string, { name?: string }>
+  enemys: Record<string, { name?: string }>,
 ): void {
   Object.keys(enemys).forEach((name) => {
     coredef.core.material.enemys[name] = {
@@ -72,7 +72,7 @@ export function buildEnemysDef(
  */
 export function buildBgmsDef(
   coredef: TernCoreDef,
-  bgms: Record<string, unknown>
+  bgms: Record<string, unknown>,
 ): void {
   Object.keys(bgms).forEach((name) => {
     coredef.core.material.bgms[name] = {
@@ -87,7 +87,7 @@ export function buildBgmsDef(
  */
 export function buildSoundsDef(
   coredef: TernCoreDef,
-  sounds: Record<string, unknown>
+  sounds: Record<string, unknown>,
 ): void {
   Object.keys(sounds).forEach((name) => {
     coredef.core.material.sounds[name] = {
@@ -102,7 +102,7 @@ export function buildSoundsDef(
  */
 export function buildAnimatesDef(
   coredef: TernCoreDef,
-  animates: Record<string, unknown>
+  animates: Record<string, unknown>,
 ): void {
   Object.keys(animates).forEach((name) => {
     coredef.core.material.animates[name] = {
@@ -126,7 +126,7 @@ function isImageInstance(obj: unknown): boolean {
  */
 export function buildImagesDef(
   coredef: TernCoreDef,
-  images: Record<string, unknown>
+  images: Record<string, unknown>,
 ): void {
   Object.keys(images).forEach((name) => {
     const image = images[name];
@@ -153,7 +153,7 @@ export function buildImagesDef(
  */
 export function buildItemsDef(
   coredef: TernCoreDef,
-  items: Record<string, { name?: string | null }>
+  items: Record<string, { name?: string | null }>,
 ): void {
   Object.keys(items).forEach((name) => {
     coredef.core.material.items[name] = {
@@ -168,7 +168,7 @@ export function buildItemsDef(
  */
 export function buildSpecialsDef(
   coredef: TernCoreDef,
-  functions: FunctionsType
+  functions: FunctionsType,
 ): void {
   const specials = functions.enemys.getSpecials();
   specials.forEach((one) => {
@@ -186,7 +186,7 @@ export function buildSpecialsDef(
  */
 export function buildCanvasDef(
   coredef: TernCoreDef,
-  canvas: Record<string, CanvasRenderingContext2D>
+  canvas: Record<string, CanvasRenderingContext2D>,
 ): void {
   Object.keys(canvas).forEach((name) => {
     coredef.core.canvas[name] = {
@@ -201,7 +201,7 @@ export function buildCanvasDef(
  */
 export function buildMapsDef(
   coredef: TernCoreDef,
-  maps: Record<string, { title?: string }>
+  maps: Record<string, { title?: string }>,
 ): void {
   Object.keys(maps).forEach((name) => {
     const title = maps[name].title || "";
@@ -225,7 +225,7 @@ export function buildMapsDef(
  */
 export function buildShopsDef(
   coredef: TernCoreDef,
-  shops: Record<string, { textInList?: string }>
+  shops: Record<string, { textInList?: string }>,
 ): void {
   Object.keys(shops).forEach((id) => {
     coredef.core.status.shops[id] = {
@@ -239,11 +239,35 @@ export function buildShopsDef(
  */
 export function buildTextAttributeDef(
   coredef: TernCoreDef,
-  textAttribute: Record<string, unknown>
+  textAttribute: Record<string, unknown>,
 ): void {
   Object.keys(textAttribute).forEach((id) => {
     coredef.core.status.textAttribute[id] = {};
   });
+}
+
+/**
+ * 将 defs 中声明的模块函数转发到 core 根级别。
+ *
+ * mota-js 运行时会把 core.ui.strokeRect 之类的模块方法提升为
+ * core.strokeRect。这里直接复用模块条目的精确类型和文档；若 defs 已经
+ * 显式声明了同名顶层成员，则以顶层声明为准。多个模块发生同名冲突时，
+ * 保持 defs 中最先出现的模块，与运行时只接受首次转发的语义一致。
+ */
+export function buildDeclaredForwardFunctionsDef(coredef: TernCoreDef): void {
+  const core = coredef.core as Record<string, unknown>;
+  const modules = Object.entries(core);
+
+  for (const [, candidate] of modules) {
+    if (typeof candidate !== "object" || candidate === null) continue;
+    for (const [funcname, value] of Object.entries(candidate)) {
+      if (typeof value !== "object" || value === null) continue;
+      const entry = value as TernTypeEntry;
+      if (!entry["!type"]?.startsWith("fn(")) continue;
+      if (core[funcname] !== undefined) continue;
+      core[funcname] = { ...entry };
+    }
+  }
 }
 
 /**
@@ -253,31 +277,12 @@ export function buildTextAttributeDef(
 export function buildForwardFunctionsDef(
   coredef: TernCoreDef,
   core: CoreType,
-  functions: FunctionsType
 ): void {
-  for (const name in coredef.core) {
+  buildDeclaredForwardFunctionsDef(coredef);
+
+  for (const name of Object.keys(coredef.core)) {
     const module = coredef.core[name];
     if (typeof module !== "object" || module === null) continue;
-
-    // 处理已有定义的函数转发
-    for (const funcname in module as Record<string, TernTypeEntry>) {
-      const one = (module as Record<string, TernTypeEntry>)[funcname] || {};
-      const type = one["!type"] || "";
-      if (typeof type === "string" && type.startsWith("fn(")) {
-        const forwardname =
-          (functions[name] as Record<string, unknown> | undefined)?.[funcname]
-            ? "脚本编辑"
-            : name;
-        (coredef.core as Record<string, TernTypeEntry>)[funcname] = {
-          "!type": one["!type"],
-          "!doc": (one["!doc"] || "") + "<br/>（转发到" + forwardname + "中）",
-        };
-        if (one["!url"]) {
-          (coredef.core as Record<string, TernTypeEntry>)[funcname]["!url"] =
-            one["!url"];
-        }
-      }
-    }
 
     // 处理 core 中未在 coredef 中定义的函数
     const coreModule = core[name];
@@ -286,9 +291,9 @@ export function buildForwardFunctionsDef(
     for (const funcname in coreModule as Record<string, unknown>) {
       const fn = (coreModule as Record<string, unknown>)[funcname];
       if (
-        typeof fn !== "function" ||
-        funcname.charAt(0) === "_" ||
-        (module as Record<string, TernTypeEntry>)[funcname]
+        typeof fn !== "function"
+        || funcname.charAt(0) === "_"
+        || (module as Record<string, TernTypeEntry>)[funcname]
       ) {
         continue;
       }
@@ -309,7 +314,7 @@ export function buildForwardFunctionsDef(
 export function buildValuesDef(
   coredef: TernCoreDef,
   values: Record<string, unknown>,
-  dataComment: DataCommentType
+  dataComment: DataCommentType,
 ): void {
   Object.keys(values).forEach((id) => {
     const one = dataComment._data.values._data[id];
@@ -327,7 +332,7 @@ export function buildValuesDef(
 export function buildFlagsDef(
   coredef: TernCoreDef,
   flags: Record<string, unknown>,
-  dataComment: DataCommentType
+  dataComment: DataCommentType,
 ): void {
   Object.keys(flags).forEach((id) => {
     const one = dataComment._data.flags._data[id];
@@ -354,7 +359,7 @@ export function buildTernDefinitions(
   coredef: TernCoreDef,
   core: CoreType,
   functions: FunctionsType,
-  dataComment: DataCommentType
+  dataComment: DataCommentType,
 ): void {
   // 构建 material 相关定义
   buildEnemysDef(coredef, core.material.enemys);
@@ -376,7 +381,7 @@ export function buildTernDefinitions(
   buildTextAttributeDef(coredef, core.status.textAttribute);
 
   // 构建转发函数定义
-  buildForwardFunctionsDef(coredef, core, functions);
+  buildForwardFunctionsDef(coredef, core);
 
   // 构建 values 和 flags 定义
   buildValuesDef(coredef, core.values, dataComment);

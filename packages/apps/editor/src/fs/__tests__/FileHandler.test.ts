@@ -51,12 +51,28 @@ describe("FileHandler", () => {
       const content = handler.getContent();
       expect(ContentUtils.isNotFound(content)).toBe(true);
     });
+
+    it("工程访问错误不应误报为当前文件不存在", async () => {
+      const projectErrorFs = memoryFs.createFsInterface();
+      projectErrorFs.promises.readFile = async () => {
+        throw new Error("HTTP 404: project-not-found: Project not found [project/data.js]");
+      };
+      const handler = new FileHandler("project/data.js", projectErrorFs);
+
+      await handler.load();
+
+      const content = handler.getContent();
+      expect(content.status).toBe("error");
+      if (content.status === "error") {
+        expect(content.error.message).toContain("project-not-found");
+      }
+    });
   });
 
   describe("update 方法", () => {
     it("应该同步更新内存", async () => {
       memoryFs.setFile("test.txt", "old");
-      const handler = new FileHandler("test.txt",  memoryFs.createFsInterface());
+      const handler = new FileHandler("test.txt", memoryFs.createFsInterface());
       await handler.load();
 
       handler.update("new");
@@ -71,7 +87,7 @@ describe("FileHandler", () => {
 
     it("应该异步落盘", async () => {
       memoryFs.setFile("test.txt", "old");
-      const handler = new FileHandler("test.txt",  memoryFs.createFsInterface());
+      const handler = new FileHandler("test.txt", memoryFs.createFsInterface());
       await handler.load();
 
       handler.update("new");
@@ -85,7 +101,7 @@ describe("FileHandler", () => {
 
     it("应该支持同步转换函数", async () => {
       memoryFs.setFile("test.txt", "hello");
-      const handler = new FileHandler("test.txt",  memoryFs.createFsInterface());
+      const handler = new FileHandler("test.txt", memoryFs.createFsInterface());
       await handler.load();
 
       handler.update((current) => current + " world");
@@ -102,7 +118,7 @@ describe("FileHandler", () => {
 
     it("应该支持异步转换函数", async () => {
       memoryFs.setFile("test.txt", "hello");
-      const handler = new FileHandler("test.txt",  memoryFs.createFsInterface());
+      const handler = new FileHandler("test.txt", memoryFs.createFsInterface());
       await handler.load();
 
       await handler.update(async (current) => {
@@ -125,7 +141,7 @@ describe("FileHandler", () => {
     it("应该串行化写入操作", async () => {
       memoryFs.setWriteDelay(50); // 模拟慢速写入
       memoryFs.setFile("test.txt", "0");
-      const handler = new FileHandler("test.txt",  memoryFs.createFsInterface());
+      const handler = new FileHandler("test.txt", memoryFs.createFsInterface());
       await handler.load();
 
       // 并发写入
@@ -142,7 +158,7 @@ describe("FileHandler", () => {
     it("应该优化写入队列（最多保留 2 个任务）", async () => {
       memoryFs.setWriteDelay(50);
       memoryFs.setFile("test.txt", "0");
-      const handler = new FileHandler("test.txt",  memoryFs.createFsInterface());
+      const handler = new FileHandler("test.txt", memoryFs.createFsInterface());
       await handler.load();
 
       // 快速连续写入多次
@@ -162,7 +178,7 @@ describe("FileHandler", () => {
   describe("signal 自动通知", () => {
     it("应该在内容变化时通知订阅者", async () => {
       memoryFs.setFile("test.txt", "old");
-      const handler = new FileHandler("test.txt",  memoryFs.createFsInterface());
+      const handler = new FileHandler("test.txt", memoryFs.createFsInterface());
       await handler.load();
 
       const changes: string[] = [];
@@ -186,7 +202,7 @@ describe("FileHandler", () => {
 
     it("应该在加载时通知订阅者", async () => {
       memoryFs.setFile("test.txt", "content");
-      const handler = new FileHandler("test.txt",  memoryFs.createFsInterface());
+      const handler = new FileHandler("test.txt", memoryFs.createFsInterface());
 
       const statuses: string[] = [];
       const unsubscribe = handler.subscribe((content) => {
@@ -207,7 +223,7 @@ describe("FileHandler", () => {
   describe("refetch", () => {
     it("应该重新加载文件", async () => {
       memoryFs.setFile("test.txt", "old");
-      const handler = new FileHandler("test.txt",  memoryFs.createFsInterface());
+      const handler = new FileHandler("test.txt", memoryFs.createFsInterface());
       await handler.load();
 
       // 修改文件系统中的文件
@@ -225,7 +241,7 @@ describe("FileHandler", () => {
 
     it("refetch 时应该转换到 loading 状态", async () => {
       memoryFs.setFile("test.txt", "content");
-      const handler = new FileHandler("test.txt",  memoryFs.createFsInterface());
+      const handler = new FileHandler("test.txt", memoryFs.createFsInterface());
       await handler.load();
 
       const statuses: string[] = [];
@@ -288,7 +304,7 @@ describe("FileHandler", () => {
     it("删除立即更新内存并在后台排到旧写入之后", async () => {
       memoryFs.setFile("test.txt", "content");
       memoryFs.setWriteDelay(50); // 模拟慢速写入
-      const handler = new FileHandler("test.txt",  memoryFs.createFsInterface());
+      const handler = new FileHandler("test.txt", memoryFs.createFsInterface());
       await handler.load();
 
       // 触发一个写入
@@ -306,7 +322,7 @@ describe("FileHandler", () => {
     it("删除后更新会把最新写入排到删除之后", async () => {
       memoryFs.setFile("test.txt", "content");
       memoryFs.setWriteDelay(100); // 模拟慢速写入
-      const handler = new FileHandler("test.txt",  memoryFs.createFsInterface());
+      const handler = new FileHandler("test.txt", memoryFs.createFsInterface());
       await handler.load();
 
       handler.update("new content");
@@ -321,7 +337,7 @@ describe("FileHandler", () => {
 
   describe("错误处理", () => {
     it("未加载时直接设置值应该创建文件", async () => {
-      const handler = new FileHandler("test.txt",  memoryFs.createFsInterface());
+      const handler = new FileHandler("test.txt", memoryFs.createFsInterface());
 
       handler.update("new");
 
@@ -337,7 +353,7 @@ describe("FileHandler", () => {
 
     it("写入失败时不应该影响内存状态", async () => {
       memoryFs.setFile("test.txt", "content");
-      const handler = new FileHandler("test.txt",  memoryFs.createFsInterface());
+      const handler = new FileHandler("test.txt", memoryFs.createFsInterface());
       await handler.load();
 
       // 创建一个会失败的 fs 接口

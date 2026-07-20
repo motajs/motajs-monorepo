@@ -4,10 +4,10 @@ import type { PrefabInfo } from "@/services/prefab";
 
 export type PrefabType = "enemy" | "item" | "mapBlock";
 
-export type PrefabResource =
-  | ReturnType<typeof projectData.enemys>
-  | ReturnType<typeof projectData.items>
-  | ReturnType<typeof projectData.mapBlocks>;
+export type PrefabResource
+  = | ReturnType<typeof projectData.enemys>
+    | ReturnType<typeof projectData.items>
+    | ReturnType<typeof projectData.mapBlocks>;
 
 export interface PrefabTarget {
   info: PrefabInfo;
@@ -76,5 +76,5 @@ export function getPrefabItemData(
 }
 
 export function canCopyPastePrefab(target: PrefabTarget): boolean {
-  return target.type === "enemy" || target.type === "item";
+  return target.registered;
 }

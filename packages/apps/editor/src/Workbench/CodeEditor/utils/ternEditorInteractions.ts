@@ -24,18 +24,21 @@ function requestType(
   position: Position,
   callback: (error?: Error, data?: TypeQueryResult) => void,
 ): void {
-  const file = "__active_editor__.js";
-  const source = editor.getValue();
-  server.server.addFile(file, source);
   const query: TypeQuery = {
     type: "type",
-    file,
-    end: editor.indexFromPos(position),
+    file: "doc",
+    end: position,
     preferFunction: false,
   };
-  server.server.request({
+  server.request(
+    editor as never,
     query,
-  }, (error, data) => callback(error ? new Error(error) : undefined, data));
+    (error, data: TypeQueryResult | undefined) => callback(
+      error ? new Error(String(error)) : undefined,
+      data,
+    ),
+    position,
+  );
 }
 
 function createTypeTooltip(data: TypeQueryResult, target: HoverTarget): HTMLDivElement {
@@ -165,7 +168,7 @@ export function attachTernEditorInteractions(options: {
       requestType(server, editor, { line: target.line, ch: position.ch }, (error, data) => {
         if (requestId !== hoverRequest) return;
         if (error || !data || (!data.type && !data.doc)) return;
-        wrapper.dataset.ternHoverType = data.type ?? 'unknown';
+        wrapper.dataset.ternHoverType = data.type ?? "unknown";
         hoverTooltip?.remove();
         hoverTooltip = createTypeTooltip(data, target);
       });

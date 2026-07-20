@@ -5,6 +5,8 @@
   --schema-table-subtle: #f6f8fa;
   --schema-table-text: #24292f;
   --schema-table-muted: #656d76;
+  --schema-table-error-surface: #fff8f7;
+  --schema-table-danger-surface: #fff1f0;
 
   font-size: 13px;
   padding: 4px 6px 12px;
@@ -18,6 +20,8 @@
   --schema-table-subtle: #373a40;
   --schema-table-text: #d5d7db;
   --schema-table-muted: #a1a7b0;
+  --schema-table-error-surface: #3a2929;
+  --schema-table-danger-surface: #422b2d;
 }
 
 .schemaTableColumns2,
@@ -618,7 +622,7 @@
   animation: schemaTablePulse 1.3s infinite;
 }
 
-.schemaTableMismatch > td { background: #fff8f7; }
+.schemaTableMismatch > td { background: var(--schema-table-error-surface); }
 .schemaTableRest > summary span { color: var(--schema-table-muted); font-weight: 400; }
 .schemaTableRestObject > td { background: var(--schema-table-subtle); font-weight: 600; }
 .schemaTableRestActions { justify-content: flex-end; width: 100%; }
@@ -688,7 +692,7 @@
   flex: none;
   align-items: center;
   justify-content: center;
-  color: #656d76;
+  color: var(--schema-table-muted);
   cursor: grab;
   touch-action: none;
 }
@@ -724,7 +728,7 @@
 
 .schemaTableIconButton.danger:hover:not(:disabled) {
   color: #cf222e;
-  background: #fff1f0 !important;
+  background: var(--schema-table-danger-surface) !important;
 }
 
 .schemaBgmItem {

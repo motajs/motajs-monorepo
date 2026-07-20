@@ -25,6 +25,7 @@ import type {
 import {
   buildAnimatesDef,
   buildBgmsDef,
+  buildDeclaredForwardFunctionsDef,
   buildEnemysDef,
   buildFlagsDef,
   buildItemsDef,
@@ -127,6 +128,19 @@ function functionStub(node: FunctionExpressionNode): string {
   return `function (${parameters.join(", ")}) {}`;
 }
 
+function definitionAt(root: Record<string, unknown>, path: readonly string[]): unknown {
+  let current: unknown = root;
+  for (const part of path) {
+    if (current == null || typeof current !== "object") return undefined;
+    current = (current as Record<string, unknown>)[part];
+  }
+  return current;
+}
+
+function coreAccess(path: readonly string[]): string {
+  return path.reduce((result, part) => `${result}[${JSON.stringify(part)}]`, "core");
+}
+
 function appendSpecialDocs(coredef: TernCoreDef, source: unknown, diagnostics: ProjectDiagnostic[]): void {
   if (typeof source !== "string") return;
   try {
@@ -167,9 +181,11 @@ function appendSpecialDocs(coredef: TernCoreDef, source: unknown, diagnostics: P
 
 function collectFunctionDocuments(
   data: FunctionsData,
+  coredef: TernCoreDef,
   diagnostics: ProjectDiagnostic[],
 ): TernDefinitionDocument[] {
   const lines: string[] = [];
+  const core = coredef.core as Record<string, unknown>;
 
   const visit = (value: FunctionsData, path: string[]) => {
     for (const [key, child] of Object.entries(value)) {
@@ -177,9 +193,24 @@ function collectFunctionDocuments(
       if (typeof child === "string") {
         try {
           const expression = parseFunctionSource(child);
-          const target = nextPath.reduce((result, part) => `${result}[${JSON.stringify(part)}]`, "core");
-          lines.push(`${target} = ${functionStub(expression)};`);
-          lines.push(`core[${JSON.stringify(key)}] = ${target};`);
+          const target = coreAccess(nextPath);
+          const rootTarget = coreAccess([key]);
+          const targetDefined = definitionAt(core, nextPath) !== undefined;
+          const rootDefined = definitionAt(core, [key]) !== undefined;
+
+          if (nextPath.length === 1) {
+            if (!rootDefined) lines.push(`${target} = ${functionStub(expression)};`);
+          } else {
+            // Existing defs are authoritative. An empty implementation stub only
+            // carries parameter names and would otherwise hide their precise
+            // parameter, return and documentation metadata inside Tern.
+            if (!targetDefined) {
+              lines.push(rootDefined
+                ? `${target} = ${rootTarget};`
+                : `${target} = ${functionStub(expression)};`);
+            }
+            if (!rootDefined) lines.push(`${rootTarget} = ${target};`);
+          }
         } catch (error) {
           diagnostics.push({
             source: `tern:functions.${nextPath.join(".")}`,
@@ -199,9 +230,11 @@ function collectFunctionDocuments(
 
 function collectPluginDocuments(
   data: PluginsData,
+  coredef: TernCoreDef,
   diagnostics: ProjectDiagnostic[],
 ): TernDefinitionDocument[] {
   const lines: string[] = [];
+  const pluginDefinitions = coredef.core.plugin as Record<string, unknown> | undefined;
   for (const [key, source] of Object.entries(data)) {
     if (typeof source !== "string") continue;
     try {
@@ -218,6 +251,7 @@ function collectPluginDocuments(
             ? property?.value
             : property?.name;
           if (typeof name !== "string") return;
+          if (pluginDefinitions?.[name] !== undefined) return;
           lines.push(
             `core.plugin[${JSON.stringify(name)}] = ${functionStub(right)};`,
           );
@@ -293,12 +327,13 @@ export function buildTernDefinitionBundle(inputs: TernDefinitionInputs): TernDef
     (inputs.functions.enemys as FunctionsData | undefined)?.getSpecials,
     diagnostics,
   );
+  buildDeclaredForwardFunctionsDef(coredef);
 
   return {
     defs,
     documents: [
-      ...collectFunctionDocuments(inputs.functions, diagnostics),
-      ...collectPluginDocuments(inputs.plugins, diagnostics),
+      ...collectFunctionDocuments(inputs.functions, coredef, diagnostics),
+      ...collectPluginDocuments(inputs.plugins, coredef, diagnostics),
     ],
     diagnostics,
   };

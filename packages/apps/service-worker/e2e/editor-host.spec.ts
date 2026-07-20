@@ -159,6 +159,69 @@ test("hosts the blind editor artifact against a real OPFS mota-js project", asyn
 
   await expect.poll(() => enginePreviewReads.some((url) => url.endsWith("/preview/main.js"))).toBe(true);
   expect(projectPreviewReads).toEqual([]);
+
+  const missingRegisteredFloor = await page.evaluate(async (projectId) => {
+    const request = (operation: string, values: Record<string, string>) => fetch(
+      `/service/${projectId}/api/fs/${operation}`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded;charset=UTF-8" },
+        body: new URLSearchParams(values),
+      },
+    );
+    const deletion = await request("deleteFile", { name: "project/floors/sample0.js" });
+    const tower = await request("readFile", { name: "project/data.js", type: "utf8" });
+    const floor = await request("readFile", { name: "project/floors/sample0.js", type: "utf8" });
+    return {
+      deletion: deletion.status,
+      tower: tower.status,
+      floor: floor.status,
+      towerContainsSample0: (await tower.text()).includes('"sample0"'),
+    };
+  }, id);
+  expect(missingRegisteredFloor).toEqual({
+    deletion: 200,
+    tower: 200,
+    floor: 404,
+    towerContainsSample0: true,
+  });
+
+  await page.reload();
+  await expect(page.getByTestId("workspace-map")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByTestId("floor-management-row-sample0")).toHaveClass(/is-missing/);
+  await expect(page.getByText("文件不存在: project/data.js")).toHaveCount(0);
+  await expect(page.getByTestId("map-editor-error")).toHaveCount(0);
+
+  const missingRegisteredTileset = await page.evaluate(async (projectId) => {
+    const request = (operation: string, values: Record<string, string>) => fetch(
+      `/service/${projectId}/api/fs/${operation}`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded;charset=UTF-8" },
+        body: new URLSearchParams(values),
+      },
+    );
+    const deletion = await request("deleteFile", { name: "project/tilesets/magictower.png" });
+    const tower = await request("readFile", { name: "project/data.js", type: "utf8" });
+    const tileset = await request("readFile", { name: "project/tilesets/magictower.png", type: "base64" });
+    return {
+      deletion: deletion.status,
+      tower: tower.status,
+      tileset: tileset.status,
+      towerContainsTileset: (await tower.text()).includes('"magictower.png"'),
+    };
+  }, id);
+  expect(missingRegisteredTileset).toEqual({
+    deletion: 200,
+    tower: 200,
+    tileset: 404,
+    towerContainsTileset: true,
+  });
+
+  await page.reload();
+  await expect(page.getByTestId("workspace-map")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText("文件不存在: project/data.js")).toHaveCount(0);
+  await expect(page.getByTestId("map-editor-error")).toHaveCount(0);
   expect(pageErrors).toEqual([]);
 });
 

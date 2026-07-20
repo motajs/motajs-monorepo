@@ -29,6 +29,28 @@ describe("table project models", () => {
     expect(catalog.diagnostics).toHaveLength(1);
   });
 
+  it("diagnoses sparse or invalid enemy special rows without hiding the valid rows", () => {
+    const catalog = buildEnemySpecialCatalog({
+      enemys: {
+        getSpecials: `function () { return [
+          [1, "先攻"],
+          ,
+          [null, "无效项"],
+          [2, "魔攻"]
+        ]; }`,
+      },
+    });
+
+    expect(catalog.entries).toEqual([
+      { id: 1, name: "先攻", dynamic: false },
+      { id: 2, name: "魔攻", dynamic: false },
+    ]);
+    expect(catalog.diagnostics.map((diagnostic) => diagnostic.message)).toEqual([
+      "enemys.getSpecials 第 2 项为空或不是数组；旧编辑器会在读取该项时失败",
+      "enemys.getSpecials 第 3 项缺少合法的特殊属性 ID",
+    ]);
+  });
+
   it("binds project context to range, checkbox and transform evaluators", () => {
     const context = createTableMetaRuntimeContext({
       data: { main: { floorIds: ["sample0", "sample1"] } },

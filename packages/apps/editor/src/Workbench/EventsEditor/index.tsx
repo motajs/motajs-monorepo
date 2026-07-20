@@ -1,38 +1,39 @@
-import type { FC } from 'react';
-import { useRef, useEffect, useState, useCallback } from 'react';
-import * as Blockly from 'blockly';
+import type { FC } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
+import * as Blockly from "blockly";
 
-import { BlocklyWorkspace } from '@/blockly/components/BlocklyWorkspace';
-import { createEditorBlocklyApi } from '@/blockly/api/editorBlockly';
-import type { BlocklyWorkspaceRef, BlocklyWorkspaceProps } from '@/blockly/components/BlocklyWorkspace';
-import type { EditorBlocklyApi } from '@/blockly/api/editorBlockly';
-import { useEventEditorRegistration, type EventEditorOpenRequest } from './EventEditorContext';
-import { useBlocklyInteractionCapabilities } from './BlocklyCapabilitiesContext';
+import { BlocklyWorkspace } from "@/blockly/components/BlocklyWorkspace";
+import { createEditorBlocklyApi } from "@/blockly/api/editorBlockly";
+import type { BlocklyWorkspaceRef, BlocklyWorkspaceProps } from "@/blockly/components/BlocklyWorkspace";
+import type { EditorBlocklyApi } from "@/blockly/api/editorBlockly";
+import { useEventEditorRegistration, type EventEditorOpenRequest } from "./EventEditorContext";
+import { useBlocklyInteractionCapabilities } from "./BlocklyCapabilitiesContext";
 import {
   BlocklyEditorSession,
   blocklySessionStore,
-} from '@/blockly/session/BlocklyEditorSession';
-import { useConfigItem } from '@/stores/useEditorConfig';
-import { projectData } from '@/project/data/projectData';
-import { useCurrentFn } from '@motajs/react-hooks';
-import { createPortal } from 'react-dom';
-import JSON5 from 'json5';
-import { Blocks } from 'lucide-react';
-import { setUnknownBlockRegistrationHandler } from '@/blockly/fields';
+} from "@/blockly/session/BlocklyEditorSession";
+import { useConfigItem } from "@/stores/useEditorConfig";
+import { projectData } from "@/project/data/projectData";
+import { useCurrentFn } from "@motajs/react-hooks";
+import { createPortal } from "react-dom";
+import JSON5 from "json5";
+import { Blocks } from "lucide-react";
+import { setUnknownBlockRegistrationHandler } from "@/blockly/fields";
 import {
   loadProjectBlockPack,
   subscribeProjectBlockPack,
-} from '@/blockly/project';
+} from "@/blockly/project";
 import {
   CustomBlockManager,
   type CustomBlockRegistrationSeed,
-} from './CustomBlockManager';
+} from "./CustomBlockManager";
+import "./events-editor.css";
 
 function currentEntryProjectContext() {
   const content = projectData.tower().content();
-  const main = content.status === 'loaded' ? content.value.main : undefined;
+  const main = content.status === "loaded" ? content.value.main : undefined;
   const strings = (value: unknown): string[] => Array.isArray(value)
-    ? value.filter((item): item is string => typeof item === 'string')
+    ? value.filter((item): item is string => typeof item === "string")
     : [];
   return {
     bgms: strings(main?.bgms),
@@ -52,11 +53,12 @@ export const EventsEditor: FC = () => {
   const apiRef = useRef<EditorBlocklyApi | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [embedded, setEmbedded] = useState(false);
-  const [codePreview, setCodePreview] = useState('');
+  const [codePreview, setCodePreview] = useState("");
   const [sourceDirty, setSourceDirty] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [customBlockManagerOpen, setCustomBlockManagerOpen] = useState(false);
   const [customBlockRegistration, setCustomBlockRegistration] = useState<CustomBlockRegistrationSeed | null>(null);
+  const visibleRef = useRef(false);
   const customBlockRequestIdRef = useRef(0);
   const sessionRef = useRef<BlocklyEditorSession | null>(null);
   const requestRef = useRef<EventEditorOpenRequest | null>(null);
@@ -70,14 +72,14 @@ export const EventsEditor: FC = () => {
   const registerEventEditor = useEventEditorRegistration();
   const capabilities = useBlocklyInteractionCapabilities();
   const confirmInteraction = useCurrentFn((message: string) => capabilities.confirm(message));
-  const reportInteraction = useCurrentFn((message: string, level: 'error' | 'warning' | 'info') => (
+  const reportInteraction = useCurrentFn((message: string, level: "error" | "warning" | "info") => (
     capabilities.report(message, level)
   ));
   const selectPointInteraction = useCurrentFn(async () => {
     await capabilities.selectPoint({ multiple: true });
   });
-  const [disableReplace, setDisableReplace] = useConfigItem('disableBlocklyReplace', false);
-  const [disableExpandCompare, setDisableExpandCompare] = useConfigItem('disableBlocklyExpandCompare', false);
+  const [disableReplace, setDisableReplace] = useConfigItem("disableBlocklyReplace", false);
+  const [disableExpandCompare, setDisableExpandCompare] = useConfigItem("disableBlocklyExpandCompare", false);
 
   useEffect(() => {
     setUnknownBlockRegistrationHandler((request) => {
@@ -97,26 +99,28 @@ export const EventsEditor: FC = () => {
 
   // 显示编辑器
   const showEditor = useCallback(() => {
+    visibleRef.current = true;
     setIsVisible(true);
     // 更新 DOM 样式以兼容旧版样式
-    const panel = document.getElementById('left6');
+    const panel = document.getElementById("left6");
     if (panel) {
-      panel.style.zIndex = '999';
-      panel.style.opacity = '1';
+      panel.style.zIndex = "999";
+      panel.style.opacity = "1";
     }
   }, []);
 
   // 隐藏编辑器
   const hideEditor = useCallback(() => {
+    visibleRef.current = false;
     workspaceRef.current?.getApi().getWorkspace()?.hideChaff();
     Blockly.WidgetDiv.hide();
     Blockly.DropDownDiv.hideWithoutAnimation();
     setIsVisible(false);
     // 更新 DOM 样式以兼容旧版样式
-    const panel = document.getElementById('left6');
+    const panel = document.getElementById("left6");
     if (panel) {
-      panel.style.zIndex = '-1';
-      panel.style.opacity = '0';
+      panel.style.zIndex = "-1";
+      panel.style.opacity = "0";
     }
   }, []);
 
@@ -137,10 +141,10 @@ export const EventsEditor: FC = () => {
     );
     apiRef.current = api;
     const openRequest = (request: EventEditorOpenRequest) => {
-      const isCommonEventWorkspace = request.contextId.startsWith('common-event-workspace:');
+      const isCommonEventWorkspace = request.contextId.startsWith("common-event-workspace:");
       // 公共事件源码允许保留暂时无法解析的 JSON5 草稿。重新切回该事件时，
       // 字符串本身就是源码，不能再次 JSON.stringify，否则会被包成字符串字面量。
-      const source = isCommonEventWorkspace && typeof request.initialValue === 'string'
+      const source = isCommonEventWorkspace && typeof request.initialValue === "string"
         ? request.initialValue
         : JSON.stringify(request.initialValue ?? null, null, 2);
       const currentSession = sessionRef.current;
@@ -151,6 +155,7 @@ export const EventsEditor: FC = () => {
         && currentState.entryType === request.entryType
         && currentState.sourceText === source
         && !currentSession.hasUnparsedSource()
+        && visibleRef.current
       ) {
         // React StrictMode 和数据资源刷新都可能重复投递同一个 open。不要因此
         // 保存默认视口并重新导入，否则第二次导入会把入口块移出视口。
@@ -207,7 +212,7 @@ export const EventsEditor: FC = () => {
       void loadProjectBlockPack()
         .catch((error) => reportInteraction(
           `自定义事件块加载失败：${error instanceof Error ? error.message : String(error)}`,
-          'error',
+          "error",
         ))
         .finally(() => openRequest(request));
     });
@@ -254,7 +259,7 @@ export const EventsEditor: FC = () => {
   }), []);
 
   // 处理工作区内容变化
-  const handleChange: BlocklyWorkspaceProps['onChange'] = useCallback((json: string) => {
+  const handleChange: BlocklyWorkspaceProps["onChange"] = useCallback((json: string) => {
     // clear/load 会产生若干中间 change 事件。导入完成前完全忽略它们，避免将
     // [] 写入刚创建的 session；最终源码已由 open request 确定。
     if (suppressDraftNotificationRef.current) return;
@@ -311,13 +316,13 @@ export const EventsEditor: FC = () => {
   // 修改展示偏好；重新解析时应用。
   const handleTriggerReplace = useCallback(() => {
     setDisableReplace(!disableReplace);
-    capabilities.report('中文名替换偏好已更新，请点击“解析”重新构建当前工作区。', 'info');
+    capabilities.report("中文名替换偏好已更新，请点击“解析”重新构建当前工作区。", "info");
   }, [capabilities, disableReplace, setDisableReplace]);
 
   // 修改逻辑块展示偏好；重新解析时应用。
   const handleTriggerExpandCompare = useCallback(() => {
     setDisableExpandCompare(!disableExpandCompare);
-    capabilities.report('比较展开偏好已更新，请点击“解析”重新构建当前工作区。', 'info');
+    capabilities.report("比较展开偏好已更新，请点击“解析”重新构建当前工作区。", "info");
   }, [capabilities, disableExpandCompare, setDisableExpandCompare]);
 
   const editor = (
@@ -327,9 +332,9 @@ export const EventsEditor: FC = () => {
       className={embedded ? "leftTab eventEditorEmbedded" : "leftTab"}
       style={{ zIndex: isVisible ? (embedded ? 1 : 999) : -1, opacity: isVisible ? 1 : 0 }}
     >
-      <div style={{ position: 'relative', height: '95%' }}>
+      <div style={{ position: "relative", height: "95%" }}>
         {/* 工具栏 */}
-        <h3>
+        <h3 className="eventEditorToolbar">
           事件编辑器 (V12) &nbsp;&nbsp;
           {embedded ? (
             <button data-test-id="event-editor-save" onClick={handleApply}>保存</button>
@@ -345,8 +350,8 @@ export const EventsEditor: FC = () => {
           {embedded ? null : <button data-test-id="event-editor-cancel" onClick={handleCancel}>取消</button>}
           <div
             style={{
-              position: 'relative',
-              display: 'inline-block',
+              position: "relative",
+              display: "inline-block",
               marginLeft: 10,
             }}
           >
@@ -405,7 +410,7 @@ export const EventsEditor: FC = () => {
           />
           <span
             className="cpPanel"
-            style={{ marginLeft: '-4px', fontSize: 13 }}
+            style={{ marginLeft: "-4px", fontSize: 13 }}
           >
             开启中文名替换
           </span>
@@ -420,20 +425,20 @@ export const EventsEditor: FC = () => {
           />
           <span
             className="cpPanel"
-            style={{ marginLeft: '-4px', fontSize: 13 }}
+            style={{ marginLeft: "-4px", fontSize: 13 }}
           >
             展开值块逻辑运算
           </span>
         </h3>
 
         {/* Blockly 工作区和代码预览 */}
-        <div style={{ position: 'relative', height: '100%', display: 'flex' }}>
-          <div id="blocklyArea" style={{ flex: 1, position: 'relative' }}>
+        <div style={{ position: "relative", height: "100%", display: "flex" }}>
+          <div id="blocklyArea" style={{ flex: 1, position: "relative" }}>
             <BlocklyWorkspace
               ref={workspaceRef}
               onChange={handleChange}
               options={{ interactionCapabilities: capabilities }}
-              style={{ width: '100%', height: '100%' }}
+              style={{ width: "100%", height: "100%" }}
             />
           </div>
           <textarea
@@ -441,7 +446,7 @@ export const EventsEditor: FC = () => {
             data-test-id="event-editor-source"
             spellCheck="false"
             value={codePreview}
-            data-source-dirty={sourceDirty ? 'true' : 'false'}
+            data-source-dirty={sourceDirty ? "true" : "false"}
             onChange={(event) => {
               sessionRef.current?.editSource(event.target.value);
               if (sessionRef.current) blocklySessionStore.save(sessionRef.current);
@@ -450,17 +455,17 @@ export const EventsEditor: FC = () => {
               setSourceDirty(true);
             }}
             style={{
-              width: '300px',
-              height: '100%',
-              fontFamily: 'monospace',
-              fontSize: '12px',
+              width: "300px",
+              height: "100%",
+              fontFamily: "monospace",
+              fontSize: "12px",
             }}
           />
         </div>
       </div>
     </div>
   );
-  const embeddedHost = embedded ? document.getElementById('common-event-editor-host') : null;
+  const embeddedHost = embedded ? document.getElementById("common-event-editor-host") : null;
   const manager = (
     <CustomBlockManager
       open={customBlockManagerOpen}

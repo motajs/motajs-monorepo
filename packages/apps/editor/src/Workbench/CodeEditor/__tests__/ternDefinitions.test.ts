@@ -497,7 +497,7 @@ describe("ternDefinitions", () => {
         enemys: { getSpecials: () => [] },
       };
 
-      buildForwardFunctionsDef(coredef, core, functions);
+      buildForwardFunctionsDef(coredef, core);
 
       // 函数应该被转发到 core 根级别
       expect((coredef.core as Record<string, unknown>).testFunc).toBeDefined();

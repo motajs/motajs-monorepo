@@ -6,10 +6,7 @@ import { waitUntil } from "@/utils/base/signal";
 import type { Content } from "./types";
 import type { IContentHandler, ReadonlySignal } from "./interfaces";
 import { persistenceMonitor } from "./PersistenceMonitor";
-
-function isNotFoundError(error: Error): boolean {
-  return /not[- ]found|ENOENT|no such file/i.test(error.message);
-}
+import { isFileNotFoundError } from "./errors";
 
 export class FileHandler implements IContentHandler<string> {
   private _content = signal<Content<string>>({ status: "idle" });
@@ -99,7 +96,7 @@ export class FileHandler implements IContentHandler<string> {
           await fs.promises.deleteFile(path);
         } catch (error) {
           const normalized = error instanceof Error ? error : new Error(String(error));
-          if (!isNotFoundError(normalized)) throw normalized;
+          if (!isFileNotFoundError(normalized)) throw normalized;
         }
       },
     });
@@ -119,7 +116,7 @@ export class FileHandler implements IContentHandler<string> {
     } catch (error) {
       if (version !== this.mutationVersion) return;
       const normalized = error instanceof Error ? error : new Error(String(error));
-      this._content(isNotFoundError(normalized)
+      this._content(isFileNotFoundError(normalized)
         ? { status: "not-found" }
         : { status: "error", error: normalized });
     }

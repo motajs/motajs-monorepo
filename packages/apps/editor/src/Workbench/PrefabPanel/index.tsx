@@ -6,8 +6,8 @@
  */
 
 import { useCallback, useMemo, useState, type FC } from "react";
-import { Button, Input, Modal, Segmented, Tooltip } from "antd";
-import { ImagePlus, Pencil, Trash2 } from "lucide-react";
+import { Alert, Button, Dropdown, Input, Modal, Radio, Tooltip } from "antd";
+import { ClipboardPaste, Copy, Ellipsis, ImagePlus, RotateCcw, Trash2 } from "lucide-react";
 import { ContentLeftTab } from "../components/ContentLeftTab";
 import {
   ContentValueSource,
@@ -24,8 +24,6 @@ import {
   itemSchemaDefinition,
   mapBlockSchemaDefinition,
 } from "@/components/SchemaTable/builtinSchemas";
-import { Table, EditModeSegmented } from "@/components/Table";
-import { useTableMetaSuspense } from "@/hooks";
 import { useResourceSuspense } from "@/hooks/suspense";
 import { materialCommands, prefabCommands } from "@/project/commands";
 import { projectModel } from "@/project/model/projectModel";
@@ -36,25 +34,18 @@ import { PanelStore } from "@/stores/PanelStore";
 import { setAppendPicTemplate } from "@/stores/appendPicState";
 import { setCurrentPrefabSelection, useCurrentPrefabSelection } from "@/stores/prefabState";
 import {
-  canCopyPastePrefab,
-  getPrefabComment,
   getPrefabItemData,
   resolvePrefabTarget,
   type PrefabTarget,
 } from "@/project/model/prefabModel";
 import type { Action } from "@/utils/action";
-import type { EditMode, TableAction } from "@/components/Table/types";
-import type { ClearPrefabTemplates, PrefabClipboardData } from "@/project/commands/prefabCommands";
-import type { CommentObject } from "@/components/Table";
-
-type PrefabTableVersion = "schema" | "legacy";
-
-function getClearPrefabTemplates(meta: CommentObject): ClearPrefabTemplates {
-  const metaData = (meta as { _data?: { enemys_template?: Record<string, unknown> } })._data;
-  return {
-    enemy: metaData?.enemys_template,
-  };
-}
+import {
+  parsePrefabClipboard,
+  serializePrefabClipboard,
+  type PrefabClipboardData,
+  type PrefabPasteMode,
+  type PrefabPastePreview,
+} from "@/project/commands/prefabCommands";
 
 async function removeMaterialWithConfirmation(info: PrefabInfo): Promise<boolean> {
   const result = await materialCommands.remove(info);
@@ -147,160 +138,217 @@ const NewIdIdnumSection: FC<NewIdIdnumSectionProps> = ({ info }) => {
 
 // ==================== 图块属性表格区域 ====================
 
-interface EnemyItemTableSectionProps {
-  target: PrefabTarget;
-  editMode: EditMode;
+function prefabLabel(type: PrefabTarget["type"]): string {
+  if (type === "enemy") return "怪物";
+  if (type === "item") return "道具";
+  return "图块";
 }
 
-const EnemyItemTableSection: FC<EnemyItemTableSectionProps> = ({
-  target,
-  editMode,
-}) => {
-  const { info } = target;
-  // 使用 Suspense hooks
+function briefJson(value: unknown): string {
+  const text = JSON.stringify(value);
+  if (text == null) return "未设置";
+  return text.length > 100 ? `${text.slice(0, 97)}...` : text;
+}
+
+interface PasteDialogState {
+  clipboard: PrefabClipboardData;
+  mode: PrefabPasteMode;
+  preview: PrefabPastePreview;
+}
+
+const PropertyChangeList: FC<{ preview: PrefabPastePreview }> = ({ preview }) => (
+  <div data-test-id="prefab-property-change-list" style={{ maxHeight: 280, overflow: "auto" }}>
+    {preview.changes.length === 0 ? <Alert type="info" showIcon message="粘贴后属性不会发生变化" /> : null}
+    {preview.changes.map((change) => (
+      <div
+        key={change.key}
+        style={{ display: "grid", gridTemplateColumns: "100px 52px minmax(0, 1fr)", gap: 8, padding: "6px 0" }}
+      >
+        <code>{change.key}</code>
+        <span>{change.kind === "add" ? "新增" : change.kind === "delete" ? "删除" : "修改"}</span>
+        <span title={`${briefJson(change.before)} → ${briefJson(change.after)}`}>
+          {change.kind === "add" ? briefJson(change.after) : change.kind === "delete"
+            ? briefJson(change.before)
+            : `${briefJson(change.before)} → ${briefJson(change.after)}`}
+        </span>
+      </div>
+    ))}
+  </div>
+);
+
+const PrefabPropertyActions: FC<{ target: PrefabTarget }> = ({ target }) => {
   const [allData] = useResourceSuspense(target.resource);
-  const meta = useTableMetaSuspense("comment");
+  const data = allData as Record<string, unknown>;
+  const [paste, setPaste] = useState<PasteDialogState | null>(null);
+  const [resetPreview, setResetPreview] = useState<PrefabPastePreview | null>(null);
+  const [batchResetOpen, setBatchResetOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const batchIds = prefabCommands.batchResetIds(target.info, data);
+  const label = prefabLabel(target.type);
 
-  // 获取当前图块的数据项
-  const itemData = useMemo(
-    () => getPrefabItemData(allData as Record<string, unknown>, target),
-    [allData, target],
-  );
-
-  // 获取对应的 commentObj
-  const commentObj = useMemo(
-    () => getPrefabComment(meta, target),
-    [meta, target],
-  );
-
-  // 统一的变更处理 - 即时保存
-  const handleChange = useCallback(
-    async (action: TableAction) => {
-      try {
-        const result = await prefabCommands.patch(info, [action as Action]);
-        notifyCommandResult(result, "保存成功！");
-      } catch (err) {
-        notifyError(err);
-      }
-    },
-    [info],
-  );
-
-  // 复制/粘贴/清空功能
-  // 剪贴板数据前缀，用于识别是否为编辑器数据
-  const CLIPBOARD_PREFIX = "mota-prefab:";
-
-  const handleCopyEnemyItem = useCallback(async () => {
-    const result = prefabCommands.getClipboardData(info, allData as Record<string, unknown>);
+  const copyProperties = async () => {
+    const result = prefabCommands.getClipboardData(target.info, data);
     if (!result.ok || !result.data) {
       notifyCommandResult(result, "");
       return;
     }
-    await navigator.clipboard.writeText(CLIPBOARD_PREFIX + JSON.stringify(result.data));
-    notifySuccess(`${result.data.type === "enemy" ? "怪物" : "道具"}属性已复制到剪贴板`);
-  }, [info, allData]);
-
-  const handlePasteEnemyItem = useCallback(async () => {
-    const prefabType = target.type;
-    if (!prefabType || prefabType === "mapBlock") return;
-
     try {
-      const text = await navigator.clipboard.readText();
-      if (!text.startsWith(CLIPBOARD_PREFIX)) {
-        notifyError("剪贴板内容不是有效的图块数据");
-        return;
-      }
-
-      const clipboard = JSON.parse(text.slice(CLIPBOARD_PREFIX.length)) as PrefabClipboardData;
-      if (clipboard.type !== prefabType) {
-        notifyError(`类型不匹配：剪贴板中是${clipboard.type === "enemy" ? "怪物" : "道具"}数据`);
-        return;
-      }
-
-      if (prefabType === "enemy") {
-        if (!confirm("你确定要覆盖此怪物的全部属性么？这是个不可逆操作！")) return;
-        const result = await prefabCommands.replaceFromClipboard(info, clipboard, allData as Record<string, unknown>);
-        notifyCommandResult(result, "怪物属性粘贴成功");
-      } else {
-        if (!confirm("你确定要覆盖此道具的全部属性么？这是个不可逆操作！")) return;
-        const result = await prefabCommands.replaceFromClipboard(info, clipboard, allData as Record<string, unknown>);
-        notifyCommandResult(result, "道具属性粘贴成功");
-      }
-    } catch {
-      notifyError("剪贴板内容解析失败");
+      await navigator.clipboard.writeText(serializePrefabClipboard(result.data));
+      notifySuccess(`${label}属性已复制到剪贴板`);
+    } catch (error) {
+      notifyError(error);
     }
-  }, [target, info, allData]);
+  };
 
-  const handleClearEnemyItem = useCallback(async () => {
-    const templates = getClearPrefabTemplates(meta);
-    if (target.type === "enemy") {
-      if (confirm("你确定要清空本怪物的全部属性么？这是个不可逆操作！")) {
-        const result = await prefabCommands.clear(info, templates, allData as Record<string, unknown>);
-        notifyCommandResult(result, "怪物属性清空成功");
-      }
-    } else if (target.type === "item") {
-      if (confirm("你确定要清空本道具的全部属性么？这是个不可逆操作！")) {
-        const result = await prefabCommands.clear(info, templates, allData as Record<string, unknown>);
-        notifyCommandResult(result, "道具属性清空成功");
-      }
+  const openPaste = async () => {
+    try {
+      const clipboard = parsePrefabClipboard(await navigator.clipboard.readText());
+      const mode: PrefabPasteMode = "replace";
+      setPaste({ clipboard, mode, preview: prefabCommands.previewPaste(target.info, clipboard, data, mode) });
+    } catch (error) {
+      notifyError(error);
     }
-  }, [target, info, meta, allData]);
+  };
 
-  const handleClearAllEnemyItem = useCallback(async () => {
-    const templates = getClearPrefabTemplates(meta);
-    if (target.type === "enemy") {
-      if (
-        confirm(
-          "你确定要批量清空【全塔怪物】的全部属性么？这是个不可逆操作！",
-        )
-      ) {
-        const result = await prefabCommands.clearAll(info, templates, allData as Record<string, unknown>);
-        notifyCommandResult(result, "全塔全部怪物属性清空成功！");
-      }
-    } else if (target.type === "item") {
-      if (
-        confirm(
-          "你确定要批量清空【全塔所有自动注册且未修改ID的道具】的全部属性么？这是个不可逆操作！",
-        )
-      ) {
-        const result = await prefabCommands.clearAll(info, templates, allData as Record<string, unknown>);
-        notifyCommandResult(result, "全塔全部道具属性清空成功！");
-      }
+  const changePasteMode = (mode: PrefabPasteMode) => {
+    if (!paste) return;
+    setPaste({
+      ...paste,
+      mode,
+      preview: prefabCommands.previewPaste(target.info, paste.clipboard, data, mode),
+    });
+  };
+
+  const confirmPaste = async () => {
+    if (!paste) return;
+    setSaving(true);
+    try {
+      const result = await prefabCommands.pasteFromClipboard(target.info, paste.clipboard, data, paste.mode);
+      if (notifyCommandResult(result, `${label}属性粘贴成功`)) setPaste(null);
+    } finally {
+      setSaving(false);
     }
-  }, [target, info, meta, allData]);
+  };
 
-  // 显示复制/粘贴按钮（仅对 enemy 和 item 类型）
-  const showCopyPasteButtons = canCopyPastePrefab(target);
+  const openReset = () => {
+    try {
+      setResetPreview(prefabCommands.previewReset(target.info, data));
+    } catch (error) {
+      notifyError(error);
+    }
+  };
 
-  if (!itemData || !commentObj) {
-    return <div>无数据</div>;
-  }
+  const confirmReset = async () => {
+    setSaving(true);
+    try {
+      const result = await prefabCommands.reset(target.info, data);
+      if (notifyCommandResult(result, `${label}属性已重置`)) setResetPreview(null);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const confirmBatchReset = async () => {
+    setSaving(true);
+    try {
+      const result = await prefabCommands.resetAll(target.info, data);
+      if (notifyCommandResult(result, `已批量重置 ${batchIds.length} 个${label}`)) setBatchResetOpen(false);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
-    <div id="enemyItemTable">
-      <Table
-        data={itemData}
-        commentObj={commentObj}
-        onChange={handleChange}
-        editMode={editMode}
-      />
-      {showCopyPasteButtons && (
-        <div style={{ marginTop: "-10px", marginBottom: 10 }}>
-          <button id="copyEnemyItem" onClick={handleCopyEnemyItem}>
-            复制属性
-          </button>
-          <button id="pasteEnemyItem" onClick={handlePasteEnemyItem}>
-            粘贴属性
-          </button>
-          <button id="clearEnemyItem" onClick={handleClearEnemyItem}>
-            清空属性
-          </button>
-          <button id="clearAllEnemyItem" onClick={handleClearAllEnemyItem}>
-            批量清空属性
-          </button>
-        </div>
-      )}
-    </div>
+    <>
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 2 }}>
+        <Tooltip title={`复制${label}的原始属性`}>
+          <Button size="small" data-test-id="prefab-copy-properties" icon={<Copy size={14} />} onClick={() => void copyProperties()}>复制</Button>
+        </Tooltip>
+        <Tooltip title="读取剪贴板并预览属性变化">
+          <Button size="small" data-test-id="prefab-paste-properties" icon={<ClipboardPaste size={14} />} onClick={() => void openPaste()}>粘贴</Button>
+        </Tooltip>
+        <Tooltip title="恢复基础属性，可通过撤销找回">
+          <Button size="small" data-test-id="prefab-reset-properties" icon={<RotateCcw size={14} />} onClick={openReset}>重置</Button>
+        </Tooltip>
+        {target.type !== "mapBlock" ? (
+          <Dropdown
+            trigger={["click"]}
+            menu={{ items: [{ key: "batch-reset", danger: true, label: "批量重置属性", disabled: batchIds.length === 0 }], onClick: () => setBatchResetOpen(true) }}
+          >
+            <Button type="text" size="small" aria-label="更多属性操作" data-test-id="prefab-property-more" icon={<Ellipsis size={14} />} />
+          </Dropdown>
+        ) : null}
+      </span>
+
+      <Modal
+        title={`粘贴${label}属性`}
+        open={paste != null}
+        width={720}
+        okText="确认粘贴"
+        cancelText="取消"
+        confirmLoading={saving}
+        okButtonProps={{ "disabled": paste?.preview.changes.length === 0, "data-test-id": "prefab-paste-confirm" }}
+        onCancel={() => !saving && setPaste(null)}
+        onOk={() => void confirmPaste()}
+        destroyOnHidden
+      >
+        {paste ? (
+          <>
+            <Alert
+              type="info"
+              showIcon
+              message={`来源：${paste.clipboard.source.name ?? paste.clipboard.source.id}`}
+              description={`固定保留目标字段：${paste.preview.preservedKeys.join("、")}`}
+              style={{ marginBottom: 12 }}
+            />
+            <Radio.Group
+              data-test-id="prefab-paste-mode"
+              value={paste.mode}
+              onChange={(event) => changePasteMode(event.target.value as PrefabPasteMode)}
+              style={{ marginBottom: 12 }}
+            >
+              <Radio.Button value="replace">覆盖属性</Radio.Button>
+              <Radio.Button value="merge">合并属性</Radio.Button>
+            </Radio.Group>
+            <PropertyChangeList preview={paste.preview} />
+          </>
+        ) : null}
+      </Modal>
+
+      <Modal
+        title={`重置${label}属性`}
+        open={resetPreview != null}
+        okText="确认重置"
+        cancelText="取消"
+        confirmLoading={saving}
+        okButtonProps={{ "danger": true, "disabled": resetPreview?.changes.length === 0, "data-test-id": "prefab-reset-confirm" }}
+        onCancel={() => !saving && setResetPreview(null)}
+        onOk={() => void confirmReset()}
+        destroyOnHidden
+      >
+        <Alert type="warning" showIcon message="未保留的字段将恢复为基础值或被删除；本操作可以撤销。" style={{ marginBottom: 12 }} />
+        {resetPreview ? <PropertyChangeList preview={resetPreview} /> : null}
+      </Modal>
+
+      <Modal
+        title={`批量重置${label}属性`}
+        open={batchResetOpen}
+        okText={`重置 ${batchIds.length} 项`}
+        cancelText="取消"
+        confirmLoading={saving}
+        okButtonProps={{ "danger": true, "disabled": batchIds.length === 0, "data-test-id": "prefab-batch-reset-confirm" }}
+        onCancel={() => !saving && setBatchResetOpen(false)}
+        onOk={() => void confirmBatchReset()}
+        destroyOnHidden
+      >
+        <Alert
+          type="warning"
+          showIcon
+          message={target.type === "enemy" ? `将重置全部 ${batchIds.length} 个怪物。` : `将重置 ${batchIds.length} 个自动注册且未修改 ID 的道具。`}
+          description="该操作作为一条历史记录提交，可以整体撤销。"
+        />
+      </Modal>
+    </>
   );
 };
 
@@ -491,13 +539,9 @@ const EnemySchemaSection: FC<{ target: PrefabTarget; onRename: () => void }> = (
 
 // ==================== 主内容组件 ====================
 
-interface PrefabPanelContentProps {
-  editMode: EditMode;
-  tableVersion: PrefabTableVersion;
-  onRename: () => void;
-}
+interface PrefabPanelContentProps { onRename: () => void }
 
-const PrefabPanelContent: FC<PrefabPanelContentProps> = ({ editMode, tableVersion, onRename }) => {
+const PrefabPanelContent: FC<PrefabPanelContentProps> = ({ onRename }) => {
   const selection = useCurrentPrefabSelection();
   const info = selection?.info ?? null;
   const target = useMemo(() => resolvePrefabTarget(info), [info]);
@@ -517,17 +561,9 @@ const PrefabPanelContent: FC<PrefabPanelContentProps> = ({ editMode, tableVersio
   }
 
   // 否则显示编辑区域
-  return (
-    <>
-      {tableVersion === "schema" && target.type === "mapBlock"
-        ? <MapBlockSchemaSection target={target} onRename={onRename} />
-        : tableVersion === "schema" && target.type === "item"
-          ? <ItemSchemaSection target={target} onRename={onRename} />
-          : tableVersion === "schema" && target.type === "enemy"
-            ? <EnemySchemaSection target={target} onRename={onRename} />
-            : <EnemyItemTableSection target={target} editMode={editMode} />}
-    </>
-  );
+  if (target.type === "mapBlock") return <MapBlockSchemaSection target={target} onRename={onRename} />;
+  if (target.type === "item") return <ItemSchemaSection target={target} onRename={onRename} />;
+  return <EnemySchemaSection target={target} onRename={onRename} />;
 };
 
 // ==================== 面板组件 ====================
@@ -539,17 +575,12 @@ const PrefabPanelContent: FC<PrefabPanelContentProps> = ({ editMode, tableVersio
  * actions 始终显示，不受数据加载状态影响
  */
 export const PrefabPanel: FC = () => {
-  // 在 Panel 层维护 editMode（不依赖数据）
-  const [editMode, setEditMode] = useState<EditMode>("change");
-  const [tableVersion, setTableVersion] = useState<PrefabTableVersion>("schema");
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameValue, setRenameValue] = useState("");
   const [renameSaving, setRenameSaving] = useState(false);
   const selection = useCurrentPrefabSelection();
   const info = selection?.info;
   const target = useMemo(() => resolvePrefabTarget(info), [info]);
-  const schemaAvailable = target?.registered === true
-    && (target.type === "mapBlock" || target.type === "item" || target.type === "enemy");
   const schemaDefinition = target?.type === "mapBlock"
     ? mapBlockSchemaDefinition
     : target?.type === "item"
@@ -557,7 +588,6 @@ export const PrefabPanel: FC = () => {
       : target?.type === "enemy"
         ? enemySchemaDefinition
         : undefined;
-  const showingLegacy = !schemaAvailable || tableVersion === "legacy";
   const { setActivePanel } = PanelStore.useStore();
 
   const openRename = useCallback(() => {
@@ -636,34 +666,11 @@ export const PrefabPanel: FC = () => {
   // 操作按钮区域（始终显示）
   const actions = (
     <>
-      {schemaAvailable ? (
-        <Segmented
-          size="small"
-          data-test-id="prefab-table-version"
-          value={tableVersion}
-          onChange={(value) => setTableVersion(value as PrefabTableVersion)}
-          options={[
-            { label: "新版", value: "schema" },
-            { label: "旧版", value: "legacy" },
-          ]}
-        />
-      ) : null}
+      {target?.registered ? <PrefabPropertyActions target={target} /> : null}
       {info ? (
         <>
-          {schemaAvailable ? <>&nbsp;</> : null}
+          {target?.registered ? <>&nbsp;</> : null}
           <span style={{ display: "inline-flex", alignItems: "center", gap: 2 }}>
-            {showingLegacy && target?.registered ? (
-              <Tooltip title="修改图块 ID">
-                <Button
-                  type="text"
-                  size="small"
-                  aria-label="修改图块 ID"
-                  data-test-id="prefab-rename-open"
-                  icon={<Pencil size={14} />}
-                  onClick={openRename}
-                />
-              </Tooltip>
-            ) : null}
             <Tooltip title="以当前素材为模板追加">
               <Button
                 size="small"
@@ -690,19 +697,14 @@ export const PrefabPanel: FC = () => {
           </span>
         </>
       ) : null}
-      {showingLegacy ? (
-        <>
-          {schemaAvailable ? <>&nbsp;&nbsp;</> : null}
-          <EditModeSegmented value={editMode} onChange={setEditMode} testId="prefab-edit-mode" />
-        </>
-      ) : schemaDefinition ? <SchemaCustomizationButton definition={schemaDefinition} /> : null}
+      {schemaDefinition ? <SchemaCustomizationButton definition={schemaDefinition} /> : null}
     </>
   );
 
   return (
     <>
       <ContentLeftTab id="left3" testId="panel-prefab" title="图块属性" actions={actions}>
-        <PrefabPanelContent editMode={editMode} tableVersion={tableVersion} onRename={openRename} />
+        <PrefabPanelContent onRename={openRename} />
       </ContentLeftTab>
       <Modal
         title="修改图块 ID"

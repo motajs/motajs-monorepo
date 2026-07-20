@@ -107,10 +107,24 @@ export function buildEnemySpecialCatalog(functions: Record<string, unknown>): En
       diagnostics: [{ source: "enemy-specials", severity: "warning", message: "Cannot statically parse enemys.getSpecials" }],
     };
   }
-  const entries = returned.elements.flatMap((row: Node | null): EnemySpecialDefinition[] => {
-    if (!row || row.type !== "ArrayExpression") return [];
+  const entries = returned.elements.flatMap((row: Node | null, index: number): EnemySpecialDefinition[] => {
+    if (!row || row.type !== "ArrayExpression") {
+      diagnostics.push({
+        source: `enemy-specials:${index}`,
+        severity: "warning",
+        message: `enemys.getSpecials 第 ${index + 1} 项为空或不是数组；旧编辑器会在读取该项时失败`,
+      });
+      return [];
+    }
     const id = safeValue(row.elements[0], {});
-    if (typeof id !== "string" && typeof id !== "number") return [];
+    if (typeof id !== "string" && typeof id !== "number") {
+      diagnostics.push({
+        source: `enemy-specials:${index}`,
+        severity: "warning",
+        message: `enemys.getSpecials 第 ${index + 1} 项缺少合法的特殊属性 ID`,
+      });
+      return [];
+    }
     const nameNode = row.elements[1];
     const literalName = safeValue(nameNode, {});
     if (typeof literalName === "string") return [{ id, name: literalName, dynamic: false }];

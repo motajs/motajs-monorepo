@@ -37,4 +37,9 @@ describe("resolveDefaultGroundSprite", () => {
   it("treats none as an intentional transparent background", () => {
     expect(resolveDefaultGroundSprite(floor("none"), blocks, sprites, tilesets)).toBeUndefined();
   });
+
+  it("silently treats an unregistered default ground as transparent", () => {
+    expect(resolveDefaultGroundSprite(floor("null"), blocks, sprites, tilesets)).toBeUndefined();
+    expect(resolveDefaultGroundSprite(floor("projectCustomGround"), blocks, sprites, tilesets)).toBeUndefined();
+  });
 });

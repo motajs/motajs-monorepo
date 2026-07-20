@@ -67,7 +67,9 @@ const ValidatedRecentlyUsedPanel: FC<ComponentProps<typeof RecentlyUsedPanel>> =
       return tilesetCatalog.entries.some((entry) => (
         item.idnum >= entry.startIdnum
         && item.idnum < entry.startIdnum + entry.columns * entry.rows
-      )) ? [item] : [];
+      ))
+        ? [item]
+        : [];
     }), [blockRegistry, props.items, tilesetCatalog]);
 
   return <RecentlyUsedPanel {...props} items={validItems} />;
@@ -153,16 +155,20 @@ const MapEditorInner: FC = () => {
 
   const discoveredFloorId = towerContent.status === "loaded"
     ? (() => {
-      const floorIds = Array.isArray(towerContent.value.main.floorIds)
-        ? towerContent.value.main.floorIds
-        : [];
-      const initialFloorId = towerContent.value.firstData.floorId;
-      return typeof initialFloorId === "string" && floorIds.includes(initialFloorId)
-        ? initialFloorId
-        : floorIds.find((item): item is string => typeof item === "string") ?? "";
-    })()
+        const floorIds = Array.isArray(towerContent.value.main.floorIds)
+          ? towerContent.value.main.floorIds
+          : [];
+        const initialFloorId = towerContent.value.firstData.floorId;
+        return typeof initialFloorId === "string" && floorIds.includes(initialFloorId)
+          ? initialFloorId
+          : floorIds.find((item): item is string => typeof item === "string") ?? "";
+      })()
     : "";
-  const floorId = currentFloorId || externalFloorId || discoveredFloorId;
+  // Derived map resources (notably the tileset catalog) depend on tower data.
+  // Keep the editor dormant while that root resource is unavailable so a
+  // missing project/data.js is not misreported as "tilesetCatalog not found".
+  const towerReady = towerContent.status === "loaded";
+  const floorId = towerReady ? currentFloorId || externalFloorId || discoveredFloorId : "";
   const floorIdRef = useRef(floorId);
 
   useEffect(() => {
@@ -255,17 +261,17 @@ const MapEditorInner: FC = () => {
         });
       },
     }), [
-      activeMapPanel,
-      activePanel,
-      activeScriptWorkspace,
-      activeWorkspace,
-      setActiveMapPanel,
-      setActivePanel,
-      setActiveScriptWorkspace,
-      setActiveWorkspace,
-      state,
-      store,
-    ]);
+    activeMapPanel,
+    activePanel,
+    activeScriptWorkspace,
+    activeWorkspace,
+    setActiveMapPanel,
+    setActivePanel,
+    setActiveScriptWorkspace,
+    setActiveWorkspace,
+    state,
+    store,
+  ]);
 
   useEffect(() => {
     const handleHistoryShortcut = (event: KeyboardEvent) => {
@@ -283,9 +289,9 @@ const MapEditorInner: FC = () => {
   }, []);
 
   useEffect(() => subscribeNotifications(({ level, message }) => {
-      setTipMessage(message);
-      setTipClass(level === "success" ? "successText" : level === "error" ? "warnText" : "infoText");
-    }), []);
+    setTipMessage(message);
+    setTipClass(level === "success" ? "successText" : level === "error" ? "warnText" : "infoText");
+  }), []);
 
   // 处理素材选中变化
   const handleSelectedBlockChange = useCallback(
@@ -557,57 +563,61 @@ const MapEditorInner: FC = () => {
         {/* 地图编辑区 */}
         {floorId
           ? (
-            <ContentBoundary loadingUI={<div className="map" id="mapEdit" />}>
-              <MapCanvas
-                floorId={floorId}
-                onContextMenu={handleContextMenu}
-                onDoubleClickSelect={handleDoubleClickSelect}
-                onLocSelect={handleLocSelect}
-                onPaintSuccess={handlePaintSuccess}
-              />
-            </ContentBoundary>
-          )
+              <ContentBoundary loadingUI={<div className="map" id="mapEdit" />}>
+                <MapCanvas
+                  floorId={floorId}
+                  onContextMenu={handleContextMenu}
+                  onDoubleClickSelect={handleDoubleClickSelect}
+                  onLocSelect={handleLocSelect}
+                  onPaintSuccess={handlePaintSuccess}
+                />
+              </ContentBoundary>
+            )
           : <div className="map" id="mapEdit" data-test-id="map-canvas-unavailable" />}
 
         {/* 工具栏 */}
         {floorId
           ? (
-            <ContentBoundary key={`tools:${floorId}`} loadingUI={<div className="tools" />}>
-              <ToolBar
-                floorId={floorId}
-                tipMessage={tipMessage}
-                tipClass={tipClass}
-                onFloorChange={handleFloorChange}
-              />
-            </ContentBoundary>
-          )
+              <ContentBoundary key={`tools:${floorId}`} loadingUI={<div className="tools" />}>
+                <ToolBar
+                  floorId={floorId}
+                  tipMessage={tipMessage}
+                  tipClass={tipClass}
+                  onFloorChange={handleFloorChange}
+                />
+              </ContentBoundary>
+            )
           : <div className="tools" />}
       </div>
 
       {/* 最近使用面板 */}
-      <ContentBoundary loadingUI={<></>}>
-        <ValidatedRecentlyUsedPanel
-          items={lastUsed}
-          selectedIdnum={typeof selectedBlock === "object" ? selectedBlock.idnum : undefined}
-          sortType={lastUsedType}
-          onSortTypeChange={setLastUsedType}
-          onSelect={handleRecentlyUsedSelect}
-          onToggleTop={(item, istop) =>
-            setLastUsed(lastUsed.map((one) => (
-              one.idnum === item.idnum ? { ...one, istop: istop ? 1 : 0 } : one
-            )))}
-          onClear={() => setLastUsed([])}
-        />
-      </ContentBoundary>
+      {towerReady ? (
+        <ContentBoundary loadingUI={<></>}>
+          <ValidatedRecentlyUsedPanel
+            items={lastUsed}
+            selectedIdnum={typeof selectedBlock === "object" ? selectedBlock.idnum : undefined}
+            sortType={lastUsedType}
+            onSortTypeChange={setLastUsedType}
+            onSelect={handleRecentlyUsedSelect}
+            onToggleTop={(item, istop) =>
+              setLastUsed(lastUsed.map((one) => (
+                one.idnum === item.idnum ? { ...one, istop: istop ? 1 : 0 } : one
+              )))}
+            onClear={() => setLastUsed([])}
+          />
+        </ContentBoundary>
+      ) : <div id="mid2" />}
 
       {/* 素材面板 */}
-      <ContentBoundary loadingUI={<></>}>
-        <MaterialPanel
-          selectedBlock={selectedBlock}
-          onSelectedBlockChange={handleSelectedBlockChange}
-          onTileSizeChange={store.setTileSize}
-        />
-      </ContentBoundary>
+      {towerReady ? (
+        <ContentBoundary loadingUI={<></>}>
+          <MaterialPanel
+            selectedBlock={selectedBlock}
+            onSelectedBlockChange={handleSelectedBlockChange}
+            onTileSizeChange={store.setTileSize}
+          />
+        </ContentBoundary>
+      ) : <div id="right" />}
 
       {/* 右键菜单 */}
       {floorId && (

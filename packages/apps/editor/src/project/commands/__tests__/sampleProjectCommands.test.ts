@@ -12,7 +12,11 @@ import { floorCommands } from "@/project/commands/floorCommands";
 import { locCommands } from "@/project/commands/locCommands";
 import { mapCommands, readMapInfo } from "@/project/commands/mapCommands";
 import { materialCommands } from "@/project/commands/materialCommands";
-import { prefabCommands } from "@/project/commands/prefabCommands";
+import {
+  parsePrefabClipboard,
+  prefabCommands,
+  serializePrefabClipboard,
+} from "@/project/commands/prefabCommands";
 import { tableCommands } from "@/project/commands/tableCommands";
 import { animationCommands } from "@/project/commands/animationCommands";
 import { projectModel } from "@/project/model/projectModel";
@@ -298,7 +302,7 @@ describe("ProjectData + Commands with real sample project", () => {
     const tower = projectData.tower().value();
     expect(tower.firstData.floorId).toBe("sample1");
     expect(tower.firstData.hero.loc).toMatchObject({ x: 3, y: 4 });
-    expect(project.readText("project/data.js")).toContain('"sample1"');
+    expect(project.readText("project/data.js")).toContain("\"sample1\"");
   });
 
   it("binds stair and portal changeFloor events through mapCommands", async () => {
@@ -576,7 +580,7 @@ describe("ProjectData + Commands with real sample project", () => {
     expect(projectData.mapBlocks().value()[1].id).toBe("testYellowWall");
   });
 
-  it("copies and replaces enemy prefab data through prefabCommands", async () => {
+  it("copies, validates, previews and pastes prefab data through prefabCommands", async () => {
     await project.loadResource(projectData.enemys());
     await projectData.enemys().patch([
       ["change", "['greenSlime']", {
@@ -584,12 +588,16 @@ describe("ProjectData + Commands with real sample project", () => {
         name: "绿头怪",
         hp: 50,
         displayIdInBook: 1,
+        faceIds: { down: "greenSlime" },
+        sourceOnly: true,
       }],
       ["change", "['redSlime']", {
         id: "redSlime",
         name: "红头怪",
         hp: 80,
         displayIdInBook: 2,
+        faceIds: { down: "redSlime" },
+        targetOnly: true,
       }],
     ]);
 
@@ -597,12 +605,39 @@ describe("ProjectData + Commands with real sample project", () => {
       { images: "enemys", id: "greenSlime" },
       projectData.enemys().value(),
     );
-    expect(copy).toMatchObject({ ok: true, data: { type: "enemy" } });
-
-    const result = await prefabCommands.replaceFromClipboard(
+    expect(copy).toMatchObject({
+      ok: true,
+      data: { kind: "mota-prefab-properties", version: 1, type: "enemy", source: { id: "greenSlime" } },
+    });
+    const clipboard = parsePrefabClipboard(serializePrefabClipboard(copy.data!));
+    const replacePreview = prefabCommands.previewPaste(
       { images: "enemys", id: "redSlime" },
-      copy.data!,
+      clipboard,
       projectData.enemys().value(),
+      "replace",
+    );
+    expect(replacePreview.next).toMatchObject({
+      id: "redSlime",
+      name: "红头怪",
+      hp: 50,
+      displayIdInBook: 2,
+      faceIds: { down: "redSlime" },
+      sourceOnly: true,
+    });
+    expect(replacePreview.next.targetOnly).toBeUndefined();
+    const mergePreview = prefabCommands.previewPaste(
+      { images: "enemys", id: "redSlime" },
+      clipboard,
+      projectData.enemys().value(),
+      "merge",
+    );
+    expect(mergePreview.next.targetOnly).toBe(true);
+
+    const result = await prefabCommands.pasteFromClipboard(
+      { images: "enemys", id: "redSlime" },
+      clipboard,
+      projectData.enemys().value(),
+      "replace",
     );
 
     expect(result).toEqual({ ok: true });
@@ -611,12 +646,16 @@ describe("ProjectData + Commands with real sample project", () => {
       name: "红头怪",
       hp: 50,
       displayIdInBook: 2,
+      faceIds: { down: "redSlime" },
+      sourceOnly: true,
     });
+    expect(projectData.enemys().value().redSlime.targetOnly).toBeUndefined();
   });
 
-  it("clears enemy and item prefab data through prefabCommands", async () => {
+  it("resets enemy, item and map block data without legacy comment templates", async () => {
     await project.loadResource(projectData.enemys());
     await project.loadResource(projectData.items());
+    await project.loadResource(projectData.mapBlocks());
     await projectData.enemys().patch([
       ["change", "['greenSlime']", {
         id: "greenSlime",
@@ -624,6 +663,7 @@ describe("ProjectData + Commands with real sample project", () => {
         hp: 50,
         atk: 20,
         displayIdInBook: 1,
+        faceIds: { down: "greenSlime" },
       }],
     ]);
     await projectData.items().patch([
@@ -635,25 +675,32 @@ describe("ProjectData + Commands with real sample project", () => {
       }],
     ]);
 
-    const enemyResult = await prefabCommands.clear(
+    const enemyResult = await prefabCommands.reset(
       { images: "enemys", id: "greenSlime" },
-      { enemy: { hp: 0, atk: 0, money: 0 } },
       projectData.enemys().value(),
     );
-    const itemResult = await prefabCommands.clear(
+    const itemResult = await prefabCommands.reset(
       { images: "items", id: "yellowKey" },
-      {},
       projectData.items().value(),
+    );
+    const mapBlockResult = await prefabCommands.reset(
+      { images: "animates", id: "yellowWall", idnum: 1 },
+      projectData.mapBlocks().value(),
     );
 
     expect(enemyResult).toEqual({ ok: true });
     expect(projectData.enemys().value().greenSlime).toEqual({
       hp: 0,
       atk: 0,
+      def: 0,
       money: 0,
+      exp: 0,
+      point: 0,
+      special: 0,
       id: "greenSlime",
       name: "绿头怪",
       displayIdInBook: 1,
+      faceIds: { down: "greenSlime" },
     });
     expect(itemResult).toEqual({ ok: true });
     expect(projectData.items().value().yellowKey).toEqual({
@@ -661,18 +708,19 @@ describe("ProjectData + Commands with real sample project", () => {
       cls: "keys",
       name: "黄钥匙",
     });
+    expect(mapBlockResult).toEqual({ ok: true });
+    expect(projectData.mapBlocks().value()[1]).toEqual({ cls: "animates", id: "yellowWall" });
   });
 
-  it("clears all auto registered item prefabs through prefabCommands", async () => {
+  it("batch resets all auto registered item prefabs through prefabCommands", async () => {
     await project.loadResource(projectData.items());
     await projectData.items().patch([
       ["change", "['I100']", { id: "I100", cls: "items", name: "Auto Item", text: "remove" }],
       ["change", "['yellowKey']", { id: "yellowKey", cls: "keys", name: "黄钥匙", text: "keep" }],
     ]);
 
-    const result = await prefabCommands.clearAll(
+    const result = await prefabCommands.resetAll(
       { images: "items", id: "I100" },
-      {},
       projectData.items().value(),
     );
 
@@ -874,6 +922,40 @@ describe("ProjectData + Commands with real sample project", () => {
     await operationHistory.redo();
     expect(project.hasFile("project/floors/COMMAND_NEW.js")).toBe(false);
     expect(projectData.tower().value().main.floorIds).not.toContain("COMMAND_NEW");
+  });
+
+  it("rebuilds a registered floor whose file was removed", async () => {
+    const tower = projectData.tower();
+    const floor = projectData.floor("sample0");
+    await project.loadResource(tower);
+    await project.loadResource(floor);
+    await project.fs.deleteFile(floor.path);
+    await floor.reload();
+
+    expect(floor.snapshot().status).toBe("not-found");
+    expect(tower.value().main.floorIds).toContain("sample0");
+
+    expect(await floorCommands.rebuildMissing("sample0")).toEqual({ ok: true });
+    expect(projectData.floor("sample0").value()).toMatchObject({
+      floorId: "sample0",
+      width: 13,
+      height: 13,
+    });
+    expect(projectData.floor("sample0").value().map).toHaveLength(13);
+    expect(tower.value().main.floorIds).toContain("sample0");
+
+    await operationHistory.undo();
+    expect(projectData.floor("sample0").snapshot().status).toBe("not-found");
+    expect(tower.value().main.floorIds).toContain("sample0");
+    await operationHistory.redo();
+    expect(projectData.floor("sample0").value().map).toHaveLength(13);
+
+    await operationHistory.undo();
+    expect(await floorCommands.delete("sample0")).toEqual({ ok: true });
+    expect(tower.value().main.floorIds).not.toContain("sample0");
+    await operationHistory.undo();
+    expect(tower.value().main.floorIds).toContain("sample0");
+    expect(projectData.floor("sample0").snapshot().status).toBe("not-found");
   });
 
   it("batch creates floors after validating all inputs", async () => {

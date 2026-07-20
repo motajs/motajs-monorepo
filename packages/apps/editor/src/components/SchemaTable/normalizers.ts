@@ -1,6 +1,8 @@
 import type { Normalizer, NormalizerRegistry, RawSlot } from "./types";
 
-function present<T>(value: T): RawSlot<T> { return { present: true, value }; }
+function present<T>(value: T): RawSlot<T> {
+  return { present: true, value };
+}
 const missing: RawSlot<never> = { present: false };
 
 export const identityNormalizer: Normalizer<unknown, unknown> = {
@@ -34,11 +36,16 @@ export const numericScalarOrListNormalizer: Normalizer<unknown, number[]> = {
     }
     throw new Error("Expected 0, a finite number, or an array of finite numbers");
   },
-  toRaw(edit) {
+  toRaw(edit, previous) {
     if (!Array.isArray(edit) || !edit.every((item) => typeof item === "number" && Number.isFinite(item))) {
       throw new Error("Expected an array of finite numbers from the checkbox editor");
     }
-    return present([...edit]);
+    if (Array.isArray(previous.present ? previous.value : undefined)) return present([...edit]);
+    if (edit.length > 1) return present([...edit]);
+    if (edit.length === 1) return present(edit[0]);
+    if (previous.present && previous.value === null) return present(null);
+    if (!previous.present) return missing;
+    return present(0);
   },
 };
 
@@ -187,8 +194,15 @@ function autoEventPage(value: unknown, label: string): Record<string, unknown> |
 export const autoEventPagesNormalizer: Normalizer<unknown, AutoEventEditingPage[]> = {
   toEdit(raw) {
     if (!raw.present || raw.value == null) return [];
-    if (!raw.value || typeof raw.value !== "object" || Array.isArray(raw.value)) {
-      throw new Error("Expected an auto-event page record or null");
+    if (Array.isArray(raw.value)) {
+      const pages = raw.value;
+      return Array.from({ length: pages.length }, (_, id) => ({
+        id,
+        value: autoEventPage(pages[id] ?? null, `Page ${id}`),
+      }));
+    }
+    if (!raw.value || typeof raw.value !== "object") {
+      throw new Error("Expected an auto-event page array, record, or null");
     }
     return Object.entries(raw.value as Record<string, unknown>)
       .map(([key, value]) => {
@@ -199,7 +213,7 @@ export const autoEventPagesNormalizer: Normalizer<unknown, AutoEventEditingPage[
       })
       .sort((left, right) => left.id - right.id);
   },
-  toRaw(edit) {
+  toRaw(edit, previous) {
     if (!Array.isArray(edit)) throw new Error("Expected an auto-event page list");
     const result: Record<string, unknown> = {};
     for (const [index, rawPage] of edit.entries()) {
@@ -214,7 +228,13 @@ export const autoEventPagesNormalizer: Normalizer<unknown, AutoEventEditingPage[
       if (Object.prototype.hasOwnProperty.call(result, key)) throw new Error(`Duplicate auto-event page id: ${key}`);
       result[key] = autoEventPage(page.value, `Page ${key}`);
     }
-    return Object.keys(result).length === 0 ? missing : present(result);
+    if (Object.keys(result).length === 0) return missing;
+    if (previous.present && previous.value != null && !Array.isArray(previous.value)) return present(result);
+
+    const pageIds = Object.keys(result).map(Number);
+    const pages = Array.from({ length: Math.max(...pageIds) + 1 }, () => null as Record<string, unknown> | null);
+    for (const [key, value] of Object.entries(result)) pages[Number(key)] = value as Record<string, unknown> | null;
+    return present(pages);
   },
 };
 

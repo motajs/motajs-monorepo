@@ -6,6 +6,7 @@ import type { Content } from "@/fs/types";
 import type { Fs } from "@/services/fs";
 import { waitUntil } from "@/utils/base/signal";
 import type { AssetDirectoryResourceLike, AssetDirectorySnapshot } from "./types";
+import { isFileNotFoundError } from "@/fs/errors";
 
 function toError(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error));
@@ -55,7 +56,7 @@ export class AssetDirectoryResource implements AssetDirectoryResourceLike {
       this.mutableContent({ status: "loaded", value: { entries, revision: this.revision } });
     } catch (error) {
       const normalized = toError(error);
-      if (normalized.message.includes("not found")) this.mutableContent({ status: "not-found" });
+      if (isFileNotFoundError(normalized)) this.mutableContent({ status: "not-found" });
       else this.mutableContent({ status: "error", error: normalized });
     }
   }

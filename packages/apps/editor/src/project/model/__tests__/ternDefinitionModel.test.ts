@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Server } from "tern";
 import type * as Tern from "tern";
+import type { TernCoreDef } from "@/Workbench/CodeEditor/types";
 import {
   buildTernDefinitionBundle,
   type TernDefinitionInputs,
@@ -12,7 +13,10 @@ function baseDefs(): Tern.Def[] {
     { "!name": "ecmascript" },
     {
       "!name": "core",
-      core: {
+      "!define": {
+        CanvasRenderingContext2D: {},
+      },
+      "core": {
         material: {
           enemys: {},
           bgms: {},
@@ -32,8 +36,30 @@ function baseDefs(): Tern.Def[] {
         },
         values: {},
         flags: {},
-        events: {},
-        plugin: {},
+        events: {
+          flyTo: {
+            "!type": "fn(toId?: string, callback?: fn()) -> bool",
+            "!doc": "飞往某一层",
+          },
+        },
+        control: {
+          clearStatus: {
+            "!type": "fn()",
+            "!doc": "清除游戏状态和数据",
+          },
+        },
+        ui: {
+          strokeRect: {
+            "!type": "fn(name: string|CanvasRenderingContext2D, x: number, y: number, width: number, height: number, style?: string, lineWidth?: number, angle?: number)",
+            "!doc": "绘制一个矩形的边框",
+          },
+        },
+        plugin: {
+          builtIn: {
+            "!type": "fn(value: string) -> number",
+            "!doc": "内置插件方法",
+          },
+        },
       },
     },
   ] as Tern.Def[];
@@ -63,13 +89,15 @@ function inputs(): TernDefinitionInputs {
     functions: {
       events: {
         customEvent: "function customEvent (value) { return value; }",
+        flyTo: "function flyTo (toId, callback) { return false; }",
+        clearStatus: "function clearStatus () {}",
       },
       enemys: {
         getSpecials: "function getSpecials () { return [[1, '先攻'], [6, function () { return '连击'; }]]; }",
       },
     },
     plugins: {
-      custom: "function custom () { this.customPlugin = function (count) { return count; }; }",
+      custom: "function custom () { this.customPlugin = function (count) { return count; }; this.builtIn = function (value) { return 1; }; }",
     },
     dataComment: {
       _type: "object",
@@ -105,12 +133,31 @@ function requestCompletions(server: Server, source: string): Promise<string[]> {
   });
 }
 
+function requestType(server: Server, source: string): Promise<{
+  type?: string;
+  doc?: string;
+}> {
+  return new Promise((resolve, reject) => {
+    server.request({
+      files: [{ type: "full", name: "type-test.js", text: source }],
+      query: {
+        type: "type",
+        file: "type-test.js",
+        end: source.length,
+      },
+    }, (error, response) => {
+      if (error) reject(error);
+      else resolve(response as { type?: string; doc?: string });
+    });
+  });
+}
+
 describe("TernDefinitionModel", () => {
   it("clones base defs and enriches them from project data", () => {
     const source = inputs();
     const original = structuredClone(source.baseDefs);
     const bundle = buildTernDefinitionBundle(source);
-    const core = (bundle.defs[2] as any).core;
+    const core = (bundle.defs[2] as unknown as TernCoreDef).core;
 
     expect(source.baseDefs).toEqual(original);
     expect(core.material.enemys.greenSlime["!doc"]).toBe("绿头怪");
@@ -132,6 +179,40 @@ describe("TernDefinitionModel", () => {
 
     await expect(requestCompletions(server, "core.cust")).resolves.toContain("customEvent");
     await expect(requestCompletions(server, "core.plugin.customP")).resolves.toContain("customPlugin");
+  });
+
+  it("keeps precise defs for known functions while adding project aliases", async () => {
+    const bundle = buildTernDefinitionBundle(inputs());
+    const projectFunctions = bundle.documents.find((document) => document.name === "project-functions.js")?.text ?? "";
+    const projectPlugins = bundle.documents.find((document) => document.name === "project-plugins.js")?.text ?? "";
+    const server = new Server({ defs: bundle.defs });
+    for (const document of bundle.documents) server.addFile(document.name, document.text);
+
+    expect(projectFunctions).not.toContain("core[\"events\"][\"flyTo\"] = function");
+    expect(projectFunctions).not.toContain("core[\"flyTo\"] = core[\"events\"][\"flyTo\"]");
+    expect(projectFunctions).toContain("core[\"events\"][\"clearStatus\"] = core[\"clearStatus\"]");
+    expect(projectPlugins).not.toContain("core.plugin[\"builtIn\"]");
+
+    await expect(requestType(server, "core.events.flyTo")).resolves.toEqual(expect.objectContaining({
+      type: "fn(toId?: string, callback?: fn()) -> bool",
+      doc: "飞往某一层",
+    }));
+    await expect(requestType(server, "core.flyTo")).resolves.toEqual(expect.objectContaining({
+      type: "fn(toId?: string, callback?: fn()) -> bool",
+      doc: "飞往某一层",
+    }));
+    await expect(requestType(server, "core.clearStatus")).resolves.toEqual(expect.objectContaining({
+      type: "fn()",
+      doc: "清除游戏状态和数据",
+    }));
+    await expect(requestType(server, "core.strokeRect")).resolves.toEqual(expect.objectContaining({
+      type: "fn(name: string|CanvasRenderingContext2D, x: number, y: number, width: number, height: number, style?: string, lineWidth?: number, angle?: number)",
+      doc: "绘制一个矩形的边框",
+    }));
+    await expect(requestType(server, "core.plugin.builtIn")).resolves.toEqual(expect.objectContaining({
+      type: "fn(value: string) -> number",
+      doc: "内置插件方法",
+    }));
   });
 
   it("reports invalid project source without losing base definitions", () => {

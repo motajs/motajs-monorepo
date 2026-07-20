@@ -13,18 +13,31 @@ import {
 } from "../normalizers";
 
 describe("SchemaTable normalizers", () => {
-  it("normalizes historical numeric scalar/list values into one editing list", () => {
+  it("normalizes historical numeric scalar/list values while preserving their raw shape", () => {
     expect(numericScalarOrListNormalizer.toEdit({ present: true, value: 0 })).toEqual([]);
     expect(numericScalarOrListNormalizer.toEdit({ present: true, value: 6 })).toEqual([6]);
     expect(numericScalarOrListNormalizer.toEdit({ present: true, value: [6, 25] })).toEqual([6, 25]);
     expect(numericScalarOrListNormalizer.toRaw([6], { present: true, value: 6 })).toEqual({
       present: true,
-      value: [6],
+      value: 6,
     });
     expect(numericScalarOrListNormalizer.toRaw([], { present: true, value: 0 })).toEqual({
       present: true,
+      value: 0,
+    });
+    expect(numericScalarOrListNormalizer.toRaw([6], { present: true, value: [1] })).toEqual({
+      present: true,
+      value: [6],
+    });
+    expect(numericScalarOrListNormalizer.toRaw([], { present: true, value: [1] })).toEqual({
+      present: true,
       value: [],
     });
+    expect(numericScalarOrListNormalizer.toRaw([6, 25], { present: true, value: 6 })).toEqual({
+      present: true,
+      value: [6, 25],
+    });
+    expect(numericScalarOrListNormalizer.toRaw([], { present: false })).toEqual({ present: false });
   });
 
   it("round-trips nullable scalar/list BGM values", () => {
@@ -117,7 +130,14 @@ describe("SchemaTable normalizers", () => {
     })).toThrow("configured event data");
   });
 
-  it("normalizes auto-event page records into a sorted editable list", () => {
+  it("normalizes auto-event page arrays and records into a sorted editable list", () => {
+    expect(autoEventPagesNormalizer.toEdit({
+      present: true,
+      value: [null, { condition: "flag:door", data: [] }],
+    })).toEqual([
+      { id: 0, value: null },
+      { id: 1, value: { condition: "flag:door", data: [] } },
+    ]);
     expect(autoEventPagesNormalizer.toEdit({
       present: true,
       value: {
@@ -132,6 +152,13 @@ describe("SchemaTable normalizers", () => {
       { id: 0, value: null },
       { id: 1, value: { condition: "flag:door", data: [] } },
     ], { present: false })).toEqual({
+      present: true,
+      value: [null, { condition: "flag:door", data: [] }],
+    });
+    expect(autoEventPagesNormalizer.toRaw([
+      { id: 0, value: null },
+      { id: 1, value: { condition: "flag:door", data: [] } },
+    ], { present: true, value: { 0: null } })).toEqual({
       present: true,
       value: {
         0: null,

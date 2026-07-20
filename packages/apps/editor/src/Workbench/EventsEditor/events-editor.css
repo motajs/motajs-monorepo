@@ -1,0 +1,63 @@
+#left6 {
+  background: var(--editor-surface, #fff);
+  color: var(--editor-fg, #202124);
+}
+
+#left6 .eventEditorToolbar {
+  color: var(--editor-fg, #202124);
+}
+
+#left6 .eventEditorToolbar button,
+#left6 .eventEditorToolbar input[type="text"] {
+  border: 1px solid var(--editor-border, #d0d7de);
+  border-radius: 3px;
+  background: var(--editor-toolbar-bg, #fff);
+  color: var(--editor-fg, #202124);
+}
+
+#left6 .eventEditorToolbar button:hover {
+  border-color: #1677ff;
+}
+
+#left6 .eventEditorToolbar input[type="text"]::placeholder {
+  color: var(--editor-muted, #656d76);
+}
+
+#left6 #codeArea {
+  box-sizing: border-box;
+  border: 1px solid var(--editor-border, #d0d7de);
+  border-radius: 0;
+  outline: none;
+  background: var(--editor-surface, #fff);
+  color: var(--editor-fg, #202124);
+  caret-color: currentColor;
+  resize: none;
+}
+
+#left6 #codeArea:focus {
+  border-color: #1677ff;
+  box-shadow: inset 0 0 0 1px #1677ff;
+}
+
+#left6 .blocklyToolbox {
+  border-right: 1px solid var(--editor-border, #d0d7de);
+}
+
+:root[data-editor-theme="dark"] #left6 .blocklyToolboxCategory:not(.blocklyToolboxSelected):hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+:root[data-editor-theme="dark"] #left6 .blocklyToolboxCategoryLabel {
+  color: inherit;
+}
+
+:root[data-editor-theme="dark"] #left6 .blocklyNonEditableField > text,
+:root[data-editor-theme="dark"] #left6 .blocklyEditableField:not(.blocklyEditing) > text,
+:root[data-editor-theme="dark"] #left6 .blocklyNonEditableField > g > text,
+:root[data-editor-theme="dark"] #left6 .blocklyEditableField:not(.blocklyEditing) > g > text {
+  fill: #f0f1f4 !important;
+}
+
+:root[data-editor-theme="dark"] #left6 .blocklyTreeSeparator {
+  border-color: var(--editor-border, #4b4b52);
+}

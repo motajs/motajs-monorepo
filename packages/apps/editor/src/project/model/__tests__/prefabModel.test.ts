@@ -38,7 +38,7 @@ describe("prefabModel", () => {
       dataKey: "165",
       registered: true,
     });
-    expect(block && canCopyPastePrefab(block)).toBe(false);
+    expect(block && canCopyPastePrefab(block)).toBe(true);
 
     const unregistered = resolvePrefabTarget({ images: "terrains", y: 99 });
     expect(unregistered).toMatchObject({

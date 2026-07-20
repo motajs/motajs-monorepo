@@ -31,7 +31,7 @@ function setup() {
     server,
     getAutocomplete: () => true,
   });
-  return { detach, editor, handlers, server };
+  return { detach, editor, handlers, server, wrapper };
 }
 
 function inputChange(text: string): EditorChange {
@@ -59,6 +59,38 @@ describe("Tern editor interactions", () => {
 
     await vi.advanceTimersByTimeAsync(120);
     expect(server.complete).toHaveBeenCalledWith(editor);
+    detach();
+  });
+
+  it("queries hover types through the registered CodeMirror document", async () => {
+    vi.useFakeTimers();
+    const { detach, editor, server, wrapper } = setup();
+    Object.assign(editor, {
+      coordsChar: () => ({ line: 0, ch: 4 }),
+      getTokenAt: () => ({ start: 0, end: 4, string: "core", type: "variable" }),
+      charCoords: (position: { ch: number }) => ({
+        left: 10 + position.ch * 8,
+        right: 18 + position.ch * 8,
+        top: 10,
+        bottom: 26,
+      }),
+    });
+    const request = vi.fn((_editor, _query, callback) => callback(undefined, {
+      type: "core",
+      doc: "游戏运行时 API",
+    }));
+    Object.assign(server, { request });
+
+    wrapper.dispatchEvent(new MouseEvent("mousemove", { clientX: 20, clientY: 18 }));
+    await vi.advanceTimersByTimeAsync(280);
+
+    expect(request).toHaveBeenCalledWith(
+      editor,
+      expect.objectContaining({ type: "type", end: { line: 0, ch: 4 } }),
+      expect.any(Function),
+      { line: 0, ch: 4 },
+    );
+    expect(document.querySelector(".editorTernHoverTooltip")?.textContent).toContain("游戏运行时 API");
     detach();
   });
 });

@@ -2,7 +2,7 @@
   "kind": "field-bundle",
   "formatVersion": 1,
   "schemaId": "loc.fields",
-  "revision": 2,
+  "revision": 3,
   "fields": {
     "loc.events": {
       "type": [
@@ -59,6 +59,7 @@
     },
     "loc.autoEvent": {
       "type": [
+        "array",
         "object",
         "null"
       ],
@@ -75,7 +76,7 @@
         }
       },
       "diagnostics": {
-        "loc.autoEvent.shape": "必须是以非负整数页码为 key 的自动事件对象"
+        "loc.autoEvent.shape": "必须是自动事件页数组，或以非负整数页码为 key 的自动事件对象"
       }
     },
     "loc.beforeBattle": {

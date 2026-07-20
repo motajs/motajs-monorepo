@@ -212,16 +212,31 @@ export const MapPanel: FC = () => {
     });
   }, []);
 
-  const deleteFloor = useCallback((targetFloorId: string) => {
+  const rebuildMissingFloor = useCallback((targetFloorId: string) => {
     Modal.confirm({
-      title: `删除楼层 ${targetFloorId}？`,
-      content: "楼层文件和列表项都会删除；该操作可通过历史记录撤销。",
+      title: `重建空白楼层 ${targetFloorId}？`,
+      content: "将创建一个 13 × 13 的空白楼层文件；已丢失的原地图内容无法从编辑器恢复。该操作可撤销。",
+      okText: "重建空白楼层",
+      cancelText: "取消",
+      onOk: async () => {
+        const result = await floorCommands.rebuildMissing(targetFloorId);
+        notifyCommandResult(result, "空白楼层已重建");
+      },
+    });
+  }, []);
+
+  const deleteFloor = useCallback((targetFloorId: string, exists: boolean) => {
+    Modal.confirm({
+      title: exists ? `删除楼层 ${targetFloorId}？` : `移除失效楼层 ${targetFloorId}？`,
+      content: exists
+        ? "楼层文件和列表项都会删除；该操作可通过历史记录撤销。"
+        : "楼层文件已经不存在；这里只会从楼层列表和分区中移除失效引用。该操作可撤销。",
       okButtonProps: { danger: true },
-      okText: "删除楼层",
+      okText: exists ? "删除楼层" : "移除失效引用",
       cancelText: "取消",
       onOk: async () => {
         const result = await floorCommands.delete(targetFloorId);
-        notifyCommandResult(result, "楼层已删除");
+        notifyCommandResult(result, exists ? "楼层已删除" : "失效楼层引用已移除");
       },
     });
   }, []);
@@ -240,9 +255,16 @@ export const MapPanel: FC = () => {
         { key: "export", label: "导出地图数据…", disabled: !exists },
         { key: "clear", label: <span data-test-id="map-clear-submit">清空地图…</span>, danger: true, disabled: !exists },
         { type: "divider" },
+        ...(!exists
+          ? [{
+              key: "rebuild",
+              label: <span data-test-id={`map-rebuild-${targetFloorId}`}>重建为空白楼层…</span>,
+              icon: <FilePlus2 size={14} />,
+            } as const]
+          : []),
         {
           key: "delete",
-          label: <span data-test-id="map-delete-submit">删除楼层…</span>,
+          label: <span data-test-id="map-delete-submit">{exists ? "删除楼层…" : "从楼层列表移除…"}</span>,
           danger: true,
           disabled: !organization.valid || tower.main.floorIds.length <= 1,
         },
@@ -259,10 +281,11 @@ export const MapPanel: FC = () => {
         }
         if (key === "import" || key === "export") openMapData(targetFloorId, key);
         if (key === "clear") clearFloor(targetFloorId);
-        if (key === "delete") deleteFloor(targetFloorId);
+        if (key === "rebuild") rebuildMissingFloor(targetFloorId);
+        if (key === "delete") deleteFloor(targetFloorId, exists);
       },
     };
-  }, [clearFloor, createPartition, deleteFloor, navigateFloor, openMapData, organization.partitions, organization.valid, organizationDisabled, setActiveMapPanel, tower.main.floorIds]);
+  }, [clearFloor, createPartition, deleteFloor, navigateFloor, openMapData, organization.partitions, organization.valid, organizationDisabled, rebuildMissingFloor, setActiveMapPanel, tower.main.floorIds]);
 
   const renderFloor = (one: FloorListItem, tokenIndex?: number) => {
     const selected = one.id === floorId;
@@ -329,7 +352,9 @@ export const MapPanel: FC = () => {
             event.preventDefault();
           }}
           onDrop={(event) => dropToken(index, event)}
-        ><span>{label}</span></div>
+        >
+          <span>{label}</span>
+        </div>
       </Dropdown>
     );
   };
@@ -396,10 +421,15 @@ export const MapPanel: FC = () => {
         <div className="floorOrganizationDiagnostic" data-test-id="floor-organization-diagnostic">
           <AlertTriangle size={15} />
           <div><strong>楼层分区数据异常</strong><span>{organization.diagnostics.join("；")}</span></div>
-          <Button size="small" onClick={() => {
-            setRepairText(JSON.stringify(rawPartitions ?? [], null, 2));
-            setRepairOpen(true);
-          }}>修复</Button>
+          <Button
+            size="small"
+            onClick={() => {
+              setRepairText(JSON.stringify(rawPartitions ?? [], null, 2));
+              setRepairOpen(true);
+            }}
+          >
+            修复
+          </Button>
         </div>
       ) : null}
       {filter.trim() ? <p className="floorManagementFilterHint">筛选结果仅供选择；清空搜索后可调整顺序和分区。</p> : null}
@@ -416,7 +446,9 @@ export const MapPanel: FC = () => {
               event.preventDefault();
             }}
             onDrop={(event) => dropToken(tokens.length, event)}
-          >拖到列表末尾</div>
+          >
+            拖到列表末尾
+          </div>
         ) : null}
       </div>
 
@@ -445,7 +477,13 @@ export const MapPanel: FC = () => {
             {
               key: "batch",
               label: "批量创建",
-              children: <BatchCreateMapsForm onSuccess={() => { setCreateOpen(false); setFilter(""); }} />,
+              children: (
+                <BatchCreateMapsForm onSuccess={() => {
+                  setCreateOpen(false);
+                  setFilter("");
+                }}
+                />
+              ),
             },
           ]}
         />

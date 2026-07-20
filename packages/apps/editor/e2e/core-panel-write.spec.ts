@@ -179,7 +179,7 @@ test.describe("core panels write to sandbox project", () => {
     await page.addInitScript(() => {
       const testWindow = window as Window & { __audioPlayCalls: number };
       Object.defineProperty(testWindow, "__audioPlayCalls", { value: 0, writable: true });
-      HTMLMediaElement.prototype.play = function() {
+      HTMLMediaElement.prototype.play = function () {
         testWindow.__audioPlayCalls += 1;
         this.dispatchEvent(new Event("play"));
         return Promise.resolve();
@@ -195,7 +195,7 @@ test.describe("core panels write to sandbox project", () => {
     const playCallsBefore = await page.evaluate(() =>
       (
         window as Window & { __audioPlayCalls: number }
-      ).__audioPlayCalls
+      ).__audioPlayCalls,
     );
     await toggle.click();
     await expect(toggle).toHaveText("暂停");
@@ -203,8 +203,8 @@ test.describe("core panels write to sandbox project", () => {
       page.evaluate(() =>
         (
           window as Window & { __audioPlayCalls: number }
-        ).__audioPlayCalls
-      )
+        ).__audioPlayCalls,
+      ),
     ).toBeGreaterThan(playCallsBefore);
     await page.getByTestId("select-material-modal-cancel").click();
 
@@ -223,7 +223,7 @@ test.describe("core panels write to sandbox project", () => {
     const source = page.getByTestId("event-editor-source");
     const events = JSON5.parse(await source.inputValue()) as Array<Record<string, unknown>>;
     expect(events.some((event) => event.type === "previewUI")).toBe(true);
-    expect(JSON.stringify(events)).toContain('"case":"keyboard"');
+    expect(JSON.stringify(events)).toContain("\"case\":\"keyboard\"");
     events.push({ type: "comment", text: "BLOCKLY_E2E_MARKER" });
     await source.fill(JSON.stringify(events, null, 2));
     await page.getByTestId("event-editor-parse").click();
@@ -802,10 +802,20 @@ test.describe("core panels write to sandbox project", () => {
     await expect(panel.getByTestId("schema-table")).toBeVisible();
     await expect(panel.getByTestId("schema-auto-event-list")).toBeVisible();
 
+    const editEvents = panel.getByTestId("schema-input-events").getByRole("button", { name: "编辑" });
+    await editEvents.click();
+    await expect(page.getByTestId("event-editor")).toBeVisible();
+    await page.getByTestId("event-editor-cancel").click();
+    await expect(page.getByTestId("event-editor")).toHaveCSS("opacity", "0");
+    await expect(page.getByTestId("event-editor")).toHaveCSS("z-index", "-1");
+    await editEvents.click();
+    await expect(page.getByTestId("event-editor")).toBeVisible();
+    await page.getByTestId("event-editor-cancel").click();
+
     let waitForWrite = sandbox.waitForWrite("project/floors/sample0.js");
     await panel.getByRole("button", { name: "添加自动事件页" }).click();
     await waitForWrite;
-    expect(readFloorData(sandbox, "sample0").autoEvent["4,4"]).toEqual({ 0: null });
+    expect(readFloorData(sandbox, "sample0").autoEvent["4,4"]).toEqual([null]);
     await expect(panel.getByRole("button", { name: "编辑自动事件第 0 页" })).toBeVisible();
 
     const before = readFloorData(sandbox, "sample0").cannotMove?.["4,4"] ?? [];
@@ -817,6 +827,20 @@ test.describe("core panels write to sandbox project", () => {
     await waitForWrite;
     const after = readFloorData(sandbox, "sample0").cannotMove?.["4,4"] ?? [];
     expect(Array.isArray(after) && after.includes("up")).toBe(!blocked);
+
+    // The template stores auto-event pages as an array. It must reach the
+    // dedicated editor instead of falling back to Raw JSON.
+    await clickMapCell(page, 1, 1);
+    await expect(panel.getByTestId("schema-raw-fallback-自动事件")).toHaveCount(0);
+    await expect(panel.getByRole("button", { name: "编辑自动事件第 0 页" })).toBeVisible();
+    await expect(panel.getByRole("button", { name: "编辑自动事件第 1 页" })).toBeVisible();
+    if (await page.locator("html").getAttribute("data-editor-theme") !== "dark") {
+      await page.getByTestId("theme-toggle").click();
+    }
+    await expect(panel.getByTestId("schema-collection-item-0")).toHaveCSS("background-color", "rgb(48, 48, 53)");
+    await panel.getByRole("button", { name: "编辑自动事件第 0 页" }).click();
+    await expect(page.getByTestId("event-editor")).toBeVisible();
+    await page.getByTestId("event-editor-cancel").click();
     expect(pageErrors).toEqual([]);
   });
 
@@ -865,13 +889,51 @@ test.describe("core panels write to sandbox project", () => {
     expect(pageErrors).toEqual([]);
   });
 
+  test("Prefab property actions preview, paste and reset item attributes", async ({ page, context }) => {
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    const { sandbox, pageErrors } = await bootWithSandbox(page);
+
+    await clickMaterialCell(page, "items", 0, 16);
+    const panel = await selectPanel(page, "enemyitem", "panel-prefab");
+    await panel.getByTestId("prefab-copy-properties").click();
+
+    await clickMaterialCell(page, "items", 0, 0);
+    await panel.getByTestId("prefab-paste-properties").click();
+    const pasteModal = page.locator(".ant-modal").filter({ hasText: "粘贴道具属性" });
+    await expect(pasteModal).toContainText("来源：红宝石");
+    await expect(pasteModal).toContainText("itemEffect");
+    await expect(pasteModal).toContainText("固定保留目标字段：id、name");
+
+    const pasteWrite = sandbox.waitForWrite("project/items.js");
+    await pasteModal.getByTestId("prefab-paste-confirm").click();
+    await pasteWrite;
+    expect(readItems(sandbox).yellowKey).toMatchObject({
+      name: "黄钥匙",
+      cls: "items",
+      itemEffect: expect.stringContaining("hero.atk"),
+    });
+    expect(readItems(sandbox).yellowKey.hideInToolbox).toBeUndefined();
+
+    await panel.getByTestId("prefab-reset-properties").click();
+    const resetModal = page.locator(".ant-modal").filter({ hasText: "重置道具属性" });
+    await expect(resetModal).toContainText("itemEffect");
+    const resetWrite = sandbox.waitForWrite("project/items.js");
+    await resetModal.getByTestId("prefab-reset-confirm").click();
+    await resetWrite;
+    expect(readItems(sandbox).yellowKey).toEqual({ cls: "items", name: "黄钥匙" });
+    expect(pageErrors).toEqual([]);
+  });
+
   test("Item schema conditions follow cls while preserving populated historical fields", async ({ page }) => {
     const { sandbox, pageErrors } = await bootWithSandbox(page);
     await selectFloor(page, "sample0");
     await doubleClickMapCell(page, 8, 8);
     const panel = await selectPanel(page, "enemyitem", "panel-prefab");
 
-    await expect(panel.getByTestId("prefab-table-version")).toContainText("新版");
+    await expect(panel.getByTestId("prefab-table-version")).toHaveCount(0);
+    await expect(panel.getByTestId("prefab-copy-properties")).toBeVisible();
+    await expect(panel.getByTestId("prefab-paste-properties")).toBeVisible();
+    await expect(panel.getByTestId("prefab-reset-properties")).toBeVisible();
     await expect(panel.getByTestId("schema-input-itemEffect")).toBeVisible();
     await expect(panel.getByTestId("schema-input-itemEffectTip")).toBeVisible();
     await expect(panel.getByTestId("schema-group-pickup")).toBeVisible();
@@ -901,8 +963,6 @@ test.describe("core panels write to sandbox project", () => {
     await expect(panel.getByTestId("schema-input-equip")).toBeVisible();
     await expect(panel.getByTestId("schema-field-equip")).toHaveClass(/schemaTableInactive/);
 
-    await panel.getByTestId("prefab-table-version").getByText("旧版").click();
-    await expect(panel.getByTestId("prefab-edit-mode")).toBeVisible();
     expect(pageErrors).toEqual([]);
   });
 
@@ -936,8 +996,8 @@ test.describe("core panels write to sandbox project", () => {
     const content = panel.getByTestId("panel-prefab-content");
 
     const before = await panel.evaluate((root) => {
-      const headerElement = root.querySelector<HTMLElement>('[data-test-id="panel-prefab-header"]');
-      const contentElement = root.querySelector<HTMLElement>('[data-test-id="panel-prefab-content"]');
+      const headerElement = root.querySelector<HTMLElement>("[data-test-id=\"panel-prefab-header\"]");
+      const contentElement = root.querySelector<HTMLElement>("[data-test-id=\"panel-prefab-content\"]");
       if (!headerElement || !contentElement) throw new Error("Panel layout elements are missing");
       const headerRect = headerElement.getBoundingClientRect();
       const contentRect = contentElement.getBoundingClientRect();
@@ -973,6 +1033,10 @@ test.describe("core panels write to sandbox project", () => {
 
     await expect(header.getByTestId("prefab-append")).toBeVisible();
     await expect(header.getByTestId("prefab-remove-registered")).toBeVisible();
+    await expect(header.getByTestId("prefab-copy-properties")).toBeVisible();
+    await expect(header.getByTestId("prefab-paste-properties")).toBeVisible();
+    await expect(header.getByTestId("prefab-reset-properties")).toBeVisible();
+    await expect(header.getByTestId("prefab-table-version")).toHaveCount(0);
     await expect(panel.locator("#changeId")).toHaveCount(0);
 
     await panel.getByTestId("prefab-rename-open").click();
@@ -1789,10 +1853,12 @@ test.describe("core panels write to sandbox project", () => {
 
   test("enemy schema loads project specials and updates inactive parameters", async ({ page }) => {
     const { sandbox, pageErrors } = await bootWithSandbox(page);
+    const functionsBefore = sandbox.readText("project/functions.js");
+    const legacyCommentBefore = sandbox.readText("_server/table/comment.js");
     await selectFloor(page, "sample0");
     await doubleClickMapCell(page, 0, 7);
     const panel = await selectPanel(page, "enemyitem", "panel-prefab");
-    await expect(panel.getByTestId("prefab-table-version")).toContainText("新版");
+    await expect(panel.getByTestId("prefab-table-version")).toHaveCount(0);
     await expect(panel.getByTestId("prefab-edit-mode")).toHaveCount(0);
     await expect(panel.getByTestId("schema-field-n")).toHaveClass(/schemaTableInactive/);
     await expect(panel.getByTestId("schema-group-map-effects")).toHaveClass(/schemaTableInactive/);
@@ -1807,11 +1873,17 @@ test.describe("core panels write to sandbox project", () => {
     await page.getByTestId("checkbox-set-modal-confirm").click();
     await waitForWrite;
     expect(sandbox.readText("project/enemys.js")).toMatch(/"special"\s*:\s*\[\s*6\s*\]/);
+    expect(sandbox.writeCount("project/functions.js")).toBe(0);
+    expect(sandbox.writeCount("_server/table/comment.js")).toBe(0);
+    expect(sandbox.readText("project/functions.js")).toBe(functionsBefore);
+    expect(sandbox.readText("_server/table/comment.js")).toBe(legacyCommentBefore);
     await expect(panel.getByTestId("schema-field-n")).not.toHaveClass(/schemaTableInactive/);
 
-    await panel.getByTestId("prefab-table-version").getByText("旧版").click();
-    await expect(panel.getByTestId("prefab-edit-mode")).toBeVisible();
-    await expect(panel.getByTestId("table-edit-special")).toBeVisible();
+    await panel.getByTestId("prefab-reset-properties").click();
+    const resetModal = page.locator(".ant-modal").filter({ hasText: "重置怪物属性" });
+    await expect(resetModal.getByText("重置怪物属性", { exact: true })).toBeVisible();
+    await expect(page.getByTestId("prefab-property-change-list")).toContainText("special");
+    await resetModal.getByRole("button", { name: /取\s*消/ }).click();
     expect(pageErrors).toEqual([]);
   });
 
@@ -1832,7 +1904,7 @@ test.describe("core panels write to sandbox project", () => {
       preview.evaluate((canvas) => ({
         width: (canvas as HTMLCanvasElement).width,
         height: (canvas as HTMLCanvasElement).height,
-      }))
+      })),
     ).toEqual({ width: 384, height: 96 });
     const waitForWrite = sandbox.waitForWrite("project/enemys.js");
     await option.dblclick();

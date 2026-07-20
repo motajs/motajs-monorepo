@@ -76,6 +76,9 @@ export function resolveDefaultGroundSprite(
     return resolveCellSprite(registered.idnum, blockRegistry, tilesets);
   }
 
-  return spriteRegistry.get(`terrains:${configured}`)
-    ?? `Missing default ground sprite: ${configured}`;
+  // A floor is allowed to reference a ground sprite that is not registered in
+  // the current project. In that case the empty map cells are transparent;
+  // unlike a non-zero map cell, a missing default ground is not broken map
+  // data and should not produce a full-screen missing-tile diagnostic.
+  return spriteRegistry.get(`terrains:${configured}`);
 }

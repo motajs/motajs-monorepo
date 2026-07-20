@@ -10,6 +10,7 @@ import { fs as defaultFs, type Fs } from "@/services/fs";
 import { waitUntil } from "@/utils/base/signal";
 import type { Content } from "./types";
 import type { IContentView, ReadonlySignal } from "./interfaces";
+import { isFileNotFoundError } from "./errors";
 
 export class BinaryFileHandler implements IContentView<HTMLImageElement> {
   private _content: ReturnType<typeof signal<Content<HTMLImageElement>>>;
@@ -70,7 +71,7 @@ export class BinaryFileHandler implements IContentView<HTMLImageElement> {
     } catch (err) {
       const error = err as Error;
 
-      if (error.message && error.message.includes("not found")) {
+      if (isFileNotFoundError(error)) {
         this._content({ status: "not-found" });
       } else {
         this._content({ status: "error", error });

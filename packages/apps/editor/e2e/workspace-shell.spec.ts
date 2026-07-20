@@ -1,6 +1,25 @@
 import { expect, test } from "@playwright/test";
 import { ProjectSandbox } from "./utils/projectSandbox";
 
+test("opening the new editor never rewrites legacy comment or function sources", async ({ page }) => {
+  const sandbox = await ProjectSandbox.create(page);
+  const commentBefore = sandbox.readText("_server/table/comment.js");
+  const functionsBefore = sandbox.readText("project/functions.js");
+
+  await page.goto("/");
+  await expect(page.getByTestId("app-topbar")).toBeVisible();
+  await page.getByTestId("workspace-scripts").click();
+  await expect(page.getByTestId("scripts-workspace")).toBeVisible();
+  await page.getByTestId("workspace-map").click();
+  await page.getByTestId("map-panel-tab-enemyitem").click();
+  await expect(page.getByTestId("panel-slot-enemyitem")).toBeVisible();
+
+  expect(sandbox.writeCount("_server/table/comment.js")).toBe(0);
+  expect(sandbox.writeCount("project/functions.js")).toBe(0);
+  expect(sandbox.readText("_server/table/comment.js")).toBe(commentBefore);
+  expect(sandbox.readText("project/functions.js")).toBe(functionsBefore);
+});
+
 test("only SchemaTable exposes project table customization", async ({ page }) => {
   test.setTimeout(60_000);
   const sandbox = await ProjectSandbox.create(page);
@@ -168,6 +187,78 @@ test("switching public events atomically replaces the Blockly workspace", async 
     await expect.poll(() => blockCanvas.evaluate((element) => element.childElementCount)).toBeGreaterThan(0);
   }
   expect(pageErrors).toEqual([]);
+});
+
+test("public events follow the dark editor theme without recreating Blockly", async ({ page }) => {
+  await ProjectSandbox.create(page);
+  await page.goto("/");
+  await page.getByTestId("workspace-common-events").click();
+
+  const source = page.getByTestId("event-editor-source");
+  const blockCanvas = page.locator("#common-event-editor-host .blocklyBlockCanvas").first();
+  await expect(source).toHaveValue(/通过传参/);
+  await expect.poll(() => blockCanvas.evaluate((element) => element.childElementCount)).toBeGreaterThan(0);
+
+  const sourceBeforeThemeChange = await source.inputValue();
+  const blockCountBeforeThemeChange = await blockCanvas.evaluate((element) => element.childElementCount);
+  if (await page.locator("html").getAttribute("data-editor-theme") !== "dark") {
+    await page.getByTestId("theme-toggle").click();
+  }
+
+  await expect(page.locator("html")).toHaveAttribute("data-editor-theme", "dark");
+  await expect(page.locator("#common-event-editor-host .blocklyToolbox")).toHaveCSS(
+    "background-color",
+    "rgb(41, 42, 47)",
+  );
+  await expect(page.locator("#common-event-editor-host .blocklyToolboxCategoryLabel").first()).toHaveCSS(
+    "color",
+    "rgb(215, 217, 223)",
+  );
+  const inactiveFieldText = page.locator([
+    "#common-event-editor-host .blocklyEditableField:not(.blocklyEditing) > text",
+    "#common-event-editor-host .blocklyNonEditableField > text",
+  ].join(", ")).first();
+  await expect(inactiveFieldText).toBeVisible();
+  await expect(inactiveFieldText).toHaveCSS("fill", "rgb(240, 241, 244)");
+  await expect(source).toHaveCSS("background-color", "rgb(48, 48, 53)");
+  await expect(source).toHaveCSS("color", "rgb(212, 212, 212)");
+  await expect(source).toHaveValue(sourceBeforeThemeChange);
+  await expect.poll(() => blockCanvas.evaluate((element) => element.childElementCount))
+    .toBe(blockCountBeforeThemeChange);
+});
+
+test("missing tower data stays inside the map panel without a derived-resource error", async ({ page }) => {
+  const sandbox = await ProjectSandbox.create(page);
+  sandbox.removeFile("project/data.js");
+  await page.goto("/");
+
+  const recovery = page.getByTestId("panel-slot-map").locator(".leftTabError");
+  await expect(recovery).toBeVisible();
+  await expect(recovery).toContainText("文件不存在: project/data.js");
+  await expect(recovery).toHaveCSS("position", "absolute");
+  await expect(recovery).toHaveCSS("width", "435px");
+  await expect(page.getByRole("tablist", { name: "地图编辑面板" })).toBeVisible();
+  await expect(page.getByTestId("map-editor-error")).toHaveCount(0);
+  await expect(page.getByText("tilesetCatalog not found")).toHaveCount(0);
+});
+
+test("a registered floor with a missing file can be rebuilt from the floor list", async ({ page }) => {
+  const sandbox = await ProjectSandbox.create(page);
+  sandbox.removeFile("project/floors/sample0.js");
+  await page.goto("/");
+
+  const row = page.getByTestId("floor-management-row-sample0");
+  await expect(row).toHaveClass(/is-missing/);
+  await row.getByRole("button", { name: "sample0 更多操作" }).click();
+  await page.getByTestId("map-rebuild-sample0").click();
+
+  const floorWrite = sandbox.waitForWrite("project/floors/sample0.js");
+  await page.getByRole("button", { name: "重建空白楼层", exact: true }).click();
+  await floorWrite;
+  await expect(row).not.toHaveClass(/is-missing/);
+  expect(sandbox.hasFile("project/floors/sample0.js")).toBe(true);
+  expect(sandbox.readText("project/floors/sample0.js")).toContain("\"width\": 13");
+  await expect(page.getByTestId("map-editor-error")).toHaveCount(0);
 });
 
 test("dedicated common-event and script workspaces save through guarded commands", async ({ page }) => {

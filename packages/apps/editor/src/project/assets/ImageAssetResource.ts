@@ -7,6 +7,7 @@ import type { PersistStatus } from "@/project/data/DataResource";
 import { fs as defaultFs, type Fs } from "@/services/fs";
 import { waitUntil } from "@/utils/base/signal";
 import type { ImageAssetResourceLike, ImageAssetSnapshot } from "./types";
+import { isFileNotFoundError } from "@/fs/errors";
 
 function encodeBase64(bytes: Uint8Array): string {
   const nodeBuffer = (globalThis as { Buffer?: { from: (input: Uint8Array) => { toString: (encoding: string) => string } } }).Buffer;
@@ -21,10 +22,6 @@ function encodeBase64(bytes: Uint8Array): string {
 
 function toError(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error));
-}
-
-function isNotFoundError(error: Error): boolean {
-  return /not[- ]found|ENOENT|no such file/i.test(error.message);
 }
 
 export class ImageAssetResource implements ImageAssetResourceLike {
@@ -70,7 +67,7 @@ export class ImageAssetResource implements ImageAssetResourceLike {
     } catch (error) {
       if (version !== this.mutationVersion) return;
       const normalized = toError(error);
-      this.mutableContent(isNotFoundError(normalized)
+      this.mutableContent(isFileNotFoundError(normalized)
         ? { status: "not-found" }
         : { status: "error", error: normalized });
     }
@@ -127,7 +124,7 @@ export class ImageAssetResource implements ImageAssetResourceLike {
           await fs.promises.deleteFile(path);
         } catch (error) {
           const normalized = toError(error);
-          if (!isNotFoundError(normalized)) throw normalized;
+          if (!isFileNotFoundError(normalized)) throw normalized;
         }
       },
     });

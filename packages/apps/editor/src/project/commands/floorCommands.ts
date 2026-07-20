@@ -89,7 +89,7 @@ function createInitialFloorData(
   const width = options.width ?? 13;
   const height = options.height ?? 13;
   const emptyMap = Array.from({ length: height }, () =>
-    Array.from({ length: width }, () => 0)
+    Array.from({ length: width }, () => 0),
   );
 
   const floor: FloorData = {
@@ -380,7 +380,9 @@ class FloorCommands {
 
     try {
       const oldData = projectData.floor(oldFloorId).value();
-      const newData = produce(oldData, (draft) => { draft.floorId = newFloorId; });
+      const newData = produce(oldData, (draft) => {
+        draft.floorId = newFloorId;
+      });
       const tower = projectData.tower().value();
       const floorIds = tower.main.floorIds.map((id) => id === oldFloorId ? newFloorId : id);
       const organization = validateFloorOrganization(tower.main.floorIds, readPartitions(tower));
@@ -449,6 +451,34 @@ class FloorCommands {
       return executeCompositeCommand(operations, { label: `删除楼层 ${floorId}`, stage: "delete-floor" });
     } catch (error) {
       return commandError("update-floorIds", error);
+    }
+  }
+
+  async rebuildMissing(floorId: string): Promise<CommandResult> {
+    try {
+      const tower = projectData.tower().value();
+      if (!tower.main.floorIds.includes(floorId)) {
+        throw new Error(`楼层 ${floorId} 不在工程楼层列表中`);
+      }
+      if (await FileHandlerManager.exists(floorPath(floorId))) {
+        throw new Error(`楼层文件 ${floorId}.js 已存在，请先重试加载`);
+      }
+
+      const floor = createInitialFloorData(floorId);
+      return executeCompositeCommand([
+        writeTextFileOperation(
+          floorPath(floorId),
+          serializeToJsMapFile(floorId, floor),
+          { label: `重建空白楼层 ${floorId}`, stage: "rebuild-missing-floor" },
+          floorFileOptions(floorId),
+        ),
+        navigateFloorOperation(floorId, {
+          label: `重建空白楼层 ${floorId}`,
+          stage: "navigate-rebuilt-floor",
+        }),
+      ], { label: `重建空白楼层 ${floorId}`, stage: "rebuild-missing-floor" });
+    } catch (error) {
+      return commandError("rebuild-missing-floor", error);
     }
   }
 

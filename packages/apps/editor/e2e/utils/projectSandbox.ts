@@ -59,9 +59,16 @@ function isMetaphysicsPath(filePath: string): boolean {
   return normalizeFilePath(filePath).startsWith(".metaphysics/");
 }
 
+function isLegacyTablePath(filePath: string): boolean {
+  return normalizeFilePath(filePath).startsWith("_server/table/");
+}
+
 function isWritableSandboxPath(filePath: string): boolean {
   const normalized = normalizeFilePath(filePath);
-  return isProjectPath(normalized) || isMetaphysicsPath(normalized) || normalized === CONFIG_PATH;
+  return isProjectPath(normalized)
+    || isMetaphysicsPath(normalized)
+    || isLegacyTablePath(normalized)
+    || normalized === CONFIG_PATH;
 }
 
 async function readPublicFile(filePath: string, encoding: BufferEncoding): Promise<string> {
@@ -126,8 +133,21 @@ export class ProjectSandbox {
     return this.files.has(normalizeFilePath(filePath));
   }
 
+  removeFile(filePath: string): void {
+    const normalized = normalizeFilePath(filePath);
+    if (!isWritableSandboxPath(normalized)) {
+      throw new Error(`Refusing to remove non-project sandbox file: ${filePath}`);
+    }
+    this.files.delete(normalized);
+    this.notify(this.deleteListeners, this.deleteVersions, normalized);
+  }
+
   readCount(filePath: string): number {
     return this.readVersions.get(normalizeFilePath(filePath)) ?? 0;
+  }
+
+  writeCount(filePath: string): number {
+    return this.writeVersions.get(normalizeFilePath(filePath)) ?? 0;
   }
 
   waitForWrite(filePath: string, timeoutMs: number = 10_000): Promise<void> {
@@ -157,6 +177,10 @@ export class ProjectSandbox {
   private async loadProjectFiles(): Promise<void> {
     for (const absolute of await collectFiles(PROJECT_ROOT)) {
       this.files.set(toProjectPath(absolute), await readFile(absolute));
+    }
+    const legacyTableRoot = path.join(PUBLIC_ROOT, "_server/table");
+    for (const absolute of await collectFiles(legacyTableRoot)) {
+      this.files.set(normalizeFilePath(path.relative(PUBLIC_ROOT, absolute)), await readFile(absolute));
     }
     try {
       this.files.set(CONFIG_PATH, await readFile(path.join(PUBLIC_ROOT, CONFIG_PATH)));
@@ -242,7 +266,7 @@ export class ProjectSandbox {
       this.readVersions.set(name, (this.readVersions.get(name) ?? 0) + 1);
       return file.toString(encoding);
     }
-    if (isMetaphysicsPath(name)) return `error: File not found: ${name}`;
+    if (isProjectPath(name) || isMetaphysicsPath(name)) return `error: File not found: ${name}`;
     return readPublicFile(name, encoding);
   }
 

@@ -345,6 +345,27 @@ body {
     height: auto;
 }
 
+.panelSlotBoundary {
+    display: contents;
+}
+
+.mapWorkspace .panelSlotBoundary > .leftTabError,
+.mapWorkspace .panelSlotBoundary > .leftTabLoading {
+    position: absolute;
+    z-index: 15;
+    top: 46px;
+    bottom: 10px;
+    left: 5px;
+    width: 435px;
+    padding: 16px;
+    border: 1px solid var(--editor-border, #d0d7de);
+    border-radius: 2px;
+    box-sizing: border-box;
+    overflow: auto;
+    background: var(--editor-surface, #fff);
+    color: var(--editor-fg, #202124);
+}
+
 .workspaceSurface {
     position: absolute;
     z-index: 160;
