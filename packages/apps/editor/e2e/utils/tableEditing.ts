@@ -30,21 +30,21 @@ export async function selectScript(
     exact: true,
   }).click();
   await workspace.locator(".scriptTreeLeaf").filter({ hasText: leaf }).first().click();
-  await expect(workspace.locator(".CodeMirror")).toBeVisible();
+  await expect(workspace.getByTestId("script-monaco-editor")).toBeVisible();
   return workspace;
 }
 
 export async function setScriptSource(workspace: Locator, source: string): Promise<void> {
-  await workspace.locator(".CodeMirror").evaluate((element, value) => {
-    const host = element as HTMLElement & { CodeMirror: { setValue(next: string): void } };
-    host.CodeMirror.setValue(value);
+  await workspace.getByTestId("script-code-editor").evaluate((element, value) => {
+    const host = element as HTMLElement & { __motajsMonacoEditor: { setValue(next: string): void } };
+    host.__motajsMonacoEditor.setValue(value);
   }, source);
 }
 
 export async function expectScriptSource(workspace: Locator, substring: string): Promise<void> {
-  await expect.poll(() => workspace.locator(".CodeMirror").evaluate((element) => {
-    const host = element as HTMLElement & { CodeMirror: { getValue(): string } };
-    return host.CodeMirror.getValue();
+  await expect.poll(() => workspace.getByTestId("script-code-editor").evaluate((element) => {
+    const host = element as HTMLElement & { __motajsMonacoEditor: { getValue(): string } };
+    return host.__motajsMonacoEditor.getValue();
   })).toContain(substring);
 }
 

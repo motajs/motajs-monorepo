@@ -4,7 +4,7 @@ import { ModalsProvider } from "./Workbench/modals";
 import { EditorStore } from "./stores/EditorStore";
 import { AppErrorBoundary } from "./components/AppErrorBoundary";
 import { editorConfigService } from "./services/editorConfig";
-import { CodeEditorProvider } from "./Workbench/CodeEditor/CodeEditorContext";
+import { CodeEditorProvider } from "./Workbench/CodeEditor/CodeEditorProvider";
 import { EventEditorProvider } from "./Workbench/EventsEditor/EventEditorContext";
 import { RuntimeProvider } from "./runtime";
 import { ConfigProvider, theme as antdTheme } from "antd";

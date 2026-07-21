@@ -1,10 +1,11 @@
-import { CSSProperties, FC, useEffect, useState } from "react";
+import "../localization/zh-cn";
+import { useEffect, useState, type CSSProperties, type FC } from "react";
 import * as monaco from "monaco-editor";
-import { setupMonacoTSWorker } from "../setup";
+import { setupMonacoTextmate } from "../setup";
 import { noop } from "lodash-es";
 import { useCurrentFn, useNodeAsEffect, useWatch } from "@motajs/react-hooks";
 
-const viewStates = new Map<monaco.editor.ITextModel, monaco.editor.ICodeEditorViewState>();
+const viewStates = new WeakMap<monaco.editor.ITextModel, monaco.editor.ICodeEditorViewState>();
 
 export interface IMonacoEditorProps {
   model?: monaco.editor.ITextModel;
@@ -12,10 +13,11 @@ export interface IMonacoEditorProps {
   style?: CSSProperties;
   className?: string;
   getEditorInstance?: (editor?: monaco.editor.IStandaloneCodeEditor) => void;
+  onMount?: (editor: monaco.editor.IStandaloneCodeEditor) => void | (() => void);
 }
 
 const MonacoEditor: FC<IMonacoEditorProps> = (props) => {
-  const { model, options, style, className, getEditorInstance = noop } = props;
+  const { model, options, style, className, getEditorInstance = noop, onMount } = props;
 
   const [editorInstance, setEditorInstance] = useState<monaco.editor.IStandaloneCodeEditor>();
 
@@ -39,11 +41,15 @@ const MonacoEditor: FC<IMonacoEditorProps> = (props) => {
       model,
       ...options,
     });
-    setupMonacoTSWorker(editor);
+    void setupMonacoTextmate(editor);
+    const disposeMount = onMount?.(editor);
 
     setEditorInstance(editor);
 
-    return () => disposeEditor(editor);
+    return () => {
+      disposeMount?.();
+      disposeEditor(editor);
+    };
   });
 
   useWatch(model, (model, prevModel) => {
@@ -83,3 +89,9 @@ const MonacoEditor: FC<IMonacoEditorProps> = (props) => {
 };
 
 export default MonacoEditor;
+
+// Kept beside the WeakMap so model scopes can release view-state entries.
+// eslint-disable-next-line react-refresh/only-export-components
+export function clearMonacoViewState(model: monaco.editor.ITextModel): void {
+  viewStates.delete(model);
+}

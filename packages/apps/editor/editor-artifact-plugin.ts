@@ -20,7 +20,7 @@ const mediaMime = (name: string): string => {
 export interface EditorArtifactManifest {
   schemaVersion: 2;
   environmentProtocolVersion: 1;
-  runtimeProtocolVersion: 2;
+  runtimeProtocolVersion: 3;
   editorVersion: string;
   buildId: string;
   entrypoints: { editor: "index.html"; runtime: "runtime.html" };
@@ -106,7 +106,7 @@ export function editorArtifactPlugin(editorVersion: string): Plugin[] {
       const manifest: EditorArtifactManifest = {
         schemaVersion: 2,
         environmentProtocolVersion: 1,
-        runtimeProtocolVersion: 2,
+        runtimeProtocolVersion: 3,
         editorVersion,
         buildId: await calculateEditorBuildId(outDir),
         entrypoints: { editor: "index.html", runtime: "runtime.html" },

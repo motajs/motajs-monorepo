@@ -25,10 +25,6 @@ import {
 } from "./tilesetCatalog";
 import { buildFloorPassability, type FloorPassability } from "./passability";
 import {
-  TernDefinitionModelResource,
-  type TernDefinitionBundle,
-} from "./ternDefinitionModel";
-import {
   buildBlocklyCompletionCatalog,
   buildFlagUsageIndex,
   type BlocklyCompletionCatalog,
@@ -47,7 +43,6 @@ import {
 
 export * from "./tilesetCatalog";
 export * from "./passability";
-export type { TernDefinitionBundle, TernDefinitionDocument } from "./ternDefinitionModel";
 export type {
   BlocklyCompletionCatalog,
   BlocklyCompletionItem,
@@ -440,7 +435,6 @@ class ProjectModelImpl {
   private materialCatalogResource: ModelResource<MaterialCatalog> | null = null;
   private tilesetCatalogResource: ModelResource<TilesetCatalog> | null = null;
   private readonly floorPassabilityResources = new Map<string, ModelResource<FloorPassability>>();
-  private ternDefinitionsResource: ModelResource<TernDefinitionBundle> | null = null;
   private blocklyCompletionsResource: ModelResource<BlocklyCompletionCatalog> | null = null;
   private flagUsageResource: ModelResource<FlagUsageIndex> | null = null;
   private enemySpecialResource: ModelResource<EnemySpecialCatalog> | null = null;
@@ -580,13 +574,6 @@ class ProjectModelImpl {
     return resource;
   }
 
-  ternDefinitions(): ModelResource<TernDefinitionBundle> {
-    if (!this.ternDefinitionsResource) {
-      this.ternDefinitionsResource = new TernDefinitionModelResource();
-    }
-    return this.ternDefinitionsResource;
-  }
-
   blocklyCompletions(): ModelResource<BlocklyCompletionCatalog> {
     if (!this.blocklyCompletionsResource) {
       this.blocklyCompletionsResource = aggregateResource(
@@ -692,16 +679,6 @@ class ProjectModelImpl {
         });
       }
     }
-    const tern = this.ternDefinitions().snapshot();
-    if (tern.status === "loaded") {
-      diagnostics.push(...tern.value.diagnostics);
-    } else if (tern.status === "error") {
-      diagnostics.push({
-        source: "ternDefinitions",
-        severity: "warning",
-        message: tern.error.message,
-      });
-    }
     return diagnostics;
   }
 
@@ -712,7 +689,6 @@ class ProjectModelImpl {
     this.materialCatalogResource = null;
     this.tilesetCatalogResource = null;
     this.floorPassabilityResources.clear();
-    this.ternDefinitionsResource = null;
     this.blocklyCompletionsResource = null;
     this.flagUsageResource = null;
     this.enemySpecialResource = null;

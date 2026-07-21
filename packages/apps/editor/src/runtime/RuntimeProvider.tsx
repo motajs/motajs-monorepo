@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { RuntimeContext, type RuntimeState, type RuntimeSurfaceLease } from "./RuntimeContext";
-import { RUNTIME_PROTOCOL_VERSION, type HostMessage, type HostRequest, type HostRequestPayload, type ProjectResourceChange, type RuntimeMessage, type RuntimeStatusBarRequest, type RuntimeUIPreviewRequest } from "./protocol";
+import { RUNTIME_PROTOCOL_VERSION, type HostMessage, type HostRequest, type HostRequestPayload, type ProjectResourceChange, type RuntimeLanguageSnapshot, type RuntimeMessage, type RuntimeStatusBarRequest, type RuntimeUIPreviewRequest } from "./protocol";
 import { RuntimeResourceGateway } from "./RuntimeResourceGateway";
 import { getEditorEnvironment } from "@/environment";
 
@@ -14,7 +14,7 @@ export function RuntimeProvider({ children }: { children?: ReactNode }) {
   const portRef = useRef<MessagePort | null>(null);
   const gatewayRef = useRef(new RuntimeResourceGateway());
   const sequenceRef = useRef(0);
-  const pendingRef = useRef(new Map<number, { resolve: (value: { width: number; height: number }) => void; reject: (error: Error) => void; timer: number }>());
+  const pendingRef = useRef(new Map<number, { resolve: (value: unknown) => void; reject: (error: Error) => void; timer: number }>());
   const leaseRef = useRef<RuntimeSurfaceLease | null>(null);
   const automaticRetryRef = useRef(0);
   const changedResourcesRef = useRef(new Map<string, ProjectResourceChange>());
@@ -48,7 +48,7 @@ export function RuntimeProvider({ children }: { children?: ReactNode }) {
     pendingRef.current.clear();
   }, []);
 
-  const send = useCallback((request: HostRequestPayload): Promise<{ width: number; height: number }> => {
+  const send = useCallback(<T,>(request: HostRequestPayload): Promise<T> => {
     const port = portRef.current;
     if (!port || state.status !== "ready") return Promise.reject(new Error("Runtime unavailable"));
     const id = ++sequenceRef.current;
@@ -57,7 +57,7 @@ export function RuntimeProvider({ children }: { children?: ReactNode }) {
         pendingRef.current.delete(id);
         reject(new Error("Runtime request timed out"));
       }, REQUEST_TIMEOUT);
-      pendingRef.current.set(id, { resolve, reject, timer });
+      pendingRef.current.set(id, { resolve: (value) => resolve(value as T), reject, timer });
       port.postMessage({ ...request, id } satisfies HostRequest);
     });
   }, [state.status]);
@@ -139,7 +139,7 @@ export function RuntimeProvider({ children }: { children?: ReactNode }) {
             pendingRef.current.delete(message.id);
             if (message.ok) {
               automaticRetryRef.current = 0;
-              pending.resolve({ width: message.width ?? 416, height: message.height ?? 416 });
+              pending.resolve(message.payload ?? { width: message.width ?? 416, height: message.height ?? 416 });
             }
             else pending.reject(new Error(message.error ?? "Runtime request failed"));
           }
@@ -222,7 +222,7 @@ export function RuntimeProvider({ children }: { children?: ReactNode }) {
     leaseRef.current?.close();
     const operation = previewQueueRef.current.then(async () => {
       if (generation !== previewGenerationRef.current) throw new DOMException("Preview superseded", "AbortError");
-      const size = await send(request);
+      const size = await send<{ width: number; height: number }>(request);
       if (generation !== previewGenerationRef.current) throw new DOMException("Preview superseded", "AbortError");
       return createLease(size);
     });
@@ -252,6 +252,7 @@ export function RuntimeProvider({ children }: { children?: ReactNode }) {
         throw error;
       }
     },
+    languageSnapshot: () => send<RuntimeLanguageSnapshot>({ type: "language-snapshot" }),
     retry: async () => {
       automaticRetryRef.current = 0;
       await start();

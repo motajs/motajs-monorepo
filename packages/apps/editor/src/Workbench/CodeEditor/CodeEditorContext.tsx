@@ -1,17 +1,14 @@
 import {
   createContext,
-  useCallback,
   useContext,
-  useMemo,
-  useRef,
-  type FC,
-  type ReactNode,
+  useSyncExternalStore,
 } from "react";
 
 export interface CodeEditorOpenRequest {
   contextId: string;
   initialValue: string;
   lint?: boolean;
+  language?: "javascript" | "json" | "plaintext";
   preview?: unknown;
   onPreview?(value: string): void | Promise<void>;
   scrollTop?: number;
@@ -23,53 +20,27 @@ export interface CodeEditorCapability {
   open(request: CodeEditorOpenRequest): void;
 }
 
-type CodeEditorOpener = (request: CodeEditorOpenRequest) => void;
+export type CodeEditorOpener = (request: CodeEditorOpenRequest) => void;
 
-interface CodeEditorContextValue extends CodeEditorCapability {
+export interface CodeEditorContextValue extends CodeEditorCapability {
   register(opener: CodeEditorOpener): () => void;
   registerPreview(previewer: (mode: unknown, value: string) => void | Promise<void>): () => void;
 }
 
-const CodeEditorContext = createContext<CodeEditorContextValue | null>(null);
+export const CodeEditorContext = createContext<CodeEditorContextValue | null>(null);
+let codeEditorHostRequested = false;
+const codeEditorHostListeners = new Set<() => void>();
 
-export const CodeEditorProvider: FC<{ children?: ReactNode }> = ({ children }) => {
-  const openerRef = useRef<CodeEditorOpener | null>(null);
-  const pendingRef = useRef<CodeEditorOpenRequest | null>(null);
-  const previewerRef = useRef<((mode: unknown, value: string) => void | Promise<void>) | null>(null);
+export function requestCodeEditorHost(): void {
+  if (codeEditorHostRequested) return;
+  codeEditorHostRequested = true;
+  for (const listener of codeEditorHostListeners) listener();
+}
 
-  const open = useCallback((request: CodeEditorOpenRequest) => {
-    const normalized = request.preview && !request.onPreview && previewerRef.current
-      ? { ...request, onPreview: (value: string) => previewerRef.current?.(request.preview, value) }
-      : request;
-    const opener = openerRef.current;
-    if (opener) {
-      opener(normalized);
-      return;
-    }
-    pendingRef.current = normalized;
-  }, []);
-
-  const register = useCallback((opener: CodeEditorOpener) => {
-    openerRef.current = opener;
-    const pending = pendingRef.current;
-    pendingRef.current = null;
-    if (pending) opener(pending);
-
-    return () => {
-      if (openerRef.current === opener) openerRef.current = null;
-    };
-  }, []);
-
-  const registerPreview = useCallback((previewer: (mode: unknown, value: string) => void | Promise<void>) => {
-    previewerRef.current = previewer;
-    return () => {
-      if (previewerRef.current === previewer) previewerRef.current = null;
-    };
-  }, []);
-
-  const value = useMemo(() => ({ open, register, registerPreview }), [open, register, registerPreview]);
-  return <CodeEditorContext.Provider value={value}>{children}</CodeEditorContext.Provider>;
-};
+function subscribeCodeEditorHost(listener: () => void): () => void {
+  codeEditorHostListeners.add(listener);
+  return () => codeEditorHostListeners.delete(listener);
+}
 
 export function useCodeEditor(): CodeEditorCapability {
   const context = useContext(CodeEditorContext);
@@ -87,4 +58,12 @@ export function useCodeEditorPreviewRegistration(): CodeEditorContextValue["regi
   const context = useContext(CodeEditorContext);
   if (!context) throw new Error("CodeEditorProvider is missing");
   return context.registerPreview;
+}
+
+export function useCodeEditorHostRequested(): boolean {
+  return useSyncExternalStore(
+    subscribeCodeEditorHost,
+    () => codeEditorHostRequested,
+    () => false,
+  );
 }

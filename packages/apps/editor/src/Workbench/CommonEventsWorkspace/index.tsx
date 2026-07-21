@@ -4,7 +4,7 @@ import { projectData } from "@/project/data/projectData";
 import { buildFieldPath } from "@/utils/fieldPath";
 import { notifyCommandResult, notifyError } from "@/utils/notify";
 import { Input, Modal } from "antd";
-import { Plus, Trash2 } from "lucide-react";
+import { Circle, Plus, Trash2 } from "lucide-react";
 import { isEqual } from "es-toolkit";
 import JSON5 from "json5";
 import { useCallback, useEffect, useMemo, useRef, useState, type FC } from "react";
@@ -140,7 +140,7 @@ export const CommonEventsWorkspace: FC = () => {
         {names.map((name) => (
           <div className={activeSelected === name ? "commonEventItem is-active" : "commonEventItem"} key={name}>
             <button className="commonEventSelect" onClick={() => setSelected(name)} onDoubleClick={() => void rename(name)}>
-              <span>{name}</span>{drafts[name] !== undefined ? <i title="未保存">●</i> : null}
+              <span>{name}</span>{drafts[name] !== undefined ? <i title="未保存"><Circle fill="currentColor" size={12} strokeWidth={0} /></i> : null}
             </button>
             <button aria-label={`删除${name}`} className="commonEventDelete" onClick={() => remove(name)}><Trash2 size={14} /></button>
           </div>

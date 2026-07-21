@@ -1,4 +1,5 @@
-import { useSyncExternalStoreFromMemo } from "@motajs/react-hooks";
+import "./localization/zh-cn";
+import { useSyncExternalStoreFrom } from "@motajs/react-hooks";
 import { editor } from "monaco-editor";
 import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 
@@ -12,7 +13,7 @@ export const useEditorInstance = () => {
 };
 
 export const useEditorCursorPosition = (editor?: editor.IStandaloneCodeEditor) => {
-  return useSyncExternalStoreFromMemo(useMemo(() => {
+  return useSyncExternalStoreFrom(useMemo(() => {
     if (!editor) return;
     let position = editor.getPosition() ?? void 0;
 

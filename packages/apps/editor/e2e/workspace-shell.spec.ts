@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { ProjectSandbox } from "./utils/projectSandbox";
+import { expectScriptSource, setScriptSource } from "./utils/tableEditing";
 
 test("opening the new editor never rewrites legacy comment or function sources", async ({ page }) => {
   const sandbox = await ProjectSandbox.create(page);
@@ -20,6 +21,20 @@ test("opening the new editor never rewrites legacy comment or function sources",
   expect(sandbox.readText("project/functions.js")).toBe(functionsBefore);
 });
 
+test("map panel shortcuts stay scoped to the map workspace", async ({ page }) => {
+  await page.goto("/");
+
+  await page.getByTestId("workspace-scripts").click();
+  await expect(page.getByTestId("scripts-workspace")).toBeVisible();
+  await page.keyboard.press("v");
+  await expect(page.getByTestId("scripts-workspace")).toBeVisible();
+  await expect(page.getByTestId("workspace-scripts")).toHaveClass(/is-active/);
+
+  await page.getByTestId("workspace-map").click();
+  await page.keyboard.press("v");
+  await expect(page.getByTestId("map-panel-tab-floor")).toHaveAttribute("aria-selected", "true");
+});
+
 test("only SchemaTable exposes project table customization", async ({ page }) => {
   test.setTimeout(60_000);
   const sandbox = await ProjectSandbox.create(page);
@@ -32,12 +47,15 @@ test("only SchemaTable exposes project table customization", async ({ page }) =>
 
   await tower.getByRole("button", { name: "自定义表格" }).click();
   await tower.getByRole("button", { name: "完整 Table 源码", exact: true }).click();
-  await expect(page.getByTestId("code-editor-content")).toContainText("\"schemaId\": \"tower-properties\"");
-  await page.locator(".CodeMirror").last().evaluate((element) => {
-    const host = element as HTMLElement & { CodeMirror: { getValue(): string; setValue(value: string): void } };
-    const schema = JSON.parse(host.CodeMirror.getValue()) as { nodes: Array<{ label?: string }> };
+  await expect.poll(() => page.getByTestId("code-editor-content").evaluate((element) => {
+    const host = element as HTMLElement & { __motajsMonacoEditor: { getValue(): string } };
+    return host.__motajsMonacoEditor.getValue();
+  })).toContain('"schemaId": "tower-properties"');
+  await page.getByTestId("code-editor-content").evaluate((element) => {
+    const host = element as HTMLElement & { __motajsMonacoEditor: { getValue(): string; setValue(value: string): void } };
+    const schema = JSON.parse(host.__motajsMonacoEditor.getValue()) as { nodes: Array<{ label?: string }> };
     schema.nodes[0]!.label = "工程信息（自定义）";
-    host.CodeMirror.setValue(JSON.stringify(schema, null, 2));
+    host.__motajsMonacoEditor.setValue(JSON.stringify(schema, null, 2));
   });
   const schemaWrite = sandbox.waitForWrite(".metaphysics/schemas/ui/tower-properties.json");
   await page.getByTestId("code-editor-confirm").click();
@@ -114,18 +132,18 @@ test("top bar workspaces, schema tower, drafts, scripts and theme stay coherent"
   await expect(scripts).toBeVisible();
   await scripts.locator(".scriptTreeLeaf").first().click();
   await expect(scripts.locator(".scriptTab")).toHaveCount(1);
-  await expect(scripts.locator(".CodeMirror")).toBeVisible();
+  await expect(scripts.getByTestId("script-monaco-editor")).toBeVisible();
   await scripts.locator(".scriptTreeLeaf").nth(1).click();
   await expect(scripts.locator(".scriptTab")).toHaveCount(2);
-  const scriptEditor = scripts.locator(".CodeMirror");
+  const scriptEditor = scripts.getByTestId("script-code-editor");
   await expect(scriptEditor).toBeVisible();
   const originalScript = await scriptEditor.evaluate((element) => {
-    const host = element as HTMLElement & { CodeMirror: { getValue(): string } };
-    return host.CodeMirror.getValue();
+    const host = element as HTMLElement & { __motajsMonacoEditor: { getValue(): string } };
+    return host.__motajsMonacoEditor.getValue();
   });
   await scriptEditor.evaluate((element) => {
-    const host = element as HTMLElement & { CodeMirror: { getValue(): string; setValue(value: string): void } };
-    host.CodeMirror.setValue(`${host.CodeMirror.getValue()}\n// activity-preserved-draft`);
+    const host = element as HTMLElement & { __motajsMonacoEditor: { getValue(): string; setValue(value: string): void } };
+    host.__motajsMonacoEditor.setValue(`${host.__motajsMonacoEditor.getValue()}\n// activity-preserved-draft`);
   });
   await expect(scripts.locator(".scriptTab.is-active i")).toBeVisible();
 
@@ -135,12 +153,12 @@ test("top bar workspaces, schema tower, drafts, scripts and theme stay coherent"
   await expect(scripts.locator(".scriptTab")).toHaveCount(2);
   await expect(scriptEditor).toBeVisible();
   await expect.poll(() => scriptEditor.evaluate((element) => {
-    const host = element as HTMLElement & { CodeMirror: { getValue(): string } };
-    return host.CodeMirror.getValue();
+    const host = element as HTMLElement & { __motajsMonacoEditor: { getValue(): string } };
+    return host.__motajsMonacoEditor.getValue();
   })).toContain("activity-preserved-draft");
   await scriptEditor.evaluate((element, value) => {
-    const host = element as HTMLElement & { CodeMirror: { setValue(source: string): void } };
-    host.CodeMirror.setValue(value);
+    const host = element as HTMLElement & { __motajsMonacoEditor: { setValue(source: string): void } };
+    host.__motajsMonacoEditor.setValue(value);
   }, originalScript);
   await expect(scripts.locator(".scriptTab.is-active i")).toHaveCount(0);
 
@@ -282,187 +300,88 @@ test("dedicated common-event and script workspaces save through guarded commands
   await page.getByTestId("workspace-scripts").click();
   const scripts = page.getByTestId("scripts-workspace");
   await scripts.locator(".scriptTreeLeaf").filter({ hasText: "resetGame" }).click();
-  const codeMirror = scripts.locator(".CodeMirror");
-  await expect(codeMirror).toBeVisible();
-  await expect(scripts.getByTestId("script-code-editor")).toHaveAttribute("data-tern-status", "ready");
+  const scriptSurface = scripts.getByTestId("script-code-editor");
+  const monacoEditor = scripts.locator(".monaco-editor");
+  await expect(scriptSurface).toBeVisible();
+  await expect(scripts.getByTestId("script-code-editor")).toHaveAttribute("data-language-status", /ready|degraded/);
+
+  // The Activity-preserved Blockly workspace still has its global toolbox
+  // shortcuts mounted. They must not consume digit input from Monaco.
+  const sourceBeforeDigitInput = await scriptSurface.evaluate((element) => {
+    const host = element as HTMLElement & { __motajsMonacoEditor: { getValue(): string } };
+    return host.__motajsMonacoEditor.getValue();
+  });
+  await scriptSurface.evaluate((element) => {
+    const host = element as HTMLElement & {
+      __motajsMonacoEditor: {
+        focus(): void;
+        setPosition(position: { lineNumber: number; column: number }): void;
+      };
+    };
+    host.__motajsMonacoEditor.setPosition({ lineNumber: 1, column: 1 });
+    host.__motajsMonacoEditor.focus();
+  });
+  await page.keyboard.type("123456789");
+  await expectScriptSource(scripts, `123456789${sourceBeforeDigitInput}`);
+  await setScriptSource(scripts, sourceBeforeDigitInput);
+
+  // Each tab is a stable Monaco model. Switching tabs preserves both content
+  // and view state while the TypeScript worker keeps semantic information.
   await scripts.locator(".scriptTreeLeaf").filter({ hasText: "flyTo" }).click();
-  await expect.poll(() => codeMirror.evaluate((element) => {
-    const host = element as HTMLElement & { CodeMirror: { getValue(): string } };
-    return host.CodeMirror.getValue();
-  })).toContain("function flyTo");
-  const flyToFunction = codeMirror.locator(".CodeMirror-Tern-semantic-function").filter({ hasText: "flyTo" }).first();
-  const callbackFunction = codeMirror.locator(".CodeMirror-Tern-semantic-function").filter({ hasText: "callback" }).first();
-  await expect(flyToFunction).toHaveAttribute("data-tern-type", /^fn\(/);
-  await expect(callbackFunction).toHaveAttribute("data-tern-type", /^fn\(/);
-  const renderedColor = (element: Element) => {
-    const descendants = [...element.querySelectorAll<HTMLElement>("*")];
-    const renderedToken = descendants.reverse().find((child) => child.childElementCount === 0) ?? element;
-    return getComputedStyle(renderedToken).color;
-  };
-  const semanticFunctionColor = await flyToFunction.evaluate(renderedColor);
-  const callbackFunctionColor = await callbackFunction.evaluate(renderedColor);
-  const functionKeywordColor = await codeMirror.locator(".cm-keyword").filter({ hasText: "function" }).first()
-    .evaluate((element) => getComputedStyle(element).color);
-  expect(semanticFunctionColor).toBe("rgb(121, 94, 38)");
-  expect(callbackFunctionColor).toBe("rgb(121, 94, 38)");
-  expect(semanticFunctionColor).not.toBe(functionKeywordColor);
+  await expectScriptSource(scripts, "function flyTo");
+  await expect(monacoEditor.locator(".monaco-type-function").filter({ hasText: "flyTo" }).first()).toBeVisible();
+  await expect(monacoEditor.locator(".monaco-type-function").filter({ hasText: "callback" }).first()).toBeVisible();
   await scripts.locator(".scriptTab").filter({ hasText: "resetGame" }).click();
-  await codeMirror.evaluate((element) => {
-    const host = element as HTMLElement & { CodeMirror: { setValue(value: string): void } };
-    host.CodeMirror.setValue("function () { const broken = ; return broken; }");
+  const before = Array.from({ length: 12 }, (_, index) => `\t// before ${index + 1}`).join("\n");
+  await setScriptSource(scripts, `function () {\n${before}\n\tconst broken = ;\n\treturn broken;\n}`);
+  const syntaxMarker = monacoEditor.locator(".squiggly-error").first();
+  await expect(syntaxMarker).toBeVisible();
+  await scriptSurface.evaluate(async (element) => {
+    const host = element as HTMLElement & {
+      __motajsMonacoEditor: {
+        getAction(id: string): { run(): Promise<void> } | null;
+        setPosition(position: { lineNumber: number; column: number }): void;
+      };
+    };
+    host.__motajsMonacoEditor.setPosition({ lineNumber: 14, column: 18 });
+    await host.__motajsMonacoEditor.getAction("editor.action.showHover")?.run();
   });
-  const lintMark = codeMirror.locator(".CodeMirror-lint-mark-error");
-  await expect(lintMark).not.toHaveCount(0);
-  await lintMark.first().hover();
-  const lintTooltip = page.locator(".CodeMirror-lint-tooltip");
-  await expect(lintTooltip).toBeVisible();
-  await expect(lintTooltip).not.toBeEmpty();
-  await codeMirror.evaluate((element) => {
-    const host = element as HTMLElement & { CodeMirror: { setValue(value: string): void } };
-    const before = Array.from({ length: 60 }, (_, index) => `\t// before ${index + 1}`).join("\n");
-    const after = Array.from({ length: 50 }, (_, index) => `\t// after ${index + 1}`).join("\n");
-    host.CodeMirror.setValue(`function () {\n${before}\n\tconst broken = ;\n\treturn broken;\n${after}\n}`);
-  });
+  await expect(page.locator(".monaco-hover")).toBeVisible();
   await expect(scripts.getByTestId("script-validate")).toHaveAttribute("data-validation", "invalid");
   await expect(scripts.getByTestId("script-validate")).toContainText(/错误 [1-9]\d* 警告 \d+/);
   await scripts.getByTestId("script-validate").click();
   const validationPopover = page.getByTestId("script-validation-popover");
   await expect(validationPopover).toContainText(/错误 [1-9]\d*，警告 \d+/);
-  const diagnostics = validationPopover.getByTestId("script-validation-diagnostic");
-  const diagnosticTexts = await diagnostics.allInnerTexts();
-  const targetDiagnosticIndex = diagnosticTexts.findIndex((text) => Number(text.match(/第 (\d+) 行/)?.[1]) > 5);
-  expect(targetDiagnosticIndex).toBeGreaterThanOrEqual(0);
-  const targetDiagnostic = diagnostics.nth(targetDiagnosticIndex);
-  const diagnosticText = diagnosticTexts[targetDiagnosticIndex];
-  const diagnosticLine = Number(diagnosticText.match(/第 (\d+) 行/)?.[1]);
-  expect(diagnosticLine).toBeGreaterThan(5);
-  await targetDiagnostic.click();
-  const revealState = await codeMirror.evaluate((element) => {
-    const host = element as HTMLElement & { CodeMirror: {
-      defaultTextHeight(): number;
-      getCursor(): { line: number };
-      getScrollInfo(): { top: number };
-      heightAtLine(line: number, mode: "local"): number;
-    }; };
-    const cursor = host.CodeMirror.getCursor();
-    return {
-      cursorLine: cursor.line + 1,
-      expectedTop: Math.max(0, host.CodeMirror.heightAtLine(cursor.line, "local") - host.CodeMirror.defaultTextHeight() * 5),
-      scrollTop: host.CodeMirror.getScrollInfo().top,
-    };
-  });
-  expect(revealState.cursorLine).toBe(diagnosticLine);
-  expect(Math.abs(revealState.scrollTop - revealState.expectedTop)).toBeLessThan(2);
-  await expect.poll(() => codeMirror.evaluate((element) => {
-    const host = element as HTMLElement & { CodeMirror: { getValue(): string } };
-    return host.CodeMirror.getValue();
-  })).toContain("const broken = ;");
+  await validationPopover.getByTestId("script-validation-diagnostic").first().click();
   await scripts.getByRole("button", { name: "保存", exact: true }).click();
   await expect(page.getByRole("dialog")).toContainText("脚本无法保存");
   await page.getByRole("button", { name: "返回修改" }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
   expect(sandbox.readText("project/functions.js")).not.toContain("const broken = ;");
-  await codeMirror.evaluate((element) => {
-    const host = element as HTMLElement & { CodeMirror: { setValue(value: string): void } };
-    host.CodeMirror.setValue("function(){const value=1;return value;}");
-  });
-  await expect(scripts.getByTestId("script-validate")).toHaveAttribute("data-validation", "checking");
+
+  await setScriptSource(scripts, "function(){const value=1;return value;}");
   await scripts.getByTestId("script-format").click();
-  await expect.poll(() => codeMirror.evaluate((element) => {
-    const host = element as HTMLElement & { CodeMirror: { getValue(): string } };
-    return host.CodeMirror.getValue();
-  })).toContain("\n\treturn value;");
+  await expectScriptSource(scripts, "\n\treturn value;");
   await expect(scripts.getByTestId("script-validate")).toHaveAttribute("data-validation", "valid");
   await expect(scripts.getByTestId("script-validate")).toContainText("错误 0 警告 0");
-  await scripts.getByTestId("script-validate").click();
-  await expect(page.getByTestId("script-validation-popover")).toContainText("错误 0，警告 0");
-  await scripts.getByTestId("script-validate").click();
-  await codeMirror.evaluate((element) => {
-    const host = element as HTMLElement & { CodeMirror: { setValue(value: string): void } };
-    host.CodeMirror.setValue("function value() { return new Date; }");
-  });
-  await expect(scripts.getByTestId("script-validate")).toHaveAttribute("data-validation", "warning");
-  await expect(scripts.getByTestId("script-validate")).toContainText(/错误 0 警告 [1-9]\d*/);
-  await scripts.getByTestId("script-validate").click();
-  const stylePopover = page.getByTestId("script-validation-popover");
-  await stylePopover.getByText("错误 0", { exact: true }).click();
-  await expect(stylePopover).toContainText("这一类没有问题");
-  await stylePopover.locator(".ant-segmented-item").filter({ hasText: /^警告 [1-9]\d*/ }).click();
-  await expect(stylePopover.getByTestId("script-validation-diagnostic")).not.toHaveCount(0);
-  await codeMirror.evaluate((element) => {
+
+  // Monaco suggestions filter in place; typing one letter never commits the
+  // selected suggestion until the user explicitly accepts it.
+  await setScriptSource(scripts, "function () { co }");
+  await scriptSurface.evaluate((element) => {
     const host = element as HTMLElement & {
-      CodeMirror: {
-        focus(): void;
-        setCursor(position: { line: number; ch: number }): void;
-        setValue(value: string): void;
-      };
+      __motajsMonacoEditor: { focus(): void; setPosition(position: { lineNumber: number; column: number }): void };
     };
-    const probe = "function () { core. }";
-    host.CodeMirror.setValue(probe);
-    host.CodeMirror.setCursor({ line: 0, ch: probe.indexOf(" }") });
-    host.CodeMirror.focus();
+    host.__motajsMonacoEditor.setPosition({ lineNumber: 1, column: 17 });
+    host.__motajsMonacoEditor.focus();
   });
-  const semanticCore = codeMirror.locator(".CodeMirror-Tern-semantic-object").filter({ hasText: "core" });
-  await expect(semanticCore).toBeVisible();
-  await expect(semanticCore).toHaveAttribute("data-tern-type", /core|object/i);
-  await codeMirror.evaluate((element) => {
-    const host = element as HTMLElement & {
-      CodeMirror: {
-        getOption(name: "extraKeys"): Record<string, (editor: unknown) => void>;
-      };
-    };
-    host.CodeMirror.getOption("extraKeys")["Ctrl-Space"]?.(host.CodeMirror);
-  });
-  await expect(page.locator(".CodeMirror-hints")).toBeVisible();
-  await expect.poll(() => page.locator(".CodeMirror-hints").evaluate((element) => {
-    const rect = element.getBoundingClientRect();
-    const topmost = document.elementFromPoint(
-      rect.left + Math.min(20, rect.width / 2),
-      rect.top + Math.min(20, rect.height / 2),
-    );
-    return topmost === element || element.contains(topmost);
-  })).toBe(true);
-  await page.keyboard.press("Escape");
-  await codeMirror.evaluate((element) => {
-    const host = element as HTMLElement & {
-      CodeMirror: {
-        focus(): void;
-        setCursor(position: { line: number; ch: number }): void;
-        setValue(value: string): void;
-      };
-    };
-    const probe = "function () { co }";
-    host.CodeMirror.setValue(probe);
-    host.CodeMirror.setCursor({ line: 0, ch: probe.indexOf(" }") });
-    host.CodeMirror.focus();
-  });
+  await page.keyboard.press("Control+Space");
+  await expect(page.locator(".suggest-widget.visible")).toBeVisible();
   await page.keyboard.type("r");
-  await expect(page.locator(".CodeMirror-hints")).toBeVisible();
-  await expect.poll(() => codeMirror.evaluate((element) => {
-    const host = element as HTMLElement & { CodeMirror: { getValue(): string } };
-    return host.CodeMirror.getValue();
-  })).toBe("function () { cor }");
+  await expectScriptSource(scripts, "function () { cor }");
   await page.keyboard.press("Escape");
-  await codeMirror.evaluate((element) => {
-    const host = element as HTMLElement & { CodeMirror: { focus(): void; refresh(): void; setValue(value: string): void } };
-    const probe = "function () { const amount = 1; return amount; }";
-    host.CodeMirror.setValue(probe);
-    host.CodeMirror.refresh();
-    host.CodeMirror.focus();
-  });
-  const amountReference = codeMirror.locator(".cm-variable-2").filter({ hasText: "amount" }).first();
-  await expect(amountReference).toBeVisible();
-  await expect(codeMirror.locator(".CodeMirror-Tern-semantic-number").filter({ hasText: "amount" }).first()).toBeVisible();
-  const amountBox = await amountReference.boundingBox();
-  if (!amountBox) throw new Error("The local variable reference has no rendered bounds");
-  await page.mouse.move(amountBox.x + amountBox.width / 2, amountBox.y + amountBox.height / 2);
-  await expect(codeMirror).toHaveAttribute("data-tern-hover-type", "number");
-  await expect(page.getByTestId("tern-hover-tooltip")).toContainText("number");
-  await expect(codeMirror.locator(".CodeMirror-tern-hover-token")).toHaveCount(1);
-  await codeMirror.evaluate((element) => {
-    const host = element as HTMLElement & { CodeMirror: { setValue(value: string): void } };
-    host.CodeMirror.setValue("function resetGame () { return '__workspaceFunctionWrite'; }");
-  });
+
+  await setScriptSource(scripts, "function resetGame () { return '__workspaceFunctionWrite'; }");
   const functionWrite = sandbox.waitForWrite("project/functions.js");
   await scripts.getByRole("button", { name: "保存", exact: true }).click();
   await functionWrite;

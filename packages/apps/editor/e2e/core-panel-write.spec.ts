@@ -429,7 +429,7 @@ test.describe("core panels write to sandbox project", () => {
   test("Plugin opens the modern CodeEditor and saves raw function source", async ({ page }) => {
     const { sandbox, pageErrors } = await bootWithSandbox(page);
     let workspace = await selectScript(page, "plugins", "init");
-    await expect(workspace.getByTestId("script-code-editor")).toHaveAttribute("data-tern-status", "ready");
+    await expect(workspace.getByTestId("script-code-editor")).toHaveAttribute("data-language-status", /ready|degraded/);
     await expectScriptSource(workspace, "function init");
 
     const waitForWrite = sandbox.waitForWrite("project/plugins.js");

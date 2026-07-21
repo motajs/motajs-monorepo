@@ -1,4 +1,4 @@
-import { Activity, useEffect, type FC, type ReactNode } from "react";
+import { Activity, lazy, Suspense, useEffect, useState, type FC, type ReactNode } from "react";
 import { AppTopBar } from "./AppTopBar";
 import { PanelSlot } from "./components/PanelSlot";
 import { MapPanel } from "./MapPanel";
@@ -7,7 +7,6 @@ import { PrefabPanel } from "./PrefabPanel";
 import { FloorPanel } from "./FloorPanel";
 import { TowerPanel } from "./TowerPanel";
 import { EventsEditor } from "./EventsEditor";
-import { CodeEditor } from "./CodeEditor";
 import { MapEditor } from "@/MapEditor";
 import { MapEditorStore } from "@/MapEditor/MapEditorStore";
 import { projectData } from "@/project/data/projectData";
@@ -20,7 +19,7 @@ import { ContentBoundary } from "@/components/ContentBoundary";
 import { PanelErrorBoundary } from "./components/PanelErrorBoundary";
 import { ResourcesWorkspace } from "./ResourcesWorkspace";
 import { CommonEventsWorkspace } from "./CommonEventsWorkspace";
-import { ScriptsWorkspace } from "./ScriptsWorkspace";
+import { useCodeEditorHostRequested } from "./CodeEditor/CodeEditorContext";
 import { shouldWarnBeforeWorkspaceUnload } from "./draftGuard";
 import { migrateLegacyAirwall } from "@/project/migrations";
 import { notifyError, notifySuccess } from "@/utils/notify";
@@ -37,6 +36,28 @@ const MAP_PANELS: Array<{
   { id: "enemyitem", label: "图块属性", shortcut: "C" },
   { id: "floor", label: "楼层属性", shortcut: "V" },
 ];
+
+const LazyCodeEditor = lazy(() => import("./CodeEditor").then((module) => ({ default: module.CodeEditor })));
+
+const DeferredScriptsWorkspace: FC = () => {
+  const { activeWorkspace } = PanelStore.useStore();
+  const [Surface, setSurface] = useState<FC>();
+  useEffect(() => {
+    if (activeWorkspace !== "scripts" || Surface) return;
+    let live = true;
+    void import("./ScriptsWorkspace").then((module) => {
+      if (live) setSurface(() => module.ScriptsWorkspace);
+    });
+    return () => { live = false; };
+  }, [activeWorkspace, Surface]);
+  if (Surface) return <Surface />;
+  return activeWorkspace === "scripts" ? <div className="scriptEmpty">正在加载代码编辑器…</div> : null;
+};
+
+const DeferredCodeEditor: FC = () => {
+  const requested = useCodeEditorHostRequested();
+  return requested ? <Suspense fallback={null}><LazyCodeEditor /></Suspense> : null;
+};
 
 const MapPanelTabs: FC = () => {
   const { activeMapPanel, setActiveMapPanel } = PanelStore.useStore();
@@ -147,10 +168,10 @@ export const Workbench: FC = () => {
         <WorkspaceSurface id="common-events">
           <CommonEventsWorkspace />
         </WorkspaceSurface>
-        <WorkspaceSurface id="scripts"><ScriptsWorkspace /></WorkspaceSurface>
+        <WorkspaceSurface id="scripts"><DeferredScriptsWorkspace /></WorkspaceSurface>
 
         <EventsEditor />
-        <CodeEditor />
+        <DeferredCodeEditor />
         </div>
         </ProjectSchemaBootstrap>
         </ContentBoundary>

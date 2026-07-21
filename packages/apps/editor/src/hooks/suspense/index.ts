@@ -12,7 +12,6 @@ export { usePluginsDataSuspense } from "./usePluginsDataSuspense";
 export { useCommonEventDataSuspense } from "./useCommonEventDataSuspense";
 export { useTableMetaSuspense } from "./useTableMetaSuspense";
 export { useLocTableMetaSuspense } from "./useLocTableMetaSuspense";
-export { useTernDefsSuspense } from "./useTernDefsSuspense";
 export { useDataSuspense } from "./useDataSuspense";
 export { useResourceSuspense } from "./useResourceSuspense";
 export { useModelResourceSuspense } from "./useModelResourceSuspense";

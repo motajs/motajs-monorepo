@@ -5,6 +5,7 @@ import App from './App.tsx';
 import { GlobalStore } from './stores/index.ts';
 import { queryClient } from './queryClient.ts';
 import "@/css/index.css";
+import "@/css/editor.css";
 import { initializeEditorEnvironment } from "./environment";
 
 const root = createRoot(document.getElementById('root')!);

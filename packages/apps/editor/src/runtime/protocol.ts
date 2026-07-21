@@ -1,7 +1,7 @@
 import type { FloorData } from "@/types";
 import type { UIData } from "@/Workbench/modals/shared/types";
 
-export const RUNTIME_PROTOCOL_VERSION = 2;
+export const RUNTIME_PROTOCOL_VERSION = 3;
 
 export interface RuntimeConnectMessage {
   type: "mota-runtime-connect";
@@ -42,6 +42,18 @@ export interface RuntimeStatusBarRequest {
   context: RuntimePreviewContext;
 }
 
+export interface RuntimeMemberSnapshot {
+  name: string;
+  kind: "function" | "array" | "object" | "string" | "number" | "boolean" | "unknown";
+}
+
+export interface RuntimeLanguageSnapshot {
+  core: RuntimeMemberSnapshot[];
+  modules: Record<string, RuntimeMemberSnapshot[]>;
+  catalogs: Record<string, RuntimeMemberSnapshot[]>;
+  specials: Array<{ id: number; name: string }>;
+}
+
 export interface ProjectResourceChange {
   revision: number;
   path: string;
@@ -49,10 +61,11 @@ export interface ProjectResourceChange {
   kind: "data" | "floor" | "image" | "animation" | "audio" | "font";
 }
 
-export type HostRequestPayload =
-  | { type: "render-ui"; payload: RuntimeUIPreviewRequest }
-  | { type: "render-status-bar"; payload: RuntimeStatusBarRequest }
-  | { type: "close-preview" };
+export type HostRequestPayload
+  = | { type: "render-ui"; payload: RuntimeUIPreviewRequest }
+    | { type: "render-status-bar"; payload: RuntimeStatusBarRequest }
+    | { type: "language-snapshot" }
+    | { type: "close-preview" };
 
 export type HostRequest = HostRequestPayload & { id: number };
 
@@ -63,12 +76,12 @@ export type RuntimeRequest = {
   binary: boolean;
 };
 
-export type RuntimeMessage =
-  | { type: "ready"; version: number; instanceId: string }
-  | { type: "fatal"; message: string }
-  | { type: "diagnostic"; message: string }
-  | { type: "response"; id: number; ok: boolean; error?: string; width?: number; height?: number }
-  | RuntimeRequest;
+export type RuntimeMessage
+  = | { type: "ready"; version: number; instanceId: string }
+    | { type: "fatal"; message: string }
+    | { type: "diagnostic"; message: string }
+    | { type: "response"; id: number; ok: boolean; error?: string; width?: number; height?: number; payload?: unknown }
+    | RuntimeRequest;
 
 export type HostMessage = HostRequest | { type: "resources-changed"; changes: ProjectResourceChange[] } | {
   type: "resource-response";

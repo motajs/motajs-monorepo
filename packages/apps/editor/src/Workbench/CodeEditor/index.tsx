@@ -1,503 +1,304 @@
-import { useCurrentFn } from "@motajs/react-hooks";
-import { useConfigItem } from "@/stores/useEditorConfig";
-import { useState, useCallback, type FC, useRef, useEffect } from "react";
-import CodeMirror from "codemirror";
-// CodeMirror addon 和 CSS 导入
-import "./setup";
-import { JSHINT } from "jshint";
-import beautifier from "js-beautify";
 import {
+  MonacoEditor,
+  MonacoModelScope,
+  attachMonacoTypeSemanticHighlighting,
+  monaco,
+  type MonacoEditorInstance,
+  type MonacoTextModel,
+} from "@motajs/react-monaco-editor";
+import beautifier from "js-beautify";
+import { parse } from "acorn";
+import { Dropdown, Modal } from "antd";
+import { ChevronDown } from "lucide-react";
+import { useCallback, useEffect, useRef, useState, type FC } from "react";
+import { notifyError, notifySuccess } from "@/utils/notify";
+import {
+  API_DOCS_PATH,
   commandsName,
   getShortcutKeys,
-  DEFAULT_CODEMIRROR_OPTIONS,
-  PERSISTENT_SEARCH_KEYS,
-  FONT_SIZE_CONFIG_KEY,
-  DEFAULT_FONT_SIZE,
-  API_DOCS_PATH,
   PLUGINS_URL,
-  JSHINT_OPTIONS,
 } from "./config/commands";
-import type { TernServerInstance } from "./utils/createTernServer";
-import { type EditContext, type EditorConfig } from "./contexts";
-import type { CodeMirrorInstance } from "./types";
-import type { OpenConfig, OpenCallbacks } from "./contexts";
-import { isString } from "es-toolkit";
-import { TernServerInitializer } from "./components";
 import {
   useCodeEditorRegistration,
   type CodeEditorOpenRequest,
 } from "./CodeEditorContext";
-import { notifyError, notifySuccess } from "@/utils/notify";
 import { editorDocsEndpoint } from "@/environment";
-import { Modal } from "antd";
+import { useProjectLanguageEnvironment } from "./projectLanguageEnvironment";
+import { CodeEditorSettingsButton } from "./CodeEditorAppearance";
+import { useCodeEditorAppearance } from "./useCodeEditorAppearance";
 
-export const CodeEditor: FC = () => {
-  // ========== React State ==========
-  const [visible, setVisible] = useState(false);
-  const [fontSize, setFontSize] = useConfigItem(FONT_SIZE_CONFIG_KEY, DEFAULT_FONT_SIZE);
-  const [fontBold, setFontBold] = useState(false);
-  const [lintEnabled, setLintEnabled] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
-  const [codeMirrorReady, setCodeMirrorReady] = useState(false);
-  const [ternStatus, setTernStatus] = useState<"loading" | "ready" | "error">("loading");
+type EditorLanguage = "javascript" | "json" | "plaintext";
 
-  // ========== Refs ==========
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const codeEditorRef = useRef<CodeMirrorInstance>(null);
-  const ternServerRef = useRef<TernServerInstance>(null);
-  const extraKeysRef = useRef<CodeMirror.KeyMap>(null);
-  const initialFontSizeRef = useRef(fontSize);
-  const disposeRef = useRef<(() => void) | null>(null);
-  const disposeTimerRef = useRef<number | null>(null);
-  const registerCodeEditor = useCodeEditorRegistration();
+function languageFor(request: CodeEditorOpenRequest): EditorLanguage {
+  if (request.language) return request.language;
+  if (request.contextId.startsWith("project-schema:")) return "json";
+  return request.lint ? "javascript" : "plaintext";
+}
 
-  // 当前编辑上下文
-  const contextRef = useRef<EditContext | null>(null);
-
-  // 状态 ref（供 legacy API 访问）
-  const stateRef = useRef({
-    lintAutocomplete: false,
-    preview: null as unknown,
-  });
-
-  // ========== useCurrentFn 包装的回调 ==========
-  const show = useCurrentFn(() => {
-    setVisible(true);
-  });
-
-  const hide = useCurrentFn(() => {
-    setVisible(false);
-  });
-
-  const updateShowPreview = useCurrentFn((showValue: boolean) => {
-    setShowPreview(showValue);
-  });
-
-  const updateLintEnabled = useCurrentFn((enabled: boolean) => {
-    setLintEnabled(enabled);
-  });
-
-  const openUrl = useCurrentFn((url: string) => {
-    window.open(url, "_blank");
-  });
-
-  // ========== 编辑器核心函数 ==========
-
-  /**
-   * 设置编辑器值并更新 Tern 文档
-   */
-  const setValue = useCurrentFn((val: string) => {
-    const codeEditor = codeEditorRef.current;
-    if (!codeEditor) return;
-
-    codeEditor.setValue(val || "");
-  });
-
-  /**
-   * 获取编辑器值
-   */
-  const getValue = useCurrentFn(() => codeEditorRef.current?.getValue() || "");
-
-  /**
-   * 格式化代码
-   */
-  const format = useCurrentFn(() => {
-    if (!stateRef.current.lintAutocomplete) return;
-    const codeEditor = codeEditorRef.current;
-    if (!codeEditor) return;
-
-    const offset = codeEditor.getScrollInfo().top || 0;
-    setValue(beautifier.js(getValue(), {
-      brace_style: "collapse" as const,
+function formatSource(source: string, language: EditorLanguage): string {
+  if (language === "json") return `${JSON.stringify(JSON.parse(source), null, 2)}\n`;
+  if (language === "javascript") {
+    return beautifier.js(source, {
+      brace_style: "collapse",
       indent_with_tabs: true,
       jslint_happy: true,
-    }));
-    codeEditor.scrollTo(0, offset);
-  });
+    });
+  }
+  return source;
+}
 
-  /**
-   * 设置 lint 状态
-   */
-  const setLint = useCurrentFn((enabled?: boolean) => {
-    const codeEditor = codeEditorRef.current;
-    if (!codeEditor) return;
-
-    if (typeof enabled === "boolean") {
-      stateRef.current.lintAutocomplete = enabled;
+function validationError(source: string, language: EditorLanguage): Error | undefined {
+  try {
+    if (language === "json") JSON.parse(source);
+    if (language === "javascript") {
+      try {
+        parse(source, { ecmaVersion: "latest", locations: true });
+      } catch (programError) {
+        try {
+          parse(`(${source}\n)`, { ecmaVersion: "latest", locations: true });
+        } catch {
+          throw programError;
+        }
+      }
     }
+  } catch (error) {
+    return error instanceof Error ? error : new Error(String(error));
+  }
+  return undefined;
+}
 
-    if (stateRef.current.lintAutocomplete) {
-      codeEditor.setOption("lint", JSHINT_OPTIONS);
-    } else {
-      codeEditor.setOption("lint", false);
-    }
-    // autocomplete 是插件添加的配置项
-    (codeEditor as { setOption: (name: string, value: unknown) => void }).setOption("autocomplete", stateRef.current.lintAutocomplete);
-    updateLintEnabled(stateRef.current.lintAutocomplete);
-  });
+function updateSyntaxMarker(model: MonacoTextModel, language: EditorLanguage): void {
+  if (language !== "javascript") {
+    monaco.editor.setModelMarkers(model, "motajs-code-syntax", []);
+    return;
+  }
+  const error = validationError(model.getValue(), language) as (Error & {
+    loc?: { line: number; column: number };
+  }) | undefined;
+  monaco.editor.setModelMarkers(model, "motajs-code-syntax", error ? [{
+    message: error.message,
+    severity: monaco.MarkerSeverity.Error,
+    startLineNumber: error.loc?.line ?? 1,
+    startColumn: (error.loc?.column ?? 0) + 1,
+    endLineNumber: error.loc?.line ?? 1,
+    endColumn: (error.loc?.column ?? 0) + 2,
+  }] : []);
+}
 
-  // ========== Event Handlers ==========
-  const handleLintToggle = useCallback(() => {
-    const newValue = !lintEnabled;
-    setLintEnabled(newValue);
-    stateRef.current.lintAutocomplete = newValue;
-    setLint(newValue);
-  }, [lintEnabled, setLint]);
+export const CodeEditor: FC = () => {
+  const [visible, setVisible] = useState(false);
+  const appearance = useCodeEditorAppearance();
+  const [request, setRequest] = useState<CodeEditorOpenRequest>();
+  const [value, setValue] = useState("");
+  const [model, setModel] = useState<MonacoTextModel>();
+  const modelScopeRef = useRef<MonacoModelScope>(null);
+  modelScopeRef.current ??= new MonacoModelScope();
+  const scopeGenerationRef = useRef(0);
+  const editorRef = useRef<MonacoEditorInstance | null>(null);
+  const applyingRef = useRef(false);
+  const requestRef = useRef<CodeEditorOpenRequest | undefined>(undefined);
+  const valueRef = useRef("");
+  const register = useCodeEditorRegistration();
+  const languageStatus = useProjectLanguageEnvironment();
 
-  const handleFontSizeChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const value = Number(e.target.value);
-      setFontSize(value);
-      if (codeEditorRef.current) {
-        const wrapper = codeEditorRef.current.getWrapperElement();
-        if (wrapper) {
-          wrapper.style.fontSize = `${value}px`;
-          wrapper.style.fontWeight = fontBold ? "bold" : "normal";
-        }
-      }
-    },
-    [fontBold, setFontSize]
-  );
+  useEffect(() => {
+    requestRef.current = request;
+    valueRef.current = value;
+  }, [request, value]);
 
-  const handleFontBoldChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const checked = e.target.checked;
-      setFontBold(checked);
-      if (codeEditorRef.current) {
-        const wrapper = codeEditorRef.current.getWrapperElement();
-        if (wrapper) {
-          wrapper.style.fontSize = `${fontSize}px`;
-          wrapper.style.fontWeight = checked ? "bold" : "normal";
-        }
-      }
-    },
-    [fontSize]
-  );
+  const close = useCallback((cancel: boolean) => {
+    const current = requestRef.current;
+    if (cancel) current?.onCancel?.();
+    setVisible(false);
+    setRequest(undefined);
+    setModel(undefined);
+    if (current) modelScopeRef.current?.delete(current.contextId);
+  }, []);
 
-  const handleCommandChange = useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>) => {
-      const value = e.target.value;
-      e.target.selectedIndex = 0;
-      if (!extraKeysRef.current || !codeEditorRef.current) return;
-      const extraKeys = extraKeysRef.current;
-      if (extraKeys[value]) {
-        if (isString(extraKeys[value])) {
-          codeEditorRef.current.execCommand(extraKeys[value]);
-        } else {
-          extraKeys[value](codeEditorRef.current);
-        }
-      }
-    },
-    []
-  );
-
-  // ========== Handler ref（在 useEditor 中初始化）==========
-
-  const handleConfirm = useCallback(async (keep?: boolean) => {
-    const context = contextRef.current;
-    if (!context) return;
-
-    // 统一的错误检查
-    if (stateRef.current.lintAutocomplete) {
-      const value = codeEditorRef.current?.getValue() ?? "";
-      JSHINT(value, JSHINT_OPTIONS.options);
-      const hasErrors = JSHINT.errors?.filter((e) => e?.code?.startsWith("E")).length > 0;
-      if (hasErrors) {
-        const first = JSHINT.errors?.find((error) => error?.code?.startsWith("E"));
+  const confirm = useCallback(async (keep = false) => {
+    const current = requestRef.current;
+    if (!current) return;
+    const language = languageFor(current);
+    if (current.lint || language === "json") {
+      const error = validationError(valueRef.current, language);
+      if (error) {
         Modal.error({
           title: "代码无法保存",
-          content: first
-            ? `第 ${first.line} 行，第 ${first.character} 列：${first.reason}`
-            : "当前代码存在语法错误，请修改后再保存。",
+          content: <><p>{error.message}</p><p>当前草稿已保留，没有写入工程。</p></>,
           okText: "返回修改",
         });
         return;
       }
     }
-
     try {
-      await context.confirm(keep);
-      if (!keep && contextRef.current === context) {
-        contextRef.current = null;
-      }
+      await current.onConfirm(valueRef.current);
+      if (keep) notifySuccess("写入成功！");
+      else close(false);
     } catch (error) {
       notifyError(error);
     }
+  }, [close]);
+
+  useEffect(() => register((next) => {
+    const language = languageFor(next);
+    const nextModel = modelScopeRef.current!.get({
+      id: next.contextId,
+      value: next.initialValue,
+      language,
+      uri: `inmemory://motajs/editor/${encodeURIComponent(next.contextId)}.${language === "json" ? "json" : language === "javascript" ? "js" : "txt"}`,
+    });
+    applyingRef.current = true;
+    nextModel.setValue(next.initialValue);
+    applyingRef.current = false;
+    requestRef.current = next;
+    valueRef.current = next.initialValue;
+    setRequest(next);
+    setValue(next.initialValue);
+    setModel(nextModel);
+    setVisible(true);
+    window.setTimeout(() => {
+      if (next.scrollTop) editorRef.current?.setScrollTop(next.scrollTop);
+      editorRef.current?.focus();
+    });
+  }), [register]);
+
+  useEffect(() => {
+    const generation = ++scopeGenerationRef.current;
+    return () => queueMicrotask(() => {
+      // The delayed generation check deliberately distinguishes a real unmount
+      // from React StrictMode's immediate mount/unmount/remount probe.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      if (scopeGenerationRef.current === generation) modelScopeRef.current?.dispose();
+    });
   }, []);
 
-  const handleCancel = useCallback(() => {
-    const context = contextRef.current;
-    if (!context) return;
+  const mount = useCallback((editor: MonacoEditorInstance) => {
+    editorRef.current = editor;
+    const domNode = editor.getDomNode() as (HTMLElement & { __motajsMonacoEditor?: MonacoEditorInstance }) | null;
+    domNode?.setAttribute("data-test-id", "code-editor-content");
+    if (import.meta.env.DEV && domNode) domNode.__motajsMonacoEditor = editor;
+    const input = domNode?.querySelector("textarea");
+    input?.setAttribute("data-test-id", "code-editor-input");
+    const change = editor.onDidChangeModelContent(() => {
+      if (applyingRef.current) return;
+      const next = editor.getValue();
+      valueRef.current = next;
+      setValue(next);
+      const current = requestRef.current;
+      const currentModel = editor.getModel();
+      if (current && currentModel) updateSyntaxMarker(currentModel, languageFor(current));
+    });
+    const modelChange = editor.onDidChangeModel(() => {
+      const current = requestRef.current;
+      const currentModel = editor.getModel();
+      if (current && currentModel) updateSyntaxMarker(currentModel, languageFor(current));
+    });
+    const current = requestRef.current;
+    const currentModel = editor.getModel();
+    if (current && currentModel) updateSyntaxMarker(currentModel, languageFor(current));
+    const disposeSemanticHighlighting = attachMonacoTypeSemanticHighlighting(editor);
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => void confirm(true));
+    return () => {
+      change.dispose();
+      modelChange.dispose();
+      disposeSemanticHighlighting();
+      if (domNode) delete domNode.__motajsMonacoEditor;
+      if (editorRef.current === editor) editorRef.current = null;
+    };
+  }, [confirm]);
 
-    context.cancel();
-    contextRef.current = null;
-  }, []);
-
-  const handleFormat = useCallback(() => {
-    if (!stateRef.current.lintAutocomplete) {
-      alert("只有代码才能进行格式化操作！");
+  const format = useCallback(() => {
+    if (!request) return;
+    const language = languageFor(request);
+    if (language === "plaintext") {
+      notifyError("只有代码或 JSON 才能格式化");
       return;
     }
-    format();
-  }, [format]);
-
-  const handlePreview = useCallback(() => {
-    const preview = stateRef.current.preview;
-    const value = codeEditorRef.current?.getValue() ?? "";
-    if (preview) {
-      if (contextRef.current?.onPreview) {
-        void contextRef.current.onPreview(value);
-      }
+    try {
+      const next = formatSource(valueRef.current, language);
+      applyingRef.current = true;
+      model?.setValue(next);
+      applyingRef.current = false;
+      if (model) updateSyntaxMarker(model, language);
+      valueRef.current = next;
+      setValue(next);
+    } catch (error) {
+      notifyError(error);
     }
-  }, []);
+  }, [model, request]);
 
-  // 获取自动补全状态（供 TernServerInitializer 使用）
-  const getAutocomplete = useCallback(() => stateRef.current.lintAutocomplete, []);
-
-  // ========== 初始化 ==========
-  useEffect(() => {
-    if (disposeTimerRef.current != null) {
-      window.clearTimeout(disposeTimerRef.current);
-      disposeTimerRef.current = null;
+  const runCommand = useCallback((command: string) => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const actions: Record<string, string> = {
+      "Ctrl-/": "editor.action.commentLine",
+      "Ctrl-B": "editor.action.revealDefinition",
+      "Ctrl-Q": "editor.action.rename",
+      "Ctrl-F": "actions.find",
+      "Ctrl-R": "editor.action.startFindReplaceAction",
+      "Ctrl-D": "editor.fold",
+    };
+    if (command === "Ctrl-O") {
+      const url = editorDocsEndpoint(API_DOCS_PATH);
+      if (url) window.open(url, "_blank");
+      return;
     }
-
-    const scheduleDispose = () => {
-      disposeTimerRef.current = window.setTimeout(() => {
-        disposeTimerRef.current = null;
-        disposeRef.current?.();
-        disposeRef.current = null;
-      }, 0);
-    };
-
-    // React StrictMode immediately runs setup-cleanup-setup. Reuse the live instance
-    // during that probe and only dispose when no replacement setup follows.
-    if (disposeRef.current) return scheduleDispose;
-    if (!textareaRef.current) return;
-
-    // 创建 extraKeys 配置
-    const docsUrl = editorDocsEndpoint(API_DOCS_PATH);
-    const extraKeys: CodeMirror.KeyMap = {
-      "Ctrl-/": (cm) => {
-        cm.toggleComment();
-      },
-      "Ctrl-B": (cm) => {
-        ternServerRef.current?.jumpToDef(cm);
-      },
-      "Ctrl-Q": (cm) => {
-        ternServerRef.current?.rename(cm);
-      },
-      ...PERSISTENT_SEARCH_KEYS,
-      "Ctrl-R": CodeMirror.commands.replaceAll,
-      "Ctrl-D": (cm) => {
-        const cursor = cm.getCursor();
-        cm.foldCode(cursor);
-      },
-      ...(docsUrl ? { "Ctrl-O": () => openUrl(docsUrl) } : {}),
-      "Ctrl-P": () => openUrl(PLUGINS_URL),
-    };
-    extraKeysRef.current = extraKeys;
-
-    // 创建 CodeMirror 实例
-    const codeEditor = CodeMirror.fromTextArea(textareaRef.current, {
-      ...DEFAULT_CODEMIRROR_OPTIONS,
-      extraKeys,
-    });
-    codeEditor.getInputField().setAttribute("data-test-id", "code-editor-input");
-    codeEditorRef.current = codeEditor as unknown as CodeMirrorInstance;
-
-    // 应用保存的字体大小
-    const wrapper = codeEditor.getWrapperElement();
-    if (wrapper) {
-      wrapper.setAttribute("data-test-id", "code-editor-content");
-      wrapper.style.fontSize = `${initialFontSizeRef.current}px`;
+    if (command === "Ctrl-P") {
+      window.open(PLUGINS_URL, "_blank");
+      return;
     }
-
-    // 标记 CodeMirror 已就绪，触发 TernServerInitializer 渲染
-    setCodeMirrorReady(true);
-
-    // 注意：TernServer 的创建已移至 TernServerInitializer 组件
-    // 该组件使用 Suspense 实现细粒度响应，在数据未就绪时挂起
-
-    // ========== 创建 Handler ==========
-
-    /**
-     * 打开编辑器并设置上下文（内部接口，接收 EditContext）
-     */
-    const openWithContext = (context: EditContext, config: EditorConfig) => {
-      // 设置上下文
-      contextRef.current = context;
-
-      // 设置状态
-      stateRef.current.lintAutocomplete = config.lint ?? false;
-      stateRef.current.preview = config.preview ?? null;
-
-      // 设置编辑器值
-      setValue(config.initialValue);
-
-      // 更新 UI 状态
-      updateShowPreview(!!config.preview);
-
-      // 检查是否为函数代码
-      if (config.initialValue.slice(0, 8) === "function") {
-        stateRef.current.lintAutocomplete = true;
-      }
-
-      // 应用 lint 设置
-      setLint();
-
-      // 显示编辑器
-      show();
-
-      // 恢复滚动位置
-      if (config.scrollTop) {
-        codeEditorRef.current?.scrollTo(0, config.scrollTop);
-      }
-    };
-
-    /**
-     * 新的简洁 open 接口
-     * 调用方负责准备初始值和处理回调
-     */
-    const open = (initialValue: string, config: OpenConfig, callbacks: OpenCallbacks) => {
-      // 创建通用的 EditContext（内联对象，存储 callbacks）
-      const context: EditContext = {
-        id: config.contextId ?? "open",
-        async confirm(keep?: boolean) {
-          format();
-          const value = getValue() || "";
-          await callbacks.onConfirm(value);
-          if (!keep) {
-            hide();
-          } else {
-            notifySuccess("写入成功！");
-          }
-        },
-        cancel() {
-          callbacks.onCancel?.();
-          hide();
-        },
-        onPreview: callbacks.onPreview,
-      };
-
-      // 调用内部 open 函数
-      openWithContext(context, {
-        initialValue,
-        lint: config.lint,
-        preview: config.preview,
-        scrollTop: config.scrollTop,
-      });
-    };
-
-    const unregister = registerCodeEditor((request: CodeEditorOpenRequest) => {
-      open(
-        request.initialValue,
-        {
-          contextId: request.contextId,
-          lint: request.lint,
-          preview: request.preview,
-          scrollTop: request.scrollTop,
-        },
-        {
-          onConfirm: request.onConfirm,
-          onCancel: request.onCancel,
-          onPreview: request.onPreview,
-        },
-      );
-    });
-
-    disposeRef.current = () => {
-      unregister();
-      ternServerRef.current = null;
-      extraKeysRef.current = null;
-      const fromTextArea = codeEditor as CodeMirror.EditorFromTextArea;
-      fromTextArea.toTextArea?.();
-      codeEditorRef.current = null;
-    };
-    return scheduleDispose;
-    // All captured helpers are stable current-value callbacks; initialize exactly once per mount.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const action = actions[command];
+    if (action) void editor.getAction(action)?.run();
   }, []);
 
   return (
     <div
       id="left7"
       data-test-id="code-editor"
-      data-tern-status={ternStatus}
-      className={visible ? "" : "hidden-panel"}
+      data-language-status={languageStatus.state}
+      className={visible ? "monacoCodeEditorPanel" : "hidden-panel monacoCodeEditorPanel"}
       style={visible ? undefined : { zIndex: -1, opacity: 0 }}
+      title={languageStatus.message}
     >
-      {/* 多行文本编辑器 */}
-      <div>
-        <button data-test-id="code-editor-confirm" onClick={() => void handleConfirm()}>确认</button>
-        <button data-test-id="code-editor-cancel" onClick={() => handleCancel()}>取消</button>
-        <button data-test-id="code-editor-apply" onClick={() => void handleConfirm(true)}>应用</button>
-        <button onClick={() => handleFormat()}>格式化</button>
-        <button
-          id="editor_multi_preview"
-          data-test-id="code-editor-preview"
-          style={{ display: showPreview ? "inline" : "none" }}
-          onClick={handlePreview}
+      <div className="monacoCodeEditorToolbar">
+        <button data-test-id="code-editor-confirm" onClick={() => void confirm()}>确认</button>
+        <button data-test-id="code-editor-cancel" onClick={() => close(true)}>取消</button>
+        <button data-test-id="code-editor-apply" onClick={() => void confirm(true)}>应用</button>
+        <button onClick={format}>格式化</button>
+        {request?.preview ? (
+          <button data-test-id="code-editor-preview" onClick={() => void request.onPreview?.(valueRef.current)}>预览</button>
+        ) : null}
+        <Dropdown
+          menu={{
+            items: getShortcutKeys().map((key) => ({ key, label: commandsName[key] })),
+            onClick: ({ key }) => runCommand(key),
+          }}
+          trigger={["click"]}
         >
-          预览
-        </button>
-        <input
-          type="checkbox"
-          checked={lintEnabled}
-          onChange={handleLintToggle}
-          id="lintCheckbox"
-          style={{ verticalAlign: "middle", marginLeft: 6 }}
-        />
-        <span style={{ verticalAlign: "middle", marginLeft: "-3px" }}>
-          语法检查
-        </span>
-        <select
-          id="codemirrorCommands"
-          onChange={handleCommandChange}
-          style={{ verticalAlign: "middle", marginLeft: 6 }}
-        >
-          <option value="">常用命令</option>
-          {getShortcutKeys().map((key) => (
-            <option key={key} value={key}>
-              {commandsName[key]}
-            </option>
-          ))}
-        </select>
-        <span>字体大小</span>
-        <input
-          style={{ width: 40 }}
-          type="number"
-          value={fontSize}
-          onChange={handleFontSizeChange}
-          id="editor_multi_fontsize"
-        />
-        <span>字体加粗</span>
-        <input
-          type="checkbox"
-          checked={fontBold}
-          onChange={handleFontBoldChange}
-          id="editor_multi_fontweight"
+          <button className="codeEditorCommandsButton">常用命令<ChevronDown size={13} /></button>
+        </Dropdown>
+        <CodeEditorSettingsButton appearance={appearance} />
+        <span className="monacoLanguageStatus">{languageStatus.state === "degraded" ? languageStatus.message : ""}</span>
+      </div>
+      <div className="monacoCodeEditorSurface" data-test-id="code-editor-source">
+        <MonacoEditor
+          model={model}
+          onMount={mount}
+          options={{
+            automaticLayout: true,
+            fontFamily: '"SFMono-Regular", Consolas, monospace',
+            fontSize: appearance.fontSize,
+            fontWeight: appearance.fontBold ? "bold" : "normal",
+            glyphMargin: true,
+            lineNumbers: "on",
+            minimap: { enabled: false },
+            "semanticHighlighting.enabled": true,
+            wordWrap: "on",
+            scrollBeyondLastLine: false,
+          }}
+          style={{ width: "100%", height: "100%" }}
         />
       </div>
-      <textarea
-        ref={textareaRef}
-        id="multiLineCode"
-        data-test-id="code-editor-source"
-        name="multiLineCode"
-        defaultValue={""}
-      />
-      {/* Tern data loads independently and never blocks the editor surface. */}
-      {codeMirrorReady && codeEditorRef.current && (
-        <TernServerInitializer
-          codeEditor={codeEditorRef.current}
-          ref={ternServerRef}
-          getAutocomplete={getAutocomplete}
-          onReady={() => setTernStatus("ready")}
-          onError={(error) => {
-            console.warn("Tern initialization failed", error);
-            setTernStatus("error");
-          }}
-        />
-      )}
     </div>
   );
-}
+};

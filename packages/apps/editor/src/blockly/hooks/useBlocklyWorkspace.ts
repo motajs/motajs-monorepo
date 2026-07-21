@@ -23,6 +23,7 @@ import {
 import type { BlocklyInteractionCapabilities } from "@/Workbench/EventsEditor/BlocklyCapabilitiesContext";
 import type { BlocklyViewport } from "../session/BlocklyEditorSession";
 import { editorConfigService } from "@/services/editorConfig";
+import { isKeyboardInputTarget, isVisibleKeyboardScope } from "@/utils/keyboard";
 import { EditorStore } from "@/stores/EditorStore";
 import { withDisabledBlocksEnabled } from "../registry";
 import { blocklyDarkTheme, blocklyLightTheme } from "../theme";
@@ -220,8 +221,7 @@ export function useBlocklyWorkspace(
     workspace.addChangeListener(trackToolboxCategory);
 
     const handleToolboxShortcut = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null;
-      if (target?.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target?.tagName ?? "")) return;
+      if (!isVisibleKeyboardScope(containerRef.current) || isKeyboardInputTarget(event.target)) return;
       const toolbox = workspace.getToolbox();
       if (!toolbox) return;
       if (event.key === "Escape") {

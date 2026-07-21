@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import type { RuntimeStatus, RuntimeStatusBarRequest, RuntimeUIPreviewRequest } from "./protocol";
+import type { RuntimeLanguageSnapshot, RuntimeStatus, RuntimeStatusBarRequest, RuntimeUIPreviewRequest } from "./protocol";
 
 export interface RuntimeState { status: RuntimeStatus; error?: Error; instanceId?: string }
 
@@ -15,6 +15,7 @@ export interface RuntimePreviewCapability {
   state: RuntimeState;
   previewUI(request: RuntimeUIPreviewRequest): Promise<RuntimeSurfaceLease>;
   previewStatusBar(request: RuntimeStatusBarRequest): Promise<RuntimeSurfaceLease>;
+  languageSnapshot(): Promise<RuntimeLanguageSnapshot>;
   retry(): Promise<void>;
 }
 

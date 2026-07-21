@@ -630,56 +630,6 @@ body {
     white-space: pre-wrap;
 }
 
-.CodeMirror-tern-hover-token {
-    position: absolute;
-    z-index: 3;
-    border-bottom: 1px solid rgba(22, 119, 255, 0.75);
-    background: rgba(22, 119, 255, 0.1);
-    box-sizing: border-box;
-    pointer-events: none;
-}
-
-.CodeMirror .cm-matchhighlight {
-    border-radius: 2px;
-    background: rgba(22, 119, 255, 0.16);
-}
-
-.cm-s-default .CodeMirror-Tern-semantic,
-.cm-s-default .CodeMirror-Tern-semantic * {
-    color: var(--tern-semantic-color) !important;
-}
-
-.cm-s-default .CodeMirror-Tern-semantic-function { --tern-semantic-color: #795e26; }
-.cm-s-default .CodeMirror-Tern-semantic-number { --tern-semantic-color: #26734d; }
-.cm-s-default .CodeMirror-Tern-semantic-string { --tern-semantic-color: #a31515; }
-.cm-s-default .CodeMirror-Tern-semantic-boolean { --tern-semantic-color: #005cc5; }
-.cm-s-default .CodeMirror-Tern-semantic-array { --tern-semantic-color: #0b7285; }
-.cm-s-default .CodeMirror-Tern-semantic-object { --tern-semantic-color: #005fb8; }
-.cm-s-default .CodeMirror-Tern-semantic-union { --tern-semantic-color: #9c5d00; }
-
-:root[data-editor-theme="dark"] .cm-s-default .CodeMirror-Tern-semantic-function { --tern-semantic-color: #dcdcaa; }
-:root[data-editor-theme="dark"] .cm-s-default .CodeMirror-Tern-semantic-number { --tern-semantic-color: #b5cea8; }
-:root[data-editor-theme="dark"] .cm-s-default .CodeMirror-Tern-semantic-string { --tern-semantic-color: #ce9178; }
-:root[data-editor-theme="dark"] .cm-s-default .CodeMirror-Tern-semantic-boolean { --tern-semantic-color: #569cd6; }
-:root[data-editor-theme="dark"] .cm-s-default .CodeMirror-Tern-semantic-array { --tern-semantic-color: #4ec9b0; }
-:root[data-editor-theme="dark"] .cm-s-default .CodeMirror-Tern-semantic-object { --tern-semantic-color: #9cdcfe; }
-:root[data-editor-theme="dark"] .cm-s-default .CodeMirror-Tern-semantic-union { --tern-semantic-color: #c586c0; }
-
-.editorTernHoverTooltip {
-    position: fixed;
-    z-index: 10000;
-    max-width: min(520px, calc(100vw - 24px));
-    padding: 6px 9px;
-    border: 1px solid rgba(128, 128, 128, 0.35);
-    border-radius: 4px;
-    background: var(--editor-surface, #fff);
-    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.2);
-    color: var(--editor-fg, #202124);
-    font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    pointer-events: none;
-    white-space: pre-wrap;
-}
-
 .blocklyWidgetDiv .blocklyAutocomplete {
     width: 100%;
 }
@@ -1144,12 +1094,69 @@ table.row {
     background: var(--editor-bg, #fff);
 }
 
-#left7 .CodeMirror {
-    /* border-top: 1px solid black;
-    border-bottom: 1px solid black; */
-    font-size: 14px;
-    height: 95%;
-    width: 95%;
+#left7.monacoCodeEditorPanel {
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+}
+
+.monacoCodeEditorToolbar {
+    display: flex;
+    min-height: 38px;
+    padding: 5px 8px;
+    box-sizing: border-box;
+    align-items: center;
+    gap: 6px;
+}
+
+.monacoCodeEditorToolbar label {
+    display: inline-flex;
+    align-items: center;
+}
+
+.codeEditorCommandsButton,
+.codeEditorSettingsButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+}
+
+.codeEditorSettingsButton {
+    min-width: 28px;
+    padding-right: 5px;
+    padding-left: 5px;
+}
+
+.codeEditorAppearanceSettings {
+    display: grid;
+    min-width: 168px;
+    gap: 12px;
+}
+
+.codeEditorAppearanceSettings > label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.codeEditorAppearanceSettings .ant-input-number {
+    width: 82px;
+}
+
+.monacoLanguageStatus {
+    overflow: hidden;
+    flex: 1;
+    color: #d46b08;
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.monacoCodeEditorSurface {
+    min-height: 0;
+    flex: 1;
 }
 
 .etable table, .etable table td {

@@ -179,10 +179,10 @@ async function syncContextAssets(context: RuntimePreviewContext): Promise<void> 
     const exists = asset.path.includes("/autotiles/")
       ? runtime.core.material.images.autotile[id]
       : asset.path.includes("/tilesets/")
-      ? runtime.core.material.images.tilesets[file]
-      : asset.path.includes("/materials/")
-      ? runtime.core.material.images[id]
-      : true;
+        ? runtime.core.material.images.tilesets[file]
+        : asset.path.includes("/materials/")
+          ? runtime.core.material.images[id]
+          : true;
     if (!exists) {
       pending.set(asset.path, {
         revision: 0,
@@ -220,7 +220,7 @@ function installMainResourceHooks(engineRoot: URL): void {
       }
     });
   };
-  runtime.main.importFonts = function(fonts: string[]) {
+  runtime.main.importFonts = function (fonts: string[]) {
     for (const font of fonts ?? []) {
       void binaryUrl(`project/fonts/${font}.ttf`, "font/ttf").then((url) => {
         const face = new FontFace(font, `url(${url})`);
@@ -232,7 +232,7 @@ function installMainResourceHooks(engineRoot: URL): void {
 
 function installLoaderResourceHooks(): void {
   const prototype = runtime.loader.prototype;
-  prototype.loadImage = function(
+  prototype.loadImage = function (
     dir: string,
     imageName: string,
     callback: (id: string, image: HTMLImageElement | null) => void,
@@ -249,7 +249,7 @@ function installLoaderResourceHooks(): void {
       image.src = url;
     }).catch(() => callback(imageName, null));
   };
-  prototype._loadAnimates_sync = function() {
+  prototype._loadAnimates_sync = function () {
     for (const name of runtime.core.animates ?? []) {
       void requestResource(`project/animates/${name}.animate`, false).then((response) => {
         runtime.core.material.animates[name] = runtime.core.loader._loadAnimate(response.text ?? "");
@@ -258,7 +258,7 @@ function installLoaderResourceHooks(): void {
       });
     }
   };
-  prototype.loadOneMusic = function(name: string) {
+  prototype.loadOneMusic = function (name: string) {
     const music = new Audio();
     music.preload = "none";
     music.loop = true;
@@ -267,13 +267,13 @@ function installLoaderResourceHooks(): void {
       music.src = url;
     });
   };
-  prototype.loadOneSound = function(name: string) {
+  prototype.loadOneSound = function (name: string) {
     void requestResource(`project/sounds/${name}`, true).then((response) => {
       if (response.bytes) runtime.core.loader._loadOneSound_decodeData(name, response.bytes);
     });
   };
   const originalMusic = prototype._loadMusic_sync;
-  prototype._loadMusic_sync = function() {
+  prototype._loadMusic_sync = function () {
     const startBgm = runtime.main.startBgm;
     runtime.main.startBgm = null;
     originalMusic.call(this);
@@ -295,6 +295,83 @@ function closePreview(): void {
   }
   restorePreview?.();
   restorePreview = null;
+}
+
+const SNAPSHOT_MODULES = [
+  "control", "loader", "events", "enemys", "items", "maps", "ui", "utils", "icons", "actions", "plugin",
+] as const;
+
+const SNAPSHOT_CATALOGS = [
+  "material.enemys",
+  "material.items",
+  "material.animates",
+  "material.bgms",
+  "material.sounds",
+  "material.images",
+  "material.images.images",
+  "material.images.autotile",
+  "material.images.tilesets",
+  "canvas",
+  "status.maps",
+  "status.shops",
+  "status.textAttribute",
+  "status.globalAttribute",
+  "values",
+  "flags",
+] as const;
+
+function valueAtPath(value: unknown, path: string): unknown {
+  let current = value;
+  for (const segment of path.split(".")) {
+    if ((typeof current !== "object" || current === null) && typeof current !== "function") return undefined;
+    current = (current as Record<string, unknown>)[segment];
+  }
+  return current;
+}
+
+function snapshotMembers(value: unknown): import("./protocol").RuntimeMemberSnapshot[] {
+  if ((typeof value !== "object" || value === null) && typeof value !== "function") return [];
+  const names = new Set<string>();
+  let current: object | null = value as object;
+  while (current && current !== Object.prototype && current !== Function.prototype) {
+    for (const name of Object.getOwnPropertyNames(current)) if (name !== "constructor") names.add(name);
+    current = Object.getPrototypeOf(current) as object | null;
+  }
+  return [...names].sort().map((name) => {
+    let member: unknown;
+    try {
+      member = (value as Record<string, unknown>)[name];
+    } catch {
+      member = undefined;
+    }
+    const type = typeof member;
+    const kind = Array.isArray(member)
+      ? "array"
+      : type === "function" || type === "string" || type === "number" || type === "boolean"
+        ? type
+        : member !== null && type === "object" ? "object" : "unknown";
+    return { name, kind };
+  });
+}
+
+async function buildLanguageSnapshot(): Promise<import("./protocol").RuntimeLanguageSnapshot> {
+  await syncChangedResources();
+  const core = runtime.core;
+  const modules = Object.fromEntries(SNAPSHOT_MODULES.map((name) => [name, snapshotMembers(core?.[name])]));
+  const catalogs = Object.fromEntries(SNAPSHOT_CATALOGS.map((path) => [path, snapshotMembers(valueAtPath(core, path))]));
+  const specials: Array<{ id: number; name: string }> = [];
+  try {
+    const values: unknown[] = runtime.functions_d6ad677b_427a_4623_b50f_a445a3b0ef8a?.enemys?.getSpecials?.() ?? [];
+    for (const entry of values) {
+      if (!Array.isArray(entry) || typeof entry[0] !== "number") continue;
+      let name = entry[1];
+      if (typeof name === "function") name = name({});
+      specials.push({ id: entry[0], name: typeof name === "string" ? name : String(name ?? "动态名称") });
+    }
+  } catch (error) {
+    port?.postMessage({ type: "diagnostic", message: `Cannot inspect getSpecials(): ${String(error)}` } satisfies RuntimeMessage);
+  }
+  return { core: snapshotMembers(core), modules, catalogs, specials };
 }
 
 function beginPreview(context: RuntimePreviewContext): void {
@@ -595,11 +672,16 @@ window.addEventListener("message", (event) => {
     if (!("id" in message)) return;
     void (async () => {
       try {
+        if (message.type === "language-snapshot") {
+          const payload = await buildLanguageSnapshot();
+          port?.postMessage({ type: "response", id: message.id, ok: true, payload } satisfies RuntimeMessage);
+          return;
+        }
         const size = message.type === "render-ui"
           ? await renderUI(message.payload)
           : message.type === "render-status-bar"
-          ? await renderStatusBar(message.payload)
-          : (closePreview(), { width: 416, height: 416 });
+            ? await renderStatusBar(message.payload)
+            : (closePreview(), { width: 416, height: 416 });
         port?.postMessage({ type: "response", id: message.id, ok: true, ...size } satisfies RuntimeMessage);
       } catch (error) {
         port?.postMessage(
@@ -617,6 +699,6 @@ window.addEventListener("message", (event) => {
   void initialize(connect.previewUrl).then(() =>
     port?.postMessage(
       { type: "ready", version: RUNTIME_PROTOCOL_VERSION, instanceId: crypto.randomUUID() } satisfies RuntimeMessage,
-    )
+    ),
   ).catch(fatal);
 }, { once: true });

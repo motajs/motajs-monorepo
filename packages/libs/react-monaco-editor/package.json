@@ -9,20 +9,26 @@
     "./DarkModeButton": "./lib/DarkModeButton/index.tsx",
     "./DarkModeEffect/*": "./lib/DarkModeEffect/*.tsx"
   },
-  "scripts": {},
+  "scripts": {
+    "test": "vitest run"
+  },
   "keywords": [],
   "author": "",
   "license": "BSD-3-Clause",
   "dependencies": {
     "@motajs/react-hooks": "workspace:*",
+    "lodash-es": "catalog:default",
+    "react": "catalog:default",
     "monaco-editor": "catalog:default",
     "monaco-editor-textmate": "catalog:default",
     "monaco-textmate": "catalog:default",
-    "onigasm": "catalog:default"
+    "onigasm": "catalog:default",
+    "typescript": "catalog:default"
   },
   "devDependencies": {
     "@motajs/config": "workspace:*",
     "@types/lodash-es": "catalog:default",
-    "@types/react": "catalog:default"
+    "@types/react": "catalog:default",
+    "vitest": "catalog:default"
   }
 }

@@ -7,13 +7,21 @@ import { buildFieldPath } from "@/utils/fieldPath";
 import type { Action } from "@/utils/action";
 import { notifyCommandResult, notifyError, notifySuccess } from "@/utils/notify";
 import { Input, Modal, Popover, Segmented } from "antd";
-import CodeMirror from "codemirror";
-import type { Annotation } from "codemirror/addon/lint/lint";
+import {
+  MonacoEditor,
+  MonacoModelScope,
+  attachMonacoTypeSemanticHighlighting,
+  monaco,
+  revealMonacoPosition,
+  type MonacoEditorInstance,
+  type MonacoTextModel,
+} from "@motajs/react-monaco-editor";
 import { cloneDeep } from "es-toolkit";
 import {
   CheckCircle2,
   ChevronDown,
   ChevronRight,
+  Circle,
   CircleX,
   Eye,
   FileCode2,
@@ -32,15 +40,9 @@ import {
   type FC,
   type ReactNode,
 } from "react";
-import "../CodeEditor/setup";
-import { TernServerInitializer } from "../CodeEditor/components";
-import {
-  CODEMIRROR_HINT_OPTIONS,
-  JSHINT_OPTIONS,
-  PERSISTENT_SEARCH_KEYS,
-} from "../CodeEditor/config/commands";
-import type { CodeMirrorInstance } from "../CodeEditor/types";
-import type { TernServerInstance } from "../CodeEditor/utils";
+import { useProjectLanguageEnvironment } from "../CodeEditor/projectLanguageEnvironment";
+import { CodeEditorSettingsButton } from "../CodeEditor/CodeEditorAppearance";
+import { useCodeEditorAppearance } from "../CodeEditor/useCodeEditorAppearance";
 import "./scripts-workspace.css";
 import {
   collectFunctionDiagnostics,
@@ -50,7 +52,6 @@ import {
 } from "./validation";
 import { setWorkspaceDraftDirty } from "../draftGuard";
 import { useStatusBarPreviewModal } from "../modals/StatusBarPreview";
-import { ScriptDocumentRegistry } from "./scriptDocumentRegistry";
 
 const UUIDS: Record<ScriptWorkspaceId, string> = {
   functions: "functions_d6ad677b_427a_4623_b50f_a445a3b0ef8a",
@@ -86,7 +87,7 @@ interface ScriptValidation {
 
 type DiagnosticFilter = "all" | ScriptDiagnostic["severity"];
 
-interface CodeMirrorSurfaceHandle {
+interface MonacoSurfaceHandle {
   reveal(line: number, column?: number): void;
   renameDocument(previousId: string, nextId: string): void;
 }
@@ -104,15 +105,26 @@ function summarizeDiagnostics(diagnostics: ScriptDiagnostic[]): ScriptValidation
   };
 }
 
-function diagnosticAnnotation(diagnostic: ScriptDiagnostic): Annotation {
-  const line = Math.max(0, (diagnostic.line ?? 1) - 1);
-  const column = Math.max(0, (diagnostic.column ?? 1) - 1);
-  return {
-    from: CodeMirror.Pos(line, column),
+function diagnosticsEqual(left: readonly ScriptDiagnostic[], right: readonly ScriptDiagnostic[]): boolean {
+  return left.length === right.length && left.every((diagnostic, index) => {
+    const other = right[index];
+    return diagnostic.message === other.message
+      && diagnostic.line === other.line
+      && diagnostic.column === other.column
+      && diagnostic.severity === other.severity;
+  });
+}
+
+function updateStructuralMarkers(model: MonacoTextModel): void {
+  const structural = collectFunctionDiagnostics(model.getValue());
+  monaco.editor.setModelMarkers(model, "motajs-structure", structural.map((diagnostic) => ({
     message: diagnostic.message,
-    severity: diagnostic.severity,
-    to: CodeMirror.Pos(line, column + 1),
-  };
+    severity: diagnostic.severity === "error" ? monaco.MarkerSeverity.Error : monaco.MarkerSeverity.Warning,
+    startLineNumber: diagnostic.line ?? 1,
+    startColumn: diagnostic.column ?? 1,
+    endLineNumber: diagnostic.line ?? 1,
+    endColumn: (diagnostic.column ?? 1) + 1,
+  })));
 }
 
 function readPath(value: ScriptDataObject, path: readonly string[]): string | undefined {
@@ -150,27 +162,38 @@ function askName(title: string, initialValue = ""): Promise<string | undefined> 
   });
 }
 
-const CodeMirrorSurface = forwardRef<CodeMirrorSurfaceHandle, {
+const MonacoSurface = forwardRef<MonacoSurfaceHandle, {
   activeDocumentId: string;
   documents: readonly ScriptDocumentDescriptor[];
   onChange(documentId: string, value: string): void;
   onDiagnostics(documentId: string, diagnostics: ScriptDiagnostic[]): void;
   onSave(): void;
-}>(({ activeDocumentId, documents, onChange, onDiagnostics, onSave }, ref) => {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const editorRef = useRef<CodeMirror.EditorFromTextArea | null>(null);
-  const ternServerRef = useRef<TernServerInstance | null>(null);
+  fontSize: number;
+  fontBold: boolean;
+}>(({ activeDocumentId, documents, onChange, onDiagnostics, onSave, fontSize, fontBold }, ref) => {
+  const editorRef = useRef<MonacoEditorInstance | null>(null);
   const onChangeRef = useRef(onChange);
   const onDiagnosticsRef = useRef(onDiagnostics);
   const onSaveRef = useRef(onSave);
   const applyingRef = useRef(false);
   const activeDocumentIdRef = useRef(activeDocumentId);
-  const documentRegistryRef = useRef<ScriptDocumentRegistry>(null);
-  documentRegistryRef.current ??= new ScriptDocumentRegistry();
-  const documentRegistry = documentRegistryRef.current;
-  const [editor, setEditor] = useState<CodeMirrorInstance | null>(null);
-  const [ternStatus, setTernStatus] = useState<"loading" | "ready" | "error">("loading");
-  const getAutocomplete = useCallback(() => true, []);
+  const modelScopeRef = useRef<MonacoModelScope>(null);
+  modelScopeRef.current ??= new MonacoModelScope();
+  const modelScope = modelScopeRef.current;
+  const scopeGenerationRef = useRef(0);
+  const [model, setModel] = useState<MonacoTextModel>();
+  const languageStatus = useProjectLanguageEnvironment();
+
+  const publishDiagnostics = useCallback((target: MonacoTextModel) => {
+    const markers = monaco.editor.getModelMarkers({ resource: target.uri });
+    const diagnostics: ScriptDiagnostic[] = markers.map((marker) => ({
+      message: marker.message,
+      line: marker.startLineNumber,
+      column: marker.startColumn,
+      severity: marker.severity >= monaco.MarkerSeverity.Error ? "error" : "warning",
+    }));
+    onDiagnosticsRef.current(activeDocumentIdRef.current, diagnostics);
+  }, []);
 
   useEffect(() => {
     onChangeRef.current = onChange;
@@ -179,140 +202,117 @@ const CodeMirrorSurface = forwardRef<CodeMirrorSurfaceHandle, {
   }, [onChange, onDiagnostics, onSave]);
 
   useEffect(() => {
-    if (!textareaRef.current) return undefined;
-    for (const document of documents) documentRegistry.open(document.id, document.value);
-    const activeDocument = documentRegistry.get(activeDocumentId);
-    if (!activeDocument) return undefined;
-    const editor = CodeMirror.fromTextArea(textareaRef.current, {
-      mode: {
-        name: "javascript",
-        globalVars: true,
-        localVars: true,
-      } as CodeMirror.ModeSpec<{ globalVars: boolean; localVars: boolean }>,
-      lineNumbers: true,
-      lineWrapping: false,
-      indentUnit: 4,
-      indentWithTabs: true,
-      smartIndent: true,
-      tabSize: 4,
-      gutters: ["CodeMirror-linenumbers", "CodeMirror-lint-markers"],
-      lint: {
-        ...JSHINT_OPTIONS,
-        getAnnotations: (source: string) => collectFunctionDiagnostics(source).map(diagnosticAnnotation),
-        onUpdateLinting: (annotations) => {
-          const diagnostics = annotations.map((annotation) => ({
-            message: annotation.message ?? "未知问题",
-            line: annotation.from.line + 1,
-            column: annotation.from.ch + 1,
-            severity: annotation.severity === "warning" ? "warning" as const : "error" as const,
-          }));
-          onDiagnosticsRef.current(activeDocumentIdRef.current, diagnostics);
-        },
-      },
-      hintOptions: CODEMIRROR_HINT_OPTIONS,
-      highlightSelectionMatches: { showToken: /[\w$]/ },
-      extraKeys: {
-        ...PERSISTENT_SEARCH_KEYS,
-        "Ctrl-Space": (current) => ternServerRef.current?.complete(current),
-        "Cmd-Space": (current) => ternServerRef.current?.complete(current),
-        "Ctrl-S": () => onSaveRef.current(),
-        "Cmd-S": () => onSaveRef.current(),
-      },
-    });
-    editor.swapDoc(activeDocument);
-    editor.on("change", () => {
-      if (!applyingRef.current) {
-        onChangeRef.current(activeDocumentIdRef.current, editor.getValue());
+    const retainedIds = new Set(documents.map((document) => document.id));
+    applyingRef.current = true;
+    let activeModel: MonacoTextModel | undefined;
+    try {
+      for (const document of documents) {
+        const current = modelScope.get({
+          id: document.id,
+          value: document.value,
+          language: "javascript",
+          uri: `inmemory://motajs/scripts/${encodeURIComponent(document.id)}.js`,
+        });
+        if (document.id === activeDocumentId) activeModel = current;
       }
-    });
-    editorRef.current = editor;
-    setEditor(editor);
-    return () => {
-      if (editor.getWrapperElement().parentNode) {
-        // toTextArea does not release Doc.cm. Detach the tab-owned document so
-        // React StrictMode's next setup can attach that same Doc safely.
-        editor.swapDoc(new CodeMirror.Doc("", "javascript"));
-        editor.toTextArea();
-      }
-      editorRef.current = null;
-      ternServerRef.current = null;
-      setEditor(null);
-    };
-  // CodeMirror owns this DOM node for the lifetime of the surface.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+      modelScope.retain(retainedIds);
+    } finally {
+      applyingRef.current = false;
+    }
+    activeDocumentIdRef.current = activeDocumentId;
+    setModel(activeModel);
+    if (activeModel) {
+      updateStructuralMarkers(activeModel);
+      queueMicrotask(() => publishDiagnostics(activeModel));
+    }
+  }, [activeDocumentId, documents, modelScope, publishDiagnostics]);
 
   useEffect(() => {
-    const editor = editorRef.current;
-    if (!editor) return;
-    const retainedIds = new Set(documents.map((document) => document.id));
-    for (const document of documents) {
-      documentRegistry.open(document.id, document.value);
-      applyingRef.current = true;
-      try {
-        documentRegistry.setValue(document.id, document.value);
-      } finally {
-        applyingRef.current = false;
-      }
-    }
-    const activeDocument = documentRegistry.get(activeDocumentId);
-    if (activeDocument && editor.getDoc() !== activeDocument) {
-      editor.closeHint();
-      activeDocumentIdRef.current = activeDocumentId;
-      editor.swapDoc(activeDocument);
-      editor.performLint();
-    } else {
-      activeDocumentIdRef.current = activeDocumentId;
-    }
-    documentRegistry.retain(retainedIds);
-  }, [activeDocumentId, documentRegistry, documents]);
+    const generation = ++scopeGenerationRef.current;
+    return () => queueMicrotask(() => {
+      // Keep models across React StrictMode's probe, but release them after a
+      // real unmount if no newer mount generation claimed this scope.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      if (scopeGenerationRef.current === generation) modelScope.dispose();
+    });
+  }, [modelScope]);
 
-  const registerDocuments = useCallback((server: TernServerInstance) => {
-    documentRegistry.attachTern(server);
-  }, [documentRegistry]);
-  const unregisterDocuments = useCallback((server: TernServerInstance) => {
-    documentRegistry.detachTern(server);
-  }, [documentRegistry]);
+  const mount = useCallback((editor: MonacoEditorInstance) => {
+    editorRef.current = editor;
+    const domNode = editor.getDomNode() as (HTMLElement & { __motajsMonacoEditor?: MonacoEditorInstance }) | null;
+    const surfaceNode = domNode?.closest(".scriptCodeEditor") as (HTMLElement & { __motajsMonacoEditor?: MonacoEditorInstance }) | null;
+    domNode?.setAttribute("data-test-id", "script-monaco-editor");
+    if (import.meta.env.DEV && domNode) domNode.__motajsMonacoEditor = editor;
+    if (import.meta.env.DEV && surfaceNode) surfaceNode.__motajsMonacoEditor = editor;
+    const updateCurrent = () => {
+      const current = editor.getModel();
+      if (!current || applyingRef.current) return;
+      const source = current.getValue();
+      updateStructuralMarkers(current);
+      onChangeRef.current(activeDocumentIdRef.current, source);
+      publishDiagnostics(current);
+    };
+    const contentDisposable = editor.onDidChangeModelContent(updateCurrent);
+    const modelDisposable = editor.onDidChangeModel(updateCurrent);
+    const markerDisposable = monaco.editor.onDidChangeMarkers((uris) => {
+      const current = editor.getModel();
+      if (current && uris.some((uri) => uri.toString() === current.uri.toString())) publishDiagnostics(current);
+    });
+    const disposeSemanticHighlighting = attachMonacoTypeSemanticHighlighting(editor);
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => onSaveRef.current());
+    updateCurrent();
+    return () => {
+      contentDisposable.dispose();
+      modelDisposable.dispose();
+      markerDisposable.dispose();
+      disposeSemanticHighlighting();
+      if (domNode) delete domNode.__motajsMonacoEditor;
+      if (surfaceNode?.__motajsMonacoEditor === editor) delete surfaceNode.__motajsMonacoEditor;
+      if (editorRef.current === editor) editorRef.current = null;
+    };
+  }, [publishDiagnostics]);
 
   useImperativeHandle(ref, () => ({
     reveal(line, column = 1) {
       const editor = editorRef.current;
-      if (!editor) return;
-      const targetLine = Math.max(0, Math.min(editor.lineCount() - 1, line - 1));
-      const targetColumn = Math.max(0, Math.min(editor.getLine(targetLine).length, column - 1));
-      editor.operation(() => {
-        editor.setCursor({ line: targetLine, ch: targetColumn });
-        const lineTop = editor.heightAtLine(targetLine, "local");
-        const contextHeight = editor.defaultTextHeight() * 5;
-        editor.scrollTo(null, Math.max(0, lineTop - contextHeight));
-        editor.focus();
-      });
+      if (editor) revealMonacoPosition(editor, line, column, 5);
     },
     renameDocument(previousId, nextId) {
-      documentRegistry.rename(previousId, nextId);
+      const renamed = modelScope.rename(previousId, {
+        id: nextId,
+        value: "",
+        language: "javascript",
+        uri: `inmemory://motajs/scripts/${encodeURIComponent(nextId)}.js`,
+      });
       if (activeDocumentIdRef.current === previousId) activeDocumentIdRef.current = nextId;
+      if (renamed) setModel(renamed);
     },
-  }), [documentRegistry]);
+  }), [modelScope]);
 
   return (
-    <div className="scriptCodeEditor" data-test-id="script-code-editor" data-tern-status={ternStatus}>
-      <textarea ref={textareaRef} />
-      {editor ? (
-        <TernServerInitializer
-          codeEditor={editor}
-          ref={ternServerRef}
-          getAutocomplete={getAutocomplete}
-          registerDocuments={registerDocuments}
-          unregisterDocuments={unregisterDocuments}
-          onReady={() => setTernStatus("ready")}
-          onError={() => setTernStatus("error")}
-        />
-      ) : null}
+    <div className="scriptCodeEditor" data-test-id="script-code-editor" data-language-status={languageStatus.state} title={languageStatus.message}>
+      <MonacoEditor
+        model={model}
+        onMount={mount}
+        options={{
+          automaticLayout: true,
+          fontFamily: '"SFMono-Regular", Consolas, monospace',
+          fontSize,
+          fontWeight: fontBold ? "bold" : "normal",
+          glyphMargin: true,
+          minimap: { enabled: false },
+          "semanticHighlighting.enabled": true,
+          tabSize: 4,
+          insertSpaces: false,
+          scrollBeyondLastLine: false,
+        }}
+        style={{ width: "100%", height: "100%" }}
+      />
     </div>
   );
 });
 
-CodeMirrorSurface.displayName = "CodeMirrorSurface";
+MonacoSurface.displayName = "MonacoSurface";
 
 const ScriptTree: FC<{
   kind: ScriptWorkspaceId;
@@ -351,8 +351,9 @@ export const ScriptsWorkspace: FC = () => {
   const [activeId, setActiveId] = useState<string>();
   const [validationPopoverTabId, setValidationPopoverTabId] = useState<string>();
   const [diagnosticFilter, setDiagnosticFilter] = useState<DiagnosticFilter>("all");
-  const codeSurfaceRef = useRef<CodeMirrorSurfaceHandle>(null);
+  const codeSurfaceRef = useRef<MonacoSurfaceHandle>(null);
   const [openStatusBarPreview, statusBarPreviewHolder] = useStatusBarPreviewModal();
+  const appearance = useCodeEditorAppearance();
   const currentData = activeScriptWorkspace === "functions" ? functions : plugins;
   const active = tabs.find((tab) => tab.id === activeId);
   const canPreviewStatusBar = active?.kind === "functions"
@@ -408,9 +409,15 @@ export const ScriptsWorkspace: FC = () => {
   }, []);
 
   const updateDiagnostics = useCallback((documentId: string, diagnostics: ScriptDiagnostic[]) => {
-    setTabs((current) => current.map((tab) => tab.id === documentId
-      ? { ...tab, validation: summarizeDiagnostics(diagnostics) }
-      : tab));
+    setTabs((current) => {
+      let changed = false;
+      const next = current.map((tab) => {
+        if (tab.id !== documentId || (tab.validation && diagnosticsEqual(tab.validation.diagnostics, diagnostics))) return tab;
+        changed = true;
+        return { ...tab, validation: summarizeDiagnostics(diagnostics) };
+      });
+      return changed ? next : current;
+    });
   }, []);
 
   const validateTab = useCallback((tab: ScriptTab) => {
@@ -689,7 +696,7 @@ export const ScriptsWorkspace: FC = () => {
         <div className="scriptTabs">
           {tabs.map((tab) => (
             <button className={tab.id === activeId ? "scriptTab is-active" : "scriptTab"} key={tab.id} onClick={() => setActiveId(tab.id)}>
-              <span>{tab.path.at(-1)}</span>{tab.dirty ? <i>●</i> : null}{tab.conflict || tab.diskDeleted ? <b title="磁盘版本已变化">!</b> : null}
+              <span>{tab.path.at(-1)}</span>{tab.dirty ? <i title="未保存"><Circle fill="currentColor" size={12} strokeWidth={0} /></i> : null}{tab.conflict || tab.diskDeleted ? <b title="磁盘版本已变化">!</b> : null}
               <span role="button" aria-label="关闭" onClick={(event) => { event.stopPropagation(); close(tab); }}><X size={13} /></span>
             </button>
           ))}
@@ -742,6 +749,7 @@ export const ScriptsWorkspace: FC = () => {
                   <Eye size={14} />预览
                 </button>
               ) : null}
+              <CodeEditorSettingsButton appearance={appearance} />
               <button disabled={!active.dirty} onClick={() => void save(active)}>保存</button>
               {customPlugin ? (
                 <div className="scriptPluginActions">
@@ -751,13 +759,15 @@ export const ScriptsWorkspace: FC = () => {
               ) : null}
             </div>
             <div className="scriptCodeSurface">
-              <CodeMirrorSurface
+              <MonacoSurface
                 ref={codeSurfaceRef}
                 activeDocumentId={active.id}
                 documents={tabs.map((tab) => ({ id: tab.id, value: tab.text }))}
                 onChange={updateDocument}
                 onDiagnostics={updateDiagnostics}
                 onSave={() => void save(active)}
+                fontSize={appearance.fontSize}
+                fontBold={appearance.fontBold}
               />
             </div>
           </>

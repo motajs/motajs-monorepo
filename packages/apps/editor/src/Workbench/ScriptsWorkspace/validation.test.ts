@@ -33,24 +33,14 @@ describe("script workspace save gate", () => {
     expect(() => validateFunctionSource(formatted)).not.toThrow();
   });
 
-  it("keeps style diagnostics as warnings", () => {
+  it("does not make style preferences part of the save gate", () => {
     const diagnostics = collectFunctionDiagnostics("function value() { return new Date; }");
-    expect(diagnostics).toEqual(expect.arrayContaining([
-      expect.objectContaining({ severity: "warning", message: expect.stringContaining("()") }),
-    ]));
-    expect(diagnostics).not.toEqual(expect.arrayContaining([
-      expect.objectContaining({ severity: "error" }),
-    ]));
+    expect(diagnostics).toEqual([]);
   });
 
-  it("keeps semantic warnings and syntax errors separate", () => {
-    const warning = collectFunctionDiagnostics("function value(input) { if (input = 1) return input; }");
-    expect(warning).toEqual(expect.arrayContaining([
-      expect.objectContaining({ severity: "warning" }),
-    ]));
-    expect(warning).not.toEqual(expect.arrayContaining([
-      expect.objectContaining({ severity: "error" }),
-    ]));
+  it("leaves semantic advice to Monaco while retaining syntax errors in the save gate", () => {
+    const semantic = collectFunctionDiagnostics("function value(input) { if (input = 1) return input; }");
+    expect(semantic).toEqual([]);
 
     const error = collectFunctionDiagnostics("function value() { const result = ; }");
     expect(error).toEqual(expect.arrayContaining([
