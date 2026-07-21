@@ -29,6 +29,9 @@ export interface IContentView<T> {
   /** 重新加载 */
   refetch(): Promise<void>;
 
+  /** 确保完成首次加载；已在加载时仅等待，不重新读取 */
+  ensureLoaded(): Promise<void>;
+
   /** 获取路径（用于调试） */
   getPath(): string;
 }

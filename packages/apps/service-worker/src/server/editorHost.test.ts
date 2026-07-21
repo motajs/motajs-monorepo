@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const projectMocks = vi.hoisted(() => ({ accessProjectById: vi.fn() }));
 const releaseMocks = vi.hoisted(() => ({
-  getEditorHostStatus: vi.fn(),
   resolveEditorRelease: vi.fn(),
+  getEditorReleaseManager: vi.fn(),
 }));
 vi.mock("./project", () => projectMocks);
 vi.mock("./editorRelease", () => releaseMocks);
@@ -17,6 +17,9 @@ const html = "<!doctype html><html><head></head><body><script id=\"mota-editor-e
 
 describe("editor host", () => {
   const stat = vi.fn();
+  const getUpdateState = vi.fn();
+  const checkForUpdates = vi.fn();
+  const activateCandidate = vi.fn();
 
   beforeEach(() => {
     stat.mockResolvedValue({ isFile: () => true });
@@ -31,12 +34,14 @@ describe("editor host", () => {
         entrypoints: { runtime: "runtime.html" },
       },
     });
-    releaseMocks.getEditorHostStatus.mockResolvedValue({
+    getUpdateState.mockResolvedValue({
+      protocolVersion: 2,
       status: "ready",
-      buildId,
-      editorVersion: "2.0.0",
-      source: "network",
+      launch: { buildId, version: "2.0.0" },
     });
+    checkForUpdates.mockResolvedValue(undefined);
+    activateCandidate.mockResolvedValue(undefined);
+    releaseMocks.getEditorReleaseManager.mockReturnValue({ getUpdateState, checkForUpdates, activateCandidate });
   });
 
   it("injects a scoped base and project-specific blind environment", () => {
@@ -85,20 +90,19 @@ describe("editor host", () => {
     const response = await serveEditorUpdateStatus(request, scope);
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(await response.json()).toEqual({
-      protocolVersion: 1,
+      protocolVersion: 2,
       status: "ready",
-      release: { buildId, version: "2.0.0" },
+      launch: { buildId, version: "2.0.0" },
     });
 
-    releaseMocks.getEditorHostStatus.mockResolvedValueOnce({
-      status: "unavailable",
-      reason: "offline",
-      message: "offline",
+    const background: Promise<unknown>[] = [];
+    const post = new Request(request.url, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ action: "check" }),
     });
-    expect(await (await serveEditorUpdateStatus(request, scope)).json()).toEqual({
-      protocolVersion: 1,
-      status: "unavailable",
-      message: "offline",
-    });
+    expect((await serveEditorUpdateStatus(post, scope, (task) => background.push(task))).status).toBe(200);
+    await Promise.all(background);
+    expect(checkForUpdates).toHaveBeenCalledWith(false);
   });
 });

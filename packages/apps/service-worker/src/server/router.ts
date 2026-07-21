@@ -9,6 +9,10 @@ import { serveEditorReleaseAsset } from "./editorRelease";
 
 export type BackgroundTaskScheduler = (task: Promise<unknown>) => void;
 
+export interface RequestRouteContext {
+  clientId?: string;
+}
+
 const withSlash = (value: string) => value.endsWith("/") ? value : `${value}/`;
 
 const appShell = async (scopeUrl: URL): Promise<Response> => {
@@ -47,15 +51,18 @@ const routeService = async (
   projectId: number,
   tail: string,
   schedule?: BackgroundTaskScheduler,
+  context?: RequestRouteContext,
 ): Promise<Response> => {
   const serviceRoot = `${withSlash(scopeUrl.pathname)}service/${projectId}/`;
   const projectUrl = new URL(`${serviceRoot}project/`, url.origin).href;
   if (!tail) return redirect(url, `${serviceRoot}project/`);
   if (tail === "project" || tail === "project/") return appShell(scopeUrl);
   if (tail === "editor") return redirect(url, `${serviceRoot}editor/`);
-  if (tail === "editor/") return serveProjectEditor(request, scopeUrl, projectId, projectUrl, schedule);
+  if (tail === "editor/") {
+    return serveProjectEditor(request, scopeUrl, projectId, projectUrl, schedule, context?.clientId);
+  }
   if (tail === "api/editor-update" || tail === "api/editor-update/") {
-    return serveEditorUpdateStatus(request, scopeUrl);
+    return serveEditorUpdateStatus(request, scopeUrl, schedule);
   }
 
   const apiMatch = /^api\/fs\/([^/]+)\/?$/.exec(tail);
@@ -107,6 +114,7 @@ export const routeRequest = async (
   request: Request,
   scopeUrl: URL,
   schedule?: BackgroundTaskScheduler,
+  context?: RequestRouteContext,
 ): Promise<Response | null> => {
   const url = new URL(request.url);
   if (url.origin !== scopeUrl.origin) return null;
@@ -115,7 +123,9 @@ export const routeRequest = async (
   const pathname = url.pathname.slice(scopePath.length);
 
   const service = /^service\/(\d+)(?:\/(.*))?$/.exec(pathname);
-  if (service) return routeService(request, url, scopeUrl, Number(service[1]), service[2] ?? "", schedule);
+  if (service) {
+    return routeService(request, url, scopeUrl, Number(service[1]), service[2] ?? "", schedule, context);
+  }
 
   const tower = /^tower\/(\d+)(?:\/(.*))?$/.exec(pathname);
   if (tower) return routeLegacyTower(request, url, scopeUrl, Number(tower[1]), tower[2] ?? "");

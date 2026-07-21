@@ -150,12 +150,9 @@ test("hosts the blind editor artifact against a real OPFS mota-js project", asyn
   await expect(scripts).toBeVisible();
   await scripts.locator(".scriptRootTabs").getByRole("button", { name: "插件", exact: true }).click();
   await scripts.locator(".scriptTreeLeaf").filter({ hasText: "init" }).click();
-  const scriptEditor = scripts.locator(".CodeMirror");
+  const scriptEditor = scripts.getByTestId("script-monaco-editor");
   await expect(scriptEditor).toBeVisible();
-  await expect.poll(() => scriptEditor.evaluate((element) => {
-    const host = element as HTMLElement & { CodeMirror: { getValue(): string } };
-    return host.CodeMirror.getValue();
-  })).toContain("function init");
+  await expect(scriptEditor.locator(".view-lines")).toContainText("function init");
 
   await expect.poll(() => enginePreviewReads.some((url) => url.endsWith("/preview/main.js"))).toBe(true);
   expect(projectPreviewReads).toEqual([]);
@@ -176,7 +173,7 @@ test("hosts the blind editor artifact against a real OPFS mota-js project", asyn
       deletion: deletion.status,
       tower: tower.status,
       floor: floor.status,
-      towerContainsSample0: (await tower.text()).includes('"sample0"'),
+      towerContainsSample0: (await tower.text()).includes("\"sample0\""),
     };
   }, id);
   expect(missingRegisteredFloor).toEqual({
@@ -208,7 +205,7 @@ test("hosts the blind editor artifact against a real OPFS mota-js project", asyn
       deletion: deletion.status,
       tower: tower.status,
       tileset: tileset.status,
-      towerContainsTileset: (await tower.text()).includes('"magictower.png"'),
+      towerContainsTileset: (await tower.text()).includes("\"magictower.png\""),
     };
   }, id);
   expect(missingRegisteredTileset).toEqual({
@@ -249,6 +246,18 @@ test("switches Editor releases without rebuilding or replacing the active Servic
     await expect(page.locator("base")).toHaveAttribute("href", new RegExp(`/releases/${releaseA}/$`));
 
     await pointEditorChannel(releaseB);
+    await page.evaluate(async (projectId) => {
+      const response = await fetch(`/service/${projectId}/api/editor-update/`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "check", force: true }),
+      });
+      if (!response.ok) throw new Error(`update check failed: ${response.status}`);
+    }, id);
+    await expect.poll(async () => page.evaluate(async (projectId) => {
+      const response = await fetch(`/service/${projectId}/api/editor-update/`, { cache: "no-store" });
+      return (await response.json()).candidate?.buildId as string | undefined;
+    }, id)).toBe(releaseB);
     await page.reload();
     await expect(page.getByTestId("editor-release-marker")).toHaveText("release-b");
     await expect(page.locator("base")).toHaveAttribute("href", new RegExp(`/releases/${releaseB}/$`));

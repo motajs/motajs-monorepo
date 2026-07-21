@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { promisify } from "node:util";
+import { brotliCompress, constants as zlibConstants, gzip } from "node:zlib";
 import type { Plugin } from "vite";
 
 const blocklyMediaRoot = path.resolve(import.meta.dirname, "node_modules/blockly/media");
@@ -33,6 +35,17 @@ export interface EditorArtifactFile {
   sha256: string;
 }
 
+export interface EditorArtifactReport {
+  files: number;
+  rawBytes: number;
+  gzipBytes: number;
+  brotliBytes: number;
+}
+
+const gzipAsync = promisify(gzip);
+const brotliAsync = promisify(brotliCompress);
+const MAX_EDITOR_ARTIFACT_BYTES = 20 * 1024 * 1024;
+
 async function artifactFiles(root: string, relative = ""): Promise<string[]> {
   const entries = await fs.readdir(path.join(root, relative), { withFileTypes: true });
   const files = await Promise.all(entries.map(async (entry) => {
@@ -60,6 +73,45 @@ export async function createEditorArtifactFiles(root: string): Promise<EditorArt
       sha256: createHash("sha256").update(content).digest("hex"),
     };
   }));
+}
+
+export async function createEditorArtifactReport(
+  root: string,
+  files: readonly EditorArtifactFile[],
+): Promise<EditorArtifactReport> {
+  const compressed = await Promise.all(files.map(async (file) => {
+    const content = await fs.readFile(path.join(root, file.path));
+    const [gzipped, brotli] = await Promise.all([
+      gzipAsync(content, { level: 9 }),
+      brotliAsync(content, {
+        params: { [zlibConstants.BROTLI_PARAM_QUALITY]: 9 },
+      }),
+    ]);
+    return { gzip: gzipped.byteLength, brotli: brotli.byteLength };
+  }));
+  return {
+    files: files.length,
+    rawBytes: files.reduce((sum, file) => sum + file.size, 0),
+    gzipBytes: compressed.reduce((sum, file) => sum + file.gzip, 0),
+    brotliBytes: compressed.reduce((sum, file) => sum + file.brotli, 0),
+  };
+}
+
+const mib = (bytes: number): string => `${(bytes / 1024 / 1024).toFixed(2)} MiB`;
+
+function validateEditorArtifact(files: readonly EditorArtifactFile[], report: EditorArtifactReport): void {
+  if (report.rawBytes > MAX_EDITOR_ARTIFACT_BYTES) {
+    throw new Error(`Editor artifact ${mib(report.rawBytes)} exceeds the ${mib(MAX_EDITOR_ARTIFACT_BYTES)} budget`);
+  }
+  const workerNames = files.map((file) => path.posix.basename(file.path));
+  const tsWorkers = workerNames.filter((name) => /^(?:ts|typescript)\.worker-.*\.js$/.test(name));
+  if (tsWorkers.length !== 1 || tsWorkers[0]?.startsWith("typescript.worker-")) {
+    throw new Error(`Editor artifact must contain exactly one standard ts.worker; found: ${tsWorkers.join(", ") || "none"}`);
+  }
+  const unusedWorkers = workerNames.filter((name) => /^(?:css|html)\.worker-.*\.js$/.test(name));
+  if (unusedWorkers.length > 0) {
+    throw new Error(`Editor artifact contains unused Monaco workers: ${unusedWorkers.join(", ")}`);
+  }
 }
 
 export function editorArtifactPlugin(editorVersion: string): Plugin[] {
@@ -103,6 +155,11 @@ export function editorArtifactPlugin(editorVersion: string): Plugin[] {
       await fs.cp(blocklyMediaRoot, path.join(outDir, "assets/blockly-media"), { recursive: true });
       await fs.cp(editorThemeRoot, path.join(outDir, "assets/theme"), { recursive: true });
       const files = await createEditorArtifactFiles(outDir);
+      const report = await createEditorArtifactReport(outDir, files);
+      validateEditorArtifact(files, report);
+      console.info(
+        `Editor artifact: ${report.files} files, raw ${mib(report.rawBytes)}, gzip ${mib(report.gzipBytes)}, brotli ${mib(report.brotliBytes)}`,
+      );
       const manifest: EditorArtifactManifest = {
         schemaVersion: 2,
         environmentProtocolVersion: 1,

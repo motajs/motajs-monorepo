@@ -4,59 +4,127 @@ import {
   type EditorReleaseIdentity,
 } from "@/environment";
 
-interface ReadyEditorUpdateStatus {
-  protocolVersion: 1;
+export interface EditorUpdateStaging {
+  buildId: string;
+  version?: string;
+  completedFiles: number;
+  totalFiles: number;
+  completedBytes: number;
+  totalBytes: number;
+  error?: string;
+}
+
+export interface EditorUpdateStatus {
+  protocolVersion: 2;
   status: "ready";
-  release: EditorReleaseIdentity;
+  launch?: EditorReleaseIdentity;
+  candidate?: EditorReleaseIdentity;
+  staging?: EditorUpdateStaging;
+  lastCheckedAt?: number;
 }
-
-interface UnavailableEditorUpdateStatus {
-  protocolVersion: 1;
-  status: "unavailable";
-  message: string;
-}
-
-export type EditorUpdateStatus = ReadyEditorUpdateStatus | UnavailableEditorUpdateStatus;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
 
+function parseRelease(value: unknown, label: string): EditorReleaseIdentity | undefined {
+  if (value === undefined) return undefined;
+  if (!isRecord(value) || typeof value.buildId !== "string" || !value.buildId) {
+    throw new Error(`编辑器更新状态缺少${label} buildId。`);
+  }
+  if (typeof value.version !== "string" || !value.version) {
+    throw new Error(`编辑器更新状态缺少${label}版本号。`);
+  }
+  return { buildId: value.buildId, version: value.version };
+}
+
 export function parseEditorUpdateStatus(value: unknown): EditorUpdateStatus {
-  if (!isRecord(value) || value.protocolVersion !== 1) {
+  if (!isRecord(value) || value.protocolVersion !== 2 || value.status !== "ready") {
     throw new Error("编辑器更新接口返回了不兼容的数据。");
   }
-  if (value.status === "unavailable") {
-    if (typeof value.message !== "string") throw new Error("编辑器更新状态缺少错误信息。");
-    return { protocolVersion: 1, status: "unavailable", message: value.message };
+  const launch = parseRelease(value.launch, "当前版本");
+  const candidate = parseRelease(value.candidate, "候选版本");
+  let staging: EditorUpdateStaging | undefined;
+  if (value.staging !== undefined) {
+    if (!isRecord(value.staging) || typeof value.staging.buildId !== "string") {
+      throw new Error("编辑器更新状态中的下载进度无效。");
+    }
+    const stagingValue = value.staging;
+    const numeric = ["completedFiles", "totalFiles", "completedBytes", "totalBytes"] as const;
+    if (numeric.some((key) => typeof stagingValue[key] !== "number")) {
+      throw new Error("编辑器更新状态中的下载进度无效。");
+    }
+    staging = {
+      buildId: stagingValue.buildId as string,
+      ...(typeof stagingValue.version === "string" ? { version: stagingValue.version } : {}),
+      completedFiles: stagingValue.completedFiles as number,
+      totalFiles: stagingValue.totalFiles as number,
+      completedBytes: stagingValue.completedBytes as number,
+      totalBytes: stagingValue.totalBytes as number,
+      ...(typeof stagingValue.error === "string" ? { error: stagingValue.error } : {}),
+    };
   }
-  if (value.status !== "ready" || !isRecord(value.release)) {
-    throw new Error("编辑器更新状态格式无效。");
-  }
-  const { buildId, version } = value.release;
-  if (typeof buildId !== "string" || buildId.length === 0) {
-    throw new Error("编辑器更新状态缺少 buildId。");
-  }
-  if (typeof version !== "string" || version.length === 0) {
-    throw new Error("编辑器更新状态缺少版本号。");
-  }
-  return { protocolVersion: 1, status: "ready", release: { buildId, version } };
+  return {
+    protocolVersion: 2,
+    status: "ready",
+    ...(launch ? { launch } : {}),
+    ...(candidate ? { candidate } : {}),
+    ...(staging ? { staging } : {}),
+    ...(typeof value.lastCheckedAt === "number" ? { lastCheckedAt: value.lastCheckedAt } : {}),
+  };
+}
+
+async function requestUpdateEndpoint(
+  environment: EditorEnvironment,
+  init: RequestInit,
+): Promise<EditorUpdateStatus> {
+  const endpoint = environment.endpoints.update;
+  if (!endpoint) throw new Error("当前编辑器宿主未提供更新能力。");
+  const response = await fetch(endpoint, {
+    cache: "no-store",
+    headers: { "accept": "application/json", "content-type": "application/json" },
+    ...init,
+  });
+  if (!response.ok) throw new Error(`编辑器更新请求失败：HTTP ${response.status}`);
+  return parseEditorUpdateStatus(await response.json());
+}
+
+export async function getEditorUpdateState(
+  environment: EditorEnvironment = getEditorEnvironment(),
+  signal?: AbortSignal,
+): Promise<EditorUpdateStatus | null> {
+  if (!environment.release || !environment.endpoints.update) return null;
+  return await requestUpdateEndpoint(environment, { method: "GET", signal });
 }
 
 export async function checkEditorUpdate(
   environment: EditorEnvironment = getEditorEnvironment(),
   signal?: AbortSignal,
-): Promise<EditorReleaseIdentity | null> {
-  const { release } = environment;
-  const endpoint = environment.endpoints.update;
-  if (!release || !endpoint) return null;
-  const response = await fetch(endpoint, {
-    cache: "no-store",
-    headers: { accept: "application/json" },
+  force = false,
+): Promise<EditorUpdateStatus | null> {
+  if (!environment.release || !environment.endpoints.update) return null;
+  return await requestUpdateEndpoint(environment, {
+    method: "POST",
+    body: JSON.stringify({ action: "check", ...(force ? { force: true } : {}) }),
     signal,
   });
-  if (!response.ok) throw new Error(`编辑器更新检查失败：HTTP ${response.status}`);
-  const status = parseEditorUpdateStatus(await response.json());
-  if (status.status !== "ready" || status.release.buildId === release.buildId) return null;
-  return status.release;
+}
+
+export async function activateEditorUpdate(
+  buildId: string,
+  environment: EditorEnvironment = getEditorEnvironment(),
+): Promise<EditorUpdateStatus> {
+  return await requestUpdateEndpoint(environment, {
+    method: "POST",
+    body: JSON.stringify({ action: "activate", buildId }),
+  });
+}
+
+export function availableEditorRelease(
+  status: EditorUpdateStatus | null | undefined,
+  running: EditorReleaseIdentity | undefined,
+): EditorReleaseIdentity | undefined {
+  if (!status || !running) return undefined;
+  const release = status.candidate ?? status.launch;
+  return release && release.buildId !== running.buildId ? release : undefined;
 }

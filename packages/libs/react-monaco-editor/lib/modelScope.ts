@@ -1,5 +1,5 @@
 import "./localization/zh-cn";
-import * as monaco from "monaco-editor";
+import * as monaco from "monaco-editor/editor/editor.api";
 import { clearMonacoViewState } from "./MonacoEditor";
 
 export interface MonacoModelDescriptor {

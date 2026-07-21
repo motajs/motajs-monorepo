@@ -25,6 +25,7 @@ import { migrateLegacyAirwall } from "@/project/migrations";
 import { notifyError, notifySuccess } from "@/utils/notify";
 import { useProjectSchemaSuspense } from "@/components/SchemaTable";
 import { floorSchemaDefinition } from "@/components/SchemaTable/builtinSchemas";
+import { scheduleMonacoPreload } from "./monacoPreload";
 
 const MAP_PANELS: Array<{
   id: MapPanelId;
@@ -104,6 +105,11 @@ const ProjectDataPreloader: FC = () => {
   return null;
 };
 
+const MonacoPreloader: FC = () => {
+  useEffect(() => scheduleMonacoPreload(), []);
+  return null;
+};
+
 const ProjectSchemaBootstrap: FC<{ children: ReactNode }> = ({ children }) => {
   useProjectSchemaSuspense(floorSchemaDefinition);
   return children;
@@ -145,6 +151,7 @@ export const Workbench: FC = () => {
     <MapEditorStore.Provider>
       <div className="editorAppShell">
         <ProjectDataPreloader />
+        <MonacoPreloader />
         <AppTopBar />
         <ContentBoundary loadingUI={<div className="workspaceSchemaLoading">正在加载表格配置...</div>}>
         <ProjectSchemaBootstrap>

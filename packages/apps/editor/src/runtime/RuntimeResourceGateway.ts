@@ -1,4 +1,3 @@
-import { FileHandlerManager } from "@/fs/FileHandlerManager";
 import type { IContentHandler } from "@/fs/interfaces";
 import { projectAssets } from "@/project/assets";
 import { projectData } from "@/project/data/projectData";
@@ -31,11 +30,7 @@ function dataResource(path: string): DataResource<unknown> | null {
 
 async function loadedRaw(resource: DataResource<unknown>): Promise<IContentHandler<string>> {
   const raw = resource.raw();
-  const current = raw.getContent();
-  if (current.status === "idle" || current.status === "loading") {
-    await FileHandlerManager.load(resource.path);
-    await resource.waitForSettled();
-  }
+  await resource.ensureLoaded();
   return raw;
 }
 
@@ -97,11 +92,7 @@ export class RuntimeResourceGateway {
     if (!path.startsWith("project/")) throw new Error(`Runtime resource denied: ${path}`);
     const resource = projectAssets.image(path);
     this.watch(path, (listener) => resource.subscribe(listener));
-    const current = resource.snapshot();
-    if (current.status === "idle" || current.status === "loading") {
-      await resource.reload();
-      await resource.waitForSettled();
-    }
+    await resource.ensureLoaded();
     const content = resource.snapshot();
     if (content.status !== "loaded") throw new Error(`Runtime resource unavailable: ${path}`);
     return { revision: content.value.revision, bytes: new Uint8Array(content.value.bytes) };

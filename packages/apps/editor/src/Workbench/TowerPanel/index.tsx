@@ -118,12 +118,14 @@ const TowerSchemaWorkspace: FC = () => {
     "project:materials.images",
     () => mapDirectory(imageDirectory.snapshot(), (name) => /\.(png|jpg|jpeg|gif)$/i.test(name)),
     (listener) => imageDirectory.subscribe(listener),
+    () => imageDirectory.ensureLoaded(),
     () => imageDirectory.reload(),
   ), [imageDirectory]);
   const bgmSource = useMemo(() => new ContentValueSource<string[]>(
     "project:materials.bgms",
     () => mapDirectory(bgmDirectory.snapshot(), (name) => /\.(mp3|ogg|wav|m4a|flac)$/i.test(name)),
     (listener) => bgmDirectory.subscribe(listener),
+    () => bgmDirectory.ensureLoaded(),
     () => bgmDirectory.reload(),
   ), [bgmDirectory]);
 

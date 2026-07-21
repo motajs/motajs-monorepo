@@ -63,7 +63,7 @@ class FileHandlerManagerImpl {
     // 创建加载 Promise
     const loadPromise = (async () => {
       try {
-        await handler.load();
+        await handler.ensureLoaded();
         return handler;
       } finally {
         // 加载完成后移除锁

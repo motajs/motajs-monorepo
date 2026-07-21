@@ -201,6 +201,7 @@ export interface ValueSource<T> {
   readonly id: string;
   snapshot(): BlockResolution<RawSlot<T>>;
   subscribe(listener: () => void): () => void;
+  ensureLoaded?(): Promise<void>;
   reload?(): Promise<void>;
 }
 

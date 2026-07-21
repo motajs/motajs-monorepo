@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { Badge, Button, Modal, Popover, Tooltip } from "antd";
 import { useCallback, useEffect, useMemo, useState, type FC } from "react";
-import { getEditorEnvironment, type EditorReleaseIdentity } from "@/environment";
+import { getEditorEnvironment } from "@/environment";
 import { persistenceMonitor } from "@/fs/PersistenceMonitor";
 import { useSignal } from "@/hooks/useFs";
 import { projectData } from "@/project/data/projectData";
@@ -29,7 +29,14 @@ import {
 import { notifyError } from "@/utils/notify";
 import { isKeyboardInputTarget } from "@/utils/keyboard";
 import { suppressNextWorkspaceDraftWarning } from "./draftGuard";
-import { checkEditorUpdate } from "./editorUpdate";
+import {
+  activateEditorUpdate,
+  availableEditorRelease,
+  checkEditorUpdate,
+  getEditorUpdateState,
+  parseEditorUpdateStatus,
+  type EditorUpdateStatus,
+} from "./editorUpdate";
 import { createRetainedProjectTitleSignal } from "./projectTitle";
 
 const WORKSPACES: Array<{
@@ -61,40 +68,52 @@ const ProjectTitle: FC = () => {
   return <div className="appProjectTitle" title={title}>{title}</div>;
 };
 
-function useAvailableEditorUpdate(): EditorReleaseIdentity | undefined {
-  const [release, setRelease] = useState<EditorReleaseIdentity>();
+function useEditorUpdateState(): EditorUpdateStatus | undefined {
+  const [status, setStatus] = useState<EditorUpdateStatus>();
   useEffect(() => {
     const environment = getEditorEnvironment();
     if (!environment.release || !environment.endpoints.update) return;
     const controller = new AbortController();
     let checking = false;
-    const check = async () => {
+    const refresh = async () => {
+      const next = await getEditorUpdateState(environment, controller.signal);
+      if (!controller.signal.aborted && next) setStatus(next);
+    };
+    const check = async (force = false) => {
       if (checking) return;
       checking = true;
       try {
-        const available = await checkEditorUpdate(environment, controller.signal);
-        if (!controller.signal.aborted) setRelease(available ?? undefined);
+        const next = await checkEditorUpdate(environment, controller.signal, force);
+        if (!controller.signal.aborted && next) setStatus(next);
       } catch (error) {
         if (!controller.signal.aborted) console.debug("Editor update check is unavailable", error);
       } finally {
         checking = false;
       }
     };
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible") void check();
+    const handleMessage = (event: MessageEvent) => {
+      if (!event.data || event.data.type !== "motajs-editor-release-state") return;
+      try {
+        setStatus(parseEditorUpdateStatus(event.data.state));
+      } catch (error) {
+        console.debug("Ignored an invalid Editor release broadcast", error);
+      }
     };
-    void check();
-    const interval = window.setInterval(() => void check(), 5 * 60_000);
-    window.addEventListener("focus", check);
-    document.addEventListener("visibilitychange", handleVisibility);
+    void refresh().then(() => check()).catch((error) => {
+      if (!controller.signal.aborted) console.debug("Editor update state is unavailable", error);
+    });
+    const interval = window.setInterval(() => void check(), 10 * 60_000);
+    const handleOnline = () => void check(true);
+    navigator.serviceWorker?.addEventListener("message", handleMessage);
+    window.addEventListener("online", handleOnline);
     return () => {
       controller.abort();
       window.clearInterval(interval);
-      window.removeEventListener("focus", check);
-      document.removeEventListener("visibilitychange", handleVisibility);
+      navigator.serviceWorker?.removeEventListener("message", handleMessage);
+      window.removeEventListener("online", handleOnline);
     };
   }, []);
-  return release;
+  return status;
 }
 
 const shortBuildId = (buildId: string): string => buildId.length > 12 ? buildId.slice(0, 12) : buildId;
@@ -110,11 +129,12 @@ export const AppTopBar: FC = () => {
   } = PanelStore.useStore();
   const { theme, setTheme } = EditorStore.useStore();
   const history = useOperationHistory();
-  const availableRelease = useAvailableEditorUpdate();
+  const updateStatus = useEditorUpdateState();
   const [updateOpen, setUpdateOpen] = useState(false);
   const dark = theme === "editor_color_dark";
   const environment = getEditorEnvironment();
   const runningRelease = environment.release;
+  const availableRelease = availableEditorRelease(updateStatus, runningRelease);
   const docsUrl = environment.endpoints.docs;
 
   const navigate = useCallback((workspace: WorkspaceId) => {
@@ -183,7 +203,7 @@ export const AppTopBar: FC = () => {
     </div>
   );
 
-  const reloadForUpdate = useCallback(() => {
+  const reloadForUpdate = async () => {
     if (history.busy) {
       notifyError("当前操作尚未完成，请稍后再更新。");
       return;
@@ -196,9 +216,15 @@ export const AppTopBar: FC = () => {
       notifyError("存在写入失败的工程文件，请先处理保存错误再更新。");
       return;
     }
-    suppressNextWorkspaceDraftWarning();
-    window.location.reload();
-  }, [history.busy]);
+    if (!availableRelease) return;
+    try {
+      await activateEditorUpdate(availableRelease.buildId, environment);
+      suppressNextWorkspaceDraftWarning();
+      window.location.reload();
+    } catch (error) {
+      notifyError(error);
+    }
+  };
 
   return (
     <>
@@ -327,13 +353,13 @@ export const AppTopBar: FC = () => {
         centered
         okText="刷新并更新"
         onCancel={() => setUpdateOpen(false)}
-        onOk={reloadForUpdate}
+        onOk={() => void reloadForUpdate()}
         open={updateOpen && Boolean(availableRelease)}
         title="编辑器更新可用"
       >
         {availableRelease && (
           <div className="editorUpdateDialog" data-test-id="editor-update-dialog">
-            <p>服务端已经准备好新的编辑器版本，刷新页面后即可启用。</p>
+            <p>新的编辑器版本已经完整下载并校验，刷新页面后即可启用。</p>
             <dl>
               <div>
                 <dt>当前版本</dt>

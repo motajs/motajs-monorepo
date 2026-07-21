@@ -1,5 +1,6 @@
 import "./localization/zh-cn";
-import * as monaco from "monaco-editor";
+import * as monacoApi from "monaco-editor/editor/editor.api";
+import * as monacoTypeScript from "monaco-editor/languages/features/typescript/register";
 import { initializeMonaco } from "./setup";
 
 export interface MonacoExtraLibrary {
@@ -8,7 +9,7 @@ export interface MonacoExtraLibrary {
 }
 
 export class MonacoLanguageLibraryScope {
-  private disposables: monaco.IDisposable[] = [];
+  private disposables: monacoApi.IDisposable[] = [];
   readonly id: string;
 
   constructor(id: string) {
@@ -19,7 +20,7 @@ export class MonacoLanguageLibraryScope {
   replace(libraries: readonly MonacoExtraLibrary[]): void {
     this.clear();
     this.disposables = libraries.map((library) => (
-      monaco.typescript.javascriptDefaults.addExtraLib(library.content, library.path)
+      monacoTypeScript.javascriptDefaults.addExtraLib(library.content, library.path)
     ));
   }
 
@@ -34,7 +35,7 @@ export class MonacoLanguageLibraryScope {
 }
 
 export function setMonacoTheme(theme: "light" | "dark"): void {
-  monaco.editor.setTheme(theme === "dark" ? "dark-plus" : "light-plus");
+  monacoApi.editor.setTheme(theme === "dark" ? "dark-plus" : "light-plus");
   document.documentElement.dataset.monacoTheme = theme;
 }
 
@@ -63,13 +64,13 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function isUsedAsCallable(model: monaco.editor.ITextModel, name: string): boolean {
+function isUsedAsCallable(model: monacoApi.editor.ITextModel, name: string): boolean {
   if (["function", "if", "for", "while", "switch", "catch", "return", "new", "typeof"].includes(name)) return false;
   return new RegExp(`\\b${escapeRegExp(name)}\\s*\\(`).test(model.getValue());
 }
 
 function ignoredTokenAt(line: string, offset: number): boolean {
-  const tokens = monaco.editor.tokenize(line, "javascript")[0] ?? [];
+  const tokens = monacoApi.editor.tokenize(line, "javascript")[0] ?? [];
   let type = "";
   for (const token of tokens) {
     if (token.offset > offset) break;
@@ -79,7 +80,7 @@ function ignoredTokenAt(line: string, offset: number): boolean {
 }
 
 export function attachMonacoTypeSemanticHighlighting(
-  editor: monaco.editor.IStandaloneCodeEditor,
+  editor: monacoApi.editor.IStandaloneCodeEditor,
 ): () => void {
   const decorations = editor.createDecorationsCollection();
   let generation = 0;
@@ -91,7 +92,7 @@ export function attachMonacoTypeSemanticHighlighting(
     const model = editor.getModel();
     if (!model || model.getLanguageId() !== "javascript") return;
     const visible = editor.getVisibleRanges();
-    const identifiers: Array<{ range: monaco.Range; offset: number; name: string }> = [];
+    const identifiers: Array<{ range: monacoApi.Range; offset: number; name: string }> = [];
     for (const range of visible) {
       for (let line = range.startLineNumber; line <= range.endLineNumber; line += 1) {
         const text = model.getLineContent(line);
@@ -100,13 +101,13 @@ export function attachMonacoTypeSemanticHighlighting(
         while ((match = matcher.exec(text)) && identifiers.length < 1000) {
           if (ignoredTokenAt(text, match.index)) continue;
           const startColumn = match.index + 1;
-          const tokenRange = new monaco.Range(line, startColumn, line, startColumn + match[0].length);
+          const tokenRange = new monacoApi.Range(line, startColumn, line, startColumn + match[0].length);
           identifiers.push({ range: tokenRange, offset: model.getOffsetAt(tokenRange.getStartPosition()), name: match[0] });
         }
       }
     }
     try {
-      const workerFactory = await monaco.typescript.getJavaScriptWorker();
+      const workerFactory = await monacoTypeScript.getJavaScriptWorker();
       const worker = await workerFactory(model.uri);
       const results = await Promise.all(identifiers.map(async (identifier) => ({
         range: identifier.range,
@@ -141,11 +142,11 @@ export function attachMonacoTypeSemanticHighlighting(
   };
 }
 
-export function getMonacoDiagnostics(model: monaco.editor.ITextModel): monaco.editor.IMarker[] {
-  return monaco.editor.getModelMarkers({ resource: model.uri });
+export function getMonacoDiagnostics(model: monacoApi.editor.ITextModel): monacoApi.editor.IMarker[] {
+  return monacoApi.editor.getModelMarkers({ resource: model.uri });
 }
 
-export async function formatMonacoDocument(editor: monaco.editor.IStandaloneCodeEditor): Promise<boolean> {
+export async function formatMonacoDocument(editor: monacoApi.editor.IStandaloneCodeEditor): Promise<boolean> {
   const action = editor.getAction("editor.action.formatDocument");
   if (!action?.isSupported()) return false;
   await action.run();
@@ -153,7 +154,7 @@ export async function formatMonacoDocument(editor: monaco.editor.IStandaloneCode
 }
 
 export function revealMonacoPosition(
-  editor: monaco.editor.IStandaloneCodeEditor,
+  editor: monacoApi.editor.IStandaloneCodeEditor,
   line: number,
   column = 1,
   contextLines = 5,
@@ -170,7 +171,7 @@ export function revealMonacoPosition(
   editor.focus();
 }
 
-export { monaco };
-export type MonacoEditorInstance = monaco.editor.IStandaloneCodeEditor;
-export type MonacoTextModel = monaco.editor.ITextModel;
-export type MonacoMarker = monaco.editor.IMarker;
+export const monaco = { ...monacoApi, typescript: monacoTypeScript };
+export type MonacoEditorInstance = monacoApi.editor.IStandaloneCodeEditor;
+export type MonacoTextModel = monacoApi.editor.ITextModel;
+export type MonacoMarker = monacoApi.editor.IMarker;

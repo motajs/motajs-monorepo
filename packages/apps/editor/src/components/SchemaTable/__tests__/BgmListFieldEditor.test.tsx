@@ -35,6 +35,30 @@ const registry: ValueSource<unknown> = {
 };
 
 describe("BgmListFieldEditor", () => {
+  it("ensures a loading registry without forcing a reload", async () => {
+    const ensureLoaded = vi.fn(async () => undefined);
+    const reload = vi.fn(async () => undefined);
+    const loadingRegistry: ValueSource<unknown> = {
+      id: "project:materials.bgms",
+      snapshot: () => ({ status: "loading" }),
+      subscribe: () => () => undefined,
+      ensureLoaded,
+      reload,
+    };
+    render(
+      <BgmListFieldEditor
+        schema={schema}
+        value={[]}
+        disabled={false}
+        scope={{ roots: { project: new RegistryReferenceRoot(new Map([["materials.bgms", loadingRegistry]])) } }}
+        onCommit={vi.fn(async () => undefined)}
+      />,
+    );
+
+    await waitFor(() => expect(ensureLoaded).toHaveBeenCalledTimes(1));
+    expect(reload).not.toHaveBeenCalled();
+  });
+
   it("replaces by clicking the item and adds multiple selected files", async () => {
     const commit = vi.fn(async () => undefined);
     selectMaterial.mockResolvedValueOnce(["b.mp3"]).mockResolvedValueOnce(["b.mp3", "c.mp3"]);

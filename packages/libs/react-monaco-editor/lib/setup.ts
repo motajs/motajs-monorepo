@@ -1,11 +1,17 @@
 import "./localization/zh-cn";
-import * as monaco from "monaco-editor";
+// Monaco 0.56 loads the TypeScript worker manager lazily. Its shared worker
+// module also registers editor contributions and their singleton services, so
+// load those registrations before the first standalone editor is created.
+import "monaco-editor/internal/common/workers";
+import * as monaco from "monaco-editor/editor/editor.api";
+import * as monacoTypeScript from "monaco-editor/languages/features/typescript/register";
+import "monaco-editor/languages/definitions/javascript/register";
+import "monaco-editor/languages/definitions/typescript/register";
+import "monaco-editor/languages/features/json/register";
 
-import editorWorker from "./workers/editor.worker?worker";
-import jsonWorker from "./workers/json.worker?worker";
-import cssWorker from "./workers/css.worker?worker";
-import htmlWorker from "./workers/html.worker?worker";
-import tsWorker from "./workers/typescript.worker?worker";
+import editorWorker from "monaco-editor/editor/editor.worker?worker";
+import jsonWorker from "monaco-editor/languages/features/json/json.worker?worker";
+import tsWorker from "monaco-editor/languages/features/typescript/ts.worker?worker";
 
 import lightPlus from "./assets/code/light_plus.json";
 import darkPlus from "./assets/code/dark_plus.json";
@@ -22,18 +28,8 @@ import { once } from "lodash-es";
 
 self.MonacoEnvironment = {
   getWorker(_, label) {
-    if (label === "json") {
-      return new jsonWorker();
-    }
-    if (label === "css" || label === "scss" || label === "less") {
-      return new cssWorker();
-    }
-    if (label === "html" || label === "handlebars" || label === "razor") {
-      return new htmlWorker();
-    }
-    if (label === "typescript" || label === "javascript") {
-      return new tsWorker();
-    }
+    if (label === "json") return new jsonWorker();
+    if (label === "javascript" || label === "typescript") return new tsWorker();
     return new editorWorker();
   },
 };
@@ -68,16 +64,16 @@ const registry = new Registry({
 const loadOnigasm = once(() => loadWASM(onigasmURL));
 
 const configureJavascript = once(() => {
-  const defaults = monaco.typescript.javascriptDefaults;
+  const defaults = monacoTypeScript.javascriptDefaults;
   defaults.setEagerModelSync(true);
   defaults.setCompilerOptions({
     allowJs: true,
     allowNonTsExtensions: true,
     checkJs: true,
     noEmit: true,
-    target: monaco.typescript.ScriptTarget.ESNext,
-    module: monaco.typescript.ModuleKind.ESNext,
-    moduleResolution: monaco.typescript.ModuleResolutionKind.NodeJs,
+    target: monacoTypeScript.ScriptTarget.ESNext,
+    module: monacoTypeScript.ModuleKind.ESNext,
+    moduleResolution: monacoTypeScript.ModuleResolutionKind.NodeJs,
   });
   defaults.setDiagnosticsOptions({
     // Script entries are stored as function expressions. Monaco parses a model
@@ -121,8 +117,23 @@ export const setupMonacoTextmate = async (editor: monaco.editor.IStandaloneCodeE
   initializeMonaco();
   try {
     await loadOnigasm();
-    await wireTmGrammars(monaco, registry, grammars, editor);
+    await wireTmGrammars(
+      monaco as unknown as Parameters<typeof wireTmGrammars>[0],
+      registry,
+      grammars,
+      editor,
+    );
   } catch {
     //
   }
 };
+
+const preloadRuntime = once(async () => {
+  initializeMonaco();
+  await loadOnigasm();
+  const worker = await monacoTypeScript.getJavaScriptWorker();
+  await worker();
+});
+
+/** Loads and starts Monaco's heavy runtime without requiring an editor surface. */
+export const preloadMonacoRuntime = async (): Promise<void> => await preloadRuntime();

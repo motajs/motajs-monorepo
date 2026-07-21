@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   calculateEditorBuildId,
   createEditorArtifactFiles,
+  createEditorArtifactReport,
   editorArtifactPlugin,
 } from "./editor-artifact-plugin";
 
@@ -66,5 +67,14 @@ describe("editor artifact build id", () => {
         sha256: "1553cc62ff246044c683a61e203e65541990e7fcd4af9443d22b9557ecc9ac54",
       },
     ]);
+  });
+
+  it("reports raw, gzip and brotli release sizes", async () => {
+    const root = await artifact([["index.html", "editor"], ["assets/app.js", "code"]]);
+    const files = await createEditorArtifactFiles(root);
+    const report = await createEditorArtifactReport(root, files);
+    expect(report).toMatchObject({ files: 2, rawBytes: 10 });
+    expect(report.gzipBytes).toBeGreaterThan(0);
+    expect(report.brotliBytes).toBeGreaterThan(0);
   });
 });

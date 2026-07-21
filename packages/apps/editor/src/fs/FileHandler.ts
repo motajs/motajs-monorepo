@@ -32,6 +32,12 @@ export class FileHandler implements IContentHandler<string> {
     await this.load();
   }
 
+  async ensureLoaded(): Promise<void> {
+    const status = this._content().status;
+    if (status === "idle") await this.load();
+    else if (status === "loading") await this.waitForSettled();
+  }
+
   getPath(): string {
     return this.path;
   }

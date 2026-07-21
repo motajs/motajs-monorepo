@@ -1,6 +1,10 @@
 import { accessProjectById } from "./project";
 import { ResponseUtils } from "./utils";
-import { getEditorHostStatus, resolveEditorRelease } from "./editorRelease";
+import {
+  EditorReleaseError,
+  getEditorReleaseManager,
+  resolveEditorRelease,
+} from "./editorRelease";
 
 const environmentPattern = /(<script\b[^>]*\bid=["']mota-editor-environment["'][^>]*>)[\s\S]*?(<\/script>)/i;
 
@@ -53,23 +57,48 @@ export function createEditorShell({
   return withEnvironment.replace(/<head([^>]*)>/i, `<head$1><base href="${htmlAttribute(releaseRoot.href)}">`);
 }
 
-export async function serveEditorUpdateStatus(request: Request, scopeUrl: URL): Promise<Response> {
-  if (request.method !== "GET" && request.method !== "HEAD") {
-    return ResponseUtils.error(405, "method-not-allowed", "Editor update status supports GET and HEAD only");
+export async function serveEditorUpdateStatus(
+  request: Request,
+  scopeUrl: URL,
+  schedule?: (task: Promise<unknown>) => void,
+): Promise<Response> {
+  if (request.method !== "GET" && request.method !== "HEAD" && request.method !== "POST") {
+    return ResponseUtils.error(405, "method-not-allowed", "Editor update status supports GET, HEAD and POST only");
   }
-  const status = await getEditorHostStatus(scopeUrl);
-  const body = status.status === "ready"
-    ? {
-        protocolVersion: 1,
-        status: "ready",
-        release: { buildId: status.buildId, version: status.editorVersion },
+  const manager = getEditorReleaseManager(scopeUrl);
+  if (request.method === "POST") {
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return ResponseUtils.error(400, "invalid-request", "Editor update action must be valid JSON");
+    }
+    if (!body || typeof body !== "object" || !("action" in body)) {
+      return ResponseUtils.error(400, "invalid-request", "Editor update action is missing");
+    }
+    const action = (body as { action?: unknown }).action;
+    if (action === "check") {
+      const task = manager.checkForUpdates((body as { force?: unknown }).force === true)
+        .catch((error) => console.debug("Editor update check failed", error));
+      if (schedule) schedule(task);
+      else void task;
+    } else if (action === "activate") {
+      const buildId = (body as { buildId?: unknown }).buildId;
+      if (typeof buildId !== "string") {
+        return ResponseUtils.error(400, "invalid-request", "Editor candidate buildId is missing");
       }
-    : {
-        protocolVersion: 1,
-        status: "unavailable",
-        message: status.message,
-      };
-  return new Response(request.method === "HEAD" ? null : JSON.stringify(body), {
+      try {
+        await manager.activateCandidate(buildId);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return ResponseUtils.error(error instanceof EditorReleaseError ? 409 : 500, "activation-failed", message);
+      }
+    } else {
+      return ResponseUtils.error(400, "invalid-request", "Unknown Editor update action");
+    }
+  }
+  const status = await manager.getUpdateState();
+  return new Response(request.method === "HEAD" ? null : JSON.stringify(status), {
     headers: {
       "content-type": "application/json; charset=utf-8",
       "cache-control": "no-store",
@@ -83,6 +112,7 @@ export async function serveProjectEditor(
   projectId: number,
   projectUrl: string,
   schedule?: (task: Promise<unknown>) => void,
+  clientId?: string,
 ): Promise<Response> {
   if (request.method !== "GET" && request.method !== "HEAD") {
     return ResponseUtils.error(405, "method-not-allowed", "Editor shell supports GET and HEAD only");
@@ -96,7 +126,7 @@ export async function serveProjectEditor(
     .catch(() => undefined);
   let release;
   try {
-    release = await resolveEditorRelease(scopeUrl, schedule);
+    release = await resolveEditorRelease(scopeUrl, schedule, clientId);
   } catch (error) {
     const target = new URL(projectUrl);
     target.searchParams.set("reason", "editor-unavailable");

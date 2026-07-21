@@ -17,5 +17,5 @@ export type {
   MonacoMarker,
   MonacoTextModel,
 } from "./languageScope";
-export { initializeMonaco } from "./setup";
+export { initializeMonaco, preloadMonacoRuntime } from "./setup";
 export * from "./hook";

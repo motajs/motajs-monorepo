@@ -37,7 +37,7 @@ describe("service worker router", () => {
   it("routes the project-scoped Editor update capability", async () => {
     const request = new Request("https://example.test/app/service/1055/api/editor-update/");
     expect(await (await routeRequest(request, scope))?.text()).toBe("update");
-    expect(mocks.serveEditorUpdateStatus).toHaveBeenCalledWith(request, scope);
+    expect(mocks.serveEditorUpdateStatus).toHaveBeenCalledWith(request, scope, undefined);
   });
 
   it("uses the project page as the canonical project URL", async () => {
@@ -73,6 +73,7 @@ describe("service worker router", () => {
       scope,
       1055,
       "https://example.test/app/service/1055/project/",
+      undefined,
       undefined,
     );
   });

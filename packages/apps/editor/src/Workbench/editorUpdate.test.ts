@@ -18,23 +18,29 @@ const environment: EditorEnvironment = {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("Editor update check", () => {
-  it("returns a release only when its build differs from the running build", async () => {
+  it("requests a background check and returns the local install state", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(Response.json({
-        protocolVersion: 1,
+        protocolVersion: 2,
         status: "ready",
-        release: { buildId: "new-build", version: "2.0.0" },
+        launch: environment.release,
+        candidate: { buildId: "new-build", version: "2.0.0" },
       }))
       .mockResolvedValueOnce(Response.json({
-        protocolVersion: 1,
+        protocolVersion: 2,
         status: "ready",
-        release: environment.release,
+        launch: environment.release,
       }));
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(checkEditorUpdate(environment)).resolves.toEqual({ buildId: "new-build", version: "2.0.0" });
-    await expect(checkEditorUpdate(environment)).resolves.toBeNull();
-    expect(fetchMock).toHaveBeenCalledWith(environment.endpoints.update, expect.objectContaining({ cache: "no-store" }));
+    await expect(checkEditorUpdate(environment)).resolves.toMatchObject({
+      candidate: { buildId: "new-build", version: "2.0.0" },
+    });
+    await expect(checkEditorUpdate(environment)).resolves.toMatchObject({ launch: environment.release });
+    expect(fetchMock).toHaveBeenCalledWith(environment.endpoints.update, expect.objectContaining({
+      method: "POST",
+      cache: "no-store",
+    }));
   });
 
   it("is disabled when the host did not provide the optional capability", async () => {
@@ -48,7 +54,7 @@ describe("Editor update check", () => {
   });
 
   it("rejects malformed responses", () => {
-    expect(() => parseEditorUpdateStatus({ protocolVersion: 2, status: "ready" })).toThrow("不兼容");
-    expect(() => parseEditorUpdateStatus({ protocolVersion: 1, status: "ready", release: {} })).toThrow("buildId");
+    expect(() => parseEditorUpdateStatus({ protocolVersion: 1, status: "ready" })).toThrow("不兼容");
+    expect(() => parseEditorUpdateStatus({ protocolVersion: 2, status: "ready", launch: {} })).toThrow("buildId");
   });
 });

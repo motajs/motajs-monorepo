@@ -196,6 +196,11 @@ export function resolveCombinedReferences(
       const disposers = entries.map(([, source]) => source.subscribe(listener));
       return () => disposers.forEach((dispose) => dispose());
     },
+    ensureLoaded: entries.some(([, source]) => source.ensureLoaded)
+      ? async () => {
+          await Promise.all(entries.map(([, source]) => source.ensureLoaded?.()));
+        }
+      : undefined,
     reload: entries.some(([, source]) => source.reload)
       ? async () => {
           await Promise.all(entries.map(([, source]) => source.reload?.()));
@@ -262,16 +267,19 @@ export class ContentValueSource<T> implements ValueSource<T> {
   readonly id: string;
   private readonly getContent: () => Content<T>;
   private readonly onSubscribe: (listener: () => void) => () => void;
+  readonly ensureLoaded?: () => Promise<void>;
   readonly reload?: () => Promise<void>;
   constructor(
     id: string,
     getContent: () => Content<T>,
     onSubscribe: (listener: () => void) => () => void,
+    ensureLoaded?: () => Promise<void>,
     reload?: () => Promise<void>,
   ) {
     this.id = id;
     this.getContent = getContent;
     this.onSubscribe = onSubscribe;
+    this.ensureLoaded = ensureLoaded;
     this.reload = reload;
   }
 

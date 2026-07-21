@@ -300,6 +300,44 @@ describe("FileHandler", () => {
     });
   });
 
+  describe("ensureLoaded", () => {
+    it("只执行首次读取，已加载后不重新读取", async () => {
+      memoryFs.setFile("test.txt", "content");
+      const fs = memoryFs.createFsInterface();
+      const readFile = fs.promises.readFile.bind(fs.promises);
+      let reads = 0;
+      fs.promises.readFile = async (...args) => {
+        reads += 1;
+        return readFile(...args);
+      };
+      const handler = new FileHandler("test.txt", fs);
+
+      await handler.ensureLoaded();
+      await handler.ensureLoaded();
+
+      expect(reads).toBe(1);
+    });
+
+    it("加载进行中时只等待同一次读取", async () => {
+      const fs = memoryFs.createFsInterface();
+      let finishRead!: (value: string) => void;
+      let reads = 0;
+      fs.promises.readFile = () => {
+        reads += 1;
+        return new Promise<string>((resolve) => { finishRead = resolve; });
+      };
+      const handler = new FileHandler("test.txt", fs);
+
+      const first = handler.ensureLoaded();
+      const second = handler.ensureLoaded();
+      finishRead("content");
+      await Promise.all([first, second]);
+
+      expect(reads).toBe(1);
+      expect(handler.getContent()).toEqual({ status: "loaded", value: "content" });
+    });
+  });
+
   describe("删除管理", () => {
     it("删除立即更新内存并在后台排到旧写入之后", async () => {
       memoryFs.setFile("test.txt", "content");

@@ -1,6 +1,6 @@
 import "../localization/zh-cn";
 import { useEffect, useState, type CSSProperties, type FC } from "react";
-import * as monaco from "monaco-editor";
+import * as monaco from "monaco-editor/editor/editor.api";
 import { setupMonacoTextmate } from "../setup";
 import { noop } from "lodash-es";
 import { useCurrentFn, useNodeAsEffect, useWatch } from "@motajs/react-hooks";

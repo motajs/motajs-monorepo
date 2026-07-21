@@ -42,7 +42,7 @@ export const SuspenseRecoveryView: FC<SuspenseRecoveryViewProps> = ({
   // 触发加载 & 监听完成
   useEffect(() => {
     if (content.status === "idle") {
-      void handler.refetch();
+      void handler.ensureLoaded();
     }
   }, [handler, content.status]);
 

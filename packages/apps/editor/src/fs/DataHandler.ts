@@ -102,6 +102,10 @@ export abstract class DataHandler<T> implements IDataHandler<T> {
     return this.fileHandler.refetch();
   }
 
+  async ensureLoaded(): Promise<void> {
+    return this.fileHandler.ensureLoaded();
+  }
+
   /**
    * 获取路径（委托给 FileHandler）
    */

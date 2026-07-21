@@ -57,6 +57,27 @@ describe("RuntimeResourceGateway", () => {
     expect(readBinary).toHaveBeenCalledTimes(1);
   });
 
+  it("waits for an in-flight binary load without starting another read", async () => {
+    const readBinary = spies[1];
+    const originalRead = project.fs.readFileBinary.bind(project.fs);
+    let release: (() => void) | undefined;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    readBinary.mockImplementation(async (path: string) => {
+      await gate;
+      return originalRead(path);
+    });
+    const resource = projectAssets.image("project/images/hero.png");
+    const initialLoad = resource.ensureLoaded();
+    await vi.waitFor(() => expect(resource.snapshot().status).toBe("loading"));
+
+    const gatewayRead = gateway.readBinary("project/images/hero.png");
+    release?.();
+    await initialLoad;
+    await gatewayRead;
+
+    expect(readBinary).toHaveBeenCalledTimes(1);
+  });
+
   it("rejects engine paths outside the project gateway", async () => {
     await expect(gateway.readText("libs/core.js")).rejects.toThrow("denied");
   });

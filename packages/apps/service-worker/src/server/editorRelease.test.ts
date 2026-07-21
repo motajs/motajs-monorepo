@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   parseEditorChannel,
   parseEditorManifest,
+  getEditorReleaseManager,
+  resetEditorReleaseManagersForTest,
   resolveEditorRelease,
   serveEditorReleaseAsset,
   type EditorArtifactManifest,
@@ -41,6 +43,10 @@ class MemoryCache {
   async delete(input: RequestInfo | URL): Promise<boolean> {
     return this.values.delete(String(input instanceof Request ? input.url : input));
   }
+
+  async keys(): Promise<Request[]> {
+    return [...this.values.keys()].map((url) => new Request(url));
+  }
 }
 
 class MemoryCacheStorage {
@@ -76,6 +82,8 @@ describe("Editor release host", () => {
   let cacheStorage: MemoryCacheStorage;
 
   beforeEach(() => {
+    vi.unstubAllGlobals();
+    resetEditorReleaseManagersForTest();
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
     cacheStorage = new MemoryCacheStorage();
     vi.stubGlobal("caches", cacheStorage);
@@ -95,7 +103,7 @@ describe("Editor release host", () => {
     })).toThrow("unsafe");
   });
 
-  it("loads the network release, promotes a verified complete cache, and falls back offline", async () => {
+  it("loads the network release, promotes a verified complete cache, and starts cache-first", async () => {
     const background: Promise<unknown>[] = [];
     const online = await resolveEditorRelease(scope, (task) => background.push(task));
     expect(online.source).toBe("network");
@@ -104,10 +112,9 @@ describe("Editor release host", () => {
 
     vi.mocked(fetch).mockClear();
     const validated = await resolveEditorRelease(scope);
-    expect(validated.source).toBe("validated-cache");
+    expect(validated.source).toBe("cache");
     expect(validated.html).toBe(files.get("index.html"));
-    expect(fetch).toHaveBeenCalledTimes(1);
-    expect(vi.mocked(fetch).mock.calls[0]?.[1]).toMatchObject({ cache: "no-cache" });
+    expect(fetch).not.toHaveBeenCalled();
 
     vi.mocked(fetch).mockRejectedValue(new Error("offline"));
     const offline = await resolveEditorRelease(scope);
@@ -138,38 +145,115 @@ describe("Editor release host", () => {
     await Promise.all(background);
 
     const assetUrl = new URL(`static/editor/releases/${buildId}/assets/editor.js`, scope);
-    const releaseCache = await cacheStorage.open(`motajs-editor-release:${buildId}`);
-    await releaseCache.delete(assetUrl);
+    const blobUrl = new URL(`static/editor/.blobs/${digest("editor")}.js`, scope);
+    const blobCache = await cacheStorage.open("motajs-editor-blobs");
+    await blobCache.delete(blobUrl);
 
     vi.mocked(fetch).mockClear();
     const response = await serveEditorReleaseAsset(new Request(assetUrl), scope);
     expect(response.status).toBe(200);
     expect(await response.text()).toBe("editor");
-    expect(await (await releaseCache.match(assetUrl))?.text()).toBe("editor");
+    expect(await (await blobCache.match(blobUrl))?.text()).toBe("editor");
   });
 
-  it("demotes a promoted release when a missing asset cannot be repaired safely", async () => {
+  it("deduplicates scheduled update checks for ten minutes", async () => {
+    const background: Promise<unknown>[] = [];
+    await resolveEditorRelease(scope, (task) => background.push(task));
+    await Promise.all(background);
+    const manager = getEditorReleaseManager(scope);
+    vi.mocked(fetch).mockClear();
+    await manager.checkForUpdates();
+    await manager.checkForUpdates();
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(String(vi.mocked(fetch).mock.calls[0]?.[0])).toContain("current.json");
+  });
+
+  it("stages a candidate and applies it on the next navigation without retaining an unused old build", async () => {
+    const background: Promise<unknown>[] = [];
+    await resolveEditorRelease(scope, (task) => background.push(task));
+    await Promise.all(background);
+
+    const nextBuildId = "b".repeat(64);
+    const nextFiles = new Map([...files].map(([path, content]) => [path, `${content}-next`]));
+    const nextManifest: EditorArtifactManifest = {
+      ...manifest,
+      buildId: nextBuildId,
+      editorVersion: "2.1.0",
+      files: [...nextFiles].map(([path, content]) => ({ path, size: content.length, sha256: digest(content) })),
+    };
+    vi.mocked(fetch).mockImplementation(async (input: RequestInfo | URL) => {
+      const url = input instanceof Request ? input.url : String(input);
+      if (url.endsWith("/current.json")) return Response.json({ schemaVersion: 1, buildId: nextBuildId });
+      if (url.endsWith(`/${nextBuildId}/editor-manifest.json`)) return Response.json(nextManifest);
+      const path = url.split(`/${nextBuildId}/`)[1];
+      if (path) return new Response(nextFiles.get(path) ?? "missing", { status: nextFiles.has(path) ? 200 : 404 });
+      return responseFor(url);
+    });
+
+    const manager = getEditorReleaseManager(scope);
+    await manager.checkForUpdates(true);
+    expect(await manager.getUpdateState()).toMatchObject({
+      launch: { buildId },
+      candidate: { buildId: nextBuildId },
+    });
+
+    const next = await resolveEditorRelease(scope);
+    expect(next.manifest.buildId).toBe(nextBuildId);
+    expect(await manager.getUpdateState()).toMatchObject({ launch: { buildId: nextBuildId } });
+    expect((await cacheStorage.keys()).filter((name) => name.startsWith("motajs-editor-release:"))).toEqual([
+      `motajs-editor-release:${nextBuildId}`,
+    ]);
+  });
+
+  it("keeps every build used by a live page and releases it after that page closes", async () => {
+    let activeIds = ["old-client"];
+    vi.stubGlobal("clients", {
+      matchAll: vi.fn(async () => activeIds.map((id) => ({ id, postMessage: vi.fn() }))),
+    });
+    const background: Promise<unknown>[] = [];
+    await resolveEditorRelease(scope, (task) => background.push(task), "old-client");
+    await Promise.all(background);
+
+    const nextBuildId = "c".repeat(64);
+    const nextFiles = new Map([...files].map(([path, content]) => [path, `${content}-live-next`]));
+    const nextManifest: EditorArtifactManifest = {
+      ...manifest,
+      buildId: nextBuildId,
+      files: [...nextFiles].map(([path, content]) => ({ path, size: content.length, sha256: digest(content) })),
+    };
+    vi.mocked(fetch).mockImplementation(async (input: RequestInfo | URL) => {
+      const url = input instanceof Request ? input.url : String(input);
+      if (url.endsWith("/current.json")) return Response.json({ schemaVersion: 1, buildId: nextBuildId });
+      if (url.endsWith(`/${nextBuildId}/editor-manifest.json`)) return Response.json(nextManifest);
+      const path = url.split(`/${nextBuildId}/`)[1];
+      if (path) return new Response(nextFiles.get(path) ?? "missing", { status: nextFiles.has(path) ? 200 : 404 });
+      return responseFor(url);
+    });
+    const manager = getEditorReleaseManager(scope);
+    await manager.checkForUpdates(true);
+    activeIds = ["old-client", "new-client"];
+    await resolveEditorRelease(scope, undefined, "new-client");
+    expect((await cacheStorage.keys()).filter((name) => name.startsWith("motajs-editor-release:")).sort()).toEqual([
+      `motajs-editor-release:${buildId}`,
+      `motajs-editor-release:${nextBuildId}`,
+    ].sort());
+
+    activeIds = ["new-client"];
+    await manager.cleanupCaches();
+    expect((await cacheStorage.keys()).filter((name) => name.startsWith("motajs-editor-release:"))).toEqual([
+      `motajs-editor-release:${nextBuildId}`,
+    ]);
+  });
+
+  it("reports a failed repair without keeping a fixed previous slot", async () => {
     const background: Promise<unknown>[] = [];
     await resolveEditorRelease(scope, (task) => background.push(task));
     await Promise.all(background);
 
     const assetUrl = new URL(`static/editor/releases/${buildId}/assets/editor.js`, scope);
-    const releaseCache = await cacheStorage.open(`motajs-editor-release:${buildId}`);
-    await releaseCache.delete(assetUrl);
-
-    const previousBuildId = "b".repeat(64);
-    const previousRoot = new URL(`static/editor/releases/${previousBuildId}/`, scope);
-    const previousCache = await cacheStorage.open(`motajs-editor-release:${previousBuildId}`);
-    await previousCache.put(
-      new URL("editor-manifest.json", previousRoot),
-      Response.json({ ...manifest, buildId: previousBuildId }),
-    );
-    await previousCache.put(new URL("index.html", previousRoot), new Response("previous editor"));
-    const metaCache = await cacheStorage.open("motajs-editor-meta");
-    await metaCache.put(
-      new URL("static/editor/.host-state", scope),
-      Response.json({ current: buildId, previous: previousBuildId }),
-    );
+    const blobUrl = new URL(`static/editor/.blobs/${digest("editor")}.js`, scope);
+    const blobCache = await cacheStorage.open("motajs-editor-blobs");
+    await blobCache.delete(blobUrl);
 
     vi.mocked(fetch).mockImplementation(async (input: RequestInfo | URL) => {
       const url = input instanceof Request ? input.url : String(input);
@@ -180,11 +264,5 @@ describe("Editor release host", () => {
     const response = await serveEditorReleaseAsset(new Request(assetUrl), scope);
     expect(response.status).toBe(503);
     expect(response.headers.get("x-motajs-editor-cache")).toBe("repair-failed");
-
-    vi.mocked(fetch).mockRejectedValue(new Error("offline"));
-    const fallback = await resolveEditorRelease(scope);
-    expect(fallback.source).toBe("cache");
-    expect(fallback.manifest.buildId).toBe(previousBuildId);
-    expect(fallback.html).toBe("previous editor");
   });
 });

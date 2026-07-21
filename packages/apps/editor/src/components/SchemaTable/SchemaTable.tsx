@@ -147,7 +147,7 @@ function useSourceSnapshot(source: ValueSource<unknown>): BlockResolution<RawSlo
   const [snapshot, setSnapshot] = useState(() => source.snapshot());
   useEffect(() => source.subscribe(() => setSnapshot(source.snapshot())), [source]);
   useEffect(() => {
-    if (source.snapshot().status === "loading" && source.reload) void source.reload();
+    if (source.snapshot().status === "loading") void source.ensureLoaded?.();
   }, [source]);
   return isWritableValueSource(source) ? source.snapshot() : snapshot;
 }
@@ -207,7 +207,7 @@ function useConditionPresentation(
       presentation: conditionPresentation(condition, scope, slot),
     });
     const dispose = sources.map((source) => source.subscribe(refresh));
-    for (const source of sources) if (source.snapshot().status === "loading") void source.reload?.();
+    for (const source of sources) if (source.snapshot().status === "loading") void source.ensureLoaded?.();
     return () => dispose.forEach((unsubscribe) => unsubscribe());
   }, [condition, scope, slot, slotState, sources]);
   if (update && update.condition === condition && update.scope === scope && update.slotState === slotState) {

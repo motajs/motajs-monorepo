@@ -368,6 +368,7 @@ const MapBlockSchemaSection: FC<{ target: PrefabTarget; onRename: () => void }> 
     "project:materials.images",
     () => imageResource.snapshot(),
     (listener) => imageResource.subscribe(() => listener()),
+    () => imageResource.ensureLoaded(),
     () => imageResource.reload(),
   ), [imageResource]);
   const scope = useMemo<SchemaScope>(() => {
@@ -484,12 +485,14 @@ const EnemySchemaSection: FC<{ target: PrefabTarget; onRename: () => void }> = (
     "project:enemySpecials",
     () => specialResource.snapshot(),
     (listener) => specialResource.subscribe(() => listener()),
+    () => specialResource.ensureLoaded(),
     () => specialResource.reload(),
   ), [specialResource]);
   const imageSource = useMemo(() => new ContentValueSource(
     "project:materials.images",
     () => imageResource.snapshot(),
     (listener) => imageResource.subscribe(() => listener()),
+    () => imageResource.ensureLoaded(),
     () => imageResource.reload(),
   ), [imageResource]);
   const scope = useMemo<SchemaScope>(() => {

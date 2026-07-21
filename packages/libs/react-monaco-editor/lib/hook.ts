@@ -1,6 +1,6 @@
 import "./localization/zh-cn";
 import { useSyncExternalStoreFrom } from "@motajs/react-hooks";
-import { editor } from "monaco-editor";
+import type { editor } from "monaco-editor/editor/editor.api";
 import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 
 export const useEditorInstance = () => {

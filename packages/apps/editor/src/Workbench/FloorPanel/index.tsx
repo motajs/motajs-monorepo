@@ -90,6 +90,7 @@ const FloorSchemaTable: FC<{ floor: FloorData; floorId: string; onRename: () => 
       "project:materials.bgms",
       () => mapBgmDirectory(bgmDirectory.snapshot()),
       (listener) => bgmDirectory.subscribe(() => listener()),
+      () => bgmDirectory.ensureLoaded(),
       () => bgmDirectory.reload(),
     ), [bgmDirectory]);
   const scope = useMemo<SchemaScope>(() => {

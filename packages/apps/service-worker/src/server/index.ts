@@ -53,7 +53,13 @@ sw.addEventListener("message", (event) => {
 
 sw.addEventListener("fetch", (event) => {
   const backgroundTasks: Promise<unknown>[] = [];
-  const task = routeRequest(event.request, scopeUrl, (background) => backgroundTasks.push(background))
+  const clientId = event.resultingClientId || event.clientId || undefined;
+  const task = routeRequest(
+    event.request,
+    scopeUrl,
+    (background) => backgroundTasks.push(background),
+    { clientId },
+  )
     .then((response) => response ?? fetch(event.request));
   event.respondWith(task);
   event.waitUntil(task.then(async () => {

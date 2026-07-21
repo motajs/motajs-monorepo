@@ -28,7 +28,7 @@ function useRegistrySnapshot(
   const [snapshot, setSnapshot] = useState(() => source.snapshot());
   useEffect(() => source.subscribe(() => setSnapshot(source.snapshot())), [source]);
   useEffect(() => {
-    if (source.snapshot().status === "loading" && source.reload) void source.reload();
+    if (source.snapshot().status === "loading") void source.ensureLoaded?.();
   }, [source]);
   return snapshot;
 }
