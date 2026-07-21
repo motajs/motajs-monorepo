@@ -39,7 +39,12 @@ describe("script workspace save gate", () => {
   });
 
   it("leaves semantic advice to Monaco while retaining syntax errors in the save gate", () => {
-    const semantic = collectFunctionDiagnostics("function value(input) { if (input = 1) return input; }");
+    const semantic = collectFunctionDiagnostics(`function value(input) {
+      hero.statistics.customCounter = input;
+      flags.projectSpecificFlag = window.pluginDefinedValue;
+      core.plugin.projectOnlyMethod(input);
+      if (input = 1) return input;
+    }`);
     expect(semantic).toEqual([]);
 
     const error = collectFunctionDiagnostics("function value() { const result = ; }");

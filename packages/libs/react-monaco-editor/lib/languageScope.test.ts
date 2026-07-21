@@ -9,12 +9,11 @@ describe("MonacoLanguageLibraryScope", () => {
       .toBe("zh-cn");
   });
 
-  it("filters legacy-script noise without disabling semantic diagnostics", () => {
+  it("keeps JavaScript types assistive without producing semantic errors", () => {
     new MonacoLanguageLibraryScope("diagnostics").dispose();
     const options = monaco.typescript.javascriptDefaults.getDiagnosticsOptions();
-    expect(options.noSemanticValidation).toBe(false);
+    expect(options.noSemanticValidation).toBe(true);
     expect(options.noSuggestionDiagnostics).toBe(true);
-    expect(options.diagnosticCodesToIgnore).toEqual(expect.arrayContaining([2322, 2403, 7044]));
   });
 
   it("replaces and releases scoped TypeScript extra libraries", () => {

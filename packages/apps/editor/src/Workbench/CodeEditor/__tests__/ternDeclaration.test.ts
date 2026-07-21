@@ -77,4 +77,55 @@ describe("Tern declaration compatibility layer", () => {
       ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n")
     ))).toEqual([]);
   });
+
+  it("augments the defs tree with runtime catalogs, open globals and forwarded functions", () => {
+    const result = buildTernDeclaration(`var defs = [{
+      "!name": "core",
+      "!define": {
+        "hero": { "hp": "number" },
+        "flag": { "hard": "number" },
+        "floor": {}, "enemy": {}, "item": {}, "image": {}, "audio": {}, "animate": {}
+      },
+      "core": {
+        "status": { "hero": { "!type": "hero" }, "maps": {}, "bgmaps": {}, "fgmaps": {} },
+        "material": { "items": {} },
+        "flags": { "enableFloor": "bool" },
+        "plugin": {},
+        "enemys": { "hasSpecial": { "!type": "fn(special: number) -> bool", "!doc": "特殊属性" } }
+      },
+      "hero": { "!type": "heroStatus" },
+      "flags": { "!type": "flag" }
+    }];`, {
+      modules: {
+        plugin: [{ name: "customPlugin", kind: "function", parameters: ["floorId", "callback"] }],
+      },
+      catalogs: {
+        "material.items": [{ name: "yellowKey", kind: "object" }],
+        "status.maps": [{ name: "sample0", kind: "object" }],
+        "status.bgmaps": [{ name: "sample0", kind: "array" }],
+        "status.hero.statistics": [{ name: "moveDirectly", kind: "number" }],
+        "flags": [{ name: "statusBarItems", kind: "array" }],
+      },
+      globals: {
+        hero: [{ name: "statistics", kind: "object" }],
+        flags: [{ name: "runtimeFlag", kind: "boolean" }],
+      },
+      projectFlags: ["projectFlag"],
+      specials: [{ id: 1, name: "先攻" }, { id: 27, name: "自定义" }],
+    });
+
+    expect(result.declaration).toContain("\"yellowKey\": __MotaTern_item");
+    expect(result.declaration).toContain("\"sample0\": __MotaTern_floor");
+    expect(result.declaration).toContain("\"sample0\": Array<Array<number>>");
+    expect(result.declaration).toContain("\"moveDirectly\": number");
+    expect(result.declaration).toContain("\"runtimeFlag\": boolean");
+    expect(result.declaration).toContain("\"projectFlag\": Record<string, any>");
+    expect(result.declaration).toContain("\"statusBarItems\": Array<string>");
+    expect(result.declaration).toContain("\"customPlugin\": (floorId: any, callback: any) => any");
+    expect(result.declaration).toContain("type __MotaTern_hero =");
+    expect(result.declaration).toContain("& Record<string, any>;");
+    expect(result.declaration).toContain("type MotaEnemySpecialId = 1 | 27");
+    expect(result.declaration).toContain("先攻(1); 自定义(27)");
+    expect(result.declaration).toContain("declare let core: __MotaTernCore");
+  });
 });

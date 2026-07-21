@@ -313,9 +313,13 @@ const SNAPSHOT_CATALOGS = [
   "material.images.tilesets",
   "canvas",
   "status.maps",
+  "status.bgmaps",
+  "status.fgmaps",
   "status.shops",
   "status.textAttribute",
   "status.globalAttribute",
+  "status.hero",
+  "status.hero.statistics",
   "values",
   "flags",
 ] as const;
@@ -350,7 +354,24 @@ function snapshotMembers(value: unknown): import("./protocol").RuntimeMemberSnap
       : type === "function" || type === "string" || type === "number" || type === "boolean"
         ? type
         : member !== null && type === "object" ? "object" : "unknown";
-    return { name, kind };
+    let parameters: string[] | undefined;
+    if (kind === "function") {
+      try {
+        const source = Function.prototype.toString.call(member);
+        const match = /^\s*(?:async\s+)?function(?:\s+[\w$]+)?\s*\(([^)]*)\)|^\s*(?:async\s+)?\(?([^)=]*)\)?\s*=>/.exec(source);
+        const raw = match?.[1] ?? match?.[2];
+        if (raw !== undefined) {
+          parameters = raw.split(",").map((item) => item.trim()).filter(Boolean).map((item, index) => {
+            const identifier = item.replace(/^\.\.\./, "").split("=")[0]?.trim();
+            return identifier && /^[A-Za-z_$][\w$]*$/.test(identifier) ? identifier : `arg${index}`;
+          });
+        }
+      } catch {
+        // Some native or proxied functions cannot expose their source. Their
+        // callable shape is still useful even without parameter names.
+      }
+    }
+    return { name, kind, ...(parameters ? { parameters } : {}) };
   });
 }
 
@@ -359,6 +380,10 @@ async function buildLanguageSnapshot(): Promise<import("./protocol").RuntimeLang
   const core = runtime.core;
   const modules = Object.fromEntries(SNAPSHOT_MODULES.map((name) => [name, snapshotMembers(core?.[name])]));
   const catalogs = Object.fromEntries(SNAPSHOT_CATALOGS.map((path) => [path, snapshotMembers(valueAtPath(core, path))]));
+  const globals = {
+    hero: snapshotMembers(runtime.hero ?? core?.status?.hero),
+    flags: snapshotMembers(runtime.flags ?? core?.status?.hero?.flags),
+  };
   const specials: Array<{ id: number; name: string }> = [];
   try {
     const values: unknown[] = runtime.functions_d6ad677b_427a_4623_b50f_a445a3b0ef8a?.enemys?.getSpecials?.() ?? [];
@@ -371,7 +396,7 @@ async function buildLanguageSnapshot(): Promise<import("./protocol").RuntimeLang
   } catch (error) {
     port?.postMessage({ type: "diagnostic", message: `Cannot inspect getSpecials(): ${String(error)}` } satisfies RuntimeMessage);
   }
-  return { core: snapshotMembers(core), modules, catalogs, specials };
+  return { core: snapshotMembers(core), modules, catalogs, globals, specials };
 }
 
 function beginPreview(context: RuntimePreviewContext): void {

@@ -365,6 +365,16 @@ test("dedicated common-event and script workspaces save through guarded commands
   await expect(scripts.getByTestId("script-validate")).toHaveAttribute("data-validation", "valid");
   await expect(scripts.getByTestId("script-validate")).toContainText("错误 0 警告 0");
 
+  // Project scripts are open JavaScript. Engine declarations drive hover and
+  // completion, but unknown plugin members and project flags are never errors
+  // and never become part of the save gate.
+  await setScriptSource(scripts, `function () {
+    hero.statistics.projectCounter = flags.projectOnlyFlag;
+    core.plugin.projectOnlyMethod(window.pluginValue);
+  }`);
+  await expect(monacoEditor.locator(".squiggly-error")).toHaveCount(0);
+  await expect(scripts.getByTestId("script-validate")).toHaveAttribute("data-validation", "valid");
+
   // Monaco suggestions filter in place; typing one letter never commits the
   // selected suggestion until the user explicitly accepts it.
   await setScriptSource(scripts, "function () { co }");

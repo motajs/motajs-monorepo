@@ -84,21 +84,15 @@ const configureJavascript = once(() => {
     // as a whole JS file, where an anonymous function expression would be a
     // false-positive syntax error; consumers provide their expression-aware gate.
     noSyntaxValidation: true,
-    noSemanticValidation: false,
+    // Mota scripts are intentionally open JavaScript. The language service is
+    // used for completion, hover, navigation, argument hints and semantic
+    // coloring, while Acorn remains the sole correctness gate.
+    noSemanticValidation: true,
     // Monaco reports refactor hints (unused locals, "convert constructor to
     // class", etc.) through the same marker channel as diagnostics. They are
     // useful in a typed application, but overwhelm legacy script entries and
     // make the validation count look like a correctness failure.
     noSuggestionDiagnostics: true,
-    // Existing Mota projects store standalone JavaScript function bodies
-    // without type annotations. TS 7044 is an inference suggestion for those
-    // parameters, not a useful correctness diagnostic for this editing model.
-    // 2322 is similarly dominated by assignments into mutable engine state,
-    // whose runtime/Tern/project snapshot declarations intentionally overlap.
-    // Missing members and invalid calls remain diagnosed.
-    // 2403 is produced by legal `var` reuse across branches in old function
-    // bodies when TypeScript happens to infer a different type at each site.
-    diagnosticCodesToIgnore: [2322, 2403, 7044],
   });
 });
 

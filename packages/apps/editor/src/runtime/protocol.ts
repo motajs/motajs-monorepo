@@ -1,7 +1,7 @@
 import type { FloorData } from "@/types";
 import type { UIData } from "@/Workbench/modals/shared/types";
 
-export const RUNTIME_PROTOCOL_VERSION = 3;
+export const RUNTIME_PROTOCOL_VERSION = 4;
 
 export interface RuntimeConnectMessage {
   type: "mota-runtime-connect";
@@ -45,12 +45,17 @@ export interface RuntimeStatusBarRequest {
 export interface RuntimeMemberSnapshot {
   name: string;
   kind: "function" | "array" | "object" | "string" | "number" | "boolean" | "unknown";
+  parameters?: string[];
 }
 
 export interface RuntimeLanguageSnapshot {
   core: RuntimeMemberSnapshot[];
   modules: Record<string, RuntimeMemberSnapshot[]>;
   catalogs: Record<string, RuntimeMemberSnapshot[]>;
+  globals: {
+    hero: RuntimeMemberSnapshot[];
+    flags: RuntimeMemberSnapshot[];
+  };
   specials: Array<{ id: number; name: string }>;
 }
 

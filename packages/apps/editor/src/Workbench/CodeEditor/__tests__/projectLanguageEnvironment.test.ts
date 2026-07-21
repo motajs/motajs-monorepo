@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ load: vi.fn() }));
+const mocks = vi.hoisted(() => ({ load: vi.fn(), replace: vi.fn() }));
 
 vi.mock("@motajs/react-monaco-editor", () => ({
   MonacoLanguageLibraryScope: class {
-    replace = vi.fn();
+    replace = mocks.replace;
     dispose = vi.fn();
   },
   setMonacoTheme: vi.fn(),
@@ -15,16 +15,26 @@ vi.mock("@/stores/EditorStore", () => ({ EditorStore: { useStore: vi.fn() } }));
 vi.mock("@/fs/FileHandlerManager", () => ({ FileHandlerManager: { load: mocks.load } }));
 vi.mock("@/project/data/projectData", () => ({
   projectData: {
-    items: () => ({ snapshot: () => ({ status: "loaded", value: {} }) }),
-    enemys: () => ({ snapshot: () => ({ status: "loaded", value: {} }) }),
-    tower: () => ({ snapshot: () => ({ status: "loaded", value: { main: {} } }) }),
+    items: () => ({ snapshot: () => ({ status: "loaded", value: {} }), subscribe: vi.fn(() => vi.fn()) }),
+    enemys: () => ({ snapshot: () => ({ status: "loaded", value: {} }), subscribe: vi.fn(() => vi.fn()) }),
+    tower: () => ({ snapshot: () => ({ status: "loaded", value: { main: {} } }), subscribe: vi.fn(() => vi.fn()) }),
+    functions: () => ({ subscribe: vi.fn(() => vi.fn()) }),
+    plugins: () => ({ subscribe: vi.fn(() => vi.fn()) }),
+  },
+}));
+vi.mock("@/project/model/projectModel", () => ({
+  projectModel: {
+    flagUsage: () => ({
+      ensureLoaded: vi.fn(async () => undefined),
+      snapshot: () => ({ status: "loaded", value: { flags: ["projectFlag"], usages: {} } }),
+      subscribe: vi.fn(() => vi.fn()),
+    }),
   },
 }));
 
 import type { RuntimePreviewCapability } from "@/runtime/RuntimeContext";
 
 import {
-  buildRuntimeSnapshotDeclaration,
   buildRuntimeCompatibilityDeclaration,
   composeCoreDeclaration,
   ProjectLanguageEnvironment,
@@ -32,37 +42,6 @@ import {
 
 describe("project language environment", () => {
   beforeEach(() => vi.clearAllMocks());
-
-  it("turns isolated runtime members and getSpecials results into declarations", () => {
-    const declaration = buildRuntimeSnapshotDeclaration({
-      core: [
-        { name: "flyTo", kind: "function" },
-        { name: "customState", kind: "object" },
-        { name: "statusBarItems", kind: "array" },
-      ],
-      modules: {
-        plugin: [{ name: "myPluginMethod", kind: "function" }],
-      },
-      catalogs: {
-        "material.items": [{ name: "yellowKey", kind: "object" }],
-        "status.maps": [{ name: "sample0", kind: "object" }],
-      },
-      specials: [{ id: 1, name: "先攻" }, { id: 27, name: "自定义属性" }],
-    });
-
-    expect(declaration).toContain("type MotaEnemySpecialId = 1 | 27");
-    expect(declaration).toContain("\"flyTo\": (...args: any[]) => any");
-    expect(declaration).toContain("\"plugin\": {");
-    expect(declaration).toContain("\"myPluginMethod\": (...args: any[]) => any");
-    expect(declaration).toContain("\"statusBarItems\": any[]");
-    expect(declaration).toContain("\"yellowKey\": Record<string, any>");
-    expect(declaration).toContain("\"sample0\": Record<string, any>");
-  });
-
-  it("keeps Tern and runtime snapshot declarations when runtime.d.ts is unavailable", () => {
-    expect(composeCoreDeclaration("", ["__MotaTernCore", "MotaProjectRuntimeSnapshot"]))
-      .toBe("declare let core: __MotaTernCore & MotaProjectRuntimeSnapshot;\n");
-  });
 
   it("augments runtime.d.ts instead of replacing its formal core type", () => {
     expect(composeCoreDeclaration("interface core {}\ndeclare let core: core;", ["__MotaTernCore"]))
@@ -86,13 +65,13 @@ describe("project language environment", () => {
     expect(declaration).toContain("plugins_bb40132b_638b_4a9f_b028_d3fe47acc8d1");
   });
 
-  it("makes Tern declarations usable before optional runtime reflection finishes", async () => {
+  it("makes defs declarations usable before optional runtime reflection finishes", async () => {
     let resolveSnapshot!: (value: Awaited<ReturnType<RuntimePreviewCapability["languageSnapshot"]>>) => void;
     const snapshot = new Promise<Awaited<ReturnType<RuntimePreviewCapability["languageSnapshot"]>>>((resolve) => {
       resolveSnapshot = resolve;
     });
     mocks.load.mockImplementation(async (path: string) => {
-      if (path === "runtime.d.ts") throw new Error("not found");
+      if (path === "runtime.d.ts") throw new Error("runtime.d.ts must not load when defs is valid");
       return {
         getContent: () => ({
           status: "loaded",
@@ -106,7 +85,6 @@ describe("project language environment", () => {
         }),
       };
     });
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const environment = new ProjectLanguageEnvironment();
     const states: string[] = [];
     environment.subscribe((status) => states.push(status.state));
@@ -116,11 +94,29 @@ describe("project language environment", () => {
     } as unknown as RuntimePreviewCapability);
 
     await vi.waitFor(() => expect(states.at(-1)).toBe("ready"));
-    expect(warn).toHaveBeenCalledOnce();
+    expect(mocks.load).not.toHaveBeenCalledWith("runtime.d.ts");
 
-    resolveSnapshot({ core: [], modules: {}, catalogs: {}, specials: [] });
+    resolveSnapshot({ core: [], modules: {}, catalogs: {}, globals: { hero: [], flags: [] }, specials: [] });
     await refresh;
     expect(states.at(-1)).toBe("ready");
+    const latest = mocks.replace.mock.calls.at(-1)?.[0] as Array<{ path: string; content: string }>;
+    expect(latest.find(({ path }) => path.includes("tern-compatibility"))?.content)
+      .toContain("\"projectFlag\"");
+    environment.dispose();
+  });
+
+  it("loads runtime.d.ts only when defs.js cannot be decoded", async () => {
+    mocks.load.mockImplementation(async (path: string) => {
+      if (path === "_server/CodeMirror/defs.js") throw new Error("broken defs");
+      return { getContent: () => ({ status: "loaded", value: "interface core {}\ndeclare let core: core;" }) };
+    });
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const environment = new ProjectLanguageEnvironment();
+    await environment.refresh({ state: { status: "starting", instanceId: 1 } } as RuntimePreviewCapability);
+
+    expect(mocks.load).toHaveBeenCalledWith("runtime.d.ts");
+    const latest = mocks.replace.mock.calls.at(-1)?.[0] as Array<{ path: string; content: string }>;
+    expect(latest.some(({ path }) => path.includes("runtime-fallback"))).toBe(true);
     environment.dispose();
   });
 });
