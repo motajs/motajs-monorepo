@@ -258,7 +258,6 @@ export const CodeEditor: FC = () => {
       data-language-status={languageStatus.state}
       className={visible ? "monacoCodeEditorPanel" : "hidden-panel monacoCodeEditorPanel"}
       style={visible ? undefined : { zIndex: -1, opacity: 0 }}
-      title={languageStatus.message}
     >
       <div className="monacoCodeEditorToolbar">
         <button data-test-id="code-editor-confirm" onClick={() => void confirm()}>确认</button>

@@ -173,7 +173,7 @@ declare let events_c12a15a8_c380_4b28_8144_256cba95f760: Record<string, any>;
 `;
 }
 
-class ProjectLanguageEnvironment {
+export class ProjectLanguageEnvironment {
   private readonly libraries = new MonacoLanguageLibraryScope("mota-project");
   private generation = 0;
   private status: ProjectLanguageStatus = { state: "idle" };
@@ -192,8 +192,9 @@ class ProjectLanguageEnvironment {
 
   async refresh(runtime: RuntimePreviewCapability): Promise<void> {
     const generation = ++this.generation;
-    this.update({ state: "loading" });
-    const libraries: MonacoExtraLibrary[] = [];
+    // Keep the last usable language environment while optional declarations
+    // refresh. Only the very first load needs a blocking loading state.
+    if (this.status.state === "idle") this.update({ state: "loading" });
     let runtimeSource = "";
     let ternDeclaration = "";
     const degraded: string[] = [];
@@ -203,7 +204,10 @@ class ProjectLanguageEnvironment {
       if (content.status !== "loaded") throw new Error("工程根目录缺少 runtime.d.ts");
       runtimeSource = content.value;
     } catch (error) {
-      degraded.push(`静态声明不可用：${error instanceof Error ? error.message : String(error)}`);
+      console.warn(
+        "runtime.d.ts is unavailable; continuing with Tern and runtime declarations",
+        error,
+      );
     }
 
     try {
@@ -217,42 +221,49 @@ class ProjectLanguageEnvironment {
       degraded.push(`Tern 定义不可用：${error instanceof Error ? error.message : String(error)}`);
     }
 
-    let snapshot: RuntimeLanguageSnapshot | undefined;
-    let snapshotError: string | undefined;
-    if (runtime.state.status === "ready") {
-      try {
-        snapshot = await runtime.languageSnapshot();
-      } catch (error) {
-        snapshotError = error instanceof Error ? error.message : String(error);
-      }
-    } else snapshotError = "运行时尚未就绪";
     if (generation !== this.generation) return;
 
-    const coreAugmentations = [
-      "MotaRuntimeCompatibility",
-      ternDeclaration ? "__MotaTernCore" : undefined,
-      snapshot ? "MotaProjectRuntimeSnapshot" : undefined,
-    ].filter((value): value is string => Boolean(value));
-    const base = composeCoreDeclaration(runtimeSource, coreAugmentations);
-    if (ternDeclaration) {
-      libraries.push({ path: "inmemory://motajs/tern-compatibility.d.ts", content: ternDeclaration });
+    const apply = (snapshot?: RuntimeLanguageSnapshot, snapshotError?: string) => {
+      if (generation !== this.generation) return;
+      const libraries: MonacoExtraLibrary[] = [];
+      const coreAugmentations = [
+        "MotaRuntimeCompatibility",
+        ternDeclaration ? "__MotaTernCore" : undefined,
+        snapshot ? "MotaProjectRuntimeSnapshot" : undefined,
+      ].filter((value): value is string => Boolean(value));
+      const base = composeCoreDeclaration(runtimeSource, coreAugmentations);
+      if (ternDeclaration) {
+        libraries.push({ path: "inmemory://motajs/tern-compatibility.d.ts", content: ternDeclaration });
+      }
+      if (snapshot) {
+        libraries.push({
+          path: "inmemory://motajs/project-runtime-snapshot.d.ts",
+          content: buildRuntimeSnapshotDeclaration(snapshot),
+        });
+      }
+      libraries.push(
+        { path: "inmemory://motajs/runtime.d.ts", content: base },
+        { path: "inmemory://motajs/runtime-compatibility.d.ts", content: buildRuntimeCompatibilityDeclaration() },
+        { path: "inmemory://motajs/project-catalog.d.ts", content: projectCatalogDeclaration() },
+      );
+      this.libraries.replace(libraries);
+      const diagnostics = snapshotError
+        ? [...degraded, `动态探测不可用：${snapshotError}`]
+        : degraded;
+      this.update(diagnostics.length > 0
+        ? { state: "degraded", message: `已加载可用类型；${diagnostics.join("；")}` }
+        : { state: "ready" });
+    };
+
+    // Runtime reflection is optional. Do not hold the usable static/Tern
+    // environment in a loading state while the iframe request is pending.
+    apply(undefined, runtime.state.status === "ready" ? undefined : "运行时尚未就绪");
+    if (runtime.state.status !== "ready") return;
+    try {
+      apply(await runtime.languageSnapshot());
+    } catch (error) {
+      apply(undefined, error instanceof Error ? error.message : String(error));
     }
-    if (snapshot) {
-      libraries.push({
-        path: "inmemory://motajs/project-runtime-snapshot.d.ts",
-        content: buildRuntimeSnapshotDeclaration(snapshot),
-      });
-    }
-    libraries.push(
-      { path: "inmemory://motajs/runtime.d.ts", content: base },
-      { path: "inmemory://motajs/runtime-compatibility.d.ts", content: buildRuntimeCompatibilityDeclaration() },
-      { path: "inmemory://motajs/project-catalog.d.ts", content: projectCatalogDeclaration() },
-    );
-    this.libraries.replace(libraries);
-    if (snapshotError) degraded.push(`动态探测不可用：${snapshotError}`);
-    this.update(degraded.length > 0
-      ? { state: "degraded", message: `已加载其余类型；${degraded.join("；")}` }
-      : { state: "ready" });
   }
 
   dispose(): void {

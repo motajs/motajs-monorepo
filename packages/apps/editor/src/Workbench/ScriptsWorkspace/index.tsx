@@ -290,7 +290,7 @@ const MonacoSurface = forwardRef<MonacoSurfaceHandle, {
   }), [modelScope]);
 
   return (
-    <div className="scriptCodeEditor" data-test-id="script-code-editor" data-language-status={languageStatus.state} title={languageStatus.message}>
+    <div className="scriptCodeEditor" data-test-id="script-code-editor" data-language-status={languageStatus.state}>
       <MonacoEditor
         model={model}
         onMount={mount}

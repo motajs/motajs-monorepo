@@ -37,7 +37,9 @@ function functionType(source: string, aliases: ReadonlySet<string>): string | un
   if (close < 0) return "(...args: any[]) => any";
   const parameters = splitTopLevel(source.slice(3, close), ",").filter((item) => item.trim()).map((item, index) => {
     const colon = item.indexOf(":");
-    if (colon < 0) return `arg${index}: any`;
+    // Tern also accepts anonymous parameters such as `fn(string|CanvasRenderingContext2D)`.
+    // Treat the whole item as its type instead of silently dropping it to any.
+    if (colon < 0) return `arg${index}: ${ternType(item.trim(), aliases)}`;
     const rawName = item.slice(0, colon).trim();
     const optional = rawName.endsWith("?");
     const rest = rawName.startsWith("...");
@@ -78,6 +80,9 @@ function ternType(source: string, aliases: ReadonlySet<string>): string {
   if (bare === "bool") return "boolean";
   if (["number", "string", "boolean", "void", "null", "undefined", "never"].includes(bare)) return bare;
   if (aliases.has(bare)) return `__MotaTern_${safeName(bare)}`;
+  // The template still uses the historical public name `heroStatus` for the
+  // global shortcut, while the actual structure is stored as `!define.hero`.
+  if (bare === "heroStatus" && aliases.has("hero")) return "__MotaTern_hero";
   if (["CanvasRenderingContext2D", "Storage"].includes(bare) || /^[A-Z][\w$]*$/.test(bare)) return bare;
   return "any";
 }
@@ -132,8 +137,9 @@ export function buildTernDeclaration(source: string): TernDeclarationResult {
   ));
   parts.push(`type __MotaTernCore = ${entryType(coreDefinition.core, aliases)};`);
   for (const [name, entry] of Object.entries(coreDefinition)) {
-    if (name.startsWith("!") || ["core", "hero", "flags"].includes(name)) continue;
-    parts.push(`${doc(entry as TernEntry, "")}declare const ${safeName(name)}: ${entryType(entry, aliases)};`);
+    if (name.startsWith("!") || name === "core") continue;
+    const declarationKind = ["hero", "flags"].includes(name) ? "let" : "const";
+    parts.push(`${doc(entry as TernEntry, "")}declare ${declarationKind} ${safeName(name)}: ${entryType(entry, aliases)};`);
   }
   return { declaration: parts.join("\n\n"), diagnostics };
 }

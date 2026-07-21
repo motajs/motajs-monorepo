@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+const mocks = vi.hoisted(() => ({ load: vi.fn() }));
+
 vi.mock("@motajs/react-monaco-editor", () => ({
   MonacoLanguageLibraryScope: class {
     replace = vi.fn();
@@ -10,11 +12,22 @@ vi.mock("@motajs/react-monaco-editor", () => ({
 
 vi.mock("@/runtime/RuntimeContext", () => ({ useRuntimePreview: vi.fn() }));
 vi.mock("@/stores/EditorStore", () => ({ EditorStore: { useStore: vi.fn() } }));
+vi.mock("@/fs/FileHandlerManager", () => ({ FileHandlerManager: { load: mocks.load } }));
+vi.mock("@/project/data/projectData", () => ({
+  projectData: {
+    items: () => ({ snapshot: () => ({ status: "loaded", value: {} }) }),
+    enemys: () => ({ snapshot: () => ({ status: "loaded", value: {} }) }),
+    tower: () => ({ snapshot: () => ({ status: "loaded", value: { main: {} } }) }),
+  },
+}));
+
+import type { RuntimePreviewCapability } from "@/runtime/RuntimeContext";
 
 import {
   buildRuntimeSnapshotDeclaration,
   buildRuntimeCompatibilityDeclaration,
   composeCoreDeclaration,
+  ProjectLanguageEnvironment,
 } from "../projectLanguageEnvironment";
 
 describe("project language environment", () => {
@@ -71,5 +84,43 @@ describe("project language environment", () => {
     expect(declaration).toContain("declare function parseInt(value: number");
     expect(declaration).toContain("declare const editor: any");
     expect(declaration).toContain("plugins_bb40132b_638b_4a9f_b028_d3fe47acc8d1");
+  });
+
+  it("makes Tern declarations usable before optional runtime reflection finishes", async () => {
+    let resolveSnapshot!: (value: Awaited<ReturnType<RuntimePreviewCapability["languageSnapshot"]>>) => void;
+    const snapshot = new Promise<Awaited<ReturnType<RuntimePreviewCapability["languageSnapshot"]>>>((resolve) => {
+      resolveSnapshot = resolve;
+    });
+    mocks.load.mockImplementation(async (path: string) => {
+      if (path === "runtime.d.ts") throw new Error("not found");
+      return {
+        getContent: () => ({
+          status: "loaded",
+          value: `var defs = [{
+            "!name": "core",
+            "!define": { "hero": {}, "flag": {} },
+            "core": { "getFlag": "fn(name: string) -> ?" },
+            "hero": { "!type": "heroStatus" },
+            "flags": { "!type": "flag" }
+          }];`,
+        }),
+      };
+    });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const environment = new ProjectLanguageEnvironment();
+    const states: string[] = [];
+    environment.subscribe((status) => states.push(status.state));
+    const refresh = environment.refresh({
+      state: { status: "ready", instanceId: 1 },
+      languageSnapshot: () => snapshot,
+    } as unknown as RuntimePreviewCapability);
+
+    await vi.waitFor(() => expect(states.at(-1)).toBe("ready"));
+    expect(warn).toHaveBeenCalledOnce();
+
+    resolveSnapshot({ core: [], modules: {}, catalogs: {}, specials: [] });
+    await refresh;
+    expect(states.at(-1)).toBe("ready");
+    environment.dispose();
   });
 });
