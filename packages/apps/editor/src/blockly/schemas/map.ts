@@ -531,7 +531,7 @@ export const changeFloorSchema: BlockSchema = {
   },
   category: 'map',
   parser: (event: EventObject, _context: ParseContext): BlockState => {
-    const loc = event.loc as [number, number] | undefined;
+    const loc = event.loc as [PointValue['x'], PointValue['y']] | undefined;
     const position: PointValue = {
       x: loc?.[0] ?? 0,
       y: loc?.[1] ?? 0,

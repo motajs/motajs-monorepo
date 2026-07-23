@@ -4,10 +4,15 @@
  * 测试 FieldPoint 字段的值处理和验证逻辑
  */
 
+import * as Blockly from 'blockly';
+import { javascriptGenerator } from 'blockly/javascript';
+import JSON5 from 'json5';
 import { describe, it, expect, beforeAll } from 'vitest';
 
 import { registerAllBlocks } from '@/blockly/blocks';
+import { eventsToWorkspaceState } from '@/blockly/parser';
 import { parseEvent } from '@/blockly/parser/eventToState';
+import { withDisabledBlocksEnabled } from '@/blockly/registry';
 import type { EventObject, ParseContext } from '@/blockly/parser/types';
 import type { PointValue } from '@/blockly/fields';
 
@@ -21,6 +26,28 @@ beforeAll(() => {
 
 describe('FieldPoint', () => {
   describe('changeFloor 事件解析', () => {
+    it('应该在 Blockly 往返中保留坐标表达式', () => {
+      const event: EventObject = {
+        type: 'changeFloor',
+        floorId: 'MT1',
+        loc: ['flag:x', 'core.getFlag("targetY")'],
+      };
+      const workspace = new Blockly.Workspace();
+
+      Blockly.serialization.workspaces.load(eventsToWorkspaceState([event]), workspace);
+      javascriptGenerator.init(workspace);
+      const generated = withDisabledBlocksEnabled(
+        workspace,
+        () => javascriptGenerator.blockToCode(workspace.getTopBlocks(false)[0]),
+      );
+      const code = Array.isArray(generated) ? generated[0] : generated;
+      const result = JSON5.parse(`[${code.trim().replace(/,$/, '')}]`)[0];
+
+      expect(result).toEqual(event);
+      javascriptGenerator.finish('');
+      workspace.dispose();
+    });
+
     it('应该解析完整的 changeFloor 事件', () => {
       const event: EventObject = {
         type: 'changeFloor',

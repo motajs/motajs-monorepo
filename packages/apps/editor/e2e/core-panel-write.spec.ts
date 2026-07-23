@@ -338,6 +338,7 @@ test.describe("core panels write to sandbox project", () => {
     await panel.getByTestId("table-input-firstData-startCanvas").locator("textarea").dblclick();
     const source = page.getByTestId("event-editor-source");
     const events = [
+      { type: "changeFloor", floorId: "sample1", loc: ["flag:targetX", "core.getFlag('targetY')"] },
       { type: "setBlockOpacity", loc: [[1, 2], [3, 4]], floorId: "sample0", opacity: 0.5 },
       { type: "setEquip", id: "sword1", valueType: "percentage", name: "atk", value: "12" },
       { type: "drawImage", image: "bg.jpg", x: 0, y: 0, w: 32, h: 32, x1: 100, y1: 100, w1: 64, h1: 64 },
@@ -345,7 +346,7 @@ test.describe("core panels write to sandbox project", () => {
     await source.fill(JSON.stringify(events, null, 2));
     await page.getByTestId("event-editor-parse").click();
 
-    for (const type of ["mota_setBlockOpacity_s", "mota_setEquip_s", "mota_drawImage_s"]) {
+    for (const type of ["mota_changeFloor_s", "mota_setBlockOpacity_s", "mota_setEquip_s", "mota_drawImage_s"]) {
       await expect(page.getByTestId(`blockly-block-${type}`)).toBeVisible();
     }
     await expect(page.getByTestId("event-editor")).not.toContainText("未知事件");

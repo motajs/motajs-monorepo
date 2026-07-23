@@ -31,9 +31,13 @@ export const RELATIVE_FLOOR_DISPLAY: Record<RelativeFloor, string> = {
 /**
  * 单点坐标值
  */
+export type PointCoordinate = number | string;
+
 export interface PointValue {
-  x: number;
-  y: number;
+  /** 数字坐标或引擎支持的坐标表达式，例如 "flag:x" */
+  x: PointCoordinate;
+  /** 数字坐标或引擎支持的坐标表达式，例如 "flag:y" */
+  y: PointCoordinate;
   /**
    * 楼层标识
    * - undefined: 不指定楼层（某些块不需要）
@@ -74,9 +78,9 @@ export interface FieldPointJsonConfig extends FieldPointConfig {
   type: 'field_point';
   name: string;
   /** 初始 x 坐标 */
-  x?: number;
+  x?: PointCoordinate;
   /** 初始 y 坐标 */
-  y?: number;
+  y?: PointCoordinate;
   /** 初始楼层 ID（可以是相对楼层） */
   floorId?: string;
 }

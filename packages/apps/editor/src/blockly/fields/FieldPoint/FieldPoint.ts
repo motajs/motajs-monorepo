@@ -181,8 +181,12 @@ export class FieldPoint extends Blockly.Field<PointValue> {
       return DEFAULT_POINT;
     }
 
-    const x = typeof newValue.x === 'number' ? newValue.x : 0;
-    const y = typeof newValue.y === 'number' ? newValue.y : 0;
+    const x = typeof newValue.x === 'number' || typeof newValue.x === 'string'
+      ? newValue.x
+      : 0;
+    const y = typeof newValue.y === 'number' || typeof newValue.y === 'string'
+      ? newValue.y
+      : 0;
     const floorId =
       typeof newValue.floorId === 'string' ? newValue.floorId : undefined;
 

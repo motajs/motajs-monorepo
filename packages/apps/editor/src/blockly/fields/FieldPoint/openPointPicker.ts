@@ -2,7 +2,7 @@
  * FieldPoint 与现代 SelectPoint capability 的桥接。
  */
 
-import { isRelativeFloor } from './types';
+import { isRelativeFloor, type PointCoordinate } from './types';
 import { getCurrentFloorId } from '@/stores/editorState';
 import type { SelectPointOptions, SelectPointResult } from '@/Workbench/modals/shared/types';
 
@@ -14,8 +14,8 @@ export function setPointPickerCapability(open: SelectPointOpen | null): void {
 }
 
 export interface OpenPointPickerOptions {
-  x: number;
-  y: number;
+  x: PointCoordinate;
+  y: PointCoordinate;
   floorId?: string;
   /** 是否包含楼层字段 */
   includeFloor: boolean;
@@ -27,7 +27,7 @@ export interface OpenPointPickerOptions {
    * 注意：当前旧版选点器不支持相对楼层选择，此参数预留给未来 React 版选点器使用
    */
   allowRelativeFloor: boolean;
-  onSelect: (x: number, y: number, floorId?: string) => void;
+  onSelect: (x: PointCoordinate, y: PointCoordinate, floorId?: string) => void;
   onCancel?: () => void;
 }
 
@@ -76,19 +76,16 @@ export function openPointPicker(options: OpenPointPickerOptions): void {
     }
     const selectedFloorId = result.floorId;
     const { x, y } = result;
-      // 转换返回值为数字
-      const numX = typeof x === 'number' ? x : parseInt(x, 10) || 0;
-      const numY = typeof y === 'number' ? y : parseInt(y, 10) || 0;
 
-      // 如果不包含楼层，直接返回 undefined
-      if (!options.includeFloor) {
-        options.onSelect(numX, numY, undefined);
-        return;
-      }
+    // 如果不包含楼层，直接返回 undefined
+    if (!options.includeFloor) {
+      options.onSelect(x, y, undefined);
+      return;
+    }
 
-      // 返回选中的楼层 ID
-      // 注意：当前旧版选点器只能返回具体楼层，相对楼层需要用户通过其他方式设置
-      // 或等待未来 React 版选点器支持
-      options.onSelect(numX, numY, selectedFloorId);
+    // 返回选中的楼层 ID
+    // 注意：当前旧版选点器只能返回具体楼层，相对楼层需要用户通过其他方式设置
+    // 或等待未来 React 版选点器支持
+    options.onSelect(x, y, selectedFloorId);
   });
 }
