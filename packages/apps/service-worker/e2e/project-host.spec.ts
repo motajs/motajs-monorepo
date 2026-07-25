@@ -52,8 +52,11 @@ test("registers an OPFS project, serves preview and persists through the canonic
   await page.goto(`/service/${id}/project/`);
   await expect(page.getByRole("heading", { name: directoryName })).toBeVisible();
   await expect(page.getByTestId("open-preview")).toBeEnabled();
-  if (withEditor) await expect(page.getByTestId("open-editor")).toBeEnabled();
-  else await expect(page.getByTestId("open-editor")).toHaveCount(0);
+  if (withEditor) {
+    await expect(page.getByTestId("open-editor")).toBeEnabled();
+    await expect(page.getByText("网络版本不可用")).toHaveCount(0);
+    await expect(page.getByText(/^Editor 构建 [a-f0-9]{12}$/)).toBeVisible();
+  } else await expect(page.getByTestId("open-editor")).toHaveCount(0);
   await expect(page.getByText("index.html")).toBeVisible();
 
   await page.goto(`/service/${id}/preview/`);
@@ -93,4 +96,59 @@ test("registers an OPFS project, serves preview and persists through the canonic
   }, directoryName);
   expect(diskFileStillExists).toBe(true);
   expect(pageErrors).toEqual([]);
+});
+
+test("shows live Editor cache progress on the project page", async ({ page }) => {
+  test.skip(!withEditor, "requires a staged Editor release");
+  await page.goto("/");
+  const { id } = await registerOpfsProject(page);
+  await page.goto(`/service/${id}/project/`);
+  await expect(page.getByTestId("open-editor")).toBeEnabled();
+
+  const progress = page.getByTestId("editor-update-progress");
+  await expect(progress).toHaveCount(0, { timeout: 60_000 });
+
+  const launchBuildId = "a".repeat(64);
+  const stagingBuildId = "b".repeat(64);
+  await page.evaluate(({ launchBuildId, stagingBuildId }) => {
+    navigator.serviceWorker.dispatchEvent(new MessageEvent("message", {
+      data: {
+        type: "motajs-editor-release-state",
+        state: {
+          protocolVersion: 2,
+          status: "ready",
+          launch: { buildId: launchBuildId, version: "0.0.0" },
+          staging: {
+            buildId: stagingBuildId,
+            version: "0.0.0",
+            completedFiles: 4,
+            totalFiles: 10,
+            completedBytes: 1536,
+            totalBytes: 4096,
+          },
+        },
+      },
+    }));
+  }, { launchBuildId, stagingBuildId });
+
+  await expect(progress).toContainText(`正在缓存新版本 Editor 构建 ${stagingBuildId.slice(0, 12)}`);
+  await expect(progress).toContainText("4/10 个文件 · 1.5 KB/4.0 KB");
+  await expect(page.getByTestId("editor-update-progress-bar")).toHaveAttribute("aria-valuenow", "38");
+
+  await page.evaluate(({ launchBuildId, stagingBuildId }) => {
+    navigator.serviceWorker.dispatchEvent(new MessageEvent("message", {
+      data: {
+        type: "motajs-editor-release-state",
+        state: {
+          protocolVersion: 2,
+          status: "ready",
+          launch: { buildId: launchBuildId, version: "0.0.0" },
+          candidate: { buildId: stagingBuildId, version: "0.0.0" },
+        },
+      },
+    }));
+  }, { launchBuildId, stagingBuildId });
+
+  await expect(page.getByTestId("editor-update-progress")).toHaveCount(0);
+  await expect(page.getByText(`Editor 构建 ${stagingBuildId.slice(0, 12)} 已缓存完成，下次打开编辑器时启用。`)).toBeVisible();
 });

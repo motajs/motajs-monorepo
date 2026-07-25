@@ -1,4 +1,4 @@
-import { type FC, useState } from "react";
+import { type FC, useEffect, useState } from "react";
 import {
   Banner,
   Breadcrumb,
@@ -8,6 +8,7 @@ import {
   Layout,
   List,
   Modal,
+  Progress,
   Space,
   Spin,
   Tag,
@@ -35,6 +36,7 @@ import {
   GetProjectMessage,
   ListProjectMessage,
   RegisterProjectMessage,
+  type EditorUpdateState,
   type ProjectSummary,
 } from "@/idl";
 import styles from "./MainView.module.less";
@@ -42,11 +44,20 @@ import {
   appUrl,
   currentViewRoute,
   editorUrl,
+  editorUpdateUrl,
   previewUrl,
   projectUrl,
   serviceWorkerScope,
   serviceWorkerUrl,
 } from "./routes";
+import {
+  checkEditorUpdate,
+  editorReleaseLabel,
+  formatBytes,
+  getEditorUpdateState,
+  parseEditorUpdateState,
+  stagingPercent,
+} from "./editorUpdate";
 
 const { Text, Title } = Typography;
 const { Header, Content } = Layout;
@@ -228,6 +239,7 @@ const HomeView: FC<{ host: HostClient }> = ({ host }) => {
 
 const ProjectView: FC<{ host: HostClient; id: number }> = ({ host, id }) => {
   const [forgetOpen, setForgetOpen] = useState(false);
+  const [updateState, setUpdateState] = useState<EditorUpdateState>();
   const details = useQuery(["project", id], () => host.client.request(GetProjectMessage, { id }), {
     enabled: host.ready,
   });
@@ -237,6 +249,46 @@ const ProjectView: FC<{ host: HostClient; id: number }> = ({ host, id }) => {
   const access = details.data?.access;
   const project = access && access.status !== "not-found" ? access.project : undefined;
   const reason = new URLSearchParams(window.location.search).get("reason");
+
+  useEffect(() => {
+    if (!host.ready) return;
+    const controller = new AbortController();
+    const url = editorUpdateUrl(id);
+    const update = (state: EditorUpdateState) => {
+      if (!controller.signal.aborted) setUpdateState(state);
+    };
+    const check = async (force = false) => {
+      try {
+        update(await checkEditorUpdate(url, force, controller.signal));
+      } catch (error) {
+        if (!controller.signal.aborted) console.debug("Editor update check is unavailable", error);
+      }
+    };
+    const handleMessage = (event: MessageEvent) => {
+      if (!event.data || event.data.type !== "motajs-editor-release-state") return;
+      try {
+        update(parseEditorUpdateState(event.data.state));
+      } catch (error) {
+        console.debug("Ignored an invalid Editor release broadcast", error);
+      }
+    };
+    void getEditorUpdateState(url, controller.signal)
+      .then(update)
+      .then(() => check())
+      .catch((error) => {
+        if (!controller.signal.aborted) console.debug("Editor update state is unavailable", error);
+      });
+    const interval = window.setInterval(() => void check(), 10 * 60_000);
+    const handleOnline = () => void check(true);
+    navigator.serviceWorker.addEventListener("message", handleMessage);
+    window.addEventListener("online", handleOnline);
+    return () => {
+      controller.abort();
+      window.clearInterval(interval);
+      navigator.serviceWorker.removeEventListener("message", handleMessage);
+      window.removeEventListener("online", handleOnline);
+    };
+  }, [host.ready, id]);
 
   const requestPermission = useCurrentFn(async () => {
     const handle = details.data?.handle;
@@ -273,6 +325,11 @@ const ProjectView: FC<{ host: HostClient; id: number }> = ({ host, id }) => {
   }
 
   const ready = access?.status === "ready" && project.hasIndex;
+  const stagingIsUpdate = Boolean(
+    updateState?.launch
+    && updateState.staging
+    && updateState.launch.buildId !== updateState.staging.buildId,
+  );
   return (
     <Shell>
       <Breadcrumb className={styles.breadcrumb}>
@@ -287,8 +344,46 @@ const ProjectView: FC<{ host: HostClient; id: number }> = ({ host, id }) => {
       {editorStatus.data?.status === "unavailable" ? (
         <Banner type="warning" description={`编辑器暂不可用：${editorStatus.data.message}`} />
       ) : null}
-      {editorStatus.data?.status === "ready" && editorStatus.data.source === "cache" ? (
-        <Banner type="warning" description={`网络版本不可用，当前将使用已缓存的 Editor ${editorStatus.data.editorVersion}。`} />
+      {updateState?.staging ? (
+        <Banner
+          type={updateState.staging.error ? "warning" : "info"}
+          description={(
+            <div className={styles.editorUpdate} data-test-id="editor-update-progress">
+              <div>
+                {updateState.staging.error
+                  ? `${editorReleaseLabel({
+                    buildId: updateState.staging.buildId,
+                    version: updateState.staging.version ?? "0.0.0",
+                  })} 缓存失败，当前版本仍可继续使用。`
+                  : `正在缓存${stagingIsUpdate ? "新版本 " : ""}${editorReleaseLabel({
+                    buildId: updateState.staging.buildId,
+                    version: updateState.staging.version ?? "0.0.0",
+                  })}`}
+              </div>
+              {!updateState.staging.error ? (
+                <>
+                  <Progress
+                    percent={stagingPercent(updateState.staging)}
+                    showInfo
+                    size="small"
+                    data-test-id="editor-update-progress-bar"
+                  />
+                  <Text type="tertiary" size="small">
+                    {`${updateState.staging.completedFiles}/${updateState.staging.totalFiles} 个文件 · ${
+                      formatBytes(updateState.staging.completedBytes)
+                    }/${formatBytes(updateState.staging.totalBytes)}`}
+                  </Text>
+                </>
+              ) : null}
+            </div>
+          )}
+        />
+      ) : null}
+      {updateState?.candidate ? (
+        <Banner
+          type="success"
+          description={`${editorReleaseLabel(updateState.candidate)} 已缓存完成，下次打开编辑器时启用。`}
+        />
       ) : null}
       {reason === "editor-unavailable" && !editorStatus.data ? (
         <Banner type="warning" description="编辑器暂不可用，请检查 Editor release 是否已经发布。" />
@@ -310,6 +405,15 @@ const ProjectView: FC<{ host: HostClient; id: number }> = ({ host, id }) => {
           { key: "目录名称", value: project.name },
           { key: "上次访问", value: new Date(project.lastTime).toLocaleString() },
           { key: "入口文件", value: project.hasIndex === undefined ? "授权后检查" : project.hasIndex ? "index.html" : "缺失" },
+          ...(editorStatus.data?.status === "ready"
+            ? [{
+                key: "编辑器",
+                value: editorReleaseLabel({
+                  buildId: editorStatus.data.buildId,
+                  version: editorStatus.data.editorVersion,
+                }),
+              }]
+            : []),
         ]}
       />
 

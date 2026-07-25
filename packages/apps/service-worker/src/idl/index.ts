@@ -54,8 +54,8 @@ export const ListProjectMessage = new MessageType<void, ListProjectsResponse>("p
 export const GetProjectMessage = new MessageType<ProjectReferenceRequest, ProjectDetailsResponse>("project.get");
 export const ActivateProjectMessage = new MessageType<ProjectReferenceRequest, ProjectAccessResult>("project.activate");
 
-export type EditorHostStatus =
-  | {
+export type EditorHostStatus
+  = | {
     status: "ready";
     buildId: string;
     editorVersion: string;
@@ -66,5 +66,27 @@ export type EditorHostStatus =
     reason: "not-installed" | "offline" | "invalid-artifact" | "incompatible-environment";
     message: string;
   };
+
+export interface EditorReleaseIdentity {
+  buildId: string;
+  version: string;
+}
+
+export interface EditorUpdateState {
+  protocolVersion: 2;
+  status: "ready";
+  launch?: EditorReleaseIdentity;
+  candidate?: EditorReleaseIdentity;
+  staging?: {
+    buildId: string;
+    version?: string;
+    completedFiles: number;
+    totalFiles: number;
+    completedBytes: number;
+    totalBytes: number;
+    error?: string;
+  };
+  lastCheckedAt?: number;
+}
 
 export const GetEditorHostStatusMessage = new MessageType<void, EditorHostStatus>("editor.status");

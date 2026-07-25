@@ -1,4 +1,8 @@
-import type { EditorHostStatus } from "@/idl";
+import type {
+  EditorHostStatus,
+  EditorReleaseIdentity,
+  EditorUpdateState,
+} from "@/idl";
 import { ReleaseAssetCoordinator, type ReleaseAssetPriority } from "./releaseAssetCoordinator";
 
 const EDITOR_MANIFEST_SCHEMA_VERSION = 2;
@@ -61,28 +65,6 @@ interface EditorCacheState {
 interface LegacyEditorCacheState {
   current?: string;
   previous?: string;
-}
-
-export interface EditorReleaseIdentity {
-  buildId: string;
-  version: string;
-}
-
-export interface EditorUpdateState {
-  protocolVersion: 2;
-  status: "ready";
-  launch?: EditorReleaseIdentity;
-  candidate?: EditorReleaseIdentity;
-  staging?: {
-    buildId: string;
-    version?: string;
-    completedFiles: number;
-    totalFiles: number;
-    completedBytes: number;
-    totalBytes: number;
-    error?: string;
-  };
-  lastCheckedAt?: number;
 }
 
 export class EditorReleaseError extends Error {
