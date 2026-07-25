@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { ProjectSandbox } from "./utils/projectSandbox";
-import { expectScriptSource, setScriptSource } from "./utils/tableEditing";
+import { expectScriptSource, setScriptSource, waitForEventEditorReady } from "./utils/tableEditing";
 
 test("opening the new editor never rewrites legacy comment or function sources", async ({ page }) => {
   const sandbox = await ProjectSandbox.create(page);
@@ -123,6 +123,7 @@ test("top bar workspaces, schema tower, drafts, scripts and theme stay coherent"
 
   await page.getByTestId("workspace-common-events").click();
   await expect(page.getByTestId("common-events-workspace")).toBeVisible();
+  await waitForEventEditorReady(page, /通过传参/);
   await expect(page.locator(".commonEventItem")).not.toHaveCount(0);
   await expect(page.locator(".commonEventItem i[title=\"未保存\"]")).toHaveCount(0);
   await expect(page.locator("#common-event-editor-host").getByTestId("event-editor")).toBeVisible();
@@ -178,7 +179,7 @@ test("switching public events atomically replaces the Blockly workspace", async 
   await page.goto("/");
   await page.getByTestId("workspace-common-events").click();
 
-  const source = page.getByTestId("event-editor-source");
+  const source = await waitForEventEditorReady(page, /通过传参/);
   const blockCanvas = page.locator("#common-event-editor-host .blocklyBlockCanvas").first();
   const addPointEvent = page.locator(".commonEventSelect").filter({ hasText: "加点事件" });
   const keyShopEvent = page.locator(".commonEventSelect").filter({ hasText: "回收钥匙商店" });
@@ -212,7 +213,7 @@ test("public events follow the dark editor theme without recreating Blockly", as
   await page.goto("/");
   await page.getByTestId("workspace-common-events").click();
 
-  const source = page.getByTestId("event-editor-source");
+  const source = await waitForEventEditorReady(page, /通过传参/);
   const blockCanvas = page.locator("#common-event-editor-host .blocklyBlockCanvas").first();
   await expect(source).toHaveValue(/通过传参/);
   await expect.poll(() => blockCanvas.evaluate((element) => element.childElementCount)).toBeGreaterThan(0);
@@ -285,8 +286,7 @@ test("dedicated common-event and script workspaces save through guarded commands
   await page.goto("/");
 
   await page.getByTestId("workspace-common-events").click();
-  const eventSource = page.getByTestId("event-editor-source");
-  await expect(eventSource).toBeVisible();
+  const eventSource = await waitForEventEditorReady(page, /通过传参/);
   await expect(page.getByTestId("event-editor-save")).toBeVisible();
   await expect(page.getByTestId("event-editor-confirm")).toHaveCount(0);
   await expect(page.getByTestId("event-editor-cancel")).toHaveCount(0);
@@ -405,7 +405,7 @@ test("Blockly builtin text fields retain contextual autocomplete", async ({ page
   await page.goto("/");
   await page.getByTestId("workspace-common-events").click();
 
-  const source = page.getByTestId("event-editor-source");
+  const source = await waitForEventEditorReady(page, /通过传参/);
   await source.fill(JSON.stringify([{ type: "useItem", id: "yellowKey" }]));
   await page.getByTestId("event-editor-parse").click();
   const itemField = page.locator("#common-event-editor-host").getByText("yellowKey", { exact: true });

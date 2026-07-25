@@ -8,6 +8,7 @@
 import { registerFieldColour } from '@blockly/field-colour';
 import { registerFieldAutocomplete } from '../fields/FieldAutocomplete';
 import { registerFieldMultilineText } from '../fields/FieldMultilineText';
+import { registerFieldTextInput } from '../fields/FieldTextInput';
 
 import { registerAllExtensions } from '../extensions';
 import { registerCustomFields } from '../fields';
@@ -23,6 +24,7 @@ let blocksRegistered = false;
  * 只会注册一次，多次调用无效
  */
 export function registerAllBlocks(): void {
+  registerFieldTextInput();
   registerFieldAutocomplete();
   if (blocksRegistered) {
     return;

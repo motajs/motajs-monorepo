@@ -107,7 +107,12 @@ test("workbench starts before tower and table metadata while preloading independ
 
   await expect(page.getByTestId("workbench")).toBeVisible();
   await expect(page.getByTestId("event-editor")).toBeAttached();
-  await expect(page.getByTestId("code-editor")).toBeAttached();
+  await expect(page.getByTestId("event-editor")).toHaveAttribute("data-import-ready", "false");
+  // The generic CodeEditor host is intentionally mounted only after the first
+  // open request. Monaco may already be preloading in the background, but the
+  // shell should not pay the React/DOM cost while no editor is requested.
+  await expect(page.getByTestId("code-editor")).toHaveCount(0);
+  await expect(page.getByTestId("scripts-workspace")).toHaveCount(0);
   await expect.poll(() => requestedPaths.has("project/functions.js")).toBe(true);
   await expect.poll(() => requestedPaths.has("project/plugins.js")).toBe(true);
   await expect.poll(() => requestedPaths.has("_server/table/functions.comment.js")).toBe(true);

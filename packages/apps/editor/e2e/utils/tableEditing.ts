@@ -1,5 +1,26 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 
+export async function waitForEventEditorReady(
+  page: Page,
+  expectedSource?: string | RegExp,
+): Promise<Locator> {
+  const editor = page.getByTestId("event-editor");
+  const source = page.getByTestId("event-editor-source");
+  await expect(editor).toHaveAttribute("data-editor-visible", "true");
+  await expect(editor).toHaveAttribute("data-import-ready", "true");
+  if (expectedSource !== undefined) await expect(source).toHaveValue(expectedSource);
+  return source;
+}
+
+export async function openEventEditor(
+  page: Page,
+  trigger: Locator,
+  expectedSource?: string | RegExp,
+): Promise<Locator> {
+  await trigger.dblclick();
+  return waitForEventEditorReady(page, expectedSource);
+}
+
 export async function selectPanel(page: Page, mode: string, testId: string): Promise<Locator> {
   if (mode === "appendpic") {
     await page.getByTestId("workspace-resources").click();
@@ -30,7 +51,12 @@ export async function selectScript(
     exact: true,
   }).click();
   await workspace.locator(".scriptTreeLeaf").filter({ hasText: leaf }).first().click();
-  await expect(workspace.getByTestId("script-monaco-editor")).toBeVisible();
+  const surface = workspace.getByTestId("script-code-editor");
+  await expect(surface).toBeVisible();
+  await expect(surface).toHaveAttribute("data-language-status", /ready|degraded/);
+  await expect.poll(() => surface.evaluate((element) => Boolean(
+    (element as HTMLElement & { __motajsMonacoEditor?: unknown }).__motajsMonacoEditor,
+  ))).toBe(true);
   return workspace;
 }
 

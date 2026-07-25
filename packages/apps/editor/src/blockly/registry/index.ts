@@ -215,15 +215,15 @@ function applyInteractionFields(schema: BlockSchema, completeAllTextInputs: bool
       interaction.type === 'autocomplete' ? [[interaction.field, interaction.source] as const] : []
     )),
   );
-  if (completionByField.size === 0 && !completeAllTextInputs) return schema.definition;
   const definition = { ...schema.definition } as unknown as Record<string, unknown>;
   for (const [key, value] of Object.entries(definition)) {
     if (!/^args\d+$/.test(key) || !Array.isArray(value)) continue;
     definition[key] = value.map((raw: Record<string, unknown>) => {
       const source = typeof raw.name === 'string' ? completionByField.get(raw.name) : undefined;
-      return raw.type === 'field_input' && (source || completeAllTextInputs)
+      if (raw.type !== 'field_input') return raw;
+      return source || completeAllTextInputs
         ? { ...raw, type: 'field_mota_autocomplete', completionSource: source ?? 'contextual' }
-        : raw;
+        : { ...raw, type: 'field_mota_text_input' };
     });
   }
   return definition as unknown as BlockSchema['definition'];

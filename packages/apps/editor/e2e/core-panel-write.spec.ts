@@ -11,11 +11,13 @@ import {
   editTextareaByField,
   expectTextareaByFieldValue,
   expectScriptSource,
+  openEventEditor,
   rightClickMapCell,
   selectFloor,
   selectPanel,
   selectScript,
   setScriptSource,
+  waitForEventEditorReady,
 } from "./utils/tableEditing";
 
 const PROJECT_ROOT = path.join(MOTA_JS_ROOT, "project");
@@ -213,14 +215,16 @@ test.describe("core panels write to sandbox project", () => {
 
   test("Blockly edits startCanvas through the modern EventEditor capability", async ({ page }) => {
     const { sandbox, pageErrors } = await bootWithSandbox(page);
-    await selectPanel(page, "tower", "panel-tower");
+    const panel = await selectPanel(page, "tower", "panel-tower");
 
-    await page.getByTestId("table-input-firstData-startCanvas").locator("textarea").dblclick();
+    const source = await openEventEditor(
+      page,
+      panel.getByTestId("table-input-firstData-startCanvas").locator("textarea"),
+      /在这里可以用事件来自定义绘制标题界面/,
+    );
     const editor = page.getByTestId("event-editor");
-    await expect(editor).toBeVisible();
     await expect(editor).not.toContainText("未知事件");
 
-    const source = page.getByTestId("event-editor-source");
     const events = JSON5.parse(await source.inputValue()) as Array<Record<string, unknown>>;
     expect(events.some((event) => event.type === "previewUI")).toBe(true);
     expect(JSON.stringify(events)).toContain("\"case\":\"keyboard\"");
@@ -238,11 +242,17 @@ test.describe("core panels write to sandbox project", () => {
 
   test("Blockly keeps unparsed source and blocks an accidental save", async ({ page }) => {
     const { sandbox, pageErrors } = await bootWithSandbox(page);
-    await selectPanel(page, "tower", "panel-tower");
-    await page.getByTestId("table-input-firstData-startCanvas").locator("textarea").dblclick();
+    const panel = await selectPanel(page, "tower", "panel-tower");
+    const editor = page.getByTestId("event-editor");
+    await expect(editor).toHaveAttribute("data-import-ready", "false");
+    const source = await openEventEditor(
+      page,
+      panel.getByTestId("table-input-firstData-startCanvas").locator("textarea"),
+      /在这里可以用事件来自定义绘制标题界面/,
+    );
+    await expect(editor).toHaveAttribute("data-import-ready", "true");
 
     const before = readTowerData(sandbox);
-    const source = page.getByTestId("event-editor-source");
     await source.fill("[{\"type\":\"comment\",\"text\":\"UNPARSED_SOURCE\"}]");
     await expect(source).toHaveAttribute("data-source-dirty", "true");
     await page.getByTestId("event-editor-confirm").click();
@@ -251,6 +261,8 @@ test.describe("core panels write to sandbox project", () => {
     await expect(source).toHaveValue(/UNPARSED_SOURCE/);
     expect(readTowerData(sandbox)).toEqual(before);
     expect(sandbox.readText("project/data.js")).not.toContain("UNPARSED_SOURCE");
+    await page.getByTestId("event-editor-cancel").click();
+    await expect(editor).toHaveAttribute("data-import-ready", "false");
     expect(pageErrors).toEqual([]);
   });
 
@@ -262,13 +274,12 @@ test.describe("core panels write to sandbox project", () => {
     const locPanel = await selectPanel(page, "loc", "panel-loc");
     const afterGetItem = locPanel.getByTestId("table-input-afterGetItem").locator("textarea");
     await expect(afterGetItem).toHaveValue(/如需修改消耗品的效果/);
-    await afterGetItem.dblclick();
-    await expect(page.getByTestId("event-editor-source")).toHaveValue(/如需修改消耗品的效果/);
+    await openEventEditor(page, afterGetItem, /如需修改消耗品的效果/);
     await expect(page.getByTestId("event-editor")).not.toContainText("未知事件");
     await page.getByTestId("event-editor-cancel").click();
 
     await page.getByTestId("workspace-common-events").click();
-    await expect(page.getByTestId("event-editor-source")).toHaveValue(/flag:arg1/);
+    await waitForEventEditorReady(page, /flag:arg1/);
     await expect(page.getByTestId("event-editor")).toContainText("攻击+");
     await expect(page.getByTestId("event-editor-cancel")).toHaveCount(0);
     expect(pageErrors).toEqual([]);
@@ -279,9 +290,11 @@ test.describe("core panels write to sandbox project", () => {
     await selectFloor(page, "sample0");
     await clickMapCell(page, 8, 7);
     const panel = await selectPanel(page, "loc", "panel-loc");
-    await panel.getByTestId("table-input-afterGetItem").locator("textarea").dblclick();
-
-    const source = page.getByTestId("event-editor-source");
+    const source = await openEventEditor(
+      page,
+      panel.getByTestId("table-input-afterGetItem").locator("textarea"),
+      /如需修改消耗品的效果/,
+    );
     await source.fill(JSON.stringify([{ type: "animate", name: "zone" }], null, 2));
     await page.getByTestId("event-editor-parse").click();
     await page.getByTestId("blockly-block-mota_animate_s").dblclick();
@@ -298,7 +311,11 @@ test.describe("core panels write to sandbox project", () => {
   test("Blockly static flag search opens without runtime", async ({ page }) => {
     const { pageErrors } = await bootWithSandbox(page);
     const panel = await selectPanel(page, "tower", "panel-tower");
-    await panel.getByTestId("table-input-firstData-startCanvas").locator("textarea").dblclick();
+    await openEventEditor(
+      page,
+      panel.getByTestId("table-input-firstData-startCanvas").locator("textarea"),
+      /在这里可以用事件来自定义绘制标题界面/,
+    );
     await page.getByTestId("event-editor-search-flags").click();
     await expect(page.getByTestId("search-flags-modal")).toBeVisible();
     await expect(page.getByTestId("flag-usage-results")).toBeVisible();
@@ -310,8 +327,11 @@ test.describe("core panels write to sandbox project", () => {
   test("Blockly field-only action blocks render on one row", async ({ page }) => {
     const { pageErrors } = await bootWithSandbox(page);
     const panel = await selectPanel(page, "tower", "panel-tower");
-    await panel.getByTestId("table-input-firstData-startCanvas").locator("textarea").dblclick();
-    const source = page.getByTestId("event-editor-source");
+    const source = await openEventEditor(
+      page,
+      panel.getByTestId("table-input-firstData-startCanvas").locator("textarea"),
+      /在这里可以用事件来自定义绘制标题界面/,
+    );
     await source.fill(JSON.stringify(
       [
         { type: "setValue", name: "flag:door", operator: "+=", value: "1", norefresh: true },
@@ -335,8 +355,11 @@ test.describe("core panels write to sandbox project", () => {
   test("completed legacy Blockly schemas render and persist without unknown fallback", async ({ page }) => {
     const { sandbox, pageErrors } = await bootWithSandbox(page);
     let panel = await selectPanel(page, "tower", "panel-tower");
-    await panel.getByTestId("table-input-firstData-startCanvas").locator("textarea").dblclick();
-    const source = page.getByTestId("event-editor-source");
+    const source = await openEventEditor(
+      page,
+      panel.getByTestId("table-input-firstData-startCanvas").locator("textarea"),
+      /在这里可以用事件来自定义绘制标题界面/,
+    );
     const events = [
       { type: "changeFloor", floorId: "sample1", loc: ["flag:targetX", "core.getFlag('targetY')"] },
       { type: "setBlockOpacity", loc: [[1, 2], [3, 4]], floorId: "sample0", opacity: 0.5 },
@@ -360,8 +383,11 @@ test.describe("core panels write to sandbox project", () => {
 
     await page.reload();
     panel = await selectPanel(page, "tower", "panel-tower");
-    await panel.getByTestId("table-input-firstData-startCanvas").locator("textarea").dblclick();
-    await expect(page.getByTestId("event-editor-source")).toHaveValue(/"type"\s*:\s*"drawImage"/);
+    await openEventEditor(
+      page,
+      panel.getByTestId("table-input-firstData-startCanvas").locator("textarea"),
+      /"type"\s*:\s*"drawImage"/,
+    );
     await expect(page.getByTestId("event-editor")).not.toContainText("未知事件");
     await page.getByTestId("event-editor-cancel").click();
     expect(pageErrors).toEqual([]);
@@ -829,9 +855,13 @@ test.describe("core panels write to sandbox project", () => {
     const after = readFloorData(sandbox, "sample0").cannotMove?.["4,4"] ?? [];
     expect(Array.isArray(after) && after.includes("up")).toBe(!blocked);
 
-    // The template stores auto-event pages as an array. It must reach the
-    // dedicated editor instead of falling back to Raw JSON.
-    await clickMapCell(page, 1, 1);
+    // Create the second page explicitly instead of depending on a particular
+    // sample-project fixture. Newly created pages must stay on the canonical
+    // array path and reach the dedicated editor rather than Raw JSON.
+    waitForWrite = sandbox.waitForWrite("project/floors/sample0.js");
+    await panel.getByRole("button", { name: "添加自动事件页" }).click();
+    await waitForWrite;
+    expect(readFloorData(sandbox, "sample0").autoEvent["4,4"]).toEqual([null, null]);
     await expect(panel.getByTestId("schema-raw-fallback-自动事件")).toHaveCount(0);
     await expect(panel.getByRole("button", { name: "编辑自动事件第 0 页" })).toBeVisible();
     await expect(panel.getByRole("button", { name: "编辑自动事件第 1 页" })).toBeVisible();
@@ -1396,7 +1426,8 @@ test.describe("core panels write to sandbox project", () => {
     await page.keyboard.press("b");
     await expect(page.getByTestId("edit-mode-select")).toHaveValue("tower");
     await page.keyboard.press("z");
-    await expect(page.getByTestId("edit-mode-select")).toHaveValue("map");
+    await expect(page.getByTestId("edit-mode-select")).toHaveValue("tower");
+    await page.getByTestId("workspace-map").click();
     await page.keyboard.press("c");
     await expect(page.getByTestId("edit-mode-select")).toHaveValue("enemyitem");
 

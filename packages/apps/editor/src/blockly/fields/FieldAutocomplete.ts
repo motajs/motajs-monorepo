@@ -4,6 +4,7 @@ import 'awesomplete/awesomplete.css';
 import { projectModel, type BlocklyCompletionCatalog, type BlocklyCompletionItem } from '@/project/model/projectModel';
 import { editorConfigService } from '@/services/editorConfig';
 import type { BlocklyCompletionSourceId } from '../registry';
+import { FieldTextInput } from './FieldTextInput';
 
 interface FieldAutocompleteConfig extends Blockly.FieldTextInputFromJsonConfig {
   completionSource?: BlocklyCompletionSourceId;
@@ -81,7 +82,7 @@ export function resolveBlocklyCompletions(
   return { prefix, replaceStart, replaceEnd, suggestions };
 }
 
-export class FieldAutocomplete extends Blockly.FieldTextInput {
+export class FieldAutocomplete extends FieldTextInput {
   private readonly completionSource: BlocklyCompletionSourceId;
   private awesomplete: Awesomplete | null = null;
   private inputListener: (() => void) | null = null;

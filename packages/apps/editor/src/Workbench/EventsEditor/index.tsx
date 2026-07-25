@@ -52,6 +52,7 @@ export const EventsEditor: FC = () => {
   const workspaceRef = useRef<BlocklyWorkspaceRef>(null);
   const apiRef = useRef<EditorBlocklyApi | null>(null);
   const [isVisible, setIsVisible] = useState(false);
+  const [importReady, setImportReady] = useState(false);
   const [embedded, setEmbedded] = useState(false);
   const [codePreview, setCodePreview] = useState("");
   const [sourceDirty, setSourceDirty] = useState(false);
@@ -112,6 +113,7 @@ export const EventsEditor: FC = () => {
   // 隐藏编辑器
   const hideEditor = useCallback(() => {
     visibleRef.current = false;
+    setImportReady(false);
     workspaceRef.current?.getApi().getWorkspace()?.hideChaff();
     Blockly.WidgetDiv.hide();
     Blockly.DropDownDiv.hideWithoutAnimation();
@@ -160,9 +162,11 @@ export const EventsEditor: FC = () => {
         // React StrictMode 和数据资源刷新都可能重复投递同一个 open。不要因此
         // 保存默认视口并重新导入，否则第二次导入会把入口块移出视口。
         requestRef.current = request;
+        setImportReady(true);
         return;
       }
       saveSessionViewport();
+      setImportReady(false);
       const session = new BlocklyEditorSession(request.contextId, request.entryType, source);
       const restoredSession = isCommonEventWorkspace
         ? blocklySessionStore.restoreViewport(session)
@@ -202,6 +206,7 @@ export const EventsEditor: FC = () => {
                 workspaceRef.current?.getApi().restoreViewport(state.viewport, state.selectedBlockId);
               }
               suppressDraftNotificationRef.current = false;
+              setImportReady(true);
             },
           },
         ),
@@ -209,6 +214,9 @@ export const EventsEditor: FC = () => {
       setImportRevision(revision);
     };
     const unregister = registerEventEditor((request) => {
+      // The block pack can load asynchronously. Publish the pending state before
+      // waiting so callers never mistake the previous document for this request.
+      setImportReady(false);
       void loadProjectBlockPack()
         .catch((error) => reportInteraction(
           `自定义事件块加载失败：${error instanceof Error ? error.message : String(error)}`,
@@ -329,6 +337,8 @@ export const EventsEditor: FC = () => {
     <div
       id="left6"
       data-test-id="event-editor"
+      data-editor-visible={isVisible ? "true" : "false"}
+      data-import-ready={importReady ? "true" : "false"}
       className={embedded ? "leftTab eventEditorEmbedded" : "leftTab"}
       style={{ zIndex: isVisible ? (embedded ? 1 : 999) : -1, opacity: isVisible ? 1 : 0 }}
     >

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { ProjectSandbox } from "./utils/projectSandbox";
-import { selectPanel, selectScript } from "./utils/tableEditing";
+import { openEventEditor, selectPanel, selectScript } from "./utils/tableEditing";
 
 test("runtime iframe renders Blockly UI through the resource gateway", async ({ page }) => {
   const pageErrors: string[] = [];
@@ -19,8 +19,11 @@ test("runtime iframe renders Blockly UI through the resource gateway", async ({ 
   const instanceId = await runtimeHost.getAttribute("data-runtime-instance-id");
 
   const tower = await selectPanel(page, "tower", "panel-tower");
-  await tower.getByTestId("table-input-firstData-startCanvas").locator("textarea").dblclick();
-  await expect(page.getByTestId("event-editor")).toBeVisible();
+  await openEventEditor(
+    page,
+    tower.getByTestId("table-input-firstData-startCanvas").locator("textarea"),
+    /在这里可以用事件来自定义绘制标题界面/,
+  );
   const previewBlocks = page.getByTestId("blockly-block-mota_previewUI_s");
   await expect(previewBlocks).toHaveCount(2);
   await previewBlocks.nth(0).dispatchEvent("dblclick");
@@ -92,7 +95,11 @@ test("runtime crash falls back explicitly and manual retry restores the live sur
   await expect(runtimeHost).toHaveAttribute("data-runtime-status", "ready", { timeout: 20_000 });
 
   const tower = await selectPanel(page, "tower", "panel-tower");
-  await tower.getByTestId("table-input-firstData-startCanvas").locator("textarea").dblclick();
+  await openEventEditor(
+    page,
+    tower.getByTestId("table-input-firstData-startCanvas").locator("textarea"),
+    /在这里可以用事件来自定义绘制标题界面/,
+  );
   await page.getByTestId("event-editor-source").fill(JSON.stringify([{
     type: "previewUI",
     action: [{ type: "fillRect", x: 0, y: 0, width: 64, height: 64, style: [0, 255, 0, 1] }],

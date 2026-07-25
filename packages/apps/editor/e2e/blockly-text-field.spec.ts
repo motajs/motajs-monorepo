@@ -1,14 +1,17 @@
 import { expect, test } from "@playwright/test";
 import { ProjectSandbox } from "./utils/projectSandbox";
-import { selectPanel } from "./utils/tableEditing";
+import { openEventEditor, selectPanel } from "./utils/tableEditing";
 
 test("Blockly multiline text wraps and keeps its editor aligned", async ({ page }) => {
   await ProjectSandbox.create(page);
   await page.goto("/");
 
   const tower = await selectPanel(page, "tower", "panel-tower");
-  await tower.getByTestId("table-input-firstData-startCanvas").locator("textarea").dblclick();
-  await expect(page.getByTestId("event-editor")).toBeVisible();
+  await openEventEditor(
+    page,
+    tower.getByTestId("table-input-firstData-startCanvas").locator("textarea"),
+    /在这里可以用事件来自定义绘制标题界面/,
+  );
 
   const text = "这是一段很长的显示文字，用来确认单行内容会在块内自动换行，而不是在末尾直接显示省略号。".repeat(3);
   await page.getByTestId("event-editor-source").fill(JSON.stringify([text]));
@@ -67,4 +70,48 @@ test("Blockly multiline text wraps and keeps its editor aligned", async ({ page 
   await expect(page.getByTestId("select-point-modal")).toBeVisible();
   await expect(page.getByTestId("select-point-modal").getByText("右键多选")).toBeVisible();
   await page.getByTestId("select-point-cancel").click();
+});
+
+test("Blockly text field edges open the input instead of focusing the block", async ({ page }) => {
+  await ProjectSandbox.create(page);
+  await page.goto("/");
+
+  const tower = await selectPanel(page, "tower", "panel-tower");
+  await openEventEditor(
+    page,
+    tower.getByTestId("table-input-firstData-startCanvas").locator("textarea"),
+  );
+  await page.getByTestId("event-editor-source").fill(JSON.stringify([{
+    type: "setValue",
+    name: "flag:difficulty",
+    operator: "=",
+    value: "-1",
+  }]));
+  await page.getByTestId("event-editor-parse").click();
+
+  const block = page.getByTestId("blockly-block-mota_setValue_s");
+  const valueField = block.locator(".blocklyTextInputField").filter({ hasText: "-1" });
+  await expect(valueField).toHaveCount(1);
+  const visibleBorder = valueField.locator(":scope > .blocklyFieldRect");
+  const borderBox = await visibleBorder.boundingBox();
+  expect(borderBox).not.toBeNull();
+
+  await page.mouse.click(
+    borderBox!.x + borderBox!.width + 2,
+    borderBox!.y + borderBox!.height / 2,
+  );
+
+  const editor = page.locator(".blocklyHtmlInput");
+  await expect(editor).toBeVisible();
+  await expect(editor).toHaveValue("-1");
+  await expect(editor).toBeFocused();
+  expect(await editor.evaluate((element) => {
+    const input = element as HTMLInputElement;
+    return {
+      selectionStart: input.selectionStart,
+      selectionEnd: input.selectionEnd,
+    };
+  })).toEqual({ selectionStart: 2, selectionEnd: 2 });
+  await page.keyboard.press("Backspace");
+  await expect(editor).toHaveValue("-");
 });

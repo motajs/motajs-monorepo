@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { ProjectSandbox } from './utils/projectSandbox';
+import { waitForEventEditorReady } from './utils/tableEditing';
 
 const PACK_PATH = '.metaphysics/schemas/blockly/project-events.json';
 
@@ -10,6 +11,7 @@ test('registers an unknown event as a lossless project custom block', async ({ p
   const sandbox = await ProjectSandbox.create(page);
   await page.goto('/');
   await page.getByTestId('workspace-common-events').click();
+  await waitForEventEditorReady(page, /通过传参/);
 
   // Opening the manager directly is a blank authoring flow and must not create a file.
   await page.getByTestId('custom-block-manager-open').click();
