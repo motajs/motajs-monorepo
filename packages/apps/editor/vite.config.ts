@@ -1,6 +1,6 @@
 import react from "@vitejs/plugin-react";
 import path from "path";
-import { configDefaults, defineConfig } from "vitest/config";
+import { defineConfig } from "vitest/config";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
 import motaServerPlugin from "./vite-plugin-mota-server";
 import fs from "node:fs/promises";
@@ -47,11 +47,5 @@ export default defineConfig({
       },
     },
     copyPublicDir: false,
-  },
-  test: {
-    environment: "jsdom",
-    globals: true,
-    exclude: [...configDefaults.exclude, "e2e/**"],
-    setupFiles: ["./test/setup.ts"],
   },
 });
