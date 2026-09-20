@@ -77,4 +77,27 @@ describe("editor artifact build id", () => {
     expect(report.gzipBytes).toBeGreaterThan(0);
     expect(report.brotliBytes).toBeGreaterThan(0);
   });
+
+  it("writes a manifest whose protocol constants are pinned to their current literals", async () => {
+    // 驱动真实的 `mota-editor-artifact` 插件写出 manifest，而不是读源码字面量：
+    // 伪造一个满足 `validateEditorArtifact` 的最小产物（恰好一个标准 ts.worker，
+    // 没有 css/html worker），让 `closeBundle` 真正跑一遍。
+    const root = await artifact([["index.html", "editor"], ["assets/ts.worker-abc.js", ""]]);
+    const plugin = editorArtifactPlugin("test").find(({ name }) => name === "mota-editor-artifact")!;
+    plugin.configResolved?.call(plugin, { build: { outDir: root } } as never);
+    await plugin.closeBundle?.call(plugin);
+    const manifest = JSON.parse(await fs.readFile(path.join(root, "editor-manifest.json"), "utf8")) as {
+      schemaVersion: number;
+      environmentProtocolVersion: number;
+      runtimeProtocolVersion: number;
+      entrypoints: unknown;
+    };
+    expect(manifest.schemaVersion).toBe(2);
+    expect(manifest.environmentProtocolVersion).toBe(1);
+    // manifest 的 runtimeProtocolVersion(3) 与 src/runtime/protocol.ts 的
+    // RUNTIME_PROTOCOL_VERSION(4) 不一致：这是本期有意保留、不得「修复」的既有行为。
+    // 两个值各自按自己的字面量断言，绝不断言 3 !== 4，也不断言两者的关系。
+    expect(manifest.runtimeProtocolVersion).toBe(3);
+    expect(manifest.entrypoints).toEqual({ editor: "index.html", runtime: "runtime.html" });
+  }, 30_000);
 });
