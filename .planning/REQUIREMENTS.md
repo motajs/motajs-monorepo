@@ -150,74 +150,74 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| KERN-01 | TBD | Pending |
-| KERN-02 | TBD | Pending |
-| KERN-03 | TBD | Pending |
-| KERN-04 | TBD | Pending |
-| KERN-05 | TBD | Pending |
-| KERN-06 | TBD | Pending |
-| PORT-01 | TBD | Pending |
-| PORT-02 | TBD | Pending |
-| PORT-03 | TBD | Pending |
-| PORT-04 | TBD | Pending |
-| PORT-05 | TBD | Pending |
-| PORT-06 | TBD | Pending |
-| PORT-07 | TBD | Pending |
-| PORT-08 | TBD | Pending |
-| RES-01 | TBD | Pending |
-| RES-02 | TBD | Pending |
-| RES-03 | TBD | Pending |
-| RES-04 | TBD | Pending |
-| RES-05 | TBD | Pending |
-| RES-06 | TBD | Pending |
-| SHELL-01 | TBD | Pending |
-| SHELL-02 | TBD | Pending |
-| SHELL-03 | TBD | Pending |
-| SHELL-04 | TBD | Pending |
-| SHELL-05 | TBD | Pending |
-| SHELL-06 | TBD | Pending |
-| TABLE-01 | TBD | Pending |
-| TABLE-02 | TBD | Pending |
-| TABLE-03 | TBD | Pending |
-| TABLE-04 | TBD | Pending |
-| CODE-01 | TBD | Pending |
-| CODE-02 | TBD | Pending |
-| CODE-03 | TBD | Pending |
-| CODE-04 | TBD | Pending |
-| ASSET-01 | TBD | Pending |
-| ASSET-02 | TBD | Pending |
-| ASSET-03 | TBD | Pending |
-| MAP-01 | TBD | Pending |
-| MAP-02 | TBD | Pending |
-| MAP-03 | TBD | Pending |
-| MAP-04 | TBD | Pending |
-| PREV-01 | TBD | Pending |
-| PREV-02 | TBD | Pending |
-| PREV-03 | TBD | Pending |
-| EXT-01 | TBD | Pending |
-| EXT-02 | TBD | Pending |
-| EXT-03 | TBD | Pending |
-| EXT-04 | TBD | Pending |
-| EXT-05 | TBD | Pending |
-| PKG-01 | TBD | Pending |
-| PKG-02 | TBD | Pending |
-| PKG-03 | TBD | Pending |
-| PKG-04 | TBD | Pending |
-| PKG-05 | TBD | Pending |
-| VERIFY-01 | TBD | Pending |
-| VERIFY-02 | TBD | Pending |
-| VERIFY-03 | TBD | Pending |
-| VERIFY-04 | TBD | Pending |
-| VERIFY-05 | TBD | Pending |
-| VERIFY-06 | TBD | Pending |
-| VERIFY-07 | TBD | Pending |
-| VERIFY-08 | TBD | Pending |
+| KERN-01 | 3 | Pending |
+| KERN-02 | 3 | Pending |
+| KERN-03 | 3 | Pending |
+| KERN-04 | 3 | Pending |
+| KERN-05 | 3 | Pending |
+| KERN-06 | 3 | Pending |
+| PORT-01 | 3 | Pending |
+| PORT-02 | 3 | Pending |
+| PORT-03 | 5 | Pending |
+| PORT-04 | 5 | Pending |
+| PORT-05 | 5 | Pending |
+| PORT-06 | 5 | Pending |
+| PORT-07 | 5 | Pending |
+| PORT-08 | 5 | Pending |
+| RES-01 | 4 | Pending |
+| RES-02 | 4 | Pending |
+| RES-03 | 4 | Pending |
+| RES-04 | 4 | Pending |
+| RES-05 | 4 | Pending |
+| RES-06 | 4 | Pending |
+| SHELL-01 | 6 | Pending |
+| SHELL-02 | 6 | Pending |
+| SHELL-03 | 6 | Pending |
+| SHELL-04 | 6 | Pending |
+| SHELL-05 | 6 | Pending |
+| SHELL-06 | 6 | Pending |
+| TABLE-01 | 7 | Pending |
+| TABLE-02 | 7 | Pending |
+| TABLE-03 | 7 | Pending |
+| TABLE-04 | 7 | Pending |
+| CODE-01 | 8 | Pending |
+| CODE-02 | 8 | Pending |
+| CODE-03 | 8 | Pending |
+| CODE-04 | 8 | Pending |
+| ASSET-01 | 9 | Pending |
+| ASSET-02 | 9 | Pending |
+| ASSET-03 | 9 | Pending |
+| MAP-01 | 10 | Pending |
+| MAP-02 | 10 | Pending |
+| MAP-03 | 10 | Pending |
+| MAP-04 | 10 | Pending |
+| PREV-01 | 11 | Pending |
+| PREV-02 | 11 | Pending |
+| PREV-03 | 11 | Pending |
+| EXT-01 | 12 | Pending |
+| EXT-02 | 12 | Pending |
+| EXT-03 | 12 | Pending |
+| EXT-04 | 12 | Pending |
+| EXT-05 | 12 | Pending |
+| PKG-01 | 2 | Pending |
+| PKG-02 | 2 | Pending |
+| PKG-03 | 2 | Pending |
+| PKG-04 | 2 | Pending |
+| PKG-05 | 2 | Pending |
+| VERIFY-01 | 1 | Pending |
+| VERIFY-02 | 1 | Pending |
+| VERIFY-03 | 1 | Pending |
+| VERIFY-04 | 1 | Pending |
+| VERIFY-05 | 2 | Pending |
+| VERIFY-06 | 1 | Pending |
+| VERIFY-07 | 1 | Pending |
+| VERIFY-08 | 12 | Pending |
 
 **Coverage:**
 - v1 requirements: 62 total
-- Mapped to phases: 0
-- Unmapped: 62 ⚠️ (roadmap will map)
+- Mapped to phases: 62
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-09-20*
-*Last updated: 2026-09-20 after initial definition*
+*Last updated: 2026-09-20 after roadmap creation (traceability mapped to 12 phases)*
