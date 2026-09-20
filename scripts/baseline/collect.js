@@ -261,6 +261,24 @@ function readPlaywrightReport(reportPath, stdout) {
   }
 }
 
+/** 从 Playwright JSON 报告里递归收集失败用例的 `file › suite › title` 路径。 */
+function collectFailedTests(report) {
+  const failures = [];
+  const walk = (suite, trail) => {
+    const titles = suite.title ? [...trail, suite.title] : trail;
+    for (const spec of suite.specs ?? []) {
+      const failed = (spec.tests ?? []).some((item) =>
+        (item.results ?? []).some((result) => result.status === "failed" || result.status === "timedOut"));
+      if (failed) {
+        failures.push({ file: spec.file ?? "", title: [...titles, spec.title].join(" > ") });
+      }
+    }
+    for (const child of suite.suites ?? []) walk(child, titles);
+  };
+  for (const suite of report.suites ?? []) walk(suite, []);
+  return failures;
+}
+
 function collectE2e() {
   if (process.env.MOTA_WITH_EDITOR === "0") {
     throw new Error("refusing to record an e2e baseline with MOTA_WITH_EDITOR=0 (see plan 01-02 task notes)");
@@ -301,6 +319,9 @@ function collectE2e() {
     }
 
     e2e[pkg] = { status: "ran", passed, failed, flaky, skipped, total };
+    if (failed > 0 || flaky > 0) {
+      e2e[pkg].failedTests = collectFailedTests(report);
+    }
     console.log(`e2e ${pkg}: ${passed} passed / ${failed} failed / ${skipped} skipped / ${total} total`);
   }
   return e2e;

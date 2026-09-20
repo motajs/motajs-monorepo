@@ -1,0 +1,298 @@
+{
+  "schemaVersion": 2,
+  "environmentProtocolVersion": 1,
+  "runtimeProtocolVersion": 3,
+  "editorVersion": "0.0.0",
+  "buildId": "a22a44900241893004f994356cbe8dddb6ded3302917e15c03e0f069ebf3aa6e",
+  "entrypoints": {
+    "editor": "index.html",
+    "runtime": "runtime.html"
+  },
+  "files": [
+    {
+      "path": "assets/BufferResource-CDMMiYGJ.js",
+      "size": 10612,
+      "sha256": "20f5c04f79b57c822957c9e79b68cca19b4046b73f4841343641f75417ba6e15"
+    },
+    {
+      "path": "assets/CanvasPool-C5Eler93.js",
+      "size": 783,
+      "sha256": "79a037896a74b4cd4669d5d289f8c9b932918446594a49d1b144bd83c2ac2052"
+    },
+    {
+      "path": "assets/CanvasRenderer-CoUUtJX3.js",
+      "size": 17517,
+      "sha256": "1eeb472108355dbab6a9851c87270ea360388f686fa12e7c806890134b124b56"
+    },
+    {
+      "path": "assets/Filter-nzfIVec8.js",
+      "size": 905,
+      "sha256": "32a7674eedfaa5da1bce13e7424ed313f70c0ae4e6ee8d221eba200f3c7d111c"
+    },
+    {
+      "path": "assets/FiraCode-CzoQJ4O7.ttf",
+      "size": 289624,
+      "sha256": "5992ab9640e2df491b2f609467b1de60e8bc39b2c28db184342a0592d98f6117"
+    },
+    {
+      "path": "assets/RenderTargetSystem-B0APzOad.js",
+      "size": 46826,
+      "sha256": "4e8119d4f255a03c5626686b57c45a866b5e4e3cc8567a12ab54f06f53d87a4b"
+    },
+    {
+      "path": "assets/WebGLRenderer-DRUShFXw.js",
+      "size": 68736,
+      "sha256": "833036330fc44e81693fca32744e5fa4553271be43ab067d51ede573ed79018e"
+    },
+    {
+      "path": "assets/WebGPURenderer-CoQIsCtd.js",
+      "size": 38967,
+      "sha256": "17618e83e74ae8bc289a07e2f0dc14250ee66fcfa848c4a3adaa353cbd63347d"
+    },
+    {
+      "path": "assets/blockly-media/1x1.gif",
+      "size": 43,
+      "sha256": "a1d88b2c952b790f5f23473c63ef99473327d02e11ebe174799ad912db08f629"
+    },
+    {
+      "path": "assets/blockly-media/click.mp3",
+      "size": 2304,
+      "sha256": "1048f2539ac47e4eaa4bd1688968c0d7b9956bd6fef507644ee5131924c6517c"
+    },
+    {
+      "path": "assets/blockly-media/click.ogg",
+      "size": 4865,
+      "sha256": "90f628941d7aa10db43d0eb84fb0975f55b27c5b9130bcfbd6d6e14db20f469b"
+    },
+    {
+      "path": "assets/blockly-media/click.wav",
+      "size": 3782,
+      "sha256": "1c2194a0d12a71d416d97665c437a8b0b0fb83c14b26a5fcd7013089e164845b"
+    },
+    {
+      "path": "assets/blockly-media/delete-icon.svg",
+      "size": 315,
+      "sha256": "3eee02b06f476ce746566808178543389e53cd4e9d7fd32b69e329eff4fc71ef"
+    },
+    {
+      "path": "assets/blockly-media/delete.mp3",
+      "size": 3123,
+      "sha256": "6ea0afab062cb3ba5409dc65d7a9fdf85d602b1870d231d80bdf3cc5b32432b6"
+    },
+    {
+      "path": "assets/blockly-media/delete.ogg",
+      "size": 5731,
+      "sha256": "b96d6b00dc8d3053eefff8997fed91c81e3710569d47a1214e0321ed1963b664"
+    },
+    {
+      "path": "assets/blockly-media/delete.wav",
+      "size": 9164,
+      "sha256": "8adfc57da35dd3b6ad65adc67b9cf9f2efebcbd94baaf1671ab320331497abef"
+    },
+    {
+      "path": "assets/blockly-media/disconnect.mp3",
+      "size": 1586,
+      "sha256": "849465a8968836ab5b24b68a7289ee76ca1a6a50ba87a295a32efe1e507e3451"
+    },
+    {
+      "path": "assets/blockly-media/disconnect.ogg",
+      "size": 4404,
+      "sha256": "63ceb6668890b173166eb207a665d02c1b3a8ff80fc20414ec25ebe1b2e88aac"
+    },
+    {
+      "path": "assets/blockly-media/disconnect.wav",
+      "size": 1492,
+      "sha256": "af6be7442f17223421cc012c59bf72bd5303e2878d0287acb4d0368d3995cf8a"
+    },
+    {
+      "path": "assets/blockly-media/dropdown-arrow.svg",
+      "size": 569,
+      "sha256": "bc3873b086b25a01c417cb3b5fe61fd7eef360b8f7c85c2c7f7b802a2626faf9"
+    },
+    {
+      "path": "assets/blockly-media/foldout-icon.svg",
+      "size": 150,
+      "sha256": "0ac7478b56f5e5cc583c26710cb7ee5edcedb563cde65cd2385f4dd3e9e08c64"
+    },
+    {
+      "path": "assets/blockly-media/handclosed.cur",
+      "size": 326,
+      "sha256": "4a1637e16f33e1b02f96f699ada695edededfd089530372126d375ad9ed2f0a5"
+    },
+    {
+      "path": "assets/blockly-media/handdelete.cur",
+      "size": 766,
+      "sha256": "e53ef200d76fef617bd2e307a100d778834ad49784f80c1abc6da547e50b8040"
+    },
+    {
+      "path": "assets/blockly-media/handopen.cur",
+      "size": 198,
+      "sha256": "d2ec9a81d9a76b0f64b7168e5f05ee660ffb6ba7e35695caaf9851e6b01a04fd"
+    },
+    {
+      "path": "assets/blockly-media/pilcrow.png",
+      "size": 1010,
+      "sha256": "4e4aa37ce0c162b0239203e538a7ae8eee706554514ff611cfb3a94baaa66167"
+    },
+    {
+      "path": "assets/blockly-media/quote0.png",
+      "size": 771,
+      "sha256": "a06f7a05d9c86851266e55357090d3af37ff24e116258c94d52c4f436c614c7c"
+    },
+    {
+      "path": "assets/blockly-media/quote1.png",
+      "size": 738,
+      "sha256": "56c52fc75cf7d2926d7502aaa7e95efb46c229aa266306d932795325722aba35"
+    },
+    {
+      "path": "assets/blockly-media/resize-handle.svg",
+      "size": 218,
+      "sha256": "c95d07b3fb3aaa088e6665061b01952e7ea9dda462b7032a85e095bf8a12855b"
+    },
+    {
+      "path": "assets/blockly-media/sprites.png",
+      "size": 2595,
+      "sha256": "6be49176dc8bef41c97958e02903c77c5e298b8dc26d2a09905851bfb73cc459"
+    },
+    {
+      "path": "assets/blockly-media/sprites.svg",
+      "size": 1775,
+      "sha256": "862de0ee081fa9baf504e673736d7446439c15246452258cab964a82566ef40f"
+    },
+    {
+      "path": "assets/browserAll-BzFBAgby.js",
+      "size": 43123,
+      "sha256": "91e22a82efecb50066765c51d395a7bcd7629924c9d6e70fd9feb4e69f799786"
+    },
+    {
+      "path": "assets/canvasUtils-CEHkxHXV.js",
+      "size": 5678,
+      "sha256": "fcfd84fc69c71b0132213f8c537d536720d461e2a73677825f39187488acc811"
+    },
+    {
+      "path": "assets/codicon-Brq4_Ui5.ttf",
+      "size": 140956,
+      "sha256": "cc2472e239e17062e7760af87f8f5997720cc0d94aa014a615c418baaf6333a8"
+    },
+    {
+      "path": "assets/editor-Cc2UTTHe.js",
+      "size": 3542680,
+      "sha256": "9cc7be5738e1b17db501385d9fc6cab3d72adfb72994c04a593c14a351ccab6b"
+    },
+    {
+      "path": "assets/editor-h9XVKFh-.css",
+      "size": 75604,
+      "sha256": "b1b9b76cc5985b7440a2057742c5d261b7ffd3bf42cacb2ed000a6f3e73755b2"
+    },
+    {
+      "path": "assets/editor.worker-CAQwfITC.js",
+      "size": 333167,
+      "sha256": "1c002222821ffe46883a36adc7db83cc126e3b5989fb60a0b964896cfec2df48"
+    },
+    {
+      "path": "assets/index--PUaycVY.js",
+      "size": 17068,
+      "sha256": "e90cdda18c65353cd46009380dd4802d2439960ae7c52e0119423baff2082fb8"
+    },
+    {
+      "path": "assets/index-CVDwBeef.js",
+      "size": 1320,
+      "sha256": "4563a336f291a744e52b88e4bdf50cdb779c2ba1b4ebc608d59da844fcc4b4e3"
+    },
+    {
+      "path": "assets/index-DF5dvtuO.js",
+      "size": 5395,
+      "sha256": "eec40bb65779593accfebf10301aea8af0c46f2fa72df230371b11043638be32"
+    },
+    {
+      "path": "assets/index-DRcOnrgO.css",
+      "size": 4428,
+      "sha256": "94bf914ad045eef61c50acc7d5ea6624ff29de4e8c4ee3e40a5ea69a04d7d27c"
+    },
+    {
+      "path": "assets/javascript-IKSNaou3.js",
+      "size": 870,
+      "sha256": "b7122a679f963769012b30811b0818a446381418dc54d35ed279aaec3de09433"
+    },
+    {
+      "path": "assets/json.worker-DgTg9oq_.js",
+      "size": 464507,
+      "sha256": "927266560118ebb2a04bbf7302d64f48e523db6f21ff999cd3ef0990f4e32ee4"
+    },
+    {
+      "path": "assets/jsonMode-CSEs0FHZ.js",
+      "size": 40841,
+      "sha256": "aa06cb6790ad363a55534c30262a00cf9809f505e2fe36f8107aedb7290fcb29"
+    },
+    {
+      "path": "assets/languageScope-IFBofPw4.css",
+      "size": 162169,
+      "sha256": "847284d4d984872dccb5b9cbdd5168829c8fe07b7de2448161a18ed3e86715e9"
+    },
+    {
+      "path": "assets/languageScope-aOkrchIo.js",
+      "size": 4488496,
+      "sha256": "0d92cc3001a34cee5802ce804997bc927967d7ba70abdec927df2aaa1b72b106"
+    },
+    {
+      "path": "assets/onigasm-kQxuTr47.wasm",
+      "size": 468274,
+      "sha256": "b63d2d2d3b0be091933583a3dd52ebb60bbbb26cc567e3cff11b3f9a1ad7a2b9"
+    },
+    {
+      "path": "assets/protocol-D4kJIUwX.js",
+      "size": 736,
+      "sha256": "955c46192ad10187fe6a15965c75e9f122ced7e5f4d8ad0b40b91ece1f3eb19e"
+    },
+    {
+      "path": "assets/runtime-B1o39C9t.js",
+      "size": 15890,
+      "sha256": "8c2ec1eeb747c348df15e3153e50f5de5f3de4dc9fb9f2159b5d0ed8a0958056"
+    },
+    {
+      "path": "assets/theme/editor_color_dark.css",
+      "size": 17462,
+      "sha256": "26b781a77069748df9ee7875a9bcea11bd634e9288691ae16b00a625615a7d3f"
+    },
+    {
+      "path": "assets/theme/editor_color_light.css",
+      "size": 14090,
+      "sha256": "d3c0ffebcba0f72426fea43bda92ea46dd483526c2c8c577ca9d28f4d96572fd"
+    },
+    {
+      "path": "assets/ts.worker-DzfQDkHh.js",
+      "size": 7094802,
+      "sha256": "6cf8b38bf96dd0f24d866420559b2d2a8051b48a9655993273a71eb69fa42b59"
+    },
+    {
+      "path": "assets/tsMode-DordA-Ek.js",
+      "size": 22052,
+      "sha256": "5b929f3adc78af2a55d53403ed3eff660b82519f3ac0fff841e62d5c62c520e7"
+    },
+    {
+      "path": "assets/typescript-R3CuPruH.js",
+      "size": 4971,
+      "sha256": "50dbaf87e4edd605f35ea364cea582ca762f4a2438d0f491544e76bf0b83b335"
+    },
+    {
+      "path": "assets/useCodeEditorAppearance-CTtxfA_0.js",
+      "size": 116767,
+      "sha256": "c1485698f6f21603724a050b74389a1f334a0dccfdbc3457b199b0fb801c3acb"
+    },
+    {
+      "path": "assets/webworkerAll-ChgGUGex.js",
+      "size": 15843,
+      "sha256": "1a61c62072af784f2b5ca5323edf6fb495971518b681eb386738dc2e4120786e"
+    },
+    {
+      "path": "index.html",
+      "size": 878,
+      "sha256": "73e6d8cd6f60effdcb3fbe662a6f4a023c2ba2b41a179a5bd48c250336c9ee75"
+    },
+    {
+      "path": "runtime.html",
+      "size": 394,
+      "sha256": "c707344e15c3e95e47d16804b8fdd389a2bbfeff1a757e849cca1463a0dc5412"
+    }
+  ]
+}

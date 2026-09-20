@@ -1,6 +1,6 @@
 {
   "git": {
-    "commit": "63a56ad14eb771133a45e44b21f0c94c36421c7f",
+    "commit": "a2eba5237ab51dc5bff070da5fc571b61524e5b8",
     "submoduleSha": "3efb548e407ad2b8007b498cb98401e2012a0b55",
     "submoduleStatus": "3efb548e407ad2b8007b498cb98401e2012a0b55 packages/external/mota-js (v2.10.3-release-2-g3efb548e)",
     "pnpm": "10.15.0",
@@ -62,6 +62,66 @@
       "skipped": 0,
       "total": 3,
       "exitCode": 0
+    }
+  },
+  "e2e": {
+    "@motajs/editor": {
+      "status": "ran",
+      "passed": 96,
+      "failed": 2,
+      "flaky": 0,
+      "skipped": 0,
+      "total": 98,
+      "failedTests": [
+        {
+          "file": "blockly-text-field.spec.ts",
+          "title": "blockly-text-field.spec.ts > Blockly multiline text wraps and keeps its editor aligned"
+        },
+        {
+          "file": "workspace-shell.spec.ts",
+          "title": "workspace-shell.spec.ts > top bar workspaces, schema tower, drafts, scripts and theme stay coherent"
+        }
+      ]
+    },
+    "@motajs/service-worker": {
+      "status": "ran",
+      "passed": 0,
+      "failed": 4,
+      "flaky": 0,
+      "skipped": 0,
+      "total": 4,
+      "failedTests": [
+        {
+          "file": "editor-host.spec.ts",
+          "title": "editor-host.spec.ts > hosts the blind editor artifact against a real OPFS mota-js project"
+        },
+        {
+          "file": "editor-host.spec.ts",
+          "title": "editor-host.spec.ts > switches Editor releases without rebuilding or replacing the active Service Worker"
+        },
+        {
+          "file": "project-host.spec.ts",
+          "title": "project-host.spec.ts > registers an OPFS project, serves preview and persists through the canonical API"
+        },
+        {
+          "file": "project-host.spec.ts",
+          "title": "project-host.spec.ts > shows live Editor cache progress on the project page"
+        }
+      ]
+    }
+  },
+  "build": {
+    "editor": {
+      "files": 57,
+      "rawBytes": 17618356,
+      "gzipBytes": 4498391,
+      "brotliBytes": 3753902,
+      "rawBudgetBytes": 20971520,
+      "rawPercentOfBudget": 84.0109,
+      "exactlyOneTsWorker": true,
+      "noCssHtmlWorkers": true,
+      "manifestSchemaVersion": 2,
+      "pluginReportLine": "Editor artifact: 57 files, raw 16.80 MiB, gzip 4.29 MiB, brotli 3.58 MiB"
     }
   },
   "protocol": {
