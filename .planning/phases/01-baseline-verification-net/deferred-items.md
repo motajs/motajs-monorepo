@@ -83,3 +83,67 @@ and this is the only error in the file — so it predates the baseline work. It 
 reformatted to keep the change set minimal. Whoever lands the `lint` gate (plan 01-03) should decide
 whether to apply the stylistic fix.
 
+---
+
+# Deferred items discovered during plan 01-06
+
+Plan 01-06 wires up the non-fixing root `lint` gate (`eslint .`, no `--fix`). Running it surfaced a
+large set of **pre-existing** rule violations that were never gated before — the old root `lint`
+script was `eslint --fix`, and a root `eslint .` OOM'd (§5). None is caused by plan 01-06's changes;
+per the scope-boundary rule they are recorded here rather than fixed inline, and the gate was
+deliberately **not** weakened to hide them.
+
+## 7. The editor's own config is not clean — 43 errors
+
+**Observed:** `pnpm --filter @motajs/editor lint` (i.e. `eslint .` through
+`packages/apps/editor/eslint.config.js`) exits `1` with **43 errors / 111 warnings**. This contradicts
+§5's parenthetical claim that the editor is clean through its own config; that claim was written at
+plan 01-02 and does not hold for the current tree.
+
+Dominant error rules (all pre-existing, produced by the editor's own rule set):
+
+| Rule | Approx. count | Representative files |
+|------|------:|----------------------|
+| `@typescript-eslint/no-explicit-any` | 20+ | `e2e/core-panel-write.spec.ts`, `src/runtime/iframeEntry.ts`, `src/project/model/tableModels.ts`, `src/services/tower/__tests__/towerService.test.ts` |
+| `react-hooks/set-state-in-effect` | 8 | `src/Workbench/modals/StatusBarPreview/*`, `src/hooks/useImageAssetUrl.ts`, `src/MapEditor/rendering/MapPixiRenderer.tsx` |
+| `react-refresh/only-export-components` | 7 | `src/Workbench/EventsEditor/*Context.tsx`, `src/components/Table/index.tsx` |
+| `prefer-const` | 2 | `src/Workbench/AppendPicPanel/index.tsx`, `src/utils/canvas/detectWhiteBackground.ts` |
+| `no-useless-escape`, `react-hooks/use-memo`, `react-hooks/immutability` | 1 each | `src/blockly/registry/path.ts`, `src/hooks/useFs.ts`, `src/runtime/RuntimeProvider.tsx` |
+
+**Impact:** a root `eslint .` (the CI `lint` job shape) cannot be green while these exist. The gate is
+not weakened: no rule is relaxed and no editor source is ignored.
+
+**Not fixed here:** fixing 43 pre-existing violations across editor sources is outside plan 01-06's
+scope (the plan owns only `package.json`, `eslint.config.js` and
+`packages/apps/editor/eslint.config.js`) and would touch many unrelated files.
+
+## 8. Pre-existing lint violations under the shared root config in other packages
+
+**Observed:** with the submodule ignored, root `eslint .` additionally reports (all pre-existing):
+
+- `@motajs/service-worker`: `@stylistic/quotes` at `src/server/editorRelease.test.ts:16`,
+  `no-control-regex` at `src/server/fsApi.ts:13`
+- `@motajs/h5animate`: `@stylistic/no-multiple-empty-lines` at `lib/__tests__/roundtrip.test.ts:267`
+
+Repo-wide total for the resolved config: **172 problems (46 errors, 126 warnings)**.
+
+## 9. Widening the editor `files` glob also lints generated `styled-system/**`
+
+**Observed:** the editor `files` glob was widened to `**/*.{js,cjs,mjs,ts,tsx}` (per plan 01-06, so the
+editor's own `eslint.config.js` and `postcss.config.cjs` are matched instead of being reported as
+having no configuration). That also makes ESLint lint the PandaCSS-generated `styled-system/` tree,
+adding 2 errors (`css/cx.mjs` `no-unused-expressions`, `helpers.mjs` `no-cond-assign`) and many
+unused-disable-directive warnings on generated `.d.ts` files.
+
+**Not fixed here:** the plan explicitly said to leave `globalIgnores(["dist"])` as-is. If the lint
+gate is later required to be green, `styled-system` (generated output) is the obvious extra global
+ignore.
+
+## 10. `pnpm test` fan-out is intermittently red on the `@motajs/react-monaco-editor` flake
+
+**Observed:** `pnpm -r run test` failed once with
+`Error: [vitest-worker]: Closing rpc while "fetch" was pending` for `@motajs/react-monaco-editor`
+(all its tests passed) — the same pre-existing teardown flake as §1. An immediate retry of the full
+fan-out exited `0`, as did an isolated `pnpm --filter @motajs/react-monaco-editor test`. `pnpm test`
+exit status is therefore nondeterministic until that flake is fixed.
+
