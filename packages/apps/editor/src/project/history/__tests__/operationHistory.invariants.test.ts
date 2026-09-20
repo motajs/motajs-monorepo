@@ -42,6 +42,50 @@ describe("operationHistory invariants", () => {
     },
   });
 
+  /**
+   * 自定义 OperationTarget 工厂：以每个 key 的 capture/restore 计数与调用顺序
+   * 作为可观测量，不读取 operationHistory 的内部 entries。
+   */
+  function createTrackedTargets() {
+    const log: string[] = [];
+    const captures = new Map<string, number>();
+    const restores = new Map<string, number>();
+    const state = new Map<string, number>([["a", 1], ["b", 2], ["c", 3]]);
+
+    function target(key: string): OperationTarget {
+      return {
+        key,
+        path: `path:${key}`,
+        capture: async () => {
+          captures.set(key, (captures.get(key) ?? 0) + 1);
+          log.push(`capture:${key}`);
+          return state.get(key);
+        },
+        restore: async (checkpoint) => {
+          restores.set(key, (restores.get(key) ?? 0) + 1);
+          log.push(`restore:${key}`);
+          state.set(key, checkpoint as number);
+        },
+      };
+    }
+
+    return { log, captures, restores, state, target };
+  }
+
+  function failingOperation(
+    targets: readonly OperationTarget[],
+    mutate: () => void,
+  ): EditorOperation {
+    return {
+      meta: { label: "failing", stage: "failing-operation" },
+      targets,
+      apply: async () => {
+        mutate();
+        throw new Error("intentional failure");
+      },
+    };
+  }
+
   it("keeps at most 100 entries and evicts the oldest once capacity is exceeded", async () => {
     for (let delta = 1; delta <= 101; delta++) {
       await operationHistory.execute(counterOperation(delta));
@@ -105,5 +149,123 @@ describe("operationHistory invariants", () => {
     // inverse (a +999 counter) and the value would jump.
     await operationHistory.undo();
     expect(value).toBe(0);
+  });
+
+  it("captures and restores each distinct target once, de-duplicated by key", async () => {
+    const tracked = createTrackedTargets();
+    const duplicated = tracked.target("a");
+    const operation = failingOperation([duplicated, duplicated, tracked.target("b")], () => {
+      tracked.state.set("a", 100);
+      tracked.state.set("b", 200);
+    });
+
+    await expect(operationHistory.execute(operation)).rejects.toThrow("intentional failure");
+
+    // Each distinct target is captured once; restore runs in reverse (b before a).
+    expect([...tracked.captures.entries()]).toEqual([["a", 1], ["b", 1]]);
+    expect([...tracked.restores.entries()]).toEqual([["b", 1], ["a", 1]]);
+    expect(tracked.state.get("a")).toBe(1);
+    expect(tracked.state.get("b")).toBe(2);
+  });
+
+  it("restores distinct targets in the reverse of their capture order", async () => {
+    const tracked = createTrackedTargets();
+    const operation = failingOperation(
+      [tracked.target("a"), tracked.target("b"), tracked.target("c")],
+      () => {
+        tracked.state.set("a", 10);
+        tracked.state.set("b", 20);
+        tracked.state.set("c", 30);
+      },
+    );
+
+    await expect(operationHistory.execute(operation)).rejects.toThrow("intentional failure");
+
+    // Restore order is the exact reverse of capture order.
+    expect(tracked.log.join("|")).toBe(
+      "capture:a|capture:b|capture:c|restore:c|restore:b|restore:a",
+    );
+  });
+
+  it("leaves every target at its pre-apply value and records no entry when apply fails", async () => {
+    const tracked = createTrackedTargets();
+    const operation = failingOperation(
+      [tracked.target("a"), tracked.target("b")],
+      () => {
+        tracked.state.set("a", 10);
+        tracked.state.set("b", 20);
+      },
+    );
+
+    await expect(operationHistory.execute(operation)).rejects.toThrow("intentional failure");
+    expect(tracked.state.get("a")).toBe(1);
+    expect(tracked.state.get("b")).toBe(2);
+
+    const restoresAfterExecute = [...tracked.restores.entries()];
+    await operationHistory.undo();
+
+    expect(tracked.state.get("a")).toBe(1);
+    expect(tracked.state.get("b")).toBe(2);
+    // No entry was recorded, so undo performed no additional target restore.
+    expect([...tracked.restores.entries()]).toEqual(restoresAfterExecute);
+  });
+
+  it("captures a target on a successful commit and applies the stored inverse on undo", async () => {
+    const tracked = createTrackedTargets();
+    const targetA = tracked.target("a");
+    const operation: EditorOperation = {
+      meta: { label: "success", stage: "success-operation" },
+      targets: [targetA],
+      apply: async () => {
+        tracked.state.set("a", 42);
+        return {
+          value: undefined,
+          inverse: {
+            meta: { label: "success", stage: "success-operation" },
+            targets: [targetA],
+            apply: async () => {
+              tracked.state.set("a", 7);
+              return { value: undefined, inverse: operation, changed: true };
+            },
+          },
+          changed: true,
+        };
+      },
+    };
+
+    await operationHistory.execute(operation);
+    expect(tracked.state.get("a")).toBe(42);
+    expect(tracked.captures.get("a")).toBe(1);
+    // A successful apply does not roll back, so no restore happens.
+    expect(tracked.restores.get("a")).toBeUndefined();
+
+    await operationHistory.undo();
+    expect(tracked.state.get("a")).toBe(7);
+    expect(tracked.restores.get("a")).toBeUndefined();
+  });
+
+  it("recovers completed composite children through their semantic inverses and tags the failing stage", async () => {
+    let counter = 0;
+    const compositeCounter = (delta: number): EditorOperation<unknown> => ({
+      meta: { label: "counter", stage: "counter" },
+      targets: [],
+      apply: async () => {
+        counter += delta;
+        return { value: counter, inverse: compositeCounter(-delta), changed: delta !== 0 };
+      },
+    });
+    const failingChild: EditorOperation<unknown> = {
+      meta: { label: "failure", stage: "composite-child" },
+      targets: [],
+      apply: async () => {
+        throw new Error("composite failure");
+      },
+    };
+
+    await expect(operationHistory.execute(compositeOperation(
+      [compositeCounter(1), failingChild],
+      { label: "composite", stage: "composite" },
+    ))).rejects.toMatchObject({ commandStage: "composite-child" });
+    expect(counter).toBe(0);
   });
 });
