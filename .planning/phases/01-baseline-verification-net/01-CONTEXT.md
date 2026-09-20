@@ -42,9 +42,9 @@
 - **D-12:** 重构中特性化测试变红 = **回归**，必须修改实现而非调整断言。
 
 ### 单测与 submodule
-- **D-13:** **unit 测试脱离 submodule 依赖**（用 `MemoryFileSystem`/`sampleProject` fixtures，不依赖真 mota-js）；**e2e 仍要求 submodule**。
+- **D-13:** **unit 测试脱离 config 加载期的 submodule 依赖**（不再因缺 submodule 而无法启动）。**修订（research 发现）**：7 个测试模块在*运行时*仍读真实 submodule（5 个经 `test/utils/sampleProject.ts`，2 个 `test/blockly/*` 与 1 个 commands spec 直接 `readFileSync`），因此 submodule 仍是 unit 测试的实际前置；本阶段不重写这些 fixture，CI 的 unit job 也 checkout submodule。**e2e 同样要求 submodule**。
 - **D-14:** 解耦方式为**拆分编辑器独立的 `vitest.config.ts`**，不导入 `MOTA_JS_ROOT`（对齐 `packages/apps/service-worker/vitest.config.ts` 等包惯例）；`vite.config.ts` 继续服务 dev/build。 — **Reversibility:** costly — editor 目前 test block 与 dev/build 共用 `vite.config.ts`，拆分会触及测试基础设施与包脚本，回退需要重新合并配置。
-- **D-15:** CI 按 job 区分 submodule：`lint`/`typecheck`/`unit` **不** checkout submodule；`build`（与 e2e 若运行）用 `submodules: recursive` —— 因为 editor 的 `publicDir` 指向 mota-js root，只有构建期才真正需要。
+- **D-15:** CI 按 job 区分 submodule：`lint`/`typecheck` **不** checkout submodule；`unit`/`build`/e2e 用 `submodules: recursive`。**修订（research 发现）**：unit job 也取 submodule，因为 7 个测试模块运行时读真实 mota-js 文件（见 D-13）；`build` 另有 `publicDir` 指向 mota-js root 的硬依赖。
 - **D-16:** e2e 静默 skip（如 `packages/apps/service-worker/e2e/project-host.spec.ts` 的 `test.skip(!withEditor, …)`）**改为必需 fixture**，缺前置则 fail，而非静默通过。
 
 ### the agent's Discretion
