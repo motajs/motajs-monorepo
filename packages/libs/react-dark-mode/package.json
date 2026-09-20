@@ -9,7 +9,9 @@
     "./DarkModeButton": "./lib/DarkModeButton/index.tsx",
     "./DarkModeEffect/*": "./lib/DarkModeEffect/*.tsx"
   },
-  "scripts": {},
+  "scripts": {
+    "typecheck": "tsc -b"
+  },
   "keywords": [],
   "author": "",
   "license": "BSD-3-Clause",

@@ -5,6 +5,7 @@
   "main": "lib/index.ts",
   "type": "module",
   "scripts": {
+    "typecheck": "tsc -b",
     "test": "vitest run"
   },
   "keywords": [],

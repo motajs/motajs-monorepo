@@ -10,6 +10,7 @@
     "./DarkModeEffect/*": "./lib/DarkModeEffect/*.tsx"
   },
   "scripts": {
+    "typecheck": "tsc -b",
     "test": "vitest run"
   },
   "keywords": [],

@@ -200,6 +200,28 @@ names, recorded here so settings can be configured without re-reading the workfl
 Making these *block merges* is repository branch-protection/ruleset configuration, not workflow
 content (D-04). It lives outside git and requires admin permission; no workflow file can enforce it.
 
+### `typecheck` script form (plan 01-06)
+
+Every workspace package with a `tsconfig.json` and a source tree now exposes a `typecheck` script,
+and `pnpm -r run typecheck` fans out over them. All of them use the same form,
+`"typecheck": "tsc -b"` — none required the `tsc --noEmit -p tsconfig.json` fallback (each
+non-composite lib project built cleanly under build mode, and `*.tsbuildinfo` is gitignored):
+
+| Package | `typecheck` |
+|---------|-------------|
+| `@motajs/editor` | `tsc -b` |
+| `@motajs/file2x` | `tsc -b` |
+| `@motajs/packer` | `tsc -b` |
+| `@motajs/react-dark-mode` | `tsc -b` |
+| `@motajs/react-hooks` | `tsc -b` |
+| `@motajs/react-monaco-editor` | `tsc -b` |
+| `@motajs/react-store` | `tsc -b` |
+| `@motajs/utils` | `tsc -b` |
+| `@motajs/service-worker` (pre-existing) | `tsc -b` |
+
+`@motajs/h5animate` has no `tsconfig.json`, so the fan-out correctly skips it; `@motajs/config` is
+configuration-only.
+
 ### Behaviour-relevant environment variables
 
 Four environment variables govern this phase's behaviour and belong to the reproduction recipe. Only

@@ -8,6 +8,7 @@
     ".": "./lib/index.ts"
   },
   "scripts": {
+    "typecheck": "tsc -b",
     "test": "vitest run"
   },
   "keywords": [],

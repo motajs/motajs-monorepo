@@ -7,7 +7,9 @@
     ".": "./lib/index.ts",
     "./advance/*": "./lib/advance/*/index.ts"
   },
-  "scripts": {},
+  "scripts": {
+    "typecheck": "tsc -b"
+  },
   "keywords": [],
   "author": "",
   "license": "BSD-3-Clause",
