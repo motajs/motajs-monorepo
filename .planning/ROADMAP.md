@@ -37,7 +37,15 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Characterization tests for `PersistExecutor`/`PersistenceMonitor` and `operationHistory` pass, locking error→retry→idle, concurrent latest-wins, no-UI-rollback-on-persist-failure, capacity 100, and multi-target checkpoint rollback.
   4. A recorded baseline exists (per-package unit counts, e2e run, build output, bundle/artifact size vs the 20 MiB ceiling, `editor-manifest.json`, protocol constants) plus Playwright screenshot baselines for the four editors + shell.
   5. No e2e test is silently skipped — each is either a required fixture or carries a CI-visible marker.
-**Plans**: TBD
+**Plans**: 7 plans
+Plans:
+- [ ] 01-01-PLAN.md — Repair the local environment and initialize the `mota-js` submodule (VERIFY-01)
+- [ ] 01-02-PLAN.md — Record the quantified baseline: unit/e2e counts, build artifact vs 20 MiB, manifest, protocol constants, four-editor screenshots (VERIFY-01)
+- [ ] 01-03-PLAN.md — Characterization tests freezing the persistence invariants (VERIFY-03)
+- [ ] 01-04-PLAN.md — Characterization tests freezing the history invariants (VERIFY-04)
+- [ ] 01-05-PLAN.md — Required e2e fixture replacing the silent skip, plus the manifest protocol assertion (VERIFY-06, VERIFY-07)
+- [ ] 01-06-PLAN.md — Editor `vitest.config.ts` split, per-package `typecheck`, root fan-out scripts (VERIFY-02)
+- [ ] 01-07-PLAN.md — Four-job PR CI workflow and required status checks (VERIFY-02)
 
 ### Phase 2: Package Boundary & Build Scaffolding
 **Goal**: Create `packages/libs/editor-core` and make the boundary, module resolution, styling, and compiler coverage machine-enforced rather than assumed.
@@ -181,7 +189,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Baseline & Verification Net | 0/TBD | Not started | - |
+| 1. Baseline & Verification Net | 0/7 | Planned | - |
 | 2. Package Boundary & Build Scaffolding | 0/TBD | Not started | - |
 | 3. Kernel — Runtime, Ports, Registry, Diagnostics | 0/TBD | Not started | - |
 | 4. Resource + Edit Layers Moved | 0/TBD | Not started | - |
