@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 const withEditor = process.env.MOTA_WITH_EDITOR !== "0";
 
@@ -42,7 +43,7 @@ async function registerOpfsProject(page: Page): Promise<{ id: number; directoryN
   });
 }
 
-test("registers an OPFS project, serves preview and persists through the canonical API", async ({ page }) => {
+test("registers an OPFS project, serves preview and persists through the canonical API", async ({ page }, testInfo) => {
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
   await page.goto("/");
@@ -56,7 +57,16 @@ test("registers an OPFS project, serves preview and persists through the canonic
     await expect(page.getByTestId("open-editor")).toBeEnabled();
     await expect(page.getByText("网络版本不可用")).toHaveCount(0);
     await expect(page.getByText(/^Editor 构建 [a-f0-9]{12}$/)).toBeVisible();
-  } else await expect(page.getByTestId("open-editor")).toHaveCount(0);
+  } else {
+    // MOTA_WITH_EDITOR=0 是有意的「不带编辑器」运行：这里显式记录该决定，
+    // 并且不对编辑器做任何断言（既不断言存在，也不断言不存在——后者只是
+    // 悄悄削弱断言）。编辑器托管能力由 editorRelease 夹具在专门的测试里
+    // 以「缺前置即失败」的方式覆盖。
+    testInfo.annotations.push({
+      type: "editor-hosting-scope",
+      description: "MOTA_WITH_EDITOR=0: Editor hosting is intentionally out of scope for this run; no editor affordance is asserted.",
+    });
+  }
   await expect(page.getByText("index.html")).toBeVisible();
 
   await page.goto(`/service/${id}/preview/`);
@@ -98,8 +108,8 @@ test("registers an OPFS project, serves preview and persists through the canonic
   expect(pageErrors).toEqual([]);
 });
 
-test("shows live Editor cache progress on the project page", async ({ page }) => {
-  test.skip(!withEditor, "requires a staged Editor release");
+test("shows live Editor cache progress on the project page", async ({ page, editorRelease }) => {
+  expect(editorRelease.buildId).toMatch(/^[a-f0-9]{64}$/);
   await page.goto("/");
   const { id } = await registerOpfsProject(page);
   await page.goto(`/service/${id}/project/`);
