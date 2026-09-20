@@ -1,6 +1,6 @@
 {
   "git": {
-    "commit": "a2eba5237ab51dc5bff070da5fc571b61524e5b8",
+    "commit": "1e118e1ac2940d3d582d04a8e08311376d4da227",
     "submoduleSha": "3efb548e407ad2b8007b498cb98401e2012a0b55",
     "submoduleStatus": "3efb548e407ad2b8007b498cb98401e2012a0b55 packages/external/mota-js (v2.10.3-release-2-g3efb548e)",
     "pnpm": "10.15.0",
@@ -142,5 +142,27 @@
     "MOTA_WITH_EDITOR",
     "MOTA_EDITOR_E2E_PORT",
     "PLAYWRIGHT_USE_SYSTEM_CHROME"
-  ]
+  ],
+  "screenshots": {
+    "shell.png": {
+      "path": "screenshots/shell.png",
+      "bytes": 270976
+    },
+    "editor-map.png": {
+      "path": "screenshots/editor-map.png",
+      "bytes": 421827
+    },
+    "editor-table.png": {
+      "path": "screenshots/editor-table.png",
+      "bytes": 87667
+    },
+    "editor-code.png": {
+      "path": "screenshots/editor-code.png",
+      "bytes": 52272
+    },
+    "editor-asset.png": {
+      "path": "screenshots/editor-asset.png",
+      "bytes": 57827
+    }
+  }
 }

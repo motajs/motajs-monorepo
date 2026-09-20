@@ -23,16 +23,19 @@ the unmodified `vite.config.ts` test block.
 
 | Fact | Value |
 |------|-------|
-| `git.commit` | `a2eba5237ab51dc5bff070da5fc571b61524e5b8` |
+| `git.commit` | `1e118e1ac2940d3d582d04a8e08311376d4da227` |
 | `mota-js` submodule SHA | `3efb548e407ad2b8007b498cb98401e2012a0b55` (`packages/external/mota-js`, `v2.10.3-release-2-g3efb548e`) |
 | Node | `v22.18.0` |
 | pnpm | `10.15.0` |
 | Editor artifact `buildId` | `a22a44900241893004f994356cbe8dddb6ded3302917e15c03e0f069ebf3aa6e` |
 
-`git.commit` is HEAD at the time of the final collector run. All four scopes ran in sequence on this
-one working tree; the only tracked files that changed between the `unit` collection and the
-`build`/`e2e` collections are `scripts/baseline/collect.js` and `.planning/baseline/*`, which no unit
-test or production module imports. No baseline number depends on those files.
+`git.commit` is HEAD at the time of the **final** collector run. All four scopes ran in sequence on
+this one working tree; the only tracked files that differ between the first (`unit`) and the last
+(`screenshots`) collection are `scripts/baseline/collect.js`, `.planning/baseline/**`,
+`packages/apps/editor/e2e/baseline-capture.spec.ts` and `packages/apps/editor/playwright.config.ts`.
+None of those is imported by a unit test or a production module, and the capture spec is excluded
+from both the vitest run (`e2e/**` is excluded) and the default Playwright project, so no recorded
+number depends on them.
 
 Local toolchain differs from CI on purpose: local pnpm is `10.15.0` while
 `.github/workflows/deploy-editor-h5test.yml` pins `11.10.0`, and local Node is `22` while CI uses
@@ -227,11 +230,21 @@ unit tests use (`ProjectSandbox`, serving `MOTA_JS_ROOT/project`):
 | `editor-asset.png` | Resources workspace | `resources-workspace` |
 
 Capture is a Playwright project (`baseline-capture`, spec `packages/apps/editor/e2e/baseline-capture.spec.ts`)
-with a fixed viewport, animations disabled, and a fixed output directory resolved from the spec's own
-location up to the repository root — never from the process working directory. There are **no
-`toHaveScreenshot` reference images**: D-08 mandates human comparison, and platform-keyed reference
-names would be dead weight. The runtime preview iframe is explicitly hidden from every capture: it
-executes project-authored code and its rendering is host-dependent (T-02-01).
+with a fixed viewport (1440×900), animations disabled, and a fixed output directory resolved from the
+spec's own location up to the repository root — never from the process working directory. There are
+**no reference-image assertions**: D-08 mandates human comparison, and platform-keyed reference names
+would be dead weight. The runtime preview iframe is explicitly hidden from every capture: it executes
+project-authored code and its rendering is host-dependent (T-02-01).
+
+Run it explicitly — it is deliberately not part of a normal e2e run:
+
+```bash
+pnpm --filter @motajs/editor exec playwright test --project baseline-capture
+```
+
+`packages/apps/editor/package.json`'s `test:e2e` pins the default `editor` project
+(`playwright test --project=editor`), because a bare `playwright test` runs *every* registered
+project and would otherwise rewrite these PNGs on every ordinary e2e run.
 
 Byte sizes for the five files are recorded in `baseline.json.screenshots`.
 
@@ -269,6 +282,14 @@ Byte sizes for the five files are recorded in `baseline.json.screenshots`.
 4. **`@motajs/react-monaco-editor` teardown flake** can make an all-passing unit run exit non-zero
    (see §5). The baseline preserves the observed `exitCode` per package in `baseline.json` rather
    than hiding it.
+5. **The `lint` gate shape does not work as written.** `pnpm exec eslint .` from the repository root
+   dies with `FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory`: the
+   root flat config's `ignores` covers only `dist` and `node_modules`, and ESLint does not read
+   `.gitignore`, so the vendored `packages/external/mota-js` submodule is linted as well. Plan 01-03
+   must scope the lint roots (or ignore the submodule) before the `lint` job can be a required check.
+   The editor package itself is clean when linted through its own config.
+6. **One pre-existing lint error under the root config** — `@stylistic/operator-linebreak` at
+   `packages/apps/editor/playwright.config.ts:5`, on a line plan 01-02 did not touch.
 
 ---
 

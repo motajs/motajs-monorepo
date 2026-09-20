@@ -29,7 +29,21 @@ export default defineConfig({
   },
   projects: [
     {
-      name: useSystemChrome ? "chrome" : "chromium",
+      // 稳定的默认项目名，供 `pnpm test:e2e`（= `playwright test --project=editor`）点名。
+      // Playwright 的 bare 运行会执行「所有已注册 project」，所以只靠 testIgnore
+      // 还不能保证 `test:e2e` 不碰基线截图；把默认项目固定下来才是可靠的隔离。
+      name: "editor",
+      testIgnore: /baseline-capture\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        channel: useSystemChrome ? "chrome" : undefined,
+      },
+    },
+    {
+      // 基线截图是人工比对产物（D-07/D-08）：只在
+      // `pnpm --filter @motajs/editor exec playwright test --project baseline-capture` 时运行。
+      name: "baseline-capture",
+      testMatch: /baseline-capture\.spec\.ts/,
       use: {
         ...devices["Desktop Chrome"],
         channel: useSystemChrome ? "chrome" : undefined,

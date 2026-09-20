@@ -54,3 +54,32 @@ project-page failure in its own phase.
 
 Local pnpm is `10.15.0` and Node is `22`, while CI pins pnpm `11.10.0` and Node `24`. Both were
 recorded as facts in `BASELINE.md`; changing the local major versions is a scope change.
+
+## 5. `pnpm exec eslint .` from the repo root runs out of memory
+
+**Observed:** `pnpm exec eslint .` (the shape plan 01-03 specifies for the `lint` CI job) terminates
+with `FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory`.
+
+**Likely cause:** the root flat config's only `ignores` entries are `dist` and `node_modules`. ESLint
+does not read `.gitignore`, so the vendored `packages/external/mota-js` submodule (a full upstream
+repository with `_docs`, `libs`, `project`, …) is linted too.
+
+**Impact:** plan 01-03's `lint` job will fail on the first run unless the config ignores the
+submodule (and any other generated trees) or the CLI scopes the lint roots. The editor package is
+unaffected when linted through its own `eslint.config.js` (`pnpm --filter @motajs/editor exec eslint .`
+is clean).
+
+**Not fixed here:** `eslint.config.js` is not part of plan 01-02's deliverables, and the lint gate is
+plan 01-03's.
+
+## 6. Pre-existing lint error in `packages/apps/editor/playwright.config.ts` under the root config
+
+**Observed:** `pnpm exec eslint packages/apps/editor/playwright.config.ts` reports
+`5:74 error '||' should be placed at the beginning of the line @stylistic/operator-linebreak` for the
+`const useSystemChrome = … || …` line.
+
+**Status:** the line is untouched by plan 01-02 (`git diff` shows only the `projects` block changed),
+and this is the only error in the file — so it predates the baseline work. It is recorded rather than
+reformatted to keep the change set minimal. Whoever lands the `lint` gate (plan 01-03) should decide
+whether to apply the stylistic fix.
+
