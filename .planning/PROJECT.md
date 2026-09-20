@@ -37,6 +37,7 @@
 - [ ] `@motajs/editor` 改为调用 `editor-core`，自身承担 mota-js 引擎适配
 - [ ] 重构期间 `@motajs/editor` 对外行为（功能 / UI / 宿主协议）完全不变
 - [ ] 为未来插件生态预留扩展点（本期不实现插件加载/注册机制）
+- [ ] Blockly 事件编辑器作为编辑器能力纳入 core（归入 code 能力：通用 Blockly host + schema→block 编译框架；`blockly/project/*`、领域 schema、事件字段绑定、诊断经适配器注入）
 
 ### Out of Scope
 
@@ -64,6 +65,7 @@
 - **Architecture**: `editor-core` 不得导入宿主或引擎代码；不得擅自读取文件；引擎相关数据一律经注册钩子注入
 - **Workspace**: `editor-core` 位于 `packages/libs/editor-core`，作为共享库被 `editor` 依赖；`@/` 别名与 tsconfig 基础沿用 `@motajs/config`
 - **Verification**: 判定「行为完全不变」的依据是现有测试全绿 + 关键流程手动验收
+- **Process**: 每个 plan 执行前，编排器必须先向用户简报（plan id/goal、大致内容、需要解决的问题、验证方式）并**等待批准**才可执行 — 该门禁覆盖 `--auto` 自动批准；详见 `AGENTS.md` 的 Project Rules
 
 ## Key Decisions
 
@@ -77,6 +79,8 @@
 | 本期为纯重构，对外行为完全不变 | 降低风险，以现有测试全绿 + 手动验收为准 | — Pending |
 | 插件生态本期只留扩展点，不实现机制 | 保持里程碑聚焦 | — Pending |
 | `editor-next` 推后到后续里程碑 | 本期只抽 core | — Pending |
+| 每个 plan 执行前必须向用户简报并等待批准 | 用户明确要求的执行前门禁，覆盖 `--auto` 自动批准 | — Pending |
+| Blockly 事件编辑器纳入 core 的 code 能力 | 现有编辑器已有 Blockly 事件编辑器，属既有能力下沉，非新增 | — Pending |
 
 ## Evolution
 

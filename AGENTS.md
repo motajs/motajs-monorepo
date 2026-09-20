@@ -454,3 +454,20 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 > Profile not yet configured. Run `/gsd-profile-user` to generate your developer profile.
 > This section is managed by `generate-claude-profile` -- do not edit manually.
 <!-- GSD:profile-end -->
+
+<!-- ===== Project Rules (user-mandated; NOT GSD-managed — safe from generate-claude-md) ===== -->
+
+## Project Rules
+
+### Per-plan briefing before execution (MANDATORY)
+
+Before executing **any** plan — via `/gsd-execute-phase`, `/gsd-executor`, `/gsd-quick`, or an `--auto` / chained pipeline — the orchestrator MUST stop and report to the user first:
+
+1. **Plan id + goal** — which plan, and its objective in one line.
+2. **大致内容和需要解决的问题** — the main tasks/files it will change, and what problem it solves (plus any open question, risk, or decision the plan expects).
+3. **Verification** — how completion will be checked.
+
+Then **wait for explicit user approval** before running that plan. Brief **per plan, in execution order** — do not batch briefings, and do not treat `--auto` as approval for plan execution.
+
+Scope: this rule governs **plan execution** only. Discussion, planning, and research artifacts may still be produced automatically.
+
