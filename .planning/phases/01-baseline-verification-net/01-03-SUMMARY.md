@@ -171,3 +171,17 @@ None — no external service configuration required.
 ---
 *Phase: 01-baseline-verification-net*
 *Completed: 2026-09-20*
+
+## Self-Check: PASSED
+
+- FOUND: `packages/apps/editor/src/fs/__tests__/persistExecutor.invariants.test.ts`
+- FOUND: `packages/apps/editor/src/fs/__tests__/persistenceMonitor.invariants.test.ts`
+- FOUND: `packages/apps/editor/src/fs/__tests__/persistNoRollback.invariants.test.ts`
+- FOUND: `.planning/phases/01-baseline-verification-net/01-03-SUMMARY.md`
+- FOUND: commit `88e92fc` (Task 1)
+- FOUND: commit `59bf205` (Task 2)
+- FOUND: commit `d03d42c` (Task 3)
+- FOUND: commit `0b94001` (plan metadata)
+- PASSED: `git diff --exit-code` on the three pre-existing neighbour suites exits 0 (untouched)
+- PASSED: `git diff --exit-code` on `PersistExecutor.ts` + `PersistenceMonitor.ts` exits 0 (no production source modified; all deliberate breaks reverted)
+- PASSED: `.planning/STATE.md` and `.planning/ROADMAP.md` have no working-tree changes (orchestrator-owned)
