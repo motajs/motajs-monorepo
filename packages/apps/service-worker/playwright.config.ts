@@ -1,6 +1,12 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const withEditor = process.env.MOTA_WITH_EDITOR !== "0";
+// 与 `packages/apps/editor/playwright.config.ts` 保持一致：默认使用 Playwright 自带的
+// chromium，只有在明确要求（PLAYWRIGHT_USE_SYSTEM_CHROME=1）或非 CI 的 macOS 上才走系统
+// Chrome。本机系统 Chrome 153 与 Playwright 1.61 不兼容：导航到 `/service/:id/project/`
+// 时浏览器直接断开（probe 复现 PAGE_CLOSE / BROWSER_DISCONNECTED），用自带 chromium 正常。
+const useSystemChrome = process.env.PLAYWRIGHT_USE_SYSTEM_CHROME === "1"
+  || (!process.env.CI && process.platform === "darwin");
 
 export default defineConfig({
   testDir: "./e2e",
@@ -14,7 +20,7 @@ export default defineConfig({
   },
   projects: [{
     name: "chrome",
-    use: { ...devices["Desktop Chrome"], channel: "chrome" },
+    use: { ...devices["Desktop Chrome"], channel: useSystemChrome ? "chrome" : undefined },
   }],
   webServer: {
     command: `${withEditor ? "pnpm build:with-editor" : "pnpm build"} && pnpm preview --host 127.0.0.1 --port 4178`,
