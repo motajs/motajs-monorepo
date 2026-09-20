@@ -1,0 +1,86 @@
+{
+  "git": {
+    "commit": "63a56ad14eb771133a45e44b21f0c94c36421c7f",
+    "submoduleSha": "3efb548e407ad2b8007b498cb98401e2012a0b55",
+    "submoduleStatus": "3efb548e407ad2b8007b498cb98401e2012a0b55 packages/external/mota-js (v2.10.3-release-2-g3efb548e)",
+    "pnpm": "10.15.0",
+    "node": "v22.18.0"
+  },
+  "unit": {
+    "@motajs/editor": {
+      "passed": 865,
+      "failed": 0,
+      "skipped": 0,
+      "total": 865,
+      "exitCode": 0
+    },
+    "@motajs/service-worker": {
+      "passed": 44,
+      "failed": 0,
+      "skipped": 0,
+      "total": 44,
+      "exitCode": 0
+    },
+    "@motajs/file2x": {
+      "passed": 14,
+      "failed": 0,
+      "skipped": 0,
+      "total": 14,
+      "exitCode": 0
+    },
+    "@motajs/h5animate": {
+      "passed": 202,
+      "failed": 0,
+      "skipped": 0,
+      "total": 202,
+      "exitCode": 0
+    },
+    "@motajs/packer": {
+      "passed": 94,
+      "failed": 0,
+      "skipped": 0,
+      "total": 94,
+      "exitCode": 0
+    },
+    "@motajs/react-hooks": {
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "total": 3,
+      "exitCode": 0
+    },
+    "@motajs/react-monaco-editor": {
+      "passed": 6,
+      "failed": 0,
+      "skipped": 0,
+      "total": 6,
+      "exitCode": 1
+    },
+    "@motajs/react-store": {
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "total": 3,
+      "exitCode": 0
+    }
+  },
+  "protocol": {
+    "manifestSchemaVersion": 2,
+    "manifestEnvironmentProtocolVersion": 1,
+    "manifestRuntimeProtocolVersion": 3,
+    "runtimeProtocolVersion": 4,
+    "mismatchPreserved": true
+  },
+  "ciJobNames": [
+    "lint",
+    "typecheck",
+    "unit",
+    "build"
+  ],
+  "envVars": [
+    "MOTA_JS_ROOT",
+    "MOTA_WITH_EDITOR",
+    "MOTA_EDITOR_E2E_PORT",
+    "PLAYWRIGHT_USE_SYSTEM_CHROME"
+  ]
+}
