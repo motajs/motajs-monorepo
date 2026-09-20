@@ -117,7 +117,7 @@ the baseline depend on host configuration).
 | Capability | Primary Tier | Secondary Tier | Rationale |
 |------------|-------------|----------------|-----------|
 | Submodule init + quantified baseline capture | Developer/operator machine (local checkout) | CI (reproducibility only) | The submodule is deliberately not vendored/committed; baseline numbers must come from a tree whose git state is recorded. A CI job cannot be the *source* of a committed baseline without a commit-back loop, which D-06/D-07 don't ask for. |
-| `lint` gate | CI job | Root `package.json` script | ESLint 9 flat config resolves per-directory (`packages/apps/editor/eslint.config.js` differs from root), so a single root invocation is correct — but it must run **without** `--fix`. |
+| `lint` gate | CI job | Root `package.json` script | ESLint 9 loads only the config resolved from the CWD (file-relative lookup is opt-in via a feature flag and is not used here), so a root `eslint .` would otherwise apply the root stylistic rule set to the editor's single-quoted sources; the root config must mount the editor's own config under a basePath-scoped object and ignore `packages/external/` — and it must run **without** `--fix`. |
 | `typecheck` gate | CI job | Per-package `tsc -b` | `tsc -b` is project-reference driven; it type-checks only files reachable from each package's includes. Ownership belongs to each package (its own tsconfig), not to a root program. |
 | `unit` gate | CI job | Per-package `vitest run` | Per-package configs are the repo convention; environments genuinely differ (node vs jsdom). |
 | `build` gate | CI job | Per-package build (editor → MPA, SW → worker + shell) | Only this tier needs the submodule (editor `publicDir`) and `panda codegen`. |
@@ -139,7 +139,7 @@ needs is already present, or is supplied by GitHub's own actions.
 | Vitest | `4.0.18` (editor/SW) / catalog `^4.0.16` | Unit + characterization suites | Already the repo runner; per-package configs already exist for 5 packages. |
 | `@playwright/test` | `1.61.1` (editor) / `^1.61.1` (SW) | e2e + screenshot capture | Already configured with `data-test-id`, `webServer`, `ProjectSandbox`. |
 | TypeScript | `5.9.3` | `tsc -b` typecheck gate | Catalog-pinned; root `overrides.vite` and `typescript-eslint@8.53.1` peer-cap the whole toolchain. |
-| ESLint | `9.39.2` + `typescript-eslint@8.53.1` | lint gate | Flat config, per-directory config resolution. |
+| ESLint | `9.39.2` + `typescript-eslint@8.53.1` | lint gate | Flat config; one config resolved from the CWD, so the root config scopes the editor rules itself. |
 | pnpm | `11.10.0` (CI, `.github/workflows/deploy-editor-h5test.yml:23`) | Workspace install + recursive script fan-out | Lockfile + catalog authority. |
 | Node.js | `24` (CI) | Runtime | `setup-node` pinned in the existing workflow. |
 
@@ -906,7 +906,9 @@ worth recording as pass/fail baseline facts since later phases touch the MPA ent
 | A6 | "Resource reactivity after `set`/`patch`" is satisfiable by asserting observable value change, without asserting scheduler internals. | Pattern 3 | If the invariant is really about signal-effect scheduling, the assertion shape changes. Low risk — the existing `operationHistory.test.ts:88-89` already demonstrates the observable form. |
 | A7 | The five screenshot targets are shell / map / table / code / asset, anchored on existing `data-test-id`s. CONTEXT says "four editors + shell" without enumerating them; the four are inferred from the milestone's capability list. | Pattern 5, D-07 | If the intended fourth surface differs, one image is wrong — a trivial re-capture. Worth a one-line confirmation. |
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+All five questions were resolved during planning; each resolution is recorded inline below.
 
 1. **What is the actual test *count*, not test-*file* count, per package?** (D-05 requires counts.)
    - What we know: a file census this session gives editor 92, service-worker 8, h5animate 8, packer 9,
@@ -917,6 +919,7 @@ worth recording as pass/fail baseline facts since later phases touch the MPA ent
    - Recommendation: derive counts from `vitest run --reporter=json` and Playwright's JSON reporter,
      recording passed/failed/**skipped**/total. Use the file census only as a wiring sanity cross-check
      (a package reporting zero tests while owning files is a bug), not as the deliverable.
+   - **Resolved:** implemented as recommended — `scripts/baseline/collect.js unit` derives `{passed, failed, skipped, total}` from each package's `vitest run --reporter=json` report, and the file census is used only as a wiring sanity check (plan 01-02 Task 1). Unmeasurable at research time because the research machine's install was broken; plan 01-01 repairs it before any count is taken.
 
 2. **Does the `unit` job check out the submodule, or do seven test modules get rewritten?** (the
    D-13/D-15 conflict — see Pitfall 1.)
@@ -931,26 +934,36 @@ worth recording as pass/fail baseline facts since later phases touch the MPA ent
      suite and makes "unit counts" job-dependent.
    - Recommendation: **(a)**, with the deviation from D-15 recorded explicitly in `BASELINE.md`. A unit
      job that silently omits 7 of 92 editor files cannot anchor "behavior unchanged". Option (b) is the
-     right long-term answer but is disproportionate for Phase 1 and collides with D-09. **Needs user
-     confirmation before planning — it changes a locked decision (D-15).**
+      right long-term answer but is disproportionate for Phase 1 and collides with D-09. **Needs user
+      confirmation before planning — it changes a locked decision (D-15).**
+   - **Resolved:** option (a) adopted — the `unit` job checks out the submodule. CONTEXT's D-13/D-15
+     revision note records the supersession of D-15's original letter, `BASELINE.md` records the
+     deviation, and plan 01-07 gives `submodules: recursive` to exactly the `unit` and `build` jobs.
 
 3. **Is test code in scope for the `typecheck` gate?** (Pitfall 3.)
    - What we know: nothing currently typechecks the editor's `test/` or `__tests__/` trees.
    - Recommendation: add an editor `tsconfig.test.json`, because this phase's characterization suites are
-     the files you least want un-typechecked. If that is too much scope, record the blind spot in
-     `BASELINE.md` and defer to Phase 2.
+      the files you least want un-typechecked. If that is too much scope, record the blind spot in
+      `BASELINE.md` and defer to Phase 2.
+   - **Resolved:** the narrower option — record the blind spot in `BASELINE.md` and defer an editor
+     `tsconfig.test.json` to Phase 2 (plan 01-02 Task 2 writes the note; plan 01-06 Task 2 adds the
+     per-package `typecheck` scripts without adding a test program).
 
 4. **Who sets the required status checks, and when?** (D-03/D-04.)
    - What we know: it needs admin/owner permission and lives outside git.
    - Recommendation: plan an explicit `checkpoint:human-verify` task whose acceptance is "a PR cannot
-     merge while one of the four checks is red". The workflow remains independently valuable (it runs and
-     reports) before it is made required.
+      merge while one of the four checks is red". The workflow remains independently valuable (it runs and
+      reports) before it is made required.
+   - **Resolved:** implemented as recommended — plan 01-07 Task 2 is a `checkpoint:human-action`
+     whose acceptance is that a deliberate failure blocks the merge button.
 
 5. **Should the editor e2e suites also fail-fast without the submodule?**
    - What we know: only the SW spec has a skip; all 8 editor specs already fail loudly without
      `ProjectSandbox`'s `MOTA_JS_ROOT`.
    - Recommendation: leave editor e2e alone — VERIFY-06 is specifically about *silent* skips. Do not add a
      fixture where no skip exists.
+   - **Resolved:** implemented as recommended — plan 01-05 Task 1 converts only the service-worker
+     spec's `test.skip` into a required fixture; the editor e2e suites are untouched.
 
 ## Environment Availability
 
