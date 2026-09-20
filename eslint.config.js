@@ -5,12 +5,13 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 import stylistic from "@stylistic/eslint-plugin";
 import betterExhaustiveDeps from "eslint-plugin-react-hooks-better-stable";
+import editorConfig from "./packages/apps/editor/eslint.config.js";
 
-export default tseslint.config(
+const rootConfig = tseslint.config(
   {
     ignores: [
-      "dist",
-      "node_modules",
+      "**/dist/",
+      "packages/external/",
     ],
   },
   {
@@ -28,6 +29,9 @@ export default tseslint.config(
     ],
     files: [
       "**/*.{js,ts,tsx}",
+    ],
+    ignores: [
+      "packages/apps/editor/**",
     ],
     languageOptions: {
       globals: globals.browser,
@@ -67,3 +71,8 @@ export default tseslint.config(
     },
   },
 );
+
+export default [
+  ...rootConfig,
+  ...editorConfig.map((block) => ({ ...block, basePath: "packages/apps/editor" })),
+];

@@ -8,7 +8,7 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 export default defineConfig([
   globalIgnores(['dist']),
   {
-    files: ['**/*.{ts,tsx}'],
+    files: ['**/*.{js,cjs,mjs,ts,tsx}'],
     extends: [
       js.configs.recommended,
       tseslint.configs.recommended,
@@ -25,5 +25,11 @@ export default defineConfig([
       'object-shorthand': 'warn',
       'arrow-body-style': ['warn', 'as-needed'],
     }
+  },
+  {
+    files: ['**/*.{cjs,mjs}'],
+    languageOptions: {
+      globals: globals.node,
+    },
   },
 ])

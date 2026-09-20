@@ -5,7 +5,11 @@
   "description": "",
   "type": "module",
   "scripts": {
-    "lint": "eslint --fix"
+    "lint": "eslint .",
+    "lint:fix": "eslint --fix",
+    "test": "pnpm -r run test",
+    "typecheck": "pnpm -r run typecheck",
+    "build": "pnpm -r run build"
   },
   "keywords": [],
   "author": "",
