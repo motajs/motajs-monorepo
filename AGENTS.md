@@ -471,3 +471,12 @@ Then **wait for explicit user approval** before running that plan. Brief **per p
 
 Scope: this rule governs **plan execution** only. Discussion, planning, and research artifacts may still be produced automatically.
 
+### Per-plan completion report (MANDATORY)
+
+When a plan finishes, **report before moving on — do not stay silent.** Every plan boundary produces exactly two things, in this order:
+
+1. **What the just-completed plan actually did** — task outcomes; the exact verify-command results (test counts, exit codes, artifact numbers); any deviation, surprise, or blocker; and the commit hashes.
+2. **The next plan itself** — its id, goal, main tasks, the problem it solves, and how completion will be verified (i.e. the per-plan briefing above).
+
+Then **wait for explicit user approval** before executing the next plan. Never chain silently from one plan into the next, and never report only one of the two items.
+

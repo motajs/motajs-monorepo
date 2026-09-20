@@ -66,6 +66,7 @@
 - **Workspace**: `editor-core` 位于 `packages/libs/editor-core`，作为共享库被 `editor` 依赖；`@/` 别名与 tsconfig 基础沿用 `@motajs/config`
 - **Verification**: 判定「行为完全不变」的依据是现有测试全绿 + 关键流程手动验收
 - **Process**: 每个 plan 执行前，编排器必须先向用户简报（plan id/goal、大致内容、需要解决的问题、验证方式）并**等待批准**才可执行 — 该门禁覆盖 `--auto` 自动批准；详见 `AGENTS.md` 的 Project Rules
+- **Process**: 每个 plan 执行完毕后必须汇报「①刚完成计划的执行情况（结果/验证证据/偏差/提交）②下一个计划本身」，然后等待批准 — 不得静默进入下一个 plan
 
 ## Key Decisions
 
