@@ -546,37 +546,44 @@ computes the same predicate and chooses the webServer command
 (`${withEditor ? "pnpm build:with-editor" : "pnpm build"}`), so the default is "editor staged";
 the skip only fires under `MOTA_WITH_EDITOR=0`.
 
-**Recommended shape** (RESEARCH §Pattern 4): an auto fixture that (a) asserts the release is
-staged, (b) throws a descriptive error naming the exact remediation command, (c) turns
-`MOTA_WITH_EDITOR=0` into an *announced* opt-out, never a silent pass:
+**Corrected shape** (revised after checker feedback — plan 01-05 Task 1 is authoritative): a NAMED
+(not `auto`) fixture that (a) reads the service worker's `editor.status` reply from the app root —
+the same `GetEditorHostStatusMessage` value that gates `open-editor` — (b) throws a descriptive
+error naming the exact remediation command, and (c) never treats `MOTA_WITH_EDITOR=0` as a pass.
+
+**Do NOT probe `open-editor` as the staging signal.** `open-editor` is rendered only by
+`ProjectView` on `service/:id/project/` (`src/view/MainView.tsx:421-432`), gated on
+`editorStatus.data?.status === "ready"` (`:246-248,408`); on the home route `/` the element is
+absent whether or not a release is staged, so a fixture that waits for it there throws
+unconditionally and fails the default staged run. The `editor.status` message is reachable from `/`
+because it is a global service-worker status, not a per-project one.
 ```ts
 import { test as base, expect } from "@playwright/test";
 
-const editorRequested = process.env.MOTA_WITH_EDITOR !== "0";
-
-export const test = base.extend<{ editorRelease: void }>({
+export const test = base.extend<{ editorRelease: { buildId: string } }>({
   editorRelease: [async ({ page }, use, testInfo) => {
-    if (!editorRequested) {
-      testInfo.annotations.push({
-        type: "editor-release-opt-out",
-        description: "MOTA_WITH_EDITOR=0 — editor hosting is not covered by this run",
-      });
-      await use();
-      return;
-    }
+    testInfo.annotations.push({
+      type: "mota-with-editor",
+      description: process.env.MOTA_WITH_EDITOR ?? "(unset — a staged release is required)",
+    });
     await page.goto("/");
-    if (await page.getByTestId("open-editor").count() === 0) {
+    // Inside page.evaluate: await navigator.serviceWorker.ready (and controllerchange when
+    // uncontrolled), then post [requestId, "editor.status", null] and await the matching reply.
+    const status = await readEditorStatus(page);
+    if (!status || status.status !== "ready") {
       throw new Error(
-        "Editor release is not staged. Run " +
+        `Editor release is not staged (${JSON.stringify(status)}). Run ` +
         "`pnpm --filter @motajs/service-worker build:with-editor` and retry.",
       );
     }
-    await use();
-  }, { auto: true }],
+    await use({ buildId: status.buildId });
+  }, { auto: false }],
 });
 
 export { expect };
 ```
+(An earlier draft of RESEARCH §Pattern 4 recommended an `auto` fixture checking `open-editor` on
+`/`; that shape is wrong for the reason above and must not be copied.)
 **CI must never set `MOTA_WITH_EDITOR=0`** (RESEARCH Runtime State Inventory) so required checks
 always exercise the real path. `test.skip` at runtime counts as success for GitHub required
 checks, which is precisely why the skip must go.
