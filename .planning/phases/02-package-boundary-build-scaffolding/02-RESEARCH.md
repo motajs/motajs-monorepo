@@ -724,26 +724,31 @@ Measured output for a real lib component contained `react/compiler-runtime.js?v=
 
 **If this table is non-empty:** every row above is a point the planner should surface to the user rather than silently encode. Rows A2–A4 and A6 are cheap to confirm during planning; A1 and A3 are confirmable only at execution time and should be paired with an explicit fallback in the plan.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **How should core's intra-package imports resolve, given that tsc `paths` is program-global?** *(BLOCKING — PKG-03's literal success criterion cannot hold as written; this is a direction decision.)*
+   - **RESOLVED — D-06 amended (user direction decision, 2026-09-21):** option **A** adopted — core's intra-package imports are **relative**; the D-06 DAG survives unchanged as dependency-cruiser rules over `lib/<dir>/` paths; PKG-03's wording becomes "core's intra-package imports resolve identically under `tsc -b` and Vite", and the negative polarity is proven by requiring `TS2307` from core's own program (Plan 03).
    - What we know: Vite can be fixed (D-05 confirmed). tsc cannot: `exclude` does not mask imported package source, project references are rejected by `TS6310` while core is `noEmit`, and a second candidate in editor's `paths` only works while no name collides. Measured evidence in Pattern 1.
    - Options: **(A)** core's cross-subpath imports are **relative** (`../../react/...`); D-06's DAG survives unchanged as dependency-cruiser rules over `lib/<dir>/` paths; zero silent-failure surface; PKG-03's wording becomes "core's intra-package imports resolve identically under `tsc -b` and Vite". **(B)** keep `@/` and add `"@/*": ["./src/*", "../../libs/editor-core/lib/*"]` to `packages/apps/editor/tsconfig.app.json`, plus a guard invariant enforced by a verify script ("no `@/X` used by core may exist as `editor/src/X`; every `@/X` used by editor must exist under `editor/src`"). **(C)** give core a non-colliding alias (e.g. `@core/*`) mapped unambiguously in core's tsconfig, editor's tsconfig, and Vite — preserves the "package-internal alias, not relative" spirit of D-06 but adds a second alias convention.
    - Recommendation: **A** (simplest, removes the entire silent-misresolution class, costs only cosmetic relative paths), with **C** as the fallback if the user wants to keep a package-internal alias. **B is not recommended** because during Phases 3–11 both trees coexist, so `core/lib/fs/...` and `editor/src/fs/...` colliding is the expected case, not the edge case — and the failure is silent.
    - This must be asked as a question, not decided by the plan (AGENTS.md: direction is the user's call).
 
 2. **Should `@douyinfe/semi-ui` stay in core's peer list when no core consumer uses it?**
+   - **RESOLVED → D-18:** keep it (honours D-02) but as an **optional** peer — `peerDependenciesMeta: { '@douyinfe/semi-ui': { optional: true } }`; the D-15 realpath assertion covers the eight consumed singletons from editor+core and asserts Semi from `packages/apps/service-worker` only, printing why.
    - What we know: measured — editor cannot resolve it; service-worker can; the editor uses antd only; D-02 locks the list to PKG-02's seven.
    - Options: keep it and mark `peerDependenciesMeta: { '@douyinfe/semi-ui': { optional: true } }`, excluding it from the D-15 realpath assertion; keep it non-optional and assert it from service-worker (its real consumer); or drop it and note the deviation from ROADMAP PKG-02.
    - Recommendation: keep it (honours D-02) but as an **optional** peer, and have the D-15 verifier assert the eight *consumed* singletons from editor+core while asserting Semi against service-worker — documenting why.
 
 3. **Should the `"各 subpath 内容状态"` manifest (D-01 discretion) be JSON or Markdown, and where?**
+   - **RESOLVED (this revision) → JSON manifest:** the shape implemented by Plan 02 Task 2 is `.planning/phases/02-package-boundary-build-scaffolding/subpathStatus.json` — `{ schemaVersion, phase, subpaths: { ".": { target, content, carriesProbe }, … }, note }`, with `content` = `"empty-barrel"` for the six inert subpaths and `"probe"` for `./react`, cross-checked against the real `exports` map by `coreExports.js`.
    - Recommendation: a small JSON at `.planning/phases/02-package-boundary-build-scaffolding/subpathStatus.json` (machine-checkable by the PKG-01 verifier, which can assert every `exports` target exists and is listed), plus one human sentence in the summary.
 
 4. **Where should the dependency-cruiser config live and how should it be invoked?**
+   - **RESOLVED → D-20 + N-10:** the config lives at the repository root as `.dependencyCruiser.cjs` (N-10 — the tool's conventional name with the hyphen removed) and is passed explicitly via `--config`; it is driven by `scripts/verify/coreBoundaries.js` (the repo's verifier convention), and the tool itself is pinned at `18.2.0` (D-20, avoiding the registry release-age gate).
    - Recommendation: root `.dependencyCruiser.cjs` (the tool's conventional name, ESLint/Prettier-adjacent config style in this repo), invoked as `pnpm exec depcruise --config .dependencyCruiser.cjs packages/libs/editor-core/lib` from a `scripts/verify/coreBoundaries.js` wrapper (so the two-polarity proof and the editor→core edge assertion live in the repo's verifier convention).
 
 5. **Does `pnpm test` (root, 1257 tests) still run within a sane time once core is added?**
+   - **RESOLVED → D-21:** core's suite stays a single fast smoke test file (no jsdom rendering beyond what the assertion needs), so the root `-r run test` fan-out keeps its current runtime.
    - What we know: core adds one Vitest project with one smoke test; the fan-out is `pnpm -r run test`. Pre-existing flake (§1/§10 of `deferred-items.md`) can make the fan-out intermittently red.
    - Recommendation: keep core's suite to a single fast test file; do not add jsdom rendering unless the assertion needs it.
 

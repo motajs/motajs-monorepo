@@ -74,11 +74,11 @@
 | N-12 | `lib/react/index.ts` re-export of `CoreProbe` | export | Makes the probe reachable from the `./react` subpath so it has a real entry path into the editor's build graph. Without it the editor could only reach the probe by file path, which would not exercise the package `exports` map it is supposed to prove. |
 | — | `lib/index.ts` + `lib/{code,table,map,asset,shell}/index.ts` | barrels *(derived from the locked subpath list)* | Six `export {}` barrels, one per non-probe subpath. They exist because an `exports` target must be a real file on disk, and because dependency-cruiser's DAG rules need a file node per subpath. The root `lib/index.ts` must not re-export the capability subpaths. |
 
-**Deliberately absent from Plan 01:** no `src/` directory, no `panda.config.ts` under core, no `build` script, no `peerDependencies` (Plan 02 owns the PKG-02 peer block).
+**Deliberately absent from Plan 01:** no `src/` directory, no `panda.config.ts` under core, no `build` script, no named props type — the probe types its props inline at the parameter, so no unconfirmed type name is introduced and the confirmed set stays exactly N-01..N-12 — and no `peerDependencies` (Plan 02 owns the PKG-02 peer block).
 
 ## Section 2 — Plan 02
 
-**Plan:** `02-02-PLAN.md` — *catalog gaps, nine peers with Semi optional, and the machine-checked core manifest* (wave 2; depends on 01-01; requirements PKG-01, PKG-02).
+**Plan:** `02-02-PLAN.md` — *catalog gaps, nine peers with Semi optional, and the machine-checked core manifest* (wave 2; depends on 02-01; requirements PKG-01, PKG-02).
 **Names this plan introduces:** N-06, N-11.
 
 | # | Name | Kind | What it is for |
@@ -92,7 +92,7 @@
 
 ## Section 3 — Plan 03
 
-**Plan:** `02-03-PLAN.md` — *boundary gate and consumer-pipeline coverage* (wave 3; depends on 01-01, 02-02; requirements PKG-03, PKG-04, PKG-05, VERIFY-05; contains one blocking human checkpoint).
+**Plan:** `02-03-PLAN.md` — *boundary gate and consumer-pipeline coverage* (wave 3; depends on 02-01, 02-02; requirements PKG-03, PKG-04, PKG-05, VERIFY-05; contains one blocking human checkpoint).
 **Names this plan introduces:** N-07, N-08, N-09, N-10.
 
 | # | Name | Kind | What it is for |

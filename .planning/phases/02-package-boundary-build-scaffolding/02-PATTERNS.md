@@ -315,12 +315,8 @@ Sketch the planner should reproduce (not verbatim from any file — composite):
 import { useState } from 'react';
 import { css } from '@styled-system/css';
 
-export interface ICoreProbeProps {
-  label?: string;
-}
-
 /** Phase 2 scaffolding probe — replaced/deleted in Phase 4+. */
-export function CoreProbe({ label = 'editor-core probe' }: ICoreProbeProps): JSX.Element {
+export function CoreProbe({ label = 'editor-core probe' }: { label?: string }): JSX.Element {
   const [count] = useState(0);
   return <div className={css`display: block;`}>{`${label}:${count}`}</div>;
 }
