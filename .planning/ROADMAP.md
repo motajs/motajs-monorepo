@@ -90,7 +90,20 @@ Plans:
   4. PandaCSS generates a known core class and React Compiler transforms core TSX (both probed; workarounds applied if not).
   5. `dependency-cruiser` rules (forbidden edges, singleton `requireZero`, no-cycles) run in CI and fail on violation.
 
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+**Wave 1**
+
+- [ ] 02-01-PLAN.md — Create the `editor-core` skeleton, the probe, core's own Vitest project and the editor's cross-package resolution wiring (PKG-01, PKG-03)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 02-02-PLAN.md — Fill the catalog gaps, declare the nine peers with Semi optional, and machine-check the package manifest, subpath status and single-copy resolution (PKG-01, PKG-02)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 02-03-PLAN.md — Install the pinned boundary gate, assert PandaCSS extraction and React Compiler coverage, and wire all three into the existing four CI jobs (PKG-03, PKG-04, PKG-05, VERIFY-05)
+
 **UI hint**: yes
 
 ### Phase 3: Kernel — Runtime, Ports, Registry, Diagnostics
@@ -253,7 +266,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Baseline & Verification Net | 10/10 | Complete    | 2026-09-21 |
-| 2. Package Boundary & Build Scaffolding | 0/TBD | Not started | - |
+| 2. Package Boundary & Build Scaffolding | 0/3 | Planned | - |
 | 3. Kernel — Runtime, Ports, Registry, Diagnostics | 0/TBD | Not started | - |
 | 4. Resource + Edit Layers Moved | 0/TBD | Not started | - |
 | 5. Engine Adapter Skeleton & Resource Descriptors | 0/TBD | Not started | - |
