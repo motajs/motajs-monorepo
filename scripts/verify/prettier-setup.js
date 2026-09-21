@@ -9,10 +9,13 @@
  *   2. `.prettierignore` 真的把 pnpm-lock.yaml、`.planning`、`packages/external`、
  *      styled-system、node_modules、dist 这些目录排除在外；
  *   3. 根 `package.json` 暴露 `format` 与 `format:check`，且指向 Prettier CLI；
- *   4. `pnpm-lock.yaml` 声明了三个新增 devDependency。
+ *   4. `pnpm-lock.yaml` 声明了三个新增 devDependency；
+ *   5. ESLint 的「解析后配置」（不是配置文件源码）里，editor 文件与非 editor 文件都把
+ *      `prettier/prettier` 报成 error，而 `@stylistic/quotes` 已被关闭；共享规则集未被削弱。
  *
- * 不访问网络、不导入任何 workspace 包；只用仓库自己的 node_modules 里的 Prettier。
+ * 不访问网络、不导入任何 workspace 包；只用仓库自己的 node_modules 里的 Prettier 与 ESLint。
  */
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
@@ -54,6 +57,14 @@ const MUST_BE_IGNORED = [
 
 /** 本 plan 新增的三个 devDependency。 */
 const NEW_DEV_DEPENDENCIES = ["prettier", "eslint-config-prettier", "eslint-plugin-prettier"];
+
+const ESLINT_BIN_PATH = path.join(REPO_ROOT, "node_modules", "eslint", "bin", "eslint.js");
+
+/** 必须解析出同一套 Prettier 规则的两种文件（一个走共享根配置，一个走 editor 自己的配置）。 */
+const ESLINT_TARGETS = [
+  ["非 editor 文件", "scripts/baseline/collect.js"],
+  ["editor 文件", "packages/apps/editor/src/hooks/useImageAssetUrl.ts"],
+];
 
 // ==================== 断言工具 ====================
 
@@ -159,6 +170,93 @@ function checkLockfile() {
   }
 }
 
+// ==================== 断言：ESLint 解析后的配置 ====================
+
+/**
+ * 取一个文件在 ESLint 里「实际生效」的规则配置。
+ *
+ * 断言建立在解析后的对象上，绝不匹配配置文件的源码文本：配置文件里本来就会同时出现
+ * `prettier/prettier` 与 `quotes: "single"`，按文本匹配既会误判也证明不了规则是否生效。
+ */
+function resolveEslintConfig(relativeFile) {
+  const result = spawnSync(process.execPath, [ESLINT_BIN_PATH, "--print-config", relativeFile], {
+    cwd: REPO_ROOT,
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  if (result.status !== 0) {
+    const detail = (result.stderr || result.stdout || "").trim().replace(/\s+/g, " ");
+    return { error: detail.slice(-400) || `eslint --print-config 退出码 ${result.status}` };
+  }
+  try {
+    return { config: JSON.parse(result.stdout) };
+  } catch (error) {
+    return { error: `无法解析 --print-config 的 JSON 输出：${error instanceof Error ? error.message : String(error)}` };
+  }
+}
+
+/** 规则配置可能是数字、字符串或 `[severity, ...options]`，统一取 severity。 */
+function ruleSeverity(ruleConfig) {
+  if (ruleConfig === undefined) return undefined;
+  return Array.isArray(ruleConfig) ? ruleConfig[0] : ruleConfig;
+}
+
+function isErrorSeverity(severity) {
+  return severity === 2 || severity === "error";
+}
+
+function isOffSeverity(severity) {
+  return severity === 0 || severity === "off";
+}
+
+function checkEslintConfig() {
+  if (!fs.existsSync(ESLINT_BIN_PATH)) {
+    failures.push(`找不到 ESLint CLI（${path.relative(REPO_ROOT, ESLINT_BIN_PATH)}）—— 无法验证解析后的规则配置`);
+    return;
+  }
+  for (const [label, relativeFile] of ESLINT_TARGETS) {
+    const { config, error } = resolveEslintConfig(relativeFile);
+    if (error) {
+      failures.push(`无法解析${label}（${relativeFile}）的 ESLint 配置：${error}`);
+      continue;
+    }
+    const rules = config.rules ?? {};
+    check(
+      isErrorSeverity(ruleSeverity(rules["prettier/prettier"])),
+      `${label}（${relativeFile}）的解析配置里 prettier/prettier 不是 error，实际是 ${JSON.stringify(rules["prettier/prettier"])}`,
+    );
+    const quotesRule = rules["@stylistic/quotes"];
+    check(
+      quotesRule === undefined || isOffSeverity(ruleSeverity(quotesRule)),
+      `${label}（${relativeFile}）的解析配置里 @stylistic/quotes 仍然生效，实际是 ${JSON.stringify(quotesRule)}`,
+    );
+  }
+}
+
+/** 共享根规则集在加入 Prettier 之后仍然完整（非 editor 文件仍然受类型/React 规则约束）。 */
+function checkSharedRuleSetIntact() {
+  const { config, error } = resolveEslintConfig("scripts/baseline/collect.js");
+  if (error) {
+    failures.push(`无法解析共享根规则集：${error}`);
+    return;
+  }
+  const rules = config.rules ?? {};
+  check(
+    rules["@typescript-eslint/no-explicit-any"] !== undefined,
+    "共享根规则集丢失了 @typescript-eslint/no-explicit-any",
+  );
+  check(
+    Object.prototype.hasOwnProperty.call(rules, "react-hooks/rules-of-hooks"),
+    "共享根规则集丢失了 react-hooks/rules-of-hooks",
+  );
+  const pluginNames = Array.isArray(config.plugins) ? config.plugins : Object.keys(config.plugins ?? {});
+  // --print-config 输出的插件名可能是 `name` 或 `name:package@version` 两种形态。
+  const hasPlugin = (name) => pluginNames.some((entry) => entry === name || entry.startsWith(`${name}:`));
+  for (const plugin of ["react-hooks", "react-refresh", "prettier"]) {
+    check(hasPlugin(plugin), `共享根规则集丢失了插件 ${plugin}`);
+  }
+}
+
 // ==================== 入口 ====================
 
 async function main() {
@@ -167,6 +265,8 @@ async function main() {
   await checkIgnoreRules();
   checkScripts();
   checkLockfile();
+  checkEslintConfig();
+  checkSharedRuleSetIntact();
 
   if (failures.length > 0) {
     for (const failure of failures) console.error(`prettier-setup: ${failure}`);
