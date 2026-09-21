@@ -243,12 +243,12 @@ scripts/verify/
 ├── prettier-setup.js         # existing
 ├── lint-severities.js        # existing
 ├── e2e-prerequisite.js       # existing
-├── core-exports.js           # NEW  PKG-01/02: exports shape + peer/catalog declarations + realpath dedupe (D-15)
-├── core-panda-class.js       # NEW  PKG-04 (D-10)
-├── core-react-compiler.js    # NEW  PKG-05 (D-11)
-└── core-boundaries.js        # NEW  VERIFY-05 harness + two-polarity proof (D-14/D-17)
+├── coreExports.js           # NEW  PKG-01/02: exports shape + peer/catalog declarations + realpath dedupe (D-15)
+├── corePandaClass.js       # NEW  PKG-04 (D-10)
+├── coreReactCompiler.js    # NEW  PKG-05 (D-11)
+└── coreBoundaries.js        # NEW  VERIFY-05 harness + two-polarity proof (D-14/D-17)
 
-.dependency-cruiser.cjs       # NEW  root config, cruises packages/libs/editor-core/lib only
+.dependencyCruiser.cjs       # NEW  root config, cruises packages/libs/editor-core/lib only
 ```
 
 *(`core-*` file names are proposals — per AGENTS.md they must be confirmed in `INTERFACE-NAME.md` before implementation.)*
@@ -623,7 +623,7 @@ export default defineConfig({
 ### dependency-cruiser rules (VERIFY-05) — syntax from the official reference
 
 ```js
-// .dependency-cruiser.cjs  (root; cruise target: packages/libs/editor-core/lib)
+// .dependencyCruiser.cjs  (root; cruise target: packages/libs/editor-core/lib)
 module.exports = {
   forbidden: [
     {
@@ -670,7 +670,7 @@ module.exports = {
 ```
 `[CITED: github.com/sverweij/dependency-cruiser/blob/main/doc/rules-reference.md]` — the reference confirms: `forbidden` rules carry `name`/`comment`/`severity`; `from.path`/`to.path` are regular expressions over project-root-relative paths with forward slashes; `'group matching'` allows `$1` in `to.path`/`to.pathNot` when `from.path` captures; `circular: true` is the no-cycles form; dependent-count attributes (`numberOfDependentsLessThan`/`MoreThan`) "**only work within the `forbidden` context**" and are written as `from` + `module` (not `required`); `severity: 'error'` is what makes the `err` reporter exit non-zero.
 
-CLI: `pnpm exec depcruise --config .dependency-cruiser.cjs packages/libs/editor-core/lib` (plus a second invocation/rule asserting the editor→core edge direction, per D-14).
+CLI: `pnpm exec depcruise --config .dependencyCruiser.cjs packages/libs/editor-core/lib` (plus a second invocation/rule asserting the editor→core edge direction, per D-14).
 
 ### The PKG-04 verifier's core operation (D-10)
 
@@ -738,10 +738,10 @@ Measured output for a real lib component contained `react/compiler-runtime.js?v=
    - Recommendation: keep it (honours D-02) but as an **optional** peer, and have the D-15 verifier assert the eight *consumed* singletons from editor+core while asserting Semi against service-worker — documenting why.
 
 3. **Should the `"各 subpath 内容状态"` manifest (D-01 discretion) be JSON or Markdown, and where?**
-   - Recommendation: a small JSON at `.planning/phases/02-package-boundary-build-scaffolding/subpath-status.json` (machine-checkable by the PKG-01 verifier, which can assert every `exports` target exists and is listed), plus one human sentence in the summary.
+   - Recommendation: a small JSON at `.planning/phases/02-package-boundary-build-scaffolding/subpathStatus.json` (machine-checkable by the PKG-01 verifier, which can assert every `exports` target exists and is listed), plus one human sentence in the summary.
 
 4. **Where should the dependency-cruiser config live and how should it be invoked?**
-   - Recommendation: root `.dependency-cruiser.cjs` (the tool's conventional name, ESLint/Prettier-adjacent config style in this repo), invoked as `pnpm exec depcruise --config .dependency-cruiser.cjs packages/libs/editor-core/lib` from a `scripts/verify/core-boundaries.js` wrapper (so the two-polarity proof and the editor→core edge assertion live in the repo's verifier convention).
+   - Recommendation: root `.dependencyCruiser.cjs` (the tool's conventional name, ESLint/Prettier-adjacent config style in this repo), invoked as `pnpm exec depcruise --config .dependencyCruiser.cjs packages/libs/editor-core/lib` from a `scripts/verify/coreBoundaries.js` wrapper (so the two-polarity proof and the editor→core edge assertion live in the repo's verifier convention).
 
 5. **Does `pnpm test` (root, 1257 tests) still run within a sane time once core is added?**
    - What we know: core adds one Vitest project with one smoke test; the fan-out is `pnpm -r run test`. Pre-existing flake (§1/§10 of `deferred-items.md`) can make the fan-out intermittently red.
@@ -785,27 +785,27 @@ Measured output for a real lib component contained `react/compiler-runtime.js?v=
 
 | Req ID | Behavior | Test Type | Automated Command | File Exists? |
 |--------|----------|-----------|-------------------|--------------|
-| PKG-01 | `packages/libs/editor-core` exists with `lib/` layout, `private`/`type`/`sideEffects`, and all 7 `exports` targets exist on disk | structural verifier | `node scripts/verify/core-exports.js` | ❌ Wave 0 |
-| PKG-02 | every singleton is a peer + catalog-declared, and resolves to exactly one realpath across consumers | structural verifier | `node scripts/verify/core-exports.js` (same script, second assertion) | ❌ Wave 0 |
+| PKG-01 | `packages/libs/editor-core` exists with `lib/` layout, `private`/`type`/`sideEffects`, and all 7 `exports` targets exist on disk | structural verifier | `node scripts/verify/coreExports.js` | ❌ Wave 0 |
+| PKG-02 | every singleton is a peer + catalog-declared, and resolves to exactly one realpath across consumers | structural verifier | `node scripts/verify/coreExports.js` (same script, second assertion) | ❌ Wave 0 |
 | PKG-03 | core's intra-package imports resolve the same way under `tsc -b` and Vite | unit + build | `pnpm typecheck` (core's own program) **and** `pnpm build` (editor program) **and** core's smoke test asserting the probe's symbol; plus a negative polarity proving a wrong import fails | ❌ Wave 0 (smoke test) + existing gates |
-| PKG-04 | PandaCSS extraction covers core and emits a known core class | extraction verifier | `node scripts/verify/core-panda-class.js` (runs `panda cssgen`, asserts `.display_block { display: block }`) | ❌ Wave 0 |
-| PKG-05 | React Compiler transforms core TSX | transform verifier | `node scripts/verify/core-react-compiler.js` (live Vite `transformRequest` on the probe, asserts `react/compiler-runtime` and `_c(`) | ❌ Wave 0 |
-| VERIFY-05 | dependency-cruiser rules run in CI and fail on violation | two-polarity gate verifier | `node scripts/verify/core-boundaries.js` (cruise the real tree → exit 0; cruise a synthetic violating fixture → non-zero, then clean up) | ❌ Wave 0 |
+| PKG-04 | PandaCSS extraction covers core and emits a known core class | extraction verifier | `node scripts/verify/corePandaClass.js` (runs `panda cssgen`, asserts `.display_block { display: block }`) | ❌ Wave 0 |
+| PKG-05 | React Compiler transforms core TSX | transform verifier | `node scripts/verify/coreReactCompiler.js` (live Vite `transformRequest` on the probe, asserts `react/compiler-runtime` and `_c(`) | ❌ Wave 0 |
+| VERIFY-05 | dependency-cruiser rules run in CI and fail on violation | two-polarity gate verifier | `node scripts/verify/coreBoundaries.js` (cruise the real tree → exit 0; cruise a synthetic violating fixture → non-zero, then clean up) | ❌ Wave 0 |
 
 ### Sampling Rate
 
 - **Per task commit:** the task's own narrow command (e.g. `pnpm --filter @motajs/editor-core typecheck`; the single relevant `node scripts/verify/…` script).
 - **Per wave merge:** `pnpm lint && pnpm typecheck && pnpm test` (the three fast gates), plus `node scripts/verify/ci-workflow.js` after any `ci.yml` edit.
-- **Phase gate:** all four CI jobs green (`pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`) **plus** `node scripts/verify/ci-workflow.js`, `node scripts/verify/core-exports.js`, `node scripts/verify/core-panda-class.js`, `node scripts/verify/core-react-compiler.js`, `node scripts/verify/core-boundaries.js`, `pnpm format:check`, and `git status --porcelain` clean — before `/gsd-verify-work`.
+- **Phase gate:** all four CI jobs green (`pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`) **plus** `node scripts/verify/ci-workflow.js`, `node scripts/verify/coreExports.js`, `node scripts/verify/corePandaClass.js`, `node scripts/verify/coreReactCompiler.js`, `node scripts/verify/coreBoundaries.js`, `pnpm format:check`, and `git status --porcelain` clean — before `/gsd-verify-work`.
 
 ### Wave 0 Gaps
 
 - [ ] `packages/libs/editor-core/package.json`, `tsconfig.json`, `vitest.config.ts`, and the 7 stub barrels + probe (the package itself)
 - [ ] `packages/libs/editor-core/lib/__tests__/<probe>.test.ts` — the mandatory smoke test (D-12; without it `pnpm -r run test` goes red — Pitfall 10)
-- [ ] `scripts/verify/core-exports.js` — PKG-01 + PKG-02 + D-15 realpath dedupe
-- [ ] `scripts/verify/core-panda-class.js` — PKG-04
-- [ ] `scripts/verify/core-react-compiler.js` — PKG-05
-- [ ] `scripts/verify/core-boundaries.js` (+ `.dependency-cruiser.cjs`) — VERIFY-05, with the two-polarity proof
+- [ ] `scripts/verify/coreExports.js` — PKG-01 + PKG-02 + D-15 realpath dedupe
+- [ ] `scripts/verify/corePandaClass.js` — PKG-04
+- [ ] `scripts/verify/coreReactCompiler.js` — PKG-05
+- [ ] `scripts/verify/coreBoundaries.js` (+ `.dependencyCruiser.cjs`) — VERIFY-05, with the two-polarity proof
 - [ ] `.planning/phases/02-package-boundary-build-scaffolding/INTERFACE-NAME.md` — AGENTS.md requires confirmed names **before** implementation (probe file/symbols, script file names, config file name)
 - [ ] Framework install: none — Vitest/Vite/Panda/Compiler are already present; only `dependency-cruiser` needs `pnpm add`
 

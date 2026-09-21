@@ -31,9 +31,9 @@ created: "2026-09-21"
 
 ## Sampling Rate
 
-- **After every task commit:** the task's own narrow command — e.g. `pnpm --filter @motajs/editor-core typecheck`, `node scripts/verify/core-exports.js`, or the single relevant verifier.
+- **After every task commit:** the task's own narrow command — e.g. `pnpm --filter @motajs/editor-core typecheck`, `node scripts/verify/coreExports.js`, or the single relevant verifier.
 - **After every plan wave:** `pnpm lint && pnpm typecheck && pnpm test` (the three fast gates); plus `node scripts/verify/ci-workflow.js` after any `.github/workflows/ci.yml` edit.
-- **Before `/gsd-verify-work`:** all four CI jobs green (`pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`) **plus** `node scripts/verify/ci-workflow.js`, `node scripts/verify/core-exports.js`, `node scripts/verify/core-panda-class.js`, `node scripts/verify/core-react-compiler.js`, `node scripts/verify/core-boundaries.js`, `pnpm format:check`, and a clean `git status --porcelain`.
+- **Before `/gsd-verify-work`:** all four CI jobs green (`pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`) **plus** `node scripts/verify/ci-workflow.js`, `node scripts/verify/coreExports.js`, `node scripts/verify/corePandaClass.js`, `node scripts/verify/coreReactCompiler.js`, `node scripts/verify/coreBoundaries.js`, `pnpm format:check`, and a clean `git status --porcelain`.
 - **Max feedback latency:** 90 seconds (full root fan-out); ≤10 s for any single verifier.
 
 ---
@@ -42,12 +42,12 @@ created: "2026-09-21"
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| TBD | TBD | 1 | PKG-01 | T-02-01 | Package manifest cannot be resolved to an untracked/gitignored path; all 7 `exports` targets exist on disk | structural verifier | `node scripts/verify/core-exports.js` | ❌ W0 | ⬜ pending |
-| TBD | TBD | 1 | PKG-02 | T-02-01 | Every singleton resolved to exactly one realpath; no duplicate installed copy masks a boundary break | structural verifier | `node scripts/verify/core-exports.js` (second assertion) | ❌ W0 | ⬜ pending |
+| TBD | TBD | 1 | PKG-01 | T-02-01 | Package manifest cannot be resolved to an untracked/gitignored path; all 7 `exports` targets exist on disk | structural verifier | `node scripts/verify/coreExports.js` | ❌ W0 | ⬜ pending |
+| TBD | TBD | 1 | PKG-02 | T-02-01 | Every singleton resolved to exactly one realpath; no duplicate installed copy masks a boundary break | structural verifier | `node scripts/verify/coreExports.js` (second assertion) | ❌ W0 | ⬜ pending |
 | TBD | TBD | 1 | PKG-03 | T-02-03 | A wrong `@/` import must fail loudly (no silent cross-package misresolution) | unit + build | `pnpm typecheck` (core program) **and** `pnpm build` (editor program) **and** core smoke test on the probe symbol | ❌ W0 + existing gates | ⬜ pending |
-| TBD | TBD | 1 | PKG-04 | — | PandaCSS extraction cannot silently miss core source (which would ship unstyled components) | extraction verifier | `node scripts/verify/core-panda-class.js` (`panda cssgen`, asserts `.display_block { display: block }`) | ❌ W0 | ⬜ pending |
-| TBD | TBD | 1 | PKG-05 | — | React Compiler coverage cannot silently regress to untransformed TSX | transform verifier | `node scripts/verify/core-react-compiler.js` (live Vite `transformRequest`; asserts `react/compiler-runtime` and `_c(`) | ❌ W0 | ⬜ pending |
-| TBD | TBD | 1 | VERIFY-05 | T-02-03 | A boundary gate that never fires must be caught — synthetic violation must be reported, and `couldNotResolve` cannot mask the DAG rules | two-polarity gate verifier | `node scripts/verify/core-boundaries.js` (real tree → exit 0; synthetic violating fixture → non-zero, then clean up) | ❌ W0 | ⬜ pending |
+| TBD | TBD | 1 | PKG-04 | — | PandaCSS extraction cannot silently miss core source (which would ship unstyled components) | extraction verifier | `node scripts/verify/corePandaClass.js` (`panda cssgen`, asserts `.display_block { display: block }`) | ❌ W0 | ⬜ pending |
+| TBD | TBD | 1 | PKG-05 | — | React Compiler coverage cannot silently regress to untransformed TSX | transform verifier | `node scripts/verify/coreReactCompiler.js` (live Vite `transformRequest`; asserts `react/compiler-runtime` and `_c(`) | ❌ W0 | ⬜ pending |
+| TBD | TBD | 1 | VERIFY-05 | T-02-03 | A boundary gate that never fires must be caught — synthetic violation must be reported, and `couldNotResolve` cannot mask the DAG rules | two-polarity gate verifier | `node scripts/verify/coreBoundaries.js` (real tree → exit 0; synthetic violating fixture → non-zero, then clean up) | ❌ W0 | ⬜ pending |
 
 *Plan/task IDs are assigned by gsd-planner; this map is keyed by requirement and is filled in as plans land.*
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
@@ -58,10 +58,10 @@ created: "2026-09-21"
 
 - [ ] `packages/libs/editor-core/package.json`, `tsconfig.json`, `vitest.config.ts`, the 7 stub barrels + the `lib/react/` probe (the package itself)
 - [ ] `packages/libs/editor-core/lib/__tests__/<probe>.test.ts` — the mandatory smoke test (D-12; without it `pnpm -r run test` goes red — Pitfall 10: `vitest run` exits non-zero on "no test files")
-- [ ] `scripts/verify/core-exports.js` — PKG-01 + PKG-02 + D-15 realpath dedupe
-- [ ] `scripts/verify/core-panda-class.js` — PKG-04
-- [ ] `scripts/verify/core-react-compiler.js` — PKG-05
-- [ ] `scripts/verify/core-boundaries.js` + dependency-cruiser config — VERIFY-05, with the two-polarity proof
+- [ ] `scripts/verify/coreExports.js` — PKG-01 + PKG-02 + D-15 realpath dedupe
+- [ ] `scripts/verify/corePandaClass.js` — PKG-04
+- [ ] `scripts/verify/coreReactCompiler.js` — PKG-05
+- [ ] `scripts/verify/coreBoundaries.js` + dependency-cruiser config — VERIFY-05, with the two-polarity proof
 - [ ] `.planning/phases/02-package-boundary-build-scaffolding/INTERFACE-NAME.md` — `AGENTS.md` Project Rules require confirmed names **before** implementation (probe file/symbols, script file names, config file name, subpath-status manifest)
 - [ ] Framework install: none — Vitest/Vite/PandaCSS/React Compiler are already present; only `dependency-cruiser` needs adding (pin `18.2.0` per the release-age finding), and host unit/build config edits (editor `vite.config.ts` / `vitest.config.ts` `@` alias → `resolvePlugin`)
 
@@ -73,7 +73,7 @@ created: "2026-09-21"
 
 | Behavior | Requirement | Why Manual | Test Instructions |
 |----------|-------------|------------|-------------------|
-| `requireZero` rule is *attached and running* in Phase 2 even though core has no singletons yet (empty set passes), so it auto-activates in Phase 3 | VERIFY-05 (D-17) | The rule's subject does not exist yet; a machine check can only prove the rule is configured, not that it will bite later | Inspect the dependency-cruiser config for the singleton rule; confirm `core-boundaries.js` cruises with the rule present and reports zero violations; re-confirm in Phase 3 once `lib/kernel/core.ts` + the 6 singletons exist |
+| `requireZero` rule is *attached and running* in Phase 2 even though core has no singletons yet (empty set passes), so it auto-activates in Phase 3 | VERIFY-05 (D-17) | The rule's subject does not exist yet; a machine check can only prove the rule is configured, not that it will bite later | Inspect the dependency-cruiser config for the singleton rule; confirm `coreBoundaries.js` cruises with the rule present and reports zero violations; re-confirm in Phase 3 once `lib/kernel/core.ts` + the 6 singletons exist |
 
 *All other phase behaviors have automated verification. The PKG-03 blocking contradiction (research Q1) may add one manual/structural item once the user decides.*
 
