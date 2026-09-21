@@ -1,0 +1,24 @@
+# 依赖与构建产物
+node_modules
+**/dist
+**/styled-system
+coverage
+playwright-report
+test-results
+
+# 第三方 vendored 代码与 GSD 规划证据：绝不改写
+packages/external
+.planning
+
+# 由 pnpm 维护，不做格式改写
+pnpm-lock.yaml
+
+# 遗留的第二套打包工具链（未被引用）
+packages/libs/packer/prev
+
+# Markdown 与 YAML 不在 Prettier 范围内：
+# - 仓库 Markdown 多为中文长文，且 AGENTS.md 由 GSD 重新生成；
+# - pnpm-workspace.yaml / .github/workflows/*.yml 是手工维护的配置。
+*.md
+*.yml
+*.yaml

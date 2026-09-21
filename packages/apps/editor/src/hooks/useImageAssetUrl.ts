@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
-import { projectAssets } from "@/project/assets";
-import { useSignal } from "./useFs";
+import { useEffect, useMemo, useState } from 'react';
+import { projectAssets } from '@/project/assets';
+import { useSignal } from './useFs';
 
 export function useImageAssetUrl(path: string): { url: string | null; revision: number } {
   const resource = useMemo(() => projectAssets.image(path), [path]);
@@ -11,13 +11,13 @@ export function useImageAssetUrl(path: string): { url: string | null; revision: 
   });
 
   useEffect(() => {
-    if (content.status === "idle") void resource.ensureLoaded();
+    if (content.status === 'idle') void resource.ensureLoaded();
   }, [content.status, resource]);
 
   useEffect(() => {
-    if (content.status !== "loaded") return;
+    if (content.status !== 'loaded') return;
     const bytes = new Uint8Array(content.value.bytes);
-    const url = URL.createObjectURL(new Blob([bytes.buffer], { type: "image/png" }));
+    const url = URL.createObjectURL(new Blob([bytes.buffer], { type: 'image/png' }));
     setPresentation({ url, revision: content.value.revision });
     return () => URL.revokeObjectURL(url);
   }, [content]);

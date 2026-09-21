@@ -7,6 +7,8 @@
   "scripts": {
     "lint": "eslint .",
     "lint:fix": "eslint --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "test": "pnpm -r run test",
     "typecheck": "pnpm -r run typecheck",
     "build": "pnpm -r run build"
@@ -19,11 +21,14 @@
     "@stylistic/eslint-plugin": "catalog:default",
     "@vitejs/plugin-react": "catalog:default",
     "eslint": "catalog:default",
+    "eslint-config-prettier": "catalog:default",
+    "eslint-plugin-prettier": "catalog:default",
     "eslint-plugin-react-hooks": "catalog:default",
     "eslint-plugin-react-hooks-better-stable": "catalog:default",
     "eslint-plugin-react-refresh": "catalog:default",
     "fast-check": "catalog:default",
     "globals": "catalog:default",
+    "prettier": "catalog:default",
     "typescript": "catalog:default",
     "typescript-eslint": "catalog:default",
     "typescript-plugin-css-modules": "catalog:default",
