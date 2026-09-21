@@ -126,6 +126,7 @@ export function RuntimeProvider({ children }: { children?: ReactNode }) {
             if (!ready) reject(error);
             else if (automaticRetryRef.current < 1) {
               automaticRetryRef.current += 1;
+              // eslint-disable-next-line react-hooks/immutability -- 重试必须调用当前的 start 回调；改用 ref 打破该引用会改变握手重试的时序
               window.setTimeout(() => void start(), 0);
             } else setState({ status: 'error', error });
             return;

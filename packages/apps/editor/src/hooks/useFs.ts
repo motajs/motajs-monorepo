@@ -4,7 +4,7 @@
  * 提供 FS 层的所有 React Hooks
  */
 
-import { useCallback, useSyncExternalStore } from 'react';
+import { useMemo, useSyncExternalStore } from 'react';
 import { effect } from 'alien-signals';
 import type { Content } from '@/fs/types';
 import type { FileHandler } from '@/fs/FileHandler';
@@ -44,7 +44,10 @@ export type UpdateFn<T> = {
 };
 
 export function useHandlerUpdate<T>(handler: IContentHandler<T>): UpdateFn<T> {
-  return useCallback(handler.update.bind(handler), [handler]);
+  // useCallback(handler.update.bind(handler), [handler]) 的等价写法：useCallback(fn, deps) 本就是
+  // useMemo(() => fn, deps)，返回值与依赖完全一致。因 UpdateFn 是重载类型，内联转发函数无法
+  // 无断言地满足全部重载，故用值记忆形式表达。
+  return useMemo(() => handler.update.bind(handler), [handler]);
 }
 
 /**
