@@ -3,11 +3,11 @@ gsd_state_version: "1.0"
 current_phase: 2
 current_phase_name: Package Boundary & Build Scaffolding
 status: planning
-stopped_at: "Phase 1 complete (10/10, verification PASSED). Branch strategy set to git.branching_strategy=phase in config; NO phase branch created yet (user instruction: create it only after Phase 2 starts). Phase 2 not started. main is 5 commits ahead of origin/main (unpushed)."
-last_updated: "2026-09-21T09:39:12.754Z"
+stopped_at: Phase 2 context gathered
+last_updated: "2026-09-21T10:48:56.784Z"
 last_activity: 2026-09-21
 last_activity_desc: Phase 01 complete, transitioned to Phase 2
-state_head: 5b18b25e2bffcbc4659b824d8d5e13a4056f0b0d
+state_head: 552208f09042fb29792a51ed8d6137bdac04d03a
 progress:
   total_phases: 12
   completed_phases: 1
@@ -65,6 +65,7 @@ Recent decisions affecting current work:
 - [Roadmap]: 12-phase structure adopted — verification net first, then boundary, kernel, verbatim resource/edit moves, adapter skeleton, shell, capabilities least-coupled-first (table→code→asset→map), preview/cutover, then extension freeze + parity gate.
 - [Roadmap]: `editor-core` package uses `lib/` (never `src/`) per `resolvePlugin.js` and `tsconfig.lib.base.json`; subpath exports (`.`, `./code`, `./table`, `./map`, `./asset`, `./shell`, `./react`) created up front.
 - [Roadmap]: Per-instance `EditorCore` via `createEditorCore(config)` replaces the six module singletons; registration returns diagnostics+rollback, construction fails loudly on unresolved required registration.
+- [Process, 2026-09-21]: Per-phase branches are **semantic and manually created** (`editor/<topic>`); `git.branching_strategy` is now `none` so GSD no longer auto-creates `gsd/phase-*`. Phase 2 → `editor/boundary`. Planned: 3 `editor/kernel`, 4 `editor/resources`, 5 `editor/adapter`, 6 `editor/shell`, 7 `editor/table`, 8 `editor/code`, 9 `editor/asset`, 10 `editor/map`, 11 `editor/cutover`, 12 `editor/parity`.
 
 ### Pending Todos
 
@@ -74,7 +75,7 @@ None yet.
 
 - Phase 8 (Code) needs the Blockly split confirmed before planning; Phase 10 (Map) and Phase 11 (Preview/cutover) are flagged for phase-specific research.
 - Phase 7 (Table) has an open design question: built-in primitive field types vs engine-supplied, and whether the field-editor registry is core-mechanism or fully adapter-provided.
-- Phase 2 carries two MEDIUM-confidence open items (PandaCSS `include` across the package boundary, React Compiler coverage of `packages/libs/**`) — budget spikes, not research phases.
+- Phase 2 carries two MEDIUM-confidence open items — **now decided in 02-CONTEXT.md (D-09 PandaCSS 单点 include、D-11 React Compiler 先验证默认)**; verification still pending implementation, budget spikes not research phases.
 
 ## Deferred Items
 
@@ -86,6 +87,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-09-21T09:39:12.645Z
-Stopped at: Phase 1 complete (10/10, verification PASSED). Branch strategy set to git.branching_strategy=phase in config; NO phase branch created yet (user instruction: create it only after Phase 2 starts). Phase 2 not started. main is 5 commits ahead of origin/main (unpushed).
-Resume file: .planning/ROADMAP.md
+Last session: 2026-09-21T10:48:56.694Z
+Stopped at: Phase 2 context gathered
+Resume file: .planning/phases/02-package-boundary-build-scaffolding/02-CONTEXT.md
