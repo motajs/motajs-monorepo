@@ -98,6 +98,11 @@
 - [x] **VERIFY-03**: `PersistExecutor`/`PersistenceMonitor` 特性化测试（错误→重试→idle、并发 latest-wins、持久化失败不回滚 UI）
 - [x] **VERIFY-04**: `operationHistory` 特性化测试（容量 100、逆操作、多目标 checkpoint rollback、`set`/`patch` 后资源响应性）
 - [ ] **VERIFY-05**: `dependency-cruiser` 规则接入 CI（禁止边、singleton 的 `requireZero`、no-cycles）
+
+  > **注（2026-09-21 澄清）**：`requireZero` **不是** dependency-cruiser 或 ESLint 的选项，而是研究阶段提案里的示意简写，唯一出处为 `.planning/research/ARCHITECTURE.md:476`（一个虚构的 `tooling/boundaries.json`），后被抄进 `ROADMAP.md:91` 与本条。
+  > 其真实含义是：**core 中的模块级 singleton 必须具有零个边界外依赖者**——只允许 composition root（`lib/kernel/core.ts`）导入它们，任何其他文件导入都算违规。它针对的是 core 自己的 6 个模块级 singleton（`projectData`/`projectModel`/`operationHistory`/`FileHandlerManager`/`persistenceMonitor`/`editorConfigService`），目的是在第一天就把 singleton 的引用面锁死在 composition root，避免四个能力迁完后才暴露 per-instance 障碍。
+  > dependency-cruiser 只有 `forbidden`/`allowed`/`required` 三类规则，因此「零依赖者」需表达成普通规则，例如 `forbidden`（`from: { pathNot: '^lib/kernel/core\\.ts$' }`、`to: { path: '…singleton…' }`）或 `required`（`module: { path: '…singleton…', numberOfDependentsLessThan: 1 }`）。
+  > **与 PKG-02 区分**：本条约束的是 **core 自身模块级 singleton 的引用面**；PKG-02 约束的是 **外部单例库（react/antd/…）的 peerDependencies 去重**，两者不是同一件事。
 - [x] **VERIFY-06**: 静默跳过的 e2e 转为必需 fixture 或 CI 可见标记
 - [x] **VERIFY-07**: 保留既有 `runtimeProtocolVersion: 3` vs `RUNTIME_PROTOCOL_VERSION = 4` 不一致（不做「修复」），并有生成式断言记录协议常量
 - [ ] **VERIFY-08**: Phase 12 端到端执行「Looks Done But Isn't」清单（双 core 隔离、fake engine-B、dedupe 断言、体积预算、无 re-export-only 文件、无环、e2e 确实运行、视觉一致、生成 CSS 含 core class、单 React 实例 + 信号传播 smoke）
