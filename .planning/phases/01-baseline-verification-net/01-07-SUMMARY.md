@@ -51,7 +51,7 @@ patterns-established:
   - "Pull-request gate independent of deploy: ci.yml carries no secret and no environment, so the deploy workflow's secrets stay exclusively in its own file"
   - "Contract verifier for CI job ids: the workflow's structure is asserted by a runnable script whose failure message names the violated rule"
 
-requirements-completed: []   # VERIFY-02 is NOT complete: Task 1 delivers the workflow and verifier, but the merge-blocking half is Task 2's repository setting, which is still pending at this halt.
+requirements-completed: [VERIFY-02]   # Resolved 2026-09-21: Task 1 delivered the workflow + verifier (machine-verified), Task 2's repository setting was completed by the user.
 
 coverage:
   - id: D1
@@ -88,7 +88,12 @@ coverage:
 
 duration: 27min
 completed: 2026-09-21
-status: halted
+status: complete
+# Resolution (2026-09-21): the human checkpoint (Task 2) was completed by the user — the four
+# job ids (lint, typecheck, unit, build) are registered as required status checks on `main`.
+# Evidence limitation: `gh` is not installed in this environment, so the GitHub repository
+# setting cannot be machine-verified from here; the structural half IS machine-verified by
+# `scripts/verify/ci-workflow.js` (exit 0) and the registration is confirmed by the user.
 ---
 
 # Phase 01 Plan 07: Baseline & Verification Net Summary
