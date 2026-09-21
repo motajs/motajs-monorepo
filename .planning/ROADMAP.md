@@ -13,7 +13,7 @@ This milestone is a **packaging and boundary milestone**, not a feature mileston
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Baseline & Verification Net** - Quantify the current behavior and make the test/CI safety net actually run before any code moves
+- [x] **Phase 1: Baseline & Verification Net** - Quantify the current behavior and make the test/CI safety net actually run before any code moves (completed 2026-09-21)
 - [ ] **Phase 2: Package Boundary & Build Scaffolding** - Create `packages/libs/editor-core` and enforce the boundary, resolution, styling, and compiler rules
 - [ ] **Phase 3: Kernel — Runtime, Ports, Registry, Diagnostics** - Replace the six module singletons with a per-instance `EditorCore`, public capability registry, and declared ports
 - [ ] **Phase 4: Resource + Edit Layers Moved** - Relocate the engine-agnostic resource and edit layers verbatim, preserving all invariants
@@ -45,37 +45,37 @@ Decimal phases appear between their surrounding integers in numeric order.
 Plans:
 **Wave 1**
 
-- [ ] 01-01-PLAN.md — Repair the local environment and initialize the `mota-js` submodule (VERIFY-01)
+- [x] 01-01-PLAN.md — Repair the local environment and initialize the `mota-js` submodule (VERIFY-01)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 01-02-PLAN.md — Record the quantified baseline: unit/e2e counts, build artifact vs 20 MiB, manifest, protocol constants, four-editor screenshots (VERIFY-01)
+- [x] 01-02-PLAN.md — Record the quantified baseline: unit/e2e counts, build artifact vs 20 MiB, manifest, protocol constants, four-editor screenshots (VERIFY-01)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 01-03-PLAN.md — Characterization tests freezing the persistence invariants (VERIFY-03)
-- [ ] 01-04-PLAN.md — Characterization tests freezing the history invariants (VERIFY-04)
-- [ ] 01-05-PLAN.md — Required e2e fixture replacing the silent skip, plus the manifest protocol assertion (VERIFY-06, VERIFY-07)
+- [x] 01-03-PLAN.md — Characterization tests freezing the persistence invariants (VERIFY-03)
+- [x] 01-04-PLAN.md — Characterization tests freezing the history invariants (VERIFY-04)
+- [x] 01-05-PLAN.md — Required e2e fixture replacing the silent skip, plus the manifest protocol assertion (VERIFY-06, VERIFY-07)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 01-06-PLAN.md — Editor `vitest.config.ts` split, per-package `typecheck`, root fan-out scripts (VERIFY-02)
+- [x] 01-06-PLAN.md — Editor `vitest.config.ts` split, per-package `typecheck`, root fan-out scripts (VERIFY-02)
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 01-08-PLAN.md — Adopt Prettier + `eslint-config-prettier` and normalize formatting to single quotes (VERIFY-02)
+- [x] 01-08-PLAN.md — Adopt Prettier + `eslint-config-prettier` and normalize formatting to single quotes (VERIFY-02)
 
 **Wave 6** *(blocked on Wave 5 completion)*
 
-- [ ] 01-09-PLAN.md — Make `pnpm lint` green: fix the remaining pre-existing lint errors (VERIFY-02)
+- [x] 01-09-PLAN.md — Make `pnpm lint` green: fix the remaining pre-existing lint errors (VERIFY-02)
 
 **Wave 7** *(blocked on Wave 6 completion)*
 
-- [ ] 01-10-PLAN.md — Adopt pnpm 12.5.1 as the single project toolchain version (VERIFY-02)
+- [x] 01-10-PLAN.md — Adopt pnpm 12.5.1 as the single project toolchain version (VERIFY-02)
 
 **Wave 8** *(blocked on Wave 7 completion)*
 
-- [ ] 01-07-PLAN.md — Four-job PR CI workflow and required status checks (VERIFY-02)
+- [x] 01-07-PLAN.md — Four-job PR CI workflow and required status checks (VERIFY-02)
 
 ### Phase 2: Package Boundary & Build Scaffolding
 
@@ -252,7 +252,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Baseline & Verification Net | 0/7 | Planned | - |
+| 1. Baseline & Verification Net | 10/10 | Complete    | 2026-09-21 |
 | 2. Package Boundary & Build Scaffolding | 0/TBD | Not started | - |
 | 3. Kernel — Runtime, Ports, Registry, Diagnostics | 0/TBD | Not started | - |
 | 4. Resource + Edit Layers Moved | 0/TBD | Not started | - |

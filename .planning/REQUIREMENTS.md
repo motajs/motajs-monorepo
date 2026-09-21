@@ -93,13 +93,13 @@
 
 ### Verification
 
-- [ ] **VERIFY-01**: 初始化 `packages/external/mota-js` submodule 并记录量化基线（各包单测、e2e、生产构建、产物体积对 20 MiB 上限、`editor-manifest.json`、协议常量、四大编辑器 + shell 截图）
-- [ ] **VERIFY-02**: 新增 PR CI：lint + per-package typecheck + 单测 + 生产构建
-- [ ] **VERIFY-03**: `PersistExecutor`/`PersistenceMonitor` 特性化测试（错误→重试→idle、并发 latest-wins、持久化失败不回滚 UI）
-- [ ] **VERIFY-04**: `operationHistory` 特性化测试（容量 100、逆操作、多目标 checkpoint rollback、`set`/`patch` 后资源响应性）
+- [x] **VERIFY-01**: 初始化 `packages/external/mota-js` submodule 并记录量化基线（各包单测、e2e、生产构建、产物体积对 20 MiB 上限、`editor-manifest.json`、协议常量、四大编辑器 + shell 截图）
+- [x] **VERIFY-02**: 新增 PR CI：lint + per-package typecheck + 单测 + 生产构建
+- [x] **VERIFY-03**: `PersistExecutor`/`PersistenceMonitor` 特性化测试（错误→重试→idle、并发 latest-wins、持久化失败不回滚 UI）
+- [x] **VERIFY-04**: `operationHistory` 特性化测试（容量 100、逆操作、多目标 checkpoint rollback、`set`/`patch` 后资源响应性）
 - [ ] **VERIFY-05**: `dependency-cruiser` 规则接入 CI（禁止边、singleton 的 `requireZero`、no-cycles）
-- [ ] **VERIFY-06**: 静默跳过的 e2e 转为必需 fixture 或 CI 可见标记
-- [ ] **VERIFY-07**: 保留既有 `runtimeProtocolVersion: 3` vs `RUNTIME_PROTOCOL_VERSION = 4` 不一致（不做「修复」），并有生成式断言记录协议常量
+- [x] **VERIFY-06**: 静默跳过的 e2e 转为必需 fixture 或 CI 可见标记
+- [x] **VERIFY-07**: 保留既有 `runtimeProtocolVersion: 3` vs `RUNTIME_PROTOCOL_VERSION = 4` 不一致（不做「修复」），并有生成式断言记录协议常量
 - [ ] **VERIFY-08**: Phase 12 端到端执行「Looks Done But Isn't」清单（双 core 隔离、fake engine-B、dedupe 断言、体积预算、无 re-export-only 文件、无环、e2e 确实运行、视觉一致、生成 CSS 含 core class、单 React 实例 + 信号传播 smoke）
 
 ## v2 Requirements
@@ -204,16 +204,17 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PKG-03 | 2 | Pending |
 | PKG-04 | 2 | Pending |
 | PKG-05 | 2 | Pending |
-| VERIFY-01 | 1 | Pending |
-| VERIFY-02 | 1 | Pending |
-| VERIFY-03 | 1 | Pending |
-| VERIFY-04 | 1 | Pending |
+| VERIFY-01 | 1 | Complete |
+| VERIFY-02 | 1 | Complete |
+| VERIFY-03 | 1 | Complete |
+| VERIFY-04 | 1 | Complete |
 | VERIFY-05 | 2 | Pending |
-| VERIFY-06 | 1 | Pending |
-| VERIFY-07 | 1 | Pending |
+| VERIFY-06 | 1 | Complete |
+| VERIFY-07 | 1 | Complete |
 | VERIFY-08 | 12 | Pending |
 
 **Coverage:**
+
 - v1 requirements: 62 total
 - Mapped to phases: 62
 - Unmapped: 0 ✓
