@@ -69,7 +69,7 @@ covered_files:
   - scripts/verify/e2e-prerequisite.js
   - scripts/verify/lint-severities.js
   - scripts/verify/prettier-setup.js
-covered_digest: "v1:sha256:036b8a434c0fd1f0668dc1055691b4404aefb1be9826157d85334c62ac494db4"
+covered_digest: "v1:sha256:25d3dd32a65d3e1aef80e90da9ff88584e7efcfad960601a9d96722d1498bd1c"
 behavior_unverified: 0
 overrides_applied: 0
 ---
