@@ -43,7 +43,8 @@
 
 <!-- Explicit boundaries. Includes reasoning to prevent re-adding. -->
 
-- `@motajs/editor-next`（新引擎专用编辑器）— 本期不构建，待 `editor-core` 生态稳定后另开里程碑
+- `@motajs/editor-next`（新引擎专用编辑器）— **不做**（方向已更新，见下方 Direction）
+- `@motajs/editor-type` 纯类型包及其在引擎内的编辑器上层实现 — 本期里程碑**只抽 `editor-core`**；`editor-type` 与「编辑器上层实现内置进引擎」为后续方向，待用户指示后更新 ROADMAP/REQUIREMENTS
 - 插件加载 / 注册 / 生命周期机制 — 本期只留扩展点，避免范围膨胀
 - 布局自定义 — 实现难度大、收益低，明确不做
 - `editor` 的功能、UI、宿主协议改动 — 本期为纯重构
@@ -58,6 +59,12 @@
 - 驱动此次拆分的三个原因：① 方便后续新引擎开发（新引擎可无负担地新增功能与配置）；② 支持丰富的插件生态，方便作者使用；③ 用一层底层接口统一新旧编辑器，不再维护多个版本。
 - UI 拷贝为简体中文；样式使用 antd + Semi UI + PandaCSS + CSS modules。
 
+### Direction (user-owned, updated 2026-09-21)
+
+- **`editor-next` 暂不做。** 顺序改为：先抽取 `editor-core`，再据此单独做一个 **`editor-type` 纯类型包**。
+- **编辑器本身不再写在当前项目里。** 后续由**引擎内置一系列内容、调用 `editor-type`**，完成编辑器的上层实现。
+- **方向由用户掌握。** 任何范围、架构方向、包结构、roadmap 变更都先听用户描述，不得擅自决定（见 `AGENTS.md` Project Rules）。
+
 ## Constraints
 
 - **Tech stack**: TypeScript 5.9 / React 19 / Vite 7 / pnpm workspace catalog 固定依赖版本 — 不因拆分引入不必要的运行时依赖
@@ -67,6 +74,8 @@
 - **Verification**: 判定「行为完全不变」的依据是现有测试全绿 + 关键流程手动验收
 - **Process**: 每个 plan 执行前，编排器必须先向用户简报（plan id/goal、大致内容、需要解决的问题、验证方式）并**等待批准**才可执行 — 该门禁覆盖 `--auto` 自动批准；详见 `AGENTS.md` 的 Project Rules
 - **Process**: 每个 plan 执行完毕后必须汇报「①刚完成计划的执行情况（结果/验证证据/偏差/提交）②下一个计划本身」，然后等待批准 — 不得静默进入下一个 plan
+- **Process**: 任何**重要命名**（文件名 / 接口名 / 方法名 / 函数名 / 类型名 / 包名 / 导出符号名；函数体内 `let`/`const` 临时变量除外）必须先反馈用户并确认才可落盘；反馈形式为对应 Phase 目录下的 `INTERFACE-NAME.md`，**每个 Plan 单独一节**，且每条须说明该命名是用来干什么的
+- **Process**: 用户提问时**只回答、不做任何修改**（不编辑文件、不提交、不建分支、不改配置），除非用户明确以「如果你的答案是 X，则执行 Y」授权动作
 
 ## Key Decisions
 
@@ -82,6 +91,9 @@
 | `editor-next` 推后到后续里程碑 | 本期只抽 core | — Pending |
 | 每个 plan 执行前必须向用户简报并等待批准 | 用户明确要求的执行前门禁，覆盖 `--auto` 自动批准 | — Pending |
 | Blockly 事件编辑器纳入 core 的 code 能力 | 现有编辑器已有 Blockly 事件编辑器，属既有能力下沉，非新增 | — Pending |
+| 重要命名必须先经用户确认（`INTERFACE-NAME.md`，每 Plan 一节） | 命名决策多且不宜在对话中逐个确认；集中成文档便于一次确认 | — Pending |
+| 用户提问时只答不改，除非显式动作授权 | 防止擅自产生副作用（曾误建分支） | — Pending |
+| `editor-next` 不做；改为 `editor-type` 纯类型包 + 引擎内置编辑器上层实现 | 用户更新方向：编辑器实现不再写在本项目，改由引擎调用 `editor-type` | — Pending |
 
 ## Evolution
 
@@ -101,4 +113,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-20 after initialization*
+*Last updated: 2026-09-21 after Phase 1 completion and the direction update (editor-next → editor-type)*

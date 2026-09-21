@@ -484,3 +484,17 @@ When a plan finishes, **report before moving on — do not stay silent.** Every 
 2. **The next plan itself** — its id, goal, main tasks, the problem it solves, and how completion will be verified (i.e. the per-plan briefing above).
 
 Then **wait for explicit user approval** before executing the next plan. Never chain silently from one plan into the next, and never report only one of the two items.
+
+### Important naming requires prior confirmation (MANDATORY)
+
+Any **important naming** — file names, interface names, method names, function names, type names, package names, exported symbol names — MUST be reported to the user and confirmed **before** it is written into code, plans, or config. Internal local variables (`let`/`const` temporaries declared inside a function body) are exempt.
+
+Because naming decisions are numerous and awkward to settle in chat, report them in a dedicated **`INTERFACE-NAME.md`** inside the corresponding Phase directory (`.planning/phases/<phase>/INTERFACE-NAME.md`), with **one section per Plan**. Each entry must state **what the thing is for** (its purpose/role) — a proposed name alone is not a report.
+
+### Questions are answer-only (MANDATORY)
+
+When the user asks a question, **answer it — change nothing.** No file edits, no commits, no branch creation, no config changes, no "helpful" side effects. An action may only be taken when the user explicitly gates it ("if your answer is X, then do Y").
+
+### Direction is the user's call (MANDATORY)
+
+The user owns the project direction. Always hear the user's direction description first, and never decide scope, architecture direction, package structure, or roadmap changes on your own initiative.
