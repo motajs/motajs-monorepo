@@ -41,7 +41,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. A recorded baseline exists (per-package unit counts, e2e run, build output, bundle/artifact size vs the 20 MiB ceiling, `editor-manifest.json`, protocol constants) plus Playwright screenshot baselines for the four editors + shell.
   5. No e2e test is silently skipped — each is either a required fixture or carries a CI-visible marker.
 
-**Plans**: 7 plans
+**Plans**: 9 plans
 Plans:
 **Wave 1**
 
@@ -62,6 +62,14 @@ Plans:
 - [ ] 01-06-PLAN.md — Editor `vitest.config.ts` split, per-package `typecheck`, root fan-out scripts (VERIFY-02)
 
 **Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 01-08-PLAN.md — Adopt Prettier + `eslint-config-prettier` and normalize formatting to single quotes (VERIFY-02)
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
+- [ ] 01-09-PLAN.md — Make `pnpm lint` green: fix the remaining pre-existing lint errors (VERIFY-02)
+
+**Wave 7** *(blocked on Wave 6 completion)*
 
 - [ ] 01-07-PLAN.md — Four-job PR CI workflow and required status checks (VERIFY-02)
 

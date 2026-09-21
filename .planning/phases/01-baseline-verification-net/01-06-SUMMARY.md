@@ -97,7 +97,12 @@ coverage:
 
 duration: 34min
 completed: 2026-09-20
-status: halted
+status: complete
+# Resolution (2026-09-21): the halt was caused by pre-existing lint debt, not by this plan's
+# deliverables. By user decision the debt is now owned by two follow-up plans in this phase —
+# 01-08 (adopt Prettier + eslint-config-prettier, normalize formatting to single quotes) and
+# 01-09 (fix the remaining non-stylistic violations). This plan's own deliverables are complete
+# and verified; its lint-green criterion is satisfied jointly once 01-08 and 01-09 land.
 ---
 
 # Phase 01 Plan 06: Baseline & Verification Net Summary
@@ -105,6 +110,15 @@ status: halted
 **Editor-owned `vitest.config.ts` (no mota-js root import, full collection preserved), per-package `typecheck` scripts, and root fan-out scripts with a non-fixing `eslint .` gate that mounts the editor's own config — but the gate is red on 46 pre-existing lint errors.**
 
 ## ⚠️ Blocker — the lint gate is not green, and was deliberately not weakened
+
+> **RESOLVED (2026-09-21).** The blocker was escalated to the user, who chose to fix the pre-existing
+> debt rather than weaken the gate. It is now split into two follow-up plans in this phase:
+> **01-08** (adopt Prettier + `eslint-config-prettier`, normalize formatting, single quotes — resolves
+> the `@stylistic/*` errors and the generated-`styled-system` noise) and **01-09** (fix the remaining
+> non-stylistic violations: `no-explicit-any`, `set-state-in-effect`, `only-export-components`,
+> `prefer-const`, `no-useless-escape`, `use-memo`, `immutability`, `no-control-regex`). Plan 01-07's
+> CI gate depends on 01-09. This plan is re-summarized `complete`: its mechanism and scripts are
+> delivered and verified; only the pre-existing debt it surfaced remained.
 
 `pnpm lint` (= `eslint .`, no `--fix`) exits `1` with **172 problems (46 errors, 126 warnings)**. The
 config-resolution mechanism this plan delivers works exactly as specified — the editor's own rules
