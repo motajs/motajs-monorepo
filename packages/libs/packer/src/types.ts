@@ -1,4 +1,4 @@
-import type { Logger } from "./logger";
+import type { Logger } from './logger';
 
 // ============================================
 // 公开 API 类型

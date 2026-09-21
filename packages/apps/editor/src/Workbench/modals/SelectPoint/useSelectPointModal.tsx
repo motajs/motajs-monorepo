@@ -1,7 +1,7 @@
-import { ContentBoundary } from "@/components/ContentBoundary";
-import { Component, type ErrorInfo, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
-import type { SelectPointOptions, SelectPointResult, UseModalReturn } from "../shared/types";
-import { SelectPointContent } from "./SelectPointContent";
+import { ContentBoundary } from '@/components/ContentBoundary';
+import { Component, type ErrorInfo, type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import type { SelectPointOptions, SelectPointResult, UseModalReturn } from '../shared/types';
+import { SelectPointContent } from './SelectPointContent';
 
 interface SelectPointState extends SelectPointOptions {
   resolve: (value: SelectPointResult | null) => void;
@@ -17,37 +17,42 @@ const SelectPointShell: React.FC<{
   // ESC handled by ModalShell pattern, but we need custom implementation here
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" || e.keyCode === 27) {
+      if (e.key === 'Escape' || e.keyCode === 27) {
         onClose();
       }
     };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
   return (
-    <div id="uieventDiv" data-test-id="select-point-modal" style={{ display: "block" }}>
+    <div id="uieventDiv" data-test-id="select-point-modal" style={{ display: 'block' }}>
       <div id="uieventDialog" className="selectPointDialog">
         <div id="uieventHead">
           <span id="uieventTitle">{title}</span>
-          <button id="uieventNo" data-test-id="select-point-cancel" onClick={onClose}>关闭</button>
-          {onConfirm
-            ? <button id="uieventYes" data-test-id="select-point-confirm" onClick={onConfirm}>确定</button>
-            : null}
+          <button id="uieventNo" data-test-id="select-point-cancel" onClick={onClose}>
+            关闭
+          </button>
+          {onConfirm ? (
+            <button id="uieventYes" data-test-id="select-point-confirm" onClick={onConfirm}>
+              确定
+            </button>
+          ) : null}
         </div>
-        <hr style={{ clear: "both", marginTop: 0 }} />
-        <ContentBoundary loadingUI={<></>}>
-          {children}
-        </ContentBoundary>
+        <hr style={{ clear: 'both', marginTop: 0 }} />
+        <ContentBoundary loadingUI={<></>}>{children}</ContentBoundary>
       </div>
     </div>
   );
 };
 
-class SelectPointErrorBoundary extends Component<{
-  children: ReactNode;
-  onClose: () => void;
-}, { error: Error | null }> {
+class SelectPointErrorBoundary extends Component<
+  {
+    children: ReactNode;
+    onClose: () => void;
+  },
+  { error: Error | null }
+> {
   state = { error: null as Error | null };
 
   static getDerivedStateFromError(error: unknown): { error: Error } {
@@ -55,7 +60,7 @@ class SelectPointErrorBoundary extends Component<{
   }
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
-    console.error("SelectPoint modal failed", error, info.componentStack);
+    console.error('SelectPoint modal failed', error, info.componentStack);
   }
 
   render(): ReactNode {
@@ -74,13 +79,13 @@ class SelectPointErrorBoundary extends Component<{
 
 export function useSelectPointModal(): UseModalReturn<SelectPointOptions, SelectPointResult> {
   const [state, setState] = useState<SelectPointState | null>(null);
-  const [title, setTitle] = useState("地图选点");
-  const resultRef = useRef<SelectPointResult>({ floorId: "", x: 0, y: 0 });
+  const [title, setTitle] = useState('地图选点');
+  const resultRef = useRef<SelectPointResult>({ floorId: '', x: 0, y: 0 });
 
   const open = useCallback((options: SelectPointOptions) => {
     return new Promise<SelectPointResult | null>((resolve) => {
       setState({ ...options, resolve });
-      setTitle(options.multiple ? "地图选点【右键多选】" : "地图选点");
+      setTitle(options.multiple ? '地图选点【右键多选】' : '地图选点');
     });
   }, []);
 
@@ -98,25 +103,23 @@ export function useSelectPointModal(): UseModalReturn<SelectPointOptions, Select
     resultRef.current = result;
   }, []);
 
-  const holder = state
-    ? (
-      <SelectPointErrorBoundary onClose={handleCancel}>
-        <SelectPointShell title={title} onClose={handleCancel} onConfirm={handleConfirm}>
-          <SelectPointContent
-            initialFloorId={state.floorId}
-            floorSelection={state.floorSelection}
-            initialX={state.x}
-            initialY={state.y}
-            initialBigmap={state.bigmap}
-            multiple={state.multiple}
-            onTitleChange={setTitle}
-            onResultChange={handleResultChange}
-            onConfirm={handleConfirm}
-          />
-        </SelectPointShell>
-      </SelectPointErrorBoundary>
-    )
-    : null;
+  const holder = state ? (
+    <SelectPointErrorBoundary onClose={handleCancel}>
+      <SelectPointShell title={title} onClose={handleCancel} onConfirm={handleConfirm}>
+        <SelectPointContent
+          initialFloorId={state.floorId}
+          floorSelection={state.floorSelection}
+          initialX={state.x}
+          initialY={state.y}
+          initialBigmap={state.bigmap}
+          multiple={state.multiple}
+          onTitleChange={setTitle}
+          onResultChange={handleResultChange}
+          onConfirm={handleConfirm}
+        />
+      </SelectPointShell>
+    </SelectPointErrorBoundary>
+  ) : null;
 
   return [open, holder];
 }

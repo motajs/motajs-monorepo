@@ -1,6 +1,6 @@
-import { useRef, type ButtonHTMLAttributes, type FC, type MouseEvent } from "react";
+import { useRef, type ButtonHTMLAttributes, type FC, type MouseEvent } from 'react';
 
-interface LongPressButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "onMouseDown" | "onMouseUp"> {
+interface LongPressButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onMouseDown' | 'onMouseUp'> {
   /** 点击或长按时触发的回调 */
   onPress: () => void;
   /** 长按检测延迟（毫秒），默认 500ms */

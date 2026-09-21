@@ -1,9 +1,9 @@
-import { useSelectMaterialModalAction } from "@/Workbench/modals/SelectMaterial";
-import { Music } from "lucide-react";
-import { type FC, useCallback, useEffect, useMemo, useState } from "react";
-import { CollectionControl } from "./CollectionControl";
-import { resolveReference } from "./reference";
-import type { BlockResolution, FieldSchema, RawSlot, SchemaScope } from "./types";
+import { useSelectMaterialModalAction } from '@/Workbench/modals/SelectMaterial';
+import { Music } from 'lucide-react';
+import { type FC, useCallback, useEffect, useMemo, useState } from 'react';
+import { CollectionControl } from './CollectionControl';
+import { resolveReference } from './reference';
+import type { BlockResolution, FieldSchema, RawSlot, SchemaScope } from './types';
 
 interface BgmListFieldEditorProps {
   schema: FieldSchema;
@@ -13,75 +13,69 @@ interface BgmListFieldEditorProps {
   onCommit(value: unknown): Promise<void>;
 }
 
-function useRegistrySnapshot(
-  schema: FieldSchema,
-  scope: SchemaScope,
-): BlockResolution<RawSlot<unknown>> {
+function useRegistrySnapshot(schema: FieldSchema, scope: SchemaScope): BlockResolution<RawSlot<unknown>> {
   const descriptor = schema.editor;
   const source = useMemo(
-    () => resolveReference(
-      scope,
-      descriptor.kind === "bgmList" ? descriptor.reference : { ref: "project:invalid" },
-    ),
+    () => resolveReference(scope, descriptor.kind === 'bgmList' ? descriptor.reference : { ref: 'project:invalid' }),
     [descriptor, scope],
   );
   const [snapshot, setSnapshot] = useState(() => source.snapshot());
   useEffect(() => source.subscribe(() => setSnapshot(source.snapshot())), [source]);
   useEffect(() => {
-    if (source.snapshot().status === "loading") void source.ensureLoaded?.();
+    if (source.snapshot().status === 'loading') void source.ensureLoaded?.();
   }, [source]);
   return snapshot;
 }
 
-export const BgmListFieldEditor: FC<BgmListFieldEditorProps> = ({
-  schema,
-  value,
-  disabled,
-  scope,
-  onCommit,
-}) => {
+export const BgmListFieldEditor: FC<BgmListFieldEditorProps> = ({ schema, value, disabled, scope, onCommit }) => {
   const descriptor = schema.editor;
   const selectMaterial = useSelectMaterialModalAction();
   const registry = useRegistrySnapshot(schema, scope);
-  const directory = descriptor.kind === "bgmList" ? descriptor.directory : "project/bgms";
+  const directory = descriptor.kind === 'bgmList' ? descriptor.directory : 'project/bgms';
   const items = useMemo(
-    () => Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [],
+    () => (Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []),
     [value],
   );
-  const blocked = disabled || registry.status !== "ready";
+  const blocked = disabled || registry.status !== 'ready';
 
-  const chooseOne = useCallback(async (current: string): Promise<string | undefined> => {
-    const result = await selectMaterial({
-      title: "替换背景音乐",
-      value: current,
-      directory,
-      source: { kind: "directory", path: directory },
-      multiple: false,
-      transform: (name) => /\.(mp3|ogg|wav|m4a|flac)$/i.test(name) ? name : null,
-    });
-    return result?.[0];
-  }, [directory, selectMaterial]);
+  const chooseOne = useCallback(
+    async (current: string): Promise<string | undefined> => {
+      const result = await selectMaterial({
+        title: '替换背景音乐',
+        value: current,
+        directory,
+        source: { kind: 'directory', path: directory },
+        multiple: false,
+        transform: (name) => (/\.(mp3|ogg|wav|m4a|flac)$/i.test(name) ? name : null),
+      });
+      return result?.[0];
+    },
+    [directory, selectMaterial],
+  );
 
   const chooseMany = useCallback(async (): Promise<string[] | undefined> => {
     const result = await selectMaterial({
-      title: "添加背景音乐",
+      title: '添加背景音乐',
       directory,
-      source: { kind: "directory", path: directory },
+      source: { kind: 'directory', path: directory },
       multiple: true,
-      transform: (name) => /\.(mp3|ogg|wav|m4a|flac)$/i.test(name) ? name : null,
+      transform: (name) => (/\.(mp3|ogg|wav|m4a|flac)$/i.test(name) ? name : null),
     });
     return result ?? undefined;
   }, [directory, selectMaterial]);
 
-  const replace = useCallback(async (index: number) => {
-    const nextValue = await chooseOne(items[index]);
-    if (!nextValue) return;
-    const next = [...items];
-    next[index] = nextValue;
-    await onCommit(next);
-  }, [chooseOne, items, onCommit]);
+  const replace = useCallback(
+    async (index: number) => {
+      const nextValue = await chooseOne(items[index]);
+      if (!nextValue) return;
+      const next = [...items];
+      next[index] = nextValue;
+      await onCommit(next);
+    },
+    [chooseOne, items, onCommit],
+  );
 
-  if (descriptor.kind !== "bgmList") return null;
+  if (descriptor.kind !== 'bgmList') return null;
   return (
     <div className="schemaBgmList" data-source-status={registry.status} data-test-id="schema-bgm-list">
       <CollectionControl
@@ -124,10 +118,10 @@ export const BgmListFieldEditor: FC<BgmListFieldEditorProps> = ({
           void onCommit(next);
         }}
       />
-      {registry.status === "loading" ? <div className="schemaTableSkeleton" aria-label="loading" /> : null}
-      {registry.status === "error" || registry.status === "type-mismatch"
-        ? <div className="schemaTableError">{registry.error.message}</div>
-        : null}
+      {registry.status === 'loading' ? <div className="schemaTableSkeleton" aria-label="loading" /> : null}
+      {registry.status === 'error' || registry.status === 'type-mismatch' ? (
+        <div className="schemaTableError">{registry.error.message}</div>
+      ) : null}
     </div>
   );
 };

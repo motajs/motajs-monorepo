@@ -169,9 +169,7 @@ export class FieldPoint extends Blockly.Field<PointValue> {
   /**
    * 验证值格式
    */
-  protected override doClassValidation_(
-    newValue?: PointValue | null,
-  ): PointValue | null {
+  protected override doClassValidation_(newValue?: PointValue | null): PointValue | null {
     if (newValue === null || newValue === undefined) {
       return DEFAULT_POINT;
     }
@@ -181,14 +179,9 @@ export class FieldPoint extends Blockly.Field<PointValue> {
       return DEFAULT_POINT;
     }
 
-    const x = typeof newValue.x === 'number' || typeof newValue.x === 'string'
-      ? newValue.x
-      : 0;
-    const y = typeof newValue.y === 'number' || typeof newValue.y === 'string'
-      ? newValue.y
-      : 0;
-    const floorId =
-      typeof newValue.floorId === 'string' ? newValue.floorId : undefined;
+    const x = typeof newValue.x === 'number' || typeof newValue.x === 'string' ? newValue.x : 0;
+    const y = typeof newValue.y === 'number' || typeof newValue.y === 'string' ? newValue.y : 0;
+    const floorId = typeof newValue.floorId === 'string' ? newValue.floorId : undefined;
 
     return { x, y, floorId };
   }
@@ -222,9 +215,7 @@ export class FieldPoint extends Blockly.Field<PointValue> {
     const constants = this.getConstants();
 
     // 默认值（与 Geras renderer 默认值一致）
-    const xPadding = this.borderRect_
-      ? (constants?.FIELD_BORDER_RECT_X_PADDING ?? 4)
-      : 0;
+    const xPadding = this.borderRect_ ? (constants?.FIELD_BORDER_RECT_X_PADDING ?? 4) : 0;
     const fontSize = constants?.FIELD_TEXT_FONTSIZE ?? 11;
     const fontWeight = constants?.FIELD_TEXT_FONTWEIGHT ?? 'normal';
     const fontFamily = constants?.FIELD_TEXT_FONTFAMILY ?? 'sans-serif';
@@ -233,12 +224,7 @@ export class FieldPoint extends Blockly.Field<PointValue> {
     // 计算文本宽度
     let textWidth = 0;
     if (this.textElement_) {
-      textWidth = Blockly.utils.dom.getFastTextWidth(
-        this.textElement_,
-        fontSize,
-        fontWeight,
-        fontFamily,
-      );
+      textWidth = Blockly.utils.dom.getFastTextWidth(this.textElement_, fontSize, fontWeight, fontFamily);
     }
 
     // 计算总宽度和高度

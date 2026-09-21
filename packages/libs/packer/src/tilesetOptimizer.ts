@@ -1,12 +1,8 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
-import {
-  createTransparentImage,
-  getImageSize,
-  compositeVerticalRegions,
-} from "./utils/image-utils";
-import type { GameData } from "./types";
-import { Logger } from "./logger";
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { createTransparentImage, getImageSize, compositeVerticalRegions } from './utils/image-utils';
+import type { GameData } from './types';
+import { Logger } from './logger';
 
 /** 每个 tileset 的起始 ID 间隔 */
 const TILESET_ID_INTERVAL = 10000;
@@ -67,10 +63,7 @@ export function getTilesetIdRange(tilesetIndex: number): [number, number] {
  * @param tilesetIndex tileset 索引
  * @returns 属于该 tileset 的 ID 列表（相对于该 tileset 的偏移量）
  */
-export function filterTilesetIds(
-  allUsedIds: Set<number>,
-  tilesetIndex: number,
-): number[] {
+export function filterTilesetIds(allUsedIds: Set<number>, tilesetIndex: number): number[] {
   const [startId, endId] = getTilesetIdRange(tilesetIndex);
   const ids: number[] = [];
 
@@ -104,11 +97,7 @@ export function getTileRow(tileId: number, tilesPerRow: number): number {
  * @param totalRows 总行数
  * @returns 需要保留的行区域列表
  */
-export function calculateUsedRows(
-  usedTileIds: number[],
-  tilesPerRow: number,
-  totalRows: number,
-): number[] {
+export function calculateUsedRows(usedTileIds: number[], tilesPerRow: number, totalRows: number): number[] {
   const usedRows = new Set<number>();
 
   for (const tileId of usedTileIds) {
@@ -184,9 +173,7 @@ export async function optimizeTileset(
  * @param regions 区域列表
  * @returns 合并后的区域列表
  */
-function mergeConsecutiveRegions(
-  regions: Array<{ y: number; height: number }>,
-): Array<{ y: number; height: number }> {
+function mergeConsecutiveRegions(regions: Array<{ y: number; height: number }>): Array<{ y: number; height: number }> {
   if (regions.length === 0) {
     return [];
   }
@@ -231,13 +218,13 @@ export async function optimizeAll(
     return 0;
   }
 
-  logger?.group("优化 Tileset 图片");
+  logger?.group('优化 Tileset 图片');
 
   // 提取所有使用的 tileset ID
   const usedIds = extractUsedTileIds(floorsContent);
   logger?.log(`从地图数据中提取到 ${usedIds.size} 个潜在 tileset ID`);
 
-  const tilesetsDir = join(rootDir, "project", "tilesets");
+  const tilesetsDir = join(rootDir, 'project', 'tilesets');
   let optimizedCount = 0;
 
   for (let i = 0; i < tilesets.length; i++) {
@@ -272,19 +259,15 @@ export async function optimizeAll(
  * @param logger 日志记录器
  * @returns 优化的 tileset 数量
  */
-export async function optimizeFromGameData(
-  rootDir: string,
-  gameData: GameData,
-  logger?: Logger,
-): Promise<number> {
+export async function optimizeFromGameData(rootDir: string, gameData: GameData, logger?: Logger): Promise<number> {
   // 读取 floors.min.js 内容
-  const floorsMinPath = join(rootDir, "project", "floors.min.js");
+  const floorsMinPath = join(rootDir, 'project', 'floors.min.js');
 
   let floorsContent: string;
   try {
-    floorsContent = await readFile(floorsMinPath, "utf-8");
+    floorsContent = await readFile(floorsMinPath, 'utf-8');
   } catch {
-    logger?.warn("floors.min.js 不存在，跳过 tileset 优化");
+    logger?.warn('floors.min.js 不存在，跳过 tileset 优化');
     return 0;
   }
 

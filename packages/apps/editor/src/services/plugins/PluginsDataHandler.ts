@@ -10,20 +10,20 @@
  * - 叶子节点是函数，解析后转为字符串存储
  */
 
-import { ScriptDataHandler } from "@/fs/ScriptDataHandler";
-import type { FileHandler } from "@/fs/FileHandler";
+import { ScriptDataHandler } from '@/fs/ScriptDataHandler';
+import type { FileHandler } from '@/fs/FileHandler';
 
 /** 数据变量名 */
-const PLUGINS_VAR_NAME = "plugins_bb40132b_638b_4a9f_b028_d3fe47acc8d1";
+const PLUGINS_VAR_NAME = 'plugins_bb40132b_638b_4a9f_b028_d3fe47acc8d1';
 
 /** 类型别名：语义化 */
-export type { ScriptData as PluginsData } from "@/fs/ScriptDataHandler";
+export type { ScriptData as PluginsData } from '@/fs/ScriptDataHandler';
 
 /**
  * PluginsDataHandler - 插件数据处理器
  */
 export class PluginsDataHandler extends ScriptDataHandler {
   constructor(fileHandler: FileHandler) {
-    super(fileHandler, PLUGINS_VAR_NAME, "Plugins Data");
+    super(fileHandler, PLUGINS_VAR_NAME, 'Plugins Data');
   }
 }

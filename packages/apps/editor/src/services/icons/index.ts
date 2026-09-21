@@ -1,2 +1,2 @@
-export * from "./IconsDataHandler";
-export * from "./iconsService";
+export * from './IconsDataHandler';
+export * from './iconsService';

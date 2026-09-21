@@ -21,10 +21,7 @@
       }
     },
     "enemy.description": {
-      "type": [
-        "string",
-        "null"
-      ],
+      "type": ["string", "null"],
       "title": "怪物描述",
       "description": "怪物详细信息页显示的描述，支持引擎文本转义。",
       "editor": {
@@ -32,10 +29,7 @@
       }
     },
     "enemy.displayIdInBook": {
-      "type": [
-        "string",
-        "null"
-      ],
+      "type": ["string", "null"],
       "title": "手册映射 ID",
       "description": "手册中改用另一个怪物 ID 的图像和信息，常用于多朝向怪物。",
       "editor": {
@@ -43,10 +37,7 @@
       }
     },
     "enemy.faceIds": {
-      "type": [
-        "object",
-        "null"
-      ],
+      "type": ["object", "null"],
       "title": "行走朝向",
       "description": "移动或碰撞时按方向切换到对应怪物图块。",
       "editor": {
@@ -55,10 +46,7 @@
       }
     },
     "enemy.bigImage": {
-      "type": [
-        "string",
-        "null"
-      ],
+      "type": ["string", "null"],
       "title": "绑定贴图",
       "description": "绑定 project/images 中的 PNG 怪物贴图。",
       "normalizer": "optionalJson",
@@ -120,11 +108,7 @@
       }
     },
     "enemy.special": {
-      "type": [
-        "number",
-        "array",
-        "null"
-      ],
+      "type": ["number", "array", "null"],
       "title": "特殊属性",
       "description": "特殊属性列表来自工程 functions.js 的 enemys.getSpecials。历史单值、0 和 null 会正规化为列表编辑。",
       "normalizer": "numericScalarOrList",
@@ -136,10 +120,7 @@
       }
     },
     "enemy.value": {
-      "type": [
-        "number",
-        "null"
-      ],
+      "type": ["number", "null"],
       "title": "兼容数值",
       "description": "旧工程可能使用的通用特殊属性数值；新逻辑优先使用下面的具名字段。",
       "editor": {
@@ -147,10 +128,7 @@
       }
     },
     "enemy.zone": {
-      "type": [
-        "number",
-        "null"
-      ],
+      "type": ["number", "null"],
       "title": "领域伤害",
       "description": "领域怪每次造成的伤害。",
       "editor": {
@@ -158,10 +136,7 @@
       }
     },
     "enemy.repulse": {
-      "type": [
-        "number",
-        "null"
-      ],
+      "type": ["number", "null"],
       "title": "阻击伤害",
       "description": "阻击触发时造成的伤害。",
       "editor": {
@@ -169,10 +144,7 @@
       }
     },
     "enemy.laser": {
-      "type": [
-        "number",
-        "null"
-      ],
+      "type": ["number", "null"],
       "title": "激光伤害",
       "description": "激光在同行或同列造成的伤害。",
       "editor": {
@@ -180,10 +152,7 @@
       }
     },
     "enemy.range": {
-      "type": [
-        "integer",
-        "null"
-      ],
+      "type": ["integer", "null"],
       "title": "领域范围",
       "description": "领域影响范围；未设置时默认为 1。",
       "editor": {
@@ -194,10 +163,7 @@
       }
     },
     "enemy.zoneSquare": {
-      "type": [
-        "boolean",
-        "null"
-      ],
+      "type": ["boolean", "null"],
       "title": "九宫格范围",
       "description": "领域、阻击或捕捉按九宫格而不是十字范围生效。",
       "editor": {
@@ -205,10 +171,7 @@
       }
     },
     "enemy.n": {
-      "type": [
-        "integer",
-        "null"
-      ],
+      "type": ["integer", "null"],
       "title": "连击数",
       "description": "多连击怪每回合的攻击次数。",
       "editor": {
@@ -219,10 +182,7 @@
       }
     },
     "enemy.breakArmor": {
-      "type": [
-        "number",
-        "null"
-      ],
+      "type": ["number", "null"],
       "title": "破甲比例",
       "description": "破甲附加角色防御的比例，例如 0.1 表示 10%。",
       "editor": {
@@ -230,10 +190,7 @@
       }
     },
     "enemy.counterAttack": {
-      "type": [
-        "number",
-        "null"
-      ],
+      "type": ["number", "null"],
       "title": "反击比例",
       "description": "反击附加角色攻击的比例，例如 0.1 表示 10%。",
       "editor": {
@@ -241,10 +198,7 @@
       }
     },
     "enemy.purify": {
-      "type": [
-        "number",
-        "null"
-      ],
+      "type": ["number", "null"],
       "title": "净化倍率",
       "description": "净化附加角色护盾的倍率。",
       "editor": {
@@ -252,10 +206,7 @@
       }
     },
     "enemy.vampire": {
-      "type": [
-        "number",
-        "null"
-      ],
+      "type": ["number", "null"],
       "title": "吸血比例",
       "description": "战前吸取角色生命的比例。",
       "editor": {
@@ -263,10 +214,7 @@
       }
     },
     "enemy.add": {
-      "type": [
-        "boolean",
-        "null"
-      ],
+      "type": ["boolean", "null"],
       "title": "吸血加到自身",
       "description": "吸血造成的伤害是否同时增加到怪物生命。",
       "editor": {
@@ -274,10 +222,7 @@
       }
     },
     "enemy.atkValue": {
-      "type": [
-        "integer",
-        "null"
-      ],
+      "type": ["integer", "null"],
       "title": "退化扣攻",
       "description": "退化在战后永久扣除的攻击点数。",
       "editor": {
@@ -285,10 +230,7 @@
       }
     },
     "enemy.defValue": {
-      "type": [
-        "integer",
-        "null"
-      ],
+      "type": ["integer", "null"],
       "title": "退化扣防",
       "description": "退化在战后永久扣除的防御点数。",
       "editor": {
@@ -296,10 +238,7 @@
       }
     },
     "enemy.damage": {
-      "type": [
-        "integer",
-        "null"
-      ],
+      "type": ["integer", "null"],
       "title": "固定伤害",
       "description": "战前直接造成的固定伤害。",
       "editor": {
@@ -307,10 +246,7 @@
       }
     },
     "enemy.hpBuff": {
-      "type": [
-        "number",
-        "null"
-      ],
+      "type": ["number", "null"],
       "title": "光环加血",
       "description": "光环提高怪物生命的百分比数值。",
       "editor": {
@@ -318,10 +254,7 @@
       }
     },
     "enemy.atkBuff": {
-      "type": [
-        "number",
-        "null"
-      ],
+      "type": ["number", "null"],
       "title": "光环加攻",
       "description": "光环提高怪物攻击的百分比数值。",
       "editor": {
@@ -329,10 +262,7 @@
       }
     },
     "enemy.defBuff": {
-      "type": [
-        "number",
-        "null"
-      ],
+      "type": ["number", "null"],
       "title": "光环加防",
       "description": "光环提高怪物防御的百分比数值。",
       "editor": {
@@ -340,10 +270,7 @@
       }
     },
     "enemy.haloRange": {
-      "type": [
-        "integer",
-        "null"
-      ],
+      "type": ["integer", "null"],
       "title": "光环范围",
       "description": "光环影响范围；未设置表示全图。",
       "editor": {
@@ -354,10 +281,7 @@
       }
     },
     "enemy.haloSquare": {
-      "type": [
-        "boolean",
-        "null"
-      ],
+      "type": ["boolean", "null"],
       "title": "光环九宫格",
       "description": "局部光环按九宫格而不是十字范围生效。",
       "editor": {
@@ -365,10 +289,7 @@
       }
     },
     "enemy.haloAdd": {
-      "type": [
-        "boolean",
-        "null"
-      ],
+      "type": ["boolean", "null"],
       "title": "光环可叠加",
       "description": "相同怪物 ID 的多个光环是否可以叠加。",
       "editor": {
@@ -376,10 +297,7 @@
       }
     },
     "enemy.notBomb": {
-      "type": [
-        "boolean",
-        "null"
-      ],
+      "type": ["boolean", "null"],
       "title": "不可炸",
       "description": "该怪物是否不受炸弹类道具影响。",
       "editor": {
@@ -387,10 +305,7 @@
       }
     },
     "enemy.beforeBattle": {
-      "type": [
-        "array",
-        "null"
-      ],
+      "type": ["array", "null"],
       "title": "战前事件",
       "description": "与该怪物战斗前执行的事件。",
       "editor": {
@@ -399,10 +314,7 @@
       }
     },
     "enemy.afterBattle": {
-      "type": [
-        "array",
-        "null"
-      ],
+      "type": ["array", "null"],
       "title": "战后事件",
       "description": "与该怪物战斗后执行的事件。",
       "editor": {

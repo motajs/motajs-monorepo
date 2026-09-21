@@ -1,5 +1,5 @@
-import { useMemo, type FC } from "react";
-import type { CheckboxSetConfig } from "../shared/types";
+import { useMemo, type FC } from 'react';
+import type { CheckboxSetConfig } from '../shared/types';
 
 interface CheckboxSetContentProps {
   value: Array<string | number>;
@@ -30,8 +30,8 @@ export const CheckboxSetContent: FC<CheckboxSetContentProps> = ({ value, comment
   };
 
   return (
-    <div id="uieventExtraBody" data-test-id="checkbox-set-content" style={{ display: "block", marginTop: "-10px" }}>
-      <table style={{ width: "100%" }}>
+    <div id="uieventExtraBody" data-test-id="checkbox-set-content" style={{ display: 'block', marginTop: '-10px' }}>
+      <table style={{ width: '100%' }}>
         <tbody>
           {keys.map((item, index) => {
             const checked = value.includes(item);
@@ -52,8 +52,8 @@ export const CheckboxSetContent: FC<CheckboxSetContentProps> = ({ value, comment
                     <td className="popCheckboxItem">
                       {prefixes[index + 1]}
                       <input
-                          type="checkbox"
-                          data-test-id={`checkbox-set-${String(keys[index + 1])}`}
+                        type="checkbox"
+                        data-test-id={`checkbox-set-${String(keys[index + 1])}`}
                         className="uieventCheckboxSet"
                         checked={value.includes(keys[index + 1])}
                         onChange={(event) => toggleValue(keys[index + 1], event.target.checked)}
@@ -64,8 +64,8 @@ export const CheckboxSetContent: FC<CheckboxSetContentProps> = ({ value, comment
                     <td className="popCheckboxItem">
                       {prefixes[index + 2]}
                       <input
-                          type="checkbox"
-                          data-test-id={`checkbox-set-${String(keys[index + 2])}`}
+                        type="checkbox"
+                        data-test-id={`checkbox-set-${String(keys[index + 2])}`}
                         className="uieventCheckboxSet"
                         checked={value.includes(keys[index + 2])}
                         onChange={(event) => toggleValue(keys[index + 2], event.target.checked)}

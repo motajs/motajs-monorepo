@@ -33,14 +33,16 @@ describe('UI event schemas', () => {
   });
 
   it('round-trips a previewUI tree through real Blockly blocks', () => {
-    const events = [{
-      type: 'previewUI',
-      action: [
-        { type: 'fillRect', x: 0, y: 0, width: 'flag:x', height: 300, style: [0, 0, 0, 0.6] },
-        { type: 'setAttribute', align: 'center' },
-        { type: 'fillBoldText', x: 208, y: 80, text: '开始游戏', strokeStyle: [0, 0, 0, 1] },
-      ],
-    }];
+    const events = [
+      {
+        type: 'previewUI',
+        action: [
+          { type: 'fillRect', x: 0, y: 0, width: 'flag:x', height: 300, style: [0, 0, 0, 0.6] },
+          { type: 'setAttribute', align: 'center' },
+          { type: 'fillBoldText', x: 208, y: 80, text: '开始游戏', strokeStyle: [0, 0, 0, 1] },
+        ],
+      },
+    ];
     const workspace = new Blockly.Workspace();
     Blockly.serialization.workspaces.load(eventsToWorkspaceState(events), workspace);
     javascriptGenerator.init(workspace);
@@ -69,14 +71,16 @@ describe('UI event schemas', () => {
   });
 
   it('preserves wait keyboard and mouse branches', () => {
-    const events = [{
-      type: 'wait',
-      forceChild: true,
-      data: [
-        { case: 'keyboard', keycode: '13,32', break: true, action: [{ type: 'comment', text: '确定' }] },
-        { case: 'mouse', px: [10, 20], py: [30, 40], action: [{ type: 'break', n: 1 }] },
-      ],
-    }];
+    const events = [
+      {
+        type: 'wait',
+        forceChild: true,
+        data: [
+          { case: 'keyboard', keycode: '13,32', break: true, action: [{ type: 'comment', text: '确定' }] },
+          { case: 'mouse', px: [10, 20], py: [30, 40], action: [{ type: 'break', n: 1 }] },
+        ],
+      },
+    ];
     const workspace = new Blockly.Workspace();
     Blockly.serialization.workspaces.load(eventsToWorkspaceState(events), workspace);
     javascriptGenerator.init(workspace);
@@ -95,19 +99,28 @@ describe('UI event schemas', () => {
         text: '\\t[流浪者,trader]请选择',
         timeout: 1500,
         width: 260,
-        choices: [{
-          text: '红钥匙', icon: 'redKey', color: [255, 0, 0, 1],
-          need: 'item:redKey', condition: 'flag:showKey',
-          action: [{ type: 'comment', text: 'selected' }],
-        }],
+        choices: [
+          {
+            text: '红钥匙',
+            icon: 'redKey',
+            color: [255, 0, 0, 1],
+            need: 'item:redKey',
+            condition: 'flag:showKey',
+            action: [{ type: 'comment', text: 'selected' }],
+          },
+        ],
       },
       {
-        type: 'confirm', text: '确认继续吗？', timeout: 800, default: true,
+        type: 'confirm',
+        text: '确认继续吗？',
+        timeout: 800,
+        default: true,
         yes: [{ type: 'comment', text: 'yes' }],
         no: [{ type: 'comment', text: 'no' }],
       },
       {
-        type: 'switch', condition: 'flag:selection',
+        type: 'switch',
+        condition: 'flag:selection',
         caseList: [{ case: '1', nobreak: true, action: [{ type: 'comment', text: 'case' }] }],
       },
     ];
@@ -131,10 +144,7 @@ describe('UI event schemas', () => {
       afterOpenDoor: [{ type: 'comment', text: 'opened' }],
     };
     const workspace = new Blockly.Workspace();
-    Blockly.serialization.workspaces.load(
-      dataToWorkspaceStateWithEntry(doorInfo, 'doorInfo'),
-      workspace,
-    );
+    Blockly.serialization.workspaces.load(dataToWorkspaceStateWithEntry(doorInfo, 'doorInfo'), workspace);
     javascriptGenerator.init(workspace);
 
     const top = workspace.getTopBlocks(false)[0];

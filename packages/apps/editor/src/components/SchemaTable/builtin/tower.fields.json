@@ -32,10 +32,7 @@
       }
     },
     "tower.floorPartitions": {
-      "type": [
-        "array",
-        "null"
-      ],
+      "type": ["array", "null"],
       "title": "楼层分区",
       "description": "用于不可返回高层塔的楼层分区设置。",
       "editor": {
@@ -44,10 +41,7 @@
       }
     },
     "tower.levelChoose": {
-      "type": [
-        "array",
-        "null"
-      ],
+      "type": ["array", "null"],
       "title": "难度分歧",
       "description": "游戏开始前可供玩家选择的难度及其事件。",
       "editor": {
@@ -56,10 +50,7 @@
       }
     },
     "tower.equipName": {
-      "type": [
-        "array",
-        "null"
-      ],
+      "type": ["array", "null"],
       "title": "装备孔",
       "description": "装备位名称，是与 equip.type 数值对应的有序列表。",
       "editor": {
@@ -69,10 +60,7 @@
       }
     },
     "tower.nameMap": {
-      "type": [
-        "object",
-        "null"
-      ],
+      "type": ["object", "null"],
       "title": "文件别名",
       "description": "图片、动画、背景音乐和音效使用的稳定文件别名。",
       "editor": {
@@ -80,10 +68,7 @@
       }
     },
     "tower.startBgm": {
-      "type": [
-        "string",
-        "null"
-      ],
+      "type": ["string", "null"],
       "title": "标题音乐",
       "description": "标题界面默认播放的背景音乐。",
       "editor": {
@@ -96,10 +81,7 @@
       }
     },
     "tower.startCanvas": {
-      "type": [
-        "array",
-        "null"
-      ],
+      "type": ["array", "null"],
       "title": "标题事件",
       "description": "开启标题事件化后，用事件流绘制和控制标题界面。",
       "editor": {
@@ -108,10 +90,7 @@
       }
     },
     "tower.startText": {
-      "type": [
-        "array",
-        "null"
-      ],
+      "type": ["array", "null"],
       "title": "开场剧情",
       "description": "正式进入初始楼层前执行的事件。",
       "editor": {
@@ -129,10 +108,7 @@
       }
     },
     "tower.levelUp": {
-      "type": [
-        "array",
-        "null"
-      ],
+      "type": ["array", "null"],
       "title": "等级提升",
       "description": "经验升级阈值、名称与升级事件。",
       "editor": {
@@ -141,10 +117,7 @@
       }
     },
     "tower.hero.image": {
-      "type": [
-        "string",
-        "null"
-      ],
+      "type": ["string", "null"],
       "title": "勇士行走图",
       "description": "勇士使用的 PNG 行走图。",
       "editor": {
@@ -182,10 +155,7 @@
       }
     },
     "tower.hero.hpmax": {
-      "type": [
-        "number",
-        "null"
-      ],
+      "type": ["number", "null"],
       "title": "生命上限",
       "editor": {
         "kind": "number"
@@ -199,10 +169,7 @@
       }
     },
     "tower.hero.manamax": {
-      "type": [
-        "number",
-        "null"
-      ],
+      "type": ["number", "null"],
       "title": "魔力上限",
       "description": "非负时生效；null 或负数表示不启用魔力上限。",
       "editor": {

@@ -4,17 +4,12 @@
  * 提供 h5animate 格式的编码功能
  */
 
-import { BinaryWriter } from "./binary.js";
-import { createValidationError } from "./errors.js";
-import type {
-  H5AnimateMeta,
-  H5AnimateFrame,
-  H5AnimateObject,
-  SpriteInfo,
-} from "./types.js";
+import { BinaryWriter } from './binary.js';
+import { createValidationError } from './errors.js';
+import type { H5AnimateMeta, H5AnimateFrame, H5AnimateObject, SpriteInfo } from './types.js';
 
 /** 文件签名常量 */
-const FILE_SIGNATURE = "ANIM";
+const FILE_SIGNATURE = 'ANIM';
 
 /** 当前版本号 */
 const CURRENT_VERSION = 1;
@@ -29,15 +24,7 @@ const CURRENT_VERSION = 1;
  * @returns 数组格式的数据
  */
 export function convertObjectToArray(obj: H5AnimateObject): number[] {
-  return [
-    obj.index,
-    obj.x,
-    obj.y,
-    obj.scale,
-    obj.opacity,
-    obj.mirror ?? 0,
-    obj.rotate ?? 0,
-  ];
+  return [obj.index, obj.x, obj.y, obj.scale, obj.opacity, obj.mirror ?? 0, obj.rotate ?? 0];
 }
 
 /**
@@ -50,7 +37,7 @@ export function convertObjectToArray(obj: H5AnimateObject): number[] {
  * @returns 转换后的值
  */
 export function metaReplacer(key: string, value: unknown): unknown {
-  if (key === "objects" && Array.isArray(value)) {
+  if (key === 'objects' && Array.isArray(value)) {
     return (value as H5AnimateObject[]).map(convertObjectToArray);
   }
   return value;
@@ -97,41 +84,37 @@ export function getSpriteInfoSize(spriteInfo: SpriteInfo): number {
  * @param webpData - WebP 数据
  * @throws H5AnimateError 如果输入数据无效
  */
-export function validateEncodeInput(
-  meta: H5AnimateMeta,
-  spriteInfo: SpriteInfo,
-  webpData: Buffer,
-): void {
+export function validateEncodeInput(meta: H5AnimateMeta, spriteInfo: SpriteInfo, webpData: Buffer): void {
   const missingFields: string[] = [];
 
   if (meta === null || meta === undefined) {
-    missingFields.push("meta");
+    missingFields.push('meta');
   } else {
-    if (typeof meta.ratio !== "number") {
-      missingFields.push("meta.ratio");
+    if (typeof meta.ratio !== 'number') {
+      missingFields.push('meta.ratio');
     }
     if (!Array.isArray(meta.frame)) {
-      missingFields.push("meta.frame");
+      missingFields.push('meta.frame');
     }
   }
 
   if (spriteInfo === null || spriteInfo === undefined) {
-    missingFields.push("spriteInfo");
+    missingFields.push('spriteInfo');
   } else {
-    if (typeof spriteInfo.count !== "number") {
-      missingFields.push("spriteInfo.count");
+    if (typeof spriteInfo.count !== 'number') {
+      missingFields.push('spriteInfo.count');
     }
     if (!Array.isArray(spriteInfo.dimensions)) {
-      missingFields.push("spriteInfo.dimensions");
+      missingFields.push('spriteInfo.dimensions');
     }
   }
 
   if (!Buffer.isBuffer(webpData)) {
-    missingFields.push("webpData");
+    missingFields.push('webpData');
   }
 
   if (missingFields.length > 0) {
-    throw createValidationError("输入数据缺少必需字段", missingFields);
+    throw createValidationError('输入数据缺少必需字段', missingFields);
   }
 }
 
@@ -146,17 +129,13 @@ export function validateEncodeInput(
  * @returns 编码后的二进制数据
  * @throws H5AnimateError 如果输入数据无效
  */
-export function encodeH5Animate(
-  meta: H5AnimateMeta,
-  spriteInfo: SpriteInfo,
-  webpData: Buffer,
-): Buffer {
+export function encodeH5Animate(meta: H5AnimateMeta, spriteInfo: SpriteInfo, webpData: Buffer): Buffer {
   // 验证输入
   validateEncodeInput(meta, spriteInfo, webpData);
 
   // 序列化元数据，使用 replacer 将对象转换为数组格式
   const metaJson = JSON.stringify(meta, metaReplacer);
-  const metaBuffer = Buffer.from(metaJson, "utf8");
+  const metaBuffer = Buffer.from(metaJson, 'utf8');
 
   // 计算精灵图信息大小
   const spriteInfoSize = getSpriteInfoSize(spriteInfo);

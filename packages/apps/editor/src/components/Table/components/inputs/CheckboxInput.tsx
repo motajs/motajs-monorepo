@@ -9,17 +9,12 @@ import type { CheckboxInputProps } from '../../types';
 export const CheckboxInput: FC<CheckboxInputProps> = (props) => {
   const { value, onChange, disabled = false } = props;
 
-  const handleChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
-    onChange(e.target.checked);
-  }, [onChange]);
-
-  return (
-    <input
-      type="checkbox"
-      className="checkbox"
-      checked={value}
-      onChange={handleChange}
-      disabled={disabled}
-    />
+  const handleChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      onChange(e.target.checked);
+    },
+    [onChange],
   );
+
+  return <input type="checkbox" className="checkbox" checked={value} onChange={handleChange} disabled={disabled} />;
 };

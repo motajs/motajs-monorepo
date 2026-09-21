@@ -199,10 +199,7 @@ export const eventEntrySchema: BlockSchema = {
       { type: 'field_number', name: 'SHADOW', value: 0, min: 0 },
     ],
     message2: '%1 %2',
-    args2: [
-      { type: 'input_dummy' },
-      { type: 'input_statement', name: 'ACTION' },
-    ],
+    args2: [{ type: 'input_dummy' }, { type: 'input_statement', name: 'ACTION' }],
     colour: 'auto', // 使用 category 默认颜色 (250)
     tooltip: '编辑魔塔的事件',
     helpUrl: '/_docs/#/instruction',
@@ -229,7 +226,7 @@ export const eventEntrySchema: BlockSchema = {
       const obj = event as Record<string, unknown>;
       trigger = obj.trigger === 'action';
       enable = obj.enable !== false;
-      noPass = obj.noPass as string | boolean | null ?? null;
+      noPass = (obj.noPass as string | boolean | null) ?? null;
       displayDamage = obj.displayDamage !== false;
       opacity = (obj.opacity as number) ?? 1;
       if (obj.filter && typeof obj.filter === 'object') {
@@ -350,10 +347,7 @@ export const autoEventEntrySchema: BlockSchema = {
       { type: 'field_checkbox', name: 'MULTI_EXECUTE', checked: false },
     ],
     message2: '%1 %2',
-    args2: [
-      { type: 'input_dummy' },
-      { type: 'input_statement', name: 'ACTION' },
-    ],
+    args2: [{ type: 'input_dummy' }, { type: 'input_statement', name: 'ACTION' }],
     colour: 'auto', // 使用 category 默认颜色 (250)
     tooltip: '自动事件',
     helpUrl: '/_docs/#/instruction',
@@ -449,7 +443,8 @@ export const changeFloorEntrySchema: BlockSchema = {
       { type: 'field_dropdown', name: 'IGNORE_CHANGE_FLOOR', options: IGNORE_CHANGE_FLOOR_LIST_OPTIONS },
     ],
     colour: 'auto', // 使用 category 默认颜色 (250)
-    tooltip: '楼梯, 传送门, 如果目标楼层有多个楼梯, 写upFloor或downFloor可能会导致到达的楼梯不确定, 这时候请使用loc方式来指定具体的点位置',
+    tooltip:
+      '楼梯, 传送门, 如果目标楼层有多个楼梯, 写upFloor或downFloor可能会导致到达的楼梯不确定, 这时候请使用loc方式来指定具体的点位置',
     helpUrl: '/_docs/#/instruction',
     extensions: [CHANGE_FLOOR_VISIBILITY_EXTENSION],
   },
@@ -622,10 +617,7 @@ export const levelEntrySchema: BlockSchema = {
   definition: {
     type: 'mota_level_m',
     message0: '等级提升 %1 %2',
-    args0: [
-      { type: 'input_dummy' },
-      { type: 'input_statement', name: 'LEVEL_CASES', check: 'levelCase' },
-    ],
+    args0: [{ type: 'input_dummy' }, { type: 'input_statement', name: 'LEVEL_CASES', check: 'levelCase' }],
     colour: 'auto', // 使用 category 默认颜色 (250)
     tooltip: '升级事件',
     helpUrl: '/_docs/#/instruction',
@@ -744,10 +736,7 @@ export const shopEntrySchema: BlockSchema = {
   definition: {
     type: 'mota_shop_m',
     message0: '全局商店列表 %1 %2',
-    args0: [
-      { type: 'input_dummy' },
-      { type: 'input_statement', name: 'SHOP_LIST', check: 'shopsub' },
-    ],
+    args0: [{ type: 'input_dummy' }, { type: 'input_statement', name: 'SHOP_LIST', check: 'shopsub' }],
     colour: 'auto', // 使用 category 默认颜色 (250)
     tooltip: '全局商店列表',
     helpUrl: '/_docs/#/instruction',
@@ -966,9 +955,7 @@ export const shopSubSchema: BlockSchema = {
       { type: 'field_input', name: 'ICON', text: 'moneyShop' },
     ],
     message1: '文字 %1',
-    args1: [
-      { type: 'field_multilinetext', name: 'TEXT', text: '勇敢的武士啊, 给我${20+2*flag:shop1}金币就可以：' },
-    ],
+    args1: [{ type: 'field_multilinetext', name: 'TEXT', text: '勇敢的武士啊, 给我${20+2*flag:shop1}金币就可以：' }],
     message2: '快捷名称 %1 未开启不显示 %2 不可预览 %3',
     args2: [
       { type: 'field_input', name: 'TEXT_IN_LIST', text: '金币商店' },
@@ -976,10 +963,7 @@ export const shopSubSchema: BlockSchema = {
       { type: 'field_checkbox', name: 'DISABLE_PREVIEW', checked: false },
     ],
     message3: '%1 %2',
-    args3: [
-      { type: 'input_dummy' },
-      { type: 'input_statement', name: 'CHOICES', check: 'shopChoices' },
-    ],
+    args3: [{ type: 'input_dummy' }, { type: 'input_statement', name: 'CHOICES', check: 'shopChoices' }],
     previousStatement: 'shopsub',
     nextStatement: 'shopsub',
     colour: BlockColours.SHOP,
@@ -1044,10 +1028,7 @@ export const shopChoicesSchema: BlockSchema = {
       { type: 'field_input', name: 'CONDITION', text: '' },
     ],
     message2: '%1 %2',
-    args2: [
-      { type: 'input_dummy' },
-      { type: 'input_statement', name: 'ACTION' },
-    ],
+    args2: [{ type: 'input_dummy' }, { type: 'input_statement', name: 'ACTION' }],
     previousStatement: 'shopChoices',
     nextStatement: 'shopChoices',
     colour: BlockColours.SHOP,
@@ -1089,7 +1070,14 @@ export const shopItemSchema: BlockSchema = {
     args0: [
       { type: 'field_input', name: 'ID', text: 'itemShop' },
       { type: 'field_input', name: 'TEXT_IN_LIST', text: '道具商店' },
-      { type: 'field_dropdown', name: 'USE', options: [['金币', 'money'], ['经验', 'experience']] },
+      {
+        type: 'field_dropdown',
+        name: 'USE',
+        options: [
+          ['金币', 'money'],
+          ['经验', 'experience'],
+        ],
+      },
       { type: 'field_checkbox', name: 'MUST_ENABLE', checked: false },
     ],
     message1: '%1',
@@ -1104,14 +1092,16 @@ export const shopItemSchema: BlockSchema = {
   generator: (block: Blockly.Block): string => {
     const choicesCode = javascriptGenerator.statementToCode(block, 'CHOICES');
     const choices = choicesCode ? JSON5.parse(`[${choicesCode}]`) : [];
-    return JSON.stringify({
-      id: block.getFieldValue('ID') || '',
-      item: true,
-      textInList: block.getFieldValue('TEXT_IN_LIST') || '',
-      use: block.getFieldValue('USE') || 'money',
-      mustEnable: block.getFieldValue('MUST_ENABLE') === 'TRUE',
-      choices,
-    }) + ',\n';
+    return (
+      JSON.stringify({
+        id: block.getFieldValue('ID') || '',
+        item: true,
+        textInList: block.getFieldValue('TEXT_IN_LIST') || '',
+        use: block.getFieldValue('USE') || 'money',
+        mustEnable: block.getFieldValue('MUST_ENABLE') === 'TRUE',
+        choices,
+      }) + ',\n'
+    );
   },
 };
 

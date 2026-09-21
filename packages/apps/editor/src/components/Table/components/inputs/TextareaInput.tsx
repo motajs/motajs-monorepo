@@ -11,9 +11,7 @@ export const TextareaInput: FC<TextareaInputProps> = (props) => {
   const { value, onChange, indent = 0, disabled = false, readonly = false } = props;
 
   // 将值序列化为 JSON 字符串用于显示
-  const [displayValue, setDisplayValue] = useState(() =>
-    JSON.stringify(value, null, indent)
-  );
+  const [displayValue, setDisplayValue] = useState(() => JSON.stringify(value, null, indent));
 
   // 当外部 value 变化时，更新显示值
   useEffect(() => {

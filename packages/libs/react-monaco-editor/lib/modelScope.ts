@@ -1,6 +1,6 @@
-import "./localization/zh-cn";
-import * as monaco from "monaco-editor/editor/editor.api";
-import { clearMonacoViewState } from "./MonacoEditor";
+import './localization/zh-cn';
+import * as monaco from 'monaco-editor/editor/editor.api';
+import { clearMonacoViewState } from './MonacoEditor';
 
 export interface MonacoModelDescriptor {
   id: string;
@@ -24,7 +24,7 @@ export class MonacoModelScope {
     }
     const uri = monaco.Uri.parse(descriptor.uri ?? `inmemory://motajs/${encodeURIComponent(descriptor.id)}.js`);
     const existing = monaco.editor.getModel(uri);
-    const model = existing ?? monaco.editor.createModel(descriptor.value, descriptor.language ?? "javascript", uri);
+    const model = existing ?? monaco.editor.createModel(descriptor.value, descriptor.language ?? 'javascript', uri);
     if (existing && descriptor.language && existing.getLanguageId() !== descriptor.language) {
       monaco.editor.setModelLanguage(existing, descriptor.language);
     }

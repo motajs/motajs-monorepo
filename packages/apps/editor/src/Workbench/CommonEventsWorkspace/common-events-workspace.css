@@ -22,8 +22,16 @@
   justify-content: space-between;
 }
 
-.commonEventList h1 { margin: 0; font-size: 18px; }
-.commonEventList button { border: 0; background: transparent; color: inherit; cursor: pointer; }
+.commonEventList h1 {
+  margin: 0;
+  font-size: 18px;
+}
+.commonEventList button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
 .commonEventList > header button {
   display: inline-flex;
   width: 28px;
@@ -41,8 +49,12 @@
 }
 
 .commonEventItem:hover,
-.commonEventItem.is-active { background: rgba(22, 119, 255, 0.08); }
-.commonEventItem.is-active { color: #1677ff; }
+.commonEventItem.is-active {
+  background: rgba(22, 119, 255, 0.08);
+}
+.commonEventItem.is-active {
+  color: #1677ff;
+}
 .commonEventSelect {
   display: flex;
   min-width: 0;
@@ -52,10 +64,25 @@
   flex: 1;
   text-align: left;
 }
-.commonEventSelect span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.commonEventSelect i { display: inline-flex; color: #fa8c16; font-style: normal; line-height: 0; }
-.commonEventDelete { display: none; padding: 7px; color: #999 !important; }
-.commonEventItem:hover .commonEventDelete { display: inline-flex; }
+.commonEventSelect span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.commonEventSelect i {
+  display: inline-flex;
+  color: #fa8c16;
+  font-style: normal;
+  line-height: 0;
+}
+.commonEventDelete {
+  display: none;
+  padding: 7px;
+  color: #999 !important;
+}
+.commonEventItem:hover .commonEventDelete {
+  display: inline-flex;
+}
 
 .commonEventEditorPane,
 #common-event-editor-host {

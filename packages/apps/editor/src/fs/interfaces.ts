@@ -2,7 +2,7 @@
  * 核心接口定义
  */
 
-import type { Content } from "./types";
+import type { Content } from './types';
 
 /**
  * ReadonlySignal<T> - 只读 signal（函数式）

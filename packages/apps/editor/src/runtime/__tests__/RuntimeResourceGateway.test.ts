@@ -1,12 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
-import { FileHandlerManager } from "@/fs/FileHandlerManager";
-import { projectAssets } from "@/project/assets";
-import { projectData } from "@/project/data/projectData";
-import { fs as browserFs } from "@/services/fs";
-import { loadSampleProject, type SampleProjectContext } from "@test/utils/sampleProject";
-import { RuntimeResourceGateway } from "../RuntimeResourceGateway";
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
+import { FileHandlerManager } from '@/fs/FileHandlerManager';
+import { projectAssets } from '@/project/assets';
+import { projectData } from '@/project/data/projectData';
+import { fs as browserFs } from '@/services/fs';
+import { loadSampleProject, type SampleProjectContext } from '@test/utils/sampleProject';
+import { RuntimeResourceGateway } from '../RuntimeResourceGateway';
 
-describe("RuntimeResourceGateway", () => {
+describe('RuntimeResourceGateway', () => {
   let project: SampleProjectContext;
   let spies: MockInstance[];
   let gateway: RuntimeResourceGateway;
@@ -15,11 +15,11 @@ describe("RuntimeResourceGateway", () => {
     project = await loadSampleProject();
     projectAssets.reset();
     spies = [
-      vi.spyOn(browserFs.promises, "readFile").mockImplementation(project.fs.readFile.bind(project.fs)),
-      vi.spyOn(browserFs.promises, "readFileBinary").mockImplementation(project.fs.readFileBinary.bind(project.fs)),
-      vi.spyOn(browserFs.promises, "writeFile").mockImplementation(project.fs.writeFile.bind(project.fs)),
-      vi.spyOn(browserFs.promises, "readdir").mockImplementation(project.fs.readdir.bind(project.fs)),
-      vi.spyOn(browserFs.promises, "deleteFile").mockImplementation(project.fs.deleteFile.bind(project.fs)),
+      vi.spyOn(browserFs.promises, 'readFile').mockImplementation(project.fs.readFile.bind(project.fs)),
+      vi.spyOn(browserFs.promises, 'readFileBinary').mockImplementation(project.fs.readFileBinary.bind(project.fs)),
+      vi.spyOn(browserFs.promises, 'writeFile').mockImplementation(project.fs.writeFile.bind(project.fs)),
+      vi.spyOn(browserFs.promises, 'readdir').mockImplementation(project.fs.readdir.bind(project.fs)),
+      vi.spyOn(browserFs.promises, 'deleteFile').mockImplementation(project.fs.deleteFile.bind(project.fs)),
     ];
     gateway = new RuntimeResourceGateway();
   });
@@ -32,45 +32,47 @@ describe("RuntimeResourceGateway", () => {
     spies.forEach((spy) => spy.mockRestore());
   });
 
-  it("returns the latest in-memory raw source and emits a deduplicatable change", async () => {
+  it('returns the latest in-memory raw source and emits a deduplicatable change', async () => {
     const changes: string[] = [];
     gateway.setChangeListener((change) => changes.push(`${change.path}:${change.state}`));
-    await gateway.readText("project/data.js");
+    await gateway.readText('project/data.js');
 
     await projectData.tower().mutate((tower) => {
-      tower.firstData.title = "RUNTIME_MEMORY_TITLE";
+      tower.firstData.title = 'RUNTIME_MEMORY_TITLE';
     });
-    const current = await gateway.readText("project/data.js");
+    const current = await gateway.readText('project/data.js');
 
-    expect(current.text).toContain("RUNTIME_MEMORY_TITLE");
-    expect(changes).toContain("project/data.js:loaded");
+    expect(current.text).toContain('RUNTIME_MEMORY_TITLE');
+    expect(changes).toContain('project/data.js:loaded');
   });
 
-  it("returns binary copies while reusing the shared asset cache", async () => {
+  it('returns binary copies while reusing the shared asset cache', async () => {
     const readBinary = spies[1];
-    const first = await gateway.readBinary("project/images/hero.png");
+    const first = await gateway.readBinary('project/images/hero.png');
     const expected = first.bytes[0];
     first.bytes[0] = expected ^ 0xff;
-    const second = await gateway.readBinary("project/images/hero.png");
+    const second = await gateway.readBinary('project/images/hero.png');
 
     expect(second.bytes[0]).toBe(expected);
     expect(readBinary).toHaveBeenCalledTimes(1);
   });
 
-  it("waits for an in-flight binary load without starting another read", async () => {
+  it('waits for an in-flight binary load without starting another read', async () => {
     const readBinary = spies[1];
     const originalRead = project.fs.readFileBinary.bind(project.fs);
     let release: (() => void) | undefined;
-    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
     readBinary.mockImplementation(async (path: string) => {
       await gate;
       return originalRead(path);
     });
-    const resource = projectAssets.image("project/images/hero.png");
+    const resource = projectAssets.image('project/images/hero.png');
     const initialLoad = resource.ensureLoaded();
-    await vi.waitFor(() => expect(resource.snapshot().status).toBe("loading"));
+    await vi.waitFor(() => expect(resource.snapshot().status).toBe('loading'));
 
-    const gatewayRead = gateway.readBinary("project/images/hero.png");
+    const gatewayRead = gateway.readBinary('project/images/hero.png');
     release?.();
     await initialLoad;
     await gatewayRead;
@@ -78,7 +80,7 @@ describe("RuntimeResourceGateway", () => {
     expect(readBinary).toHaveBeenCalledTimes(1);
   });
 
-  it("rejects engine paths outside the project gateway", async () => {
-    await expect(gateway.readText("libs/core.js")).rejects.toThrow("denied");
+  it('rejects engine paths outside the project gateway', async () => {
+    await expect(gateway.readText('libs/core.js')).rejects.toThrow('denied');
   });
 });

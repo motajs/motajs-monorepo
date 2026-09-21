@@ -8,13 +8,7 @@
 import { blockRegistry, setParseEventListFn } from '../registry';
 import { unknownSchema } from '../schemas/unknown';
 
-import type {
-  BlockState,
-  EventData,
-  EventObject,
-  ParseContext,
-  WorkspaceState,
-} from './types';
+import type { BlockState, EventData, EventObject, ParseContext, WorkspaceState } from './types';
 
 // ============================================
 // 主要解析函数
@@ -27,10 +21,7 @@ import type {
  * @param context - 解析上下文
  * @returns 第一个块的状态，后续块通过 next 链接
  */
-export function parseEventList(
-  events: EventData[],
-  context: ParseContext = { entryType: 'event' },
-): BlockState | null {
+export function parseEventList(events: EventData[], context: ParseContext = { entryType: 'event' }): BlockState | null {
   if (!events || events.length === 0) {
     return null;
   }
@@ -62,10 +53,7 @@ setParseEventListFn(parseEventList);
  * @param context - 解析上下文
  * @returns BlockState
  */
-export function parseEvent(
-  event: EventData,
-  context: ParseContext = { entryType: 'event' },
-): BlockState {
+export function parseEvent(event: EventData, context: ParseContext = { entryType: 'event' }): BlockState {
   // 字符串是简单文本
   if (typeof event === 'string') {
     return parseTextString(event, context);
@@ -106,15 +94,10 @@ function parseTextString(text: string, context: ParseContext): BlockState {
 function parseTextEvent(event: EventObject, context: ParseContext): BlockState {
   const text = String(event.text ?? '');
   // 与旧 ActionParser 一致：只有存在高级显示参数时才展开完整选项块。
-  const hasTextMetadata = text.includes("\t[")
-    || text.includes("\\t[")
-    || text.includes("\b[")
-    || text.includes("\\b[");
-  const hasTextDrawing = text.includes("\f[") || text.includes("\\f[");
-  const hasAdvancedOptions = hasTextMetadata
-    || event.pos != null
-    || Boolean(event.code)
-    || hasTextDrawing;
+  const hasTextMetadata =
+    text.includes('\t[') || text.includes('\\t[') || text.includes('\b[') || text.includes('\\b[');
+  const hasTextDrawing = text.includes('\f[') || text.includes('\\f[');
+  const hasAdvancedOptions = hasTextMetadata || event.pos != null || Boolean(event.code) || hasTextDrawing;
 
   if (hasAdvancedOptions) {
     const parser = blockRegistry.getParser('text');

@@ -1,5 +1,5 @@
-import type { BlockRegistry, RegistrySpriteInfo, SpriteRegistry } from "@/project/model/projectModel";
-import type { FloorData } from "@/types";
+import type { BlockRegistry, RegistrySpriteInfo, SpriteRegistry } from '@/project/model/projectModel';
+import type { FloorData } from '@/types';
 
 const TILESET_START_OFFSET = 10000;
 const TILESET_OFFSET_STEP = 10000;
@@ -38,20 +38,18 @@ export function resolveCellSprite(
 
   const block = blockRegistry.get(idnum);
   if (!block) return `Missing block registry entry for idnum ${idnum}`;
-  if (!block.materialPath) return `Missing sprite metadata for idnum ${idnum} (${block.id ?? "unknown"})`;
-  if (typeof block.y !== "number") return `Missing sprite index for idnum ${idnum} (${block.id ?? "unknown"})`;
+  if (!block.materialPath) return `Missing sprite metadata for idnum ${idnum} (${block.id ?? 'unknown'})`;
+  if (typeof block.y !== 'number') return `Missing sprite index for idnum ${idnum} (${block.id ?? 'unknown'})`;
 
   return {
     key: `${block.images}:${block.id}`,
     id: block.id ?? String(idnum),
-    images: block.images ?? "",
+    images: block.images ?? '',
     path: block.materialPath,
     x: block.x ?? 0,
     y: block.y,
-    width: typeof block.width === "number" ? block.width : 32,
-    height: typeof block.height === "number"
-      ? block.height
-      : block.images?.endsWith("48") ? 48 : 32,
+    width: typeof block.width === 'number' ? block.width : 32,
+    height: typeof block.height === 'number' ? block.height : block.images?.endsWith('48') ? 48 : 32,
     isTile: block.isTile,
     idnum,
   };
@@ -63,10 +61,9 @@ export function resolveDefaultGroundSprite(
   spriteRegistry: SpriteRegistry,
   tilesets: readonly string[],
 ): ResolvedSpriteInfo | string | undefined {
-  const configured = typeof floor.defaultGround === "string" && floor.defaultGround.length > 0
-    ? floor.defaultGround
-    : "ground";
-  if (configured === "none") return undefined;
+  const configured =
+    typeof floor.defaultGround === 'string' && floor.defaultGround.length > 0 ? floor.defaultGround : 'ground';
+  if (configured === 'none') return undefined;
 
   const tileset = /^X(\d+)$/.exec(configured);
   if (tileset) return resolveCellSprite(Number(tileset[1]), blockRegistry, tilesets);

@@ -9,11 +9,8 @@
  * - 提供恢复操作（retry, openAsText 等）
  */
 
-import type { FC, ReactNode } from "react";
-import {
-  SuspenseWithRecovery,
-  type SuspenseWithRecoveryProps,
-} from "./SuspenseWithRecovery";
+import type { FC, ReactNode } from 'react';
+import { SuspenseWithRecovery, type SuspenseWithRecoveryProps } from './SuspenseWithRecovery';
 
 export interface ContentBoundaryProps extends SuspenseWithRecoveryProps {
   children: ReactNode;
@@ -60,4 +57,4 @@ export const ContentBoundary: FC<ContentBoundaryProps> = (props) => {
 
 // 导出相关类型和组件
 export { SuspenseWithRecovery, type SuspenseWithRecoveryProps };
-export * from "./RecoveryUI";
+export * from './RecoveryUI';

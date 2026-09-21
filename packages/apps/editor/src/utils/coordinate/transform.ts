@@ -73,11 +73,7 @@ export function transformCoordField(
  * transformCoordPoint([1, 1], 2, 3) // => [3, 4]
  * ```
  */
-export function transformCoordPoint(
-  coord: [number, number],
-  offsetX: number,
-  offsetY: number,
-): [number, number] {
+export function transformCoordPoint(coord: [number, number], offsetX: number, offsetY: number): [number, number] {
   return [coord[0] + offsetX, coord[1] + offsetY];
 }
 
@@ -90,12 +86,7 @@ export function transformCoordPoint(
  * @param height - 地图高度
  * @returns 是否在边界内
  */
-export function isCoordInBounds(
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-): boolean {
+export function isCoordInBounds(x: number, y: number, width: number, height: number): boolean {
   return x >= 0 && x < width && y >= 0 && y < height;
 }
 

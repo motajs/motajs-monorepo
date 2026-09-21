@@ -14,12 +14,7 @@
     },
     "item.cls": {
       "type": "string",
-      "enum": [
-        "items",
-        "constants",
-        "tools",
-        "equips"
-      ],
+      "enum": ["items", "constants", "tools", "equips"],
       "title": "道具类别",
       "description": "items 为即拾即用，constants 为永久道具，tools 为消耗道具，equips 为装备。",
       "editor": {
@@ -45,10 +40,7 @@
       }
     },
     "item.name": {
-      "type": [
-        "string",
-        "null"
-      ],
+      "type": ["string", "null"],
       "title": "道具名称",
       "description": "道具在编辑器与游戏界面中显示的名称。",
       "editor": {
@@ -56,10 +48,7 @@
       }
     },
     "item.text": {
-      "type": [
-        "string",
-        "null"
-      ],
+      "type": ["string", "null"],
       "title": "道具描述",
       "description": "道具在道具栏中显示的描述。",
       "editor": {
@@ -67,10 +56,7 @@
       }
     },
     "item.hideInToolbox": {
-      "type": [
-        "boolean",
-        "null"
-      ],
+      "type": ["boolean", "null"],
       "title": "不显示在道具栏",
       "description": "获得后不在道具栏列出该道具。",
       "editor": {
@@ -78,10 +64,7 @@
       }
     },
     "item.hideInReplay": {
-      "type": [
-        "boolean",
-        "null"
-      ],
+      "type": ["boolean", "null"],
       "title": "回放不绘制道具栏",
       "description": "适合会在回放中频繁连续使用的道具。",
       "editor": {
@@ -89,10 +72,7 @@
       }
     },
     "item.itemEffect": {
-      "type": [
-        "string",
-        "null"
-      ],
+      "type": ["string", "null"],
       "title": "即拾即用效果",
       "description": "获得 items 类道具时执行的 JavaScript。",
       "editor": {
@@ -101,10 +81,7 @@
       }
     },
     "item.itemEffectTip": {
-      "type": [
-        "string",
-        "null"
-      ],
+      "type": ["string", "null"],
       "title": "即拾即用提示",
       "description": "获得 items 类道具时追加显示的文字。",
       "editor": {
@@ -112,10 +89,7 @@
       }
     },
     "item.useItemEvent": {
-      "type": [
-        "array",
-        "null"
-      ],
+      "type": ["array", "null"],
       "title": "碰触或使用事件",
       "description": "碰触或使用道具时执行的事件，对所有类别有效。",
       "editor": {
@@ -124,10 +98,7 @@
       }
     },
     "item.useItemEffect": {
-      "type": [
-        "string",
-        "null"
-      ],
+      "type": ["string", "null"],
       "title": "使用效果",
       "description": "使用 tools 或 constants 类道具时执行的 JavaScript。",
       "editor": {
@@ -136,10 +107,7 @@
       }
     },
     "item.canUseItemEffect": {
-      "type": [
-        "string",
-        "null"
-      ],
+      "type": ["string", "null"],
       "title": "能否使用或装备",
       "description": "非 items 类道具的可用或可装备条件；null 表示始终不可使用但仍可装备。",
       "editor": {
@@ -148,10 +116,7 @@
       }
     },
     "item.equip": {
-      "type": [
-        "object",
-        "null"
-      ],
+      "type": ["object", "null"],
       "title": "装备属性",
       "description": "装备类道具的部位、动画与数值加成。",
       "editor": {

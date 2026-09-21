@@ -5,9 +5,9 @@
  * 业务组件只需要处理数据已加载的情况
  */
 
-import { pluginsService, type PluginsData } from "@/services/plugins";
-import type { UpdateFn } from "../useFs";
-import { useDataSuspense } from "./useDataSuspense";
+import { pluginsService, type PluginsData } from '@/services/plugins';
+import type { UpdateFn } from '../useFs';
+import { useDataSuspense } from './useDataSuspense';
 
 /**
  * Suspense 版本的插件数据 Hook
@@ -32,10 +32,7 @@ import { useDataSuspense } from "./useDataSuspense";
  *   <PluginsEditor />
  * </ContentBoundary>
  */
-export function usePluginsDataSuspense(): [
-  PluginsData,
-  UpdateFn<PluginsData>,
-] {
+export function usePluginsDataSuspense(): [PluginsData, UpdateFn<PluginsData>] {
   const handler = pluginsService.getHandler();
   return useDataSuspense(handler);
 }

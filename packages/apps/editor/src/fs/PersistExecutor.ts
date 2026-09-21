@@ -6,19 +6,17 @@
  * state and persistence failures never roll editor state back.
  */
 
-import { signal } from "alien-signals";
-import { waitUntil } from "@/utils/base/signal";
-import type { ReadonlySignal } from "./interfaces";
+import { signal } from 'alien-signals';
+import { waitUntil } from '@/utils/base/signal';
+import type { ReadonlySignal } from './interfaces';
 
 export type PersistenceIntent = {
-  kind: "write" | "delete";
+  kind: 'write' | 'delete';
   execute: () => Promise<void>;
 };
 
 export type ExecutorStatus =
-  | { status: "idle" }
-  | { status: "executing"; pending: number }
-  | { status: "error"; error: Error; pending: 0 };
+  { status: 'idle' } | { status: 'executing'; pending: number } | { status: 'error'; error: Error; pending: 0 };
 
 export class PersistExecutor {
   private readonly legacyOperation?: () => Promise<void>;
@@ -30,7 +28,7 @@ export class PersistExecutor {
 
   constructor(legacyOperation?: () => Promise<void>) {
     this.legacyOperation = legacyOperation;
-    this._status = signal<ExecutorStatus>({ status: "idle" });
+    this._status = signal<ExecutorStatus>({ status: 'idle' });
     this.status = this._status as ReadonlySignal<ExecutorStatus>;
   }
 
@@ -38,7 +36,7 @@ export class PersistExecutor {
   schedule(intent: PersistenceIntent): void {
     this.pendingIntent = intent;
     if (this.isExecuting) {
-      this._status({ status: "executing", pending: 1 });
+      this._status({ status: 'executing', pending: 1 });
       return;
     }
     void this.processQueue();
@@ -47,13 +45,13 @@ export class PersistExecutor {
   /** Legacy test adapter. Production resources use schedule(). */
   exec(): void {
     if (!this.legacyOperation) {
-      throw new Error("PersistExecutor.exec() requires a legacy operation");
+      throw new Error('PersistExecutor.exec() requires a legacy operation');
     }
-    this.schedule({ kind: "write", execute: this.legacyOperation });
+    this.schedule({ kind: 'write', execute: this.legacyOperation });
   }
 
   retry(): void {
-    if (!this.failedIntent || this._status().status !== "error") return;
+    if (!this.failedIntent || this._status().status !== 'error') return;
     this.schedule(this.failedIntent);
   }
 
@@ -64,30 +62,30 @@ export class PersistExecutor {
     while (this.pendingIntent) {
       const intent = this.pendingIntent;
       this.pendingIntent = null;
-      this._status({ status: "executing", pending: 0 });
+      this._status({ status: 'executing', pending: 0 });
 
       try {
         await intent.execute();
         this.failedIntent = null;
       } catch (error) {
         const normalized = error instanceof Error ? error : new Error(String(error));
-        console.error("PersistExecutor: task failed", normalized);
+        console.error('PersistExecutor: task failed', normalized);
         this.failedIntent = intent;
         if (!this.pendingIntent) {
           this.isExecuting = false;
-          this._status({ status: "error", error: normalized, pending: 0 });
+          this._status({ status: 'error', error: normalized, pending: 0 });
           return;
         }
       }
     }
 
     this.isExecuting = false;
-    this._status({ status: "idle" });
+    this._status({ status: 'idle' });
   }
 
   /** Persistence-boundary/test API; ordinary editing code must not call it. */
   async whenQuiescent(): Promise<void> {
-    await waitUntil(() => this._status().status !== "executing");
+    await waitUntil(() => this._status().status !== 'executing');
   }
 
   /** @deprecated Use PersistenceMonitor.flush() at explicit boundaries. */
@@ -98,7 +96,7 @@ export class PersistExecutor {
   async flush(): Promise<void> {
     await this.whenQuiescent();
     const status = this._status();
-    if (status.status === "error") throw status.error;
+    if (status.status === 'error') throw status.error;
   }
 
   hasPending(): boolean {

@@ -33,16 +33,16 @@ function rankCompletions(values: BlocklyCompletionItem[]): BlocklyCompletionItem
 }
 
 function sourceForContext(valueBeforeCaret: string): { source: string; prefix: string } | null {
-  const colon = /(?:^|[^\w])(status|item|flag|enemy):([A-Za-z0-9_\u4E00-\u9FCC\u3040-\u30FF\u2160-\u216B\u0391-\u03C9]*)$/.exec(valueBeforeCaret);
+  const colon =
+    /(?:^|[^\w])(status|item|flag|enemy):([A-Za-z0-9_\u4E00-\u9FCC\u3040-\u30FF\u2160-\u216B\u0391-\u03C9]*)$/.exec(
+      valueBeforeCaret,
+    );
   if (colon) return { source: colon[1] === 'status' ? 'status' : colon[1], prefix: colon[2] };
   const dot = /(?:^|[^\w])(hero|flags)\.([A-Za-z0-9_]*)$/.exec(valueBeforeCaret);
   if (dot) return { source: dot[1] === 'hero' ? 'status' : 'flag', prefix: dot[2] };
   const escape = /\\([ifrg])\[([^\]]*)$/.exec(valueBeforeCaret);
   if (escape) {
-    const source = escape[1] === 'i' ? 'id'
-      : escape[1] === 'f' ? 'image'
-      : escape[1] === 'r' ? 'color'
-      : 'font';
+    const source = escape[1] === 'i' ? 'id' : escape[1] === 'f' ? 'image' : escape[1] === 'r' ? 'color' : 'font';
     return { source, prefix: escape[2] };
   }
   if (valueBeforeCaret.endsWith('\\')) return { source: 'textEscape', prefix: '\\' };
@@ -66,14 +66,16 @@ export function resolveBlocklyCompletions(
   const token = /[A-Za-z0-9_.\-\u4E00-\u9FCC\u3040-\u30FF\u2160-\u216B\u0391-\u03C9]*$/.exec(before)?.[0] ?? '';
   const selectedSource = contextual?.source ?? source;
   const prefix = contextual?.prefix ?? token;
-  const suffix = /^[A-Za-z0-9_.\-\u4E00-\u9FCC\u3040-\u30FF\u2160-\u216B\u0391-\u03C9]*/.exec(value.slice(caret))?.[0] ?? '';
+  const suffix =
+    /^[A-Za-z0-9_.\-\u4E00-\u9FCC\u3040-\u30FF\u2160-\u216B\u0391-\u03C9]*/.exec(value.slice(caret))?.[0] ?? '';
   const replaceStart = Math.max(0, caret - prefix.length);
   const replaceEnd = caret + suffix.length;
-  const values = selectedSource === 'contextual'
-    ? []
-    : selectedSource === 'auto'
-    ? catalog.all
-    : catalog.bySource[selectedSource] ?? catalog.bySource.expression ?? catalog.all;
+  const values =
+    selectedSource === 'contextual'
+      ? []
+      : selectedSource === 'auto'
+        ? catalog.all
+        : (catalog.bySource[selectedSource] ?? catalog.bySource.expression ?? catalog.all);
   const normalizedPrefix = prefix.toLocaleLowerCase();
   const suggestions = rankCompletions(values)
     .filter((item) => item.value !== prefix && item.value.toLocaleLowerCase().startsWith(normalizedPrefix))
@@ -129,7 +131,13 @@ export class FieldAutocomplete extends FieldTextInput {
       }
       snapshot = resource.snapshot();
     }
-    if (snapshot.status !== 'loaded' || generation !== this.editorGeneration || this.htmlInput_ !== input || !input.isConnected) return;
+    if (
+      snapshot.status !== 'loaded' ||
+      generation !== this.editorGeneration ||
+      this.htmlInput_ !== input ||
+      !input.isConnected
+    )
+      return;
 
     let replaceStart = 0;
     let replaceEnd = 0;
@@ -141,9 +149,12 @@ export class FieldAutocomplete extends FieldTextInput {
       sort: false,
       replace: (raw) => {
         const suggestion = raw as { value?: string } | string;
-        const replacement = typeof suggestion === 'string' ? suggestion : suggestion.value ?? String(suggestion);
+        const replacement = typeof suggestion === 'string' ? suggestion : (suggestion.value ?? String(suggestion));
         const recent = editorConfigService.get<string[]>('blocklyCompletionRecent', []);
-        editorConfigService.set('blocklyCompletionRecent', [replacement, ...recent.filter((item) => item !== replacement)].slice(0, 50));
+        editorConfigService.set(
+          'blocklyCompletionRecent',
+          [replacement, ...recent.filter((item) => item !== replacement)].slice(0, 50),
+        );
         const next = `${input.value.slice(0, replaceStart)}${replacement}${input.value.slice(replaceEnd)}`;
         input.value = next;
         this.setValue(next);

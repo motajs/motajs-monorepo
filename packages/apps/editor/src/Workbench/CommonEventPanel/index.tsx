@@ -5,16 +5,16 @@
  * 业务组件只写"数据已就绪"的逻辑
  */
 
-import { useCallback, useState, type FC } from "react";
-import { ContentLeftTab } from "../components/ContentLeftTab";
-import { Table, EditModeSegmented } from "@/components/Table";
-import { useTableMetaSuspense } from "@/hooks";
-import { useResourceSuspense } from "@/hooks/suspense";
-import { projectData } from "@/project/data/projectData";
-import { tableCommands } from "@/project/commands";
-import { notifyCommandResult, notifyError } from "@/utils/notify";
-import type { EditMode, TableAction, CommentObject } from "@/components/Table/types";
-import type { Action } from "@/utils/action";
+import { useCallback, useState, type FC } from 'react';
+import { ContentLeftTab } from '../components/ContentLeftTab';
+import { Table, EditModeSegmented } from '@/components/Table';
+import { useTableMetaSuspense } from '@/hooks';
+import { useResourceSuspense } from '@/hooks/suspense';
+import { projectData } from '@/project/data/projectData';
+import { tableCommands } from '@/project/commands';
+import { notifyCommandResult, notifyError } from '@/utils/notify';
+import type { EditMode, TableAction, CommentObject } from '@/components/Table/types';
+import type { Action } from '@/utils/action';
 
 /**
  * CommonEventPanelContent - 内容组件（使用 Suspense hooks）
@@ -29,7 +29,7 @@ interface CommonEventPanelContentProps {
 const CommonEventPanelContent: FC<CommonEventPanelContentProps> = ({ editMode }) => {
   // 使用 Suspense 版本的 hooks - 数据未就绪时会 throw
   const [commonEvents] = useResourceSuspense(projectData.commonEvents());
-  const eventsMeta = useTableMetaSuspense("eventsComment");
+  const eventsMeta = useTableMetaSuspense('eventsComment');
 
   // 只取 commonEvent 的元数据（与原实现一致）
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -39,20 +39,13 @@ const CommonEventPanelContent: FC<CommonEventPanelContentProps> = ({ editMode })
   const handleChange = useCallback(async (action: TableAction) => {
     try {
       const result = await tableCommands.patchCommonEvents([action as Action]);
-      notifyCommandResult(result, "保存成功！");
+      notifyCommandResult(result, '保存成功！');
     } catch (err) {
       notifyError(err);
     }
   }, []);
 
-  return (
-    <Table
-      data={commonEvents}
-      commentObj={meta}
-      onChange={handleChange}
-      editMode={editMode}
-    />
-  );
+  return <Table data={commonEvents} commentObj={meta} onChange={handleChange} editMode={editMode} />;
 };
 
 /**
@@ -63,7 +56,7 @@ const CommonEventPanelContent: FC<CommonEventPanelContentProps> = ({ editMode })
  */
 export const CommonEventPanel: FC = () => {
   // 在 Panel 层维护 editMode（不依赖数据）
-  const [editMode, setEditMode] = useState<EditMode>("change");
+  const [editMode, setEditMode] = useState<EditMode>('change');
 
   const actions = <EditModeSegmented value={editMode} onChange={setEditMode} />;
 

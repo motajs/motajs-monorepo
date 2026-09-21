@@ -4,7 +4,7 @@
  * 基于 @/utils/coordinate 封装的编辑器专用坐标转换
  */
 
-import { Grid, type LocPOD, type GridPOD } from "@/utils/coordinate";
+import { Grid, type LocPOD, type GridPOD } from '@/utils/coordinate';
 
 /** 默认格子大小 */
 export const DEFAULT_GRID: GridPOD = [32, 32];
@@ -21,10 +21,7 @@ export const GRID_COUNT = 13;
  * @param container - 容器元素
  * @returns 像素坐标 [x, y]
  */
-export function eToLoc(
-  e: MouseEvent | React.MouseEvent,
-  container: HTMLElement
-): LocPOD {
+export function eToLoc(e: MouseEvent | React.MouseEvent, container: HTMLElement): LocPOD {
   const rect = container.getBoundingClientRect();
   return [e.clientX - rect.left, e.clientY - rect.top];
 }
@@ -37,11 +34,7 @@ export function eToLoc(
  * @param grid - 格子大小，默认 [32, 32]
  * @returns 格子位置 [x, y]
  */
-export function locToPos(
-  loc: LocPOD,
-  offset: LocPOD = [0, 0],
-  grid: GridPOD = DEFAULT_GRID
-): LocPOD {
+export function locToPos(loc: LocPOD, offset: LocPOD = [0, 0], grid: GridPOD = DEFAULT_GRID): LocPOD {
   const [px, py] = loc;
   const [ox, oy] = offset;
   return Grid.unmapLoc([px + ox, py + oy], grid);
@@ -55,11 +48,7 @@ export function locToPos(
  * @param grid - 格子大小，默认 [32, 32]
  * @returns 像素坐标 [x, y]
  */
-export function posToDrawLoc(
-  pos: LocPOD,
-  offset: LocPOD = [0, 0],
-  grid: GridPOD = DEFAULT_GRID
-): LocPOD {
+export function posToDrawLoc(pos: LocPOD, offset: LocPOD = [0, 0], grid: GridPOD = DEFAULT_GRID): LocPOD {
   const [x, y] = Grid.mapLoc(pos, grid);
   const [ox, oy] = offset;
   return [x - ox, y - oy];
@@ -72,10 +61,7 @@ export function posToDrawLoc(
  * @param bigmapInfo - 大地图信息 { top, left, size }
  * @returns 像素坐标 [x, y]
  */
-export function posToDrawLocBigmap(
-  pos: LocPOD,
-  bigmapInfo: { top: number; left: number; size: number }
-): LocPOD {
+export function posToDrawLocBigmap(pos: LocPOD, bigmapInfo: { top: number; left: number; size: number }): LocPOD {
   const { top, left, size } = bigmapInfo;
   return [left + pos[0] * size, top + pos[1] * size];
 }
@@ -93,7 +79,7 @@ export function locToPosBigmap(
   loc: LocPOD,
   bigmapInfo: { top: number; left: number; size: number },
   floorWidth: number,
-  floorHeight: number
+  floorHeight: number,
 ): LocPOD {
   const { top, left, size } = bigmapInfo;
   const x = Math.max(0, Math.min(Math.floor((loc[0] - left) / size), floorWidth - 1));
@@ -110,10 +96,7 @@ export function locToPosBigmap(
  * @returns 限制后的格子位置
  */
 export function clampPos(pos: LocPOD, width: number, height: number): LocPOD {
-  return [
-    Math.max(0, Math.min(pos[0], width - 1)),
-    Math.max(0, Math.min(pos[1], height - 1)),
-  ];
+  return [Math.max(0, Math.min(pos[0], width - 1)), Math.max(0, Math.min(pos[1], height - 1))];
 }
 
 /**

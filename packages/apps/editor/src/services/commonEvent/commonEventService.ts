@@ -10,19 +10,19 @@
  * - 内存数据源 + 异步落盘
  */
 
-import { produce } from "immer";
-import { FileHandlerManager } from "@/fs/FileHandlerManager";
-import { Json2xDataHandler } from "@/fs/Json2xDataHandler";
-import type { Content } from "@/fs";
-import { applyActions, type Action } from "@/utils/action";
-import { ContentUtils } from "@/fs/ContentUtils";
-import { tableCommands } from "@/project/commands";
+import { produce } from 'immer';
+import { FileHandlerManager } from '@/fs/FileHandlerManager';
+import { Json2xDataHandler } from '@/fs/Json2xDataHandler';
+import type { Content } from '@/fs';
+import { applyActions, type Action } from '@/utils/action';
+import { ContentUtils } from '@/fs/ContentUtils';
+import { tableCommands } from '@/project/commands';
 
 /** 事件数据文件路径 */
-const EVENTS_DATA_PATH = "project/events.js";
+const EVENTS_DATA_PATH = 'project/events.js';
 
 /** 数据变量名 */
-const EVENTS_VAR_NAME = "events_c12a15a8_c380_4b28_8144_256cba95f760";
+const EVENTS_VAR_NAME = 'events_c12a15a8_c380_4b28_8144_256cba95f760';
 
 /**
  * 公共事件数据类型
@@ -51,11 +51,7 @@ class CommonEventServiceImpl {
   private getDataHandler(): Json2xDataHandler<EventsData> {
     if (!this.dataHandler) {
       const fileHandler = FileHandlerManager.get(EVENTS_DATA_PATH);
-      this.dataHandler = new Json2xDataHandler<EventsData>(
-        fileHandler,
-        EVENTS_VAR_NAME,
-        "Events Data",
-      );
+      this.dataHandler = new Json2xDataHandler<EventsData>(fileHandler, EVENTS_VAR_NAME, 'Events Data');
     }
     return this.dataHandler;
   }

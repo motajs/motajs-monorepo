@@ -1,5 +1,5 @@
-import { createContext, useContext, type ComponentType, type FC, type ReactNode } from "react";
-import { EMPTY } from "./empty";
+import { createContext, useContext, type ComponentType, type FC, type ReactNode } from 'react';
+import { EMPTY } from './empty';
 
 export interface StoreProviderProps {
   children: ReactNode;
@@ -22,11 +22,13 @@ export interface ParameterfulStore<Value, Argument> {
 
 export function createStore<Value>(useHook: () => Value): Store<Value>;
 export function createStore<Value, Argument>(useHook: (arg: Argument) => Value): ParameterfulStore<Value, Argument>;
-export function createStore<Value, Argument>(useHook: (() => Value) | ((arg: Argument) => Value)): Store<Value> | ParameterfulStore<Value, Argument> {
+export function createStore<Value, Argument>(
+  useHook: (() => Value) | ((arg: Argument) => Value),
+): Store<Value> | ParameterfulStore<Value, Argument> {
   const Context = createContext<Value | typeof EMPTY>(EMPTY);
 
   const Provider: FC<StoreProviderProps | ParameterfulStoreProviderProps<Argument>> = (props) => {
-    const argument = "argument" in props ? props.argument : undefined;
+    const argument = 'argument' in props ? props.argument : undefined;
     const value = (useHook as (argument: Argument | undefined) => Value)(argument);
     return <Context.Provider value={value}>{props.children}</Context.Provider>;
   };
@@ -34,7 +36,7 @@ export function createStore<Value, Argument>(useHook: (() => Value) | ((arg: Arg
   const useStore = (): Value => {
     const value = useContext(Context);
     if (value === EMPTY) {
-      throw new Error("Component must be wrapped with <Container.Provider>");
+      throw new Error('Component must be wrapped with <Container.Provider>');
     }
     return value;
   };

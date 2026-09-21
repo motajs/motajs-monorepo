@@ -10,15 +10,15 @@
  * - 内存数据源 + 异步落盘
  */
 
-import { produce } from "immer";
-import { FileHandlerManager } from "@/fs/FileHandlerManager";
-import type { Content } from "@/fs";
-import { applyActions, type Action } from "@/utils/action";
-import { PluginsDataHandler, type PluginsData } from "./PluginsDataHandler";
-import { tableCommands } from "@/project/commands";
+import { produce } from 'immer';
+import { FileHandlerManager } from '@/fs/FileHandlerManager';
+import type { Content } from '@/fs';
+import { applyActions, type Action } from '@/utils/action';
+import { PluginsDataHandler, type PluginsData } from './PluginsDataHandler';
+import { tableCommands } from '@/project/commands';
 
 /** 插件数据文件路径 */
-const PLUGINS_DATA_PATH = "project/plugins.js";
+const PLUGINS_DATA_PATH = 'project/plugins.js';
 
 /**
  * pluginsService - 插件服务（命令式 API）

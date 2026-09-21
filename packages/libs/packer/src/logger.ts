@@ -1,7 +1,7 @@
 /**
  * 日志级别
  */
-export type LogLevel = "log" | "success" | "warn" | "error";
+export type LogLevel = 'log' | 'success' | 'warn' | 'error';
 
 /**
  * 日志输出回调类型
@@ -69,7 +69,7 @@ export class Logger {
    * 根据当前深度添加缩进
    */
   private indent(text: string): string {
-    const prefix = "  ".repeat(this.depth);
+    const prefix = '  '.repeat(this.depth);
     return `${prefix}${text}`;
   }
 }
@@ -81,10 +81,10 @@ export class Logger {
  */
 export function formatSize(bytes: number): string {
   if (bytes < 0) {
-    return "0B";
+    return '0B';
   }
 
-  const units = ["B", "KB", "MB", "GB"];
+  const units = ['B', 'KB', 'MB', 'GB'];
   let unitIndex = 0;
   let size = bytes;
 
@@ -108,11 +108,11 @@ export function formatSize(bytes: number): string {
 export function formatTimestamp(): string {
   const now = new Date();
   const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  const hours = String(now.getHours()).padStart(2, "0");
-  const minutes = String(now.getMinutes()).padStart(2, "0");
-  const seconds = String(now.getSeconds()).padStart(2, "0");
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
 
   return `[${year}-${month}-${day} ${hours}:${minutes}:${seconds}]`;
 }

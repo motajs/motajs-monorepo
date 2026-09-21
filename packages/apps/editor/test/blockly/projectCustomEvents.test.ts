@@ -2,10 +2,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import * as Blockly from 'blockly';
 import { javascriptGenerator } from 'blockly/javascript';
 import JSON5 from 'json5';
-import {
-  blockRegistry,
-  roundTripDeclarativeEvent,
-} from '@/blockly/registry';
+import { blockRegistry, roundTripDeclarativeEvent } from '@/blockly/registry';
 import { registerAllBlocks } from '@/blockly/blocks';
 import { eventsToWorkspaceState } from '@/blockly/parser';
 import {
@@ -51,31 +48,44 @@ describe('project custom event pack', () => {
       eventType: 'projectThing',
       title: '工程事件',
     });
-    const duplicate = { ...first, type: `${first.type}_2`, definition: { ...first.definition, type: `${first.type}_2` } };
-    expect(() => parseProjectBlockPack({
-      ...createEmptyProjectBlockPack(),
-      blocks: [first, duplicate],
-    })).toThrow('自定义事件 type 重复');
+    const duplicate = {
+      ...first,
+      type: `${first.type}_2`,
+      definition: { ...first.definition, type: `${first.type}_2` },
+    };
+    expect(() =>
+      parseProjectBlockPack({
+        ...createEmptyProjectBlockPack(),
+        blocks: [first, duplicate],
+      }),
+    ).toThrow('自定义事件 type 重复');
 
     const builtin = compileCustomBlockDraft({
       ...createBlankCustomBlockDraft(),
       eventType: 'comment',
       title: '不能覆盖注释',
     });
-    const result = blockRegistry.replacePack({
-      ...createEmptyProjectBlockPack(),
-      blocks: [builtin],
-    }, { source: 'extension' });
+    const result = blockRegistry.replacePack(
+      {
+        ...createEmptyProjectBlockPack(),
+        blocks: [builtin],
+      },
+      { source: 'extension' },
+    );
     expect(result.ok).toBe(false);
     expect(result.diagnostics.some((item) => item.code === 'matcher.conflict')).toBe(true);
   });
 
   it('replaces and releases the project-owned registry atomically', () => {
     const first = compileCustomBlockDraft({
-      ...createBlankCustomBlockDraft(), eventType: 'projectFirst', title: 'First',
+      ...createBlankCustomBlockDraft(),
+      eventType: 'projectFirst',
+      title: 'First',
     });
     const second = compileCustomBlockDraft({
-      ...createBlankCustomBlockDraft(), eventType: 'projectSecond', title: 'Second',
+      ...createBlankCustomBlockDraft(),
+      eventType: 'projectSecond',
+      title: 'Second',
     });
     replaceProjectBlockPack({ ...createEmptyProjectBlockPack(), blocks: [first] });
     expect(blockRegistry.hasEventType('projectFirst')).toBe(true);
@@ -99,10 +109,14 @@ describe('custom event inference', () => {
   };
 
   it('uses clicked-sample key order, unions fields and marks missing values optional', () => {
-    const draft = inferCustomBlockDraft('dialogue', [
-      sample({ type: 'dialogue', enabled: true, title: 'first', count: 2 }),
-      sample({ type: 'dialogue', title: 'second', body: 'line 1\nline 2' }, '$[1]'),
-    ], catalog);
+    const draft = inferCustomBlockDraft(
+      'dialogue',
+      [
+        sample({ type: 'dialogue', enabled: true, title: 'first', count: 2 }),
+        sample({ type: 'dialogue', title: 'second', body: 'line 1\nline 2' }, '$[1]'),
+      ],
+      catalog,
+    );
     expect(draft.fields.map((field) => field.path)).toEqual(['enabled', 'title', 'count', 'body']);
     expect(draft.fields.map((field) => field.control)).toEqual(['checkbox', 'text', 'number', 'multiline']);
     expect(draft.fields.find((field) => field.path === 'enabled')?.optional).toBe(true);
@@ -110,45 +124,44 @@ describe('custom event inference', () => {
   });
 
   it('infers completion only when every string uniquely matches one source', () => {
-    const unique = inferCustomBlockDraft('custom', [
-      sample({ type: 'custom', arbitrary: 'yellowKey' }),
-    ], catalog);
+    const unique = inferCustomBlockDraft('custom', [sample({ type: 'custom', arbitrary: 'yellowKey' })], catalog);
     expect(unique.fields[0].completionSource).toBe('item');
 
-    const ambiguous = inferCustomBlockDraft('custom', [
-      sample({ type: 'custom', arbitrary: 'hero.png' }),
-    ], catalog);
+    const ambiguous = inferCustomBlockDraft('custom', [sample({ type: 'custom', arbitrary: 'hero.png' })], catalog);
     expect(ambiguous.fields[0].completionSource).toBeUndefined();
   });
 
   it('does not use field names as semantic hints', () => {
-    const controls = ['sound', 'title', 'x'].map((key) => (
-      inferCustomBlockDraft('custom', [sample({ type: 'custom', [key]: 'free text' })], catalog).fields[0]
-    ));
-    expect(controls.map(({ control, completionSource }) => ({ control, completionSource })))
-      .toEqual(Array(3).fill({ control: 'text', completionSource: undefined }));
+    const controls = ['sound', 'title', 'x'].map(
+      (key) => inferCustomBlockDraft('custom', [sample({ type: 'custom', [key]: 'free text' })], catalog).fields[0],
+    );
+    expect(controls.map(({ control, completionSource }) => ({ control, completionSource }))).toEqual(
+      Array(3).fill({ control: 'text', completionSource: undefined }),
+    );
   });
 
   it('falls back to JSON for null, containers and mixed JSON types', () => {
     for (const value of [null, { x: 1 }, [1, 2]]) {
       expect(inferCustomBlockDraft('custom', [sample({ type: 'custom', value })]).fields[0].control).toBe('json');
     }
-    expect(inferCustomBlockDraft('custom', [
-      sample({ type: 'custom', value: 1 }),
-      sample({ type: 'custom', value: '1' }),
-    ]).fields[0].control).toBe('json');
+    expect(
+      inferCustomBlockDraft('custom', [sample({ type: 'custom', value: 1 }), sample({ type: 'custom', value: '1' })])
+        .fields[0].control,
+    ).toBe('json');
   });
 });
 
 describe('custom event lossless mapping', () => {
   it('preserves unbound and later-added fields, nested objects, dot keys and null', () => {
-    const draft = inferCustomBlockDraft('dialogue', [sample({
-      type: 'dialogue',
-      title: '妖精',
-      nullable: null,
-      'literal.key': 'kept',
-      portraits: [{ side: 'left', image: 'fairy.png' }],
-    })]);
+    const draft = inferCustomBlockDraft('dialogue', [
+      sample({
+        type: 'dialogue',
+        title: '妖精',
+        nullable: null,
+        'literal.key': 'kept',
+        portraits: [{ side: 'left', image: 'fairy.png' }],
+      }),
+    ]);
     // Deliberately map only two fields. Everything else must remain in the raw snapshot.
     draft.fields = draft.fields.filter((field) => field.path === 'title' || field.path.includes('literal.key'));
     const schema = compileCustomBlockDraft(draft);
@@ -177,10 +190,13 @@ describe('custom event lossless mapping', () => {
     const draft = inferCustomBlockDraft('dialogue', [sample(input)]);
     draft.fields = draft.fields.filter((field) => field.path === 'title');
     const schema = compileCustomBlockDraft(draft);
-    const result = blockRegistry.replacePack({
-      ...createEmptyProjectBlockPack(),
-      blocks: [schema],
-    }, { source: 'extension' });
+    const result = blockRegistry.replacePack(
+      {
+        ...createEmptyProjectBlockPack(),
+        blocks: [schema],
+      },
+      { source: 'extension' },
+    );
     expect(result.ok).toBe(true);
 
     const workspace = new Blockly.Workspace();
@@ -221,32 +237,42 @@ describe('project event index traversal', () => {
       const ensureLoaded = vi.fn(async () => {
         if (failure) throw failure;
       });
-      const reload = vi.fn(async () => { throw new Error('reload must not be called'); });
+      const reload = vi.fn(async () => {
+        throw new Error('reload must not be called');
+      });
       resources.push({ ensureLoaded, reload });
       return {
         path,
         ensureLoaded,
         reload,
-        snapshot: () => failure
-          ? { status: 'error', error: failure }
-          : { status: 'loaded', value },
+        snapshot: () => (failure ? { status: 'error', error: failure } : { status: 'loaded', value }),
       } as unknown as DataResource<unknown>;
     };
-    vi.spyOn(projectData, 'tower').mockReturnValue(fake('tower', {
-      main: { floorIds: ['F1'] },
-      firstData: { action: [{ type: 'indexOnly', from: 'tower' }] },
-    }) as ReturnType<typeof projectData.tower>);
-    vi.spyOn(projectData, 'items').mockReturnValue(fake('items', {
-      item: { useItemEvent: [{ type: 'indexOnly', from: 'item' }] },
-    }) as ReturnType<typeof projectData.items>);
-    vi.spyOn(projectData, 'enemys').mockReturnValue(fake('enemys', {}, new Error('enemy read failed')) as ReturnType<typeof projectData.enemys>);
+    vi.spyOn(projectData, 'tower').mockReturnValue(
+      fake('tower', {
+        main: { floorIds: ['F1'] },
+        firstData: { action: [{ type: 'indexOnly', from: 'tower' }] },
+      }) as ReturnType<typeof projectData.tower>,
+    );
+    vi.spyOn(projectData, 'items').mockReturnValue(
+      fake('items', {
+        item: { useItemEvent: [{ type: 'indexOnly', from: 'item' }] },
+      }) as ReturnType<typeof projectData.items>,
+    );
+    vi.spyOn(projectData, 'enemys').mockReturnValue(
+      fake('enemys', {}, new Error('enemy read failed')) as ReturnType<typeof projectData.enemys>,
+    );
     vi.spyOn(projectData, 'mapBlocks').mockReturnValue(fake('maps', {}) as ReturnType<typeof projectData.mapBlocks>);
-    vi.spyOn(projectData, 'commonEvents').mockReturnValue(fake('events', {
-      custom: [{ type: 'indexOnly', from: 'common' }],
-    }) as ReturnType<typeof projectData.commonEvents>);
-    vi.spyOn(projectData, 'floor').mockReturnValue(fake('floor', {
-      events: { '1,1': [{ type: 'indexOnly', from: 'floor' }] },
-    }) as ReturnType<typeof projectData.floor>);
+    vi.spyOn(projectData, 'commonEvents').mockReturnValue(
+      fake('events', {
+        custom: [{ type: 'indexOnly', from: 'common' }],
+      }) as ReturnType<typeof projectData.commonEvents>,
+    );
+    vi.spyOn(projectData, 'floor').mockReturnValue(
+      fake('floor', {
+        events: { '1,1': [{ type: 'indexOnly', from: 'floor' }] },
+      }) as ReturnType<typeof projectData.floor>,
+    );
 
     const result = await collectProjectEventSamples('indexOnly');
     expect(result.samples.map((entry) => entry.event.from)).toEqual(['tower', 'item', 'common', 'floor']);

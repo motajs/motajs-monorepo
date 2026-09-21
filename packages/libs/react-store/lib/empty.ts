@@ -1,1 +1,1 @@
-export const EMPTY = Symbol("EMPTY");
+export const EMPTY = Symbol('EMPTY');

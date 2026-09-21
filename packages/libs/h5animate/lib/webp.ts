@@ -4,9 +4,9 @@
  * 提供 PNG 到 WebP 的转换、精灵图创建和帧提取功能
  */
 
-import sharp from "sharp";
-import type { SpriteInfo, ImageConversionResult } from "./types.js";
-import { createWebPProcessingError } from "./errors.js";
+import sharp from 'sharp';
+import type { SpriteInfo, ImageConversionResult } from './types.js';
+import { createWebPProcessingError } from './errors.js';
 
 /**
  * WebP 压缩选项
@@ -23,20 +23,15 @@ export type WebPOptions = sharp.WebpOptions;
  * @returns 转换后的 WebP 数据
  * @throws H5AnimateError 如果图像处理失败
  */
-export async function convertToWebP(
-  imageBuffer: Buffer,
-  options: WebPOptions = {},
-): Promise<Buffer> {
+export async function convertToWebP(imageBuffer: Buffer, options: WebPOptions = {}): Promise<Buffer> {
   const { lossless = true, quality = 80 } = options;
 
   try {
-    const webpOptions: sharp.WebpOptions = lossless
-      ? { lossless: true }
-      : { lossless: false, quality };
+    const webpOptions: sharp.WebpOptions = lossless ? { lossless: true } : { lossless: false, quality };
 
     return await sharp(imageBuffer).webp(webpOptions).toBuffer();
   } catch (error) {
-    const message = error instanceof Error ? error.message : "未知错误";
+    const message = error instanceof Error ? error.message : '未知错误';
     throw createWebPProcessingError(`图像转换为 WebP 失败: ${message}`);
   }
 }
@@ -79,7 +74,7 @@ export async function createVerticalSpriteSheet(
   options: WebPOptions = {},
 ): Promise<ImageConversionResult> {
   if (imageBuffers.length === 0) {
-    throw createWebPProcessingError("没有图像可处理");
+    throw createWebPProcessingError('没有图像可处理');
   }
 
   const { lossless = true, quality = 80 } = options;
@@ -96,7 +91,6 @@ export async function createVerticalSpriteSheet(
 
     // 单个图像的情况，直接转换
     if (imageBuffers.length === 1) {
-
       const webpData = await sharp(imageBuffers[0]).webp(webpOptions).toBuffer();
 
       const spriteInfo: SpriteInfo = {
@@ -155,10 +149,10 @@ export async function createVerticalSpriteSheet(
 
     return { webpData, spriteInfo };
   } catch (error) {
-    if (error instanceof Error && error.name === "H5AnimateError") {
+    if (error instanceof Error && error.name === 'H5AnimateError') {
       throw error;
     }
-    const message = error instanceof Error ? error.message : "未知错误";
+    const message = error instanceof Error ? error.message : '未知错误';
     throw createWebPProcessingError(`创建精灵图失败: ${message}`);
   }
 }
@@ -171,11 +165,9 @@ export async function createVerticalSpriteSheet(
  */
 export function base64ToBuffer(base64Data: string): Buffer {
   // 移除 data URI 前缀（如果存在）
-  const base64Content = base64Data.includes(",")
-    ? base64Data.split(",")[1]
-    : base64Data;
+  const base64Content = base64Data.includes(',') ? base64Data.split(',')[1] : base64Data;
 
-  return Buffer.from(base64Content, "base64");
+  return Buffer.from(base64Content, 'base64');
 }
 
 /**
@@ -190,9 +182,7 @@ export async function combineBase64ImagesToWebP(
   options: WebPOptions = {},
 ): Promise<ImageConversionResult> {
   // 过滤空字符串并转换为 Buffer
-  const imageBuffers = base64Images
-    .filter((img) => img.length > 0)
-    .map(base64ToBuffer);
+  const imageBuffers = base64Images.filter((img) => img.length > 0).map(base64ToBuffer);
 
   return createVerticalSpriteSheet(imageBuffers, options);
 }
@@ -248,10 +238,10 @@ export async function extractFrameByIndex(
       })
       .toBuffer();
   } catch (error) {
-    if (error instanceof Error && error.name === "H5AnimateError") {
+    if (error instanceof Error && error.name === 'H5AnimateError') {
       throw error;
     }
-    const message = error instanceof Error ? error.message : "未知错误";
+    const message = error instanceof Error ? error.message : '未知错误';
     throw createWebPProcessingError(`提取帧失败: ${message}`);
   }
 }
@@ -275,11 +265,9 @@ export async function extractFrameByPosition(
   height: number,
 ): Promise<Buffer> {
   try {
-    return await sharp(webpBuffer)
-      .extract({ left, top, width, height })
-      .toBuffer();
+    return await sharp(webpBuffer).extract({ left, top, width, height }).toBuffer();
   } catch (error) {
-    const message = error instanceof Error ? error.message : "未知错误";
+    const message = error instanceof Error ? error.message : '未知错误';
     throw createWebPProcessingError(`提取帧失败: ${message}`);
   }
 }
@@ -322,10 +310,10 @@ export async function extractAllFrames(
 
     return frames;
   } catch (error) {
-    if (error instanceof Error && error.name === "H5AnimateError") {
+    if (error instanceof Error && error.name === 'H5AnimateError') {
       throw error;
     }
-    const message = error instanceof Error ? error.message : "未知错误";
+    const message = error instanceof Error ? error.message : '未知错误';
     throw createWebPProcessingError(`提取所有帧失败: ${message}`);
   }
 }

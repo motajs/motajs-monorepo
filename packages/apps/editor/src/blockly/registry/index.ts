@@ -24,10 +24,7 @@ import { createExpressionBlock, generateEventJson, isEmpty, parseEventList, setP
 import { editorConfigService } from '@/services/editorConfig';
 import { replaceExpressionForDisplay, replaceExpressionFromDisplay } from '../representation';
 import { editorDocsEndpoint } from '@/environment';
-import {
-  PROJECT_EVENT_PASSTHROUGH_EXTENSION,
-  readProjectEventRaw,
-} from '../extensions/projectEventPassthrough';
+import { PROJECT_EVENT_PASSTHROUGH_EXTENSION, readProjectEventRaw } from '../extensions/projectEventPassthrough';
 
 const SAFE_EXTENSION_FIELDS = new Set([
   'field_input',
@@ -42,45 +39,127 @@ const SAFE_EXTENSION_FIELDS = new Set([
   'input_dummy',
 ]);
 const RESERVED_CATEGORY_IDS = new Set([
-  'entry', 'text', 'data', 'map', 'eventControl', 'effect', 'sound',
-  'ui', 'native', 'value', 'templates', 'recent',
+  'entry',
+  'text',
+  'data',
+  'map',
+  'eventControl',
+  'effect',
+  'sound',
+  'ui',
+  'native',
+  'value',
+  'templates',
+  'recent',
 ]);
 const SAFE_INTERACTION_TYPES = new Set([
-  'editText', 'selectPoint', 'selectMaterial', 'preview',
-  'autocomplete', 'colourBinding', 'command',
+  'editText',
+  'selectPoint',
+  'selectMaterial',
+  'preview',
+  'autocomplete',
+  'colourBinding',
+  'command',
 ]);
 const SAFE_COMMANDS = new Set(['showKeyCodes']);
-const SAFE_PREVIEW_ADAPTERS = new Set([
-  'event', 'text', 'textDrawing', 'setText', 'waitRect', 'floorImage',
-]);
+const SAFE_PREVIEW_ADAPTERS = new Set(['event', 'text', 'textDrawing', 'setText', 'waitRect', 'floorImage']);
 const SAFE_COMPLETION_SOURCES = new Set([
-  'auto', 'contextual', 'expression', 'id', 'enemy', 'item', 'floor', 'shop', 'commonEvent',
-  'image', 'animate', 'bgm', 'sound', 'font', 'color', 'flag', 'status', 'core', 'textEscape',
+  'auto',
+  'contextual',
+  'expression',
+  'id',
+  'enemy',
+  'item',
+  'floor',
+  'shop',
+  'commonEvent',
+  'image',
+  'animate',
+  'bgm',
+  'sound',
+  'font',
+  'color',
+  'flag',
+  'status',
+  'core',
+  'textEscape',
 ]);
 const WORKSPACE_STATE_EVENTS = new Set([
-  'text', 'if', 'confirm', 'switch', 'choices', 'for', 'forEach',
-  'while', 'dowhile', 'wait', 'previewUI',
-  '_choice_item', '_switch_case', '_wait_keyboard', '_wait_mouse',
-  '_wait_condition', '_wait_timeout',
-  'setBlockOpacity', 'setBlockFilter', 'turnBlock', 'showFloorImg', 'hideFloorImg',
-  'showBgFgMap', 'hideBgFgMap', 'setBgFgBlock', 'follow', 'unfollow', 'loadEquip',
-  'unloadEquip', 'resetEnemyOnPoint', 'moveEnemyOnPoint', '_moveEnemyOnPointRelative',
-  'setEquip', 'loadBgm', 'freeBgm', 'setBgmSpeed', 'showTextImage', 'rotateImage',
-  'scaleImage', 'showGif', 'setFilter', 'fillText', 'drawTextContent', 'drawLine',
-  'drawArrow', 'fillPolygon', 'strokePolygon', 'fillEllipse', 'strokeEllipse',
-  'fillArc', 'strokeArc', 'drawImage',
+  'text',
+  'if',
+  'confirm',
+  'switch',
+  'choices',
+  'for',
+  'forEach',
+  'while',
+  'dowhile',
+  'wait',
+  'previewUI',
+  '_choice_item',
+  '_switch_case',
+  '_wait_keyboard',
+  '_wait_mouse',
+  '_wait_condition',
+  '_wait_timeout',
+  'setBlockOpacity',
+  'setBlockFilter',
+  'turnBlock',
+  'showFloorImg',
+  'hideFloorImg',
+  'showBgFgMap',
+  'hideBgFgMap',
+  'setBgFgBlock',
+  'follow',
+  'unfollow',
+  'loadEquip',
+  'unloadEquip',
+  'resetEnemyOnPoint',
+  'moveEnemyOnPoint',
+  '_moveEnemyOnPointRelative',
+  'setEquip',
+  'loadBgm',
+  'freeBgm',
+  'setBgmSpeed',
+  'showTextImage',
+  'rotateImage',
+  'scaleImage',
+  'showGif',
+  'setFilter',
+  'fillText',
+  'drawTextContent',
+  'drawLine',
+  'drawArrow',
+  'fillPolygon',
+  'strokePolygon',
+  'fillEllipse',
+  'strokeEllipse',
+  'fillArc',
+  'strokeArc',
+  'drawImage',
 ]);
 const MATERIAL_EVENT_KINDS: Record<string, import('./types').MaterialKind> = {
-  animate: 'animate', playSound: 'sound', playBgm: 'bgm',
-  showImage: 'image', showGif: 'image', setHeroIcon: 'hero',
+  animate: 'animate',
+  playSound: 'sound',
+  playBgm: 'bgm',
+  showImage: 'image',
+  showGif: 'image',
+  setHeroIcon: 'hero',
 };
 const PREVIEW_EVENT_TYPES = new Set([
-  'showImage', 'showGif', 'setCurtain', 'setWeather', 'choices', 'confirm', 'setText',
+  'showImage',
+  'showGif',
+  'setCurtain',
+  'setWeather',
+  'choices',
+  'confirm',
+  'setText',
 ]);
 const disabledBlocksBeingGenerated = new WeakSet<Blockly.Block>();
 
 export function withDisabledBlocksEnabled<T>(workspace: Blockly.Workspace, generate: () => T): T {
-  const disabled = workspace.getAllBlocks(false)
+  const disabled = workspace
+    .getAllBlocks(false)
     .filter((block) => !block.isEnabled())
     .map((block) => ({ block, reasons: [...block.getDisabledReasons()] }));
   const eventsWereEnabled = Blockly.Events.isEnabled();
@@ -101,9 +180,7 @@ export function withDisabledBlocksEnabled<T>(workspace: Blockly.Workspace, gener
 }
 
 function matcherKey(schema: BlockSchema): string | null {
-  return schema.event
-    ? `${schema.event.match.path}:${JSON.stringify(schema.event.match.equals)}`
-    : null;
+  return schema.event ? `${schema.event.match.path}:${JSON.stringify(schema.event.match.equals)}` : null;
 }
 
 function containsExecutable(value: unknown, seen = new Set<object>()): boolean {
@@ -116,10 +193,10 @@ function containsExecutable(value: unknown, seen = new Set<object>()): boolean {
 
 function normalizePackSchema(schema: BlockSchema | DeclarativeBlockSchema): BlockSchema {
   if ('eventType' in schema) return schema;
-  const inferredEventType = schema.event.match.path === 'type'
-    && typeof schema.event.match.equals === 'string'
-    ? schema.event.match.equals
-    : `extension:${schema.type}`;
+  const inferredEventType =
+    schema.event.match.path === 'type' && typeof schema.event.match.equals === 'string'
+      ? schema.event.match.equals
+      : `extension:${schema.type}`;
   return {
     ...schema,
     eventType: inferredEventType,
@@ -149,16 +226,21 @@ function inferBuiltinInteractions(schema: BlockSchema): BlockSchema {
   if (schema.category === 'map' && !interactions.some((item) => item.type === 'selectPoint')) {
     const xField = names.has('X') ? 'X' : names.has('POS_X') ? 'POS_X' : undefined;
     const yField = names.has('Y') ? 'Y' : names.has('POS_Y') ? 'POS_Y' : undefined;
-    if (xField && yField) interactions.push({
-      type: 'selectPoint', xField, yField,
-      floorField: names.has('FLOOR_ID') ? 'FLOOR_ID' : undefined,
-      floorPolicy: names.has('FLOOR_ID') ? 'explicit' : 'current',
-    });
+    if (xField && yField)
+      interactions.push({
+        type: 'selectPoint',
+        xField,
+        yField,
+        floorField: names.has('FLOOR_ID') ? 'FLOOR_ID' : undefined,
+        floorPolicy: names.has('FLOOR_ID') ? 'explicit' : 'current',
+      });
   }
   const materialKind = MATERIAL_EVENT_KINDS[schema.eventType];
   if (materialKind && names.has('NAME') && !interactions.some((item) => item.type === 'selectMaterial')) {
     interactions.push({
-      type: 'selectMaterial', field: 'NAME', materialKind,
+      type: 'selectMaterial',
+      field: 'NAME',
+      materialKind,
       transform: materialKind === 'animate' ? 'strip-animate-extension' : undefined,
       aliasPolicy: 'preserve',
     });
@@ -167,53 +249,82 @@ function inferBuiltinInteractions(schema: BlockSchema): BlockSchema {
     interactions.push({ type: 'preview', adapter: 'event' });
   }
   const materialCompletion = interactions.find((item) => item.type === 'selectMaterial');
-  if (materialCompletion?.type === 'selectMaterial'
-    && !interactions.some((item) => item.type === 'autocomplete' && item.field === materialCompletion.field)) {
-    const source = materialCompletion.materialKind === 'hero' || materialCompletion.materialKind === 'tileset'
-      || materialCompletion.materialKind === 'autotile'
-      ? 'image'
-      : materialCompletion.materialKind;
+  if (
+    materialCompletion?.type === 'selectMaterial' &&
+    !interactions.some((item) => item.type === 'autocomplete' && item.field === materialCompletion.field)
+  ) {
+    const source =
+      materialCompletion.materialKind === 'hero' ||
+      materialCompletion.materialKind === 'tileset' ||
+      materialCompletion.materialKind === 'autotile'
+        ? 'image'
+        : materialCompletion.materialKind;
     interactions.push({ type: 'autocomplete', field: materialCompletion.field, source });
   }
   args.forEach((arg, index) => {
     const previous = args[index - 1];
-    if (arg.type === 'field_colour' && arg.name && previous?.type === 'field_input' && previous.name
-      && !interactions.some((item) => item.type === 'colourBinding' && item.colourField === arg.name)) {
+    if (
+      arg.type === 'field_colour' &&
+      arg.name &&
+      previous?.type === 'field_input' &&
+      previous.name &&
+      !interactions.some((item) => item.type === 'colourBinding' && item.colourField === arg.name)
+    ) {
       interactions.push({ type: 'colourBinding', textField: previous.name, colourField: arg.name });
     }
   });
   for (const binding of schema.event?.bindings ?? []) {
-    if (binding.kind !== 'field' || interactions.some((item) => item.type === 'autocomplete' && item.field === binding.input)) continue;
-    const source = binding.input === 'FLOOR_ID' ? 'floor'
-      : binding.input === 'ID' ? 'id'
-      : binding.valueType === 'expression' ? 'expression'
-      : null;
+    if (
+      binding.kind !== 'field' ||
+      interactions.some((item) => item.type === 'autocomplete' && item.field === binding.input)
+    )
+      continue;
+    const source =
+      binding.input === 'FLOOR_ID'
+        ? 'floor'
+        : binding.input === 'ID'
+          ? 'id'
+          : binding.valueType === 'expression'
+            ? 'expression'
+            : null;
     if (source) interactions.push({ type: 'autocomplete', field: binding.input, source });
   }
   for (const arg of args) {
-    if (arg.type !== 'field_input' || !arg.name
-      || interactions.some((item) => item.type === 'autocomplete' && item.field === arg.name)) continue;
-    const source = arg.name === 'FLOOR_ID' ? 'floor'
-      : arg.name === 'ID' ? (schema.eventType === 'useItem' ? 'item'
-        : schema.eventType === 'openShop' || schema.eventType === 'disableShop' ? 'shop'
-        : schema.eventType === 'insert' ? 'commonEvent'
-        : 'id')
-      : null;
+    if (
+      arg.type !== 'field_input' ||
+      !arg.name ||
+      interactions.some((item) => item.type === 'autocomplete' && item.field === arg.name)
+    )
+      continue;
+    const source =
+      arg.name === 'FLOOR_ID'
+        ? 'floor'
+        : arg.name === 'ID'
+          ? schema.eventType === 'useItem'
+            ? 'item'
+            : schema.eventType === 'openShop' || schema.eventType === 'disableShop'
+              ? 'shop'
+              : schema.eventType === 'insert'
+                ? 'commonEvent'
+                : 'id'
+          : null;
     if (source) interactions.push({ type: 'autocomplete', field: arg.name, source });
   }
-  return interactions.length ? {
-    ...schema,
-    interactions,
-    defaultInteraction: schema.defaultInteraction
-      ?? (interactions.some((item) => item.type === 'preview') ? 'preview' : undefined),
-  } : schema;
+  return interactions.length
+    ? {
+        ...schema,
+        interactions,
+        defaultInteraction:
+          schema.defaultInteraction ?? (interactions.some((item) => item.type === 'preview') ? 'preview' : undefined),
+      }
+    : schema;
 }
 
 function applyInteractionFields(schema: BlockSchema, completeAllTextInputs: boolean): BlockSchema['definition'] {
   const completionByField = new Map(
-    (schema.interactions ?? []).flatMap((interaction) => (
-      interaction.type === 'autocomplete' ? [[interaction.field, interaction.source] as const] : []
-    )),
+    (schema.interactions ?? []).flatMap((interaction) =>
+      interaction.type === 'autocomplete' ? [[interaction.field, interaction.source] as const] : [],
+    ),
   );
   const definition = { ...schema.definition } as unknown as Record<string, unknown>;
   for (const [key, value] of Object.entries(definition)) {
@@ -229,9 +340,7 @@ function applyInteractionFields(schema: BlockSchema, completeAllTextInputs: bool
   return definition as unknown as BlockSchema['definition'];
 }
 
-export function normalizeBuiltinStatementLayout(
-  input: BlockSchema['definition'],
-): BlockSchema['definition'] {
+export function normalizeBuiltinStatementLayout(input: BlockSchema['definition']): BlockSchema['definition'] {
   const definition = input as unknown as Record<string, unknown>;
   const lines: Array<{ message: string; args?: Array<Record<string, unknown>> }> = [];
   let hasValueInput = false;
@@ -240,7 +349,7 @@ export function normalizeBuiltinStatementLayout(
   while (typeof definition[`message${index}`] === 'string') {
     const message = definition[`message${index}`] as string;
     const args = Array.isArray(definition[`args${index}`])
-      ? definition[`args${index}`] as Array<Record<string, unknown>>
+      ? (definition[`args${index}`] as Array<Record<string, unknown>>)
       : undefined;
     if (args?.some((arg) => arg.type === 'input_value')) hasValueInput = true;
     const statementArgs = args?.filter((arg) => arg.type === 'input_statement') ?? [];
@@ -262,41 +371,46 @@ export function normalizeBuiltinStatementLayout(
     }
     const isInventedLabel = /^(?:执行|则执行|响应分支|分支列表|选项列表)$/.test(title);
     if (hasSingleStatement) {
-      if (title && !isInventedLabel) lines.push({
-        message: title,
-        args: headerArgs.length ? headerArgs : undefined,
-      });
+      if (title && !isInventedLabel)
+        lines.push({
+          message: title,
+          args: headerArgs.length ? headerArgs : undefined,
+        });
       lines.push({ message: '%1', args: statementArgs });
     } else lines.push({ message, args });
     index += 1;
   }
-  const isStatementBlock = Object.prototype.hasOwnProperty.call(definition, 'previousStatement')
-    || Object.prototype.hasOwnProperty.call(definition, 'nextStatement');
-  const canMergeFieldRows = lines.length > 1
-    && isStatementBlock
-    && !hasStatementInput
-    && !hasValueInput
-    && definition.inputsInline !== false
-    && lines.every((line) => (line.args ?? []).every((arg) => (
-      typeof arg.type === 'string'
-      && arg.type.startsWith('field_')
-      && arg.type !== 'field_multilinetext'
-    )));
+  const isStatementBlock =
+    Object.prototype.hasOwnProperty.call(definition, 'previousStatement') ||
+    Object.prototype.hasOwnProperty.call(definition, 'nextStatement');
+  const canMergeFieldRows =
+    lines.length > 1 &&
+    isStatementBlock &&
+    !hasStatementInput &&
+    !hasValueInput &&
+    definition.inputsInline !== false &&
+    lines.every((line) =>
+      (line.args ?? []).every(
+        (arg) => typeof arg.type === 'string' && arg.type.startsWith('field_') && arg.type !== 'field_multilinetext',
+      ),
+    );
   if (canMergeFieldRows) {
     let offset = 0;
     const args: Array<Record<string, unknown>> = [];
-    const message = lines.map((line) => {
-      const shifted = line.message.replace(/%(\d+)/g, (_match, rawIndex: string) => (
-        `%${offset + Number(rawIndex)}`
-      ));
-      offset += line.args?.length ?? 0;
-      args.push(...(line.args ?? []));
-      return shifted;
-    }).join(' ').replace(/\s+/g, ' ').trim();
+    const message = lines
+      .map((line) => {
+        const shifted = line.message.replace(/%(\d+)/g, (_match, rawIndex: string) => `%${offset + Number(rawIndex)}`);
+        offset += line.args?.length ?? 0;
+        args.push(...(line.args ?? []));
+        return shifted;
+      })
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim();
     lines.splice(0, lines.length, { message, args: args.length ? args : undefined });
   }
-  const layoutChanged = lines.length !== index
-    || lines.some((line, lineIndex) => line.message !== definition[`message${lineIndex}`]);
+  const layoutChanged =
+    lines.length !== index || lines.some((line, lineIndex) => line.message !== definition[`message${lineIndex}`]);
   const needsInlineValues = (hasValueInput || canMergeFieldRows) && definition.inputsInline === undefined;
   if (!layoutChanged && !needsInlineValues) return input;
 
@@ -380,17 +494,16 @@ function parseGeneratedStatements(code: string): unknown[] {
 
 export function roundTripDeclarativeEvent(schema: BlockSchema, input: EventObject): EventObject {
   if (!schema.event) throw new Error(`Block ${schema.definition.type} has no declarative event mapping`);
-  let event = schema.event.preserveUnbound
-    ? cloneJson(input)
-    : cloneJson(schema.event.template);
+  let event = schema.event.preserveUnbound ? cloneJson(input) : cloneJson(schema.event.template);
   for (const binding of schema.event.bindings) {
     const source = getAtPath(input, binding.path);
     let value = source === undefined ? cloneJson(binding.default) : source;
     if (binding.kind === 'field') {
       value = coerceFromField(coerceToField(value, binding.valueType), binding.valueType);
     }
-    const shouldOmit = (binding.optional && (value === undefined || value === ''))
-      || (binding.omitWhenDefault && Object.is(value, binding.default));
+    const shouldOmit =
+      (binding.optional && (value === undefined || value === '')) ||
+      (binding.omitWhenDefault && Object.is(value, binding.default));
     if (shouldOmit) deleteAtPath(event, binding.path);
     else event = setAtPath(event, binding.path, value);
   }
@@ -404,10 +517,13 @@ export class BlockRegistry {
   private codecs = new Map<string, BlockCodec>();
   private packSources = new Map<string, RegisterPackOptions['source']>();
   private categories = new Map<string, ToolboxCategoryDefinition>();
-  private packs = new Map<string, {
-    pack: BlocklyBlockPack & { blocks: BlockSchema[] };
-    options: RegisterPackOptions;
-  }>();
+  private packs = new Map<
+    string,
+    {
+      pack: BlocklyBlockPack & { blocks: BlockSchema[] };
+      options: RegisterPackOptions;
+    }
+  >();
   private initialized = false;
 
   register(schema: BlockSchema, options: RegisterOptions = {}): void {
@@ -425,20 +541,14 @@ export class BlockRegistry {
     for (const schema of schemas) this.register(schema, options);
   }
 
-  registerPack(
-    pack: BlocklyBlockPack,
-    options: RegisterPackOptions,
-    allowOverride = false,
-  ): RegisterPackResult {
+  registerPack(pack: BlocklyBlockPack, options: RegisterPackOptions, allowOverride = false): RegisterPackResult {
     const normalizedPack: BlocklyBlockPack & { blocks: BlockSchema[] } = {
       ...pack,
       blocks: pack.blocks.map((raw) => {
         const schema = normalizePackSchema(raw);
         if (options.source !== 'builtin') return schema;
         const inferred = inferBuiltinInteractions(schema);
-        return WORKSPACE_STATE_EVENTS.has(inferred.eventType)
-          ? { ...inferred, persistWorkspaceState: true }
-          : inferred;
+        return WORKSPACE_STATE_EVENTS.has(inferred.eventType) ? { ...inferred, persistWorkspaceState: true } : inferred;
       }),
     };
     const diagnostics = this.validatePack(normalizedPack, options, allowOverride);
@@ -468,21 +578,20 @@ export class BlockRegistry {
     return { ok: true, diagnostics, registeredBlockTypes };
   }
 
-  replacePack(
-    pack: BlocklyBlockPack,
-    options: RegisterPackOptions = { source: 'extension' },
-  ): RegisterPackResult {
+  replacePack(pack: BlocklyBlockPack, options: RegisterPackOptions = { source: 'extension' }): RegisterPackResult {
     const previous = this.packs.get(pack.id);
     if (previous && previous.options.source !== options.source) {
       return {
         ok: false,
         registeredBlockTypes: [],
-        diagnostics: [{
-          level: 'error',
-          code: 'pack.source',
-          message: `Pack ${pack.id} cannot replace a ${previous.options.source} pack`,
-          packId: pack.id,
-        }],
+        diagnostics: [
+          {
+            level: 'error',
+            code: 'pack.source',
+            message: `Pack ${pack.id} cannot replace a ${previous.options.source} pack`,
+            packId: pack.id,
+          },
+        ],
       };
     }
     if (previous) this.removePack(pack.id);
@@ -527,11 +636,13 @@ export class BlockRegistry {
       return {
         ok: false,
         registeredBlockTypes: [],
-        diagnostics: [{
-          level: 'error',
-          code: 'pack.parse',
-          message: cause instanceof Error ? cause.message : String(cause),
-        }],
+        diagnostics: [
+          {
+            level: 'error',
+            code: 'pack.parse',
+            message: cause instanceof Error ? cause.message : String(cause),
+          },
+        ],
       };
     }
   }
@@ -596,10 +707,11 @@ export class BlockRegistry {
 
   private getParserForSchema(schema: BlockSchema): BlockParser | null {
     const codec = this.codecs.get(schema.definition.type);
-    const parser = codec?.parser
-      ?? schema.parser
-      ?? (schema.event ? this.createDeclarativeParser(schema) : null)
-      ?? (schema.fieldMapping ? this.createParserFromLegacyMapping(schema) : null);
+    const parser =
+      codec?.parser ??
+      schema.parser ??
+      (schema.event ? this.createDeclarativeParser(schema) : null) ??
+      (schema.fieldMapping ? this.createParserFromLegacyMapping(schema) : null);
     if (!parser || !schema.persistWorkspaceState) return parser;
     return (event, context) => ({
       ...parser(event, context),
@@ -619,8 +731,12 @@ export class BlockRegistry {
     const localMatchers = new Set<string>();
     const error = (code: string, message: string, schema?: BlockSchema, input?: string) => {
       diagnostics.push({
-        level: 'error', code, message, packId: pack.id,
-        blockType: schema?.definition?.type, input,
+        level: 'error',
+        code,
+        message,
+        packId: pack.id,
+        blockType: schema?.definition?.type,
+        input,
       });
     };
 
@@ -637,12 +753,14 @@ export class BlockRegistry {
       if (localTypes.has(type)) error('block.duplicate', `Duplicate block type ${type} in pack`, schema);
       localTypes.add(type);
       if (!schema.eventType) error('event.type', `Block ${type} requires eventType`, schema);
-      if (localEvents.has(schema.eventType)) error('event.duplicate', `Duplicate eventType ${schema.eventType} in pack`, schema);
+      if (localEvents.has(schema.eventType))
+        error('event.duplicate', `Duplicate eventType ${schema.eventType} in pack`, schema);
       localEvents.add(schema.eventType);
 
       const existing = this.blockTypes.get(type);
       if (existing && !allowOverride) error('block.exists', `Block type ${type} is already registered`, schema);
-      if (options.source === 'extension' && existing) error('extension.override', `Extension cannot override ${type}`, schema);
+      if (options.source === 'extension' && existing)
+        error('extension.override', `Extension cannot override ${type}`, schema);
       if (options.source === 'extension' && (schema.parser || schema.generator || schema.fieldMapping)) {
         error('extension.executable', `Extension ${type} must use declarative event bindings`, schema);
       }
@@ -671,8 +789,12 @@ export class BlockRegistry {
             error('interaction.missing-field', `Interaction field ${String(field)} does not exist`, schema, field);
           }
         };
-        if (interaction.type === 'editText' || interaction.type === 'selectMaterial'
-          || interaction.type === 'autocomplete') requireField(interaction.field);
+        if (
+          interaction.type === 'editText' ||
+          interaction.type === 'selectMaterial' ||
+          interaction.type === 'autocomplete'
+        )
+          requireField(interaction.field);
         if (interaction.type === 'selectPoint') {
           requireField(interaction.xField);
           requireField(interaction.yField);
@@ -689,11 +811,17 @@ export class BlockRegistry {
           error('interaction.unsafe-preview', `Preview adapter ${String(interaction.adapter)} is not public`, schema);
         }
         if (interaction.type === 'autocomplete' && !SAFE_COMPLETION_SOURCES.has(interaction.source)) {
-          error('interaction.unsafe-completion', `Completion source ${String(interaction.source)} is not public`, schema);
+          error(
+            'interaction.unsafe-completion',
+            `Completion source ${String(interaction.source)} is not public`,
+            schema,
+          );
         }
       }
-      if (schema.defaultInteraction
-        && !(schema.interactions ?? []).some((interaction) => interaction.type === schema.defaultInteraction)) {
+      if (
+        schema.defaultInteraction &&
+        !(schema.interactions ?? []).some((interaction) => interaction.type === schema.defaultInteraction)
+      ) {
         error('interaction.default', `Default interaction ${schema.defaultInteraction} is not declared`, schema);
       }
 
@@ -711,11 +839,17 @@ export class BlockRegistry {
         localMatchers.add(key);
         const bindingInputs = new Set<string>();
         for (const binding of schema.event.bindings) {
-          if (bindingInputs.has(binding.input)) error('binding.duplicate', `Input ${binding.input} is bound more than once`, schema, binding.input);
+          if (bindingInputs.has(binding.input))
+            error('binding.duplicate', `Input ${binding.input} is bound more than once`, schema, binding.input);
           bindingInputs.add(binding.input);
           const arg = argByName.get(binding.input);
           if (!arg) {
-            error('binding.missing-input', `Input ${binding.input} does not exist in the block definition`, schema, binding.input);
+            error(
+              'binding.missing-input',
+              `Input ${binding.input} does not exist in the block definition`,
+              schema,
+              binding.input,
+            );
           } else if (binding.kind === 'field' && arg.type.startsWith('input_')) {
             error('binding.kind', `${binding.input} is not a field`, schema, binding.input);
           } else if (binding.kind !== 'field' && arg.type !== `input_${binding.kind}`) {
@@ -727,9 +861,17 @@ export class BlockRegistry {
 
     const localCategories = new Set<string>();
     for (const category of pack.categories ?? []) {
-      if (!category.id || localCategories.has(category.id)
-        || (options.source === 'extension' && (this.categories.has(category.id) || RESERVED_CATEGORY_IDS.has(category.id)))) {
-        diagnostics.push({ level: 'error', code: 'category.conflict', message: `Category ${category.id} is invalid or already registered`, packId: pack.id });
+      if (
+        !category.id ||
+        localCategories.has(category.id) ||
+        (options.source === 'extension' && (this.categories.has(category.id) || RESERVED_CATEGORY_IDS.has(category.id)))
+      ) {
+        diagnostics.push({
+          level: 'error',
+          code: 'category.conflict',
+          message: `Category ${category.id} is invalid or already registered`,
+          packId: pack.id,
+        });
       }
       localCategories.add(category.id);
     }
@@ -739,9 +881,10 @@ export class BlockRegistry {
   private registerToBlockly(schema: BlockSchema): void {
     const isBuiltin = this.packSources.get(schema.definition.type) === 'builtin';
     const withInteractions = applyInteractionFields(schema, isBuiltin);
-    const withLayout = this.packSources.get(schema.definition.type) === 'builtin'
-      ? normalizeBuiltinStatementLayout(withInteractions)
-      : withInteractions;
+    const withLayout =
+      this.packSources.get(schema.definition.type) === 'builtin'
+        ? normalizeBuiltinStatementLayout(withInteractions)
+        : withInteractions;
     const definitionWithState = schema.event?.preserveUnbound
       ? {
           ...withLayout,
@@ -749,13 +892,13 @@ export class BlockRegistry {
         }
       : withLayout;
     const definition = this.applyColourInheritance(definitionWithState, schema.category);
-    const projectDocsPath = typeof definition.helpUrl === 'string' && definition.helpUrl.startsWith('/_docs/')
-      ? definition.helpUrl.slice('/_docs/'.length)
-      : undefined;
+    const projectDocsPath =
+      typeof definition.helpUrl === 'string' && definition.helpUrl.startsWith('/_docs/')
+        ? definition.helpUrl.slice('/_docs/'.length)
+        : undefined;
     const docsHelpUrl = projectDocsPath === undefined ? undefined : editorDocsEndpoint(projectDocsPath);
-    const registeredDefinition = projectDocsPath === undefined
-      ? definition
-      : { ...definition, helpUrl: docsHelpUrl ?? '' };
+    const registeredDefinition =
+      projectDocsPath === undefined ? definition : { ...definition, helpUrl: docsHelpUrl ?? '' };
     Blockly.common.defineBlocksWithJsonArray([registeredDefinition]);
     javascriptGenerator.forBlock[registeredDefinition.type] = this.getOrCreateGenerator(schema);
   }
@@ -768,11 +911,12 @@ export class BlockRegistry {
 
   private getOrCreateGenerator(schema: BlockSchema): BlockGenerator {
     const codec = this.codecs.get(schema.definition.type);
-    const generator = codec?.generator
-      ?? schema.generator
-      ?? (schema.event ? this.createDeclarativeGenerator(schema) : null)
-      ?? (schema.fieldMapping ? this.createGeneratorFromLegacyMapping(schema) : null)
-      ?? (() => '');
+    const generator =
+      codec?.generator ??
+      schema.generator ??
+      (schema.event ? this.createDeclarativeGenerator(schema) : null) ??
+      (schema.fieldMapping ? this.createGeneratorFromLegacyMapping(schema) : null) ??
+      (() => '');
     if (!schema.persistWorkspaceState) return generator;
     return (block) => {
       const generated = generator(block);
@@ -809,9 +953,7 @@ export class BlockRegistry {
           const first = parseEventList(Array.isArray(value) ? value : [], context);
           if (first) inputs[binding.input] = { block: first };
         } else if (value !== undefined) {
-          inputs[binding.input] = createExpressionBlock(
-            typeof value === 'string' ? value : JSON.stringify(value),
-          );
+          inputs[binding.input] = createExpressionBlock(typeof value === 'string' ? value : JSON.stringify(value));
         }
       }
       const preserveState = schema.persistWorkspaceState;
@@ -829,7 +971,7 @@ export class BlockRegistry {
   private createDeclarativeGenerator(schema: BlockSchema): BlockGenerator {
     return (block: Blockly.Block): string => {
       let event = schema.event!.preserveUnbound
-        ? readProjectEventRaw(block) ?? cloneJson(schema.event!.template)
+        ? (readProjectEventRaw(block) ?? cloneJson(schema.event!.template))
         : cloneJson(schema.event!.template);
       for (const binding of schema.event!.bindings) {
         let value: unknown;
@@ -843,8 +985,9 @@ export class BlockRegistry {
         } else {
           value = parseGeneratedValue(javascriptGenerator.valueToCode(block, binding.input, Order.NONE));
         }
-        const shouldOmit = (binding.optional && (value === undefined || value === ''))
-          || (binding.omitWhenDefault && Object.is(value, binding.default));
+        const shouldOmit =
+          (binding.optional && (value === undefined || value === '')) ||
+          (binding.omitWhenDefault && Object.is(value, binding.default));
         if (shouldOmit) deleteAtPath(event, binding.path);
         else event = setAtPath(event, binding.path, value);
       }

@@ -1,23 +1,18 @@
-import { produce } from "immer";
-import { computed } from "alien-signals";
-import type { Content } from "@/fs/types";
-import type {
-  IContentHandler,
-  IDataHandler,
-  ReadonlySignal,
-  RecoverableResource,
-} from "@/fs/interfaces";
-import { ContentUtils } from "@/fs/ContentUtils";
-import { persistenceMonitor } from "@/fs/PersistenceMonitor";
-import { FileHandlerManager } from "@/fs/FileHandlerManager";
-import type { LoadableResource } from "@/project/resources";
-import { applyActions, type Action } from "@/utils/action";
+import { produce } from 'immer';
+import { computed } from 'alien-signals';
+import type { Content } from '@/fs/types';
+import type { IContentHandler, IDataHandler, ReadonlySignal, RecoverableResource } from '@/fs/interfaces';
+import { ContentUtils } from '@/fs/ContentUtils';
+import { persistenceMonitor } from '@/fs/PersistenceMonitor';
+import { FileHandlerManager } from '@/fs/FileHandlerManager';
+import type { LoadableResource } from '@/project/resources';
+import { applyActions, type Action } from '@/utils/action';
 
 export type PersistStatus =
-  | { status: "idle" }
-  | { status: "persisting"; pending?: number }
-  | { status: "error"; error: Error; pending?: number }
-  | { status: "unknown" };
+  | { status: 'idle' }
+  | { status: 'persisting'; pending?: number }
+  | { status: 'error'; error: Error; pending?: number }
+  | { status: 'unknown' };
 
 export interface DataResource<T> extends RecoverableResource<T>, LoadableResource<T> {
   readonly id: string;
@@ -39,11 +34,7 @@ export class HandlerDataResource<T> implements DataResource<T> {
   readonly path: string;
   private readonly handler: IDataHandler<T>;
 
-  constructor(
-    id: string,
-    path: string,
-    handler: IDataHandler<T>,
-  ) {
+  constructor(id: string, path: string, handler: IDataHandler<T>) {
     this.id = id;
     this.path = path;
     this.handler = handler;
@@ -106,7 +97,7 @@ export class HandlerDataResource<T> implements DataResource<T> {
   update(transform: (current: T) => T): void;
   update(transform: (current: T) => Promise<T>): Promise<void>;
   update(valueOrTransform: T | ((current: T) => T | Promise<T>)): void | Promise<void> {
-    if (typeof valueOrTransform === "function") {
+    if (typeof valueOrTransform === 'function') {
       const transform = valueOrTransform as (current: T) => T | Promise<T>;
       return this.handler.update((current) => Promise.resolve(transform(current)));
     }
@@ -132,11 +123,11 @@ export class HandlerDataResource<T> implements DataResource<T> {
 
   persistStatus(): PersistStatus {
     const status = persistenceMonitor.statusFor(this.path);
-    if (status === "persisting") return { status: "persisting" };
-    if (status === "error") {
-      return { status: "error", error: persistenceMonitor.errorFor(this.path) ?? new Error("Persist failed") };
+    if (status === 'persisting') return { status: 'persisting' };
+    if (status === 'error') {
+      return { status: 'error', error: persistenceMonitor.errorFor(this.path) ?? new Error('Persist failed') };
     }
-    return { status: "idle" };
+    return { status: 'idle' };
   }
 }
 
@@ -163,9 +154,7 @@ export class MappedDataResource<TParent, TChild> implements DataResource<TChild>
     this.read = read;
     this.write = write;
     this.patchActions = patchActions;
-    this.content = computed(() =>
-      ContentUtils.map(this.parent.content(), (value) => this.read(value)),
-    );
+    this.content = computed(() => ContentUtils.map(this.parent.content(), (value) => this.read(value)));
   }
 
   getContent(): Content<TChild> {
@@ -225,10 +214,8 @@ export class MappedDataResource<TParent, TChild> implements DataResource<TChild>
   update(value: TChild): void;
   update(transform: (current: TChild) => TChild): void;
   update(transform: (current: TChild) => Promise<TChild>): Promise<void>;
-  update(
-    valueOrTransform: TChild | ((current: TChild) => TChild | Promise<TChild>),
-  ): void | Promise<void> {
-    if (typeof valueOrTransform !== "function") {
+  update(valueOrTransform: TChild | ((current: TChild) => TChild | Promise<TChild>)): void | Promise<void> {
+    if (typeof valueOrTransform !== 'function') {
       void this.set(valueOrTransform);
       return;
     }

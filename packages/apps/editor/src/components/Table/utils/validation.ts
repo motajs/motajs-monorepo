@@ -71,13 +71,13 @@ export interface ValidateIdResult {
 export function validateId(
   id: string | null | undefined,
   existingKeys: string[],
-  supportText: boolean = false
+  supportText: boolean = false,
 ): ValidateIdResult {
   // Check for empty ID
   if (id == null || id.length === 0) {
     return {
       valid: false,
-      error: 'ID不能为空'
+      error: 'ID不能为空',
     };
   }
 
@@ -86,7 +86,7 @@ export function validateId(
     if (!/^[a-zA-Z0-9_]+$/.test(id)) {
       return {
         valid: false,
-        error: 'id不符合规范, 请使用大小写字母数字下划线来构成'
+        error: 'id不符合规范, 请使用大小写字母数字下划线来构成',
       };
     }
   }
@@ -95,7 +95,7 @@ export function validateId(
   if (existingKeys.includes(id)) {
     return {
       valid: false,
-      error: 'id已存在, 请直接修改该项的值'
+      error: 'id已存在, 请直接修改该项的值',
     };
   }
 
@@ -137,7 +137,7 @@ export function parseJsonValue(value: string): ParseResult {
   } catch (e) {
     return {
       success: false,
-      error: e instanceof Error ? e.message : 'JSON解析错误'
+      error: e instanceof Error ? e.message : 'JSON解析错误',
     };
   }
 }

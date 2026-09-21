@@ -2,14 +2,14 @@
  * PersistExecutor 单元测试
  */
 
-import { describe, it, expect } from "vitest";
-import { PersistExecutor } from "../PersistExecutor";
-import { wait } from "@test/utils/testHelpers";
-import { effect } from "alien-signals";
+import { describe, it, expect } from 'vitest';
+import { PersistExecutor } from '../PersistExecutor';
+import { wait } from '@test/utils/testHelpers';
+import { effect } from 'alien-signals';
 
-describe("PersistExecutor", () => {
-  describe("串行化执行", () => {
-    it("应该按顺序执行任务", async () => {
+describe('PersistExecutor', () => {
+  describe('串行化执行', () => {
+    it('应该按顺序执行任务', async () => {
       const results: number[] = [];
       let counter = 0;
       const executor = new PersistExecutor(async () => {
@@ -30,7 +30,7 @@ describe("PersistExecutor", () => {
       expect(results).toEqual([1, 2, 3]);
     });
 
-    it("应该等待前一个任务完成再执行下一个", async () => {
+    it('应该等待前一个任务完成再执行下一个', async () => {
       let executing = false;
       const executor = new PersistExecutor(async () => {
         expect(executing).toBe(false); // 不应该有并发执行
@@ -47,8 +47,8 @@ describe("PersistExecutor", () => {
     });
   });
 
-  describe("队列优化", () => {
-    it("应该合并待执行任务（最多保留 1 个）", async () => {
+  describe('队列优化', () => {
+    it('应该合并待执行任务（最多保留 1 个）', async () => {
       const results: number[] = [];
       let counter = 0;
       const executor = new PersistExecutor(async () => {
@@ -70,7 +70,7 @@ describe("PersistExecutor", () => {
       expect(results).toEqual([1, 2]);
     });
 
-    it("正在执行的任务不会被取消", async () => {
+    it('正在执行的任务不会被取消', async () => {
       const results: number[] = [];
       let counter = 0;
       const executor = new PersistExecutor(async () => {
@@ -94,8 +94,8 @@ describe("PersistExecutor", () => {
     });
   });
 
-  describe("waitForIdle", () => {
-    it("应该等待所有任务完成", async () => {
+  describe('waitForIdle', () => {
+    it('应该等待所有任务完成', async () => {
       let counter = 0;
       const executor = new PersistExecutor(async () => {
         await wait(50);
@@ -115,7 +115,7 @@ describe("PersistExecutor", () => {
       expect(counter).toBe(2);
     });
 
-    it("队列为空时应该立即返回", async () => {
+    it('队列为空时应该立即返回', async () => {
       const executor = new PersistExecutor(async () => {
         await wait(10);
       });
@@ -129,8 +129,8 @@ describe("PersistExecutor", () => {
     });
   });
 
-  describe("hasPending", () => {
-    it("有任务时应该返回 true", async () => {
+  describe('hasPending', () => {
+    it('有任务时应该返回 true', async () => {
       const executor = new PersistExecutor(async () => {
         await wait(50);
       });
@@ -145,50 +145,65 @@ describe("PersistExecutor", () => {
     });
   });
 
-  describe("期望状态意图", () => {
-    it("写入执行中收到删除时最终执行删除", async () => {
+  describe('期望状态意图', () => {
+    it('写入执行中收到删除时最终执行删除', async () => {
       const executor = new PersistExecutor();
       const results: string[] = [];
-      executor.schedule({ kind: "write", execute: async () => {
-        await wait(20);
-        results.push("write");
-      } });
-      executor.schedule({ kind: "delete", execute: async () => {
-        results.push("delete");
-      } });
+      executor.schedule({
+        kind: 'write',
+        execute: async () => {
+          await wait(20);
+          results.push('write');
+        },
+      });
+      executor.schedule({
+        kind: 'delete',
+        execute: async () => {
+          results.push('delete');
+        },
+      });
 
       await executor.whenQuiescent();
-      expect(results).toEqual(["write", "delete"]);
+      expect(results).toEqual(['write', 'delete']);
     });
 
-    it("尚未执行的删除可以被更新的写入覆盖", async () => {
+    it('尚未执行的删除可以被更新的写入覆盖', async () => {
       const executor = new PersistExecutor();
       const results: string[] = [];
-      executor.schedule({ kind: "write", execute: async () => {
-        await wait(20);
-        results.push("first");
-      } });
-      executor.schedule({ kind: "delete", execute: async () => {
-        results.push("delete");
-      } });
-      executor.schedule({ kind: "write", execute: async () => {
-        results.push("latest");
-      } });
+      executor.schedule({
+        kind: 'write',
+        execute: async () => {
+          await wait(20);
+          results.push('first');
+        },
+      });
+      executor.schedule({
+        kind: 'delete',
+        execute: async () => {
+          results.push('delete');
+        },
+      });
+      executor.schedule({
+        kind: 'write',
+        execute: async () => {
+          results.push('latest');
+        },
+      });
 
       await executor.whenQuiescent();
-      expect(results).toEqual(["first", "latest"]);
+      expect(results).toEqual(['first', 'latest']);
     });
   });
 
-  describe("错误处理", () => {
-    it("任务失败不应该影响后续任务", async () => {
+  describe('错误处理', () => {
+    it('任务失败不应该影响后续任务', async () => {
       const results: number[] = [];
       let counter = 0;
       const executor = new PersistExecutor(async () => {
         await wait(10);
         const current = ++counter;
         if (current === 2) {
-          throw new Error("Task 2 failed");
+          throw new Error('Task 2 failed');
         }
         results.push(current);
       });
@@ -204,7 +219,7 @@ describe("PersistExecutor", () => {
       expect(results).toEqual([1]);
     });
 
-    it("多个任务失败不应该中断队列", async () => {
+    it('多个任务失败不应该中断队列', async () => {
       const results: number[] = [];
       let counter = 0;
       const executor = new PersistExecutor(async () => {
@@ -229,21 +244,21 @@ describe("PersistExecutor", () => {
       expect(results).toEqual([1, 3]);
 
       // 最终状态应该是 idle（任务 3 成功，清除了错误）
-      expect(executor.status().status).toBe("idle");
+      expect(executor.status().status).toBe('idle');
     });
   });
 
-  describe("状态 signal", () => {
-    it("初始状态应该是 idle", () => {
+  describe('状态 signal', () => {
+    it('初始状态应该是 idle', () => {
       const executor = new PersistExecutor(async () => {
         await wait(10);
       });
 
       const status = executor.status();
-      expect(status.status).toBe("idle");
+      expect(status.status).toBe('idle');
     });
 
-    it("执行时状态应该是 executing", async () => {
+    it('执行时状态应该是 executing', async () => {
       const executor = new PersistExecutor(async () => {
         await wait(50);
       });
@@ -253,15 +268,15 @@ describe("PersistExecutor", () => {
 
       // 立即检查状态
       const status = executor.status();
-      expect(status.status).toBe("executing");
-      if (status.status === "executing") {
+      expect(status.status).toBe('executing');
+      if (status.status === 'executing') {
         expect(status.pending).toBe(1); // 1 个在队列中
       }
 
       await executor.waitForIdle();
     });
 
-    it("完成后状态应该回到 idle", async () => {
+    it('完成后状态应该回到 idle', async () => {
       const executor = new PersistExecutor(async () => {
         await wait(10);
       });
@@ -270,19 +285,19 @@ describe("PersistExecutor", () => {
       await executor.waitForIdle();
 
       const status = executor.status();
-      expect(status.status).toBe("idle");
+      expect(status.status).toBe('idle');
     });
 
-    it("失败时状态应该是 error", async () => {
+    it('失败时状态应该是 error', async () => {
       const executor = new PersistExecutor(async () => {
         await wait(10);
-        throw new Error("Test error");
+        throw new Error('Test error');
       });
 
-      let errorStatus: import("../PersistExecutor").ExecutorStatus | null = null;
+      let errorStatus: import('../PersistExecutor').ExecutorStatus | null = null;
       const unsubscribe = effect(() => {
         const status = executor.status();
-        if (status.status === "error") {
+        if (status.status === 'error') {
           errorStatus = status;
         }
       });
@@ -294,20 +309,20 @@ describe("PersistExecutor", () => {
 
       // 应该在执行过程中捕获到 error 状态
       expect(errorStatus).not.toBeNull();
-      expect(errorStatus!.status).toBe("error");
-      if (errorStatus!.status === "error") {
-        expect(errorStatus!.error.message).toBe("Test error");
+      expect(errorStatus!.status).toBe('error');
+      if (errorStatus!.status === 'error') {
+        expect(errorStatus!.error.message).toBe('Test error');
       }
 
       // 队列清空后，状态应该保持 error（因为最后一次执行失败）
       const finalStatus = executor.status();
-      expect(finalStatus.status).toBe("error");
-      if (finalStatus.status === "error") {
-        expect(finalStatus.error.message).toBe("Test error");
+      expect(finalStatus.status).toBe('error');
+      if (finalStatus.status === 'error') {
+        expect(finalStatus.error.message).toBe('Test error');
       }
     });
 
-    it("应该能够订阅状态变化", async () => {
+    it('应该能够订阅状态变化', async () => {
       const executor = new PersistExecutor(async () => {
         await wait(20);
       });
@@ -323,12 +338,12 @@ describe("PersistExecutor", () => {
       unsubscribe();
 
       // 应该收到 idle -> executing -> idle
-      expect(statuses).toContain("idle");
-      expect(statuses).toContain("executing");
-      expect(statuses.filter(s => s === "idle").length).toBeGreaterThanOrEqual(2);
+      expect(statuses).toContain('idle');
+      expect(statuses).toContain('executing');
+      expect(statuses.filter((s) => s === 'idle').length).toBeGreaterThanOrEqual(2);
     });
 
-    it("pending 数量应该正确更新", async () => {
+    it('pending 数量应该正确更新', async () => {
       const executor = new PersistExecutor(async () => {
         await wait(30);
       });
@@ -336,7 +351,7 @@ describe("PersistExecutor", () => {
       const pendingCounts: number[] = [];
       const unsubscribe = effect(() => {
         const status = executor.status();
-        if (status.status === "executing") {
+        if (status.status === 'executing') {
           pendingCounts.push(status.pending);
         }
       });
@@ -355,9 +370,9 @@ describe("PersistExecutor", () => {
     });
   });
 
-  describe("读取最新数据", () => {
-    it("应该持久化最新数据而不是入队时的数据", async () => {
-      let latestValue = "v1";
+  describe('读取最新数据', () => {
+    it('应该持久化最新数据而不是入队时的数据', async () => {
+      let latestValue = 'v1';
       const persistedValues: string[] = [];
       let executionStarted = false;
 
@@ -370,7 +385,7 @@ describe("PersistExecutor", () => {
       });
 
       // 第一次触发
-      latestValue = "v1";
+      latestValue = 'v1';
       executor.exec();
 
       // 等待第一个任务真正开始执行
@@ -379,17 +394,17 @@ describe("PersistExecutor", () => {
       }
 
       // 现在第一个任务已经在执行中，更新数据并触发新的持久化
-      latestValue = "v2";
+      latestValue = 'v2';
       executor.exec();
 
-      latestValue = "v3";
+      latestValue = 'v3';
       executor.exec();
 
       await executor.waitForIdle();
 
       // 第一次持久化 v1（已经开始执行时读取的值）
       // 第二次和第三次被合并，持久化时数据已经是 v3
-      expect(persistedValues).toEqual(["v1", "v3"]);
+      expect(persistedValues).toEqual(['v1', 'v3']);
     });
   });
 });

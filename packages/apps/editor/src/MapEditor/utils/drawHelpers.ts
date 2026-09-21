@@ -2,8 +2,8 @@
  * 地图编辑器绘图辅助函数
  */
 
-import type { LocPOD } from "@/utils/coordinate";
-import { TILE_SIZE } from "./coordinate";
+import type { LocPOD } from '@/utils/coordinate';
+import { TILE_SIZE } from './coordinate';
 
 /**
  * 绘制箭头
@@ -22,8 +22,8 @@ export function drawArrow(
   fromY: number,
   toX: number,
   toY: number,
-  color: string = "#FF0000",
-  lineWidth: number = 2
+  color: string = '#FF0000',
+  lineWidth: number = 2,
 ): void {
   const headLength = 10;
   const angle = Math.atan2(toY - fromY, toX - fromX);
@@ -33,15 +33,9 @@ export function drawArrow(
   ctx.beginPath();
   ctx.moveTo(fromX, fromY);
   ctx.lineTo(toX, toY);
-  ctx.lineTo(
-    toX - headLength * Math.cos(angle - Math.PI / 6),
-    toY - headLength * Math.sin(angle - Math.PI / 6)
-  );
+  ctx.lineTo(toX - headLength * Math.cos(angle - Math.PI / 6), toY - headLength * Math.sin(angle - Math.PI / 6));
   ctx.moveTo(toX, toY);
-  ctx.lineTo(
-    toX - headLength * Math.cos(angle + Math.PI / 6),
-    toY - headLength * Math.sin(angle + Math.PI / 6)
-  );
+  ctx.lineTo(toX - headLength * Math.cos(angle + Math.PI / 6), toY - headLength * Math.sin(angle + Math.PI / 6));
   ctx.stroke();
 }
 
@@ -59,7 +53,7 @@ export function drawSelectionRect(
   startPos: LocPOD,
   endPos: LocPOD,
   offset: LocPOD = [0, 0],
-  color: string = "rgba(0, 127, 255, 0.4)"
+  color: string = 'rgba(0, 127, 255, 0.4)',
 ): void {
   let [x0, y0] = startPos;
   let [x1, y1] = endPos;
@@ -71,12 +65,7 @@ export function drawSelectionRect(
   const [ox, oy] = offset;
 
   ctx.fillStyle = color;
-  ctx.fillRect(
-    x0 * TILE_SIZE - ox,
-    y0 * TILE_SIZE - oy,
-    (x1 - x0 + 1) * TILE_SIZE,
-    (y1 - y0 + 1) * TILE_SIZE
-  );
+  ctx.fillRect(x0 * TILE_SIZE - ox, y0 * TILE_SIZE - oy, (x1 - x0 + 1) * TILE_SIZE, (y1 - y0 + 1) * TILE_SIZE);
 }
 
 /**
@@ -87,7 +76,7 @@ export function drawSelectionRectBigmap(
   startPos: LocPOD,
   endPos: LocPOD,
   bigmapInfo: { top: number; left: number; size: number },
-  color: string = "rgba(0, 127, 255, 0.4)"
+  color: string = 'rgba(0, 127, 255, 0.4)',
 ): void {
   let [x0, y0] = startPos;
   let [x1, y1] = endPos;
@@ -98,10 +87,5 @@ export function drawSelectionRectBigmap(
   const { top, left, size } = bigmapInfo;
 
   ctx.fillStyle = color;
-  ctx.fillRect(
-    left + x0 * size,
-    top + y0 * size,
-    (x1 - x0 + 1) * size,
-    (y1 - y0 + 1) * size
-  );
+  ctx.fillRect(left + x0 * size, top + y0 * size, (x1 - x0 + 1) * size, (y1 - y0 + 1) * size);
 }

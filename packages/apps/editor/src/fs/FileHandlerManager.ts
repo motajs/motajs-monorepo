@@ -7,8 +7,8 @@
  * - 提供加载锁机制，避免并发加载同一文件
  */
 
-import { fs } from "@/services/fs";
-import { FileHandler } from "./FileHandler";
+import { fs } from '@/services/fs';
+import { FileHandler } from './FileHandler';
 
 class FileHandlerManagerImpl {
   // FileHandler 实例缓存：key = path
@@ -100,11 +100,11 @@ class FileHandlerManagerImpl {
   async exists(path: string): Promise<boolean> {
     const handler = this.handlers.get(path);
     const content = handler?.getContent();
-    if (content?.status === "loaded") return true;
-    if (content?.status === "not-found") return false;
+    if (content?.status === 'loaded') return true;
+    if (content?.status === 'not-found') return false;
 
     try {
-      await fs.promises.readFile(path, "utf-8");
+      await fs.promises.readFile(path, 'utf-8');
       return true;
     } catch {
       return false;

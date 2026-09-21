@@ -9,11 +9,13 @@ interface ErrorWithCode extends Error {
  */
 export function isFileNotFoundError(error: Error): boolean {
   const { code } = error as ErrorWithCode;
-  if (code) return code === "file-not-found" || code === "ENOENT";
+  if (code) return code === 'file-not-found' || code === 'ENOENT';
 
-  return error.name === "NotFoundError"
-    || /\bfile-not-found\b/i.test(error.message)
-    || /\bfile not found\b/i.test(error.message)
-    || /\bENOENT\b/i.test(error.message)
-    || /\bno such file\b/i.test(error.message);
+  return (
+    error.name === 'NotFoundError' ||
+    /\bfile-not-found\b/i.test(error.message) ||
+    /\bfile not found\b/i.test(error.message) ||
+    /\bENOENT\b/i.test(error.message) ||
+    /\bno such file\b/i.test(error.message)
+  );
 }

@@ -1,6 +1,13 @@
 const STATUS_NAMES: Record<string, string> = {
-  hp: '生命', name: '名称', atk: '攻击', def: '防御', mdef: '魔防',
-  money: '金币', exp: '经验', point: '加点', special: '属性',
+  hp: '生命',
+  name: '名称',
+  atk: '攻击',
+  def: '防御',
+  mdef: '魔防',
+  money: '金币',
+  exp: '经验',
+  point: '加点',
+  special: '属性',
 };
 const STATUS_IDS = Object.fromEntries(Object.entries(STATUS_NAMES).map(([id, name]) => [name, id]));
 
@@ -21,7 +28,10 @@ export function replaceExpressionForDisplay(value: string): string {
 }
 
 export function replaceExpressionFromDisplay(value: string): string {
-  let result = value.replace(/状态[:：]([A-Za-z0-9_\u4E00-\u9FCC]+)/g, (_all, name: string) => `status:${STATUS_IDS[name] ?? name}`);
+  let result = value.replace(
+    /状态[:：]([A-Za-z0-9_\u4E00-\u9FCC]+)/g,
+    (_all, name: string) => `status:${STATUS_IDS[name] ?? name}`,
+  );
   result = result
     .replace(/增益[:：]/g, 'buff:')
     .replace(/物品[:：]/g, 'item:')

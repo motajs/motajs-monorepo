@@ -35,25 +35,17 @@ export const ActionButtons: FC<ActionButtonsProps> = (props) => {
   return (
     <>
       {/* 注释按钮 - 当有短注释时显示 */}
-      {showComment && (
-        <button onClick={onCommentClick}>注释</button>
-      )}
+      {showComment && <button onClick={onCommentClick}>注释</button>}
 
       {/* 编辑按钮 - 根据类型决定是否显示 */}
       {shouldShowEditButton(type) && (
-        <button
-          data-test-id={testId}
-          onClick={onOpenExternalEditor}
-          className="editorTableEditBtn"
-        >
+        <button data-test-id={testId} onClick={onOpenExternalEditor} className="editorTableEditBtn">
           {getEditButtonText(type)}
         </button>
       )}
 
       {/* 复制按钮 - 仅 disable 类型显示 */}
-      {type === 'disable' && (
-        <button onClick={onCopyClick}>复制</button>
-      )}
+      {type === 'disable' && <button onClick={onCopyClick}>复制</button>}
     </>
   );
 };

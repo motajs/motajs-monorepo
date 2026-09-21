@@ -1,16 +1,8 @@
 import { FileHandlerManager } from '@/fs/FileHandlerManager';
-import {
-  deleteTextFileOperation,
-  operationHistory,
-  writeTextFileOperation,
-} from '@/project/history';
+import { deleteTextFileOperation, operationHistory, writeTextFileOperation } from '@/project/history';
 import { fs } from '@/services/fs';
 import { blockRegistry } from '../registry';
-import type {
-  BlocklyBlockPack,
-  DeclarativeBlockSchema,
-  RegisterPackResult,
-} from '../registry/types';
+import type { BlocklyBlockPack, DeclarativeBlockSchema, RegisterPackResult } from '../registry/types';
 
 export const PROJECT_BLOCK_PACK_PATH = '.metaphysics/schemas/blockly/project-events.json';
 export const PROJECT_BLOCK_PACK_ID = 'project.custom-events';
@@ -32,17 +24,27 @@ export type ProjectBlockPackState =
 
 const PACK_KEYS = new Set(['kind', 'formatVersion', 'id', 'version', 'blocks', 'categories']);
 const BLOCK_KEYS = new Set([
-  'type', 'definition', 'event', 'toolbox', 'interactions', 'defaultInteraction',
-  'persistWorkspaceState', 'category', 'isValue',
+  'type',
+  'definition',
+  'event',
+  'toolbox',
+  'interactions',
+  'defaultInteraction',
+  'persistWorkspaceState',
+  'category',
+  'isValue',
 ]);
 const EVENT_KEYS = new Set(['match', 'template', 'bindings', 'preserveUnbound']);
 const MATCH_KEYS = new Set(['path', 'equals']);
-const BINDING_KEYS = new Set([
-  'input', 'kind', 'path', 'optional', 'default', 'omitWhenDefault', 'valueType',
-]);
+const BINDING_KEYS = new Set(['input', 'kind', 'path', 'optional', 'default', 'omitWhenDefault', 'valueType']);
 const CATEGORY_KEYS = new Set(['id', 'name', 'colour', 'order']);
 const DEFINITION_KEYS = new Set([
-  'type', 'colour', 'tooltip', 'helpUrl', 'previousStatement', 'nextStatement',
+  'type',
+  'colour',
+  'tooltip',
+  'helpUrl',
+  'previousStatement',
+  'nextStatement',
   'inputsInline',
 ]);
 const TOOLBOX_KEYS = new Set(['category', 'order', 'defaults']);
@@ -118,10 +120,13 @@ function validateDefinition(definition: Record<string, unknown>, path: string): 
       if (type === 'field_dropdown' && !Array.isArray(arg.options)) {
         throw new Error(`${argPath}.options 必须是数组`);
       }
-      if (type === 'field_dropdown' && (arg.options as unknown[]).some((option) => (
-        !Array.isArray(option) || option.length !== 2
-        || option.some((part) => typeof part !== 'string')
-      ))) throw new Error(`${argPath}.options 必须是字符串二元组数组`);
+      if (
+        type === 'field_dropdown' &&
+        (arg.options as unknown[]).some(
+          (option) => !Array.isArray(option) || option.length !== 2 || option.some((part) => typeof part !== 'string'),
+        )
+      )
+        throw new Error(`${argPath}.options 必须是字符串二元组数组`);
       if (type === 'field_number') {
         for (const key of ['value', 'min', 'max', 'precision']) {
           if (arg[key] !== undefined && (typeof arg[key] !== 'number' || !Number.isFinite(arg[key]))) {
@@ -152,12 +157,14 @@ export function createEmptyProjectBlockPack(): ProjectBlockPack {
     formatVersion: 1,
     id: PROJECT_BLOCK_PACK_ID,
     version: 1,
-    categories: [{
-      id: PROJECT_BLOCK_CATEGORY_ID,
-      name: '自定义事件',
-      colour: 230,
-      order: 900,
-    }],
+    categories: [
+      {
+        id: PROJECT_BLOCK_CATEGORY_ID,
+        name: '自定义事件',
+        colour: 230,
+        order: 900,
+      },
+    ],
     blocks: [],
   };
 }
@@ -236,8 +243,12 @@ export function parseProjectBlockPack(value: unknown): ProjectBlockPack {
   pack.categories.forEach((item, index) => {
     const category = record(item, `categories[${index}]`);
     rejectUnknownKeys(category, CATEGORY_KEYS, `categories[${index}]`);
-    if (category.id !== PROJECT_BLOCK_CATEGORY_ID || category.name !== '自定义事件'
-      || category.colour !== 230 || category.order !== 900) {
+    if (
+      category.id !== PROJECT_BLOCK_CATEGORY_ID ||
+      category.name !== '自定义事件' ||
+      category.colour !== 230 ||
+      category.order !== 900
+    ) {
       throw new Error('pack.categories 必须是固定的自定义事件分类');
     }
   });
@@ -330,7 +341,9 @@ export async function loadProjectBlockPack(): Promise<ProjectBlockPackState> {
   publish({ status: 'loading', pack: state.pack });
   loading = FileHandlerManager.load(PROJECT_BLOCK_PACK_PATH)
     .then(() => applyHandlerContent())
-    .finally(() => { loading = null; });
+    .finally(() => {
+      loading = null;
+    });
   return loading;
 }
 
@@ -343,18 +356,20 @@ export async function saveProjectBlockPack(value: unknown): Promise<void> {
   await fs.promises.mkdir('.metaphysics/schemas/blockly');
   const options = { invalidate: invalidateProjectBlockPack };
   try {
-    await operationHistory.execute(pack.blocks.length
-      ? writeTextFileOperation(
-          PROJECT_BLOCK_PACK_PATH,
-          `${JSON.stringify(pack, null, 2)}\n`,
-          { label: '保存自定义事件块', stage: 'blockly.project-pack.save' },
-          options,
-        )
-      : deleteTextFileOperation(
-          PROJECT_BLOCK_PACK_PATH,
-          { label: '清空自定义事件块', stage: 'blockly.project-pack.delete' },
-          options,
-        ));
+    await operationHistory.execute(
+      pack.blocks.length
+        ? writeTextFileOperation(
+            PROJECT_BLOCK_PACK_PATH,
+            `${JSON.stringify(pack, null, 2)}\n`,
+            { label: '保存自定义事件块', stage: 'blockly.project-pack.save' },
+            options,
+          )
+        : deleteTextFileOperation(
+            PROJECT_BLOCK_PACK_PATH,
+            { label: '清空自定义事件块', stage: 'blockly.project-pack.delete' },
+            options,
+          ),
+    );
   } catch (cause) {
     applyHandlerContent();
     throw cause;

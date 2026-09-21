@@ -1,8 +1,8 @@
-import { detectWhiteBackground } from "@/utils/canvas/detectWhiteBackground";
-import { removeWhiteBackground } from "@/utils/canvas/removeWhiteBackground";
-import { disableImageSmoothing } from "@/utils/canvas/disableImageSmoothing";
-import type { GridPOD } from "@/utils/coordinate";
-import { notifyError } from "@/utils/notify";
+import { detectWhiteBackground } from '@/utils/canvas/detectWhiteBackground';
+import { removeWhiteBackground } from '@/utils/canvas/removeWhiteBackground';
+import { disableImageSmoothing } from '@/utils/canvas/disableImageSmoothing';
+import type { GridPOD } from '@/utils/coordinate';
+import { notifyError } from '@/utils/notify';
 
 /**
  * 加载图像（纯函数）
@@ -34,21 +34,18 @@ export function loadImageAsync(content: string | HTMLImageElement | HTMLCanvasEl
 /**
  * 自动调整图像（纯函数）
  */
-export async function autoAdjustImage(
-  image: HTMLImageElement,
-  gridSize: GridPOD
-): Promise<HTMLImageElement> {
+export async function autoAdjustImage(image: HTMLImageElement, gridSize: GridPOD): Promise<HTMLImageElement> {
   let changed = false;
 
   // Step 1: 检测白底
-  let tempCanvas = document.createElement("canvas").getContext("2d")!;
+  let tempCanvas = document.createElement('canvas').getContext('2d')!;
   tempCanvas.canvas.width = image.width;
   tempCanvas.canvas.height = image.height;
   disableImageSmoothing(tempCanvas);
   tempCanvas.drawImage(image, 0, 0);
   const imgData = tempCanvas.getImageData(0, 0, image.width, image.height);
 
-  if (detectWhiteBackground(imgData) && confirm("看起来这张图片是以纯白为底色，是否自动调整为透明底色？")) {
+  if (detectWhiteBackground(imgData) && confirm('看起来这张图片是以纯白为底色，是否自动调整为透明底色？')) {
     removeWhiteBackground(imgData);
     tempCanvas.clearRect(0, 0, image.width, image.height);
     tempCanvas.putImageData(imgData, 0, 0);
@@ -61,9 +58,9 @@ export async function autoAdjustImage(
     (image.width % gridWidth !== 0 || image.height % gridHeight !== 0) &&
     image.width <= 128 &&
     image.height <= gridHeight * 4 &&
-    confirm("目标长宽不符合条件，是否自动进行调整？")
+    confirm('目标长宽不符合条件，是否自动进行调整？')
   ) {
-    const ncanvas = document.createElement("canvas").getContext("2d")!;
+    const ncanvas = document.createElement('canvas').getContext('2d')!;
     ncanvas.canvas.width = 128;
     ncanvas.canvas.height = 4 * gridHeight;
     disableImageSmoothing(ncanvas);
@@ -80,7 +77,7 @@ export async function autoAdjustImage(
           i * gridWidth + (gridWidth - w) / 2,
           j * gridHeight + (gridHeight - h) / 2,
           w,
-          h
+          h,
         );
       }
     }
@@ -103,7 +100,10 @@ export async function autoAdjustImage(
 /**
  * 处理文件内容（纯函数）
  */
-export async function processImageFile(content: string | HTMLImageElement | HTMLCanvasElement, gridSize: GridPOD): Promise<HTMLImageElement> {
+export async function processImageFile(
+  content: string | HTMLImageElement | HTMLCanvasElement,
+  gridSize: GridPOD,
+): Promise<HTMLImageElement> {
   try {
     const image = await loadImageAsync(content);
     const adjustedImage = await autoAdjustImage(image, gridSize);

@@ -19,10 +19,7 @@ type InteractionHandler<T extends DeclarativeInteraction = DeclarativeInteractio
 export class BlocklyInteractionRegistry {
   private readonly handlers = new Map<DeclarativeInteraction['type'], InteractionHandler>();
 
-  register<T extends DeclarativeInteraction>(
-    type: T['type'],
-    handler: InteractionHandler<T>,
-  ): void {
+  register<T extends DeclarativeInteraction>(type: T['type'], handler: InteractionHandler<T>): void {
     this.handlers.set(type, handler as InteractionHandler);
   }
 
@@ -36,10 +33,7 @@ export class BlocklyInteractionRegistry {
     try {
       return await handler(block, interaction, capabilities);
     } catch (cause) {
-      return failure(
-        'interaction.failed',
-        cause instanceof Error ? cause.message : String(cause),
-      );
+      return failure('interaction.failed', cause instanceof Error ? cause.message : String(cause));
     }
   }
 }
@@ -74,17 +68,25 @@ export function getEffectiveInteractions(schema: BlockSchema): DeclarativeIntera
     const names = new Set(args.map((arg) => arg.name));
     const xField = names.has('X') ? 'X' : names.has('POS_X') ? 'POS_X' : undefined;
     const yField = names.has('Y') ? 'Y' : names.has('POS_Y') ? 'POS_Y' : undefined;
-    if (xField && yField) return [{
-      type: 'selectPoint', xField, yField,
-      floorField: names.has('FLOOR_ID') ? 'FLOOR_ID' : undefined,
-      floorPolicy: names.has('FLOOR_ID') ? 'explicit' : 'current',
-    }];
+    if (xField && yField)
+      return [
+        {
+          type: 'selectPoint',
+          xField,
+          yField,
+          floorField: names.has('FLOOR_ID') ? 'FLOOR_ID' : undefined,
+          floorPolicy: names.has('FLOOR_ID') ? 'explicit' : 'current',
+        },
+      ];
   }
   return [];
 }
 
 function parseColour(value: string): string | null {
-  const channels = value.split(',').slice(0, 3).map((part) => Number(part.trim()));
+  const channels = value
+    .split(',')
+    .slice(0, 3)
+    .map((part) => Number(part.trim()));
   if (channels.length !== 3 || channels.some((part) => !Number.isFinite(part))) return null;
   return `#${channels.map((part) => Math.max(0, Math.min(255, part)).toString(16).padStart(2, '0')).join('')}`;
 }
@@ -129,8 +131,11 @@ blocklyInteractionRegistry.register('selectMaterial', async (block, interaction,
   if (interaction.type !== 'selectMaterial') return failure('interaction.type', '错误的素材交互');
   const current = String(block.getFieldValue(interaction.field) ?? '');
   const result = await capabilities.selectMaterial({
-    title: '请选择素材', value: current ? [current] : [], kind: interaction.materialKind,
-    multiple: interaction.multiple, transform: interaction.transform,
+    title: '请选择素材',
+    value: current ? [current] : [],
+    kind: interaction.materialKind,
+    multiple: interaction.multiple,
+    transform: interaction.transform,
     aliasPolicy: interaction.aliasPolicy,
   });
   if (!result) return { ok: true };
@@ -182,11 +187,12 @@ export function createBlocklyInteractionController(
     const interactions = getEffectiveInteractions(schema);
     const interaction = requestedType
       ? interactions.find((item) => item.type === requestedType)
-      : interactions.find((item) => item.type === schema.defaultInteraction)
-        ?? [...interactions].sort((a, b) => (
-          ['preview', 'selectPoint', 'selectMaterial', 'editText'].indexOf(a.type)
-          - ['preview', 'selectPoint', 'selectMaterial', 'editText'].indexOf(b.type)
-        ))[0];
+      : (interactions.find((item) => item.type === schema.defaultInteraction) ??
+        [...interactions].sort(
+          (a, b) =>
+            ['preview', 'selectPoint', 'selectMaterial', 'editText'].indexOf(a.type) -
+            ['preview', 'selectPoint', 'selectMaterial', 'editText'].indexOf(b.type),
+        )[0]);
     if (!interaction) return false;
     const result = await blocklyInteractionRegistry.execute(block, interaction, capabilities);
     if (!result.ok && result.diagnostic) capabilities.report(result.diagnostic.message, 'error');
@@ -201,10 +207,11 @@ export function createBlocklyInteractionController(
     const schema = blockRegistry.getSchemaByBlockType(block.type);
     if (!schema) return;
     const effectiveInteractions = getEffectiveInteractions(schema);
-    const hasDoubleClickInteraction = effectiveInteractions.some((interaction) => (
-      interaction.type !== 'colourBinding'
-      && (interaction.type !== 'command' || interaction.trigger === 'doubleClick')
-    ));
+    const hasDoubleClickInteraction = effectiveInteractions.some(
+      (interaction) =>
+        interaction.type !== 'colourBinding' &&
+        (interaction.type !== 'command' || interaction.trigger === 'doubleClick'),
+    );
     if (root && hasDoubleClickInteraction && !doubleClickBindings.has(block.id)) {
       const listener = (event: Event) => {
         event.preventDefault();
@@ -214,20 +221,30 @@ export function createBlocklyInteractionController(
       root.addEventListener('dblclick', listener);
       doubleClickBindings.set(block.id, { root, listener });
     }
-    const interactions = effectiveInteractions.filter((interaction) => (
-      interaction.type === 'preview'
-      || interaction.type === 'selectMaterial'
-      || (interaction.type === 'command' && interaction.trigger === 'contextMenu')
-    ));
+    const interactions = effectiveInteractions.filter(
+      (interaction) =>
+        interaction.type === 'preview' ||
+        interaction.type === 'selectMaterial' ||
+        (interaction.type === 'command' && interaction.trigger === 'contextMenu'),
+    );
     if (!interactions.length) return;
     const previous = rendered.customContextMenu;
     rendered.customContextMenu = (options) => {
       previous?.(options);
       interactions.forEach((interaction) => {
-        const text = interaction.type === 'preview' ? '预览此事件'
-          : interaction.type === 'selectMaterial' ? '选择素材'
-          : '查询键值表';
-        options.push({ text, enabled: true, callback: () => { void run(block, interaction.type); } });
+        const text =
+          interaction.type === 'preview'
+            ? '预览此事件'
+            : interaction.type === 'selectMaterial'
+              ? '选择素材'
+              : '查询键值表';
+        options.push({
+          text,
+          enabled: true,
+          callback: () => {
+            void run(block, interaction.type);
+          },
+        });
       });
     };
   };
@@ -270,9 +287,9 @@ export function createBlocklyInteractionController(
       if (change.element !== 'field' || !change.blockId || !change.name) return;
       const block = workspace.getBlockById(change.blockId);
       const schema = block && blockRegistry.getSchemaByBlockType(block.type);
-      const binding = schema?.interactions?.find((item) => (
-        item.type === 'colourBinding' && item.textField === change.name
-      ));
+      const binding = schema?.interactions?.find(
+        (item) => item.type === 'colourBinding' && item.textField === change.name,
+      );
       if (block && binding) void blocklyInteractionRegistry.execute(block, binding, capabilities);
     }
   };

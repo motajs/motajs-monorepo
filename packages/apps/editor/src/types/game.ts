@@ -51,11 +51,11 @@ export interface FloorData {
 }
 
 export interface FloorImageData {
-  canvas?: "bg" | "auto" | "fg";
+  canvas?: 'bg' | 'auto' | 'fg';
   name: string;
   x?: number;
   y?: number;
-  reverse?: ":x" | ":y" | ":o";
+  reverse?: ':x' | ':y' | ':o';
   disabled?: boolean;
   disable?: boolean;
   sx?: number;

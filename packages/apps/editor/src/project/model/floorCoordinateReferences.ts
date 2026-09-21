@@ -1,8 +1,8 @@
-import { cloneDeep } from "es-toolkit";
-import type { DataResource } from "@/project/data/DataResource";
-import { projectData } from "@/project/data/projectData";
-import type { FloorData } from "@/types";
-import type { Action } from "@/utils/action";
+import { cloneDeep } from 'es-toolkit';
+import type { DataResource } from '@/project/data/DataResource';
+import { projectData } from '@/project/data/projectData';
+import type { FloorData } from '@/types';
+import type { Action } from '@/utils/action';
 
 export type FloorPoint = [number, number];
 export type FloorPointTransform = (point: FloorPoint) => FloorPoint | null;
@@ -15,7 +15,7 @@ export interface FloorCoordinateReference {
   targetFloorId: string;
   point: FloorPoint;
   nextPoint: FloorPoint | null;
-  behavior: "move" | "clear" | "crop" | "blocked";
+  behavior: 'move' | 'clear' | 'crop' | 'blocked';
 }
 
 export interface FloorCoordinatePatch {
@@ -33,18 +33,18 @@ export interface FloorCoordinateTransformPlan {
 }
 
 const COORDINATE_RECORD_FIELDS = [
-  "events",
-  "beforeBattle",
-  "afterBattle",
-  "afterGetItem",
-  "afterOpenDoor",
-  "changeFloor",
-  "autoEvent",
-  "cannotMove",
-  "cannotMoveIn",
+  'events',
+  'beforeBattle',
+  'afterBattle',
+  'afterGetItem',
+  'afterOpenDoor',
+  'changeFloor',
+  'autoEvent',
+  'cannotMove',
+  'cannotMoveIn',
 ] as const;
 
-const OPTIONAL_POINT_FIELDS = ["upFloor", "downFloor", "flyPoint"] as const;
+const OPTIONAL_POINT_FIELDS = ['upFloor', 'downFloor', 'flyPoint'] as const;
 
 function readPoint(value: unknown): FloorPoint | undefined {
   if (!Array.isArray(value) || value.length !== 2) return undefined;
@@ -68,7 +68,7 @@ function shiftCoordinateRecord(
 ): { value: Record<string, unknown>; references: FloorCoordinateReference[] } {
   const result: Record<string, unknown> = {};
   const references: FloorCoordinateReference[] = [];
-  if (!current || typeof current !== "object" || Array.isArray(current)) {
+  if (!current || typeof current !== 'object' || Array.isArray(current)) {
     return { value: result, references };
   }
 
@@ -83,12 +83,12 @@ function shiftCoordinateRecord(
     const nextPoint = transform(point);
     references.push({
       id: `owned:${key}`,
-      owner: "target-floor",
+      owner: 'target-floor',
       path: key,
-      targetFloorId: "",
+      targetFloorId: '',
       point,
       nextPoint,
-      behavior: nextPoint ? "move" : "crop",
+      behavior: nextPoint ? 'move' : 'crop',
     });
     if (nextPoint) result[`${nextPoint[0]},${nextPoint[1]}`] = value;
   }
@@ -100,28 +100,28 @@ function resolveStaticFloorTarget(
   target: unknown,
   floorIds: readonly string[],
 ): string | undefined {
-  if (target === ":now") return sourceFloorId;
-  if (target === ":next" || target === ":before") {
+  if (target === ':now') return sourceFloorId;
+  if (target === ':next' || target === ':before') {
     const index = floorIds.indexOf(sourceFloorId);
     if (index < 0) return undefined;
-    return floorIds[index + (target === ":next" ? 1 : -1)];
+    return floorIds[index + (target === ':next' ? 1 : -1)];
   }
-  return typeof target === "string" && !target.startsWith(":") ? target : undefined;
+  return typeof target === 'string' && !target.startsWith(':') ? target : undefined;
 }
 
 async function loadIfNeeded<T>(resource: DataResource<T>): Promise<T | undefined> {
-  if (resource.snapshot().status !== "loaded") {
+  if (resource.snapshot().status !== 'loaded') {
     // The reference index is also used in isolated command tests where only one
     // floor exists. Do not trigger a network-backed load for a file that is not
     // present in the current project filesystem.
-    if (resource.raw().getContent().status !== "loaded") return undefined;
+    if (resource.raw().getContent().status !== 'loaded') return undefined;
     try {
       await resource.ensureLoaded();
     } catch {
       return undefined;
     }
   }
-  return resource.snapshot().status === "loaded" ? resource.value() : undefined;
+  return resource.snapshot().status === 'loaded' ? resource.value() : undefined;
 }
 
 function inspectChangeFloorRecord(
@@ -131,14 +131,14 @@ function inspectChangeFloorRecord(
   floorIds: readonly string[],
   transform: FloorPointTransform,
 ): { value: unknown; changed: boolean; references: FloorCoordinateReference[] } {
-  if (!record || typeof record !== "object" || Array.isArray(record)) {
+  if (!record || typeof record !== 'object' || Array.isArray(record)) {
     return { value: record, changed: false, references: [] };
   }
   const value = cloneDeep(record as Record<string, unknown>);
   const references: FloorCoordinateReference[] = [];
   let changed = false;
   for (const [sourceLoc, raw] of Object.entries(value)) {
-    if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue;
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) continue;
     const entry = raw as Record<string, unknown>;
     if (resolveStaticFloorTarget(sourceFloorId, entry.floorId, floorIds) !== targetFloorId) continue;
     const point = readPoint(entry.loc);
@@ -151,7 +151,7 @@ function inspectChangeFloorRecord(
       targetFloorId,
       point,
       nextPoint,
-      behavior: nextPoint ? "move" : "blocked",
+      behavior: nextPoint ? 'move' : 'blocked',
     };
     references.push(reference);
     if (nextPoint && changedPoint(point, nextPoint)) {
@@ -192,8 +192,8 @@ export async function buildFloorCoordinateTransformPlan(
       reference.targetFloorId = targetFloorId;
     }
     references.push(...shifted.references);
-    if (field === "changeFloor") targetChangeFloor = shifted.value;
-    else targetActions.push(["change", `['${field}']`, shifted.value]);
+    if (field === 'changeFloor') targetChangeFloor = shifted.value;
+    else targetActions.push(['change', `['${field}']`, shifted.value]);
   }
 
   for (const field of OPTIONAL_POINT_FIELDS) {
@@ -207,34 +207,26 @@ export async function buildFloorCoordinateTransformPlan(
       targetFloorId,
       point,
       nextPoint,
-      behavior: nextPoint ? "move" : "clear",
+      behavior: nextPoint ? 'move' : 'clear',
     });
     if (changedPoint(point, nextPoint)) {
-      targetActions.push(["change", `['${field}']`, nextPoint]);
+      targetActions.push(['change', `['${field}']`, nextPoint]);
     }
   }
 
   for (const sourceFloorId of floorIds) {
     const sourceResource = projectData.floor(sourceFloorId);
-    const source = sourceFloorId === targetFloorId
-      ? target
-      : await loadIfNeeded(sourceResource);
+    const source = sourceFloorId === targetFloorId ? target : await loadIfNeeded(sourceResource);
     if (!source) continue;
     const record = sourceFloorId === targetFloorId ? targetChangeFloor : source.changeFloor;
-    const inspected = inspectChangeFloorRecord(
-      record,
-      sourceFloorId,
-      targetFloorId,
-      floorIds,
-      transform,
-    );
+    const inspected = inspectChangeFloorRecord(record, sourceFloorId, targetFloorId, floorIds, transform);
     references.push(...inspected.references);
     if (sourceFloorId === targetFloorId) {
-      targetActions.push(["change", "['changeFloor']", inspected.value]);
+      targetActions.push(['change', "['changeFloor']", inspected.value]);
     } else if (inspected.changed) {
       patches.push({
         resource: sourceResource as DataResource<unknown>,
-        actions: [["change", "['changeFloor']", inspected.value]],
+        actions: [['change', "['changeFloor']", inspected.value]],
         label: `更新指向 ${targetFloorId} 的坐标`,
         stage: `floor-coordinate-reference:${sourceFloorId}`,
       });
@@ -244,29 +236,35 @@ export async function buildFloorCoordinateTransformPlan(
   if (tower?.firstData.floorId === targetFloorId) {
     const hero = tower.firstData.hero as { loc?: unknown } | undefined;
     const loc = hero?.loc;
-    if (loc && typeof loc === "object" && !Array.isArray(loc)) {
+    if (loc && typeof loc === 'object' && !Array.isArray(loc)) {
       const point = readPoint([(loc as Record<string, unknown>).x, (loc as Record<string, unknown>).y]);
       if (point) {
         const nextPoint = transform(point);
         references.push({
-          id: "tower:firstData.hero.loc",
-          owner: "tower",
-          path: "firstData.hero.loc",
+          id: 'tower:firstData.hero.loc',
+          owner: 'tower',
+          path: 'firstData.hero.loc',
           targetFloorId,
           point,
           nextPoint,
-          behavior: nextPoint ? "move" : "blocked",
+          behavior: nextPoint ? 'move' : 'blocked',
         });
         if (nextPoint && changedPoint(point, nextPoint)) {
           patches.push({
             resource: towerResource as DataResource<unknown>,
-            actions: [["change", "['firstData']['hero']['loc']", {
-              ...(loc as Record<string, unknown>),
-              x: nextPoint[0],
-              y: nextPoint[1],
-            }]],
+            actions: [
+              [
+                'change',
+                "['firstData']['hero']['loc']",
+                {
+                  ...(loc as Record<string, unknown>),
+                  x: nextPoint[0],
+                  y: nextPoint[1],
+                },
+              ],
+            ],
             label: `更新 ${targetFloorId} 的初始位置`,
-            stage: "floor-coordinate-reference:tower-start",
+            stage: 'floor-coordinate-reference:tower-start',
           });
         }
       }
@@ -277,6 +275,6 @@ export async function buildFloorCoordinateTransformPlan(
     targetActions,
     patches,
     references,
-    blocked: references.filter((reference) => reference.behavior === "blocked"),
+    blocked: references.filter((reference) => reference.behavior === 'blocked'),
   };
 }

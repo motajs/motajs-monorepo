@@ -12,23 +12,19 @@ import {
   RefreshCw,
   Sun,
   Undo2,
-} from "lucide-react";
-import { Badge, Button, Modal, Popover, Tooltip } from "antd";
-import { useCallback, useEffect, useMemo, useState, type FC } from "react";
-import { getEditorEnvironment } from "@/environment";
-import { persistenceMonitor } from "@/fs/PersistenceMonitor";
-import { useSignal } from "@/hooks/useFs";
-import { projectData } from "@/project/data/projectData";
-import { operationHistory, useOperationHistory } from "@/project/history";
-import { EditorStore } from "@/stores/EditorStore";
-import {
-  PanelStore,
-  type ScriptWorkspaceId,
-  type WorkspaceId,
-} from "@/stores/PanelStore";
-import { notifyError } from "@/utils/notify";
-import { isKeyboardInputTarget } from "@/utils/keyboard";
-import { suppressNextWorkspaceDraftWarning } from "./draftGuard";
+} from 'lucide-react';
+import { Badge, Button, Modal, Popover, Tooltip } from 'antd';
+import { useCallback, useEffect, useMemo, useState, type FC } from 'react';
+import { getEditorEnvironment } from '@/environment';
+import { persistenceMonitor } from '@/fs/PersistenceMonitor';
+import { useSignal } from '@/hooks/useFs';
+import { projectData } from '@/project/data/projectData';
+import { operationHistory, useOperationHistory } from '@/project/history';
+import { EditorStore } from '@/stores/EditorStore';
+import { PanelStore, type ScriptWorkspaceId, type WorkspaceId } from '@/stores/PanelStore';
+import { notifyError } from '@/utils/notify';
+import { isKeyboardInputTarget } from '@/utils/keyboard';
+import { suppressNextWorkspaceDraftWarning } from './draftGuard';
 import {
   activateEditorUpdate,
   availableEditorRelease,
@@ -36,24 +32,25 @@ import {
   getEditorUpdateState,
   parseEditorUpdateStatus,
   type EditorUpdateStatus,
-} from "./editorUpdate";
-import { createRetainedProjectTitleSignal } from "./projectTitle";
+} from './editorUpdate';
+import { createRetainedProjectTitleSignal } from './projectTitle';
 
 const WORKSPACES: Array<{
   id: WorkspaceId;
   label: string;
   icon: FC<{ size?: number }>;
 }> = [
-  { id: "map", label: "地图编辑器", icon: Map },
-  { id: "resources", label: "资源管理", icon: FolderOpen },
-  { id: "tower", label: "全塔属性", icon: Box },
-  { id: "common-events", label: "公共事件", icon: Puzzle },
-  { id: "scripts", label: "函数与插件", icon: Code2 },
+  { id: 'map', label: '地图编辑器', icon: Map },
+  { id: 'resources', label: '资源管理', icon: FolderOpen },
+  { id: 'tower', label: '全塔属性', icon: Box },
+  { id: 'common-events', label: '公共事件', icon: Puzzle },
+  { id: 'scripts', label: '函数与插件', icon: Code2 },
 ];
 
 function hasOpenDialog(): boolean {
-  return Array.from(document.querySelectorAll<HTMLElement>("[role='dialog'], .ant-modal-wrap, #uieventDiv"))
-    .some((element) => element.getClientRects().length > 0 && getComputedStyle(element).visibility !== "hidden");
+  return Array.from(document.querySelectorAll<HTMLElement>("[role='dialog'], .ant-modal-wrap, #uieventDiv")).some(
+    (element) => element.getClientRects().length > 0 && getComputedStyle(element).visibility !== 'hidden',
+  );
 }
 
 const ProjectTitle: FC = () => {
@@ -62,10 +59,14 @@ const ProjectTitle: FC = () => {
   const titleSignal = useMemo(() => createRetainedProjectTitleSignal(resource.content), [resource]);
   const title = useSignal(titleSignal);
   useEffect(() => {
-    if (content.status === "idle") void resource.ensureLoaded();
+    if (content.status === 'idle') void resource.ensureLoaded();
   }, [content.status, resource]);
   if (title === undefined) return <div className="appProjectTitle">正在读取工程...</div>;
-  return <div className="appProjectTitle" title={title}>{title}</div>;
+  return (
+    <div className="appProjectTitle" title={title}>
+      {title}
+    </div>
+  );
 };
 
 function useEditorUpdateState(): EditorUpdateStatus | undefined {
@@ -86,37 +87,39 @@ function useEditorUpdateState(): EditorUpdateStatus | undefined {
         const next = await checkEditorUpdate(environment, controller.signal, force);
         if (!controller.signal.aborted && next) setStatus(next);
       } catch (error) {
-        if (!controller.signal.aborted) console.debug("Editor update check is unavailable", error);
+        if (!controller.signal.aborted) console.debug('Editor update check is unavailable', error);
       } finally {
         checking = false;
       }
     };
     const handleMessage = (event: MessageEvent) => {
-      if (!event.data || event.data.type !== "motajs-editor-release-state") return;
+      if (!event.data || event.data.type !== 'motajs-editor-release-state') return;
       try {
         setStatus(parseEditorUpdateStatus(event.data.state));
       } catch (error) {
-        console.debug("Ignored an invalid Editor release broadcast", error);
+        console.debug('Ignored an invalid Editor release broadcast', error);
       }
     };
-    void refresh().then(() => check()).catch((error) => {
-      if (!controller.signal.aborted) console.debug("Editor update state is unavailable", error);
-    });
+    void refresh()
+      .then(() => check())
+      .catch((error) => {
+        if (!controller.signal.aborted) console.debug('Editor update state is unavailable', error);
+      });
     const interval = window.setInterval(() => void check(), 10 * 60_000);
     const handleOnline = () => void check(true);
-    navigator.serviceWorker?.addEventListener("message", handleMessage);
-    window.addEventListener("online", handleOnline);
+    navigator.serviceWorker?.addEventListener('message', handleMessage);
+    window.addEventListener('online', handleOnline);
     return () => {
       controller.abort();
       window.clearInterval(interval);
-      navigator.serviceWorker?.removeEventListener("message", handleMessage);
-      window.removeEventListener("online", handleOnline);
+      navigator.serviceWorker?.removeEventListener('message', handleMessage);
+      window.removeEventListener('online', handleOnline);
     };
   }, []);
   return status;
 }
 
-const shortBuildId = (buildId: string): string => buildId.length > 12 ? buildId.slice(0, 12) : buildId;
+const shortBuildId = (buildId: string): string => (buildId.length > 12 ? buildId.slice(0, 12) : buildId);
 
 export const AppTopBar: FC = () => {
   const {
@@ -131,89 +134,93 @@ export const AppTopBar: FC = () => {
   const history = useOperationHistory();
   const updateStatus = useEditorUpdateState();
   const [updateOpen, setUpdateOpen] = useState(false);
-  const dark = theme === "editor_color_dark";
+  const dark = theme === 'editor_color_dark';
   const environment = getEditorEnvironment();
   const runningRelease = environment.release;
   const availableRelease = availableEditorRelease(updateStatus, runningRelease);
   const docsUrl = environment.endpoints.docs;
 
-  const navigate = useCallback((workspace: WorkspaceId) => {
-    setActiveWorkspace(workspace);
-  }, [setActiveWorkspace]);
+  const navigate = useCallback(
+    (workspace: WorkspaceId) => {
+      setActiveWorkspace(workspace);
+    },
+    [setActiveWorkspace],
+  );
 
   useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
-      if (event.ctrlKey || event.metaKey || event.altKey || isKeyboardInputTarget(event.target) || hasOpenDialog()) return;
+      if (event.ctrlKey || event.metaKey || event.altKey || isKeyboardInputTarget(event.target) || hasOpenDialog())
+        return;
       const key = event.key.toLowerCase();
       let workspace: WorkspaceId | undefined;
       let script: ScriptWorkspaceId | undefined;
-      const mapPanel = ({ z: "map", x: "loc", c: "enemyitem", v: "floor" } as const)[
-        key as "z" | "x" | "c" | "v"
-      ];
-      if (mapPanel && activeWorkspace === "map") {
+      const mapPanel = ({ z: 'map', x: 'loc', c: 'enemyitem', v: 'floor' } as const)[key as 'z' | 'x' | 'c' | 'v'];
+      if (mapPanel && activeWorkspace === 'map') {
         event.preventDefault();
         setActiveMapPanel(mapPanel);
         return;
       }
-      if (key === "b") workspace = "tower";
-      else if (key === "m") workspace = "resources";
-      else if (key === ",") workspace = "common-events";
-      else if (key === "n") {
-        workspace = "scripts";
-        script = "functions";
-      } else if (key === ".") {
-        workspace = "scripts";
-        script = "plugins";
+      if (key === 'b') workspace = 'tower';
+      else if (key === 'm') workspace = 'resources';
+      else if (key === ',') workspace = 'common-events';
+      else if (key === 'n') {
+        workspace = 'scripts';
+        script = 'functions';
+      } else if (key === '.') {
+        workspace = 'scripts';
+        script = 'plugins';
       }
       if (!workspace) return;
       event.preventDefault();
       if (script) setActiveScriptWorkspace(script);
       else setActiveWorkspace(workspace);
     };
-    window.addEventListener("keydown", handleShortcut);
-    return () => window.removeEventListener("keydown", handleShortcut);
+    window.addEventListener('keydown', handleShortcut);
+    return () => window.removeEventListener('keydown', handleShortcut);
   }, [activeWorkspace, setActiveMapPanel, setActiveScriptWorkspace, setActiveWorkspace]);
 
   const historyContent = (
     <div className="appHistoryList" data-test-id="operation-history-list">
       {history.entries.length === 0 ? (
         <div className="appHistoryEmpty">暂无可撤销操作</div>
-      ) : [...history.entries]
-        .map((entry, index) => ({ entry, index }))
-        .reverse()
-        .map(({ entry, index }) => (
-          <div
-            className={index < history.current ? "appHistoryEntry" : "appHistoryEntry is-undone"}
-            data-test-id="operation-history-entry"
-            key={entry.id}
-          >
-            <span>{index < history.current ? "●" : "○"}</span>
-            <span title={entry.label}>{entry.label}</span>
-            <span title={entry.paths.join(", ")}>{entry.paths.join(", ")}</span>
-            <span>
-              {new Date(entry.timestamp).toLocaleTimeString("zh-CN", {
-                hour12: false,
-                hour: "2-digit",
-                minute: "2-digit",
-                second: "2-digit",
-              })}
-            </span>
-          </div>
-        ))}
+      ) : (
+        [...history.entries]
+          .map((entry, index) => ({ entry, index }))
+          .reverse()
+          .map(({ entry, index }) => (
+            <div
+              className={index < history.current ? 'appHistoryEntry' : 'appHistoryEntry is-undone'}
+              data-test-id="operation-history-entry"
+              key={entry.id}
+            >
+              <span>{index < history.current ? '●' : '○'}</span>
+              <span title={entry.label}>{entry.label}</span>
+              <span title={entry.paths.join(', ')}>{entry.paths.join(', ')}</span>
+              <span>
+                {new Date(entry.timestamp).toLocaleTimeString('zh-CN', {
+                  hour12: false,
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit',
+                })}
+              </span>
+            </div>
+          ))
+      )}
     </div>
   );
 
   const reloadForUpdate = async () => {
     if (history.busy) {
-      notifyError("当前操作尚未完成，请稍后再更新。");
+      notifyError('当前操作尚未完成，请稍后再更新。');
       return;
     }
     if (persistenceMonitor.hasUnsavedChanges()) {
-      notifyError("工程文件仍在写入，请等待写入完成后再更新。");
+      notifyError('工程文件仍在写入，请等待写入完成后再更新。');
       return;
     }
     if (persistenceMonitor.hasPersistErrors()) {
-      notifyError("存在写入失败的工程文件，请先处理保存错误再更新。");
+      notifyError('存在写入失败的工程文件，请先处理保存错误再更新。');
       return;
     }
     if (!availableRelease) return;
@@ -259,7 +266,7 @@ export const AppTopBar: FC = () => {
         <nav className="appWorkspaceNav" aria-label="编辑器工作区">
           {WORKSPACES.map((item) => (
             <button
-              className={activeWorkspace === item.id ? "appWorkspaceButton is-active" : "appWorkspaceButton"}
+              className={activeWorkspace === item.id ? 'appWorkspaceButton is-active' : 'appWorkspaceButton'}
               data-test-id={`workspace-${item.id}`}
               key={item.id}
               onClick={() => navigate(item.id)}
@@ -293,7 +300,7 @@ export const AppTopBar: FC = () => {
               <Button
                 aria-label="帮助文档"
                 icon={<BookOpen size={17} />}
-                onClick={() => window.open(docsUrl, "_blank")}
+                onClick={() => window.open(docsUrl, '_blank')}
                 type="text"
               />
             </Tooltip>
@@ -302,7 +309,7 @@ export const AppTopBar: FC = () => {
             <Button
               aria-label="前往游戏"
               icon={<ExternalLink size={17} />}
-              onClick={() => window.open(getEditorEnvironment().endpoints.preview, "_blank")}
+              onClick={() => window.open(getEditorEnvironment().endpoints.preview, '_blank')}
               type="text"
             />
           </Tooltip>
@@ -337,12 +344,12 @@ export const AppTopBar: FC = () => {
               type="text"
             />
           </Tooltip>
-          <Tooltip title={dark ? "切换到浅色主题" : "切换到深色主题"}>
+          <Tooltip title={dark ? '切换到浅色主题' : '切换到深色主题'}>
             <Button
               aria-label="切换主题"
               data-test-id="theme-toggle"
               icon={dark ? <Sun size={17} /> : <Moon size={17} />}
-              onClick={() => setTheme(dark ? "editor_color_light" : "editor_color_dark")}
+              onClick={() => setTheme(dark ? 'editor_color_light' : 'editor_color_dark')}
               type="text"
             />
           </Tooltip>
@@ -363,11 +370,16 @@ export const AppTopBar: FC = () => {
             <dl>
               <div>
                 <dt>当前版本</dt>
-                <dd>{runningRelease?.version ?? "未知"} · {runningRelease ? shortBuildId(runningRelease.buildId) : "未知构建"}</dd>
+                <dd>
+                  {runningRelease?.version ?? '未知'} ·{' '}
+                  {runningRelease ? shortBuildId(runningRelease.buildId) : '未知构建'}
+                </dd>
               </div>
               <div>
                 <dt>新版本</dt>
-                <dd>{availableRelease.version} · {shortBuildId(availableRelease.buildId)}</dd>
+                <dd>
+                  {availableRelease.version} · {shortBuildId(availableRelease.buildId)}
+                </dd>
               </div>
             </dl>
             <p className="editorUpdateWarning">

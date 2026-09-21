@@ -13,23 +13,22 @@ export const SelectInput: FC<SelectInputProps> = (props) => {
   // 将当前值序列化为字符串用于比较
   const currentValueStr = JSON.stringify(value);
 
-  const handleChange = useCallback((e: ChangeEvent<HTMLSelectElement>) => {
-    const selectedValueStr = e.target.value;
-    try {
-      // 解析选中的 JSON 值
-      const parsedValue = JSON.parse(selectedValueStr);
-      onChange(parsedValue);
-    } catch {
-      // 解析失败时不做任何操作
-    }
-  }, [onChange]);
+  const handleChange = useCallback(
+    (e: ChangeEvent<HTMLSelectElement>) => {
+      const selectedValueStr = e.target.value;
+      try {
+        // 解析选中的 JSON 值
+        const parsedValue = JSON.parse(selectedValueStr);
+        onChange(parsedValue);
+      } catch {
+        // 解析失败时不做任何操作
+      }
+    },
+    [onChange],
+  );
 
   return (
-    <select
-      value={currentValueStr}
-      onChange={handleChange}
-      disabled={disabled}
-    >
+    <select value={currentValueStr} onChange={handleChange} disabled={disabled}>
       {options.map((option, index) => {
         const optionValueStr = JSON.stringify(option);
         // 显示文本：如果是字符串直接显示，否则显示 JSON 序列化结果

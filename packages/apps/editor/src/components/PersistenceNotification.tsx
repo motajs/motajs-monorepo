@@ -1,9 +1,9 @@
-import { Button, notification } from "antd";
-import { useEffect, type FC } from "react";
-import { persistenceMonitor } from "@/fs/PersistenceMonitor";
-import { useSignal } from "@/hooks/useFs";
+import { Button, notification } from 'antd';
+import { useEffect, type FC } from 'react';
+import { persistenceMonitor } from '@/fs/PersistenceMonitor';
+import { useSignal } from '@/hooks/useFs';
 
-const NOTIFICATION_KEY = "project-persistence-failures";
+const NOTIFICATION_KEY = 'project-persistence-failures';
 
 export const PersistenceNotification: FC = () => {
   const [api, contextHolder] = notification.useNotification();
@@ -21,11 +21,11 @@ export const PersistenceNotification: FC = () => {
       message: `工程文件写入失败（${failures.length}）`,
       description: (
         <div data-test-id="persistence-failure-notification">
-          <div style={{ maxHeight: 220, overflow: "auto" }}>
+          <div style={{ maxHeight: 220, overflow: 'auto' }}>
             {failures.map(({ path, error }) => (
               <div key={path} style={{ marginBottom: 8 }}>
-                <div style={{ fontFamily: "monospace", overflowWrap: "anywhere" }}>{path}</div>
-                <div style={{ color: "var(--ant-color-error, #ff4d4f)", overflowWrap: "anywhere" }}>
+                <div style={{ fontFamily: 'monospace', overflowWrap: 'anywhere' }}>{path}</div>
+                <div style={{ color: 'var(--ant-color-error, #ff4d4f)', overflowWrap: 'anywhere' }}>
                   {error.message}
                 </div>
               </div>
@@ -42,7 +42,7 @@ export const PersistenceNotification: FC = () => {
           </Button>
         </div>
       ),
-      placement: "bottomRight",
+      placement: 'bottomRight',
       duration: 0,
       closable: false,
     });

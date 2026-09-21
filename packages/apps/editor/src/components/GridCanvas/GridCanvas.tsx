@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useRef, type FC, type MouseEvent } from "react";
-import { Grid, Loc } from "@/utils/coordinate";
-import { clearCanvas } from "@/utils/canvas/clear";
-import { drawCheckboard } from "@/utils/canvas/checkboard";
-import type { GridCanvasProps } from "./types";
+import { useCallback, useEffect, useRef, type FC, type MouseEvent } from 'react';
+import { Grid, Loc } from '@/utils/coordinate';
+import { clearCanvas } from '@/utils/canvas/clear';
+import { drawCheckboard } from '@/utils/canvas/checkboard';
+import type { GridCanvasProps } from './types';
 
 /**
  * 通用网格画布组件
@@ -32,7 +32,7 @@ export const GridCanvas: FC<GridCanvasProps> = (props) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     // 1. 清空 canvas

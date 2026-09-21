@@ -1,13 +1,7 @@
 import { useCallback, useMemo, useRef, type FC } from 'react';
 import type { TableRowProps, FieldType, CheckboxSetConfig, FieldConfig } from '../types';
 import { ActionButtons } from './ActionButtons';
-import {
-  TextareaInput,
-  SelectInput,
-  CheckboxInput,
-  CheckboxSet,
-  ColorInput,
-} from './inputs';
+import { TextareaInput, SelectInput, CheckboxInput, CheckboxSet, ColorInput } from './inputs';
 import { checkRange, getByFieldPath, getParentFieldPath } from '../utils';
 import { DataStore } from '../stores';
 import { openExternalEditor } from '../externalEditor';
@@ -30,28 +24,15 @@ const renderInput = (
 ): React.ReactNode => {
   switch (type) {
     case 'select':
-      return (
-        <SelectInput
-          value={value}
-          options={config._select?.values ?? []}
-          onChange={onChange}
-        />
-      );
+      return <SelectInput value={value} options={config._select?.values ?? []} onChange={onChange} />;
 
     case 'checkbox':
-      return (
-        <CheckboxInput
-          value={Boolean(value)}
-          onChange={onChange}
-        />
-      );
+      return <CheckboxInput value={Boolean(value)} onChange={onChange} />;
 
     case 'checkboxSet': {
       // 获取 checkboxSet 配置，支持函数形式
       const checkboxSetConfig: CheckboxSetConfig | undefined =
-        typeof config._checkboxSet === 'function'
-          ? config._checkboxSet()
-          : config._checkboxSet;
+        typeof config._checkboxSet === 'function' ? config._checkboxSet() : config._checkboxSet;
 
       return (
         <CheckboxSet
@@ -64,34 +45,15 @@ const renderInput = (
     }
 
     case 'color':
-      return (
-        <ColorInput
-          value={value}
-          onChange={onChange}
-        />
-      );
+      return <ColorInput value={value} onChange={onChange} />;
 
     case 'disable':
-      return (
-        <TextareaInput
-          value={value}
-          indent={config.indent}
-          disabled
-          readonly
-          onChange={onChange}
-        />
-      );
+      return <TextareaInput value={value} indent={config.indent} disabled readonly onChange={onChange} />;
 
     // textarea, event, material, point, popCheckboxSet 都使用 TextareaInput
     // 它们的特殊编辑功能通过编辑按钮触发
     default:
-      return (
-        <TextareaInput
-          value={value}
-          indent={config.indent}
-          onChange={onChange}
-        />
-      );
+      return <TextareaInput value={value} indent={config.indent} onChange={onChange} />;
   }
 };
 
@@ -144,10 +106,7 @@ export const TableRow: FC<TableRowProps> = (props) => {
 
   // 生成用于 data-field 属性的值
   // "['main']['floorIds']" => "main-floorIds"
-  const dataField = useMemo(
-    () => field.slice(2, -2).split("']['").join('-'),
-    [field],
-  );
+  const dataField = useMemo(() => field.slice(2, -2).split("']['").join('-'), [field]);
 
   // 转义后的注释，用于 title 属性
   const commentEscaped = useMemo(() => htmlEscape(comment), [comment]);
@@ -166,14 +125,17 @@ export const TableRow: FC<TableRowProps> = (props) => {
 
   // 统一的值变更处理（包含 checkRange 验证）
   // 无论值来自直接输入还是外部编辑器，都会经过此验证
-  const handleValueChange = useCallback((newValue: unknown) => {
-    // 验证 _range
-    if (!checkRange(config, newValue)) {
-      notifyError(field + ' : 输入的值不合要求,请鼠标放置在注释上查看说明');
-      return; // 不触发 onChange
-    }
-    onValueChange(field, newValue);
-  }, [config, field, onValueChange]);
+  const handleValueChange = useCallback(
+    (newValue: unknown) => {
+      // 验证 _range
+      if (!checkRange(config, newValue)) {
+        notifyError(field + ' : 输入的值不合要求,请鼠标放置在注释上查看说明');
+        return; // 不触发 onChange
+      }
+      onValueChange(field, newValue);
+    },
+    [config, field, onValueChange],
+  );
 
   // 打开外部编辑器 - 如果外部提供了回调则使用，否则使用内置实现
   // 关键：内置实现中的 setValue 使用带 checkRange 验证的逻辑
@@ -200,7 +162,18 @@ export const TableRow: FC<TableRowProps> = (props) => {
         checkboxSet,
       });
     }
-  }, [field, config, data, onValueChange, onOpenExternalEditor, codeEditor, eventEditor, selectPoint, selectMaterial, checkboxSet]);
+  }, [
+    field,
+    config,
+    data,
+    onValueChange,
+    onOpenExternalEditor,
+    codeEditor,
+    eventEditor,
+    selectPoint,
+    selectMaterial,
+    checkboxSet,
+  ]);
 
   // 双击处理 - 根据 editMode 调用不同的回调
   const handleDoubleClick = useCallback(() => {

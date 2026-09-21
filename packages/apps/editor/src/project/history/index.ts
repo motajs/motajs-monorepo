@@ -1,9 +1,5 @@
-export {
-  executeCompositeCommand,
-  executePatchCommand,
-  type PatchCommandOptions,
-} from "./commandOperations";
-export { operationHistory, useOperationHistory } from "./operationHistory";
+export { executeCompositeCommand, executePatchCommand, type PatchCommandOptions } from './commandOperations';
+export { operationHistory, useOperationHistory } from './operationHistory';
 export {
   compositeOperation,
   navigateFloorOperation,
@@ -13,21 +9,13 @@ export {
   type EditorOperation,
   type OperationMeta,
   type OperationTarget,
-} from "./operations";
-export {
-  appendMaterialOperation,
-  removeMaterialOperation,
-  replaceMaterialOperation,
-} from "./materialOperations";
-export {
-  deleteTextFileOperation,
-  writeTextFileOperation,
-  type TextFileOperationOptions,
-} from "./textFileOperations";
+} from './operations';
+export { appendMaterialOperation, removeMaterialOperation, replaceMaterialOperation } from './materialOperations';
+export { deleteTextFileOperation, writeTextFileOperation, type TextFileOperationOptions } from './textFileOperations';
 export {
   captureEditorViewport,
   registerEditorViewportProvider,
   restoreEditorViewport,
   type EditorViewport,
   type EditorViewportProvider,
-} from "./viewport";
+} from './viewport';

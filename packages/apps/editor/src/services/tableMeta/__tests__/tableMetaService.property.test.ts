@@ -11,11 +11,7 @@
 
 import { describe, expect, it } from 'vitest';
 import * as fc from 'fast-check';
-import {
-  loadTableMetaFile,
-  VALID_META_FILE_KEYS,
-  type MetaFileKey,
-} from '../tableMetaService';
+import { loadTableMetaFile, VALID_META_FILE_KEYS, type MetaFileKey } from '../tableMetaService';
 
 describe('loadTableMetaFile 属性测试', () => {
   describe('Property 2: Invalid Key Error', () => {
@@ -31,11 +27,9 @@ describe('loadTableMetaFile 属性测试', () => {
       await fc.assert(
         fc.asyncProperty(invalidKeyArb, async (invalidKey) => {
           // 调用 loadTableMetaFile 应该抛出错误
-          await expect(
-            loadTableMetaFile(invalidKey as MetaFileKey)
-          ).rejects.toThrow(`无效的文件 key: ${invalidKey}`);
+          await expect(loadTableMetaFile(invalidKey as MetaFileKey)).rejects.toThrow(`无效的文件 key: ${invalidKey}`);
         }),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
   });
@@ -63,7 +57,7 @@ describe('loadTableMetaFile 属性测试', () => {
             expect((error as Error).message).toMatch(/读取.*失败/);
           }
         }),
-        { numRuns: 5 } // 减少运行次数，因为涉及 I/O
+        { numRuns: 5 }, // 减少运行次数，因为涉及 I/O
       );
     });
   });

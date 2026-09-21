@@ -5,8 +5,8 @@
  * 提供响应式的状态订阅机制。
  */
 
-import { Store } from "@tanstack/store";
-import { useStore } from "@tanstack/react-store";
+import { Store } from '@tanstack/store';
+import { useStore } from '@tanstack/react-store';
 
 export interface LocPos {
   x: number;
@@ -55,9 +55,7 @@ export function setCurrentLocPos(pos: LocPos | null, floorId?: string): void {
 export function setCurrentLocFloorId(floorId: string): void {
   locStateStore.setState((state) => ({
     ...state,
-    currentSelection: state.currentSelection
-      ? { ...state.currentSelection, floorId }
-      : null,
+    currentSelection: state.currentSelection ? { ...state.currentSelection, floorId } : null,
   }));
 }
 

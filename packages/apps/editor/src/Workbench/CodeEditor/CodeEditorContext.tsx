@@ -1,14 +1,10 @@
-import {
-  createContext,
-  useContext,
-  useSyncExternalStore,
-} from "react";
+import { createContext, useContext, useSyncExternalStore } from 'react';
 
 export interface CodeEditorOpenRequest {
   contextId: string;
   initialValue: string;
   lint?: boolean;
-  language?: "javascript" | "json" | "plaintext";
+  language?: 'javascript' | 'json' | 'plaintext';
   preview?: unknown;
   onPreview?(value: string): void | Promise<void>;
   scrollTop?: number;
@@ -44,19 +40,19 @@ function subscribeCodeEditorHost(listener: () => void): () => void {
 
 export function useCodeEditor(): CodeEditorCapability {
   const context = useContext(CodeEditorContext);
-  if (!context) throw new Error("CodeEditorProvider is missing");
+  if (!context) throw new Error('CodeEditorProvider is missing');
   return context;
 }
 
-export function useCodeEditorRegistration(): CodeEditorContextValue["register"] {
+export function useCodeEditorRegistration(): CodeEditorContextValue['register'] {
   const context = useContext(CodeEditorContext);
-  if (!context) throw new Error("CodeEditorProvider is missing");
+  if (!context) throw new Error('CodeEditorProvider is missing');
   return context.register;
 }
 
-export function useCodeEditorPreviewRegistration(): CodeEditorContextValue["registerPreview"] {
+export function useCodeEditorPreviewRegistration(): CodeEditorContextValue['registerPreview'] {
   const context = useContext(CodeEditorContext);
-  if (!context) throw new Error("CodeEditorProvider is missing");
+  if (!context) throw new Error('CodeEditorProvider is missing');
   return context.registerPreview;
 }
 

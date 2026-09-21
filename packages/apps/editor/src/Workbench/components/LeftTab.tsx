@@ -23,14 +23,7 @@ export interface LeftTabProps {
 }
 
 export const LeftTab: FC<LeftTabProps> = (props) => {
-  const {
-    id,
-    title,
-    actions,
-    children,
-    loading = false,
-    error = null,
-  } = props;
+  const { id, title, actions, children, loading = false, error = null } = props;
 
   // 渲染内容
   const renderContent = () => {

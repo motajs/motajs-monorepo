@@ -1,10 +1,7 @@
-import type { Content } from "@/fs/types";
-import type { DataResource } from "@/project/data/DataResource";
-import {
-  applyActionsWithInverse,
-  type Action,
-} from "@/utils/action";
-import { captureEditorViewport, restoreEditorViewport, type EditorViewport } from "./viewport";
+import type { Content } from '@/fs/types';
+import type { DataResource } from '@/project/data/DataResource';
+import { applyActionsWithInverse, type Action } from '@/utils/action';
+import { captureEditorViewport, restoreEditorViewport, type EditorViewport } from './viewport';
 
 export interface OperationMeta {
   label: string;
@@ -38,7 +35,7 @@ function dataResourceTarget<T>(resource: DataResource<T>): OperationTarget {
     capture: () => raw.getContent(),
     restore: async (checkpoint) => {
       const content = checkpoint as Content<string>;
-      if (content.status !== "loaded") {
+      if (content.status !== 'loaded') {
         throw new Error(`Cannot restore ${resource.path} from ${content.status}`);
       }
       await Promise.resolve(raw.update(content.value));
@@ -79,12 +76,9 @@ class CompositeOperation implements EditorOperation<unknown[]> {
         }
       }
       if (rollbackErrors.length > 0) {
-        throw new AggregateError(
-          [error, ...rollbackErrors],
-          `${this.meta.stage} failed and semantic recovery failed`,
-        );
+        throw new AggregateError([error, ...rollbackErrors], `${this.meta.stage} failed and semantic recovery failed`);
       }
-      if (error && typeof error === "object" && !("commandStage" in error)) {
+      if (error && typeof error === 'object' && !('commandStage' in error)) {
         Object.assign(error, { commandStage: currentOperation?.meta.stage ?? this.meta.stage });
       }
       throw error;
@@ -108,11 +102,7 @@ class ResourcePatchOperation<T> implements EditorOperation {
   private readonly resource: DataResource<T>;
   private readonly actions: readonly Action[];
 
-  constructor(
-    meta: OperationMeta,
-    resource: DataResource<T>,
-    actions: readonly Action[],
-  ) {
+  constructor(meta: OperationMeta, resource: DataResource<T>, actions: readonly Action[]) {
     this.meta = meta;
     this.resource = resource;
     this.actions = actions;
@@ -122,19 +112,12 @@ class ResourcePatchOperation<T> implements EditorOperation {
   async apply(): Promise<AppliedOperation> {
     let inverseActions: Action[] = [];
     await this.resource.mutate((draft) => {
-      inverseActions = applyActionsWithInverse(
-        draft as Record<string, unknown>,
-        this.actions as Action[],
-      );
+      inverseActions = applyActionsWithInverse(draft as Record<string, unknown>, this.actions as Action[]);
     });
 
     return {
       value: undefined,
-      inverse: new ResourcePatchOperation(
-        this.meta,
-        this.resource,
-        inverseActions,
-      ),
+      inverse: new ResourcePatchOperation(this.meta, this.resource, inverseActions),
       changed: inverseActions.length > 0,
     };
   }

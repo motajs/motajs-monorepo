@@ -5,10 +5,10 @@
  * 业务组件只需要处理数据已加载的情况
  */
 
-import type { MetaFileKey } from "@/services/tableMeta/tableMetaService";
-import type { CommentObject } from "@/components/Table";
-import { projectModel } from "@/project/model/projectModel";
-import { useModelResourceSuspense } from "./useModelResourceSuspense";
+import type { MetaFileKey } from '@/services/tableMeta/tableMetaService';
+import type { CommentObject } from '@/components/Table';
+import { projectModel } from '@/project/model/projectModel';
+import { useModelResourceSuspense } from './useModelResourceSuspense';
 
 /**
  * Suspense 版本的表格元数据 Hook

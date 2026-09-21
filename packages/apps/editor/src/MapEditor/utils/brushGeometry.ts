@@ -1,4 +1,4 @@
-import type { LocPOD } from "@/utils/coordinate";
+import type { LocPOD } from '@/utils/coordinate';
 
 export function walkOrthogonalPath(from: LocPOD, to: LocPOD): LocPOD[] {
   const result: LocPOD[] = [];
@@ -6,9 +6,8 @@ export function walkOrthogonalPath(from: LocPOD, to: LocPOD): LocPOD[] {
   while (cursor[0] !== to[0] || cursor[1] !== to[1]) {
     const dx = to[0] - cursor[0];
     const dy = to[1] - cursor[1];
-    cursor = Math.abs(dx) >= Math.abs(dy)
-      ? [cursor[0] + Math.sign(dx), cursor[1]]
-      : [cursor[0], cursor[1] + Math.sign(dy)];
+    cursor =
+      Math.abs(dx) >= Math.abs(dy) ? [cursor[0] + Math.sign(dx), cursor[1]] : [cursor[0], cursor[1] + Math.sign(dy)];
     result.push(cursor);
   }
   return result;

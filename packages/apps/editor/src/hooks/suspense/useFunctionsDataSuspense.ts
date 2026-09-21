@@ -5,9 +5,9 @@
  * 业务组件只需要处理数据已加载的情况
  */
 
-import { functionsService, type FunctionsData } from "@/services/functions";
-import type { UpdateFn } from "../useFs";
-import { useDataSuspense } from "./useDataSuspense";
+import { functionsService, type FunctionsData } from '@/services/functions';
+import type { UpdateFn } from '../useFs';
+import { useDataSuspense } from './useDataSuspense';
 
 /**
  * Suspense 版本的脚本函数数据 Hook
@@ -32,10 +32,7 @@ import { useDataSuspense } from "./useDataSuspense";
  *   <FunctionsEditor />
  * </ContentBoundary>
  */
-export function useFunctionsDataSuspense(): [
-  FunctionsData,
-  UpdateFn<FunctionsData>,
-] {
+export function useFunctionsDataSuspense(): [FunctionsData, UpdateFn<FunctionsData>] {
   const handler = functionsService.getHandler();
   return useDataSuspense(handler);
 }

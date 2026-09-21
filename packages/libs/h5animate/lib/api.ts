@@ -4,25 +4,16 @@
  * 提供简化的编码、解码和转换接口，封装底层实现细节
  */
 
-import { decodeH5Animate as decodeCore } from "./decoder.js";
-import { encodeH5Animate as encodeCore } from "./encoder.js";
+import { decodeH5Animate as decodeCore } from './decoder.js';
+import { encodeH5Animate as encodeCore } from './encoder.js';
 import {
   convertToH5Animate as convertCore,
   convertFromJsonString as convertFromJsonCore,
   parseLegacyAnimateFile,
   type ConvertOptions,
-} from "./converter.js";
-import {
-  extractFrameByIndex,
-  extractAllFrames,
-  type WebPOptions,
-} from "./webp.js";
-import type {
-  H5AnimateMeta,
-  SpriteInfo,
-  DecodedH5Animate,
-  LegacyAnimateFile,
-} from "./types.js";
+} from './converter.js';
+import { extractFrameByIndex, extractAllFrames, type WebPOptions } from './webp.js';
+import type { H5AnimateMeta, SpriteInfo, DecodedH5Animate, LegacyAnimateFile } from './types.js';
 
 // ============ 解码 API ============
 
@@ -121,10 +112,7 @@ export function encode(options: EncodeOptions): Buffer {
  * writeFileSync("animation.h5animate", buffer);
  * ```
  */
-export async function convert(
-  legacyData: LegacyAnimateFile,
-  options?: ConvertOptions,
-): Promise<Buffer> {
+export async function convert(legacyData: LegacyAnimateFile, options?: ConvertOptions): Promise<Buffer> {
   return convertCore(legacyData, options);
 }
 
@@ -149,10 +137,7 @@ export async function convert(
  * writeFileSync("animation.h5animate", buffer);
  * ```
  */
-export async function convertFromJson(
-  jsonString: string,
-  options?: ConvertOptions,
-): Promise<Buffer> {
+export async function convertFromJson(jsonString: string, options?: ConvertOptions): Promise<Buffer> {
   return convertFromJsonCore(jsonString, options);
 }
 

@@ -12,13 +12,13 @@
  * </PanelSlot>
  */
 
-import { type ReactNode } from "react";
-import { useIsPanelActive, type PanelId } from "@/stores/PanelStore";
-import { PanelErrorBoundary } from "./PanelErrorBoundary";
-import { ContentBoundary, NotFoundRecovery } from "@/components/ContentBoundary";
-import type { IContentHandler } from "@/fs/interfaces";
-import { operationHistory, useOperationHistory } from "@/project/history";
-import { notifyError } from "@/utils/notify";
+import { type ReactNode } from 'react';
+import { useIsPanelActive, type PanelId } from '@/stores/PanelStore';
+import { PanelErrorBoundary } from './PanelErrorBoundary';
+import { ContentBoundary, NotFoundRecovery } from '@/components/ContentBoundary';
+import type { IContentHandler } from '@/fs/interfaces';
+import { operationHistory, useOperationHistory } from '@/project/history';
+import { notifyError } from '@/utils/notify';
 
 export interface PanelSlotProps {
   /** 面板 ID */
@@ -35,10 +35,16 @@ function MissingPanelResource({ handler }: { handler: IContentHandler<unknown> }
   return (
     <NotFoundRecovery
       path={handler.getPath()}
-      onRetry={() => { void handler.refetch(); }}
-      onRestore={canRestore ? () => {
-        void operationHistory.undo().catch(notifyError);
-      } : undefined}
+      onRetry={() => {
+        void handler.refetch();
+      }}
+      onRestore={
+        canRestore
+          ? () => {
+              void operationHistory.undo().catch(notifyError);
+            }
+          : undefined
+      }
       restoreLabel={previous ? `撤销“${previous.label}”` : undefined}
     />
   );
@@ -53,9 +59,9 @@ export function PanelSlot({ panelId, children }: PanelSlotProps) {
       <PanelErrorBoundary panelId={panelId}>
         <ContentBoundary
           loadingUI={<></>}
-          recoveryUI={(handler) => handler.content().status === "not-found"
-            ? <MissingPanelResource handler={handler} />
-            : null}
+          recoveryUI={(handler) =>
+            handler.content().status === 'not-found' ? <MissingPanelResource handler={handler} /> : null
+          }
         >
           {children}
         </ContentBoundary>

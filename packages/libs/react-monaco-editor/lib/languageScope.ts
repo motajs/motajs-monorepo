@@ -1,7 +1,7 @@
-import "./localization/zh-cn";
-import * as monacoApi from "monaco-editor/editor/editor.api";
-import * as monacoTypeScript from "monaco-editor/languages/features/typescript/register";
-import { initializeMonaco } from "./setup";
+import './localization/zh-cn';
+import * as monacoApi from 'monaco-editor/editor/editor.api';
+import * as monacoTypeScript from 'monaco-editor/languages/features/typescript/register';
+import { initializeMonaco } from './setup';
 
 export interface MonacoExtraLibrary {
   path: string;
@@ -19,9 +19,9 @@ export class MonacoLanguageLibraryScope {
 
   replace(libraries: readonly MonacoExtraLibrary[]): void {
     this.clear();
-    this.disposables = libraries.map((library) => (
-      monacoTypeScript.javascriptDefaults.addExtraLib(library.content, library.path)
-    ));
+    this.disposables = libraries.map((library) =>
+      monacoTypeScript.javascriptDefaults.addExtraLib(library.content, library.path),
+    );
   }
 
   clear(): void {
@@ -34,12 +34,12 @@ export class MonacoLanguageLibraryScope {
   }
 }
 
-export function setMonacoTheme(theme: "light" | "dark"): void {
-  monacoApi.editor.setTheme(theme === "dark" ? "dark-plus" : "light-plus");
+export function setMonacoTheme(theme: 'light' | 'dark'): void {
+  monacoApi.editor.setTheme(theme === 'dark' ? 'dark-plus' : 'light-plus');
   document.documentElement.dataset.monacoTheme = theme;
 }
 
-type SemanticKind = "function" | "number" | "string" | "boolean" | "object";
+type SemanticKind = 'function' | 'number' | 'string' | 'boolean' | 'object';
 
 interface QuickInfoLike {
   kind?: string;
@@ -48,30 +48,30 @@ interface QuickInfoLike {
 
 function quickInfoKind(info: QuickInfoLike | undefined): SemanticKind | undefined {
   const display = Array.isArray(info?.displayParts)
-    ? info.displayParts.map((part: { text?: string }) => part.text ?? "").join("")
-    : "";
-  if (info?.kind && ["function", "method", "constructor"].includes(info.kind)) return "function";
-  const type = display.split(":").slice(1).join(":").trim();
-  if (/^(?:\([^)]*\)|[^=]+)\s*=>|^typeof\s|\bFunction\b/.test(type)) return "function";
-  if (/^number\b/.test(type)) return "number";
-  if (/^string\b/.test(type)) return "string";
-  if (/^boolean\b/.test(type)) return "boolean";
-  if (/^(?:Record<|\{|\[|[A-Z][\w$]*(?:<|\b))/.test(type)) return "object";
+    ? info.displayParts.map((part: { text?: string }) => part.text ?? '').join('')
+    : '';
+  if (info?.kind && ['function', 'method', 'constructor'].includes(info.kind)) return 'function';
+  const type = display.split(':').slice(1).join(':').trim();
+  if (/^(?:\([^)]*\)|[^=]+)\s*=>|^typeof\s|\bFunction\b/.test(type)) return 'function';
+  if (/^number\b/.test(type)) return 'number';
+  if (/^string\b/.test(type)) return 'string';
+  if (/^boolean\b/.test(type)) return 'boolean';
+  if (/^(?:Record<|\{|\[|[A-Z][\w$]*(?:<|\b))/.test(type)) return 'object';
   return undefined;
 }
 
 function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function isUsedAsCallable(model: monacoApi.editor.ITextModel, name: string): boolean {
-  if (["function", "if", "for", "while", "switch", "catch", "return", "new", "typeof"].includes(name)) return false;
+  if (['function', 'if', 'for', 'while', 'switch', 'catch', 'return', 'new', 'typeof'].includes(name)) return false;
   return new RegExp(`\\b${escapeRegExp(name)}\\s*\\(`).test(model.getValue());
 }
 
 function ignoredTokenAt(line: string, offset: number): boolean {
-  const tokens = monacoApi.editor.tokenize(line, "javascript")[0] ?? [];
-  let type = "";
+  const tokens = monacoApi.editor.tokenize(line, 'javascript')[0] ?? [];
+  let type = '';
   for (const token of tokens) {
     if (token.offset > offset) break;
     type = token.type;
@@ -79,9 +79,7 @@ function ignoredTokenAt(line: string, offset: number): boolean {
   return /(?:comment|string|keyword|number)/.test(type);
 }
 
-export function attachMonacoTypeSemanticHighlighting(
-  editor: monacoApi.editor.IStandaloneCodeEditor,
-): () => void {
+export function attachMonacoTypeSemanticHighlighting(editor: monacoApi.editor.IStandaloneCodeEditor): () => void {
   const decorations = editor.createDecorationsCollection();
   let generation = 0;
   let timer: number | undefined;
@@ -90,7 +88,7 @@ export function attachMonacoTypeSemanticHighlighting(
   const update = async () => {
     const currentGeneration = ++generation;
     const model = editor.getModel();
-    if (!model || model.getLanguageId() !== "javascript") return;
+    if (!model || model.getLanguageId() !== 'javascript') return;
     const visible = editor.getVisibleRanges();
     const identifiers: Array<{ range: monacoApi.Range; offset: number; name: string }> = [];
     for (const range of visible) {
@@ -102,23 +100,31 @@ export function attachMonacoTypeSemanticHighlighting(
           if (ignoredTokenAt(text, match.index)) continue;
           const startColumn = match.index + 1;
           const tokenRange = new monacoApi.Range(line, startColumn, line, startColumn + match[0].length);
-          identifiers.push({ range: tokenRange, offset: model.getOffsetAt(tokenRange.getStartPosition()), name: match[0] });
+          identifiers.push({
+            range: tokenRange,
+            offset: model.getOffsetAt(tokenRange.getStartPosition()),
+            name: match[0],
+          });
         }
       }
     }
     try {
       const workerFactory = await monacoTypeScript.getJavaScriptWorker();
       const worker = await workerFactory(model.uri);
-      const results = await Promise.all(identifiers.map(async (identifier) => ({
-        range: identifier.range,
-        name: identifier.name,
-        info: await worker.getQuickInfoAtPosition(model.uri.toString(), identifier.offset),
-      })));
+      const results = await Promise.all(
+        identifiers.map(async (identifier) => ({
+          range: identifier.range,
+          name: identifier.name,
+          info: await worker.getQuickInfoAtPosition(model.uri.toString(), identifier.offset),
+        })),
+      );
       if (disposed || currentGeneration !== generation || editor.getModel() !== model) return;
-      decorations.set(results.flatMap(({ range, name, info }) => {
-        const kind = quickInfoKind(info) ?? (isUsedAsCallable(model, name) ? "function" : undefined);
-        return kind ? [{ range, options: { inlineClassName: `monaco-type-semantic monaco-type-${kind}` } }] : [];
-      }));
+      decorations.set(
+        results.flatMap(({ range, name, info }) => {
+          const kind = quickInfoKind(info) ?? (isUsedAsCallable(model, name) ? 'function' : undefined);
+          return kind ? [{ range, options: { inlineClassName: `monaco-type-semantic monaco-type-${kind}` } }] : [];
+        }),
+      );
     } catch {
       // TypeScript worker diagnostics remain available even if optional coloring fails.
     }
@@ -147,7 +153,7 @@ export function getMonacoDiagnostics(model: monacoApi.editor.ITextModel): monaco
 }
 
 export async function formatMonacoDocument(editor: monacoApi.editor.IStandaloneCodeEditor): Promise<boolean> {
-  const action = editor.getAction("editor.action.formatDocument");
+  const action = editor.getAction('editor.action.formatDocument');
   if (!action?.isSupported()) return false;
   await action.run();
   return true;

@@ -4,8 +4,8 @@
  * 迁移自 editor.uifunctions._fillMode_bfs
  */
 
-import type { LocPOD } from "@/utils/coordinate";
-import type { BlockInfo } from "../MaterialPanel/types";
+import type { LocPOD } from '@/utils/coordinate';
+import type { BlockInfo } from '../MaterialPanel/types';
 
 /** 地图数据类型 */
 type MapCell = BlockInfo | number | 0;
@@ -15,8 +15,8 @@ type MapData = MapCell[][];
  * 获取地图单元格的数字标识
  */
 function getCellNumber(cell: MapCell): number {
-  if (typeof cell === "number") return cell;
-  if (cell && typeof cell === "object" && "idnum" in cell) {
+  if (typeof cell === 'number') return cell;
+  if (cell && typeof cell === 'object' && 'idnum' in cell) {
     return cell.idnum;
   }
   return 0;
@@ -37,7 +37,7 @@ export function fillModeBfs(
   startX: number,
   startY: number,
   maxWidth: number,
-  maxHeight: number
+  maxHeight: number,
 ): LocPOD[] {
   const getNumber = (x: number, y: number): number | null => {
     if (x < 0 || y < 0 || x >= maxWidth || y >= maxHeight) return null;

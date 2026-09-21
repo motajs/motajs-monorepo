@@ -55,40 +55,46 @@ function useDataStore(argument: DataStoreArgument): DataStoreValue {
   const { data, commentObj, onChange, onOpenExternalEditor, editMode } = argument;
 
   // 从 data 和 commentObj 构建表格树，使用 useMemo 避免重复构建
-  const { rootNodes, gapFields } = useMemo(
-    () => buildTableTree(data, commentObj),
-    [data, commentObj],
-  );
+  const { rootNodes, gapFields } = useMemo(() => buildTableTree(data, commentObj), [data, commentObj]);
 
   // 值变更回调 - 转换为 Action 格式
-  const handleValueChange = useCallback((field: string, value: unknown) => {
-    return onChange?.(['change', field, value]);
-  }, [onChange]);
+  const handleValueChange = useCallback(
+    (field: string, value: unknown) => {
+      return onChange?.(['change', field, value]);
+    },
+    [onChange],
+  );
 
   // 添加项回调 - 内部处理验证逻辑
-  const handleAddItem = useCallback((parentField: string, name: string) => {
-    // 验证名称
-    let existingKeys: string[] = [];
-    const parentObj = getByFieldPath(data, parentField);
-    if (parentObj && typeof parentObj === 'object') {
-      existingKeys = Object.keys(parentObj as Record<string, unknown>);
-    }
-    const validation = validateId(name, existingKeys, false);
-    if (!validation.valid) {
-      notifyError(validation.error || '名称无效');
-      return;
-    }
+  const handleAddItem = useCallback(
+    (parentField: string, name: string) => {
+      // 验证名称
+      let existingKeys: string[] = [];
+      const parentObj = getByFieldPath(data, parentField);
+      if (parentObj && typeof parentObj === 'object') {
+        existingKeys = Object.keys(parentObj as Record<string, unknown>);
+      }
+      const validation = validateId(name, existingKeys, false);
+      if (!validation.valid) {
+        notifyError(validation.error || '名称无效');
+        return;
+      }
 
-    const newField = parentField + "['" + name + "']";
-    onChange?.(['add', newField, null]);
-    notifySuccess('添加成功，刷新后生效。');
-  }, [data, onChange]);
+      const newField = parentField + "['" + name + "']";
+      onChange?.(['add', newField, null]);
+      notifySuccess('添加成功，刷新后生效。');
+    },
+    [data, onChange],
+  );
 
   // 删除项回调
-  const handleDeleteItem = useCallback((field: string) => {
-    onChange?.(['delete', field, undefined]);
-    notifySuccess('删除成功，刷新后生效。');
-  }, [onChange]);
+  const handleDeleteItem = useCallback(
+    (field: string) => {
+      onChange?.(['delete', field, undefined]);
+      notifySuccess('删除成功，刷新后生效。');
+    },
+    [onChange],
+  );
 
   // 打开外部编辑器回调
   const handleOpenExternalEditor = useMemo(() => onOpenExternalEditor ?? noop, [onOpenExternalEditor]);

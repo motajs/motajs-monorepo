@@ -3,16 +3,35 @@ import type * as Blockly from 'blockly';
 import type { BlockSchema } from '../registry';
 import type { EventObject } from '../parser/types';
 import {
-  checkbox, expression, expressionValue, generateMultiLoc, generated, locationState,
-  optionalExpression, statementDefinition,
+  checkbox,
+  expression,
+  expressionValue,
+  generateMultiLoc,
+  generated,
+  locationState,
+  optionalExpression,
+  statementDefinition,
 } from './legacyHelpers';
 
-type LocationKind = 'setBlockOpacity' | 'setBlockFilter' | 'turnBlock'
-  | 'showFloorImg' | 'hideFloorImg' | 'showBgFgMap' | 'hideBgFgMap' | 'setBgFgBlock';
+type LocationKind =
+  | 'setBlockOpacity'
+  | 'setBlockFilter'
+  | 'turnBlock'
+  | 'showFloorImg'
+  | 'hideFloorImg'
+  | 'showBgFgMap'
+  | 'hideBgFgMap'
+  | 'setBgFgBlock';
 
 const directionOptions: Array<[string, string]> = [
-  ['不改变', ''], ['上', 'up'], ['下', 'down'], ['左', 'left'], ['右', 'right'],
-  ['左转', ':left'], ['右转', ':right'], ['后转', ':back'],
+  ['不改变', ''],
+  ['上', 'up'],
+  ['下', 'down'],
+  ['左', 'left'],
+  ['右', 'right'],
+  ['左转', ':left'],
+  ['右转', ':right'],
+  ['后转', ':back'],
 ];
 
 function locationSchema(
@@ -27,18 +46,22 @@ function locationSchema(
     category: 'map',
     definition: {
       ...statementDefinition,
-      type: `mota_${eventType}_s`, message0,
+      type: `mota_${eventType}_s`,
+      message0,
       args0: [
         { type: 'field_input', name: 'X', text: '' },
         { type: 'field_input', name: 'Y', text: '' },
         { type: 'field_input', name: 'FLOOR_ID', text: '' },
         ...args0,
       ],
-      colour: 'auto', tooltip: `${eventType}：地图位置事件`,
+      colour: 'auto',
+      tooltip: `${eventType}：地图位置事件`,
     },
-    parser: (event) => locationState(`mota_${eventType}_s`, event, {
-      FLOOR_ID: expression(event.floorId), ...parseFields(event),
-    }),
+    parser: (event) =>
+      locationState(`mota_${eventType}_s`, event, {
+        FLOOR_ID: expression(event.floorId),
+        ...parseFields(event),
+      }),
     generator: (block) => {
       const event: Record<string, unknown> = { type: eventType };
       const loc = generateMultiLoc(block.getFieldValue('X'), block.getFieldValue('Y'));
@@ -78,8 +101,11 @@ export const setBlockFilterSchema = locationSchema(
     { type: 'field_number', name: 'SHADOW', value: 0, min: 0 },
   ],
   (event) => ({
-    BLUR: event.blur ?? 0, HUE: event.hue ?? 0, GRAYSCALE: event.grayscale ?? 0,
-    INVERT: event.invert === true, SHADOW: event.shadow ?? 0,
+    BLUR: event.blur ?? 0,
+    HUE: event.hue ?? 0,
+    GRAYSCALE: event.grayscale ?? 0,
+    INVERT: event.invert === true,
+    SHADOW: event.shadow ?? 0,
   }),
   (block, event) => {
     event.blur = Number(block.getFieldValue('BLUR'));
@@ -91,31 +117,61 @@ export const setBlockFilterSchema = locationSchema(
 );
 
 export const turnBlockSchema = locationSchema(
-  'turnBlock', '事件转向 x %1 y %2 楼层 %3 方向 %4',
+  'turnBlock',
+  '事件转向 x %1 y %2 楼层 %3 方向 %4',
   [{ type: 'field_dropdown', name: 'DIRECTION', options: directionOptions }],
   (event) => ({ DIRECTION: event.direction ?? '' }),
-  (block, event) => { const value = block.getFieldValue('DIRECTION'); if (value) event.direction = value; },
+  (block, event) => {
+    const value = block.getFieldValue('DIRECTION');
+    if (value) event.direction = value;
+  },
 );
 
-const floorImage = (eventType: 'showFloorImg' | 'hideFloorImg', label: string) => locationSchema(
-  eventType, `${label} x %1 y %2 楼层 %3`, [], () => ({}), () => {},
-);
+const floorImage = (eventType: 'showFloorImg' | 'hideFloorImg', label: string) =>
+  locationSchema(
+    eventType,
+    `${label} x %1 y %2 楼层 %3`,
+    [],
+    () => ({}),
+    () => {},
+  );
 export const showFloorImgSchema = floorImage('showFloorImg', '显示楼层贴图');
 export const hideFloorImgSchema = floorImage('hideFloorImg', '隐藏楼层贴图');
 
-const bgFg = (eventType: 'showBgFgMap' | 'hideBgFgMap', label: string) => locationSchema(
-  eventType, `${label} x %1 y %2 楼层 %3 图层 %4`,
-  [{ type: 'field_dropdown', name: 'NAME', options: [['背景层', 'bg'], ['前景层', 'fg']] }],
-  (event) => ({ NAME: event.name ?? 'bg' }),
-  (block, event) => { event.name = block.getFieldValue('NAME'); },
-);
+const bgFg = (eventType: 'showBgFgMap' | 'hideBgFgMap', label: string) =>
+  locationSchema(
+    eventType,
+    `${label} x %1 y %2 楼层 %3 图层 %4`,
+    [
+      {
+        type: 'field_dropdown',
+        name: 'NAME',
+        options: [
+          ['背景层', 'bg'],
+          ['前景层', 'fg'],
+        ],
+      },
+    ],
+    (event) => ({ NAME: event.name ?? 'bg' }),
+    (block, event) => {
+      event.name = block.getFieldValue('NAME');
+    },
+  );
 export const showBgFgMapSchema = bgFg('showBgFgMap', '显示图层块');
 export const hideBgFgMapSchema = bgFg('hideBgFgMap', '隐藏图层块');
 
 export const setBgFgBlockSchema = locationSchema(
-  'setBgFgBlock', '设置图层块 x %1 y %2 楼层 %3 图层 %4 图块 %5',
+  'setBgFgBlock',
+  '设置图层块 x %1 y %2 楼层 %3 图层 %4 图块 %5',
   [
-    { type: 'field_dropdown', name: 'NAME', options: [['背景层', 'bg'], ['前景层', 'fg']] },
+    {
+      type: 'field_dropdown',
+      name: 'NAME',
+      options: [
+        ['背景层', 'bg'],
+        ['前景层', 'fg'],
+      ],
+    },
     { type: 'field_input', name: 'NUMBER', text: '0' },
   ],
   (event) => ({ NAME: event.name ?? 'bg', NUMBER: expression(event.number) }),
@@ -126,7 +182,12 @@ export const setBgFgBlockSchema = locationSchema(
 );
 
 export const legacyMapSchemas: BlockSchema[] = [
-  setBlockOpacitySchema, setBlockFilterSchema, turnBlockSchema,
-  showFloorImgSchema, hideFloorImgSchema, showBgFgMapSchema, hideBgFgMapSchema,
+  setBlockOpacitySchema,
+  setBlockFilterSchema,
+  turnBlockSchema,
+  showFloorImgSchema,
+  hideFloorImgSchema,
+  showBgFgMapSchema,
+  hideBgFgMapSchema,
   setBgFgBlockSchema,
 ];

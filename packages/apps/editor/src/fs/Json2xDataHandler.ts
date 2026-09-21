@@ -9,9 +9,9 @@
  * - 通过 varName 参数支持不同的变量名
  */
 
-import { DataHandler } from "./DataHandler";
-import type { FileHandler } from "./FileHandler";
-import { decodeGameData2x, encodeGameData2x } from "@motajs/file2x";
+import { DataHandler } from './DataHandler';
+import type { FileHandler } from './FileHandler';
+import { decodeGameData2x, encodeGameData2x } from '@motajs/file2x';
 
 /**
  * Json2xDataHandler - 通用 JSON 数据处理器
@@ -44,9 +44,7 @@ export class Json2xDataHandler<T> extends DataHandler<T> {
       }
       return decoded.data;
     } catch (err) {
-      throw new Error(
-        `Failed to parse JSON data file: ${(err as Error).message}`,
-      );
+      throw new Error(`Failed to parse JSON data file: ${(err as Error).message}`);
     }
   }
 

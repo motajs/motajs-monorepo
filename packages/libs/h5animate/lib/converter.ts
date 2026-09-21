@@ -4,9 +4,9 @@
  * 提供从旧 .animate 格式到新 h5animate 格式的转换功能
  */
 
-import { encodeH5Animate } from "./encoder.js";
-import { createConversionFailedError, createValidationError } from "./errors.js";
-import { combineBase64ImagesToWebP, type WebPOptions } from "./webp.js";
+import { encodeH5Animate } from './encoder.js';
+import { createConversionFailedError, createValidationError } from './errors.js';
+import { combineBase64ImagesToWebP, type WebPOptions } from './webp.js';
 import type {
   LegacyAnimateFile,
   H5AnimateMeta,
@@ -14,12 +14,12 @@ import type {
   H5AnimateObject,
   SoundMeta,
   ImageConversionResult,
-} from "./types.js";
+} from './types.js';
 
 /**
  * 旧格式必需字段列表
  */
-const REQUIRED_FIELDS = ["ratio", "bitmaps", "frame_max", "frames"] as const;
+const REQUIRED_FIELDS = ['ratio', 'bitmaps', 'frame_max', 'frames'] as const;
 
 /**
  * 验证旧格式文件的必需字段
@@ -28,8 +28,8 @@ const REQUIRED_FIELDS = ["ratio", "bitmaps", "frame_max", "frames"] as const;
  * @throws H5AnimateError 如果必需字段缺失
  */
 export function validateLegacyFormat(data: unknown): asserts data is LegacyAnimateFile {
-  if (data === null || typeof data !== "object") {
-    throw createValidationError("输入数据必须是对象");
+  if (data === null || typeof data !== 'object') {
+    throw createValidationError('输入数据必须是对象');
   }
 
   const obj = data as Record<string, unknown>;
@@ -42,24 +42,24 @@ export function validateLegacyFormat(data: unknown): asserts data is LegacyAnima
   }
 
   if (missingFields.length > 0) {
-    throw createValidationError("旧格式文件缺少必需字段", missingFields);
+    throw createValidationError('旧格式文件缺少必需字段', missingFields);
   }
 
   // 验证字段类型
-  if (typeof obj.ratio !== "number") {
-    throw createValidationError("ratio 字段必须是数字");
+  if (typeof obj.ratio !== 'number') {
+    throw createValidationError('ratio 字段必须是数字');
   }
 
   if (!Array.isArray(obj.bitmaps)) {
-    throw createValidationError("bitmaps 字段必须是数组");
+    throw createValidationError('bitmaps 字段必须是数组');
   }
 
-  if (typeof obj.frame_max !== "number" || obj.frame_max < 0) {
-    throw createValidationError("frame_max 字段必须是非负数字");
+  if (typeof obj.frame_max !== 'number' || obj.frame_max < 0) {
+    throw createValidationError('frame_max 字段必须是非负数字');
   }
 
   if (!Array.isArray(obj.frames)) {
-    throw createValidationError("frames 字段必须是数组");
+    throw createValidationError('frames 字段必须是数组');
   }
 }
 
@@ -76,7 +76,7 @@ export function parseLegacyAnimateFile(jsonString: string): LegacyAnimateFile {
   try {
     data = JSON.parse(jsonString);
   } catch {
-    throw createConversionFailedError("JSON 解析失败");
+    throw createConversionFailedError('JSON 解析失败');
   }
 
   validateLegacyFormat(data);
@@ -94,24 +94,21 @@ export function parseLegacyAnimateFile(jsonString: string): LegacyAnimateFile {
  * @returns 包含 WebP 数据和精灵图信息的结果
  * @throws H5AnimateError 如果图像转换失败
  */
-export async function convertImages(
-  bitmaps: string[],
-  options: WebPOptions = {},
-): Promise<ImageConversionResult> {
+export async function convertImages(bitmaps: string[], options: WebPOptions = {}): Promise<ImageConversionResult> {
   // 过滤空字符串，只保留有效的图片数据
   const validBitmaps = bitmaps.filter((bitmap) => bitmap.length > 0);
 
   if (validBitmaps.length === 0) {
-    throw createConversionFailedError("没有有效的图片数据可转换");
+    throw createConversionFailedError('没有有效的图片数据可转换');
   }
 
   try {
     return await combineBase64ImagesToWebP(validBitmaps, options);
   } catch (error) {
-    if (error instanceof Error && error.name === "H5AnimateError") {
+    if (error instanceof Error && error.name === 'H5AnimateError') {
       throw error;
     }
-    const message = error instanceof Error ? error.message : "未知错误";
+    const message = error instanceof Error ? error.message : '未知错误';
     throw createConversionFailedError(`图像转换失败: ${message}`);
   }
 }
@@ -125,17 +122,14 @@ export async function convertImages(
  * @param frameIndex - 当前帧索引
  * @returns 音效元数据数组，如果没有音效则返回 undefined
  */
-export function convertSoundData(
-  legacy: LegacyAnimateFile,
-  frameIndex: number,
-): SoundMeta[] | undefined {
+export function convertSoundData(legacy: LegacyAnimateFile, frameIndex: number): SoundMeta[] | undefined {
   if (!legacy.se) {
     return undefined;
   }
 
   const sounds: SoundMeta[] = [];
 
-  if (typeof legacy.se === "string") {
+  if (typeof legacy.se === 'string') {
     // 全局音效，只在第一帧添加
     if (frameIndex === 0) {
       sounds.push({ name: legacy.se });
@@ -231,18 +225,12 @@ export interface ConvertOptions {
  * @returns 编码后的 h5animate 二进制数据
  * @throws H5AnimateError 如果转换失败
  */
-export async function convertToH5Animate(
-  legacyData: LegacyAnimateFile,
-  options: ConvertOptions = {},
-): Promise<Buffer> {
+export async function convertToH5Animate(legacyData: LegacyAnimateFile, options: ConvertOptions = {}): Promise<Buffer> {
   // 验证输入数据
   validateLegacyFormat(legacyData);
 
   // 转换图像数据并生成精灵图信息
-  const { webpData, spriteInfo } = await convertImages(
-    legacyData.bitmaps,
-    options.webp,
-  );
+  const { webpData, spriteInfo } = await convertImages(legacyData.bitmaps, options.webp);
 
   // 转换元数据
   const meta = convertMetadata(legacyData);
@@ -261,10 +249,7 @@ export async function convertToH5Animate(
  * @returns 编码后的 h5animate 二进制数据
  * @throws H5AnimateError 如果转换失败
  */
-export async function convertFromJsonString(
-  jsonString: string,
-  options: ConvertOptions = {},
-): Promise<Buffer> {
+export async function convertFromJsonString(jsonString: string, options: ConvertOptions = {}): Promise<Buffer> {
   const legacyData = parseLegacyAnimateFile(jsonString);
   return convertToH5Animate(legacyData, options);
 }

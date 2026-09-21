@@ -21,11 +21,11 @@ import type { Content } from '@/fs/types';
  * 每个 key 对应一个 comment 文件
  */
 export type MetaFileKey =
-  | 'comment'           // comment.js (包含 items, enemys, maps, floors)
-  | 'dataComment'       // data.comment.js (全塔属性)
-  | 'functionsComment'  // functions.comment.js (脚本编辑)
-  | 'eventsComment'     // events.comment.js (公共事件)
-  | 'pluginsComment';   // plugins.comment.js (插件)
+  | 'comment' // comment.js (包含 items, enemys, maps, floors)
+  | 'dataComment' // data.comment.js (全塔属性)
+  | 'functionsComment' // functions.comment.js (脚本编辑)
+  | 'eventsComment' // events.comment.js (公共事件)
+  | 'pluginsComment'; // plugins.comment.js (插件)
 
 /**
  * 元数据文件配置

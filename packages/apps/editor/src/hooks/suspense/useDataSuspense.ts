@@ -7,27 +7,25 @@
  * - loaded → 返回数据
  */
 
-import type { IDataHandler } from "@/fs/interfaces";
-import { useHandlerUpdate, useSignal, type UpdateFn } from "../useFs";
-import { deferredEnsureLoaded } from "./deferredEnsureLoaded";
+import type { IDataHandler } from '@/fs/interfaces';
+import { useHandlerUpdate, useSignal, type UpdateFn } from '../useFs';
+import { deferredEnsureLoaded } from './deferredEnsureLoaded';
 
-export function useDataSuspense<T>(
-  handler: IDataHandler<T>,
-): [T, UpdateFn<T>] {
+export function useDataSuspense<T>(handler: IDataHandler<T>): [T, UpdateFn<T>] {
   const content = useSignal(handler.content);
 
   // idle → loading
-  if (content.status === "idle") {
+  if (content.status === 'idle') {
     throw deferredEnsureLoaded(handler);
   }
 
   // loading → throw Promise → Suspense
-  if (content.status === "loading") {
+  if (content.status === 'loading') {
     throw handler.waitForSettled();
   }
 
   // error/not-found → throw handler → Error boundary
-  if (content.status !== "loaded") {
+  if (content.status !== 'loaded') {
     throw handler;
   }
 

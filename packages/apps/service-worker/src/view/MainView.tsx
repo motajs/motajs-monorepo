@@ -1,4 +1,4 @@
-import { type FC, useEffect, useState } from "react";
+import { type FC, useEffect, useState } from 'react';
 import {
   Banner,
   Breadcrumb,
@@ -14,20 +14,30 @@ import {
   Tag,
   Toast,
   Typography,
-} from "@douyinfe/semi-ui";
-import { IconDelete, IconEdit, IconFile, IconFolder, IconHome, IconMoon, IconPlay, IconRefresh, IconSun } from "@douyinfe/semi-icons";
-import type { TreeNodeData } from "@douyinfe/semi-ui/lib/es/tree";
-import { Tree } from "@douyinfe/semi-ui";
-import { useQuery } from "react-query";
+} from '@douyinfe/semi-ui';
+import {
+  IconDelete,
+  IconEdit,
+  IconFile,
+  IconFolder,
+  IconHome,
+  IconMoon,
+  IconPlay,
+  IconRefresh,
+  IconSun,
+} from '@douyinfe/semi-icons';
+import type { TreeNodeData } from '@douyinfe/semi-ui/lib/es/tree';
+import { Tree } from '@douyinfe/semi-ui';
+import { useQuery } from 'react-query';
 import {
   useCurrentFn,
   useServiceWorker,
   useServiceWorkerContainerEventAsEffect,
   useStateAsPromise,
   useStatic,
-} from "@motajs/react-hooks";
-import { MessageClient } from "@motajs/utils/advance/message";
-import { DarkModeStore } from "@motajs/react-dark-mode";
+} from '@motajs/react-hooks';
+import { MessageClient } from '@motajs/utils/advance/message';
+import { DarkModeStore } from '@motajs/react-dark-mode';
 
 import {
   ActivateProjectMessage,
@@ -38,8 +48,8 @@ import {
   RegisterProjectMessage,
   type EditorUpdateState,
   type ProjectSummary,
-} from "@/idl";
-import styles from "./MainView.module.less";
+} from '@/idl';
+import styles from './MainView.module.less';
 import {
   appUrl,
   currentViewRoute,
@@ -49,7 +59,7 @@ import {
   projectUrl,
   serviceWorkerScope,
   serviceWorkerUrl,
-} from "./routes";
+} from './routes';
 import {
   checkEditorUpdate,
   editorReleaseLabel,
@@ -57,22 +67,22 @@ import {
   getEditorUpdateState,
   parseEditorUpdateState,
   stagingPercent,
-} from "./editorUpdate";
+} from './editorUpdate';
 
 const { Text, Title } = Typography;
 const { Header, Content } = Layout;
-const supportsLocalFs = "showDirectoryPicker" in window;
+const supportsLocalFs = 'showDirectoryPicker' in window;
 
 const permissionLabel: Record<PermissionState, string> = {
-  granted: "已授权",
-  prompt: "需要授权",
-  denied: "授权被拒绝",
+  granted: '已授权',
+  prompt: '需要授权',
+  denied: '授权被拒绝',
 };
 
-const permissionColor: Record<PermissionState, "green" | "amber" | "red"> = {
-  granted: "green",
-  prompt: "amber",
-  denied: "red",
+const permissionColor: Record<PermissionState, 'green' | 'amber' | 'red'> = {
+  granted: 'green',
+  prompt: 'amber',
+  denied: 'red',
 };
 
 const ThemeButton: FC = () => {
@@ -81,7 +91,7 @@ const ThemeButton: FC = () => {
     <Button
       type="tertiary"
       icon={isDarkMode ? <IconMoon /> : <IconSun />}
-      aria-label={isDarkMode ? "切换到浅色模式" : "切换到深色模式"}
+      aria-label={isDarkMode ? '切换到浅色模式' : '切换到深色模式'}
       onClick={() => setIsDarkMode(!isDarkMode)}
     />
   );
@@ -95,14 +105,17 @@ interface HostClient {
 const useHostClient = (): HostClient => {
   const serviceWorker = useServiceWorker(serviceWorkerUrl(), {
     scope: serviceWorkerScope(),
-    type: "module",
+    type: 'module',
   });
   const controllerPromise = useStateAsPromise(serviceWorker.controller);
-  const client = useStatic(() => new MessageClient(async (message) => {
-    const controller = await controllerPromise;
-    controller.postMessage(message);
-  }));
-  useServiceWorkerContainerEventAsEffect(navigator.serviceWorker, "message", (event) => {
+  const client = useStatic(
+    () =>
+      new MessageClient(async (message) => {
+        const controller = await controllerPromise;
+        controller.postMessage(message);
+      }),
+  );
+  useServiceWorkerContainerEventAsEffect(navigator.serviceWorker, 'message', (event) => {
     client.emit(event.data);
   });
   return { client, ready: serviceWorker.isReady };
@@ -123,7 +136,7 @@ const HomeView: FC<{ host: HostClient }> = ({ host }) => {
     handle: FileSystemDirectoryHandle;
     treeData: TreeNodeData[];
   } | null>(null);
-  const projects = useQuery(["projects"], () => host.client.request(ListProjectMessage), {
+  const projects = useQuery(['projects'], () => host.client.request(ListProjectMessage), {
     enabled: host.ready,
   });
 
@@ -136,22 +149,22 @@ const HomeView: FC<{ host: HostClient }> = ({ host }) => {
 
   const selectLocalProject = async () => {
     try {
-      const handle = await window.showDirectoryPicker({ id: "mota-service-worker", mode: "readwrite" });
+      const handle = await window.showDirectoryPicker({ id: 'mota-service-worker', mode: 'readwrite' });
       const entries = await Array.fromAsync(handle.values());
-      if (!entries.some((entry) => entry.kind === "file" && entry.name === "index.html")) {
+      if (!entries.some((entry) => entry.kind === 'file' && entry.name === 'index.html')) {
         const treeData = entries.map((entry): TreeNodeData => ({
           key: entry.name,
-          icon: entry.kind === "file" ? <IconFile /> : <IconFolder />,
+          icon: entry.kind === 'file' ? <IconFile /> : <IconFolder />,
           label: entry.name,
           handle: entry,
-          isLeaf: entry.kind === "file",
+          isLeaf: entry.kind === 'file',
         }));
         setPendingDirectory({ handle, treeData });
         return;
       }
       await registerProject(handle);
     } catch (error) {
-      if ((error as DOMException)?.name !== "AbortError") Toast.error(String(error));
+      if ((error as DOMException)?.name !== 'AbortError') Toast.error(String(error));
     }
   };
 
@@ -189,18 +202,18 @@ const HomeView: FC<{ host: HostClient }> = ({ host }) => {
           renderItem={(project: ProjectSummary) => (
             <List.Item
               data-test-id={`project-${project.id}`}
-              main={(
+              main={
                 <div className={styles.projectMain}>
                   <Text strong>{project.name}</Text>
                   <Text type="tertiary">ID {project.id}</Text>
                 </div>
-              )}
-              extra={(
+              }
+              extra={
                 <Space>
                   <Tag color={permissionColor[project.permission]}>{permissionLabel[project.permission]}</Tag>
                   <Button onClick={() => openProject(project.id)}>工程详情</Button>
                 </Space>
-              )}
+              }
             />
           )}
         />
@@ -225,7 +238,7 @@ const HomeView: FC<{ host: HostClient }> = ({ host }) => {
               treeData={pendingDirectory.treeData}
               onDoubleClick={(_, node) => {
                 const selected = (node as TreeNodeData & { handle: FileSystemHandle }).handle;
-                if (selected.kind !== "directory") return;
+                if (selected.kind !== 'directory') return;
                 setPendingDirectory(null);
                 void registerProject(selected as FileSystemDirectoryHandle);
               }}
@@ -240,15 +253,15 @@ const HomeView: FC<{ host: HostClient }> = ({ host }) => {
 const ProjectView: FC<{ host: HostClient; id: number }> = ({ host, id }) => {
   const [forgetOpen, setForgetOpen] = useState(false);
   const [updateState, setUpdateState] = useState<EditorUpdateState>();
-  const details = useQuery(["project", id], () => host.client.request(GetProjectMessage, { id }), {
+  const details = useQuery(['project', id], () => host.client.request(GetProjectMessage, { id }), {
     enabled: host.ready,
   });
-  const editorStatus = useQuery(["editor-host"], () => host.client.request(GetEditorHostStatusMessage), {
+  const editorStatus = useQuery(['editor-host'], () => host.client.request(GetEditorHostStatusMessage), {
     enabled: host.ready,
   });
   const access = details.data?.access;
-  const project = access && access.status !== "not-found" ? access.project : undefined;
-  const reason = new URLSearchParams(window.location.search).get("reason");
+  const project = access && access.status !== 'not-found' ? access.project : undefined;
+  const reason = new URLSearchParams(window.location.search).get('reason');
 
   useEffect(() => {
     if (!host.ready) return;
@@ -261,41 +274,41 @@ const ProjectView: FC<{ host: HostClient; id: number }> = ({ host, id }) => {
       try {
         update(await checkEditorUpdate(url, force, controller.signal));
       } catch (error) {
-        if (!controller.signal.aborted) console.debug("Editor update check is unavailable", error);
+        if (!controller.signal.aborted) console.debug('Editor update check is unavailable', error);
       }
     };
     const handleMessage = (event: MessageEvent) => {
-      if (!event.data || event.data.type !== "motajs-editor-release-state") return;
+      if (!event.data || event.data.type !== 'motajs-editor-release-state') return;
       try {
         update(parseEditorUpdateState(event.data.state));
       } catch (error) {
-        console.debug("Ignored an invalid Editor release broadcast", error);
+        console.debug('Ignored an invalid Editor release broadcast', error);
       }
     };
     void getEditorUpdateState(url, controller.signal)
       .then(update)
       .then(() => check())
       .catch((error) => {
-        if (!controller.signal.aborted) console.debug("Editor update state is unavailable", error);
+        if (!controller.signal.aborted) console.debug('Editor update state is unavailable', error);
       });
     const interval = window.setInterval(() => void check(), 10 * 60_000);
     const handleOnline = () => void check(true);
-    navigator.serviceWorker.addEventListener("message", handleMessage);
-    window.addEventListener("online", handleOnline);
+    navigator.serviceWorker.addEventListener('message', handleMessage);
+    window.addEventListener('online', handleOnline);
     return () => {
       controller.abort();
       window.clearInterval(interval);
-      navigator.serviceWorker.removeEventListener("message", handleMessage);
-      window.removeEventListener("online", handleOnline);
+      navigator.serviceWorker.removeEventListener('message', handleMessage);
+      window.removeEventListener('online', handleOnline);
     };
   }, [host.ready, id]);
 
   const requestPermission = useCurrentFn(async () => {
     const handle = details.data?.handle;
     if (!handle) return;
-    const permission = await handle.requestPermission({ mode: "readwrite" });
-    if (permission !== "granted") {
-      Toast.warning("未获得工程目录权限");
+    const permission = await handle.requestPermission({ mode: 'readwrite' });
+    if (permission !== 'granted') {
+      Toast.warning('未获得工程目录权限');
       await details.refetch();
       return;
     }
@@ -309,26 +322,29 @@ const ProjectView: FC<{ host: HostClient; id: number }> = ({ host, id }) => {
   });
 
   if (!host.ready || details.isLoading) {
-    return <Shell><div className={styles.center}><Spin size="large" /></div></Shell>;
+    return (
+      <Shell>
+        <div className={styles.center}>
+          <Spin size="large" />
+        </div>
+      </Shell>
+    );
   }
   if (!project) {
     return (
       <Shell>
-        <Empty
-          title="工程记录不存在"
-          description={`没有找到 ID 为 ${id} 的工程。`}
-        >
-          <Button icon={<IconHome />} onClick={() => window.location.assign(appUrl())}>返回工程列表</Button>
+        <Empty title="工程记录不存在" description={`没有找到 ID 为 ${id} 的工程。`}>
+          <Button icon={<IconHome />} onClick={() => window.location.assign(appUrl())}>
+            返回工程列表
+          </Button>
         </Empty>
       </Shell>
     );
   }
 
-  const ready = access?.status === "ready" && project.hasIndex;
+  const ready = access?.status === 'ready' && project.hasIndex;
   const stagingIsUpdate = Boolean(
-    updateState?.launch
-    && updateState.staging
-    && updateState.launch.buildId !== updateState.staging.buildId,
+    updateState?.launch && updateState.staging && updateState.launch.buildId !== updateState.staging.buildId,
   );
   return (
     <Shell>
@@ -337,28 +353,28 @@ const ProjectView: FC<{ host: HostClient; id: number }> = ({ host, id }) => {
         <Breadcrumb.Item>{project.name}</Breadcrumb.Item>
       </Breadcrumb>
 
-      {reason === "permission" ? <Banner type="warning" description="访问工程需要重新授权工程目录。" /> : null}
-      {reason === "missing-index" || project.hasIndex === false ? (
+      {reason === 'permission' ? <Banner type="warning" description="访问工程需要重新授权工程目录。" /> : null}
+      {reason === 'missing-index' || project.hasIndex === false ? (
         <Banner type="danger" description="工程根目录中没有 index.html，当前无法运行预览。" />
       ) : null}
-      {editorStatus.data?.status === "unavailable" ? (
+      {editorStatus.data?.status === 'unavailable' ? (
         <Banner type="warning" description={`编辑器暂不可用：${editorStatus.data.message}`} />
       ) : null}
       {updateState?.staging ? (
         <Banner
-          type={updateState.staging.error ? "warning" : "info"}
-          description={(
+          type={updateState.staging.error ? 'warning' : 'info'}
+          description={
             <div className={styles.editorUpdate} data-test-id="editor-update-progress">
               <div>
                 {updateState.staging.error
                   ? `${editorReleaseLabel({
-                    buildId: updateState.staging.buildId,
-                    version: updateState.staging.version ?? "0.0.0",
-                  })} 缓存失败，当前版本仍可继续使用。`
-                  : `正在缓存${stagingIsUpdate ? "新版本 " : ""}${editorReleaseLabel({
-                    buildId: updateState.staging.buildId,
-                    version: updateState.staging.version ?? "0.0.0",
-                  })}`}
+                      buildId: updateState.staging.buildId,
+                      version: updateState.staging.version ?? '0.0.0',
+                    })} 缓存失败，当前版本仍可继续使用。`
+                  : `正在缓存${stagingIsUpdate ? '新版本 ' : ''}${editorReleaseLabel({
+                      buildId: updateState.staging.buildId,
+                      version: updateState.staging.version ?? '0.0.0',
+                    })}`}
               </div>
               {!updateState.staging.error ? (
                 <>
@@ -369,14 +385,14 @@ const ProjectView: FC<{ host: HostClient; id: number }> = ({ host, id }) => {
                     data-test-id="editor-update-progress-bar"
                   />
                   <Text type="tertiary" size="small">
-                    {`${updateState.staging.completedFiles}/${updateState.staging.totalFiles} 个文件 · ${
-                      formatBytes(updateState.staging.completedBytes)
-                    }/${formatBytes(updateState.staging.totalBytes)}`}
+                    {`${updateState.staging.completedFiles}/${updateState.staging.totalFiles} 个文件 · ${formatBytes(
+                      updateState.staging.completedBytes,
+                    )}/${formatBytes(updateState.staging.totalBytes)}`}
                   </Text>
                 </>
               ) : null}
             </div>
-          )}
+          }
         />
       ) : null}
       {updateState?.candidate ? (
@@ -385,7 +401,7 @@ const ProjectView: FC<{ host: HostClient; id: number }> = ({ host, id }) => {
           description={`${editorReleaseLabel(updateState.candidate)} 已缓存完成，下次打开编辑器时启用。`}
         />
       ) : null}
-      {reason === "editor-unavailable" && !editorStatus.data ? (
+      {reason === 'editor-unavailable' && !editorStatus.data ? (
         <Banner type="warning" description="编辑器暂不可用，请检查 Editor release 是否已经发布。" />
       ) : null}
 
@@ -394,31 +410,38 @@ const ProjectView: FC<{ host: HostClient; id: number }> = ({ host, id }) => {
           <Title heading={2}>{project.name}</Title>
           <Text type="tertiary">本地工程总览</Text>
         </div>
-        <Tag color={permissionColor[project.permission]} size="large">{permissionLabel[project.permission]}</Tag>
+        <Tag color={permissionColor[project.permission]} size="large">
+          {permissionLabel[project.permission]}
+        </Tag>
       </section>
 
       <Descriptions
         className={styles.descriptions}
         row
         data={[
-          { key: "工程 ID", value: String(project.id) },
-          { key: "目录名称", value: project.name },
-          { key: "上次访问", value: new Date(project.lastTime).toLocaleString() },
-          { key: "入口文件", value: project.hasIndex === undefined ? "授权后检查" : project.hasIndex ? "index.html" : "缺失" },
-          ...(editorStatus.data?.status === "ready"
-            ? [{
-                key: "编辑器",
-                value: editorReleaseLabel({
-                  buildId: editorStatus.data.buildId,
-                  version: editorStatus.data.editorVersion,
-                }),
-              }]
+          { key: '工程 ID', value: String(project.id) },
+          { key: '目录名称', value: project.name },
+          { key: '上次访问', value: new Date(project.lastTime).toLocaleString() },
+          {
+            key: '入口文件',
+            value: project.hasIndex === undefined ? '授权后检查' : project.hasIndex ? 'index.html' : '缺失',
+          },
+          ...(editorStatus.data?.status === 'ready'
+            ? [
+                {
+                  key: '编辑器',
+                  value: editorReleaseLabel({
+                    buildId: editorStatus.data.buildId,
+                    version: editorStatus.data.editorVersion,
+                  }),
+                },
+              ]
             : []),
         ]}
       />
 
       <Space className={styles.actions} spacing="medium" wrap>
-        {editorStatus.data?.status === "ready" ? (
+        {editorStatus.data?.status === 'ready' ? (
           <Button
             theme="solid"
             type="primary"
@@ -433,18 +456,22 @@ const ProjectView: FC<{ host: HostClient; id: number }> = ({ host, id }) => {
         <Button
           icon={<IconPlay />}
           disabled={!ready}
-          onClick={() => window.open(previewUrl(id), "_blank")}
+          onClick={() => window.open(previewUrl(id), '_blank')}
           data-test-id="open-preview"
         >
           运行预览
         </Button>
-        {project.permission !== "granted" ? (
+        {project.permission !== 'granted' ? (
           <Button icon={<IconRefresh />} onClick={() => void requestPermission()} data-test-id="reauthorize-project">
             重新授权
           </Button>
         ) : null}
-        <Button icon={<IconHome />} onClick={() => window.location.assign(appUrl())}>返回工程列表</Button>
-        <Button type="danger" icon={<IconDelete />} onClick={() => setForgetOpen(true)} data-test-id="forget-project">移除记录</Button>
+        <Button icon={<IconHome />} onClick={() => window.location.assign(appUrl())}>
+          返回工程列表
+        </Button>
+        <Button type="danger" icon={<IconDelete />} onClick={() => setForgetOpen(true)} data-test-id="forget-project">
+          移除记录
+        </Button>
       </Space>
       <Modal
         visible={forgetOpen}
@@ -464,7 +491,7 @@ const ProjectView: FC<{ host: HostClient; id: number }> = ({ host, id }) => {
 const MainView: FC = () => {
   const host = useHostClient();
   const route = currentViewRoute();
-  return route.kind === "project" ? <ProjectView host={host} id={route.id} /> : <HomeView host={host} />;
+  return route.kind === 'project' ? <ProjectView host={host} id={route.id} /> : <HomeView host={host} />;
 };
 
 export default MainView;

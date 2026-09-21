@@ -22,28 +22,24 @@ import {
  * 生成有效的坐标（在指定范围内）
  */
 const coordArb = (maxX: number, maxY: number) =>
-  fc.tuple(
-    fc.integer({ min: 0, max: maxX - 1 }),
-    fc.integer({ min: 0, max: maxY - 1 }),
-  );
+  fc.tuple(fc.integer({ min: 0, max: maxX - 1 }), fc.integer({ min: 0, max: maxY - 1 }));
 
 /**
  * 生成坐标字段数据
  */
 const coordFieldDataArb = (maxX: number, maxY: number): fc.Arbitrary<CoordFieldData> =>
-  fc.array(
-    fc.tuple(
-      coordArb(maxX, maxY),
-      fc.record({ type: fc.string({ minLength: 1, maxLength: 10 }) }),
-    ),
-    { minLength: 0, maxLength: 10 },
-  ).map((entries) => {
-    const result: CoordFieldData = {};
-    for (const [[x, y], value] of entries) {
-      result[`${x},${y}`] = value;
-    }
-    return result;
-  });
+  fc
+    .array(fc.tuple(coordArb(maxX, maxY), fc.record({ type: fc.string({ minLength: 1, maxLength: 10 }) })), {
+      minLength: 0,
+      maxLength: 10,
+    })
+    .map((entries) => {
+      const result: CoordFieldData = {};
+      for (const [[x, y], value] of entries) {
+        result[`${x},${y}`] = value;
+      }
+      return result;
+    });
 
 /**
  * 生成地图尺寸参数
@@ -191,15 +187,11 @@ describe('坐标转换属性测试', () => {
 
     it('坐标字符串解析和格式化应该是往返一致的', () => {
       fc.assert(
-        fc.property(
-          fc.integer({ min: 0, max: 1000 }),
-          fc.integer({ min: 0, max: 1000 }),
-          (x, y) => {
-            const str = formatCoordString(x, y);
-            const parsed = parseCoordString(str);
-            expect(parsed).toEqual([x, y]);
-          },
-        ),
+        fc.property(fc.integer({ min: 0, max: 1000 }), fc.integer({ min: 0, max: 1000 }), (x, y) => {
+          const str = formatCoordString(x, y);
+          const parsed = parseCoordString(str);
+          expect(parsed).toEqual([x, y]);
+        }),
         { numRuns: 100 },
       );
     });

@@ -1,8 +1,8 @@
-import { computed, effect } from "alien-signals";
-import type { ReadonlySignal } from "@/fs/interfaces";
-import type { Content } from "@/fs/types";
-import type { PersistStatus } from "@/project/data/DataResource";
-import type { ImageAssetResource } from "./ImageAssetResource";
+import { computed, effect } from 'alien-signals';
+import type { ReadonlySignal } from '@/fs/interfaces';
+import type { Content } from '@/fs/types';
+import type { PersistStatus } from '@/project/data/DataResource';
+import type { ImageAssetResource } from './ImageAssetResource';
 
 export interface AnimationSoundCue {
   frame: number;
@@ -31,25 +31,22 @@ function normalizePitch(value: unknown): number {
 }
 
 export function animationSoundCues(document: AnimationDocument): AnimationSoundCue[] {
-  if (typeof document.se === "string") {
+  if (typeof document.se === 'string') {
     return document.se ? [{ frame: 1, sound: document.se, pitch: normalizePitch(document.pitch) }] : [];
   }
-  if (!document.se || typeof document.se !== "object") return [];
-  const pitch = document.pitch && typeof document.pitch === "object" ? document.pitch : {};
+  if (!document.se || typeof document.se !== 'object') return [];
+  const pitch = document.pitch && typeof document.pitch === 'object' ? document.pitch : {};
   return Object.entries(document.se)
     .flatMap(([frame, sound]) => {
       const frameNumber = Number(frame);
-      return Number.isInteger(frameNumber) && frameNumber > 0 && typeof sound === "string" && sound
+      return Number.isInteger(frameNumber) && frameNumber > 0 && typeof sound === 'string' && sound
         ? [{ frame: frameNumber, sound, pitch: normalizePitch((pitch as Record<string, number>)[frame]) }]
         : [];
     })
     .sort((left, right) => left.frame - right.frame);
 }
 
-export function withAnimationSoundCues(
-  document: AnimationDocument,
-  cues: AnimationSoundCue[],
-): AnimationDocument {
+export function withAnimationSoundCues(document: AnimationDocument, cues: AnimationSoundCue[]): AnimationDocument {
   const normalized = [...cues]
     .map((cue) => ({ frame: cue.frame, sound: cue.sound, pitch: normalizePitch(cue.pitch) }))
     .sort((left, right) => left.frame - right.frame);
@@ -81,35 +78,45 @@ export class AnimationAssetResource {
     this.binary = binary;
     this.content = computed(() => {
       const content = binary.content();
-      if (content.status !== "loaded") return content as Content<AnimationAssetSnapshot>;
+      if (content.status !== 'loaded') return content as Content<AnimationAssetSnapshot>;
       try {
         const document = JSON.parse(new TextDecoder().decode(content.value.bytes)) as AnimationDocument;
-        if (!document || typeof document !== "object" || Array.isArray(document)) {
-          throw new Error("Animation document must be an object");
+        if (!document || typeof document !== 'object' || Array.isArray(document)) {
+          throw new Error('Animation document must be an object');
         }
         return {
-          status: "loaded",
+          status: 'loaded',
           value: { document, cues: animationSoundCues(document), revision: content.value.revision },
         };
       } catch (error) {
-        return { status: "error", error: error instanceof Error ? error : new Error(String(error)) };
+        return { status: 'error', error: error instanceof Error ? error : new Error(String(error)) };
       }
     });
   }
 
-  snapshot(): Content<AnimationAssetSnapshot> { return this.content(); }
+  snapshot(): Content<AnimationAssetSnapshot> {
+    return this.content();
+  }
   value(): AnimationAssetSnapshot {
     const content = this.content();
-    if (content.status !== "loaded") throw new Error(`${this.id} is ${content.status}`);
+    if (content.status !== 'loaded') throw new Error(`${this.id} is ${content.status}`);
     return content.value;
   }
   subscribe(listener: (content: Content<AnimationAssetSnapshot>) => void): () => void {
     return effect(() => listener(this.content()));
   }
-  reload(): Promise<void> { return this.binary.reload(); }
-  ensureLoaded(): Promise<void> { return this.binary.ensureLoaded(); }
-  waitForSettled(): Promise<void> { return this.binary.waitForSettled(); }
-  persistStatus(): PersistStatus { return this.binary.persistStatus(); }
+  reload(): Promise<void> {
+    return this.binary.reload();
+  }
+  ensureLoaded(): Promise<void> {
+    return this.binary.ensureLoaded();
+  }
+  waitForSettled(): Promise<void> {
+    return this.binary.waitForSettled();
+  }
+  persistStatus(): PersistStatus {
+    return this.binary.persistStatus();
+  }
   setDocument(document: AnimationDocument): void {
     this.binary.setBytes(new TextEncoder().encode(JSON.stringify(document)));
   }

@@ -31,7 +31,14 @@ function createPack(id = 'test:declarative') {
           template: { type: `${id}:notice` },
           bindings: [
             { input: 'TEXT', kind: 'field' as const, path: 'payload.text', valueType: 'string' as const },
-            { input: 'RETRY', kind: 'field' as const, path: 'payload.retry', valueType: 'boolean' as const, default: false, omitWhenDefault: true },
+            {
+              input: 'RETRY',
+              kind: 'field' as const,
+              path: 'payload.retry',
+              valueType: 'boolean' as const,
+              default: false,
+              omitWhenDefault: true,
+            },
           ],
         },
       },
@@ -50,10 +57,15 @@ describe('declarative block packs', () => {
       type: 'test:declarative:notice',
       payload: { text: 'hello', retry: true },
     });
-    expect(parser?.({
-      type: 'test:declarative:notice',
-      payload: { text: 'hello', retry: true },
-    }, { entryType: 'event' })).toEqual({
+    expect(
+      parser?.(
+        {
+          type: 'test:declarative:notice',
+          payload: { text: 'hello', retry: true },
+        },
+        { entryType: 'event' },
+      ),
+    ).toEqual({
       type: 'test:declarative:notice',
       fields: { TEXT: 'hello', RETRY: true },
     });
@@ -131,8 +143,8 @@ describe('declarative block packs', () => {
     });
     const result = invalidRegistry.registerPackJson(JSON.stringify(invalid));
     expect(result.ok).toBe(false);
-    expect(result.diagnostics.map((item) => item.code)).toEqual(expect.arrayContaining([
-      'interaction.unsafe-command', 'interaction.missing-field',
-    ]));
+    expect(result.diagnostics.map((item) => item.code)).toEqual(
+      expect.arrayContaining(['interaction.unsafe-command', 'interaction.missing-field']),
+    );
   });
 });

@@ -1,7 +1,7 @@
-import type { GridPOD, LocPOD } from "@/utils/coordinate";
+import type { GridPOD, LocPOD } from '@/utils/coordinate';
 
-export type MaterialLayoutMode = "full" | "folded";
-export type MaterialLayoutKind = "rows" | "single" | "spatial";
+export type MaterialLayoutMode = 'full' | 'folded';
+export type MaterialLayoutKind = 'rows' | 'single' | 'spatial';
 
 export interface MaterialLayoutCell {
   source: { x: number; y: number; width: number; height: number };
@@ -29,43 +29,45 @@ function positiveInteger(value: number): number {
 
 export function createMaterialLayout(options: MaterialLayoutOptions): MaterialLayout {
   const { sourceSize, cellSize, mode } = options;
-  const kind = options.kind ?? "rows";
+  const kind = options.kind ?? 'rows';
   const rowsPerColumn = positiveInteger(options.rowsPerColumn);
   const [sourceWidth, sourceHeight] = sourceSize;
   const [cellWidth, cellHeight] = cellSize;
 
-  if (kind === "spatial") {
+  if (kind === 'spatial') {
     return {
       displaySize: sourceSize,
       sourceToDisplay: (loc) => loc,
       displayToSource: (loc) => loc,
-      cells: [{
-        source: { x: 0, y: 0, width: sourceWidth, height: sourceHeight },
-        target: { x: 0, y: 0, width: sourceWidth, height: sourceHeight },
-      }],
+      cells: [
+        {
+          source: { x: 0, y: 0, width: sourceWidth, height: sourceHeight },
+          target: { x: 0, y: 0, width: sourceWidth, height: sourceHeight },
+        },
+      ],
     };
   }
 
-  if (kind === "single") {
-    const folded = mode === "folded";
+  if (kind === 'single') {
+    const folded = mode === 'folded';
     return {
       displaySize: folded ? cellSize : sourceSize,
       sourceToDisplay: () => [0, 0],
       displayToSource: () => [0, 0],
-      cells: [{
-        source: { x: 0, y: 0, width: cellWidth, height: cellHeight },
-        target: { x: 0, y: 0, width: cellWidth, height: cellHeight },
-      }],
+      cells: [
+        {
+          source: { x: 0, y: 0, width: cellWidth, height: cellHeight },
+          target: { x: 0, y: 0, width: cellWidth, height: cellHeight },
+        },
+      ],
     };
   }
 
   const rowCount = Math.max(0, Math.floor(sourceHeight / cellHeight));
-  const folded = mode === "folded";
+  const folded = mode === 'folded';
   const columns = rowCount === 0 ? 0 : Math.ceil(rowCount / rowsPerColumn);
   const visibleRows = rowCount === 0 ? 0 : Math.min(rowCount, rowsPerColumn);
-  const displaySize: GridPOD = folded
-    ? [columns * cellWidth, visibleRows * cellHeight]
-    : sourceSize;
+  const displaySize: GridPOD = folded ? [columns * cellWidth, visibleRows * cellHeight] : sourceSize;
   const cells = Array.from({ length: rowCount }, (_, row): MaterialLayoutCell => {
     const column = folded ? Math.floor(row / rowsPerColumn) : 0;
     const displayRow = folded ? row % rowsPerColumn : row;
@@ -85,14 +87,10 @@ export function createMaterialLayout(options: MaterialLayoutOptions): MaterialLa
     displaySize,
     sourceToDisplay: ([, sourceRow]) => {
       const row = normalizeRow(sourceRow);
-      return folded
-        ? [Math.floor(row / rowsPerColumn), row % rowsPerColumn]
-        : [0, row];
+      return folded ? [Math.floor(row / rowsPerColumn), row % rowsPerColumn] : [0, row];
     },
     displayToSource: ([displayColumn, displayRow]) => {
-      const row = normalizeRow(folded
-        ? displayColumn * rowsPerColumn + displayRow
-        : displayRow);
+      const row = normalizeRow(folded ? displayColumn * rowsPerColumn + displayRow : displayRow);
       return [0, row];
     },
     cells,

@@ -4,7 +4,7 @@
  * 提供与真实文件系统相同的接口，但数据存储在内存中
  */
 
-import type { FileEncoding, Fs, FsPromiseApi } from "@/services/fs";
+import type { FileEncoding, Fs, FsPromiseApi } from '@/services/fs';
 
 export class MemoryFileSystem {
   private files = new Map<string, string>();
@@ -67,8 +67,8 @@ export class MemoryFileSystem {
   }
 
   async readFileBinary(path: string): Promise<ArrayBuffer> {
-    const content = await this.readFile(path, "base64");
-    const buffer = Buffer.from(content, "base64");
+    const content = await this.readFile(path, 'base64');
+    const buffer = Buffer.from(content, 'base64');
     return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer;
   }
 
@@ -192,7 +192,7 @@ export class MemoryFileSystem {
       moveFile: this.moveFile.bind(this),
       writeMultiFiles: async (filenames: string[], dataList: string[]) => {
         for (let i = 0; i < filenames.length; i++) {
-          await this.writeFile(filenames[i], dataList[i], "utf-8");
+          await this.writeFile(filenames[i], dataList[i], 'utf-8');
         }
       },
     };

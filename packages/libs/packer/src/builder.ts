@@ -1,15 +1,15 @@
-import { join } from "node:path";
-import type { BuildOptions, BuildResult, BuildContext, CompressOptions } from "./types";
-import { Logger, formatTimestamp } from "./logger";
-import { extract } from "./extractor";
-import { parseMainJs, parseDataJs, parseIconsJs } from "./parser";
-import { minifyAll } from "./minifier";
-import { optimizeFromGameData } from "./tilesetOptimizer";
-import { packAll, writeSplitChunkMap } from "./resourcePacker";
-import { copyDir, removeDir, ensureDir } from "./utils/file-utils";
+import { join } from 'node:path';
+import type { BuildOptions, BuildResult, BuildContext, CompressOptions } from './types';
+import { Logger, formatTimestamp } from './logger';
+import { extract } from './extractor';
+import { parseMainJs, parseDataJs, parseIconsJs } from './parser';
+import { minifyAll } from './minifier';
+import { optimizeFromGameData } from './tilesetOptimizer';
+import { packAll, writeSplitChunkMap } from './resourcePacker';
+import { copyDir, removeDir, ensureDir } from './utils/file-utils';
 
 // 重新导出 BuildContext 类型供外部使用
-export type { BuildContext } from "./types";
+export type { BuildContext } from './types';
 
 /**
  * 创建构建上下文
@@ -18,24 +18,20 @@ export type { BuildContext } from "./types";
  * @param logger 日志记录器
  * @returns 构建上下文
  */
-async function createBuildContext(
-  zipPath: string,
-  options: CompressOptions,
-  logger: Logger,
-): Promise<BuildContext> {
-  logger.group("初始化构建环境");
+async function createBuildContext(zipPath: string, options: CompressOptions, logger: Logger): Promise<BuildContext> {
+  logger.group('初始化构建环境');
 
   // 解压 ZIP 文件
-  logger.log("解压输入文件...");
+  logger.log('解压输入文件...');
   const { tempDir, rootDir } = await extract(zipPath);
   logger.log(`临时目录: ${tempDir}`);
   logger.log(`游戏根目录: ${rootDir}`);
 
   // 解析配置文件
-  logger.log("解析配置文件...");
-  const mainJsPath = join(rootDir, "main.js");
-  const dataJsPath = join(rootDir, "project", "data.js");
-  const iconsJsPath = join(rootDir, "project", "icons.js");
+  logger.log('解析配置文件...');
+  const mainJsPath = join(rootDir, 'main.js');
+  const dataJsPath = join(rootDir, 'project', 'data.js');
+  const iconsJsPath = join(rootDir, 'project', 'icons.js');
 
   const mainConfig = await parseMainJs(mainJsPath);
   logger.log(`  loadList: ${mainConfig.loadList.length} 个库文件`);
@@ -50,7 +46,7 @@ async function createBuildContext(
   logger.log(`  autotiles: ${iconsData.autotiles.length} 个 autotile`);
 
   logger.groupEnd();
-  logger.success("构建环境初始化完成");
+  logger.success('构建环境初始化完成');
 
   return {
     tempDir,
@@ -99,14 +95,7 @@ async function executeBuild(ctx: BuildContext, outputDir: string): Promise<void>
     packOptions.compressImages = options.compressImages;
   }
 
-  const splitChunkMap = await packAll(
-    rootDir,
-    mainConfig,
-    gameData,
-    iconsData,
-    packOptions,
-    logger,
-  );
+  const splitChunkMap = await packAll(rootDir, mainConfig, gameData, iconsData, packOptions, logger);
 
   // 4. 写入分块映射（如果有）
   if (Object.keys(splitChunkMap).length > 0) {
@@ -115,12 +104,12 @@ async function executeBuild(ctx: BuildContext, outputDir: string): Promise<void>
   }
 
   // 5. 复制到输出目录
-  logger.group("输出构建结果");
+  logger.group('输出构建结果');
   logger.log(`复制文件到: ${outputDir}`);
   await ensureDir(outputDir);
   await copyDir(rootDir, outputDir);
   logger.groupEnd();
-  logger.success("构建完成");
+  logger.success('构建完成');
 }
 
 /**
@@ -131,7 +120,7 @@ async function executeBuild(ctx: BuildContext, outputDir: string): Promise<void>
 async function cleanup(tempDir: string, logger?: Logger): Promise<void> {
   try {
     await removeDir(tempDir);
-    logger?.log("已清理临时文件");
+    logger?.log('已清理临时文件');
   } catch (error) {
     logger?.warn(`清理临时文件失败: ${error instanceof Error ? error.message : String(error)}`);
   }

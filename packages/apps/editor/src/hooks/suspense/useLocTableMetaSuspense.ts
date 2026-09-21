@@ -2,10 +2,10 @@
  * Suspense 版本的 loc 表格元数据 Hook
  */
 
-import type { CommentObject } from "@/components/Table";
-import { selectLocMeta } from "../useTableMeta";
-import { projectModel } from "@/project/model/projectModel";
-import { useModelResourceSuspense } from "./useModelResourceSuspense";
+import type { CommentObject } from '@/components/Table';
+import { selectLocMeta } from '../useTableMeta';
+import { projectModel } from '@/project/model/projectModel';
+import { useModelResourceSuspense } from './useModelResourceSuspense';
 
 /**
  * Suspense 版本的位置表格元数据 Hook
@@ -25,5 +25,5 @@ import { useModelResourceSuspense } from "./useModelResourceSuspense";
  * }
  */
 export function useLocTableMetaSuspense(): CommentObject {
-  return selectLocMeta(useModelResourceSuspense(projectModel.tableSchema("comment")).schema);
+  return selectLocMeta(useModelResourceSuspense(projectModel.tableSchema('comment')).schema);
 }

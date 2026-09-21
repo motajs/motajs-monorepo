@@ -26,8 +26,15 @@ function scanList(events: unknown, path: string, diagnostics: BlocklyDiagnostic[
     for (const field of ['choices', 'caseList', 'data']) {
       if (!Array.isArray(event[field])) continue;
       (event[field] as unknown[]).forEach((branch, branchIndex) => {
-        if (branch && typeof branch === 'object'
-          && scanList((branch as Record<string, unknown>).action, `${eventPath}.${field}[${branchIndex}].action`, diagnostics)) {
+        if (
+          branch &&
+          typeof branch === 'object' &&
+          scanList(
+            (branch as Record<string, unknown>).action,
+            `${eventPath}.${field}[${branchIndex}].action`,
+            diagnostics,
+          )
+        ) {
           hasAsync = true;
         }
       });
@@ -40,11 +47,12 @@ function scanList(events: unknown, path: string, diagnostics: BlocklyDiagnostic[
 
 export function diagnoseBlocklyEvents(events: unknown): BlocklyDiagnostic[] {
   const diagnostics: BlocklyDiagnostic[] = [];
-  if (scanList(events, '$', diagnostics)) diagnostics.push({
-    code: 'async.unjoined',
-    message: '存在未使用“等待所有异步事件处理完毕”收束的异步事件，可能影响录像检测。',
-    severity: 'warning',
-    path: '$',
-  });
+  if (scanList(events, '$', diagnostics))
+    diagnostics.push({
+      code: 'async.unjoined',
+      message: '存在未使用“等待所有异步事件处理完毕”收束的异步事件，可能影响录像检测。',
+      severity: 'warning',
+      path: '$',
+    });
   return diagnostics;
 }

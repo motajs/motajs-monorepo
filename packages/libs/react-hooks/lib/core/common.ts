@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore } from 'react';
 
 export const useRefFrom = <S>(source: S) => {
   const ref = useRef(source);
@@ -27,7 +27,7 @@ export const useNode = <T>() => {
   const mount = useCallback((value: T | null) => {
     setNode(value);
     if (value === null) return;
-    return () => setNode((current) => current === value ? null : current);
+    return () => setNode((current) => (current === value ? null : current));
   }, []);
 
   return [node, mount] as const;

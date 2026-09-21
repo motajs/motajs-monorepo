@@ -6,10 +6,10 @@
  * - 提供类型安全的楼层数据访问
  */
 
-import { DataHandler } from "@/fs/DataHandler";
-import type { FileHandler } from "@/fs/FileHandler";
-import type { FloorData } from "@/types";
-import { decodeGameMapData2x, encodeGameMapData2x } from "@motajs/file2x";
+import { DataHandler } from '@/fs/DataHandler';
+import type { FileHandler } from '@/fs/FileHandler';
+import type { FloorData } from '@/types';
+import { decodeGameMapData2x, encodeGameMapData2x } from '@motajs/file2x';
 
 /**
  * 解析楼层文件内容
@@ -19,8 +19,8 @@ import { decodeGameMapData2x, encodeGameMapData2x } from "@motajs/file2x";
 function parseFloorContent(content: string, floorId: string): FloorData {
   try {
     const decoded = decodeGameMapData2x<FloorData>(content);
-    if (decoded.prefix.join(".") !== "main.floors" || decoded.mapId !== floorId) {
-      throw new Error(`Expected main.floors.${floorId}, received ${[...decoded.prefix, decoded.mapId].join(".")}`);
+    if (decoded.prefix.join('.') !== 'main.floors' || decoded.mapId !== floorId) {
+      throw new Error(`Expected main.floors.${floorId}, received ${[...decoded.prefix, decoded.mapId].join('.')}`);
     }
     const data = decoded.data;
 
@@ -31,9 +31,7 @@ function parseFloorContent(content: string, floorId: string): FloorData {
 
     return data;
   } catch (err) {
-    throw new Error(
-      `Failed to parse floor file ${floorId}: ${(err as Error).message}`,
-    );
+    throw new Error(`Failed to parse floor file ${floorId}: ${(err as Error).message}`);
   }
 }
 
@@ -41,7 +39,7 @@ function parseFloorContent(content: string, floorId: string): FloorData {
  * 序列化楼层数据为文件内容
  */
 function stringifyFloorData(data: FloorData): string {
-  return encodeGameMapData2x({ prefix: ["main", "floors"], mapId: data.floorId, data });
+  return encodeGameMapData2x({ prefix: ['main', 'floors'], mapId: data.floorId, data });
 }
 
 /**

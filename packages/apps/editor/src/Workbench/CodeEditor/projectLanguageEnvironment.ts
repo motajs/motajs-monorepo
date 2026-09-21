@@ -1,31 +1,26 @@
-import {
-  MonacoLanguageLibraryScope,
-  setMonacoTheme,
-  type MonacoExtraLibrary,
-} from "@motajs/react-monaco-editor";
-import { FileHandlerManager } from "@/fs/FileHandlerManager";
-import { projectData } from "@/project/data/projectData";
-import { projectModel } from "@/project/model/projectModel";
-import { useRuntimePreview, type RuntimePreviewCapability } from "@/runtime/RuntimeContext";
-import { EditorStore } from "@/stores/EditorStore";
-import { useEffect, useState } from "react";
-import { buildTernDeclaration } from "./ternDeclaration";
+import { MonacoLanguageLibraryScope, setMonacoTheme, type MonacoExtraLibrary } from '@motajs/react-monaco-editor';
+import { FileHandlerManager } from '@/fs/FileHandlerManager';
+import { projectData } from '@/project/data/projectData';
+import { projectModel } from '@/project/model/projectModel';
+import { useRuntimePreview, type RuntimePreviewCapability } from '@/runtime/RuntimeContext';
+import { EditorStore } from '@/stores/EditorStore';
+import { useEffect, useState } from 'react';
+import { buildTernDeclaration } from './ternDeclaration';
 
 export interface ProjectLanguageStatus {
-  state: "idle" | "loading" | "ready" | "degraded";
+  state: 'idle' | 'loading' | 'ready' | 'degraded';
   message?: string;
 }
 
 function projectCatalogDeclaration(): string {
   const readKeys = (resource: ReturnType<typeof projectData.items>): string[] => {
     const content = resource.snapshot();
-    return content.status === "loaded" ? Object.keys(content.value) : [];
+    return content.status === 'loaded' ? Object.keys(content.value) : [];
   };
-  const union = (values: readonly string[]) => values.length > 0
-    ? values.map((value) => JSON.stringify(value)).join(" | ")
-    : "string";
+  const union = (values: readonly string[]) =>
+    values.length > 0 ? values.map((value) => JSON.stringify(value)).join(' | ') : 'string';
   const tower = projectData.tower().snapshot();
-  const main = tower.status === "loaded" ? tower.value.main : undefined;
+  const main = tower.status === 'loaded' ? tower.value.main : undefined;
   return `
 type MotaItemId = ${union(readKeys(projectData.items()))};
 type MotaEnemyId = ${union(readKeys(projectData.enemys()))};
@@ -36,8 +31,8 @@ type MotaSoundId = ${union(Array.isArray(main?.sounds) ? main.sounds : [])};
 }
 
 export function composeCoreDeclaration(runtimeSource: string, augmentations: readonly string[]): string {
-  const intersection = augmentations.join(" & ");
-  if (!runtimeSource) return `declare let core: ${intersection || "any"};\n`;
+  const intersection = augmentations.join(' & ');
+  if (!runtimeSource) return `declare let core: ${intersection || 'any'};\n`;
   let source = runtimeSource;
   const coreDeclaration = /declare\s+let\s+core\s*:\s*core\b/;
   if (intersection && coreDeclaration.test(source)) {
@@ -47,7 +42,7 @@ export function composeCoreDeclaration(runtimeSource: string, augmentations: rea
   }
   const mainDeclaration = /declare\s+let\s+main\s*:\s*main\b/;
   if (mainDeclaration.test(source)) {
-    source = source.replace(mainDeclaration, "declare let main: main & MotaMainRuntimeCompatibility");
+    source = source.replace(mainDeclaration, 'declare let main: main & MotaMainRuntimeCompatibility');
   }
   return source;
 }
@@ -110,9 +105,9 @@ declare let events_c12a15a8_c380_4b28_8144_256cba95f760: Record<string, any>;
 }
 
 export class ProjectLanguageEnvironment {
-  private readonly libraries = new MonacoLanguageLibraryScope("mota-project");
+  private readonly libraries = new MonacoLanguageLibraryScope('mota-project');
   private generation = 0;
-  private status: ProjectLanguageStatus = { state: "idle" };
+  private status: ProjectLanguageStatus = { state: 'idle' };
   private readonly listeners = new Set<(status: ProjectLanguageStatus) => void>();
 
   subscribe(listener: (status: ProjectLanguageStatus) => void): () => void {
@@ -128,28 +123,28 @@ export class ProjectLanguageEnvironment {
 
   async refresh(runtime: RuntimePreviewCapability): Promise<void> {
     const generation = ++this.generation;
-    if (this.status.state === "idle") this.update({ state: "loading" });
+    if (this.status.state === 'idle') this.update({ state: 'loading' });
     let defsSource: string;
     let baseDeclaration: ReturnType<typeof buildTernDeclaration>;
     try {
-      const handler = await FileHandlerManager.load("_server/CodeMirror/defs.js");
+      const handler = await FileHandlerManager.load('_server/CodeMirror/defs.js');
       const content = handler.getContent();
-      if (content.status !== "loaded") throw new Error("_server/CodeMirror/defs.js 不存在");
+      if (content.status !== 'loaded') throw new Error('_server/CodeMirror/defs.js 不存在');
       defsSource = content.value;
       // Parse before replacing the current environment. A broken defs file is
       // a fallback condition, not a reason to discard the last usable libs.
       baseDeclaration = buildTernDeclaration(defsSource);
     } catch (error) {
       const defsError = error instanceof Error ? error.message : String(error);
-      console.warn("defs.js is unavailable; falling back to runtime.d.ts", error);
-      let fallback = "";
+      console.warn('defs.js is unavailable; falling back to runtime.d.ts', error);
+      let fallback = '';
       try {
-        const handler = await FileHandlerManager.load("runtime.d.ts");
+        const handler = await FileHandlerManager.load('runtime.d.ts');
         const content = handler.getContent();
-        if (content.status !== "loaded") throw new Error("工程根目录缺少 runtime.d.ts");
-        fallback = composeCoreDeclaration(content.value, ["MotaRuntimeCompatibility"]);
+        if (content.status !== 'loaded') throw new Error('工程根目录缺少 runtime.d.ts');
+        fallback = composeCoreDeclaration(content.value, ['MotaRuntimeCompatibility']);
       } catch (fallbackError) {
-        console.warn("runtime.d.ts fallback is unavailable; using loose declarations", fallbackError);
+        console.warn('runtime.d.ts fallback is unavailable; using loose declarations', fallbackError);
         fallback = `
 type MotaLooseRuntimeObject = Record<string, any>;
 declare let core: MotaLooseRuntimeObject;
@@ -159,11 +154,11 @@ declare let flags: MotaLooseRuntimeObject;
       }
       if (generation !== this.generation) return;
       this.libraries.replace([
-        { path: "inmemory://motajs/runtime-fallback.d.ts", content: fallback },
-        { path: "inmemory://motajs/runtime-compatibility.d.ts", content: buildRuntimeCompatibilityDeclaration() },
-        { path: "inmemory://motajs/project-catalog.d.ts", content: projectCatalogDeclaration() },
+        { path: 'inmemory://motajs/runtime-fallback.d.ts', content: fallback },
+        { path: 'inmemory://motajs/runtime-compatibility.d.ts', content: buildRuntimeCompatibilityDeclaration() },
+        { path: 'inmemory://motajs/project-catalog.d.ts', content: projectCatalogDeclaration() },
       ]);
-      this.update({ state: "degraded", message: `defs.js 不可用：${defsError}` });
+      this.update({ state: 'degraded', message: `defs.js 不可用：${defsError}` });
       return;
     }
 
@@ -171,14 +166,16 @@ declare let flags: MotaLooseRuntimeObject;
     const applyDeclaration = (converted: ReturnType<typeof buildTernDeclaration>) => {
       if (generation !== this.generation) return;
       const libraries: MonacoExtraLibrary[] = [
-        { path: "inmemory://motajs/tern-compatibility.d.ts", content: converted.declaration },
-        { path: "inmemory://motajs/runtime-compatibility.d.ts", content: buildRuntimeCompatibilityDeclaration() },
-        { path: "inmemory://motajs/project-catalog.d.ts", content: projectCatalogDeclaration() },
+        { path: 'inmemory://motajs/tern-compatibility.d.ts', content: converted.declaration },
+        { path: 'inmemory://motajs/runtime-compatibility.d.ts', content: buildRuntimeCompatibilityDeclaration() },
+        { path: 'inmemory://motajs/project-catalog.d.ts', content: projectCatalogDeclaration() },
       ];
       this.libraries.replace(libraries);
-      this.update(converted.diagnostics.length > 0
-        ? { state: "degraded", message: converted.diagnostics.join("；") }
-        : { state: "ready" });
+      this.update(
+        converted.diagnostics.length > 0
+          ? { state: 'degraded', message: converted.diagnostics.join('；') }
+          : { state: 'ready' },
+      );
     };
 
     // defs.js is the primary source and becomes usable immediately. Runtime
@@ -186,31 +183,37 @@ declare let flags: MotaLooseRuntimeObject;
     // generation when they settle.
     applyDeclaration(baseDeclaration);
     const flagResource = projectModel.flagUsage();
-    const flagsPromise = flagResource.ensureLoaded().then(() => {
-      const content = flagResource.snapshot();
-      return content.status === "loaded" ? content.value.flags : [];
-    }).catch((error) => {
-      console.warn("Project flag usage is unavailable; keeping defs.js flags", error);
-      return [] as string[];
-    });
-    const snapshotPromise = runtime.state.status === "ready"
-      ? runtime.languageSnapshot().catch((error) => {
-          console.warn("Runtime language snapshot is unavailable; keeping static defs.js declarations", error);
-          return undefined;
-        })
-      : Promise.resolve(undefined);
+    const flagsPromise = flagResource
+      .ensureLoaded()
+      .then(() => {
+        const content = flagResource.snapshot();
+        return content.status === 'loaded' ? content.value.flags : [];
+      })
+      .catch((error) => {
+        console.warn('Project flag usage is unavailable; keeping defs.js flags', error);
+        return [] as string[];
+      });
+    const snapshotPromise =
+      runtime.state.status === 'ready'
+        ? runtime.languageSnapshot().catch((error) => {
+            console.warn('Runtime language snapshot is unavailable; keeping static defs.js declarations', error);
+            return undefined;
+          })
+        : Promise.resolve(undefined);
     const [projectFlags, snapshot] = await Promise.all([flagsPromise, snapshotPromise]);
     if (generation !== this.generation) return;
-    applyDeclaration(buildTernDeclaration(defsSource, {
-      ...(snapshot ?? {}),
-      projectFlags,
-    }));
+    applyDeclaration(
+      buildTernDeclaration(defsSource, {
+        ...(snapshot ?? {}),
+        projectFlags,
+      }),
+    );
   }
 
   dispose(): void {
     this.generation += 1;
     this.libraries.dispose();
-    this.update({ state: "idle" });
+    this.update({ state: 'idle' });
   }
 }
 
@@ -219,11 +222,11 @@ const environment = new ProjectLanguageEnvironment();
 export function useProjectLanguageEnvironment(): ProjectLanguageStatus {
   const runtime = useRuntimePreview();
   const { theme } = EditorStore.useStore();
-  const [status, setStatus] = useState<ProjectLanguageStatus>({ state: "idle" });
+  const [status, setStatus] = useState<ProjectLanguageStatus>({ state: 'idle' });
 
   useEffect(() => environment.subscribe(setStatus), []);
   useEffect(() => {
-    setMonacoTheme(theme === "editor_color_dark" ? "dark" : "light");
+    setMonacoTheme(theme === 'editor_color_dark' ? 'dark' : 'light');
   }, [theme]);
   useEffect(() => {
     void environment.refresh(runtime);

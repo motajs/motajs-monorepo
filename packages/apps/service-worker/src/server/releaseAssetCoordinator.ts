@@ -1,4 +1,4 @@
-export type ReleaseAssetPriority = "foreground" | "background";
+export type ReleaseAssetPriority = 'foreground' | 'background';
 
 export interface ReleaseAssetVerification {
   (bytes: ArrayBuffer, response: Response): void | Promise<void>;
@@ -18,18 +18,19 @@ interface AcquireOptions {
 interface PendingAsset {
   key: string;
   priority: ReleaseAssetPriority;
-  state: "queued" | "running";
+  state: 'queued' | 'running';
   run: () => Promise<Response>;
   resolve: (response: Response) => void;
   reject: (error: unknown) => void;
   promise: Promise<Response>;
 }
 
-const responseFromBytes = (bytes: ArrayBuffer, response: Response): Response => new Response(bytes, {
-  status: response.status,
-  statusText: response.statusText,
-  headers: response.headers,
-});
+const responseFromBytes = (bytes: ArrayBuffer, response: Response): Response =>
+  new Response(bytes, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+  });
 
 /**
  * Coordinates foreground release requests and complete-offline downloads.
@@ -49,13 +50,11 @@ export class ReleaseAssetCoordinator {
   ) {}
 
   acquire({ cacheName, request, priority, verify, shared }: AcquireOptions): Promise<Response> {
-    const key = shared
-      ? `${shared.cacheName}\0${shared.request.url}`
-      : `${cacheName}\0${request.url}`;
+    const key = shared ? `${shared.cacheName}\0${shared.request.url}` : `${cacheName}\0${request.url}`;
     const existing = this.entries.get(key);
     if (existing) {
-      if (priority === "foreground" && existing.priority === "background" && existing.state === "queued") {
-        existing.priority = "foreground";
+      if (priority === 'foreground' && existing.priority === 'background' && existing.state === 'queued') {
+        existing.priority = 'foreground';
         const index = this.backgroundQueue.indexOf(existing);
         if (index >= 0) this.backgroundQueue.splice(index, 1);
         this.foregroundQueue.push(existing);
@@ -73,7 +72,7 @@ export class ReleaseAssetCoordinator {
     const entry: PendingAsset = {
       key,
       priority,
-      state: "queued",
+      state: 'queued',
       resolve,
       reject,
       promise,
@@ -83,7 +82,7 @@ export class ReleaseAssetCoordinator {
         if (cached) {
           if (shared) {
             const sharedCache = await caches.open(shared.cacheName);
-            if (!await sharedCache.match(shared.request)) await sharedCache.put(shared.request, cached.clone());
+            if (!(await sharedCache.match(shared.request))) await sharedCache.put(shared.request, cached.clone());
             await cache.delete(request);
           }
           return cached;
@@ -95,7 +94,7 @@ export class ReleaseAssetCoordinator {
           if (sharedResponse) return sharedResponse;
         }
 
-        const response = await fetch(request, { cache: "no-store" });
+        const response = await fetch(request, { cache: 'no-store' });
         if (!response.ok) throw new Error(`${new URL(request.url).pathname} returned HTTP ${response.status}`);
         const bytes = await response.arrayBuffer();
         await verify?.(bytes, response);
@@ -108,7 +107,7 @@ export class ReleaseAssetCoordinator {
       },
     };
     this.entries.set(key, entry);
-    (priority === "foreground" ? this.foregroundQueue : this.backgroundQueue).push(entry);
+    (priority === 'foreground' ? this.foregroundQueue : this.backgroundQueue).push(entry);
     this.pump();
     return this.cloneResponse(promise);
   }
@@ -122,15 +121,18 @@ export class ReleaseAssetCoordinator {
       let entry = this.foregroundQueue.shift();
       if (!entry && this.activeBackground < this.maxBackground) entry = this.backgroundQueue.shift();
       if (!entry) return;
-      entry.state = "running";
+      entry.state = 'running';
       this.active += 1;
-      if (entry.priority === "background") this.activeBackground += 1;
-      void entry.run().then(entry.resolve, entry.reject).finally(() => {
-        this.entries.delete(entry.key);
-        this.active -= 1;
-        if (entry.priority === "background") this.activeBackground -= 1;
-        this.pump();
-      });
+      if (entry.priority === 'background') this.activeBackground += 1;
+      void entry
+        .run()
+        .then(entry.resolve, entry.reject)
+        .finally(() => {
+          this.entries.delete(entry.key);
+          this.active -= 1;
+          if (entry.priority === 'background') this.activeBackground -= 1;
+          this.pump();
+        });
     }
   }
 }

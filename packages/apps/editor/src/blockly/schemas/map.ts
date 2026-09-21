@@ -20,9 +20,7 @@ import { expressionValue } from './legacyHelpers';
  * 解析位置数组
  * 支持 [x, y] 或 [[x1, y1], [x2, y2], ...] 格式
  */
-function parseLocArray(
-  loc: unknown,
-): { single: boolean; x: string; y: string; locs: string } {
+function parseLocArray(loc: unknown): { single: boolean; x: string; y: string; locs: string } {
   if (!loc) {
     return { single: true, x: '', y: '', locs: '' };
   }
@@ -52,12 +50,7 @@ function parseLocArray(
 /**
  * 生成位置数组
  */
-function generateLocArray(
-  single: boolean,
-  x: string,
-  y: string,
-  locs: string,
-): unknown[] | undefined {
+function generateLocArray(single: boolean, x: string, y: string, locs: string): unknown[] | undefined {
   if (single) {
     if (x || y) {
       return [expressionValue(x), expressionValue(y)];
@@ -508,7 +501,12 @@ export const changeFloorSchema: BlockSchema = {
       {
         type: 'field_dropdown',
         name: 'STAIR',
-        options: [['坐标', ''], ['上楼梯', 'upFloor'], ['下楼梯', 'downFloor'], ['保持原位置', ':now']],
+        options: [
+          ['坐标', ''],
+          ['上楼梯', 'upFloor'],
+          ['下楼梯', 'downFloor'],
+          ['保持原位置', ':now'],
+        ],
       },
       {
         type: 'field_dropdown',
@@ -788,7 +786,14 @@ export const jumpSchema: BlockSchema = {
     args0: [
       { type: 'field_input', name: 'FROM_X', text: '' },
       { type: 'field_input', name: 'FROM_Y', text: '' },
-      { type: 'field_dropdown', name: 'TO_MODE', options: [['绝对位置', 'to'], ['坐标增量', 'dxy']] },
+      {
+        type: 'field_dropdown',
+        name: 'TO_MODE',
+        options: [
+          ['绝对位置', 'to'],
+          ['坐标增量', 'dxy'],
+        ],
+      },
       { type: 'field_input', name: 'TO_X', text: '' },
       { type: 'field_input', name: 'TO_Y', text: '' },
       { type: 'field_input', name: 'TIME', text: '' },
@@ -866,7 +871,14 @@ export const jumpHeroSchema: BlockSchema = {
     type: 'mota_jumpHero_s',
     message0: '跳跃勇士 %1 坐标 [%2,%3] 动画时间 %4 异步 %5',
     args0: [
-      { type: 'field_dropdown', name: 'MODE', options: [['绝对位置', 'loc'], ['坐标增量', 'dxy']] },
+      {
+        type: 'field_dropdown',
+        name: 'MODE',
+        options: [
+          ['绝对位置', 'loc'],
+          ['坐标增量', 'dxy'],
+        ],
+      },
       { type: 'field_input', name: 'X', text: '' },
       { type: 'field_input', name: 'Y', text: '' },
       { type: 'field_input', name: 'TIME', text: '' },

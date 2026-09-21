@@ -5,9 +5,9 @@
  * 业务组件只需要处理数据已加载的情况
  */
 
-import { projectData } from "@/project/data/projectData";
-import type { FloorData } from "@/types";
-import { useResourceSuspense, type ResourceUpdateFn } from "./useResourceSuspense";
+import { projectData } from '@/project/data/projectData';
+import type { FloorData } from '@/types';
+import { useResourceSuspense, type ResourceUpdateFn } from './useResourceSuspense';
 
 /**
  * Suspense 版本的楼层数据 Hook
@@ -33,8 +33,6 @@ import { useResourceSuspense, type ResourceUpdateFn } from "./useResourceSuspens
  *   <FloorEditor floorId="MT1" />
  * </ContentBoundary>
  */
-export function useFloorDataSuspense(
-  floorId: string,
-): [FloorData, ResourceUpdateFn<FloorData>] {
+export function useFloorDataSuspense(floorId: string): [FloorData, ResourceUpdateFn<FloorData>] {
   return useResourceSuspense(projectData.floor(floorId));
 }

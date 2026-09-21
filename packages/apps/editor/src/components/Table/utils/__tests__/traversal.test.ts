@@ -5,10 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import {
-  buildTableTree,
-  defaultCobj,
-} from '../traversal';
+import { buildTableTree, defaultCobj } from '../traversal';
 import type { CommentObject, FieldArgs } from '../../types';
 
 describe('traversal', () => {
@@ -261,7 +258,7 @@ describe('traversal', () => {
 
       const { rootNodes } = buildTableTree(data, commentObj);
 
-      const fields = rootNodes.map(n => n.field);
+      const fields = rootNodes.map((n) => n.field);
       const uniqueFields = new Set(fields);
       expect(uniqueFields.size).toBe(fields.length);
       expect(fields).toEqual(["['a']", "['b']", "['c']"]);

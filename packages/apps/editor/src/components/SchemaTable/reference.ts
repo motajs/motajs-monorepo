@@ -1,4 +1,4 @@
-import type { Content } from "@/fs/types";
+import type { Content } from '@/fs/types';
 import type {
   BlockResolution,
   DataReference,
@@ -8,8 +8,8 @@ import type {
   SchemaScope,
   ValueSource,
   WritableValueSource,
-} from "./types";
-import { isEqual } from "es-toolkit";
+} from './types';
+import { isEqual } from 'es-toolkit';
 
 export interface ParsedReference {
   root: string;
@@ -17,17 +17,21 @@ export interface ParsedReference {
 }
 
 export function parseReference(reference: DataReference): ParsedReference {
-  const separator = reference.ref.indexOf(":");
-  if (separator <= 0 || reference.ref.indexOf(":", separator + 1) !== -1) {
+  const separator = reference.ref.indexOf(':');
+  if (separator <= 0 || reference.ref.indexOf(':', separator + 1) !== -1) {
     throw new Error(`Invalid reference: ${reference.ref}`);
   }
   const root = reference.ref.slice(0, separator);
   const suffix = reference.ref.slice(separator + 1);
-  if (!/^[A-Za-z_$][A-Za-z0-9_$-]*$/.test(root)
-    || suffix.includes("/") || suffix.includes("[") || suffix.includes("]")) {
+  if (
+    !/^[A-Za-z_$][A-Za-z0-9_$-]*$/.test(root) ||
+    suffix.includes('/') ||
+    suffix.includes('[') ||
+    suffix.includes(']')
+  ) {
     throw new Error(`Invalid v1 dotted reference: ${reference.ref}`);
   }
-  const path = suffix.length > 0 ? suffix.split(".") : [];
+  const path = suffix.length > 0 ? suffix.split('.') : [];
   if (path.some((segment) => segment.length === 0 || /[./:[\]]/.test(segment))) {
     throw new Error(`Invalid v1 dotted reference: ${reference.ref}`);
   }
@@ -40,10 +44,11 @@ export function resolveReference(scope: SchemaScope, reference: DataReference): 
 
 export function resolveReferencePath(scope: SchemaScope, reference: ParsedReference): ValueSource<unknown> {
   const root = scope.roots[reference.root];
-  if (!root) return new ErrorValueSource(
-    `${reference.root}:${reference.path.join(".")}`,
-    new Error(`Unknown reference root: ${reference.root}`),
-  );
+  if (!root)
+    return new ErrorValueSource(
+      `${reference.root}:${reference.path.join('.')}`,
+      new Error(`Unknown reference root: ${reference.root}`),
+    );
   return root.resolve(reference.path);
 }
 
@@ -65,10 +70,12 @@ export function createBoundSchemaScope(
       writeMany: async (updates) => {
         const root = parent.roots[parsed.root];
         if (!root?.writeMany) throw new Error(`${base.ref} does not support atomic writes`);
-        await root.writeMany(updates.map((update) => ({
-          path: [...parsed.path, ...update.path],
-          slot: update.slot,
-        })));
+        await root.writeMany(
+          updates.map((update) => ({
+            path: [...parsed.path, ...update.path],
+            slot: update.slot,
+          })),
+        );
       },
     };
   }
@@ -86,8 +93,12 @@ export class ErrorValueSource implements ValueSource<unknown> {
     this.id = id;
     this.error = error;
   }
-  snapshot(): BlockResolution<RawSlot<unknown>> { return { status: "error", error: this.error }; }
-  subscribe(): () => void { return noopSubscribe(); }
+  snapshot(): BlockResolution<RawSlot<unknown>> {
+    return { status: 'error', error: this.error };
+  }
+  subscribe(): () => void {
+    return noopSubscribe();
+  }
 }
 
 export class ConstantValueSource<T> implements ValueSource<T> {
@@ -97,8 +108,12 @@ export class ConstantValueSource<T> implements ValueSource<T> {
     this.id = id;
     this.getValue = getValue;
   }
-  snapshot(): BlockResolution<RawSlot<T>> { return { status: "ready", value: this.getValue() }; }
-  subscribe(): () => void { return noopSubscribe(); }
+  snapshot(): BlockResolution<RawSlot<T>> {
+    return { status: 'ready', value: this.getValue() };
+  }
+  subscribe(): () => void {
+    return noopSubscribe();
+  }
 }
 
 export class ObjectReferenceRoot implements ReferenceRoot {
@@ -119,24 +134,24 @@ export class ObjectReferenceRoot implements ReferenceRoot {
   }
 
   resolve(path: readonly string[]): ValueSource<unknown> {
-    const sourceId = `${this.id}:${path.join("/")}`;
+    const sourceId = `${this.id}:${path.join('/')}`;
     const snapshot = (): BlockResolution<RawSlot<unknown>> => {
       let current = this.getRoot();
-      if (path.length === 0) return { status: "ready", value: { present: true, value: current } };
+      if (path.length === 0) return { status: 'ready', value: { present: true, value: current } };
       for (const [index, key] of path.entries()) {
-        if (current == null || typeof current !== "object") {
+        if (current == null || typeof current !== 'object') {
           return {
-            status: "type-mismatch",
+            status: 'type-mismatch',
             rawValue: current,
-            error: new Error(`Cannot resolve ${sourceId}: ${path.slice(0, index).join("/")} is not an object`),
+            error: new Error(`Cannot resolve ${sourceId}: ${path.slice(0, index).join('/')} is not an object`),
           };
         }
         if (!Object.prototype.hasOwnProperty.call(current, key)) {
-          return { status: "ready", value: { present: false } };
+          return { status: 'ready', value: { present: false } };
         }
         current = (current as Record<string, unknown>)[key];
       }
-      return { status: "ready", value: { present: true, value: current } };
+      return { status: 'ready', value: { present: true, value: current } };
     };
     if (!this.write) {
       return { id: sourceId, snapshot, subscribe: () => noopSubscribe() };
@@ -166,8 +181,8 @@ function combinedSnapshot(
   let mismatchError: Error | undefined;
   for (const [key, source] of entries) {
     const snapshot = source.snapshot();
-    if (snapshot.status === "loading" || snapshot.status === "error") return snapshot;
-    if (snapshot.status === "type-mismatch") {
+    if (snapshot.status === 'loading' || snapshot.status === 'error') return snapshot;
+    if (snapshot.status === 'type-mismatch') {
       value[key] = snapshot.rawValue;
       present = true;
       mismatchError ??= new Error(`${key}: ${snapshot.error.message}`);
@@ -178,19 +193,23 @@ function combinedSnapshot(
       present = true;
     }
   }
-  if (mismatchError) return { status: "type-mismatch", rawValue: value, error: mismatchError };
-  return present ? { status: "ready", value: { present: true, value } } : { status: "ready", value: { present: false } };
+  if (mismatchError) return { status: 'type-mismatch', rawValue: value, error: mismatchError };
+  return present
+    ? { status: 'ready', value: { present: true, value } }
+    : { status: 'ready', value: { present: false } };
 }
 
 export function resolveCombinedReferences(
   scope: SchemaScope,
   references: Readonly<Record<string, DataReference>>,
 ): ValueSource<unknown> {
-  const entries = Object.entries(references).map(([key, reference]) => (
-    [key, resolveReference(scope, reference)] as const
-  ));
+  const entries = Object.entries(references).map(
+    ([key, reference]) => [key, resolveReference(scope, reference)] as const,
+  );
   const base: ValueSource<unknown> = {
-    id: `combine:${Object.entries(references).map(([key, reference]) => `${key}=${reference.ref}`).join(",")}`,
+    id: `combine:${Object.entries(references)
+      .map(([key, reference]) => `${key}=${reference.ref}`)
+      .join(',')}`,
     snapshot: () => combinedSnapshot(entries),
     subscribe(listener) {
       const disposers = entries.map(([, source]) => source.subscribe(listener));
@@ -210,24 +229,24 @@ export function resolveCombinedReferences(
   if (!entries.every(([, source]) => isWritableValueSource(source))) return base;
 
   const apply = async (nextValue: unknown) => {
-    if (!nextValue || typeof nextValue !== "object" || Array.isArray(nextValue)) {
-      throw new Error("Combined field value must be an object");
+    if (!nextValue || typeof nextValue !== 'object' || Array.isArray(nextValue)) {
+      throw new Error('Combined field value must be an object');
     }
     const next = nextValue as Record<string, unknown>;
     const updatesByRoot = new Map<string, ReferenceUpdate[]>();
     const fallbackUpdates: Array<{ source: WritableValueSource<unknown>; slot: RawSlot<unknown> }> = [];
     for (const [key, source] of entries) {
       const current = source.snapshot();
-      if (current.status === "loading" || current.status === "error") {
+      if (current.status === 'loading' || current.status === 'error') {
         throw new Error(`Cannot write ${key} while its source is ${current.status}`);
       }
       const slot: RawSlot<unknown> = Object.prototype.hasOwnProperty.call(next, key)
         ? { present: true, value: next[key] }
         : { present: false };
-      const unchanged = current.status === "ready" && (
-        (!current.value.present && !slot.present)
-        || (current.value.present && slot.present && isEqual(current.value.value, slot.value))
-      );
+      const unchanged =
+        current.status === 'ready' &&
+        ((!current.value.present && !slot.present) ||
+          (current.value.present && slot.present && isEqual(current.value.value, slot.value)));
       if (unchanged) continue;
       const parsed = parseReference(references[key]);
       const root = scope.roots[parsed.root];
@@ -258,8 +277,10 @@ export class RegistryReferenceRoot implements ReferenceRoot {
     this.sources = sources;
   }
   resolve(path: readonly string[]): ValueSource<unknown> {
-    const key = path.join(".");
-    return this.sources.get(key) ?? new ErrorValueSource(`registry:${key}`, new Error(`Unknown registry source: ${key}`));
+    const key = path.join('.');
+    return (
+      this.sources.get(key) ?? new ErrorValueSource(`registry:${key}`, new Error(`Unknown registry source: ${key}`))
+    );
   }
 }
 
@@ -285,15 +306,17 @@ export class ContentValueSource<T> implements ValueSource<T> {
 
   snapshot(): BlockResolution<RawSlot<T>> {
     const content = this.getContent();
-    if (content.status === "idle" || content.status === "loading") return { status: "loading" };
-    if (content.status === "error") return { status: "error", error: content.error };
-    if (content.status === "not-found") return { status: "error", error: new Error(`${this.id} was not found`) };
-    return { status: "ready", value: { present: true, value: content.value } };
+    if (content.status === 'idle' || content.status === 'loading') return { status: 'loading' };
+    if (content.status === 'error') return { status: 'error', error: content.error };
+    if (content.status === 'not-found') return { status: 'error', error: new Error(`${this.id} was not found`) };
+    return { status: 'ready', value: { present: true, value: content.value } };
   }
 
-  subscribe(listener: () => void): () => void { return this.onSubscribe(listener); }
+  subscribe(listener: () => void): () => void {
+    return this.onSubscribe(listener);
+  }
 }
 
 export function isWritableValueSource(source: ValueSource<unknown>): source is WritableValueSource<unknown> {
-  return "set" in source && typeof source.set === "function" && "unset" in source && typeof source.unset === "function";
+  return 'set' in source && typeof source.set === 'function' && 'unset' in source && typeof source.unset === 'function';
 }

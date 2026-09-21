@@ -4,12 +4,7 @@
  * 提供解析和生成过程中常用的工具函数
  */
 
-import type {
-  BlockState,
-  ConnectionState,
-  EventData,
-  ParseContext,
-} from '../parser/types';
+import type { BlockState, ConnectionState, EventData, ParseContext } from '../parser/types';
 
 // ============================================
 // 表达式块创建
@@ -37,15 +32,12 @@ export function createExpressionBlock(expr: string): ConnectionState {
 // ============================================
 
 // 这个函数需要引用 blockRegistry，会在初始化后设置
-let parseEventListFn: ((events: EventData[], context: ParseContext) => BlockState | null) | null =
-  null;
+let parseEventListFn: ((events: EventData[], context: ParseContext) => BlockState | null) | null = null;
 
 /**
  * 设置事件列表解析函数（避免循环依赖）
  */
-export function setParseEventListFn(
-  fn: (events: EventData[], context: ParseContext) => BlockState | null,
-): void {
+export function setParseEventListFn(fn: (events: EventData[], context: ParseContext) => BlockState | null): void {
   parseEventListFn = fn;
 }
 
@@ -56,10 +48,7 @@ export function setParseEventListFn(
  * @param context - 解析上下文
  * @returns 第一个块的状态，后续块通过 next 链接
  */
-export function parseEventList(
-  events: EventData[],
-  context: ParseContext,
-): BlockState | null {
+export function parseEventList(events: EventData[], context: ParseContext): BlockState | null {
   if (!parseEventListFn) {
     console.warn('parseEventListFn not initialized');
     return null;

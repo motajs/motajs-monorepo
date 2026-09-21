@@ -1,4 +1,4 @@
 {
   "extends": "@motajs/config/tsconfig.lib.base.json",
-  "include": ["${configDir}/lib"],
+  "include": ["${configDir}/lib"]
 }

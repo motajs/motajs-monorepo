@@ -1,9 +1,9 @@
-import { FC } from "react";
-import { Button, Dropdown } from "@douyinfe/semi-ui";
-import { ButtonProps } from "@douyinfe/semi-ui/lib/es/button";
-import { IconMoon, IconSun } from "@douyinfe/semi-icons";
-import { DropdownProps } from "@douyinfe/semi-ui/lib/es/dropdown";
-import { DarkModeStore } from "../store";
+import { FC } from 'react';
+import { Button, Dropdown } from '@douyinfe/semi-ui';
+import { ButtonProps } from '@douyinfe/semi-ui/lib/es/button';
+import { IconMoon, IconSun } from '@douyinfe/semi-icons';
+import { DropdownProps } from '@douyinfe/semi-ui/lib/es/dropdown';
+import { DarkModeStore } from '../store';
 
 export interface IDarkModeButtonProps extends ButtonProps {
   dropdown?: DropdownProps;
@@ -16,11 +16,11 @@ const DarkModeButton: FC<IDarkModeButtonProps> = (props) => {
   return (
     <Dropdown
       trigger="contextMenu"
-      render={(
+      render={
         <Dropdown.Menu>
           <Dropdown.Item onClick={() => setIsDarkMode(void 0)}>跟随系统偏好</Dropdown.Item>
         </Dropdown.Menu>
-      )}
+      }
       {...dropdown}
     >
       <Button

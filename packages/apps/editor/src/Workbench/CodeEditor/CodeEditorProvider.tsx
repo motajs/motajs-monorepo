@@ -1,15 +1,11 @@
-import {
-  useRef,
-  type FC,
-  type ReactNode,
-} from "react";
+import { useRef, type FC, type ReactNode } from 'react';
 import {
   CodeEditorContext,
   requestCodeEditorHost,
   type CodeEditorContextValue,
   type CodeEditorOpenRequest,
   type CodeEditorOpener,
-} from "./CodeEditorContext";
+} from './CodeEditorContext';
 
 export const CodeEditorProvider: FC<{ children?: ReactNode }> = ({ children }) => {
   const openerRef = useRef<CodeEditorOpener | null>(null);
@@ -20,9 +16,10 @@ export const CodeEditorProvider: FC<{ children?: ReactNode }> = ({ children }) =
   valueRef.current ??= {
     open(request) {
       requestCodeEditorHost();
-      const normalized = request.preview && !request.onPreview && previewerRef.current
-        ? { ...request, onPreview: (value: string) => previewerRef.current?.(request.preview, value) }
-        : request;
+      const normalized =
+        request.preview && !request.onPreview && previewerRef.current
+          ? { ...request, onPreview: (value: string) => previewerRef.current?.(request.preview, value) }
+          : request;
       const opener = openerRef.current;
       if (opener) opener(normalized);
       else pendingRef.current = normalized;

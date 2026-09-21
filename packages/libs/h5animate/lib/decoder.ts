@@ -4,11 +4,8 @@
  * 提供 h5animate 格式的解码功能
  */
 
-import { BinaryParser } from "./binary.js";
-import {
-  createInvalidSignatureError,
-  createInvalidMetadataError,
-} from "./errors.js";
+import { BinaryParser } from './binary.js';
+import { createInvalidSignatureError, createInvalidMetadataError } from './errors.js';
 import type {
   FileHeader,
   SpriteInfo,
@@ -16,10 +13,10 @@ import type {
   H5AnimateFrame,
   H5AnimateObject,
   DecodedH5Animate,
-} from "./types.js";
+} from './types.js';
 
 /** 文件签名常量 */
-const FILE_SIGNATURE = "ANIM";
+const FILE_SIGNATURE = 'ANIM';
 
 /**
  * 解析文件头
@@ -155,7 +152,7 @@ export function decodeH5Animate(buffer: Buffer): DecodedH5Animate {
 
   // 提取并解析元信息
   const metaBuffer = parser.readBytes(header.metaDataSize);
-  const metaJson = metaBuffer.toString("utf8");
+  const metaJson = metaBuffer.toString('utf8');
 
   let rawMeta: {
     ratio: number;
@@ -168,7 +165,7 @@ export function decodeH5Animate(buffer: Buffer): DecodedH5Animate {
   try {
     rawMeta = JSON.parse(metaJson);
   } catch {
-    throw createInvalidMetadataError("JSON 解析失败");
+    throw createInvalidMetadataError('JSON 解析失败');
   }
 
   // 将数组格式的对象数据转换为对象格式

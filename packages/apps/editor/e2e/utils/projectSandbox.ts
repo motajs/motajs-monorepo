@@ -1,7 +1,7 @@
-import { readdir, readFile } from "node:fs/promises";
-import path from "node:path";
-import type { Page, Route } from "@playwright/test";
-import { MOTA_JS_ROOT } from "../../mota-root";
+import { readdir, readFile } from 'node:fs/promises';
+import path from 'node:path';
+import type { Page, Route } from '@playwright/test';
+import { MOTA_JS_ROOT } from '../../mota-root';
 
 type WriteListener = {
   path: string;
@@ -11,17 +11,17 @@ type WriteListener = {
   timer: NodeJS.Timeout;
 };
 
-const PROJECT_ROOT = path.join(MOTA_JS_ROOT, "project");
+const PROJECT_ROOT = path.join(MOTA_JS_ROOT, 'project');
 const PUBLIC_ROOT = MOTA_JS_ROOT;
-const CONFIG_PATH = "_server/config.json";
+const CONFIG_PATH = '_server/config.json';
 const FILE_ENDPOINTS = new Set([
-  "/readFile",
-  "/writeFile",
-  "/writeMultiFiles",
-  "/listFile",
-  "/makeDir",
-  "/moveFile",
-  "/deleteFile",
+  '/readFile',
+  '/writeFile',
+  '/writeMultiFiles',
+  '/listFile',
+  '/makeDir',
+  '/moveFile',
+  '/deleteFile',
 ]);
 
 async function collectFiles(dir: string): Promise<string[]> {
@@ -31,7 +31,7 @@ async function collectFiles(dir: string): Promise<string[]> {
   for (const entry of entries) {
     const absolute = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      files.push(...await collectFiles(absolute));
+      files.push(...(await collectFiles(absolute)));
     } else if (entry.isFile()) {
       files.push(absolute);
     }
@@ -45,46 +45,45 @@ function toProjectPath(absolute: string): string {
 }
 
 function normalizeFilePath(filePath: string): string {
-  return filePath
-    .replace(/\\/g, "/")
-    .replace(/^\/+/, "")
-    .replace(/^\.\//, "");
+  return filePath.replace(/\\/g, '/').replace(/^\/+/, '').replace(/^\.\//, '');
 }
 
 function isProjectPath(filePath: string): boolean {
-  return normalizeFilePath(filePath).startsWith("project/");
+  return normalizeFilePath(filePath).startsWith('project/');
 }
 
 function isMetaphysicsPath(filePath: string): boolean {
-  return normalizeFilePath(filePath).startsWith(".metaphysics/");
+  return normalizeFilePath(filePath).startsWith('.metaphysics/');
 }
 
 function isLegacyTablePath(filePath: string): boolean {
-  return normalizeFilePath(filePath).startsWith("_server/table/");
+  return normalizeFilePath(filePath).startsWith('_server/table/');
 }
 
 function isWritableSandboxPath(filePath: string): boolean {
   const normalized = normalizeFilePath(filePath);
-  return isProjectPath(normalized)
-    || isMetaphysicsPath(normalized)
-    || isLegacyTablePath(normalized)
-    || normalized === CONFIG_PATH;
+  return (
+    isProjectPath(normalized) ||
+    isMetaphysicsPath(normalized) ||
+    isLegacyTablePath(normalized) ||
+    normalized === CONFIG_PATH
+  );
 }
 
 async function readPublicFile(filePath: string, encoding: BufferEncoding): Promise<string> {
   const normalized = normalizeFilePath(filePath);
   const absolute = path.resolve(PUBLIC_ROOT, normalized);
   const relative = path.relative(PUBLIC_ROOT, absolute);
-  if (relative.startsWith("..") || path.isAbsolute(relative)) {
+  if (relative.startsWith('..') || path.isAbsolute(relative)) {
     throw new Error(`Refusing to read outside mota-js root: ${filePath}`);
   }
   return readFile(absolute, { encoding });
 }
 
-function makeResponse(body: string, status: number = 200): Parameters<Route["fulfill"]>[0] {
+function makeResponse(body: string, status: number = 200): Parameters<Route['fulfill']>[0] {
   return {
     status,
-    contentType: "text/plain; charset=utf-8",
+    contentType: 'text/plain; charset=utf-8',
     body,
   };
 }
@@ -102,7 +101,7 @@ export class ProjectSandbox {
   static async create(page: Page): Promise<ProjectSandbox> {
     const sandbox = new ProjectSandbox();
     await sandbox.loadProjectFiles();
-    await page.route("**/*", async (route) => {
+    await page.route('**/*', async (route) => {
       await sandbox.handleRoute(route);
     });
     return sandbox;
@@ -111,7 +110,7 @@ export class ProjectSandbox {
   readText(filePath: string): string {
     const file = this.files.get(normalizeFilePath(filePath));
     if (!file) throw new Error(`Missing sandbox file: ${filePath}`);
-    return file.toString("utf-8");
+    return file.toString('utf-8');
   }
 
   readBytes(filePath: string): Buffer {
@@ -125,7 +124,7 @@ export class ProjectSandbox {
     if (!isWritableSandboxPath(normalized)) {
       throw new Error(`Refusing to write non-project sandbox file: ${filePath}`);
     }
-    this.files.set(normalized, Buffer.from(value, "utf-8"));
+    this.files.set(normalized, Buffer.from(value, 'utf-8'));
     this.notify(this.writeListeners, this.writeVersions, normalized);
   }
 
@@ -153,20 +152,20 @@ export class ProjectSandbox {
   waitForWrite(filePath: string, timeoutMs: number = 10_000): Promise<void> {
     const normalized = normalizeFilePath(filePath);
     const version = this.writeVersions.get(normalized) ?? 0;
-    return this.waitForVersion(this.writeListeners, normalized, version, timeoutMs, "write");
+    return this.waitForVersion(this.writeListeners, normalized, version, timeoutMs, 'write');
   }
 
   waitForDelete(filePath: string, timeoutMs: number = 10_000): Promise<void> {
     const normalized = normalizeFilePath(filePath);
     const version = this.deleteVersions.get(normalized) ?? 0;
-    return this.waitForVersion(this.deleteListeners, normalized, version, timeoutMs, "delete");
+    return this.waitForVersion(this.deleteListeners, normalized, version, timeoutMs, 'delete');
   }
 
   setWriteDelay(delayMs: number): void {
     this.writeDelayMs = Math.max(0, delayMs);
   }
 
-  setWriteFailure(filePath: string, message: string = "simulated persistence failure"): void {
+  setWriteFailure(filePath: string, message: string = 'simulated persistence failure'): void {
     this.writeFailures.set(normalizeFilePath(filePath), message);
   }
 
@@ -178,14 +177,14 @@ export class ProjectSandbox {
     for (const absolute of await collectFiles(PROJECT_ROOT)) {
       this.files.set(toProjectPath(absolute), await readFile(absolute));
     }
-    const legacyTableRoot = path.join(PUBLIC_ROOT, "_server/table");
+    const legacyTableRoot = path.join(PUBLIC_ROOT, '_server/table');
     for (const absolute of await collectFiles(legacyTableRoot)) {
       this.files.set(normalizeFilePath(path.relative(PUBLIC_ROOT, absolute)), await readFile(absolute));
     }
     try {
       this.files.set(CONFIG_PATH, await readFile(path.join(PUBLIC_ROOT, CONFIG_PATH)));
     } catch {
-      this.files.set(CONFIG_PATH, Buffer.from("{}", "utf-8"));
+      this.files.set(CONFIG_PATH, Buffer.from('{}', 'utf-8'));
     }
   }
 
@@ -232,13 +231,13 @@ export class ProjectSandbox {
   private async handleRoute(route: Route): Promise<void> {
     const request = route.request();
     const pathname = new URL(request.url()).pathname;
-    if (request.method() !== "POST" || !FILE_ENDPOINTS.has(pathname)) {
+    if (request.method() !== 'POST' || !FILE_ENDPOINTS.has(pathname)) {
       await route.fallback();
       return;
     }
 
     try {
-      const params = new URLSearchParams(request.postData() ?? "");
+      const params = new URLSearchParams(request.postData() ?? '');
       const body = await this.handleEndpoint(pathname, params);
       await route.fulfill(makeResponse(body));
     } catch (error) {
@@ -248,19 +247,19 @@ export class ProjectSandbox {
   }
 
   private async handleEndpoint(pathname: string, params: URLSearchParams): Promise<string> {
-    if (pathname === "/readFile") return this.readFile(params);
-    if (pathname === "/writeFile") return this.writeFile(params);
-    if (pathname === "/writeMultiFiles") return this.writeMultiFiles(params);
-    if (pathname === "/listFile") return this.listFile(params);
-    if (pathname === "/makeDir") return this.makeDir(params);
-    if (pathname === "/moveFile") return this.moveFile(params);
-    if (pathname === "/deleteFile") return this.deleteFile(params);
+    if (pathname === '/readFile') return this.readFile(params);
+    if (pathname === '/writeFile') return this.writeFile(params);
+    if (pathname === '/writeMultiFiles') return this.writeMultiFiles(params);
+    if (pathname === '/listFile') return this.listFile(params);
+    if (pathname === '/makeDir') return this.makeDir(params);
+    if (pathname === '/moveFile') return this.moveFile(params);
+    if (pathname === '/deleteFile') return this.deleteFile(params);
     return `error: Unsupported endpoint ${pathname}`;
   }
 
   private async readFile(params: URLSearchParams): Promise<string> {
-    const name = normalizeFilePath(params.get("name") ?? "");
-    const encoding = params.get("type") === "base64" ? "base64" : "utf-8";
+    const name = normalizeFilePath(params.get('name') ?? '');
+    const encoding = params.get('type') === 'base64' ? 'base64' : 'utf-8';
     const file = this.files.get(name);
     if (file) {
       this.readVersions.set(name, (this.readVersions.get(name) ?? 0) + 1);
@@ -271,7 +270,7 @@ export class ProjectSandbox {
   }
 
   private async writeFile(params: URLSearchParams): Promise<string> {
-    const name = normalizeFilePath(params.get("name") ?? "");
+    const name = normalizeFilePath(params.get('name') ?? '');
     if (!isWritableSandboxPath(name)) return `error: Refusing to write non-project file ${name}`;
 
     if (this.writeDelayMs > 0) {
@@ -280,63 +279,63 @@ export class ProjectSandbox {
     const failure = this.writeFailures.get(name);
     if (failure) return `error: ${failure}`;
 
-    const encoding = params.get("type") === "base64" ? "base64" : "utf-8";
-    const value = params.get("value") ?? "";
+    const encoding = params.get('type') === 'base64' ? 'base64' : 'utf-8';
+    const value = params.get('value') ?? '';
     this.files.set(name, Buffer.from(value, encoding));
     this.notify(this.writeListeners, this.writeVersions, name);
-    return "";
+    return '';
   }
 
   private writeMultiFiles(params: URLSearchParams): string {
-    const names = (params.get("name") ?? "").split(";").filter(Boolean).map(normalizeFilePath);
-    const values = (params.get("value") ?? "").split(";");
+    const names = (params.get('name') ?? '').split(';').filter(Boolean).map(normalizeFilePath);
+    const values = (params.get('value') ?? '').split(';');
     if (names.some((name) => !isWritableSandboxPath(name))) {
-      return "error: Refusing to write non-project file";
+      return 'error: Refusing to write non-project file';
     }
 
     for (let i = 0; i < names.length; i += 1) {
       const name = names[i];
-      this.files.set(name, Buffer.from(values[i] ?? "", "utf-8"));
+      this.files.set(name, Buffer.from(values[i] ?? '', 'utf-8'));
       this.notify(this.writeListeners, this.writeVersions, name);
     }
-    return "";
+    return '';
   }
 
   private async listFile(params: URLSearchParams): Promise<string> {
-    const name = normalizeFilePath(params.get("name") ?? "");
-    if (!isProjectPath(`${name}/`) && !isMetaphysicsPath(`${name}/`) && name !== "project" && name !== ".metaphysics") {
+    const name = normalizeFilePath(params.get('name') ?? '');
+    if (!isProjectPath(`${name}/`) && !isMetaphysicsPath(`${name}/`) && name !== 'project' && name !== '.metaphysics') {
       const absolute = path.resolve(PUBLIC_ROOT, name);
       const relative = path.relative(PUBLIC_ROOT, absolute);
-      if (relative.startsWith("..") || path.isAbsolute(relative)) {
-        return "error: Invalid list path";
+      if (relative.startsWith('..') || path.isAbsolute(relative)) {
+        return 'error: Invalid list path';
       }
       return JSON.stringify(await readdir(absolute));
     }
 
-    const prefix = name.endsWith("/") ? name : `${name}/`;
+    const prefix = name.endsWith('/') ? name : `${name}/`;
     const entries = new Set<string>();
     for (const filePath of this.files.keys()) {
       if (!filePath.startsWith(prefix)) continue;
       const rest = filePath.slice(prefix.length);
-      const entry = rest.split("/")[0];
+      const entry = rest.split('/')[0];
       if (entry) entries.add(entry);
     }
     return JSON.stringify([...entries].sort());
   }
 
   private makeDir(params: URLSearchParams): string {
-    const name = normalizeFilePath(params.get("name") ?? "");
-    if (!isProjectPath(`${name}/`) && !isMetaphysicsPath(`${name}/`) && name !== "project" && name !== ".metaphysics") {
+    const name = normalizeFilePath(params.get('name') ?? '');
+    if (!isProjectPath(`${name}/`) && !isMetaphysicsPath(`${name}/`) && name !== 'project' && name !== '.metaphysics') {
       return `error: Refusing to create non-project directory ${name}`;
     }
-    return "";
+    return '';
   }
 
   private moveFile(params: URLSearchParams): string {
-    const src = normalizeFilePath(params.get("src") ?? "");
-    const dest = normalizeFilePath(params.get("dest") ?? "");
+    const src = normalizeFilePath(params.get('src') ?? '');
+    const dest = normalizeFilePath(params.get('dest') ?? '');
     if (!isWritableSandboxPath(src) || !isWritableSandboxPath(dest)) {
-      return "error: Refusing to move non-project file";
+      return 'error: Refusing to move non-project file';
     }
     const file = this.files.get(src);
     if (!file) return `error: Missing file ${src}`;
@@ -344,14 +343,14 @@ export class ProjectSandbox {
     this.files.delete(src);
     this.notify(this.writeListeners, this.writeVersions, dest);
     this.notify(this.deleteListeners, this.deleteVersions, src);
-    return "";
+    return '';
   }
 
   private deleteFile(params: URLSearchParams): string {
-    const name = normalizeFilePath(params.get("name") ?? "");
+    const name = normalizeFilePath(params.get('name') ?? '');
     if (!isWritableSandboxPath(name)) return `error: Refusing to delete non-project file ${name}`;
     this.files.delete(name);
     this.notify(this.deleteListeners, this.deleteVersions, name);
-    return "";
+    return '';
   }
 }

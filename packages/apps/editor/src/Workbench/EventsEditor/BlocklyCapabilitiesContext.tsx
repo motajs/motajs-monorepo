@@ -1,16 +1,7 @@
-import {
-  createContext,
-  useContext,
-  type ReactNode,
-} from 'react';
-import type {
-  MaterialKind,
-} from '@/blockly/registry';
+import { createContext, useContext, type ReactNode } from 'react';
+import type { MaterialKind } from '@/blockly/registry';
 import type { BlocklyPreviewResult } from '@/blockly/interactions/previewModel';
-import type {
-  SelectPointOptions,
-  SelectPointResult,
-} from '@/Workbench/modals/shared/types';
+import type { SelectPointOptions, SelectPointResult } from '@/Workbench/modals/shared/types';
 
 export interface BlocklyTextEditRequest {
   contextId: string;
@@ -46,11 +37,7 @@ export function BlocklyCapabilitiesProvider({
   value: BlocklyInteractionCapabilities;
   children?: ReactNode;
 }) {
-  return (
-    <BlocklyCapabilitiesContext.Provider value={value}>
-      {children}
-    </BlocklyCapabilitiesContext.Provider>
-  );
+  return <BlocklyCapabilitiesContext.Provider value={value}>{children}</BlocklyCapabilitiesContext.Provider>;
 }
 
 export function useBlocklyInteractionCapabilities(): BlocklyInteractionCapabilities {

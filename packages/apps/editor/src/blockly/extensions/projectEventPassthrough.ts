@@ -27,9 +27,10 @@ export function registerProjectEventPassthroughExtension(): void {
       return raw ? { raw } : null;
     },
     loadExtraState(this: PassthroughBlock, state: unknown) {
-      const raw = state && typeof state === 'object' && !Array.isArray(state)
-        ? cloneRecord((state as { raw?: unknown }).raw)
-        : undefined;
+      const raw =
+        state && typeof state === 'object' && !Array.isArray(state)
+          ? cloneRecord((state as { raw?: unknown }).raw)
+          : undefined;
       if (raw) this[PROJECT_EVENT_RAW_STATE_KEY] = raw;
       else delete this[PROJECT_EVENT_RAW_STATE_KEY];
     },

@@ -30,22 +30,25 @@ export const ColorInput: FC<BaseInputProps> = (props) => {
   }, [value]);
 
   // 处理颜色变化
-  const handleChange = useCallback((color: Color) => {
-    // antd ColorPicker 的 Color 对象可以获取 rgb 值
-    // 使用 toRgb() 方法获取 { r, g, b, a } 对象
-    const rgb = color.toRgb();
+  const handleChange = useCallback(
+    (color: Color) => {
+      // antd ColorPicker 的 Color 对象可以获取 rgb 值
+      // 使用 toRgb() 方法获取 { r, g, b, a } 对象
+      const rgb = color.toRgb();
 
-    // 判断原始值是否有 alpha 通道
-    const hasAlpha = Array.isArray(value) && (value as number[]).length === 4;
+      // 判断原始值是否有 alpha 通道
+      const hasAlpha = Array.isArray(value) && (value as number[]).length === 4;
 
-    if (hasAlpha || rgb.a !== 1) {
-      // 有 alpha 通道或 alpha 不为 1 时，保留 alpha
-      onChange([rgb.r, rgb.g, rgb.b, rgb.a] as ColorValue);
-    } else {
-      // 无 alpha 通道且 alpha 为 1，只保存 rgb
-      onChange([rgb.r, rgb.g, rgb.b] as ColorValue);
-    }
-  }, [value, onChange]);
+      if (hasAlpha || rgb.a !== 1) {
+        // 有 alpha 通道或 alpha 不为 1 时，保留 alpha
+        onChange([rgb.r, rgb.g, rgb.b, rgb.a] as ColorValue);
+      } else {
+        // 无 alpha 通道且 alpha 为 1，只保存 rgb
+        onChange([rgb.r, rgb.g, rgb.b] as ColorValue);
+      }
+    },
+    [value, onChange],
+  );
 
   return (
     <div>

@@ -1,30 +1,7 @@
 import * as Blockly from 'blockly';
-import {
-  Alert,
-  Button,
-  Checkbox,
-  Input,
-  InputNumber,
-  Modal,
-  Progress,
-  Select,
-  Tooltip,
-} from 'antd';
-import {
-  Copy,
-  GripVertical,
-  Plus,
-  RotateCcw,
-  Save,
-  Trash2,
-} from 'lucide-react';
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type FC,
-} from 'react';
+import { Alert, Button, Checkbox, Input, InputNumber, Modal, Progress, Select, Tooltip } from 'antd';
+import { Copy, GripVertical, Plus, RotateCcw, Save, Trash2 } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, type FC } from 'react';
 import type { InputRef } from 'antd';
 import { projectModel } from '@/project/model/projectModel';
 import { buildBlocklyPreview } from '@/blockly/interactions';
@@ -123,9 +100,7 @@ const PREVIEW_OPTIONS: Array<{ value: BlocklyPreviewAdapterId; label: string }> 
 ];
 
 function stateSource(state: ReturnType<typeof projectBlockPackState>): string {
-  return state.status === 'error' && state.raw !== undefined
-    ? state.raw
-    : `${JSON.stringify(state.pack, null, 2)}\n`;
+  return state.status === 'error' && state.raw !== undefined ? state.raw : `${JSON.stringify(state.pack, null, 2)}\n`;
 }
 
 let previewSequence = 0;
@@ -190,7 +165,7 @@ function combineSamples(clicked: Record<string, unknown>, samples: ProjectEventS
 }
 
 function updateAt<T>(list: T[], index: number, update: (value: T) => T): T[] {
-  return list.map((value, current) => current === index ? update(value) : value);
+  return list.map((value, current) => (current === index ? update(value) : value));
 }
 
 function defaultText(value: unknown): string {
@@ -232,13 +207,19 @@ const FieldRow: FC<{
         onChange={(event) => onChange({ ...field, path: event.target.value })}
       />
     </label>
-    <Select value={field.control} options={CONTROL_OPTIONS} onChange={(control) => onChange({
-      ...field,
-      control,
-      ...(control === 'text' ? {} : { completionSource: undefined, materialKind: undefined }),
-      ...(control === 'dropdown' ? {} : { dropdownOptions: undefined }),
-      ...(control === 'number' ? {} : { min: undefined, max: undefined, precision: undefined }),
-    })} />
+    <Select
+      value={field.control}
+      options={CONTROL_OPTIONS}
+      onChange={(control) =>
+        onChange({
+          ...field,
+          control,
+          ...(control === 'text' ? {} : { completionSource: undefined, materialKind: undefined }),
+          ...(control === 'dropdown' ? {} : { dropdownOptions: undefined }),
+          ...(control === 'number' ? {} : { min: undefined, max: undefined, precision: undefined }),
+        })
+      }
+    />
     <Input
       key={`${field.id}:${defaultText(field.defaultValue)}`}
       defaultValue={defaultText(field.defaultValue)}
@@ -253,41 +234,61 @@ const FieldRow: FC<{
         }
       }}
     />
-    <Checkbox aria-label="可选" checked={field.optional} onChange={(event) => onChange({ ...field, optional: event.target.checked })} />
-    <Checkbox aria-label="省略默认" checked={field.omitWhenDefault} onChange={(event) => onChange({ ...field, omitWhenDefault: event.target.checked })} />
-    <Tooltip title="删除字段"><Button danger icon={<Trash2 size={15} />} type="text" onClick={onDelete} /></Tooltip>
+    <Checkbox
+      aria-label="可选"
+      checked={field.optional}
+      onChange={(event) => onChange({ ...field, optional: event.target.checked })}
+    />
+    <Checkbox
+      aria-label="省略默认"
+      checked={field.omitWhenDefault}
+      onChange={(event) => onChange({ ...field, omitWhenDefault: event.target.checked })}
+    />
+    <Tooltip title="删除字段">
+      <Button danger icon={<Trash2 size={15} />} type="text" onClick={onDelete} />
+    </Tooltip>
     {(field.control === 'text' || field.control === 'dropdown' || field.control === 'number') && (
       <div className="customBlockFieldAdvanced">
-        {field.control === 'text' && <>
-          <label>补全源
-            <Select
-              allowClear
-              value={field.completionSource}
-              placeholder="不启用补全"
-              options={COMPLETION_OPTIONS}
-              onChange={(completionSource) => onChange({ ...field, completionSource })}
-            />
-          </label>
-          <label>素材选择
-            <Select
-              allowClear
-              value={field.materialKind}
-              placeholder="不启用素材选择"
-              options={MATERIAL_OPTIONS}
-              onChange={(materialKind) => onChange({ ...field, materialKind })}
-            />
-          </label>
-        </>}
+        {field.control === 'text' && (
+          <>
+            <label>
+              补全源
+              <Select
+                allowClear
+                value={field.completionSource}
+                placeholder="不启用补全"
+                options={COMPLETION_OPTIONS}
+                onChange={(completionSource) => onChange({ ...field, completionSource })}
+              />
+            </label>
+            <label>
+              素材选择
+              <Select
+                allowClear
+                value={field.materialKind}
+                placeholder="不启用素材选择"
+                options={MATERIAL_OPTIONS}
+                onChange={(materialKind) => onChange({ ...field, materialKind })}
+              />
+            </label>
+          </>
+        )}
         {field.control === 'dropdown' && (
-          <label>下拉选项 JSON
+          <label>
+            下拉选项 JSON
             <Input
               key={`${field.id}:options:${JSON.stringify(field.dropdownOptions)}`}
               defaultValue={JSON.stringify(field.dropdownOptions ?? [['选项', 'value']])}
               onBlur={(event) => {
                 try {
                   const options = JSON.parse(event.target.value) as unknown;
-                  if (!Array.isArray(options) || options.some((item) => !Array.isArray(item)
-                    || item.length !== 2 || item.some((part) => typeof part !== 'string'))) {
+                  if (
+                    !Array.isArray(options) ||
+                    options.some(
+                      (item) =>
+                        !Array.isArray(item) || item.length !== 2 || item.some((part) => typeof part !== 'string'),
+                    )
+                  ) {
                     throw new Error('下拉选项必须是 [["显示文本", "值"]]');
                   }
                   onChange({ ...field, dropdownOptions: options as Array<[string, string]> });
@@ -298,21 +299,32 @@ const FieldRow: FC<{
             />
           </label>
         )}
-        {field.control === 'number' && <>
-          <label>最小值<InputNumber value={field.min} onChange={(min) => onChange({ ...field, min: min ?? undefined })} /></label>
-          <label>最大值<InputNumber value={field.max} onChange={(max) => onChange({ ...field, max: max ?? undefined })} /></label>
-          <label>步长<InputNumber min={0} value={field.precision} onChange={(precision) => onChange({ ...field, precision: precision ?? undefined })} /></label>
-        </>}
+        {field.control === 'number' && (
+          <>
+            <label>
+              最小值
+              <InputNumber value={field.min} onChange={(min) => onChange({ ...field, min: min ?? undefined })} />
+            </label>
+            <label>
+              最大值
+              <InputNumber value={field.max} onChange={(max) => onChange({ ...field, max: max ?? undefined })} />
+            </label>
+            <label>
+              步长
+              <InputNumber
+                min={0}
+                value={field.precision}
+                onChange={(precision) => onChange({ ...field, precision: precision ?? undefined })}
+              />
+            </label>
+          </>
+        )}
       </div>
     )}
   </div>
 );
 
-export const CustomBlockManager: FC<CustomBlockManagerProps> = ({
-  open,
-  registration,
-  onClose,
-}) => {
+export const CustomBlockManager: FC<CustomBlockManagerProps> = ({ open, registration, onClose }) => {
   const capabilities = useBlocklyInteractionCapabilities();
   const [pack, setPack] = useState<ProjectBlockPack>(createEmptyProjectBlockPack);
   const [draft, setDraft] = useState<CustomBlockDraft>(createBlankCustomBlockDraft);
@@ -385,7 +397,7 @@ export const CustomBlockManager: FC<CustomBlockManagerProps> = ({
         setEditingIndex(null);
       }
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   useEffect(() => {
@@ -407,19 +419,22 @@ export const CustomBlockManager: FC<CustomBlockManagerProps> = ({
       requireUnknown: true,
       signal: controller.signal,
       onProgress: (completed, total, source) => setProgress({ completed, total, source }),
-    }).then(async (result) => {
-      const combined = combineSamples(clicked, result.samples);
-      setFailures(result.failures);
-      if (result.failures.length) setPendingInference(combined);
-      else await applyInference(type, combined);
-    }).catch((cause) => {
-      if ((cause as { name?: string }).name !== 'AbortError') notifyError(cause);
-    }).finally(() => {
-      if (scanController.current === controller) setScanning(false);
-    });
+    })
+      .then(async (result) => {
+        const combined = combineSamples(clicked, result.samples);
+        setFailures(result.failures);
+        if (result.failures.length) setPendingInference(combined);
+        else await applyInference(type, combined);
+      })
+      .catch((cause) => {
+        if ((cause as { name?: string }).name !== 'AbortError') notifyError(cause);
+      })
+      .finally(() => {
+        if (scanController.current === controller) setScanning(false);
+      });
     return () => controller.abort();
-  // requestId is the stable identity for one registration action.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // requestId is the stable identity for one registration action.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, registration?.requestId]);
 
   const schema = useMemo(() => {
@@ -429,9 +444,10 @@ export const CustomBlockManager: FC<CustomBlockManagerProps> = ({
       return { value: null, error: cause instanceof Error ? cause : new Error(String(cause)) };
     }
   }, [draft]);
-  const differences = useMemo(() => schema.value
-    ? validateCustomBlockRoundTrips(schema.value, samples)
-    : [], [samples, schema.value]);
+  const differences = useMemo(
+    () => (schema.value ? validateCustomBlockRoundTrips(schema.value, samples) : []),
+    [samples, schema.value],
+  );
 
   const refreshPack = () => {
     const next = projectBlockPackState();
@@ -526,17 +542,21 @@ export const CustomBlockManager: FC<CustomBlockManagerProps> = ({
     }
   };
 
-  const addField = () => setDraft((current) => ({
-    ...current,
-    fields: [...current.fields, {
-      id: `FIELD_${current.fields.length + 1}_${Date.now().toString(36)}`,
-      label: '',
-      path: '',
-      control: 'text',
-      optional: false,
-      omitWhenDefault: false,
-    }],
-  }));
+  const addField = () =>
+    setDraft((current) => ({
+      ...current,
+      fields: [
+        ...current.fields,
+        {
+          id: `FIELD_${current.fields.length + 1}_${Date.now().toString(36)}`,
+          label: '',
+          path: '',
+          control: 'text',
+          optional: false,
+          omitWhenDefault: false,
+        },
+      ],
+    }));
 
   const fieldOptions = draft.fields.map((field) => ({
     value: field.id,
@@ -549,7 +569,10 @@ export const CustomBlockManager: FC<CustomBlockManagerProps> = ({
       className="customBlockManagerModal"
       destroyOnHidden
       footer={null}
-      onCancel={() => { scanController.current?.abort(); onClose(); }}
+      onCancel={() => {
+        scanController.current?.abort();
+        onClose();
+      }}
       open={open}
       title="自定义事件块"
       width="min(1680px, calc(100vw - 8px))"
@@ -565,9 +588,11 @@ export const CustomBlockManager: FC<CustomBlockManagerProps> = ({
       )}
       {scanning && (
         <div className="customBlockScanProgress">
-          <Progress percent={Math.round(progress.completed / Math.max(1, progress.total) * 100)} size="small" />
+          <Progress percent={Math.round((progress.completed / Math.max(1, progress.total)) * 100)} size="small" />
           <span>正在扫描 {progress.source || '工程事件'}…</span>
-          <Button size="small" onClick={() => scanController.current?.abort()}>取消</Button>
+          <Button size="small" onClick={() => scanController.current?.abort()}>
+            取消
+          </Button>
         </div>
       )}
       {pendingInference && (
@@ -576,7 +601,13 @@ export const CustomBlockManager: FC<CustomBlockManagerProps> = ({
           type="warning"
           message={`有 ${failures.length} 个事件来源读取失败`}
           description={failures.map((item) => `${item.path}: ${item.error.message}`).join('\n')}
-          action={<Button onClick={() => void applyInference(String(pendingInference[0]?.event.type ?? ''), pendingInference)}>使用已读取样本继续</Button>}
+          action={
+            <Button
+              onClick={() => void applyInference(String(pendingInference[0]?.event.type ?? ''), pendingInference)}
+            >
+              使用已读取样本继续
+            </Button>
+          }
         />
       )}
       {!pendingInference && failures.length > 0 && (
@@ -585,33 +616,50 @@ export const CustomBlockManager: FC<CustomBlockManagerProps> = ({
           type="warning"
           message={`${failures.length} 个事件来源未参与当前 round-trip 校验`}
           description={failures.map((item) => `${item.path}: ${item.error.message}`).join('\n')}
-          action={editingIndex == null ? undefined : (
-            <Button onClick={() => void selectSchema(editingIndex)}>重试扫描</Button>
-          )}
+          action={
+            editingIndex == null ? undefined : <Button onClick={() => void selectSchema(editingIndex)}>重试扫描</Button>
+          }
         />
       )}
       {sourceMode ? (
         <div className="customBlockSourceEditor">
-          <Input.TextArea value={sourceText} onChange={(event) => setSourceText(event.target.value)} spellCheck={false} />
+          <Input.TextArea
+            value={sourceText}
+            onChange={(event) => setSourceText(event.target.value)}
+            spellCheck={false}
+          />
           <div className="customBlockManagerActions">
             <Button onClick={() => setSourceMode(false)}>返回表单</Button>
-            <Button danger onClick={() => void deleteProjectBlockPack().then(() => { refreshPack(); setSourceMode(false); })}>删除工程配置</Button>
-            <Button type="primary" icon={<Save size={15} />} onClick={() => void saveSource()}>保存 JSON</Button>
+            <Button
+              danger
+              onClick={() =>
+                void deleteProjectBlockPack().then(() => {
+                  refreshPack();
+                  setSourceMode(false);
+                })
+              }
+            >
+              删除工程配置
+            </Button>
+            <Button type="primary" icon={<Save size={15} />} onClick={() => void saveSource()}>
+              保存 JSON
+            </Button>
           </div>
         </div>
       ) : (
         <div className="customBlockManagerLayout">
           <aside className="customBlockList">
             <div className="customBlockListActions">
-              <Button
-                data-test-id="custom-block-new"
-                icon={<Plus size={15} />}
-                onClick={startBlankDraft}
-              >新增</Button>
+              <Button data-test-id="custom-block-new" icon={<Plus size={15} />} onClick={startBlankDraft}>
+                新增
+              </Button>
               <Button onClick={() => setSourceMode(true)}>完整 JSON</Button>
             </div>
             {editingIndex == null && (
-              <div className="customBlockListItem customBlockDraftItem is-active" data-test-id="custom-block-unsaved-draft">
+              <div
+                className="customBlockListItem customBlockDraftItem is-active"
+                data-test-id="custom-block-unsaved-draft"
+              >
                 <Plus size={15} />
                 <span>
                   <strong>{draft.eventType || draft.title || '新自定义事件块'}</strong>
@@ -625,7 +673,9 @@ export const CustomBlockManager: FC<CustomBlockManagerProps> = ({
                 draggable
                 key={block.type}
                 onClick={() => void selectSchema(index)}
-                onDragStart={() => { dragIndex.current = index; }}
+                onDragStart={() => {
+                  dragIndex.current = index;
+                }}
                 onDragOver={(event) => event.preventDefault()}
                 onDrop={() => {
                   if (dragIndex.current != null) void reorder(dragIndex.current, index);
@@ -633,17 +683,53 @@ export const CustomBlockManager: FC<CustomBlockManagerProps> = ({
                 }}
               >
                 <GripVertical size={15} />
-                <span><strong>{String(block.event.match.equals)}</strong><small>{block.type}</small></span>
-                <Button danger icon={<Trash2 size={14} />} type="text" onClick={(event) => { event.stopPropagation(); void removeBlock(index); }} />
+                <span>
+                  <strong>{String(block.event.match.equals)}</strong>
+                  <small>{block.type}</small>
+                </span>
+                <Button
+                  danger
+                  icon={<Trash2 size={14} />}
+                  type="text"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    void removeBlock(index);
+                  }}
+                />
               </div>
             ))}
           </aside>
           <section className="customBlockForm">
             <div className="customBlockFormGrid">
-              <label>事件 type<Input ref={eventTypeInputRef} value={draft.eventType} onChange={(event) => setDraft({ ...draft, eventType: event.target.value, blockType: editingIndex == null ? '' : draft.blockType })} /></label>
-              <label>块标题<Input value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} /></label>
-              <label>颜色<InputNumber min={0} max={360} value={draft.colour} onChange={(colour) => setDraft({ ...draft, colour: colour ?? 230 })} /></label>
-              <label>事件效果预览
+              <label>
+                事件 type
+                <Input
+                  ref={eventTypeInputRef}
+                  value={draft.eventType}
+                  onChange={(event) =>
+                    setDraft({
+                      ...draft,
+                      eventType: event.target.value,
+                      blockType: editingIndex == null ? '' : draft.blockType,
+                    })
+                  }
+                />
+              </label>
+              <label>
+                块标题
+                <Input value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} />
+              </label>
+              <label>
+                颜色
+                <InputNumber
+                  min={0}
+                  max={360}
+                  value={draft.colour}
+                  onChange={(colour) => setDraft({ ...draft, colour: colour ?? 230 })}
+                />
+              </label>
+              <label>
+                事件效果预览
                 <Select
                   allowClear
                   value={draft.previewAdapter}
@@ -652,12 +738,30 @@ export const CustomBlockManager: FC<CustomBlockManagerProps> = ({
                   onChange={(previewAdapter) => setDraft({ ...draft, previewAdapter })}
                 />
               </label>
-              <label className="is-wide">Tooltip<Input value={draft.tooltip} onChange={(event) => setDraft({ ...draft, tooltip: event.target.value })} /></label>
+              <label className="is-wide">
+                Tooltip
+                <Input
+                  value={draft.tooltip}
+                  onChange={(event) => setDraft({ ...draft, tooltip: event.target.value })}
+                />
+              </label>
             </div>
-            <div className="customBlockFieldsHeader"><strong>字段</strong><Button icon={<Plus size={14} />} onClick={addField}>新增字段</Button></div>
+            <div className="customBlockFieldsHeader">
+              <strong>字段</strong>
+              <Button icon={<Plus size={14} />} onClick={addField}>
+                新增字段
+              </Button>
+            </div>
             <div className="customBlockFields">
               <div className="customBlockFieldHeader" aria-hidden>
-                <span /><span>名称</span><span>Path</span><span>控件</span><span>默认值</span><span>可选</span><span>省略</span><span />
+                <span />
+                <span>名称</span>
+                <span>Path</span>
+                <span>控件</span>
+                <span>默认值</span>
+                <span>可选</span>
+                <span>省略</span>
+                <span />
               </div>
               {draft.fields.map((field, index) => (
                 <FieldRow
@@ -665,8 +769,12 @@ export const CustomBlockManager: FC<CustomBlockManagerProps> = ({
                   index={index}
                   key={field.id}
                   onChange={(next) => setDraft({ ...draft, fields: updateAt(draft.fields, index, () => next) })}
-                  onDelete={() => setDraft({ ...draft, fields: draft.fields.filter((_, current) => current !== index) })}
-                  onDragStart={() => { fieldDragIndex.current = index; }}
+                  onDelete={() =>
+                    setDraft({ ...draft, fields: draft.fields.filter((_, current) => current !== index) })
+                  }
+                  onDragStart={() => {
+                    fieldDragIndex.current = index;
+                  }}
                   onDrop={() => {
                     const from = fieldDragIndex.current;
                     if (from == null || from === index) return;
@@ -682,31 +790,96 @@ export const CustomBlockManager: FC<CustomBlockManagerProps> = ({
             <div className="customBlockPointSettings">
               <Checkbox
                 checked={Boolean(draft.pointInteraction)}
-                onChange={(event) => setDraft({ ...draft, pointInteraction: event.target.checked
-                  ? { xField: fieldOptions[0]?.value ?? '', yField: fieldOptions[1]?.value ?? '' }
-                  : undefined })}
-              >为此块提供地图选点</Checkbox>
-              {draft.pointInteraction && <>
-                <label><span>回填 X</span><Select value={draft.pointInteraction.xField} options={fieldOptions} placeholder="选择字段" onChange={(xField) => setDraft({ ...draft, pointInteraction: { ...draft.pointInteraction!, xField } })} /></label>
-                <label><span>回填 Y</span><Select value={draft.pointInteraction.yField} options={fieldOptions} placeholder="选择字段" onChange={(yField) => setDraft({ ...draft, pointInteraction: { ...draft.pointInteraction!, yField } })} /></label>
-                <label><span>回填 floorId</span><Select allowClear value={draft.pointInteraction.floorField} options={fieldOptions} placeholder="可选" onChange={(floorField) => setDraft({ ...draft, pointInteraction: { ...draft.pointInteraction!, floorField } })} /></label>
-              </>}
+                onChange={(event) =>
+                  setDraft({
+                    ...draft,
+                    pointInteraction: event.target.checked
+                      ? { xField: fieldOptions[0]?.value ?? '', yField: fieldOptions[1]?.value ?? '' }
+                      : undefined,
+                  })
+                }
+              >
+                为此块提供地图选点
+              </Checkbox>
+              {draft.pointInteraction && (
+                <>
+                  <label>
+                    <span>回填 X</span>
+                    <Select
+                      value={draft.pointInteraction.xField}
+                      options={fieldOptions}
+                      placeholder="选择字段"
+                      onChange={(xField) =>
+                        setDraft({ ...draft, pointInteraction: { ...draft.pointInteraction!, xField } })
+                      }
+                    />
+                  </label>
+                  <label>
+                    <span>回填 Y</span>
+                    <Select
+                      value={draft.pointInteraction.yField}
+                      options={fieldOptions}
+                      placeholder="选择字段"
+                      onChange={(yField) =>
+                        setDraft({ ...draft, pointInteraction: { ...draft.pointInteraction!, yField } })
+                      }
+                    />
+                  </label>
+                  <label>
+                    <span>回填 floorId</span>
+                    <Select
+                      allowClear
+                      value={draft.pointInteraction.floorField}
+                      options={fieldOptions}
+                      placeholder="可选"
+                      onChange={(floorField) =>
+                        setDraft({ ...draft, pointInteraction: { ...draft.pointInteraction!, floorField } })
+                      }
+                    />
+                  </label>
+                </>
+              )}
               <small>选中这种事件块后，“地图选点”会把结果回填到上面指定的字段。</small>
             </div>
             <div className="customBlockManagerActions">
-              {editingIndex != null && <Button
-                danger
-                data-test-id="custom-block-delete"
-                icon={<Trash2 size={15} />}
-                onClick={() => void removeBlock(editingIndex)}
-              >删除</Button>}
-              {editingIndex != null && <Button icon={<Copy size={15} />} onClick={() => {
-                setDraft({ ...structuredClone(draft), eventType: '', blockType: '', title: `${draft.title} 副本` });
-                setEditingIndex(null);
-                setSamples([]);
-              }}>复制</Button>}
-              <Button icon={<RotateCcw size={15} />} onClick={() => editingIndex == null ? setDraft(createBlankCustomBlockDraft()) : void selectSchema(editingIndex)}>放弃修改</Button>
-              <Button type="primary" icon={<Save size={15} />} disabled={scanning || Boolean(schema.error) || differences.length > 0} onClick={() => void saveDraft()}>保存</Button>
+              {editingIndex != null && (
+                <Button
+                  danger
+                  data-test-id="custom-block-delete"
+                  icon={<Trash2 size={15} />}
+                  onClick={() => void removeBlock(editingIndex)}
+                >
+                  删除
+                </Button>
+              )}
+              {editingIndex != null && (
+                <Button
+                  icon={<Copy size={15} />}
+                  onClick={() => {
+                    setDraft({ ...structuredClone(draft), eventType: '', blockType: '', title: `${draft.title} 副本` });
+                    setEditingIndex(null);
+                    setSamples([]);
+                  }}
+                >
+                  复制
+                </Button>
+              )}
+              <Button
+                icon={<RotateCcw size={15} />}
+                onClick={() =>
+                  editingIndex == null ? setDraft(createBlankCustomBlockDraft()) : void selectSchema(editingIndex)
+                }
+              >
+                放弃修改
+              </Button>
+              <Button
+                type="primary"
+                icon={<Save size={15} />}
+                disabled={scanning || Boolean(schema.error) || differences.length > 0}
+                onClick={() => void saveDraft()}
+              >
+                保存
+              </Button>
             </div>
           </section>
           <aside className="customBlockPreviewPane">
@@ -714,21 +887,34 @@ export const CustomBlockManager: FC<CustomBlockManagerProps> = ({
             <CustomBlockVisualPreview draft={draft} />
             <h4>Round-trip</h4>
             <div className={differences.length ? 'roundTripStatus is-error' : 'roundTripStatus is-ok'}>
-              {samples.length === 0 ? '暂无工程样本；将使用默认模板校验'
-                : differences.length ? `${differences.length}/${samples.length} 个样本发生变化`
+              {samples.length === 0
+                ? '暂无工程样本；将使用默认模板校验'
+                : differences.length
+                  ? `${differences.length}/${samples.length} 个样本发生变化`
                   : `${samples.length} 个样本保持无损`}
             </div>
-            {differences[0] && <pre>{JSON.stringify({
-              source: `${differences[0].sample.source}:${differences[0].sample.path}`,
-              input: differences[0].sample.event,
-              output: differences[0].output,
-            }, null, 2)}</pre>}
+            {differences[0] && (
+              <pre>
+                {JSON.stringify(
+                  {
+                    source: `${differences[0].sample.source}:${differences[0].sample.path}`,
+                    input: differences[0].sample.event,
+                    output: differences[0].output,
+                  },
+                  null,
+                  2,
+                )}
+              </pre>
+            )}
             <Button
               disabled={!draft.previewAdapter || !previewSample}
               onClick={() => {
-                if (draft.previewAdapter && previewSample) void capabilities.preview(buildBlocklyPreview(previewSample, draft.previewAdapter));
+                if (draft.previewAdapter && previewSample)
+                  void capabilities.preview(buildBlocklyPreview(previewSample, draft.previewAdapter));
               }}
-            >预览事件效果</Button>
+            >
+              预览事件效果
+            </Button>
             <small>仅调用编辑器内置安全 adapter，不执行工程插件。</small>
           </aside>
         </div>

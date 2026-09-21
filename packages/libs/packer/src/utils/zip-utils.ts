@@ -1,11 +1,11 @@
-import JSZip from "jszip";
-import { readFile, writeFile, mkdir } from "node:fs/promises";
-import { dirname, join } from "node:path";
-import iconvLite from "iconv-lite";
-import type { FileEntry } from "../types";
+import JSZip from 'jszip';
+import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
+import iconvLite from 'iconv-lite';
+import type { FileEntry } from '../types';
 
 // 重新导出 FileEntry 类型供外部使用
-export type { FileEntry } from "../types";
+export type { FileEntry } from '../types';
 
 // iconv-lite ESM compatibility
 const iconv = iconvLite as unknown as {
@@ -19,7 +19,7 @@ const iconv = iconvLite as unknown as {
  * @returns UTF-8 字符串
  */
 export function decodeGbkFilename(buffer: Buffer): string {
-  return iconv.decode(buffer, "gbk");
+  return iconv.decode(buffer, 'gbk');
 }
 
 /**
@@ -33,11 +33,11 @@ function tryDecodeFilename(filename: string): string {
   // 如果文件名看起来正常，直接返回
   try {
     // 尝试将字符串转为 Buffer 再用 GBK 解码
-    const buffer = Buffer.from(filename, "binary");
-    const decoded = iconv.decode(buffer, "gbk");
+    const buffer = Buffer.from(filename, 'binary');
+    const decoded = iconv.decode(buffer, 'gbk');
 
     // 如果解码后包含中文字符，使用解码后的版本
-    if (/[\u4e00-\u9fa5]/.test(decoded) && !decoded.includes("�")) {
+    if (/[\u4e00-\u9fa5]/.test(decoded) && !decoded.includes('�')) {
       return decoded;
     }
   } catch {
@@ -67,7 +67,7 @@ export async function extractZip(zipPath: string, destDir: string): Promise<void
     } else {
       // 确保父目录存在
       await mkdir(dirname(destPath), { recursive: true });
-      const content = await file.async("nodebuffer");
+      const content = await file.async('nodebuffer');
       await writeFile(destPath, content);
     }
   }
@@ -86,8 +86,8 @@ export async function createZip(files: FileEntry[], outputPath: string): Promise
   }
 
   const content = await zip.generateAsync({
-    type: "nodebuffer",
-    compression: "DEFLATE",
+    type: 'nodebuffer',
+    compression: 'DEFLATE',
     compressionOptions: { level: 9 },
   });
 

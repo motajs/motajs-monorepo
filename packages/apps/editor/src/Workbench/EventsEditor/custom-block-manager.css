@@ -1,50 +1,253 @@
-.customBlockManagerModal.ant-modal { top: 8px; height: min(820px, calc(100vh - 16px)); max-width: calc(100vw - 8px); padding-bottom: 0; }
-.customBlockManagerModal .ant-modal-container { display: flex; flex-direction: column; height: 100%; overflow: hidden; padding: 12px; }
-.customBlockManagerModal .ant-modal-header { margin-bottom: 8px; }
-.customBlockManagerModal .ant-modal-body { display: flex; flex: 1; min-height: 0; flex-direction: column; overflow: hidden; }
-.customBlockManagerModal .ant-alert { margin-bottom: 12px; white-space: pre-wrap; }
-.customBlockManagerLayout { display: grid; flex: 1; grid-template-columns: 220px minmax(760px, 1fr) 380px; gap: 10px; min-height: 0; overflow: hidden; }
-.customBlockList, .customBlockForm, .customBlockPreviewPane { min-width: 0; overflow: auto; border: 1px solid var(--editor-border, #ddd); border-radius: 6px; }
-.customBlockListActions, .customBlockManagerActions, .customBlockFieldsHeader, .customBlockPointSettings, .customBlockScanProgress { display: flex; align-items: center; gap: 8px; }
-.customBlockListActions { position: sticky; top: 0; z-index: 1; padding: 8px; background: var(--editor-bg, #fff); border-bottom: 1px solid var(--editor-border, #ddd); }
-.customBlockListItem { display: grid; grid-template-columns: 18px 1fr 30px; align-items: center; gap: 4px; padding: 7px 6px; cursor: pointer; }
-.customBlockListItem:hover, .customBlockListItem.is-active { background: color-mix(in srgb, #1677ff 12%, transparent); }
-.customBlockDraftItem { grid-template-columns: 18px 1fr; cursor: default; border-bottom: 1px dashed var(--editor-border, #ddd); }
-.customBlockListItem span { min-width: 0; display: flex; flex-direction: column; }
-.customBlockListItem small { overflow: hidden; text-overflow: ellipsis; color: #888; }
-.customBlockForm { padding: 12px; }
-.customBlockFormGrid { display: grid; grid-template-columns: 2fr 2fr 100px 1.4fr; gap: 10px; }
-.customBlockFormGrid label { display: grid; gap: 4px; font-size: 12px; }
-.customBlockFormGrid label.is-wide { grid-column: 1 / -1; }
-.customBlockFieldsHeader { justify-content: space-between; margin: 14px 0 6px; }
-.customBlockFieldHeader, .customBlockFieldRow { display: grid; grid-template-columns: 18px 1fr 1.2fr 115px 1fr 58px 70px 30px; align-items: center; gap: 5px; min-width: 720px; }
-.customBlockFieldHeader { position: sticky; top: 0; z-index: 2; padding: 5px 4px; font-size: 13px; color: #777; background: var(--editor-bg, #fff); border-bottom: 1px solid var(--editor-border, #eee); }
-.customBlockFields { max-height: min(420px, calc(100vh - 390px)); overflow: auto; border: 1px solid var(--editor-border, #eee); border-radius: 4px; }
-.customBlockFieldRow { padding: 5px 4px; border-top: 1px solid var(--editor-border, #eee); }
-.customBlockPathInput { display: block; }
-.customBlockRequired { color: #ff4d4f; font-size: 11px; }
-.customBlockFieldAdvanced { grid-column: 2 / -1; display: flex; align-items: end; flex-wrap: wrap; gap: 8px; padding: 2px 0 5px; }
-.customBlockFieldAdvanced label { display: grid; gap: 3px; min-width: 110px; font-size: 11px; color: #666; }
-.customBlockFieldAdvanced label:first-child { min-width: 320px; }
-.customBlockPointSettings { flex-wrap: wrap; margin-top: 12px; }
-.customBlockPointSettings label { display: flex; align-items: center; gap: 5px; color: #666; font-size: 12px; }
-.customBlockPointSettings label > span { white-space: nowrap; }
-.customBlockPointSettings .ant-select { min-width: 190px; }
-.customBlockPointSettings small { flex-basis: 100%; color: #777; padding-left: 24px; }
-.customBlockManagerActions { justify-content: flex-end; margin-top: 14px; }
-.customBlockPreviewPane { padding: 10px; display: flex; flex-direction: column; gap: 8px; }
-.customBlockPreviewPane h4 { margin: 2px 0; }
-.customBlockVisualPreview { height: 210px; border: 1px solid var(--editor-border, #ddd); background: #f7f7f7; }
-.customBlockPreviewPane pre { max-height: 220px; overflow: auto; margin: 0; padding: 8px; background: rgba(0,0,0,.04); font-size: 11px; white-space: pre-wrap; }
-.roundTripStatus { padding: 7px; border-radius: 4px; }
-.roundTripStatus.is-ok { color: #137333; background: #e9f7ee; }
-.roundTripStatus.is-error { color: #b42318; background: #fff0ee; }
-.customBlockSourceEditor { display: flex; flex: 1; min-height: 0; flex-direction: column; }
-.customBlockSourceEditor textarea { flex: 1; resize: none; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-.customBlockScanProgress { margin-bottom: 12px; }
-.customBlockScanProgress .ant-progress { flex: 1; }
-.blocklyActionField { cursor: pointer; text-decoration: underline; font-weight: 600; }
+.customBlockManagerModal.ant-modal {
+  top: 8px;
+  height: min(820px, calc(100vh - 16px));
+  max-width: calc(100vw - 8px);
+  padding-bottom: 0;
+}
+.customBlockManagerModal .ant-modal-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  padding: 12px;
+}
+.customBlockManagerModal .ant-modal-header {
+  margin-bottom: 8px;
+}
+.customBlockManagerModal .ant-modal-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+.customBlockManagerModal .ant-alert {
+  margin-bottom: 12px;
+  white-space: pre-wrap;
+}
+.customBlockManagerLayout {
+  display: grid;
+  flex: 1;
+  grid-template-columns: 220px minmax(760px, 1fr) 380px;
+  gap: 10px;
+  min-height: 0;
+  overflow: hidden;
+}
+.customBlockList,
+.customBlockForm,
+.customBlockPreviewPane {
+  min-width: 0;
+  overflow: auto;
+  border: 1px solid var(--editor-border, #ddd);
+  border-radius: 6px;
+}
+.customBlockListActions,
+.customBlockManagerActions,
+.customBlockFieldsHeader,
+.customBlockPointSettings,
+.customBlockScanProgress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.customBlockListActions {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 8px;
+  background: var(--editor-bg, #fff);
+  border-bottom: 1px solid var(--editor-border, #ddd);
+}
+.customBlockListItem {
+  display: grid;
+  grid-template-columns: 18px 1fr 30px;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 6px;
+  cursor: pointer;
+}
+.customBlockListItem:hover,
+.customBlockListItem.is-active {
+  background: color-mix(in srgb, #1677ff 12%, transparent);
+}
+.customBlockDraftItem {
+  grid-template-columns: 18px 1fr;
+  cursor: default;
+  border-bottom: 1px dashed var(--editor-border, #ddd);
+}
+.customBlockListItem span {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.customBlockListItem small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #888;
+}
+.customBlockForm {
+  padding: 12px;
+}
+.customBlockFormGrid {
+  display: grid;
+  grid-template-columns: 2fr 2fr 100px 1.4fr;
+  gap: 10px;
+}
+.customBlockFormGrid label {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+}
+.customBlockFormGrid label.is-wide {
+  grid-column: 1 / -1;
+}
+.customBlockFieldsHeader {
+  justify-content: space-between;
+  margin: 14px 0 6px;
+}
+.customBlockFieldHeader,
+.customBlockFieldRow {
+  display: grid;
+  grid-template-columns: 18px 1fr 1.2fr 115px 1fr 58px 70px 30px;
+  align-items: center;
+  gap: 5px;
+  min-width: 720px;
+}
+.customBlockFieldHeader {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 5px 4px;
+  font-size: 13px;
+  color: #777;
+  background: var(--editor-bg, #fff);
+  border-bottom: 1px solid var(--editor-border, #eee);
+}
+.customBlockFields {
+  max-height: min(420px, calc(100vh - 390px));
+  overflow: auto;
+  border: 1px solid var(--editor-border, #eee);
+  border-radius: 4px;
+}
+.customBlockFieldRow {
+  padding: 5px 4px;
+  border-top: 1px solid var(--editor-border, #eee);
+}
+.customBlockPathInput {
+  display: block;
+}
+.customBlockRequired {
+  color: #ff4d4f;
+  font-size: 11px;
+}
+.customBlockFieldAdvanced {
+  grid-column: 2 / -1;
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 2px 0 5px;
+}
+.customBlockFieldAdvanced label {
+  display: grid;
+  gap: 3px;
+  min-width: 110px;
+  font-size: 11px;
+  color: #666;
+}
+.customBlockFieldAdvanced label:first-child {
+  min-width: 320px;
+}
+.customBlockPointSettings {
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.customBlockPointSettings label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #666;
+  font-size: 12px;
+}
+.customBlockPointSettings label > span {
+  white-space: nowrap;
+}
+.customBlockPointSettings .ant-select {
+  min-width: 190px;
+}
+.customBlockPointSettings small {
+  flex-basis: 100%;
+  color: #777;
+  padding-left: 24px;
+}
+.customBlockManagerActions {
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+.customBlockPreviewPane {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.customBlockPreviewPane h4 {
+  margin: 2px 0;
+}
+.customBlockVisualPreview {
+  height: 210px;
+  border: 1px solid var(--editor-border, #ddd);
+  background: #f7f7f7;
+}
+.customBlockPreviewPane pre {
+  max-height: 220px;
+  overflow: auto;
+  margin: 0;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.04);
+  font-size: 11px;
+  white-space: pre-wrap;
+}
+.roundTripStatus {
+  padding: 7px;
+  border-radius: 4px;
+}
+.roundTripStatus.is-ok {
+  color: #137333;
+  background: #e9f7ee;
+}
+.roundTripStatus.is-error {
+  color: #b42318;
+  background: #fff0ee;
+}
+.customBlockSourceEditor {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+.customBlockSourceEditor textarea {
+  flex: 1;
+  resize: none;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.customBlockScanProgress {
+  margin-bottom: 12px;
+}
+.customBlockScanProgress .ant-progress {
+  flex: 1;
+}
+.blocklyActionField {
+  cursor: pointer;
+  text-decoration: underline;
+  font-weight: 600;
+}
 @media (max-width: 1180px) {
-  .customBlockManagerLayout { grid-template-columns: 190px minmax(640px, 1fr); overflow-x: auto; }
-  .customBlockPreviewPane { grid-column: 1 / -1; min-height: 300px; }
+  .customBlockManagerLayout {
+    grid-template-columns: 190px minmax(640px, 1fr);
+    overflow-x: auto;
+  }
+  .customBlockPreviewPane {
+    grid-column: 1 / -1;
+    min-height: 300px;
+  }
 }

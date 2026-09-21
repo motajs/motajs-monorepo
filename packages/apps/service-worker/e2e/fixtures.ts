@@ -17,7 +17,7 @@
  * 绝不能依赖 `open-editor` 这个 test id 来判断是否已 stage：它只由
  * `ProjectView` 在 `service/:id/project/` 渲染，在 `/` 上无论是否 stage 都不存在。
  */
-import { test as base, expect, type Page } from "@playwright/test";
+import { test as base, expect, type Page } from '@playwright/test';
 
 export interface EditorReleaseFixture {
   buildId: string;
@@ -34,20 +34,14 @@ interface EditorHostStatusReply {
 const EDITOR_STATUS_TIMEOUT_MS = 30_000;
 
 /** 缺失前置时给出的精确补救命令。 */
-const EDITOR_RELEASE_REMEDIATION = "pnpm --filter @motajs/service-worker build:with-editor";
+const EDITOR_RELEASE_REMEDIATION = 'pnpm --filter @motajs/service-worker build:with-editor';
 
 /** 在应用根路由读取 service worker 的 `editor.status`（全局状态，与工程无关）。 */
-async function readEditorStatus(
-  page: Page,
-  timeoutMs: number,
-): Promise<EditorHostStatusReply | undefined> {
-  await page.goto("/");
+async function readEditorStatus(page: Page, timeoutMs: number): Promise<EditorHostStatusReply | undefined> {
+  await page.goto('/');
   return await page.evaluate(async (limit): Promise<EditorHostStatusReply | undefined> => {
     const reply = new Promise<unknown>((resolve, reject) => {
-      const timer = window.setTimeout(
-        () => reject(new Error(`editor.status did not answer within ${limit}ms`)),
-        limit,
-      );
+      const timer = window.setTimeout(() => reject(new Error(`editor.status did not answer within ${limit}ms`)), limit);
       const finish = (value: unknown) => {
         window.clearTimeout(timer);
         resolve(value);
@@ -60,32 +54,30 @@ async function readEditorStatus(
         try {
           const registration = await navigator.serviceWorker.ready;
           if (!navigator.serviceWorker.controller) {
-            await new Promise<void>((resolveControl) => navigator.serviceWorker.addEventListener(
-              "controllerchange",
-              () => resolveControl(),
-              { once: true },
-            ));
+            await new Promise<void>((resolveControl) =>
+              navigator.serviceWorker.addEventListener('controllerchange', () => resolveControl(), { once: true }),
+            );
           }
           const controller = navigator.serviceWorker.controller ?? registration.active;
           if (!controller) {
-            fail(new Error("Service Worker did not activate"));
+            fail(new Error('Service Worker did not activate'));
             return;
           }
           const requestId = Date.now();
-          navigator.serviceWorker.addEventListener("message", function listener(event) {
+          navigator.serviceWorker.addEventListener('message', function listener(event) {
             const [id, type, payload] = event.data ?? [];
-            if (id !== requestId || type !== "editor.status") return;
-            navigator.serviceWorker.removeEventListener("message", listener);
+            if (id !== requestId || type !== 'editor.status') return;
+            navigator.serviceWorker.removeEventListener('message', listener);
             if (payload instanceof Error) fail(payload);
             else finish(payload);
           });
-          controller.postMessage([requestId, "editor.status", null]);
+          controller.postMessage([requestId, 'editor.status', null]);
         } catch (error) {
           fail(error);
         }
       })();
     });
-    return await reply as EditorHostStatusReply | undefined;
+    return (await reply) as EditorHostStatusReply | undefined;
   }, timeoutMs);
 }
 
@@ -95,21 +87,19 @@ export const test = base.extend<{ editorRelease: EditorReleaseFixture }>({
   editorRelease: async ({ page }, provide, testInfo) => {
     // 记录本次运行的配置，让报告里能直接看出 MOTA_WITH_EDITOR 的取值。
     testInfo.annotations.push({
-      type: "mota-with-editor",
-      description: process.env.MOTA_WITH_EDITOR ?? "(unset — a staged Editor release is required)",
+      type: 'mota-with-editor',
+      description: process.env.MOTA_WITH_EDITOR ?? '(unset — a staged Editor release is required)',
     });
 
     const status = await readEditorStatus(page, EDITOR_STATUS_TIMEOUT_MS);
-    if (!status || status.status !== "ready") {
+    if (!status || status.status !== 'ready') {
       const detail = status
-        ? `${status.status}${status.reason ? ` / ${status.reason}` : ""}${status.message ? `: ${status.message}` : ""}`
-        : "no reply from the service worker";
+        ? `${status.status}${status.reason ? ` / ${status.reason}` : ''}${status.message ? `: ${status.message}` : ''}`
+        : 'no reply from the service worker';
       // 缺失前置 = 失败，绝不是 skip。`MOTA_WITH_EDITOR=0` 也不是逃生舱。
-      throw new Error(
-        `Editor release is not staged (${detail}). Run \`${EDITOR_RELEASE_REMEDIATION}\` and retry.`,
-      );
+      throw new Error(`Editor release is not staged (${detail}). Run \`${EDITOR_RELEASE_REMEDIATION}\` and retry.`);
     }
-    await provide({ buildId: status.buildId ?? "" });
+    await provide({ buildId: status.buildId ?? '' });
   },
 });
 

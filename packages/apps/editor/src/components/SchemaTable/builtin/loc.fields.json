@@ -5,17 +5,10 @@
   "revision": 3,
   "fields": {
     "loc.events": {
-      "type": [
-        "array",
-        "object",
-        "null"
-      ],
+      "type": ["array", "object", "null"],
       "properties": {
         "data": {
-          "type": [
-            "array",
-            "null"
-          ]
+          "type": ["array", "null"]
         }
       },
       "title": "普通事件",
@@ -36,10 +29,7 @@
       }
     },
     "loc.changeFloor": {
-      "type": [
-        "object",
-        "null"
-      ],
+      "type": ["object", "null"],
       "title": "楼层转换",
       "description": "到达该点时执行的楼层转换；与普通事件同时存在时，普通事件会覆盖楼层转换。",
       "normalizer": "optionalJson",
@@ -58,11 +48,7 @@
       }
     },
     "loc.autoEvent": {
-      "type": [
-        "array",
-        "object",
-        "null"
-      ],
+      "type": ["array", "object", "null"],
       "title": "自动事件",
       "description": "按页管理该点的自动事件；拖动、插入或删除时按列表顺序重编号。",
       "normalizer": "autoEventPages",
@@ -80,10 +66,7 @@
       }
     },
     "loc.beforeBattle": {
-      "type": [
-        "array",
-        "null"
-      ],
+      "type": ["array", "null"],
       "title": "战前事件",
       "description": "在该点触发战斗前执行的事件。",
       "normalizer": "optionalEventList",
@@ -99,10 +82,7 @@
       }
     },
     "loc.afterBattle": {
-      "type": [
-        "array",
-        "null"
-      ],
+      "type": ["array", "null"],
       "title": "战后事件",
       "description": "在该点战斗结束后执行的事件。",
       "normalizer": "optionalEventList",
@@ -118,17 +98,10 @@
       }
     },
     "loc.afterGetItem": {
-      "type": [
-        "array",
-        "object",
-        "null"
-      ],
+      "type": ["array", "object", "null"],
       "properties": {
         "data": {
-          "type": [
-            "array",
-            "null"
-          ]
+          "type": ["array", "null"]
         }
       },
       "title": "道具后事件",
@@ -146,10 +119,7 @@
       }
     },
     "loc.afterOpenDoor": {
-      "type": [
-        "array",
-        "null"
-      ],
+      "type": ["array", "null"],
       "title": "开门后事件",
       "description": "在该点开门完成后执行的事件。",
       "normalizer": "optionalEventList",

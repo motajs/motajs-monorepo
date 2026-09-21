@@ -1,6 +1,4 @@
-export type CommandResult =
-  | { ok: true }
-  | { ok: false; stage: string; error: Error };
+export type CommandResult = { ok: true } | { ok: false; stage: string; error: Error };
 
 export function commandOk(): CommandResult {
   return { ok: true };

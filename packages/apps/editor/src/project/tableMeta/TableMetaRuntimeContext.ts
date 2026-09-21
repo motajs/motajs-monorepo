@@ -42,7 +42,7 @@ export interface TableMetaRuntimeContextOptions {
 }
 
 function isStringArray(value: unknown): value is string[] {
-  return Array.isArray(value) && value.every((item) => typeof item === "string");
+  return Array.isArray(value) && value.every((item) => typeof item === 'string');
 }
 
 function checkUnique(value: unknown): boolean {
@@ -59,9 +59,7 @@ function subarray<T>(current: T[], previous: T[]): T[] | null {
   return current.slice(previous.length);
 }
 
-function createFallbackFunctions(
-  specials: Array<[string | number, string]>,
-): TableMetaRuntimeContext["functions"] {
+function createFallbackFunctions(specials: Array<[string | number, string]>): TableMetaRuntimeContext['functions'] {
   return {
     enemys: {
       getSpecials: () => specials.map(([id, name]) => [id, name]),
@@ -69,9 +67,7 @@ function createFallbackFunctions(
   };
 }
 
-export function createTableMetaRuntimeContext(
-  options: TableMetaRuntimeContextOptions = {},
-): TableMetaRuntimeContext {
+export function createTableMetaRuntimeContext(options: TableMetaRuntimeContextOptions = {}): TableMetaRuntimeContext {
   const imageGroups: Record<string, string[]> = {
     images: [],
     tilesets: [],
@@ -82,22 +78,18 @@ export function createTableMetaRuntimeContext(
     ...(options.images ?? {}),
   };
   const materialImages = Object.fromEntries(
-    Object.entries(imageGroups).map(([key, names]) => [
-      key,
-      Object.fromEntries(names.map((name) => [name, {}])),
-    ]),
+    Object.entries(imageGroups).map(([key, names]) => [key, Object.fromEntries(names.map((name) => [name, {}]))]),
   );
   const data = options.data ?? {};
-  const dataMain = (data.main && typeof data.main === "object")
-    ? data.main as Record<string, unknown>
-    : {};
+  const dataMain = data.main && typeof data.main === 'object' ? (data.main as Record<string, unknown>) : {};
   const floorIds = isStringArray(dataMain.floorIds) ? dataMain.floorIds : [];
-  const normalizeDirectory = (directory?: string) => directory
-    ?.replace(/^\.\//, "")
-    .replace(/^project\//, "")
-    .replace(/\/$/, "")
-    .split("/")
-    .at(-1);
+  const normalizeDirectory = (directory?: string) =>
+    directory
+      ?.replace(/^\.\//, '')
+      .replace(/^project\//, '')
+      .replace(/\/$/, '')
+      .split('/')
+      .at(-1);
   const checkImages = (value: unknown, directory?: string): boolean => {
     if (value == null) return true;
     if (!isStringArray(value)) return false;
@@ -105,12 +97,11 @@ export function createTableMetaRuntimeContext(
     const available = group ? imageGroups[group] : undefined;
     return !available || value.every((name) => available.includes(name));
   };
-  const checkFloorIds = (value: unknown): boolean => (
-    isStringArray(value)
-    && value.length > 0
-    && new Set(value).size === value.length
-    && (floorIds.length === 0 || value.every((id) => floorIds.includes(id)))
-  );
+  const checkFloorIds = (value: unknown): boolean =>
+    isStringArray(value) &&
+    value.length > 0 &&
+    new Set(value).size === value.length &&
+    (floorIds.length === 0 || value.every((id) => floorIds.includes(id)));
   const coreMaterial = { images: materialImages };
 
   const context: TableMetaRuntimeContext = {
@@ -137,10 +128,12 @@ export function createTableMetaRuntimeContext(
       },
     },
     functions: createFallbackFunctions(options.specials ?? []),
-    confirm: options.confirm ?? ((message) => {
-      if (typeof window === "undefined" || typeof window.confirm !== "function") return true;
-      return window.confirm(message);
-    }),
+    confirm:
+      options.confirm ??
+      ((message) => {
+        if (typeof window === 'undefined' || typeof window.confirm !== 'function') return true;
+        return window.confirm(message);
+      }),
   };
   return context;
 }

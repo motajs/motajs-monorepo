@@ -1,5 +1,5 @@
-import { tryDo } from "../../exception";
-import { isMatching, P } from "ts-pattern";
+import { tryDo } from '../../exception';
+import { isMatching, P } from 'ts-pattern';
 
 export class MessageType<ReqT, ResT> {
   constructor(public readonly type: string) {}
@@ -60,7 +60,8 @@ export type MessageHandler<ReqT, ResT> = (req: ReqT) => ResT | Promise<ResT>;
 
 export type MessageRoute<ReqT, ResT> = [MessageType<ReqT, ResT>, MessageHandler<ReqT, ResT>];
 
-export const defineRoute = <ReqT, ResT>(type: MessageType<ReqT, ResT>, handler: (req: ReqT) => ResT | Promise<ResT>) => [type, handler] as MessageRoute<ReqT, ResT>;
+export const defineRoute = <ReqT, ResT>(type: MessageType<ReqT, ResT>, handler: (req: ReqT) => ResT | Promise<ResT>) =>
+  [type, handler] as MessageRoute<ReqT, ResT>;
 
 export class MessageServer {
   private readonly handlerMap: Map<string, MessageHandler<unknown, unknown>>;
@@ -80,7 +81,10 @@ export class MessageServer {
       console.warn(`unexcpeted message type ${type}`, message);
       return;
     }
-    const res = await tryDo(() => handler(req), (e) => e);
+    const res = await tryDo(
+      () => handler(req),
+      (e) => e,
+    );
     return [requestId, type, res];
   }
 }

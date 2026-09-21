@@ -7,13 +7,7 @@
 import type * as Blockly from 'blockly';
 import { javascriptGenerator, Order } from 'blockly/javascript';
 
-import type {
-  BlockState,
-  ConnectionState,
-  EventData,
-  EventObject,
-  ParseContext,
-} from '../parser/types';
+import type { BlockState, ConnectionState, EventData, EventObject, ParseContext } from '../parser/types';
 import type { BlockSchema } from '../registry/types';
 import { createExpressionBlock, parseEventList, stripQuotes } from '../registry/utils';
 import { BlockColours } from './colours';
@@ -26,12 +20,13 @@ function conditionInput(condition: string): ConnectionState {
     : replaceExpressionForDisplay(condition);
   if (!editorConfigService.get('disableBlocklyExpandCompare', false)) {
     const match = display.match(/^(.+?)(===|!==|==|!=|>=|<=|>|<)(.+)$/);
-    if (match) return {
-      block: {
-        type: 'mota_compare',
-        fields: { LEFT: match[1], OPERATOR: match[2], RIGHT: match[3] },
-      },
-    };
+    if (match)
+      return {
+        block: {
+          type: 'mota_compare',
+          fields: { LEFT: match[1], OPERATOR: match[2], RIGHT: match[3] },
+        },
+      };
   }
   return createExpressionBlock(display);
 }
@@ -69,9 +64,7 @@ export const expressionSchema: BlockSchema = {
   // 值块生成器返回 [code, order]
   generator: (block: Blockly.Block): [string, number] => {
     const raw = String(block.getFieldValue('EXPR') ?? '');
-    const expr = editorConfigService.get('disableBlocklyReplace', false)
-      ? raw
-      : replaceExpressionFromDisplay(raw);
+    const expr = editorConfigService.get('disableBlocklyReplace', false) ? raw : replaceExpressionFromDisplay(raw);
     return [JSON.stringify(expr), Order.ATOMIC];
   },
 };
@@ -83,10 +76,20 @@ export const compareSchema: BlockSchema = {
     message0: '%1 %2 %3',
     args0: [
       { type: 'field_input', name: 'LEFT', text: 'flag:value' },
-      { type: 'field_dropdown', name: 'OPERATOR', options: [
-        ['等于', '=='], ['严格等于', '==='], ['不等于', '!='], ['严格不等于', '!=='],
-        ['大于', '>'], ['小于', '<'], ['不小于', '>='], ['不大于', '<='],
-      ] },
+      {
+        type: 'field_dropdown',
+        name: 'OPERATOR',
+        options: [
+          ['等于', '=='],
+          ['严格等于', '==='],
+          ['不等于', '!='],
+          ['严格不等于', '!=='],
+          ['大于', '>'],
+          ['小于', '<'],
+          ['不小于', '>='],
+          ['不大于', '<='],
+        ],
+      },
       { type: 'field_input', name: 'RIGHT', text: '0' },
     ],
     inputsInline: true,
@@ -160,8 +163,7 @@ export const if1Schema: BlockSchema = {
     };
   },
   generator: (block: Blockly.Block): string => {
-    const condition =
-      javascriptGenerator.valueToCode(block, 'CONDITION', Order.NONE) || '"true"';
+    const condition = javascriptGenerator.valueToCode(block, 'CONDITION', Order.NONE) || '"true"';
     const doTrue = javascriptGenerator.statementToCode(block, 'DO_TRUE');
 
     const conditionStr = stripQuotes(condition);
@@ -246,8 +248,7 @@ export const ifSchema: BlockSchema = {
     };
   },
   generator: (block: Blockly.Block): string => {
-    const condition =
-      javascriptGenerator.valueToCode(block, 'CONDITION', Order.NONE) || '"true"';
+    const condition = javascriptGenerator.valueToCode(block, 'CONDITION', Order.NONE) || '"true"';
     const doTrue = javascriptGenerator.statementToCode(block, 'DO_TRUE');
     const doFalse = javascriptGenerator.statementToCode(block, 'DO_FALSE');
 
@@ -321,8 +322,7 @@ export const whileSchema: BlockSchema = {
     };
   },
   generator: (block: Blockly.Block): string => {
-    const condition =
-      javascriptGenerator.valueToCode(block, 'CONDITION', Order.NONE) || '"true"';
+    const condition = javascriptGenerator.valueToCode(block, 'CONDITION', Order.NONE) || '"true"';
     const doCode = javascriptGenerator.statementToCode(block, 'DO');
 
     const conditionStr = stripQuotes(condition);
@@ -394,8 +394,7 @@ export const doWhileSchema: BlockSchema = {
     };
   },
   generator: (block: Blockly.Block): string => {
-    const condition =
-      javascriptGenerator.valueToCode(block, 'CONDITION', Order.NONE) || '"true"';
+    const condition = javascriptGenerator.valueToCode(block, 'CONDITION', Order.NONE) || '"true"';
     const doCode = javascriptGenerator.statementToCode(block, 'DO');
 
     const conditionStr = stripQuotes(condition);
@@ -477,8 +476,7 @@ export const forSchema: BlockSchema = {
     };
   },
   generator: (block: Blockly.Block): string => {
-    const varName =
-      javascriptGenerator.valueToCode(block, 'VAR', Order.NONE) || '"temp:A"';
+    const varName = javascriptGenerator.valueToCode(block, 'VAR', Order.NONE) || '"temp:A"';
     const from = block.getFieldValue('FROM');
     const to = block.getFieldValue('TO');
     const step = block.getFieldValue('STEP');

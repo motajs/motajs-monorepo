@@ -1,19 +1,19 @@
-import type { LocPos, LocSelection } from "@/stores/locState";
-import type { FloorData } from "@/types";
+import type { LocPos, LocSelection } from '@/stores/locState';
+import type { FloorData } from '@/types';
 
 /**
  * 楼层文件中按 x,y 坐标索引的位置事件字段。
  */
 export const LOC_FIELDS = [
-  "events",
-  "autoEvent",
-  "changeFloor",
-  "beforeBattle",
-  "afterBattle",
-  "afterGetItem",
-  "afterOpenDoor",
-  "cannotMove",
-  "cannotMoveIn",
+  'events',
+  'autoEvent',
+  'changeFloor',
+  'beforeBattle',
+  'afterBattle',
+  'afterGetItem',
+  'afterOpenDoor',
+  'cannotMove',
+  'cannotMoveIn',
 ] as const;
 
 export type LocField = (typeof LOC_FIELDS)[number];
@@ -37,10 +37,7 @@ export function locKey(pos: LocPos): string {
   return `${pos.x},${pos.y}`;
 }
 
-export function resolveLocTarget(
-  selection: LocSelection | null,
-  fallbackFloorId?: string,
-): LocTarget | null {
+export function resolveLocTarget(selection: LocSelection | null, fallbackFloorId?: string): LocTarget | null {
   if (!selection) return null;
   const floorId = selection.floorId ?? fallbackFloorId;
   if (!floorId) return null;
@@ -58,7 +55,7 @@ export function getLocDataFromFloor(floorData: FloorData, pos: LocPos): LocData 
   for (const field of LOC_FIELDS) {
     const fieldData = floorData[field];
     locData[field] =
-      fieldData && typeof fieldData === "object" && key in fieldData
+      fieldData && typeof fieldData === 'object' && key in fieldData
         ? (fieldData as Record<string, unknown>)[key]
         : null;
   }
@@ -69,13 +66,13 @@ export function getLocDataFromFloor(floorData: FloorData, pos: LocPos): LocData 
 export function isLocValuePresent(value: unknown): boolean {
   if (value == null) return false;
   if (Array.isArray(value)) return value.length > 0;
-  if (typeof value === "object") return Object.keys(value).length > 0;
+  if (typeof value === 'object') return Object.keys(value).length > 0;
   return true;
 }
 
-export function getAutoEventPageIds(locData: Pick<LocData, "autoEvent">): string[] {
+export function getAutoEventPageIds(locData: Pick<LocData, 'autoEvent'>): string[] {
   const autoEvent = locData.autoEvent;
-  if (!autoEvent || typeof autoEvent !== "object" || Array.isArray(autoEvent)) return [];
+  if (!autoEvent || typeof autoEvent !== 'object' || Array.isArray(autoEvent)) return [];
   return Object.keys(autoEvent).sort((a, b) => Number(a) - Number(b));
 }
 

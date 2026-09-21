@@ -150,11 +150,7 @@ export function getByFieldPath(obj: unknown, fieldPath: string): unknown {
  * setByFieldPath(obj, "['a']['b']['c']", 'value');
  * // obj = { a: { b: { c: 'value' } } }
  */
-export function setByFieldPath(
-  obj: Record<string, unknown>,
-  fieldPath: string,
-  value: unknown
-): void {
+export function setByFieldPath(obj: Record<string, unknown>, fieldPath: string, value: unknown): void {
   if (!fieldPath) return;
   const keys = parseFieldPath(fieldPath);
   if (keys.length === 0) return;
@@ -173,10 +169,7 @@ export function setByFieldPath(
  * deleteByFieldPath(obj, "['a']['b']['c']"); // true
  * // obj = { a: { b: {} } }
  */
-export function deleteByFieldPath(
-  obj: Record<string, unknown>,
-  fieldPath: string
-): boolean {
+export function deleteByFieldPath(obj: Record<string, unknown>, fieldPath: string): boolean {
   if (!fieldPath) return false;
   const keys = parseFieldPath(fieldPath);
   if (keys.length === 0) return false;

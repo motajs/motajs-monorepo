@@ -14,7 +14,9 @@ export const SearchFlagsContent: FC<SearchFlagsContentProps> = ({ selectedFlag, 
       <p style={{ marginLeft: 10 }}>该变量出现的所有位置如下：</p>
       <ul>
         {list.map((item) => (
-          <li key={`${item.source}:${item.path}`}>{item.label} ({item.path})</li>
+          <li key={`${item.source}:${item.path}`}>
+            {item.label} ({item.path})
+          </li>
         ))}
       </ul>
     </div>

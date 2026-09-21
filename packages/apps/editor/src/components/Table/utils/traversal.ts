@@ -6,8 +6,11 @@
 
 import type { CommentObject, FieldArgs, FieldConfig, TableNode } from '../types';
 import { getShortField } from '@/utils/fieldPath';
-import { bindTableMetaContext, getTableMetaContext, resolveTableMetaFunction } from '@/project/tableMeta/TableMetaEvaluator';
-
+import {
+  bindTableMetaContext,
+  getTableMetaContext,
+  resolveTableMetaFunction,
+} from '@/project/tableMeta/TableMetaEvaluator';
 
 /**
  * Default field configuration object.
@@ -36,17 +39,14 @@ export const defaultCobj: FieldConfig = {
  * Resolve a potentially dynamic configuration value.
  * If the value is a function, call it with the args; otherwise return the value.
  */
-function resolveConfigValue<T>(
-  value: T | ((args: FieldArgs) => T) | undefined,
-  args: FieldArgs,
-  defaultValue: T
-): T {
+function resolveConfigValue<T>(value: T | ((args: FieldArgs) => T) | undefined, args: FieldArgs, defaultValue: T): T {
   if (value === undefined) {
     return defaultValue;
   }
   if (typeof value === 'function') {
-    return resolveTableMetaFunction(value as (args: FieldArgs) => T, args, args.field, defaultValue)
-      .value ?? defaultValue;
+    return (
+      resolveTableMetaFunction(value as (args: FieldArgs) => T, args, args.field, defaultValue).value ?? defaultValue
+    );
   }
   return value;
 }
@@ -54,11 +54,7 @@ function resolveConfigValue<T>(
 /**
  * Build a merged configuration object from parent config and defaults.
  */
-function buildFieldConfig(
-  parentCobj: CommentObject | undefined,
-  key: string,
-  args: FieldArgs
-): FieldConfig {
+function buildFieldConfig(parentCobj: CommentObject | undefined, key: string, args: FieldArgs): FieldConfig {
   let rawConfig: FieldConfig | CommentObject | undefined;
 
   if (parentCobj?._data) {
@@ -146,7 +142,7 @@ function buildFieldConfig(
  */
 export function buildTableTree(
   data: Record<string, unknown>,
-  commentObj: CommentObject
+  commentObj: CommentObject,
 ): { rootNodes: TableNode[]; gapFields: string[] } {
   const gapFields: string[] = [];
 
@@ -157,7 +153,7 @@ export function buildTableTree(
     parentField: string,
     parentCfield: string,
     parentVobj: Record<string, unknown>,
-    parentCobj: CommentObject | undefined
+    parentCobj: CommentObject | undefined,
   ): TableNode[] {
     const nodes: TableNode[] = [];
 
@@ -227,12 +223,7 @@ export function buildTableTree(
           nestedCobj = parentCobj._data[key] as CommentObject | undefined;
         }
 
-        const children = traverse(
-          field,
-          cfield,
-          (vobj as Record<string, unknown>) || {},
-          nestedCobj
-        );
+        const children = traverse(field, cfield, (vobj as Record<string, unknown>) || {}, nestedCobj);
 
         nodes.push({
           field,

@@ -18,9 +18,15 @@ test('registers an unknown event as a lossless project custom block', async ({ p
   const manager = page.locator('.customBlockManagerModal');
   await expect(manager).toBeVisible();
   const expectedManagerHeight = await page.evaluate(() => Math.min(820, window.innerHeight - 16));
-  await expect.poll(() => manager.evaluate((element) => element.getBoundingClientRect().height)).toBe(expectedManagerHeight);
-  await expect.poll(() => manager.locator('.ant-modal-container').evaluate((element) => element.getBoundingClientRect().height)).toBe(expectedManagerHeight);
-  expect(await page.locator('.ant-modal-wrap').evaluate((wrap) => wrap.scrollHeight <= wrap.clientHeight + 1)).toBe(true);
+  await expect
+    .poll(() => manager.evaluate((element) => element.getBoundingClientRect().height))
+    .toBe(expectedManagerHeight);
+  await expect
+    .poll(() => manager.locator('.ant-modal-container').evaluate((element) => element.getBoundingClientRect().height))
+    .toBe(expectedManagerHeight);
+  expect(await page.locator('.ant-modal-wrap').evaluate((wrap) => wrap.scrollHeight <= wrap.clientHeight + 1)).toBe(
+    true,
+  );
   await expect(manager.getByLabel('事件 type')).toHaveValue('');
   await expect(manager.locator('.customBlockFieldRow')).toHaveCount(0);
   await expect(manager.getByTestId('custom-block-unsaved-draft')).toContainText('未保存草稿');
@@ -41,9 +47,11 @@ test('registers an unknown event as a lossless project custom block', async ({ p
   await expect(manager.locator('.customBlockVisualPreview .blocklyBlockCanvas > g')).toHaveCount(1);
   await expect(manager.locator('.customBlockFieldAdvanced')).toContainText('补全源');
   await expect(manager.locator('.customBlockFieldAdvanced')).toContainText('素材选择');
-  expect(await manager.locator('.customBlockFieldHeader').evaluate((header) => (
-    header.parentElement?.classList.contains('customBlockFields')
-  ))).toBe(true);
+  expect(
+    await manager
+      .locator('.customBlockFieldHeader')
+      .evaluate((header) => header.parentElement?.classList.contains('customBlockFields')),
+  ).toBe(true);
   await manager.getByRole('button', { name: 'Close' }).click();
 
   const event = {
@@ -61,13 +69,19 @@ test('registers an unknown event as a lossless project custom block', async ({ p
 
   await expect(manager).toBeVisible();
   await expect(manager.getByLabel('事件 type')).toHaveValue('dialogue');
-  await expect.poll(() => manager.evaluate((element) => element.getBoundingClientRect().height)).toBe(expectedManagerHeight);
+  await expect
+    .poll(() => manager.evaluate((element) => element.getBoundingClientRect().height))
+    .toBe(expectedManagerHeight);
   await expect(manager.locator('.customBlockFieldRow')).toHaveCount(4);
   await expect(manager.locator('.roundTripStatus')).toContainText('保持无损');
   await expect(manager.locator('.customBlockVisualPreview .blocklyBlockCanvas > g')).toHaveCount(1);
-  const fieldValues = await manager.locator('.customBlockFieldRow').evaluateAll((rows) => rows.map((row) => (
-    Array.from(row.querySelectorAll('input')).slice(0, 2).map((input) => input.value)
-  )));
+  const fieldValues = await manager.locator('.customBlockFieldRow').evaluateAll((rows) =>
+    rows.map((row) =>
+      Array.from(row.querySelectorAll('input'))
+        .slice(0, 2)
+        .map((input) => input.value),
+    ),
+  );
   expect(fieldValues).toContainEqual(['literal.key', '["literal.key"]']);
 
   const write = sandbox.waitForWrite(PACK_PATH);

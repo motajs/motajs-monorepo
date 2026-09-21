@@ -4,7 +4,7 @@
  * 提供用于读写 h5animate 二进制格式的工具类
  */
 
-import { H5AnimateError, H5AnimateErrorCode } from "./errors.js";
+import { H5AnimateError, H5AnimateErrorCode } from './errors.js';
 
 /**
  * 二进制数据解析器
@@ -36,7 +36,7 @@ export class BinaryParser {
     this.checkBounds(length);
     const bytes = this.buffer.subarray(this.offset, this.offset + length);
     this.offset += length;
-    return bytes.toString("ascii");
+    return bytes.toString('ascii');
   }
 
   /**
@@ -101,7 +101,7 @@ export class BinaryWriter {
    * 写入 ASCII 字符串
    */
   writeString(value: string): void {
-    const bytesWritten = this.buffer.write(value, this.offset, "ascii");
+    const bytesWritten = this.buffer.write(value, this.offset, 'ascii');
     this.offset += bytesWritten;
   }
 

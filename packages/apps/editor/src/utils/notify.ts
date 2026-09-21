@@ -1,6 +1,6 @@
-import type { CommandResult } from "@/project/commands";
+import type { CommandResult } from '@/project/commands';
 
-export type NotificationLevel = "success" | "error" | "info";
+export type NotificationLevel = 'success' | 'error' | 'info';
 
 export interface EditorNotification {
   level: NotificationLevel;
@@ -16,21 +16,21 @@ export function subscribeNotifications(listener: (notification: EditorNotificati
 
 function emit(notification: EditorNotification): void {
   if (listeners.size > 0) listeners.forEach((listener) => listener(notification));
-  else if (notification.level === "error") console.error(notification.message);
+  else if (notification.level === 'error') console.error(notification.message);
   else console.info(notification.message);
 }
 
 export function notifySuccess(message: string): void {
-  emit({ level: "success", message });
+  emit({ level: 'success', message });
 }
 
 export function notifyError(error: unknown): void {
   const message = error instanceof Error ? error.message : String(error);
-  emit({ level: "error", message });
+  emit({ level: 'error', message });
 }
 
 export function notifyInfo(message: string): void {
-  emit({ level: "info", message });
+  emit({ level: 'info', message });
 }
 
 export function notifyCommandResult(result: CommandResult, successMessage: string): boolean {

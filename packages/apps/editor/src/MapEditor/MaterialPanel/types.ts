@@ -2,8 +2,8 @@
  * 素材面板类型定义
  */
 
-import type { GridPOD, LocPOD } from "@/utils/coordinate";
-import type { MaterialLayoutKind } from "./layout";
+import type { GridPOD, LocPOD } from '@/utils/coordinate';
+import type { MaterialLayoutKind } from './layout';
 
 /** 清除块 */
 export type ClearBlock = 0;
@@ -21,7 +21,6 @@ export interface BlockInfo {
 
 /** 选中的素材 */
 export type SelectedBlock = ClearBlock | BlockInfo;
-
 
 /** 素材图片组件 props */
 export interface MaterialImageProps {
@@ -44,13 +43,7 @@ export interface MaterialImageProps {
   /** 素材的逻辑布局类型 */
   layoutKind?: MaterialLayoutKind;
   /** 点击事件 */
-  onClick: (
-    id: string,
-    gridLoc: LocPOD,
-    grid: GridPOD,
-    size: GridPOD,
-    imageGridSize: GridPOD,
-  ) => void;
+  onClick: (id: string, gridLoc: LocPOD, grid: GridPOD, size: GridPOD, imageGridSize: GridPOD) => void;
 }
 
 /** 素材面板 props */

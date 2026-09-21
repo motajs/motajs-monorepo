@@ -5,11 +5,11 @@
  * 提供响应式的状态订阅机制。
  */
 
-import { Store } from "@tanstack/store";
-import { useStore } from "@tanstack/react-store";
-import type { PrefabInfo } from "@/services/prefab";
+import { Store } from '@tanstack/store';
+import { useStore } from '@tanstack/react-store';
+import type { PrefabInfo } from '@/services/prefab';
 
-export type PrefabSelectionSource = "material" | "map";
+export type PrefabSelectionSource = 'material' | 'map';
 
 export interface PrefabSelection {
   info: PrefabInfo;
@@ -42,10 +42,7 @@ export function setCurrentPrefabSelection(selection: PrefabSelection | null): vo
  *
  * 素材和地图选择通过此入口更新 prefab 游标。
  */
-export function setCurrentPrefabInfo(
-  info: PrefabInfo | null,
-  source: PrefabSelectionSource,
-): void {
+export function setCurrentPrefabInfo(info: PrefabInfo | null, source: PrefabSelectionSource): void {
   prefabStateStore.setState((state) => ({
     ...state,
     currentSelection: info ? { info, source } : null,

@@ -50,50 +50,56 @@ export function parseTextDrawingPreview(content: string): UIData[] {
   return result;
 }
 
-export function buildBlocklyPreview(
-  event: unknown,
-  adapter: BlocklyPreviewAdapterId,
-): BlocklyPreviewResult {
+export function buildBlocklyPreview(event: unknown, adapter: BlocklyPreviewAdapterId): BlocklyPreviewResult {
   const diagnostics: BlocklyInteractionDiagnostic[] = [];
   let staticPreview: UIData[] = [];
 
   if (adapter === 'textDrawing') {
-    const content = typeof event === 'string'
-      ? event
-      : String((event as Record<string, unknown> | null)?.text ?? '');
+    const content = typeof event === 'string' ? event : String((event as Record<string, unknown> | null)?.text ?? '');
     staticPreview = parseTextDrawingPreview(content);
-    if (staticPreview.length === 0) diagnostics.push({
-      code: 'preview.text-drawing-empty',
-      message: '没有找到可静态预览的绘图转义指令',
-      severity: 'info',
-    });
+    if (staticPreview.length === 0)
+      diagnostics.push({
+        code: 'preview.text-drawing-empty',
+        message: '没有找到可静态预览的绘图转义指令',
+        severity: 'info',
+      });
   } else if (adapter === 'floorImage' && event && typeof event === 'object') {
     const image = event as Record<string, unknown>;
     if (typeof image.name === 'string') {
       const preview: Record<string, unknown> = {
-        type: 'drawImage', image: image.name, x: image.x ?? 0, y: image.y ?? 0,
+        type: 'drawImage',
+        image: image.name,
+        x: image.x ?? 0,
+        y: image.y ?? 0,
       };
       if (image.sx != null) {
-        preview.x1 = image.sx; preview.y1 = image.sy ?? 0;
-        preview.w1 = image.w; preview.h1 = image.h;
-        preview.w = image.w; preview.h = image.h;
+        preview.x1 = image.sx;
+        preview.y1 = image.sy ?? 0;
+        preview.w1 = image.w;
+        preview.h1 = image.h;
+        preview.w = image.w;
+        preview.h = image.h;
       }
       staticPreview = [preview];
     }
   } else if (event && typeof event === 'object') {
     const record = event as Record<string, unknown>;
     if (record.type === 'previewUI') {
-      staticPreview = Array.isArray(record.action) ? record.action as UIData[] : [];
+      staticPreview = Array.isArray(record.action) ? (record.action as UIData[]) : [];
     } else if (adapter === 'waitRect') {
       const px = Array.isArray(record.px) ? record.px : [];
       const py = Array.isArray(record.py) ? record.py : [];
       if (px.length >= 2 && py.length >= 2) {
-        staticPreview = [{
-          type: 'fillRect', x: px[0], y: py[0],
-          width: Number(px[1]) - Number(px[0]),
-          height: Number(py[1]) - Number(py[0]),
-          style: [255, 0, 0, 0.4],
-        }];
+        staticPreview = [
+          {
+            type: 'fillRect',
+            x: px[0],
+            y: py[0],
+            width: Number(px[1]) - Number(px[0]),
+            height: Number(py[1]) - Number(py[0]),
+            style: [255, 0, 0, 0.4],
+          },
+        ];
       }
     } else {
       staticPreview = [record];
@@ -102,11 +108,12 @@ export function buildBlocklyPreview(
     staticPreview = [event];
   }
 
-  if (staticPreview.length === 0 && diagnostics.length === 0) diagnostics.push({
-    code: 'preview.unsupported',
-    message: '该事件包含无法静态确认的预览数据，可在 runtime 可用时尝试增强预览',
-    severity: 'warning',
-  });
+  if (staticPreview.length === 0 && diagnostics.length === 0)
+    diagnostics.push({
+      code: 'preview.unsupported',
+      message: '该事件包含无法静态确认的预览数据，可在 runtime 可用时尝试增强预览',
+      severity: 'warning',
+    });
 
   return {
     staticPreview,

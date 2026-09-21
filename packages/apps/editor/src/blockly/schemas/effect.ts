@@ -27,7 +27,14 @@ export const animateSchema: BlockSchema = {
     message0: '播放动画 %1 位置模式 %2 [%3,%4] 相对窗口 %5 异步 %6',
     args0: [
       { type: 'field_input', name: 'NAME', text: '' },
-      { type: 'field_dropdown', name: 'LOC_MODE', options: [['坐标', 'loc'], ['跟随勇士', 'hero']] },
+      {
+        type: 'field_dropdown',
+        name: 'LOC_MODE',
+        options: [
+          ['坐标', 'loc'],
+          ['跟随勇士', 'hero'],
+        ],
+      },
       { type: 'field_input', name: 'X', text: '' },
       { type: 'field_input', name: 'Y', text: '' },
       { type: 'field_checkbox', name: 'ALIGN_WINDOW', checked: false },
@@ -109,7 +116,14 @@ export const stopAnimateSchema: BlockSchema = {
     match: { path: 'type', equals: 'stopAnimate' },
     template: { type: 'stopAnimate' },
     bindings: [
-      { input: 'DO_CALLBACK', kind: 'field', path: 'doCallback', valueType: 'boolean', default: false, omitWhenDefault: true },
+      {
+        input: 'DO_CALLBACK',
+        kind: 'field',
+        path: 'doCallback',
+        valueType: 'boolean',
+        default: false,
+        omitWhenDefault: true,
+      },
     ],
   },
 };
@@ -278,7 +292,11 @@ export const resumeBgmSchema: BlockSchema = {
   },
   category: 'effect',
   fieldMapping: {
-    RESUME: { eventField: 'resume', parse: (v) => v === true, generate: (v) => v === 'TRUE' || v === true ? true : undefined },
+    RESUME: {
+      eventField: 'resume',
+      parse: (v) => v === true,
+      generate: (v) => (v === 'TRUE' || v === true ? true : undefined),
+    },
   },
 };
 
@@ -314,7 +332,11 @@ export const setVolumeSchema: BlockSchema = {
       generate: (v) => parseInt(v as string) || 100,
     },
     TIME: { eventField: 'time', parse: (v) => expression(v), generate: (v) => expressionValue(v as string) },
-    ASYNC: { eventField: 'async', parse: (v) => v === true, generate: (v) => v === 'TRUE' || v === true ? true : undefined },
+    ASYNC: {
+      eventField: 'async',
+      parse: (v) => v === true,
+      generate: (v) => (v === 'TRUE' || v === true ? true : undefined),
+    },
   },
 };
 
@@ -541,7 +563,15 @@ export const vibrateSchema: BlockSchema = {
     type: 'mota_vibrate_s',
     message0: '画面震动 方向 %1 时间 %2 速度 %3 振幅 %4 异步 %5',
     args0: [
-      { type: 'field_dropdown', name: 'DIRECTION', options: [['水平', 'horizontal'], ['垂直', 'vertical'], ['随机', 'random']] },
+      {
+        type: 'field_dropdown',
+        name: 'DIRECTION',
+        options: [
+          ['水平', 'horizontal'],
+          ['垂直', 'vertical'],
+          ['随机', 'random'],
+        ],
+      },
       { type: 'field_input', name: 'TIME', text: '' },
       { type: 'field_input', name: 'SPEED', text: '10' },
       { type: 'field_input', name: 'POWER', text: '10' },
@@ -605,7 +635,14 @@ export const waitSchema: BlockSchema = {
     match: { path: 'type', equals: 'wait' },
     template: { type: 'wait' },
     bindings: [
-      { input: 'FORCE_CHILD', kind: 'field', path: 'forceChild', valueType: 'boolean', default: false, omitWhenDefault: true },
+      {
+        input: 'FORCE_CHILD',
+        kind: 'field',
+        path: 'forceChild',
+        valueType: 'boolean',
+        default: false,
+        omitWhenDefault: true,
+      },
       { input: 'TIMEOUT', kind: 'field', path: 'timeout', valueType: 'number', optional: true },
       { input: 'CASES', kind: 'statement', path: 'data', optional: true },
     ],
@@ -625,8 +662,12 @@ export const waitKeyboardCaseSchema: BlockSchema = {
     ],
     message1: '%1',
     args1: [{ type: 'input_statement', name: 'ACTION' }],
-    previousStatement: null, nextStatement: null, inputsInline: true, colour: waitCaseColour,
-    tooltip: '等待键盘输入', helpUrl: '/_docs/#/instruction',
+    previousStatement: null,
+    nextStatement: null,
+    inputsInline: true,
+    colour: waitCaseColour,
+    tooltip: '等待键盘输入',
+    helpUrl: '/_docs/#/instruction',
   },
   event: {
     match: { path: 'case', equals: 'keyboard' },
@@ -646,14 +687,20 @@ export const waitMouseCaseSchema: BlockSchema = {
     type: 'mota_wait_mouse_s',
     message0: '点击的场合 像素x范围 %1 ~ %2；y范围 %3 ~ %4 不进行剩余判定 %5',
     args0: [
-      { type: 'field_input', name: 'PX0', text: '0' }, { type: 'field_input', name: 'PX1', text: '32' },
-      { type: 'field_input', name: 'PY0', text: '0' }, { type: 'field_input', name: 'PY1', text: '32' },
+      { type: 'field_input', name: 'PX0', text: '0' },
+      { type: 'field_input', name: 'PX1', text: '32' },
+      { type: 'field_input', name: 'PY0', text: '0' },
+      { type: 'field_input', name: 'PY1', text: '32' },
       { type: 'field_checkbox', name: 'BREAK', checked: false },
     ],
     message1: '%1',
     args1: [{ type: 'input_statement', name: 'ACTION' }],
-    previousStatement: null, nextStatement: null, inputsInline: true, colour: waitCaseColour,
-    tooltip: '等待鼠标或触摸输入', helpUrl: '/_docs/#/instruction',
+    previousStatement: null,
+    nextStatement: null,
+    inputsInline: true,
+    colour: waitCaseColour,
+    tooltip: '等待鼠标或触摸输入',
+    helpUrl: '/_docs/#/instruction',
   },
   event: {
     match: { path: 'case', equals: 'mouse' },
@@ -680,12 +727,18 @@ export const waitConditionCaseSchema: BlockSchema = {
       { type: 'field_input', name: 'CONDITION', text: 'true' },
       { type: 'field_checkbox', name: 'BREAK', checked: false },
     ],
-    message1: '%1', args1: [{ type: 'input_statement', name: 'ACTION' }],
-    previousStatement: null, nextStatement: null, inputsInline: true, colour: waitCaseColour,
-    tooltip: '等待自定义条件', helpUrl: '/_docs/#/instruction',
+    message1: '%1',
+    args1: [{ type: 'input_statement', name: 'ACTION' }],
+    previousStatement: null,
+    nextStatement: null,
+    inputsInline: true,
+    colour: waitCaseColour,
+    tooltip: '等待自定义条件',
+    helpUrl: '/_docs/#/instruction',
   },
   event: {
-    match: { path: 'case', equals: 'condition' }, template: { case: 'condition' },
+    match: { path: 'case', equals: 'condition' },
+    template: { case: 'condition' },
     bindings: [
       { input: 'CONDITION', kind: 'field', path: 'condition', valueType: 'string' },
       { input: 'BREAK', kind: 'field', path: 'break', valueType: 'boolean', default: false, omitWhenDefault: true },
@@ -700,12 +753,18 @@ export const waitTimeoutCaseSchema: BlockSchema = {
     type: 'mota_wait_timeout_s',
     message0: '超时的场合 不进行剩余判定 %1',
     args0: [{ type: 'field_checkbox', name: 'BREAK', checked: false }],
-    message1: '%1', args1: [{ type: 'input_statement', name: 'ACTION' }],
-    previousStatement: null, nextStatement: null, inputsInline: true, colour: waitCaseColour,
-    tooltip: '等待超时', helpUrl: '/_docs/#/instruction',
+    message1: '%1',
+    args1: [{ type: 'input_statement', name: 'ACTION' }],
+    previousStatement: null,
+    nextStatement: null,
+    inputsInline: true,
+    colour: waitCaseColour,
+    tooltip: '等待超时',
+    helpUrl: '/_docs/#/instruction',
   },
   event: {
-    match: { path: 'case', equals: 'timeout' }, template: { case: 'timeout' },
+    match: { path: 'case', equals: 'timeout' },
+    template: { case: 'timeout' },
     bindings: [
       { input: 'BREAK', kind: 'field', path: 'break', valueType: 'boolean', default: false, omitWhenDefault: true },
       { input: 'ACTION', kind: 'statement', path: 'action', default: [] },
@@ -738,8 +797,16 @@ export const waitAsyncSchema: BlockSchema = {
   },
   category: 'effect',
   fieldMapping: {
-    EXCLUDE_ANIMATES: { eventField: 'excludeAnimates', parse: (v) => v === true, generate: (v) => v === 'TRUE' || v === true ? true : undefined },
-    INCLUDE_SOUNDS: { eventField: 'includeSounds', parse: (v) => v === true, generate: (v) => v === 'TRUE' || v === true ? true : undefined },
+    EXCLUDE_ANIMATES: {
+      eventField: 'excludeAnimates',
+      parse: (v) => v === true,
+      generate: (v) => (v === 'TRUE' || v === true ? true : undefined),
+    },
+    INCLUDE_SOUNDS: {
+      eventField: 'includeSounds',
+      parse: (v) => v === true,
+      generate: (v) => (v === 'TRUE' || v === true ? true : undefined),
+    },
   },
 };
 

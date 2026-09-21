@@ -1,4 +1,4 @@
-import { Component, type ErrorInfo, type ReactNode } from "react";
+import { Component, type ErrorInfo, type ReactNode } from 'react';
 
 interface Props {
   children: ReactNode;
@@ -18,7 +18,7 @@ export class MapEditorErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
-    console.error("Map editor failed", error, info.componentStack);
+    console.error('Map editor failed', error, info.componentStack);
   }
 
   private retry = () => {
@@ -32,7 +32,7 @@ export class MapEditorErrorBoundary extends Component<Props, State> {
           id="mid"
           data-test-id="map-editor-error"
           role="alert"
-          style={{ padding: 16, color: "#b00020", whiteSpace: "pre-wrap" }}
+          style={{ padding: 16, color: '#b00020', whiteSpace: 'pre-wrap' }}
         >
           <div>{`地图编辑区暂不可用：${this.state.error.message}`}</div>
           <button type="button" onClick={this.retry} style={{ marginTop: 12 }}>

@@ -10,14 +10,14 @@
  * - 内存数据源 + 异步落盘
  */
 
-import { FileHandlerManager } from "@/fs/FileHandlerManager";
-import type { Content } from "@/fs";
-import type { Action } from "@/utils/action";
-import { ItemsDataHandler } from "./ItemsDataHandler";
-import { projectData } from "@/project/data/projectData";
+import { FileHandlerManager } from '@/fs/FileHandlerManager';
+import type { Content } from '@/fs';
+import type { Action } from '@/utils/action';
+import { ItemsDataHandler } from './ItemsDataHandler';
+import { projectData } from '@/project/data/projectData';
 
 /** 道具数据文件路径 */
-const ITEMS_DATA_PATH = "project/items.js";
+const ITEMS_DATA_PATH = 'project/items.js';
 
 /**
  * 道具信息类型
@@ -109,11 +109,7 @@ class ItemServiceImpl {
       return;
     }
 
-    const prefixedActions: Action[] = actions.map(([type, path, value]) => [
-      type,
-      `['${id}']${path}`,
-      value,
-    ]);
+    const prefixedActions: Action[] = actions.map(([type, path, value]) => [type, `['${id}']${path}`, value]);
     void projectData.items().patch(prefixedActions);
   }
 

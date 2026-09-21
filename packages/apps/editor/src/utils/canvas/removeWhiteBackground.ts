@@ -1,4 +1,4 @@
-import { getPixel, setPixel } from "./pixel";
+import { getPixel, setPixel } from './pixel';
 
 /**
  * Remove white background from ImageData by converting white pixels to transparent

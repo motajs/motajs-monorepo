@@ -25,11 +25,13 @@
   vertical-align: middle;
   background-color: var(--editor-surface, #fff);
   background-image:
-    linear-gradient(45deg, #e8ebef 25%, transparent 25%),
-    linear-gradient(-45deg, #e8ebef 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, #e8ebef 75%),
-    linear-gradient(-45deg, transparent 75%, #e8ebef 75%);
-  background-position: 0 0, 0 6px, 6px -6px, -6px 0;
+    linear-gradient(45deg, #e8ebef 25%, transparent 25%), linear-gradient(-45deg, #e8ebef 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #e8ebef 75%), linear-gradient(-45deg, transparent 75%, #e8ebef 75%);
+  background-position:
+    0 0,
+    0 6px,
+    6px -6px,
+    -6px 0;
   background-size: 12px 12px;
   border: 1px solid #c8d0d9;
   image-rendering: pixelated;
@@ -86,7 +88,9 @@
   background: var(--editor-selected, #dbeafe);
 }
 
-.blockPicker aside small { color: var(--editor-muted, #656d76); }
+.blockPicker aside small {
+  color: var(--editor-muted, #656d76);
+}
 
 .blockPicker main {
   display: grid;
@@ -118,14 +122,17 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  background: rgba(255, 255, 255, .78);
+  background: rgba(255, 255, 255, 0.78);
   border: 2px solid transparent;
 }
 
-.blockPickerGrid > button:hover { border-color: #6e7781; z-index: 1; }
+.blockPickerGrid > button:hover {
+  border-color: #6e7781;
+  z-index: 1;
+}
 .blockPickerGrid > button.selected {
   border-color: #1677ff;
-  background: rgba(22, 119, 255, .12);
+  background: rgba(22, 119, 255, 0.12);
 }
 
 .blockPickerStatus {
@@ -138,5 +145,10 @@
   border-top: 1px solid var(--editor-border, #d0d7de);
 }
 
-.blockPickerStatus small { color: var(--editor-muted, #656d76); }
-.blockPickerEmpty { padding: 20px; color: var(--editor-muted, #656d76); }
+.blockPickerStatus small {
+  color: var(--editor-muted, #656d76);
+}
+.blockPickerEmpty {
+  padding: 20px;
+  color: var(--editor-muted, #656d76);
+}

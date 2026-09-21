@@ -9,10 +9,10 @@
  * - 使用 useSignal 订阅 DataHandler 的 signal
  */
 
-import { towerService, type TowerData } from "@/services/tower";
-import type { Content } from "@/fs";
-import { useData } from "./useData";
-import type { UpdateFn } from "./useFs";
+import { towerService, type TowerData } from '@/services/tower';
+import type { Content } from '@/fs';
+import { useData } from './useData';
+import type { UpdateFn } from './useFs';
 
 /**
  * 订阅全塔数据（可写）
@@ -82,10 +82,7 @@ import type { UpdateFn } from "./useFs";
  *   return <Error />;
  * }
  */
-export function useTowerData(): [
-  Content<TowerData>,
-  UpdateFn<TowerData>
-] {
+export function useTowerData(): [Content<TowerData>, UpdateFn<TowerData>] {
   const handler = towerService.getHandler();
   return useData(handler);
 }

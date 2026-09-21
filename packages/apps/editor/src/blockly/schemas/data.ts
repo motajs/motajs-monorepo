@@ -47,8 +47,7 @@ export const setValueSchema: BlockSchema = {
     previousStatement: null,
     nextStatement: null,
     colour: 'auto', // 使用 category 默认颜色 (130)
-    tooltip:
-      '设置数值。name 支持 status:hp, item:yellowKey, flag:xxx 等格式',
+    tooltip: '设置数值。name 支持 status:hp, item:yellowKey, flag:xxx 等格式',
     helpUrl: '',
   },
   category: 'data',
@@ -551,7 +550,7 @@ export const updateSchema: BlockSchema = {
     DO_NOT_CHECK_AUTO_EVENTS: {
       eventField: 'doNotCheckAutoEvents',
       parse: (v) => v === true,
-      generate: (v) => v === 'TRUE' || v === true ? true : undefined,
+      generate: (v) => (v === 'TRUE' || v === true ? true : undefined),
     },
   },
 };

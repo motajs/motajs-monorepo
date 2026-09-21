@@ -10,15 +10,15 @@
  * - 内存数据源 + 异步落盘
  */
 
-import { produce } from "immer";
-import { FileHandlerManager } from "@/fs/FileHandlerManager";
-import type { Content } from "@/fs";
-import { applyActions, type Action } from "@/utils/action";
-import { FunctionsDataHandler, type FunctionsData } from "./FunctionsDataHandler";
-import { tableCommands } from "@/project/commands";
+import { produce } from 'immer';
+import { FileHandlerManager } from '@/fs/FileHandlerManager';
+import type { Content } from '@/fs';
+import { applyActions, type Action } from '@/utils/action';
+import { FunctionsDataHandler, type FunctionsData } from './FunctionsDataHandler';
+import { tableCommands } from '@/project/commands';
 
 /** 脚本函数数据文件路径 */
-const FUNCTIONS_DATA_PATH = "project/functions.js";
+const FUNCTIONS_DATA_PATH = 'project/functions.js';
 
 /**
  * functionsService - 脚本函数服务（命令式 API）

@@ -36,14 +36,7 @@ export { registerAllExtensions, CHANGE_FLOOR_VISIBILITY_EXTENSION } from './exte
 
 // 解析器导出
 export { parseEventList, parseEvent, eventsToWorkspaceState } from './parser';
-export type {
-  EventData,
-  EventObject,
-  BlockState,
-  ConnectionState,
-  WorkspaceState,
-  ParseContext,
-} from './parser/types';
+export type { EventData, EventObject, BlockState, ConnectionState, WorkspaceState, ParseContext } from './parser/types';
 
 // API 导出
 export { createEditorBlocklyApi } from './api/editorBlockly';

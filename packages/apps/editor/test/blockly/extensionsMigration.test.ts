@@ -8,18 +8,9 @@ import {
   createBlocklyInteractionController,
 } from '@/blockly/interactions';
 import { diagnoseBlocklyEvents } from '@/blockly/diagnostics/asyncDiagnostics';
-import {
-  BlocklyEditorSession,
-  BlocklySessionStore,
-} from '@/blockly/session/BlocklyEditorSession';
-import {
-  buildBlocklyCompletionCatalog,
-  buildFlagUsageIndex,
-} from '@/project/model/blocklyModels';
-import {
-  replaceExpressionForDisplay,
-  replaceExpressionFromDisplay,
-} from '@/blockly/representation';
+import { BlocklyEditorSession, BlocklySessionStore } from '@/blockly/session/BlocklyEditorSession';
+import { buildBlocklyCompletionCatalog, buildFlagUsageIndex } from '@/project/model/blocklyModels';
+import { replaceExpressionForDisplay, replaceExpressionFromDisplay } from '@/blockly/representation';
 import type { BlocklyInteractionCapabilities } from '@/Workbench/EventsEditor/BlocklyCapabilitiesContext';
 import {
   blockRegistry,
@@ -39,7 +30,9 @@ function fakeBlock(initial: Record<string, unknown>): Blockly.Block {
     id: 'block-1',
     type: 'test_s',
     getFieldValue: (name: string) => fields[name],
-    setFieldValue: (value: unknown, name: string) => { fields[name] = value; },
+    setFieldValue: (value: unknown, name: string) => {
+      fields[name] = value;
+    },
   } as unknown as Blockly.Block;
 }
 
@@ -135,13 +128,14 @@ describe('Blockly extension interactions', () => {
 
     for (const schema of allSchemas) {
       const definition = normalizeBuiltinStatementLayout(schema.definition) as unknown as Record<string, unknown>;
-      const isAction = Object.prototype.hasOwnProperty.call(definition, 'previousStatement')
-        || Object.prototype.hasOwnProperty.call(definition, 'nextStatement');
+      const isAction =
+        Object.prototype.hasOwnProperty.call(definition, 'previousStatement') ||
+        Object.prototype.hasOwnProperty.call(definition, 'nextStatement');
       if (!isAction || definition.inputsInline === false) continue;
       const rows: unknown[][] = [];
       let structural = false;
       for (let index = 0; typeof definition[`message${index}`] === 'string'; index += 1) {
-        const args = Array.isArray(definition[`args${index}`]) ? definition[`args${index}`] as unknown[] : [];
+        const args = Array.isArray(definition[`args${index}`]) ? (definition[`args${index}`] as unknown[]) : [];
         rows.push(args);
         structural ||= args.some((raw) => {
           const type = (raw as { type?: string }).type;
@@ -158,18 +152,32 @@ describe('Blockly extension interactions', () => {
       expect(request.value).toBe('first\nsecond');
       return 'changed\nvalue';
     });
-    const result = await blocklyInteractionRegistry.execute(block, {
-      type: 'editText', field: 'TEXT', mode: 'escaped-newline',
-    }, capabilities({ editText }));
+    const result = await blocklyInteractionRegistry.execute(
+      block,
+      {
+        type: 'editText',
+        field: 'TEXT',
+        mode: 'escaped-newline',
+      },
+      capabilities({ editText }),
+    );
     expect(result.ok).toBe(true);
     expect(block.getFieldValue('TEXT')).toBe('changed\\nvalue');
   });
 
   it('cancelling a point interaction leaves all fields unchanged', async () => {
     const block = fakeBlock({ X: '1', Y: '2', FLOOR_ID: 'sample0' });
-    await blocklyInteractionRegistry.execute(block, {
-      type: 'selectPoint', xField: 'X', yField: 'Y', floorField: 'FLOOR_ID', floorPolicy: 'explicit',
-    }, capabilities());
+    await blocklyInteractionRegistry.execute(
+      block,
+      {
+        type: 'selectPoint',
+        xField: 'X',
+        yField: 'Y',
+        floorField: 'FLOOR_ID',
+        floorPolicy: 'explicit',
+      },
+      capabilities(),
+    );
     expect(block.getFieldValue('X')).toBe('1');
     expect(block.getFieldValue('Y')).toBe('2');
     expect(block.getFieldValue('FLOOR_ID')).toBe('sample0');
@@ -177,13 +185,16 @@ describe('Blockly extension interactions', () => {
 
   it('infers safe interactions only for builtin multiline and map fields', () => {
     const schema = {
-      eventType: 'show', category: 'map',
+      eventType: 'show',
+      category: 'map',
       definition: {
-        type: 'mota_show_s', message0: '%1 %2',
+        type: 'mota_show_s',
+        message0: '%1 %2',
         args0: [
           { type: 'field_input', name: 'X', text: '' },
           { type: 'field_input', name: 'Y', text: '' },
-        ], colour: 1,
+        ],
+        colour: 1,
       },
     } as BlockSchema;
     expect(getEffectiveInteractions(schema)).toEqual([
@@ -234,10 +245,14 @@ describe('Blockly extension interactions', () => {
 
   it('preserves supported collapsed and disabled event metadata', () => {
     const parser = blockRegistry.getParserForEvent({
-      type: 'text', text: 'hello', _collapsed: true, _disabled: true,
+      type: 'text',
+      text: 'hello',
+      _collapsed: true,
+      _disabled: true,
     });
-    expect(parser?.({ type: 'text', text: 'hello', _collapsed: true, _disabled: true }, { entryType: 'common' }))
-      .toMatchObject({ collapsed: true, enabled: false });
+    expect(
+      parser?.({ type: 'text', text: 'hello', _collapsed: true, _disabled: true }, { entryType: 'common' }),
+    ).toMatchObject({ collapsed: true, enabled: false });
 
     const workspace = new Blockly.Workspace();
     javascriptGenerator.init(workspace);
@@ -258,15 +273,14 @@ describe('Blockly preview and diagnostics', () => {
     expect(parseTextDrawingPreview('x\\f[hero.png,1,2,32,32]y')).toEqual([
       { type: 'drawImage', image: 'hero.png', x: 1, y: 2, w: 32, h: 32 },
     ]);
-    expect(buildBlocklyPreview({ type: 'previewUI', action: [{ type: 'fillRect', x: 1 }] }, 'event').staticPreview)
-      .toEqual([{ type: 'fillRect', x: 1 }]);
+    expect(
+      buildBlocklyPreview({ type: 'previewUI', action: [{ type: 'fillRect', x: 1 }] }, 'event').staticPreview,
+    ).toEqual([{ type: 'fillRect', x: 1 }]);
   });
 
   it('matches legacy async join semantics through nested branches', () => {
     expect(diagnoseBlocklyEvents([{ type: 'playSound', async: true }])).toHaveLength(1);
-    expect(diagnoseBlocklyEvents([
-      { type: 'playSound', async: true }, { type: 'waitAsync' },
-    ])).toHaveLength(0);
+    expect(diagnoseBlocklyEvents([{ type: 'playSound', async: true }, { type: 'waitAsync' }])).toHaveLength(0);
     expect(diagnoseBlocklyEvents([{ type: 'if', true: [{ type: 'move', async: true }], false: [] }])).toHaveLength(1);
     expect(diagnoseBlocklyEvents([{ type: 'text', async: true }])).toHaveLength(0);
   });
@@ -314,7 +328,9 @@ describe('Blockly static project models', () => {
       tower: { main: { floorIds: ['sample0'], bgms: ['bgm.mp3'] }, firstData: { shops: [{ id: 'shop1' }] } },
       items: { yellowKey: { name: '黄钥匙', idnum: 21 } },
       enemys: { greenSlime: { name: '绿头怪', idnum: 201 } },
-      mapBlocks: { 21: { id: 'yellowKey' } }, commonEvents: { test: [] }, floorIds: ['sample0'],
+      mapBlocks: { 21: { id: 'yellowKey' } },
+      commonEvents: { test: [] },
+      floorIds: ['sample0'],
     });
     expect(catalog.bySource.item.some((item) => item.value === 'yellowKey')).toBe(true);
     expect(catalog.bySource.floor[0]?.value).toBe('sample0');
@@ -324,7 +340,10 @@ describe('Blockly static project models', () => {
   it('indexes structured flag references without executing strings', () => {
     const index = buildFlagUsageIndex({
       tower: { firstData: { startText: ['变量：started'] } },
-      items: {}, enemys: {}, mapBlocks: {}, commonEvents: { test: [{ type: 'if', condition: 'flag:started' }] },
+      items: {},
+      enemys: {},
+      mapBlocks: {},
+      commonEvents: { test: [{ type: 'if', condition: 'flag:started' }] },
       floors: { sample0: { events: { '8,7': [{ type: 'setValue', name: 'flag:door' }] } } },
     });
     expect(index.flags).toEqual(['door', 'started']);

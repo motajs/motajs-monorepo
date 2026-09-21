@@ -1,62 +1,68 @@
 /** editor **/
 
 :root {
-    --pixel: 416px;
-    --editor-bg: #f5f6f8;
-    --editor-surface: #fff;
-    --editor-toolbar-bg: #fff;
-    --editor-fg: #202124;
-    --editor-muted: #656d76;
-    --editor-border: #d0d7de;
-    --editor-grid: #d8dee4;
-    --editor-selected: #dbeafe;
+  --pixel: 416px;
+  --editor-bg: #f5f6f8;
+  --editor-surface: #fff;
+  --editor-toolbar-bg: #fff;
+  --editor-fg: #202124;
+  --editor-muted: #656d76;
+  --editor-border: #d0d7de;
+  --editor-grid: #d8dee4;
+  --editor-selected: #dbeafe;
 }
 
-:root[data-editor-theme="dark"] {
-    --editor-bg: #242424;
-    --editor-surface: #303035;
-    --editor-toolbar-bg: #2b2b30;
-    --editor-fg: #d4d4d4;
-    --editor-muted: #9da5b4;
-    --editor-border: #4b4b52;
-    --editor-grid: #44444b;
-    --editor-selected: #163a5f;
+:root[data-editor-theme='dark'] {
+  --editor-bg: #242424;
+  --editor-surface: #303035;
+  --editor-toolbar-bg: #2b2b30;
+  --editor-fg: #d4d4d4;
+  --editor-muted: #9da5b4;
+  --editor-border: #4b4b52;
+  --editor-grid: #44444b;
+  --editor-selected: #163a5f;
 }
 
-html, body, div, img {
-    margin: 0;
-    padding: 0;
+html,
+body,
+div,
+img {
+  margin: 0;
+  padding: 0;
 }
 
-html, body {
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
 }
 
 #root {
-    width: 100%;
-    height: 100%;
+  width: 100%;
+  height: 100%;
 }
 
 body {
-    font-family: Roboto, "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", Arial, sans-serif;;
+  font-family:
+    Roboto, 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', '微软雅黑', Arial,
+    sans-serif;
 }
 
 /* CodeMirror appends lint tooltips to body; keep them above full-screen workspaces. */
 .CodeMirror-lint-tooltip {
-    z-index: 400;
+  z-index: 400;
 }
 
 /* show-hint also appends its popup to body. The full-screen workspace is a
  * z-index 160 sibling, so CodeMirror's default z-index 10 renders underneath
  * the editor even though the popup itself is otherwise visible. */
 .CodeMirror-hints {
-    z-index: 10001;
+  z-index: 10001;
 }
 
 .CodeMirror-Tern-tooltip {
-    z-index: 10002;
+  z-index: 10002;
 }
 
 /* ::-webkit-scrollbar {
@@ -64,1223 +70,1256 @@ body {
 } */
 .main,
 .mapWorkspace {
-    max-width: 100%;
-    min-height: 500px;
-    margin: 0 auto;
+  max-width: 100%;
+  min-height: 500px;
+  margin: 0 auto;
 }
 
 .editorAppShell {
-    --app-topbar-height: 48px;
-    display: flex;
-    width: 100%;
-    height: 100%;
-    min-width: 720px;
-    flex-direction: column;
-    background: var(--editor-bg, #f5f6f8);
-    color: var(--editor-fg, #202124);
+  --app-topbar-height: 48px;
+  display: flex;
+  width: 100%;
+  height: 100%;
+  min-width: 720px;
+  flex-direction: column;
+  background: var(--editor-bg, #f5f6f8);
+  color: var(--editor-fg, #202124);
 }
 
 .appTopBar {
-    position: relative;
-    z-index: 220;
-    display: flex;
-    flex: 0 0 var(--app-topbar-height);
-    align-items: center;
-    gap: 12px;
-    height: var(--app-topbar-height);
-    padding: 0 12px;
-    border-bottom: 1px solid rgba(128, 128, 128, 0.22);
-    box-sizing: border-box;
-    background: var(--editor-toolbar-bg, #fff);
+  position: relative;
+  z-index: 220;
+  display: flex;
+  flex: 0 0 var(--app-topbar-height);
+  align-items: center;
+  gap: 12px;
+  height: var(--app-topbar-height);
+  padding: 0 12px;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.22);
+  box-sizing: border-box;
+  background: var(--editor-toolbar-bg, #fff);
 }
 
 .appLegacyPanelSelect {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 1px;
-    height: 1px;
-    opacity: 0;
-    pointer-events: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .appBrand,
 .appWorkspaceButton {
-    appearance: none;
-    border: 0;
-    background: transparent;
-    color: inherit;
-    font: inherit;
-    cursor: pointer;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
 }
 
 .appBrand {
-    flex: 0 0 auto;
-    padding: 6px 8px;
-    font-size: 15px;
-    font-weight: 700;
-    letter-spacing: 0.01em;
+  flex: 0 0 auto;
+  padding: 6px 8px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
 }
 
 .appWorkspaceNav {
-    display: flex;
-    min-width: 0;
-    align-self: stretch;
-    align-items: stretch;
+  display: flex;
+  min-width: 0;
+  align-self: stretch;
+  align-items: stretch;
 }
 
 .appWorkspaceButton {
-    position: relative;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 0 12px;
-    color: rgba(60, 60, 60, 0.75);
-    white-space: nowrap;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  color: rgba(60, 60, 60, 0.75);
+  white-space: nowrap;
 }
 
 .appWorkspaceButton:hover,
 .appWorkspaceButton.is-active {
-    color: #1677ff;
-    background: rgba(22, 119, 255, 0.06);
+  color: #1677ff;
+  background: rgba(22, 119, 255, 0.06);
 }
 
 .appWorkspaceButton.is-active::after {
-    position: absolute;
-    right: 10px;
-    bottom: 0;
-    left: 10px;
-    height: 2px;
-    background: #1677ff;
-    content: "";
+  position: absolute;
+  right: 10px;
+  bottom: 0;
+  left: 10px;
+  height: 2px;
+  background: #1677ff;
+  content: '';
 }
 
 .appProjectTitle {
-    min-width: 0;
-    flex: 1 1 auto;
-    padding: 0 8px;
-    overflow: hidden;
-    color: rgba(60, 60, 60, 0.62);
-    font-size: 13px;
-    text-align: center;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  min-width: 0;
+  flex: 1 1 auto;
+  padding: 0 8px;
+  overflow: hidden;
+  color: rgba(60, 60, 60, 0.62);
+  font-size: 13px;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .appTopActions {
-    display: flex;
-    flex: 0 0 auto;
-    align-items: center;
-    gap: 1px;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 1px;
 }
 
 .appUpdateButton {
-    color: #1677ff;
+  color: #1677ff;
 }
 
 .editorUpdateDialog dl {
-    display: grid;
-    gap: 8px;
-    margin: 16px 0;
+  display: grid;
+  gap: 8px;
+  margin: 16px 0;
 }
 
 .editorUpdateDialog dl > div {
-    display: grid;
-    grid-template-columns: 72px minmax(0, 1fr);
-    gap: 12px;
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 12px;
 }
 
 .editorUpdateDialog dt {
-    color: rgba(60, 60, 60, 0.62);
+  color: rgba(60, 60, 60, 0.62);
 }
 
 .editorUpdateDialog dd {
-    margin: 0;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 .editorUpdateWarning {
-    margin-bottom: 0;
-    color: #d46b08;
+  margin-bottom: 0;
+  color: #d46b08;
 }
 
-:root[data-editor-theme="dark"] .editorUpdateDialog dt {
-    color: rgba(255, 255, 255, 0.58);
+:root[data-editor-theme='dark'] .editorUpdateDialog dt {
+  color: rgba(255, 255, 255, 0.58);
 }
 
 .appHistoryList {
-    width: 560px;
-    max-width: calc(100vw - 48px);
-    max-height: 360px;
-    overflow-y: auto;
+  width: 560px;
+  max-width: calc(100vw - 48px);
+  max-height: 360px;
+  overflow-y: auto;
 }
 
 .appHistoryEmpty {
-    padding: 8px 4px;
-    color: #888;
+  padding: 8px 4px;
+  color: #888;
 }
 
 .appHistoryEntry {
-    display: grid;
-    grid-template-columns: 14px minmax(120px, 180px) minmax(0, 1fr) 64px;
-    align-items: center;
-    gap: 8px;
-    padding: 7px 4px;
-    border-bottom: 1px solid rgba(128, 128, 128, 0.2);
-    font-size: 12px;
-    white-space: nowrap;
+  display: grid;
+  grid-template-columns: 14px minmax(120px, 180px) minmax(0, 1fr) 64px;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 4px;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.2);
+  font-size: 12px;
+  white-space: nowrap;
 }
 
 .appHistoryEntry > span:nth-child(2),
 .appHistoryEntry > span:nth-child(3) {
-    overflow: hidden;
-    text-overflow: ellipsis;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .appHistoryEntry > span:nth-child(3),
 .appHistoryEntry > span:nth-child(4) {
-    color: #888;
+  color: #888;
 }
 
 .appHistoryEntry > span:last-child {
-    text-align: right;
+  text-align: right;
 }
 
 .appHistoryEntry.is-undone {
-    opacity: 0.5;
+  opacity: 0.5;
 }
 
 .editorAppContent {
-    position: relative;
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow: hidden;
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .mapWorkspace {
-    position: absolute;
-    inset: 0;
+  position: absolute;
+  inset: 0;
 }
 
 .mapWorkspace.is-inactive {
-    visibility: hidden;
-    pointer-events: none;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .mapPanelTabs {
-    position: absolute;
-    z-index: 20;
-    top: 10px;
-    left: 5px;
-    display: flex;
-    width: 435px;
-    height: 36px;
-    align-items: stretch;
-    border-bottom: 1px solid rgba(128, 128, 128, 0.25);
-    box-sizing: border-box;
+  position: absolute;
+  z-index: 20;
+  top: 10px;
+  left: 5px;
+  display: flex;
+  width: 435px;
+  height: 36px;
+  align-items: stretch;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.25);
+  box-sizing: border-box;
 }
 
 .mapPanelTab {
-    position: relative;
-    display: flex;
-    min-width: 0;
-    padding: 0 12px;
-    border: 0;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-    flex: 1 1 0;
-    appearance: none;
-    background: transparent;
-    color: rgba(60, 60, 60, 0.72);
-    cursor: pointer;
-    font: inherit;
-    font-size: 13px;
-    white-space: nowrap;
+  position: relative;
+  display: flex;
+  min-width: 0;
+  padding: 0 12px;
+  border: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  flex: 1 1 0;
+  appearance: none;
+  background: transparent;
+  color: rgba(60, 60, 60, 0.72);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  white-space: nowrap;
 }
 
 .mapPanelTab::after {
-    position: absolute;
-    right: 8px;
-    bottom: -1px;
-    left: 8px;
-    height: 2px;
-    border-radius: 2px 2px 0 0;
-    background: transparent;
-    content: "";
+  position: absolute;
+  right: 8px;
+  bottom: -1px;
+  left: 8px;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: transparent;
+  content: '';
 }
 
 .mapPanelTab:hover,
 .mapPanelTab.is-active {
-    color: #1677ff;
+  color: #1677ff;
 }
 
 .mapPanelTab.is-active::after {
-    background: #1677ff;
+  background: #1677ff;
 }
 
 .mapPanelTab kbd {
-    color: inherit;
-    font: 10px/1 inherit;
-    opacity: 0.55;
+  color: inherit;
+  font: 10px/1 inherit;
+  opacity: 0.55;
 }
 
-:root[data-editor-theme="dark"] .mapPanelTab {
-    color: rgba(230, 230, 230, 0.7);
+:root[data-editor-theme='dark'] .mapPanelTab {
+  color: rgba(230, 230, 230, 0.7);
 }
 
-:root[data-editor-theme="dark"] .mapPanelTab:hover,
-:root[data-editor-theme="dark"] .mapPanelTab.is-active {
-    color: #69b1ff;
+:root[data-editor-theme='dark'] .mapPanelTab:hover,
+:root[data-editor-theme='dark'] .mapPanelTab.is-active {
+  color: #69b1ff;
 }
 
-:root[data-editor-theme="dark"] .mapPanelTab.is-active::after {
-    background: #69b1ff;
+:root[data-editor-theme='dark'] .mapPanelTab.is-active::after {
+  background: #69b1ff;
 }
 
 .mapWorkspace #left,
 .mapWorkspace .leftTab {
-    top: 46px;
-    bottom: 10px;
-    height: auto;
+  top: 46px;
+  bottom: 10px;
+  height: auto;
 }
 
 .panelSlotBoundary {
-    display: contents;
+  display: contents;
 }
 
 .mapWorkspace .panelSlotBoundary > .leftTabError,
 .mapWorkspace .panelSlotBoundary > .leftTabLoading {
-    position: absolute;
-    z-index: 15;
-    top: 46px;
-    bottom: 10px;
-    left: 5px;
-    width: 435px;
-    padding: 16px;
-    border: 1px solid var(--editor-border, #d0d7de);
-    border-radius: 2px;
-    box-sizing: border-box;
-    overflow: auto;
-    background: var(--editor-surface, #fff);
-    color: var(--editor-fg, #202124);
+  position: absolute;
+  z-index: 15;
+  top: 46px;
+  bottom: 10px;
+  left: 5px;
+  width: 435px;
+  padding: 16px;
+  border: 1px solid var(--editor-border, #d0d7de);
+  border-radius: 2px;
+  box-sizing: border-box;
+  overflow: auto;
+  background: var(--editor-surface, #fff);
+  color: var(--editor-fg, #202124);
 }
 
 .workspaceSurface {
-    position: absolute;
-    z-index: 160;
-    inset: 0;
-    overflow: auto;
-    background: var(--editor-bg, #f5f6f8);
+  position: absolute;
+  z-index: 160;
+  inset: 0;
+  overflow: auto;
+  background: var(--editor-bg, #f5f6f8);
 }
 
 .legacyWorkspaceBridge {
-    position: relative;
-    min-height: 100%;
-    padding: 18px 22px 32px;
-    box-sizing: border-box;
+  position: relative;
+  min-height: 100%;
+  padding: 18px 22px 32px;
+  box-sizing: border-box;
 }
 
 .workspacePageHeader {
-    display: flex;
-    min-height: 42px;
-    margin-bottom: 16px;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
+  display: flex;
+  min-height: 42px;
+  margin-bottom: 16px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
 }
 
 .workspacePageHeader h1 {
-    margin: 0;
-    font-size: 20px;
+  margin: 0;
+  font-size: 20px;
 }
 
 .workspacePageHeader p {
-    margin: 4px 0 0;
-    color: #888;
-    font-size: 12px;
+  margin: 4px 0 0;
+  color: #888;
+  font-size: 12px;
 }
 
 .workspaceSegmented {
-    display: inline-flex;
-    padding: 2px;
-    border-radius: 6px;
-    background: rgba(128, 128, 128, 0.12);
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 6px;
+  background: rgba(128, 128, 128, 0.12);
 }
 
 .workspaceSegmented button {
-    padding: 5px 12px;
-    border: 0;
-    border-radius: 4px;
-    background: transparent;
-    cursor: pointer;
+  padding: 5px 12px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
 }
 
 .workspaceSegmented button.is-active {
-    background: var(--editor-surface);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  background: var(--editor-surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
 }
 
-:root[data-editor-theme="dark"] .appWorkspaceButton { color: rgba(255, 255, 255, 0.72); }
-:root[data-editor-theme="dark"] .appProjectTitle { color: rgba(255, 255, 255, 0.58); }
-:root[data-editor-theme="dark"] .workspaceSurface,
-:root[data-editor-theme="dark"] .resourcesWorkspace,
-:root[data-editor-theme="dark"] .commonEventsWorkspace,
-:root[data-editor-theme="dark"] .scriptsWorkspace,
-:root[data-editor-theme="dark"] .towerWorkspace,
-:root[data-editor-theme="dark"] .scriptRootTabs,
-:root[data-editor-theme="dark"] .scriptTab.is-active {
-    background: var(--editor-surface);
-    color: var(--editor-fg);
+:root[data-editor-theme='dark'] .appWorkspaceButton {
+  color: rgba(255, 255, 255, 0.72);
+}
+:root[data-editor-theme='dark'] .appProjectTitle {
+  color: rgba(255, 255, 255, 0.58);
+}
+:root[data-editor-theme='dark'] .workspaceSurface,
+:root[data-editor-theme='dark'] .resourcesWorkspace,
+:root[data-editor-theme='dark'] .commonEventsWorkspace,
+:root[data-editor-theme='dark'] .scriptsWorkspace,
+:root[data-editor-theme='dark'] .towerWorkspace,
+:root[data-editor-theme='dark'] .scriptRootTabs,
+:root[data-editor-theme='dark'] .scriptTab.is-active {
+  background: var(--editor-surface);
+  color: var(--editor-fg);
 }
 
 @media (max-width: 1080px) {
-    .appWorkspaceButton { padding: 0 8px; }
-    .appWorkspaceButton span { display: none; }
+  .appWorkspaceButton {
+    padding: 0 8px;
+  }
+  .appWorkspaceButton span {
+    display: none;
+  }
 }
 
 .cp-app {
-	z-index: 250;
+  z-index: 250;
 }
 
-#left, #mid, #mid2, #right {
-    border-radius: 2px;
-    box-sizing: border-box;
+#left,
+#mid,
+#mid2,
+#right {
+  border-radius: 2px;
+  box-sizing: border-box;
 }
 
 #left {
-    position: absolute;
-    left: 5px;
-    top: 10px;
-    width: 435px;
-    height: 630px;
+  position: absolute;
+  left: 5px;
+  top: 10px;
+  width: 435px;
+  height: 630px;
 }
 
 #mid {
-    position: absolute;
-    left: 448px;
-    top: 10px;
-    width: calc(24px + var(--pixel));
-    height: calc(422px + var(--pixel) / 2);
+  position: absolute;
+  left: 448px;
+  top: 10px;
+  width: calc(24px + var(--pixel));
+  height: calc(422px + var(--pixel) / 2);
 }
 
 #mid2 {
-    position: absolute;
-    left: 448px;
-    top: calc(442px + var(--pixel) / 2);
-    width: calc(24px + var(--pixel));
-    bottom: 10px;
+  position: absolute;
+  left: 448px;
+  top: calc(442px + var(--pixel) / 2);
+  width: calc(24px + var(--pixel));
+  bottom: 10px;
 }
 
 #mapEdit {
-    overflow: hidden;
+  overflow: hidden;
 }
 
 .map {
-    position: absolute;
-    left: 20px;
-    top: 21px;
-    width: var(--pixel);
-    height: var(--pixel);
+  position: absolute;
+  left: 20px;
+  top: 21px;
+  width: var(--pixel);
+  height: var(--pixel);
 }
 
 #lastUsedDiv {
-    height: auto;
-    bottom: 0;
-    margin-top: 20px;
-    overflow-x: hidden;
-    overflow-y: auto;
+  height: auto;
+  bottom: 0;
+  margin-top: 20px;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 #mid .tools {
-    position: absolute;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    width: calc(var(--pixel) + 9px);
-    height: calc(388px - var(--pixel) / 2);
-    left: 0;
-    bottom: 0;
-    padding: 10px 5px;
-    margin-left: 8px;;
-    box-sizing: border-box;
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: calc(var(--pixel) + 9px);
+  height: calc(388px - var(--pixel) / 2);
+  left: 0;
+  bottom: 0;
+  padding: 10px 5px;
+  margin-left: 8px;
+  box-sizing: border-box;
 }
 
 #mid .tools .ant-segmented-item-label > span {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .map-layer-picker-row {
-    display: flex;
-    flex: none;
-    align-items: center;
-    gap: 2px;
-    width: 100%;
-    max-width: 100%;
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  max-width: 100%;
 }
 
 .map-layer-picker-scroll {
-    min-width: 0;
-    overflow-x: auto;
-    scrollbar-width: thin;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
 }
 
 .map-layer-picker-row > .ant-btn {
-    flex: none;
+  flex: none;
 }
 
 .map-toolbar-body {
-    display: grid;
-    flex: 1;
-    grid-template-columns: minmax(0, 1fr) 48%;
-    gap: 12px;
-    min-height: 0;
+  display: grid;
+  flex: 1;
+  grid-template-columns: minmax(0, 1fr) 48%;
+  gap: 12px;
+  min-height: 0;
 }
 
 .map-toolbar-controls {
-    display: flex;
-    min-width: 0;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
 }
 
 .map-passability-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-    font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 12px;
 }
 
 .map-passability-toggle input {
-    margin: 0;
+  margin: 0;
 }
 
 #viewportButtons {
-    white-space: nowrap;
+  white-space: nowrap;
 }
 
 #viewportButtons #bigmapBtn {
-    margin-left: 5px;
+  margin-left: 5px;
 }
 
 .map-floor-controls {
-    display: flex;
-    max-width: 100%;
-    align-items: center;
-    gap: 4px;
+  display: flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 4px;
 }
 
 .map-layer-settings-help {
-    margin: 0 0 12px;
-    color: var(--editor-muted);
-    font-size: 13px;
+  margin: 0 0 12px;
+  color: var(--editor-muted);
+  font-size: 13px;
 }
 
 .map-layer-settings-header,
 .map-layer-settings-row {
-    display: grid;
-    grid-template-columns: 28px minmax(120px, 1fr) minmax(140px, 1fr) 32px;
-    gap: 8px;
-    align-items: center;
+  display: grid;
+  grid-template-columns: 28px minmax(120px, 1fr) minmax(140px, 1fr) 32px;
+  gap: 8px;
+  align-items: center;
 }
 
 .map-layer-settings-header {
-    margin-bottom: 4px;
-    color: var(--editor-muted);
-    font-size: 12px;
+  margin-bottom: 4px;
+  color: var(--editor-muted);
+  font-size: 12px;
 }
 
 .map-layer-settings-list {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
 }
 
 .map-layer-settings-row {
-    padding: 4px;
-    border: 1px solid var(--editor-border);
-    border-radius: 6px;
-    background: var(--editor-surface);
+  padding: 4px;
+  border: 1px solid var(--editor-border);
+  border-radius: 6px;
+  background: var(--editor-surface);
 }
 
 .map-layer-drag-handle {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    padding: 0;
-    border: 0;
-    color: var(--editor-muted);
-    background: transparent;
-    cursor: grab;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  color: var(--editor-muted);
+  background: transparent;
+  cursor: grab;
 }
 
 .map-layer-drag-handle:active {
-    cursor: grabbing;
+  cursor: grabbing;
 }
 
 .map-layer-settings-error {
-    margin-top: 10px;
-    color: #ff4d4f;
-    white-space: pre-wrap;
+  margin-top: 10px;
+  color: #ff4d4f;
+  white-space: pre-wrap;
 }
 
 .blocklyWidgetDiv .blocklyAutocomplete {
-    width: 100%;
+  width: 100%;
 }
 
 .blocklyWidgetDiv .blocklyAutocomplete > ul {
-    z-index: 10001;
-    width: max-content;
-    min-width: min(260px, calc(100vw - 24px));
-    max-width: min(360px, calc(100vw - 24px));
-    max-height: 240px;
-    overflow-y: auto;
-    color: #202124;
-    font: 13px/1.4 Roboto, "Microsoft YaHei", sans-serif;
+  z-index: 10001;
+  width: max-content;
+  min-width: min(260px, calc(100vw - 24px));
+  max-width: min(360px, calc(100vw - 24px));
+  max-height: 240px;
+  overflow-y: auto;
+  color: #202124;
+  font:
+    13px/1.4 Roboto,
+    'Microsoft YaHei',
+    sans-serif;
 }
 
 .blocklyWidgetDiv .blocklyAutocomplete > ul > li {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 #tip {
-    min-width: 0;
-    height: 100%;
-    padding: 5px 10px 10px 10px;
-    box-sizing: border-box;
-    border-radius: 2px;
-    font-size: 15px;
-    line-height: 18px;
+  min-width: 0;
+  height: 100%;
+  padding: 5px 10px 10px 10px;
+  box-sizing: border-box;
+  border-radius: 2px;
+  font-size: 15px;
+  line-height: 18px;
 }
 
 #tip p {
-    margin-top: 10px;
-    margin-bottom: 10px;
+  margin-top: 10px;
+  margin-bottom: 10px;
 }
 
 .files {
-    width: 50%;
-    height: 120px;
-    /* padding: 10px; */
-    margin-top: 15px;
+  width: 50%;
+  height: 120px;
+  /* padding: 10px; */
+  margin-top: 15px;
 }
 
 #bgSelect {
-    width: 50%;
-    height: 100px;
-    margin-top: 10px;
+  width: 50%;
+  height: 100px;
+  margin-top: 10px;
 }
 
 #bgSelect span {
-    /* display: block; */
-    font-size: 14px;
-    line-height: 30px;
+  /* display: block; */
+  font-size: 14px;
+  line-height: 30px;
 }
 
 #printOut {
-    margin-top: 10px;
-    height: 20px;
+  margin-top: 10px;
+  height: 20px;
 }
 
 #right {
-    position: absolute;
-    left: calc(484px + var(--pixel));
-    top: 10px;
-    right: 0;
-    bottom: 0;
-    /* border: 1px solid rgb(238, 13, 13); */
+  position: absolute;
+  left: calc(484px + var(--pixel));
+  top: 10px;
+  right: 0;
+  bottom: 0;
+  /* border: 1px solid rgb(238, 13, 13); */
 }
 
 #iconLib {
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    left: 5px;
-    top: 5px;
-    overflow-x: auto;
-    overflow-y: auto;
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 5px;
+  top: 5px;
+  overflow-x: auto;
+  overflow-y: auto;
 }
 
 #iconImages {
-    z-index: 0;
-    width: max-content;
-    min-width: 100%;
-    overflow: visible;
+  z-index: 0;
+  width: max-content;
+  min-width: 100%;
+  overflow: visible;
 }
 
 #iconImages > * {
-    flex: 0 0 auto;
+  flex: 0 0 auto;
 }
-
 
 .gameCanvas {
-    position: absolute;
+  position: absolute;
 }
 
-.dataSelection, .appendSelection {
-    position: absolute;
-    /* top:0;
+.dataSelection,
+.appendSelection {
+  position: absolute;
+  /* top:0;
     left:320px; */
-    z-index: 75;
-    width: 26px;
-    height: 26px;
-    margin: 3px 0 0 3px;
-    padding: 0;
-    /* display: none; */
-    box-sizing: border-box;
+  z-index: 75;
+  width: 26px;
+  height: 26px;
+  margin: 3px 0 0 3px;
+  padding: 0;
+  /* display: none; */
+  box-sizing: border-box;
 }
 
 .materialRegionPreview {
-    position: absolute;
-    z-index: 76;
-    box-sizing: border-box;
-    pointer-events: none;
-    background:
-        linear-gradient(90deg, #fff 50%, #111 50%) repeat-x top left,
-        linear-gradient(90deg, #fff 50%, #111 50%) repeat-x bottom left,
-        linear-gradient(0deg, #fff 50%, #111 50%) repeat-y top left,
-        linear-gradient(0deg, #fff 50%, #111 50%) repeat-y top right;
-    background-size: 8px 2px, 8px 2px, 2px 8px, 2px 8px;
-    animation: material-region-marquee 400ms linear infinite;
+  position: absolute;
+  z-index: 76;
+  box-sizing: border-box;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, #fff 50%, #111 50%) repeat-x top left,
+    linear-gradient(90deg, #fff 50%, #111 50%) repeat-x bottom left,
+    linear-gradient(0deg, #fff 50%, #111 50%) repeat-y top left,
+    linear-gradient(0deg, #fff 50%, #111 50%) repeat-y top right;
+  background-size:
+    8px 2px,
+    8px 2px,
+    2px 8px,
+    2px 8px;
+  animation: material-region-marquee 400ms linear infinite;
 }
 
 @keyframes material-region-marquee {
-    to {
-        background-position: 8px 0, -8px 100%, 0 -8px, 100% 8px;
-    }
+  to {
+    background-position:
+      8px 0,
+      -8px 100%,
+      0 -8px,
+      100% 8px;
+  }
 }
 
 #iconExpandBtn {
-    position: absolute;
-    left: 20px;
-    bottom: 30px;
-    font-size: 15px;
-    padding: 6px;
-    display: none;
+  position: absolute;
+  left: 20px;
+  bottom: 30px;
+  font-size: 15px;
+  padding: 6px;
+  display: none;
 }
 
 .warnText {
-    font-weight: 700;
-    font-size: 14px;
-    line-height: 1.2em;
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1.2em;
 }
 
 .successText {
-    line-height: 1.2em;
+  line-height: 1.2em;
 }
 
-#mapColMark, #mapRowMark {
-    cursor: crosshair;
+#mapColMark,
+#mapRowMark {
+  cursor: crosshair;
 }
 
 table.col {
-    position: relative;
-    text-align: center;
-    border-collapse: collapse;
+  position: relative;
+  text-align: center;
+  border-collapse: collapse;
 }
 
 #arrColMark td {
-    width: 16px;
+  width: 16px;
 }
 
 #arrColMark {
-    top: 2px;
-    left: 36px;
-    width: 385px;
-    height: 16px;
-    font-size: 13px;
+  top: 2px;
+  left: 36px;
+  width: 385px;
+  height: 16px;
+  font-size: 13px;
 }
 
 #mapColMark {
-    top: 2px;
-    left: 19px;
-    width: var(--pixel);
-    height: 16px;
-    font-size: 13px;
+  top: 2px;
+  left: 19px;
+  width: var(--pixel);
+  height: 16px;
+  font-size: 13px;
 }
 
 #mapColMark td {
-    width: 29px;
+  width: 29px;
 }
 
 #mapColMark td:hover .colBlock {
-    position: absolute;
-    top: 19px;
-    height: var(--pixel);
-    width: 32px;
-    z-index: 100;
+  position: absolute;
+  top: 19px;
+  height: var(--pixel);
+  width: 32px;
+  z-index: 100;
 }
 
 table.row {
-    position: relative;
-    text-align: right;
-    vertical-align: middle;
-    border-collapse: collapse;
+  position: relative;
+  text-align: right;
+  vertical-align: middle;
+  border-collapse: collapse;
 }
 
 #arrRowMark {
-    top: 5px;
-    left: 2px;
-    width: 16px;
-    height: 262px;
-    font-size: 12px;
+  top: 5px;
+  left: 2px;
+  width: 16px;
+  height: 262px;
+  font-size: 12px;
 }
 
 #mapRowMark {
-    top: 1px;
-    left: 2px;
-    width: 16px;
-    height: var(--pixel);
-    font-size: 12px;
+  top: 1px;
+  left: 2px;
+  width: 16px;
+  height: var(--pixel);
+  font-size: 12px;
 }
 
 #mapRowMark td {
-    height: 29px;
+  height: 29px;
 }
 
 #mapRowMark td:hover .rowBlock {
-    position: absolute;
-    left: 18px;
-    height: 32px;
-    width: var(--pixel);
-    z-index: 100;
+  position: absolute;
+  left: 18px;
+  height: 32px;
+  width: var(--pixel);
+  z-index: 100;
 }
 
-#menuDiv * { margin: 0; padding: 0; }
-#midMenu{
-    border-style: solid;
-    border-width: 1px;
-    cursor: default;
-    font: normal 13px Arial, sans-serif;
-    margin: 0;
-    outline: none;
-    padding: 4px 0;
-    position: absolute;
-    overflow-y: auto;
-    overflow-x: hidden;
-    max-height: 100%;
-    z-index: 101;
-
-    border-radius: 4px;
+#menuDiv * {
+  margin: 0;
+  padding: 0;
 }
-#midMenu .menuitem{
-    font: normal 13px Arial, sans-serif;
-    list-style: none;
-    margin: 0;
-    padding: 4px 7em 4px 28px;
-    white-space: nowrap;
+#midMenu {
+  border-style: solid;
+  border-width: 1px;
+  cursor: default;
+  font:
+    normal 13px Arial,
+    sans-serif;
+  margin: 0;
+  outline: none;
+  padding: 4px 0;
+  position: absolute;
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-height: 100%;
+  z-index: 101;
 
-    /* padding-left: 12px; */
+  border-radius: 4px;
+}
+#midMenu .menuitem {
+  font:
+    normal 13px Arial,
+    sans-serif;
+  list-style: none;
+  margin: 0;
+  padding: 4px 7em 4px 28px;
+  white-space: nowrap;
 
-    /* padding-right: 20px; */
+  /* padding-left: 12px; */
+
+  /* padding-right: 20px; */
 }
-#midMenu .menuitem:hover{
-    border-style: dotted;
-    border-width: 1px 0;
-    padding-bottom: 3px;
-    padding-top: 3px;
+#midMenu .menuitem:hover {
+  border-style: dotted;
+  border-width: 1px 0;
+  padding-bottom: 3px;
+  padding-top: 3px;
 }
-#midMenu .menuitem-content{
-    font: normal 13px Arial, sans-serif;
+#midMenu .menuitem-content {
+  font:
+    normal 13px Arial,
+    sans-serif;
 }
 
 #searchBlock {
-    width: 100px;
-    border-radius: 10px;
-    outline: none;
-    padding-left: 20px;
-    height: 14px;
+  width: 100px;
+  border-radius: 10px;
+  outline: none;
+  padding-left: 20px;
+  height: 14px;
 }
 
 .searchLogo {
-    width: 15px;
-    height: 15px;
-    position: absolute;
-    left: 6px;
-    top: 6px;
-    background-image:url('data:image/svg+xml;base64,PHN2ZyB2ZXJzaW9uPSIxLjEiIGJhc2VQcm9maWxlPSJmdWxsIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB4bWxuczpldj0iaHR0cDovL3d3dy53My5vcmcvMjAwMS94bWwtZXZlbnRzIj4KPGc%2BCgk8cG9seWdvbiBmaWxsPSIjNjY2IiBwb2ludHM9IjkuMjA3LDYuMTI2IDcuNzkzLDcuNTQxIDExLjc5MywxMS41NDEgMTMuMjA3LDEwLjEyNiIgLz4KCTxwYXRoIGZpbGw9IiM2NjYiIGQ9Ik01LjkxNywyYzEuNjA4LDAsMi45MTcsMS4zMDgsMi45MTcsMi45MTdTNy41MjUsNy44MzMsNS45MTcsNy44MzNTMyw2LjUyNSwzLDQuOTE3UzQuMzA4LDIsNS45MTcsMgoJCSBNNS45MTcsMEMzLjIwMSwwLDEsMi4yMDEsMSw0LjkxN3MyLjIwMSw0LjkxNyw0LjkxNyw0LjkxN3M0LjkxNy0yLjIwMSw0LjkxNy00LjkxN0MxMC44MzMsMi4yMDEsOC42MzIsMCw1LjkxNywwTDUuOTE3LDB6IiAvPgo8L2c%2BCjwvc3ZnPgo%3D');
+  width: 15px;
+  height: 15px;
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  background-image: url('data:image/svg+xml;base64,PHN2ZyB2ZXJzaW9uPSIxLjEiIGJhc2VQcm9maWxlPSJmdWxsIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB4bWxuczpldj0iaHR0cDovL3d3dy53My5vcmcvMjAwMS94bWwtZXZlbnRzIj4KPGc%2BCgk8cG9seWdvbiBmaWxsPSIjNjY2IiBwb2ludHM9IjkuMjA3LDYuMTI2IDcuNzkzLDcuNTQxIDExLjc5MywxMS41NDEgMTMuMjA3LDEwLjEyNiIgLz4KCTxwYXRoIGZpbGw9IiM2NjYiIGQ9Ik01LjkxNywyYzEuNjA4LDAsMi45MTcsMS4zMDgsMi45MTcsMi45MTdTNy41MjUsNy44MzMsNS45MTcsNy44MzNTMyw2LjUyNSwzLDQuOTE3UzQuMzA4LDIsNS45MTcsMgoJCSBNNS45MTcsMEMzLjIwMSwwLDEsMi4yMDEsMSw0LjkxN3MyLjIwMSw0LjkxNyw0LjkxNyw0LjkxN3M0LjkxNy0yLjIwMSw0LjkxNy00LjkxN0MxMC44MzMsMi4yMDEsOC42MzIsMCw1LjkxNywwTDUuOTE3LDB6IiAvPgo8L2c%2BCjwvc3ZnPgo%3D');
 }
 
 #uieventDiv {
-    display: none;
-    width: 100%;
-    height: 100%;
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 2000
+  display: none;
+  width: 100%;
+  height: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 2000;
 }
 
 #uieventDialog {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -55%);
-    width: 560px;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -55%);
+  width: 560px;
 }
 
 #uieventDialog.selectPointDialog {
-    width: max-content;
-    max-width: calc(100vw - 32px);
+  width: max-content;
+  max-width: calc(100vw - 32px);
 }
 
 .selectPointDialog .selectPointViewport {
-    max-width: calc(100vw - 52px);
-    max-height: calc(100vh - 180px);
-    margin-right: 10px;
+  max-width: calc(100vw - 52px);
+  max-height: calc(100vh - 180px);
+  margin-right: 10px;
 }
 
 #uieventHead {
-    margin: 10px 20px;
+  margin: 10px 20px;
 }
 
 #uieventTitle {
-    font-weight: bold;
+  font-weight: bold;
 }
 
 #uieventNo {
-    float: right;
+  float: right;
 }
 
 #uieventYes {
-    float: right;
-    margin-right: 15px;
+  float: right;
+  margin-right: 15px;
 }
 
 #uieventBody {
-    width: 540px;
-    height: 540px;
-    position: relative;
-    margin-left: 10px;
-    margin-bottom: 5px;
-    overflow: hidden;
+  width: 540px;
+  height: 540px;
+  position: relative;
+  margin-left: 10px;
+  margin-bottom: 5px;
+  overflow: hidden;
 }
 
 #uievent {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    left: 0;
-    top: 0;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  left: 0;
+  top: 0;
 }
 
 #selectPoint {
-    margin-left: 10px;
-    margin-bottom: 10px;
+  margin-left: 10px;
+  margin-bottom: 10px;
 }
 
 #selectPointFloor {
-    margin-right: 10px;
+  margin-right: 10px;
 }
 
 #selectPointButtons {
-    display: inline;
+  display: inline;
 }
 
 #selectPointBox {
-    position: absolute;
-    z-index: 75;
-    width: 26px;
-    height: 26px;
-    margin: 3px 0 0 3px;
-    padding: 0;
-    /* display: none; */
-    box-sizing: border-box;
+  position: absolute;
+  z-index: 75;
+  width: 26px;
+  height: 26px;
+  margin: 3px 0 0 3px;
+  padding: 0;
+  /* display: none; */
+  box-sizing: border-box;
 }
 
 /** left-side panels **/
 
 .leftTab {
-    border-radius: 2px;
-    box-sizing: border-box;
-    overflow: auto;
-    position: absolute;
-    bottom: 0;
+  border-radius: 2px;
+  box-sizing: border-box;
+  overflow: auto;
+  position: absolute;
+  bottom: 0;
 }
 
 .leftTab > * {
-    margin: 2.5px 5px;
+  margin: 2.5px 5px;
 }
 
 .leftTab > :first-child {
-    margin-top: 5px;
+  margin-top: 5px;
 }
 
 .leftTab > :last-child {
-    margin-bottom: 5px;
+  margin-bottom: 5px;
 }
 
 .leftTab {
-    left: 5px;
-    top: 10px;
-    width: 435px;
+  left: 5px;
+  top: 10px;
+  width: 435px;
 }
 
 .leftTabLayout {
-    display: flex;
-    overflow: hidden;
-    flex-direction: column;
+  display: flex;
+  overflow: hidden;
+  flex-direction: column;
 }
 
 .leftTabLayout > .leftTabHeader {
-    position: relative;
-    z-index: 1;
-    flex: 0 0 auto;
-    margin: 5px 5px 2.5px;
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+  margin: 5px 5px 2.5px;
 }
 
 .leftTabLayout > .leftTabContent {
-    min-height: 0;
-    margin: 2.5px 5px 5px;
-    padding-top: 0;
-    overflow: auto;
-    flex: 1 1 auto;
+  min-height: 0;
+  margin: 2.5px 5px 5px;
+  padding-top: 0;
+  overflow: auto;
+  flex: 1 1 auto;
 }
 
 #appendPicSelection span {
-    position: absolute;
-    font-size: 11px;
-    }
+  position: absolute;
+  font-size: 11px;
+}
 
 #left6 {
-    left: 5px;
-    top: 5px;
-    z-index: 200;
-    position: fixed;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
+  left: 5px;
+  top: 5px;
+  z-index: 200;
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
 }
 
 #left6 #blocklyArea {
-    float: left;
-    width: 60%;
-    height: 95%;
+  float: left;
+  width: 60%;
+  height: 95%;
 }
 
 #left6 #blocklyDiv {
-    position: relative;
+  position: relative;
 }
 
 #left6 .CodeMirror {
-    float: left;
-    height: 95%;
-    width: 35%;
+  float: left;
+  height: 95%;
+  width: 35%;
 }
 
 #left6 #codeArea {
-    width: 99.5%;
-    height: 15.4em;
-    overflow: y; /* resize:none; */
+  width: 99.5%;
+  height: 15.4em;
+  overflow: y; /* resize:none; */
 }
 
 #left7 {
-    /* height: 440px; width: 375px;float:left; */
-    left: 0;
-    top: var(--app-topbar-height);
-    z-index: 200;
-    position: fixed;
-    width: 100%;
-    height: calc(100% - var(--app-topbar-height));
-    box-sizing: border-box;
-    background: var(--editor-bg, #fff);
+  /* height: 440px; width: 375px;float:left; */
+  left: 0;
+  top: var(--app-topbar-height);
+  z-index: 200;
+  position: fixed;
+  width: 100%;
+  height: calc(100% - var(--app-topbar-height));
+  box-sizing: border-box;
+  background: var(--editor-bg, #fff);
 }
 
 #left7.monacoCodeEditorPanel {
-    display: flex;
-    min-height: 0;
-    flex-direction: column;
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
 }
 
 .monacoCodeEditorToolbar {
-    display: flex;
-    min-height: 38px;
-    padding: 5px 8px;
-    box-sizing: border-box;
-    align-items: center;
-    gap: 6px;
+  display: flex;
+  min-height: 38px;
+  padding: 5px 8px;
+  box-sizing: border-box;
+  align-items: center;
+  gap: 6px;
 }
 
 .monacoCodeEditorToolbar label {
-    display: inline-flex;
-    align-items: center;
+  display: inline-flex;
+  align-items: center;
 }
 
 .codeEditorCommandsButton,
 .codeEditorSettingsButton {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
 }
 
 .codeEditorSettingsButton {
-    min-width: 28px;
-    padding-right: 5px;
-    padding-left: 5px;
+  min-width: 28px;
+  padding-right: 5px;
+  padding-left: 5px;
 }
 
 .codeEditorAppearanceSettings {
-    display: grid;
-    min-width: 168px;
-    gap: 12px;
+  display: grid;
+  min-width: 168px;
+  gap: 12px;
 }
 
 .codeEditorAppearanceSettings > label {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .codeEditorAppearanceSettings .ant-input-number {
-    width: 82px;
+  width: 82px;
 }
 
 .monacoLanguageStatus {
-    overflow: hidden;
-    flex: 1;
-    color: #d46b08;
-    font-size: 12px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  overflow: hidden;
+  flex: 1;
+  color: #d46b08;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .monacoCodeEditorSurface {
-    min-height: 0;
-    flex: 1;
+  min-height: 0;
+  flex: 1;
 }
 
-.etable table, .etable table td {
-    cursor: auto;
+.etable table,
+.etable table td {
+  cursor: auto;
 }
 
 /* copy from github-css https://github.com/sindresorhus/github-markdown-css  */
 .etable table {
-    border-spacing: 0;
-    border-collapse: collapse;
+  border-spacing: 0;
+  border-collapse: collapse;
 }
 
 .etable table {
-    margin-top: 0;
-    margin-bottom: 16px;
+  margin-top: 0;
+  margin-bottom: 16px;
 }
 
 .etable table {
-    display: block;
-    width: 100%;
-    overflow: auto;
-    word-break: break-all;
+  display: block;
+  width: 100%;
+  overflow: auto;
+  word-break: break-all;
 }
 
 .etable table th {
-    font-weight: 600;
+  font-weight: 600;
 }
 
 .etable table th,
 .etable table td {
-    padding: 5px;
+  padding: 5px;
 }
 
 /* copy end ---------------------------------------------  */
 
 .etable tr {
-    width: 100%
+  width: 100%;
 }
 
 .etable tr > :nth-child(1) {
-    width: 24%
+  width: 24%;
 }
 
 .etable tr > :nth-child(2) {
-    width: 19%
+  width: 19%;
 }
 
 .etable tr > :nth-child(3) {
-    width: 32%;
+  width: 32%;
 }
 
 .etable tr > :nth-child(4) {
-    width: 25%;
-    padding: 0;
+  width: 25%;
+  padding: 0;
 }
 
 .etable table {
-    overflow: visible;
+  overflow: visible;
 }
 
 .etable tr > :nth-child(3) {
-    margin: 0;
-    padding: 0;
-    height: 100%;
-    position: relative;
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  position: relative;
 }
 
 .etable tr > :nth-child(4) {
-    text-align: center;
+  text-align: center;
 }
 
 div.etableInputDiv {
-    position: absolute;
-    padding: 5px 0 0 5px;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    right: 0;
+  position: absolute;
+  padding: 5px 0 0 5px;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
 }
 
 div.checkboxSet {
-    position: relative !important;
-    max-height: 250px;
-    overflow: auto;
+  position: relative !important;
+  max-height: 250px;
+  overflow: auto;
 }
 
 .etableInputDiv > * {
-    margin: 0;
-    padding: 0;
-    height: 100%;
-    width: 100%;
-    border: none;
-    background: transparent;
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  border: none;
+  background: transparent;
 }
 
 .etableInputDiv .checkbox {
-    width: 16px;
-    height: 16px;
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    margin-left: -8px;
-    margin-top: -8px;
+  width: 16px;
+  height: 16px;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  margin-left: -8px;
+  margin-top: -8px;
 }
 
 .etableInputDiv .checkboxSetMember {
-    width: 16px;
-    height: 16px;
-    display: inline-block;
+  width: 16px;
+  height: 16px;
+  display: inline-block;
 }
 
 .etableInputDiv textarea {
-    resize: none;
+  resize: none;
 }
 
 .etableInputDiv textarea:hover {
-    margin: -5px;
+  margin: -5px;
 }
 
 @font-face {
-    font-family: code;
-    src: url('@/assets/FiraCode.ttf');
+  font-family: code;
+  src: url('@/assets/FiraCode.ttf');
 }
 
 .main .CodeMirror {
-    font-family: code, 微软雅黑, 黑体, 新宋体, Verdana;
+  font-family: code, 微软雅黑, 黑体, 新宋体, Verdana;
 }

@@ -4,29 +4,26 @@
  * 封装 Blockly V12 Workspace 的初始化、销毁和常用操作
  */
 
-import { useEffect, useRef, useCallback, useMemo, useState } from "react";
-import type { RefObject } from "react";
-import * as Blockly from "blockly";
-import { javascriptGenerator } from "blockly/javascript";
-import * as Zh from "blockly/msg/zh-hans";
+import { useEffect, useRef, useCallback, useMemo, useState } from 'react';
+import type { RefObject } from 'react';
+import * as Blockly from 'blockly';
+import { javascriptGenerator } from 'blockly/javascript';
+import * as Zh from 'blockly/msg/zh-hans';
 
-import { registerAllBlocks } from "../blocks";
-import { dataToWorkspaceStateWithEntry, eventsToWorkspaceState } from "../parser";
-import type { EventData, ParseContext } from "../parser/types";
-import { generateToolboxConfig } from "../toolbox";
-import { registerToolboxCallbacks } from "../toolbox/callbacks";
-import { addRecentBlock, getSearchBlockTypes, setBlockSearchQuery } from "../toolbox/callbacks";
-import {
-  createBlocklyInteractionController,
-  type BlocklyInteractionController,
-} from "../interactions";
-import type { BlocklyInteractionCapabilities } from "@/Workbench/EventsEditor/BlocklyCapabilitiesContext";
-import type { BlocklyViewport } from "../session/BlocklyEditorSession";
-import { editorConfigService } from "@/services/editorConfig";
-import { isKeyboardInputTarget, isVisibleKeyboardScope } from "@/utils/keyboard";
-import { EditorStore } from "@/stores/EditorStore";
-import { withDisabledBlocksEnabled } from "../registry";
-import { blocklyDarkTheme, blocklyLightTheme } from "../theme";
+import { registerAllBlocks } from '../blocks';
+import { dataToWorkspaceStateWithEntry, eventsToWorkspaceState } from '../parser';
+import type { EventData, ParseContext } from '../parser/types';
+import { generateToolboxConfig } from '../toolbox';
+import { registerToolboxCallbacks } from '../toolbox/callbacks';
+import { addRecentBlock, getSearchBlockTypes, setBlockSearchQuery } from '../toolbox/callbacks';
+import { createBlocklyInteractionController, type BlocklyInteractionController } from '../interactions';
+import type { BlocklyInteractionCapabilities } from '@/Workbench/EventsEditor/BlocklyCapabilitiesContext';
+import type { BlocklyViewport } from '../session/BlocklyEditorSession';
+import { editorConfigService } from '@/services/editorConfig';
+import { isKeyboardInputTarget, isVisibleKeyboardScope } from '@/utils/keyboard';
+import { EditorStore } from '@/stores/EditorStore';
+import { withDisabledBlocksEnabled } from '../registry';
+import { blocklyDarkTheme, blocklyLightTheme } from '../theme';
 
 /**
  * Workspace 配置选项
@@ -74,7 +71,7 @@ export interface WorkspaceAPI {
   /** 加载事件数据到工作区（解析为细粒度块） */
   loadEventData: (events: EventData[]) => void;
   /** 加载带入口块的数据到工作区 */
-  loadEntryData: (data: unknown, entryType: string, project?: ParseContext["project"]) => void;
+  loadEntryData: (data: unknown, entryType: string, project?: ParseContext['project']) => void;
   /** 获取顶层入口块类型 */
   getTopBlockType: () => string | null;
   /** 校验工作区（检查是否有未连接的块） */
@@ -95,7 +92,7 @@ let blocksRegistered = false;
  * 检查块是否为入口块（_m 后缀的顶级块）
  */
 function isEntryBlock(block: Blockly.Block): boolean {
-  return block.type.endsWith("_m");
+  return block.type.endsWith('_m');
 }
 
 /**
@@ -119,10 +116,7 @@ function getDisconnectedBlocks(workspace: Blockly.WorkspaceSvg): Blockly.Block[]
  * draft changes or recording the previous document in the next document's
  * undo stack.
  */
-function replaceWorkspaceContents(
-  workspace: Blockly.WorkspaceSvg,
-  load: () => void,
-): void {
+function replaceWorkspaceContents(workspace: Blockly.WorkspaceSvg, load: () => void): void {
   const eventsWereEnabled = Blockly.Events.isEnabled();
   if (eventsWereEnabled) Blockly.Events.disable();
   try {
@@ -146,12 +140,12 @@ export function useBlocklyWorkspace(
   options: WorkspaceOptions = {},
 ): WorkspaceAPI {
   const { theme: editorTheme } = EditorStore.useStore();
-  const blocklyTheme = editorTheme === "editor_color_dark" ? blocklyDarkTheme : blocklyLightTheme;
+  const blocklyTheme = editorTheme === 'editor_color_dark' ? blocklyDarkTheme : blocklyLightTheme;
   const initialBlocklyThemeRef = useRef(blocklyTheme);
   const {
     readOnly = false,
     showToolbox = true,
-    mediaPath = new URL("assets/blockly-media/", document.baseURI).href,
+    mediaPath = new URL('assets/blockly-media/', document.baseURI).href,
     entryType,
   } = options;
 
@@ -174,9 +168,7 @@ export function useBlocklyWorkspace(
     }
 
     // 创建工具箱配置
-    const toolbox = showToolbox
-      ? generateToolboxConfig(entryType)
-      : undefined;
+    const toolbox = showToolbox ? generateToolboxConfig(entryType) : undefined;
 
     // 创建 Workspace
     const workspace = Blockly.inject(containerRef.current, {
@@ -208,13 +200,13 @@ export function useBlocklyWorkspace(
       const ids = (event as Blockly.Events.BlockCreate).ids ?? [];
       for (const id of ids) {
         const type = workspace.getBlockById(id)?.type;
-        if (type && !type.endsWith("_m")) addRecentBlock(type);
+        if (type && !type.endsWith('_m')) addRecentBlock(type);
       }
     };
     const trackToolboxCategory = (event: Blockly.Events.Abstract) => {
       if (event.type !== Blockly.Events.TOOLBOX_ITEM_SELECT) return;
       const selected = (event as Blockly.Events.ToolboxItemSelect).newItem;
-      if (selected) editorConfigService.set("blocklyLastToolboxCategory", selected);
+      if (selected) editorConfigService.set('blocklyLastToolboxCategory', selected);
     };
     workspace.addChangeListener(Blockly.Events.disableOrphans);
     workspace.addChangeListener(trackCreatedBlocks);
@@ -224,7 +216,7 @@ export function useBlocklyWorkspace(
       if (!isVisibleKeyboardScope(containerRef.current) || isKeyboardInputTarget(event.target)) return;
       const toolbox = workspace.getToolbox();
       if (!toolbox) return;
-      if (event.key === "Escape") {
+      if (event.key === 'Escape') {
         toolbox.clearSelection();
         return;
       }
@@ -234,14 +226,14 @@ export function useBlocklyWorkspace(
       event.preventDefault();
       toolbox.setSelectedItem(item);
     };
-    window.addEventListener("keydown", handleToolboxShortcut);
+    window.addEventListener('keydown', handleToolboxShortcut);
 
     // 注册工具箱动态分类回调
     if (showToolbox) {
       registerToolboxCallbacks(workspace, entryType);
       window.requestAnimationFrame(() => {
         const toolbox = workspace.getToolbox() as Blockly.Toolbox | null;
-        const selectedId = editorConfigService.get<string>("blocklyLastToolboxCategory", "");
+        const selectedId = editorConfigService.get<string>('blocklyLastToolboxCategory', '');
         const selected = toolbox?.getToolboxItems().find((item) => item.getId() === selectedId);
         if (selected) toolbox?.setSelectedItem(selected);
       });
@@ -252,7 +244,7 @@ export function useBlocklyWorkspace(
       workspace.removeChangeListener(Blockly.Events.disableOrphans);
       workspace.removeChangeListener(trackCreatedBlocks);
       workspace.removeChangeListener(trackToolboxCategory);
-      window.removeEventListener("keydown", handleToolboxShortcut);
+      window.removeEventListener('keydown', handleToolboxShortcut);
       workspace.dispose();
       workspaceRef.current = null;
       setIsReady(false);
@@ -297,13 +289,13 @@ export function useBlocklyWorkspace(
   // 生成代码（只生成与入口块相连的块）
   const generateCode = useCallback((): string => {
     const workspace = workspaceRef.current;
-    if (!workspace) return "";
+    if (!workspace) return '';
 
     // 获取所有入口块
     const entryBlocks = getEntryBlocks(workspace);
 
     if (entryBlocks.length === 0) {
-      return "";
+      return '';
     }
 
     // 只为入口块生成代码
@@ -320,7 +312,7 @@ export function useBlocklyWorkspace(
           }
         }
       }
-      return codeBlocks.join("\n");
+      return codeBlocks.join('\n');
     });
   }, []);
 
@@ -345,7 +337,7 @@ export function useBlocklyWorkspace(
   }, []);
 
   // 加载带入口块的数据
-  const loadEntryData = useCallback((data: unknown, entryType: string, project?: ParseContext["project"]) => {
+  const loadEntryData = useCallback((data: unknown, entryType: string, project?: ParseContext['project']) => {
     const workspace = workspaceRef.current;
     if (!workspace) return;
 
@@ -391,14 +383,12 @@ export function useBlocklyWorkspace(
     const errors: string[] = [];
 
     if (disconnectedBlocks.length > 0) {
-      errors.push(
-        `存在 ${disconnectedBlocks.length} 个未连接到入口块的块，请将它们连接到入口块或删除`,
-      );
+      errors.push(`存在 ${disconnectedBlocks.length} 个未连接到入口块的块，请将它们连接到入口块或删除`);
 
       // 添加具体的块类型信息（可选）
       const blockTypes = [...new Set(disconnectedBlocks.map((b) => b.type))];
       if (blockTypes.length <= 5) {
-        errors.push(`未连接的块类型: ${blockTypes.join(", ")}`);
+        errors.push(`未连接的块类型: ${blockTypes.join(', ')}`);
       }
     }
 
@@ -413,18 +403,21 @@ export function useBlocklyWorkspace(
     setBlockSearchQuery(query);
     const toolbox = workspaceRef.current?.getToolbox() as Blockly.Toolbox | null;
     if (!toolbox) return;
-    const searchCategory = toolbox.getToolboxItems().find((item) => (
-      item.isSelectable()
-      && "getName" in item
-      && typeof item.getName === "function"
-      && item.getName() === "最近使用事件"
-    ));
+    const searchCategory = toolbox
+      .getToolboxItems()
+      .find(
+        (item) =>
+          item.isSelectable() &&
+          'getName' in item &&
+          typeof item.getName === 'function' &&
+          item.getName() === '最近使用事件',
+      );
     if (searchCategory) {
       toolbox.setSelectedItem(searchCategory);
       const div = searchCategory.getDiv();
-      div?.setAttribute("data-test-id", "event-editor-search-results");
-      div?.setAttribute("data-search-active", "true");
-      div?.setAttribute("data-result-count", String(getSearchBlockTypes(query).length));
+      div?.setAttribute('data-test-id', 'event-editor-search-results');
+      div?.setAttribute('data-search-active', 'true');
+      div?.setAttribute('data-result-count', String(getSearchBlockTypes(query).length));
     }
     toolbox.refreshSelection();
   }, []);
@@ -441,9 +434,10 @@ export function useBlocklyWorkspace(
     if (selected) next?.setSelectedItem(selected);
   }, [entryType, showToolbox]);
 
-  const runSelectedPointInteraction = useCallback(async () => (
-    interactionControllerRef.current?.runSelectedPointInteraction() ?? false
-  ), []);
+  const runSelectedPointInteraction = useCallback(
+    async () => interactionControllerRef.current?.runSelectedPointInteraction() ?? false,
+    [],
+  );
 
   const getViewport = useCallback((): BlocklyViewport => {
     const workspace = workspaceRef.current;

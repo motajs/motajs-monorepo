@@ -1,4 +1,4 @@
-import convert from "color-convert";
+import convert from 'color-convert';
 
 export const hueRotate = (ctx: CanvasRenderingContext2D, degree: number) => {
   const { width, height } = ctx.canvas;

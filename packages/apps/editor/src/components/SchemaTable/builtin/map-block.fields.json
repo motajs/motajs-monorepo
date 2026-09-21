@@ -29,10 +29,7 @@
       }
     },
     "mapBlock.name": {
-      "type": [
-        "string",
-        "null"
-      ],
+      "type": ["string", "null"],
       "title": "图块名称",
       "description": "在编辑器和相关界面中显示的图块名称；null 表示未指定。",
       "editor": {
@@ -40,10 +37,7 @@
       }
     },
     "mapBlock.canPass": {
-      "type": [
-        "boolean",
-        "null"
-      ],
+      "type": ["boolean", "null"],
       "title": "可通行",
       "description": "勇士是否可以直接走入该图块；null 表示未指定。",
       "editor": {
@@ -51,10 +45,7 @@
       }
     },
     "mapBlock.canBreak": {
-      "type": [
-        "boolean",
-        "null"
-      ],
+      "type": ["boolean", "null"],
       "title": "可破震",
       "description": "该图块是否可被破墙镐或地震卷轴破坏；null 表示未指定。",
       "editor": {
@@ -62,17 +53,8 @@
       }
     },
     "mapBlock.trigger": {
-      "type": [
-        "string",
-        "null"
-      ],
-      "enum": [
-        null,
-        "openDoor",
-        "pushBox",
-        "ski",
-        "custom"
-      ],
+      "type": ["string", "null"],
+      "enum": [null, "openDoor", "pushBox", "ski", "custom"],
       "title": "默认触发器",
       "description": "触碰图块时执行的内置行为；未设置表示没有默认触发器。",
       "normalizer": "optionalJson",
@@ -103,17 +85,8 @@
       }
     },
     "mapBlock.animate": {
-      "type": [
-        "integer",
-        "null"
-      ],
-      "enum": [
-        null,
-        1,
-        2,
-        3,
-        4
-      ],
+      "type": ["integer", "null"],
+      "enum": [null, 1, 2, 3, 4],
       "title": "动画帧数",
       "description": "覆盖素材的默认动画帧数；未设置时使用素材默认值。",
       "normalizer": "optionalJson",
@@ -140,10 +113,7 @@
       }
     },
     "mapBlock.script": {
-      "type": [
-        "string",
-        "null"
-      ],
+      "type": ["string", "null"],
       "title": "碰触脚本",
       "description": "碰触图块时、点位触发器执行前运行的脚本。",
       "editor": {
@@ -153,10 +123,7 @@
       }
     },
     "mapBlock.event": {
-      "type": [
-        "array",
-        "null"
-      ],
+      "type": ["array", "null"],
       "title": "碰触事件",
       "description": "碰触图块时执行的事件；存在时不会再执行默认触发器。",
       "editor": {
@@ -180,10 +147,7 @@
       }
     },
     "mapBlock.doorInfo": {
-      "type": [
-        "object",
-        "null"
-      ],
+      "type": ["object", "null"],
       "title": "门信息",
       "description": "开关门动画、音效和钥匙消耗配置，通常只适用于 animates 与 npc48。",
       "editor": {
@@ -192,10 +156,7 @@
       }
     },
     "mapBlock.faceIds": {
-      "type": [
-        "object",
-        "null"
-      ],
+      "type": ["object", "null"],
       "title": "行走朝向",
       "description": "移动或碰撞时按方向切换到对应图块 ID。",
       "editor": {
@@ -204,10 +165,7 @@
       }
     },
     "mapBlock.bigImage": {
-      "type": [
-        "string",
-        "null"
-      ],
+      "type": ["string", "null"],
       "title": "绑定贴图",
       "description": "绑定 project/images 中的 PNG 贴图。",
       "normalizer": "optionalJson",

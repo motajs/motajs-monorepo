@@ -23,18 +23,10 @@
 // ============ 用户友好 API（推荐使用）============
 
 // 导出简化的 API 函数
-export {
-  decode,
-  encode,
-  convert,
-  convertFromJson,
-  parseLegacy,
-  extractFrame,
-  extractFrames,
-} from "./api.js";
+export { decode, encode, convert, convertFromJson, parseLegacy, extractFrame, extractFrames } from './api.js';
 
 // 导出 API 相关类型
-export type { EncodeOptions, ExtractFrameOptions } from "./api.js";
+export type { EncodeOptions, ExtractFrameOptions } from './api.js';
 
 // ============ 类型定义 ============
 
@@ -51,7 +43,7 @@ export type {
   DecodedH5Animate,
   FileHeader,
   ImageConversionResult,
-} from "./types.js";
+} from './types.js';
 
 // ============ 错误处理 ============
 
@@ -78,21 +70,15 @@ export {
   createImageMergeError,
   createFrameExtractionError,
   getErrorCodeDescription,
-} from "./errors.js";
+} from './errors.js';
 
 // ============ 底层 API（高级用法）============
 
 // 导出二进制工具类
-export { BinaryParser, BinaryWriter } from "./binary.js";
+export { BinaryParser, BinaryWriter } from './binary.js';
 
 // 导出解码器函数
-export {
-  parseHeader,
-  parseSpriteInfo,
-  getSpriteInfoSize,
-  convertArraysToObjects,
-  decodeH5Animate,
-} from "./decoder.js";
+export { parseHeader, parseSpriteInfo, getSpriteInfoSize, convertArraysToObjects, decodeH5Animate } from './decoder.js';
 
 // 导出编码器函数
 export {
@@ -101,10 +87,10 @@ export {
   metaReplacer,
   validateEncodeInput,
   encodeH5Animate,
-} from "./encoder.js";
+} from './encoder.js';
 
 // 导出 WebP 处理函数
-export type { WebPOptions, ExtractFrameOptions as WebPExtractFrameOptions } from "./webp.js";
+export type { WebPOptions, ExtractFrameOptions as WebPExtractFrameOptions } from './webp.js';
 export {
   convertToWebP,
   createVerticalSpriteSheet,
@@ -113,10 +99,10 @@ export {
   extractFrameByIndex,
   extractFrameByPosition,
   extractAllFrames,
-} from "./webp.js";
+} from './webp.js';
 
 // 导出格式转换函数
-export type { ConvertOptions } from "./converter.js";
+export type { ConvertOptions } from './converter.js';
 export {
   validateLegacyFormat,
   parseLegacyAnimateFile,
@@ -126,12 +112,12 @@ export {
   convertMetadata,
   convertToH5Animate,
   convertFromJsonString,
-} from "./converter.js";
+} from './converter.js';
 
 // ============ 验证函数 ============
 
 // 导出验证函数
-export type { ValidationResult } from "./validation.js";
+export type { ValidationResult } from './validation.js';
 export {
   validateSoundMeta,
   validateH5AnimateObject,
@@ -143,4 +129,4 @@ export {
   validateH5AnimateMetaSafe,
   validateSpriteInfoSafe,
   validateEncodeInputComplete,
-} from "./validation.js";
+} from './validation.js';

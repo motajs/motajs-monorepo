@@ -1,31 +1,26 @@
-import { Dexie, type EntityTable } from "dexie";
-import { randomInt } from "es-toolkit";
-import { FsaNodeFs } from "memfs/lib/fsa-to-node";
+import { Dexie, type EntityTable } from 'dexie';
+import { randomInt } from 'es-toolkit';
+import { FsaNodeFs } from 'memfs/lib/fsa-to-node';
 
-import type {
-  ProjectAccessResult,
-  ProjectDetailsResponse,
-  ProjectRecord,
-  ProjectSummary,
-} from "@/idl";
+import type { ProjectAccessResult, ProjectDetailsResponse, ProjectRecord, ProjectSummary } from '@/idl';
 
 const PROJECT_ID_START = 1055;
 const PROJECT_ID_END = 9922;
 
-const db = new Dexie("service-worker") as Dexie & {
-  project: EntityTable<ProjectRecord, "id">;
+const db = new Dexie('service-worker') as Dexie & {
+  project: EntityTable<ProjectRecord, 'id'>;
 };
 
 db.version(1).stores({
-  project: "&id, name, lastTime",
+  project: '&id, name, lastTime',
 });
 
 export type ProjectFs = FsaNodeFs;
 
-export type ProjectHostAccess
-  = | { status: "ready"; project: ProjectSummary; fs: ProjectFs; handle: FileSystemDirectoryHandle }
-    | { status: "permission-required"; project: ProjectSummary; handle: FileSystemDirectoryHandle }
-    | { status: "not-found" };
+export type ProjectHostAccess =
+  | { status: 'ready'; project: ProjectSummary; fs: ProjectFs; handle: FileSystemDirectoryHandle }
+  | { status: 'permission-required'; project: ProjectSummary; handle: FileSystemDirectoryHandle }
+  | { status: 'not-found' };
 
 const activeProjectMap = new Map<number, [ProjectFs, FileSystemDirectoryHandle]>();
 const activationPromises = new Map<number, Promise<ProjectHostAccess>>();
@@ -33,45 +28,44 @@ const activationPromises = new Map<number, Promise<ProjectHostAccess>>();
 const applyProjectID = async () => {
   while (true) {
     const id = randomInt(PROJECT_ID_START, PROJECT_ID_END);
-    if (await db.project.where("id").equals(id).count() === 0) return id;
+    if ((await db.project.where('id').equals(id).count()) === 0) return id;
   }
 };
 
 const getPrevProjectId = async (handle: FileSystemDirectoryHandle) => {
-  const records = await db.project.where("name").equals(handle.name).toArray();
-  const tests = await Promise.all(records.map(async (record) => {
-    try {
-      return [record.id, await handle.isSameEntry(record.handle)] as const;
-    } catch {
-      return [record.id, false] as const;
-    }
-  }));
+  const records = await db.project.where('name').equals(handle.name).toArray();
+  const tests = await Promise.all(
+    records.map(async (record) => {
+      try {
+        return [record.id, await handle.isSameEntry(record.handle)] as const;
+      } catch {
+        return [record.id, false] as const;
+      }
+    }),
+  );
   return tests.find(([, same]) => same)?.[0];
 };
 
 const queryPermission = async (handle: FileSystemDirectoryHandle): Promise<PermissionState> => {
   try {
-    return await handle.queryPermission({ mode: "readwrite" });
+    return await handle.queryPermission({ mode: 'readwrite' });
   } catch {
-    return "denied";
+    return 'denied';
   }
 };
 
 const hasIndex = async (fs: ProjectFs): Promise<boolean> => {
   try {
-    const stat = await fs.promises.stat("index.html");
+    const stat = await fs.promises.stat('index.html');
     return stat.isFile();
   } catch {
     return false;
   }
 };
 
-const summaryOf = async (
-  record: ProjectRecord,
-  knownPermission?: PermissionState,
-): Promise<ProjectSummary> => {
-  const permission = knownPermission ?? await queryPermission(record.handle);
-  const active = permission === "granted" && activeProjectMap.has(record.id);
+const summaryOf = async (record: ProjectRecord, knownPermission?: PermissionState): Promise<ProjectSummary> => {
+  const permission = knownPermission ?? (await queryPermission(record.handle));
+  const active = permission === 'granted' && activeProjectMap.has(record.id);
   const summary: ProjectSummary = {
     id: record.id,
     name: record.name,
@@ -79,7 +73,7 @@ const summaryOf = async (
     permission,
     active,
   };
-  if (permission === "granted") {
+  if (permission === 'granted') {
     const fs = activeProjectMap.get(record.id)?.[0] ?? new FsaNodeFs(record.handle as never);
     summary.hasIndex = await hasIndex(fs);
   }
@@ -87,7 +81,7 @@ const summaryOf = async (
 };
 
 const publicAccess = (access: ProjectHostAccess): ProjectAccessResult => {
-  if (access.status === "not-found") return access;
+  if (access.status === 'not-found') return access;
   return { status: access.status, project: access.project };
 };
 
@@ -117,12 +111,12 @@ export const invalidateProject = (id: number) => {
 
 const activate = async (id: number): Promise<ProjectHostAccess> => {
   const record = await db.project.get(id);
-  if (!record) return { status: "not-found" };
+  if (!record) return { status: 'not-found' };
   const permission = await queryPermission(record.handle);
-  if (permission !== "granted") {
+  if (permission !== 'granted') {
     activeProjectMap.delete(id);
     return {
-      status: "permission-required",
+      status: 'permission-required',
       project: await summaryOf(record, permission),
       handle: record.handle,
     };
@@ -133,7 +127,7 @@ const activate = async (id: number): Promise<ProjectHostAccess> => {
   await db.project.update(id, { lastTime });
   const nextRecord = { ...record, lastTime };
   return {
-    status: "ready",
+    status: 'ready',
     project: await summaryOf(nextRecord, permission),
     fs,
     handle: record.handle,
@@ -149,14 +143,14 @@ export const activateProject = async (id: number): Promise<ProjectHostAccess> =>
 };
 
 export const accessProjectById = async (id: number): Promise<ProjectHostAccess> => {
-  if (!Number.isSafeInteger(id)) return { status: "not-found" };
+  if (!Number.isSafeInteger(id)) return { status: 'not-found' };
   const record = await db.project.get(id);
-  if (!record) return { status: "not-found" };
+  if (!record) return { status: 'not-found' };
   const permission = await queryPermission(record.handle);
-  if (permission !== "granted") {
+  if (permission !== 'granted') {
     activeProjectMap.delete(id);
     return {
-      status: "permission-required",
+      status: 'permission-required',
       project: await summaryOf(record, permission),
       handle: record.handle,
     };
@@ -164,7 +158,7 @@ export const accessProjectById = async (id: number): Promise<ProjectHostAccess> 
   const active = activeProjectMap.get(id);
   if (active) {
     return {
-      status: "ready",
+      status: 'ready',
       project: await summaryOf(record, permission),
       fs: active[0],
       handle: active[1],
@@ -177,12 +171,12 @@ export const getProjectDetails = async (id: number): Promise<ProjectDetailsRespo
   const access = await accessProjectById(id);
   return {
     access: publicAccess(access),
-    handle: access.status === "not-found" ? undefined : access.handle,
+    handle: access.status === 'not-found' ? undefined : access.handle,
   };
 };
 
 export const listProject = async (): Promise<ProjectSummary[]> => {
-  const records = await db.project.orderBy("lastTime").reverse().toArray();
+  const records = await db.project.orderBy('lastTime').reverse().toArray();
   return Promise.all(records.map((record) => summaryOf(record)));
 };
 

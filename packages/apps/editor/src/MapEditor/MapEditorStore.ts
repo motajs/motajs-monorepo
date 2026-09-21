@@ -4,16 +4,16 @@
  * 使用 createStore 管理地图编辑器的交互状态
  */
 
-import { useState, useCallback } from "react";
-import { createStore } from "@motajs/react-store";
-import type { LocPOD, GridPOD, RectPOD } from "@/utils/coordinate";
-import type { SelectedBlock, BlockInfo } from "./MaterialPanel/types";
+import { useState, useCallback } from 'react';
+import { createStore } from '@motajs/react-store';
+import type { LocPOD, GridPOD, RectPOD } from '@/utils/coordinate';
+import type { SelectedBlock, BlockInfo } from './MaterialPanel/types';
 
 /** 图层模式；属性名来自项目的地图图层配置。 */
 export type LayerMod = string;
 
 /** 画笔模式 */
-export type BrushMod = "line" | "rectangle" | "fill";
+export type BrushMod = 'line' | 'rectangle' | 'fill';
 
 /** 复制的位置信息 */
 export interface CopiedInfo {
@@ -128,12 +128,12 @@ export interface MapEditorStoreValue {
 
 /** 初始状态 */
 const initialState: MapEditorState = {
-  currentFloorId: "",
+  currentFloorId: '',
   pos: [0, 0],
   hoverPos: null,
   selectedBlock: undefined,
-  layerMod: "map",
-  brushMod: "line",
+  layerMod: 'map',
+  brushMod: 'line',
   bigmap: false,
   bigmapInfo: { top: 0, left: 0, size: 32 },
   viewportOffset: [0, 0],
@@ -199,12 +199,9 @@ function useMapEditorStoreHook(): MapEditorStoreValue {
     setState((s) => ({ ...s, bigmap }));
   }, []);
 
-  const setBigmapInfo = useCallback(
-    (info: { top: number; left: number; size: number }) => {
-      setState((s) => ({ ...s, bigmapInfo: info }));
-    },
-    []
-  );
+  const setBigmapInfo = useCallback((info: { top: number; left: number; size: number }) => {
+    setState((s) => ({ ...s, bigmapInfo: info }));
+  }, []);
 
   // 视口操作
   const setViewportOffset = useCallback((offset: LocPOD) => {
@@ -219,11 +216,12 @@ function useMapEditorStoreHook(): MapEditorStoreValue {
         Math.max(0, Math.min(s.viewportOffset[1], normalized[1])),
       ];
       if (
-        s.viewportBounds[0] === normalized[0]
-        && s.viewportBounds[1] === normalized[1]
-        && s.viewportOffset[0] === viewportOffset[0]
-        && s.viewportOffset[1] === viewportOffset[1]
-      ) return s;
+        s.viewportBounds[0] === normalized[0] &&
+        s.viewportBounds[1] === normalized[1] &&
+        s.viewportOffset[0] === viewportOffset[0] &&
+        s.viewportOffset[1] === viewportOffset[1]
+      )
+        return s;
       return { ...s, viewportBounds: normalized, viewportOffset };
     });
   }, []);

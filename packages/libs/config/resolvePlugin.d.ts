@@ -1,3 +1,3 @@
-import { Plugin } from "vite";
+import { Plugin } from 'vite';
 
 export const resolvePlugin: Plugin;

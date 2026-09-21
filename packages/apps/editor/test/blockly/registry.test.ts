@@ -207,7 +207,10 @@ describe('BlockRegistry', () => {
       const event: EventObject = {
         type: 'setBlock',
         number: 'yellowDoor',
-        loc: [[1, 2], [3, 4]],
+        loc: [
+          [1, 2],
+          [3, 4],
+        ],
       };
       const state = parseEvent(event, testContext);
 
@@ -307,14 +310,10 @@ describe('BlockRegistry', () => {
     });
 
     it('应该解析素材和 UI 辅助事件而不是 unknown', () => {
-      expect(parseEvent({ type: 'drawIcon', id: 'yellowKey', x: 0, y: 32 }, testContext).type)
-        .toBe('mota_drawIcon_s');
-      expect(parseEvent({ type: 'drawSelector', code: 1 }, testContext).type)
-        .toBe('mota_drawSelector_s');
-      expect(parseEvent({ type: 'moveAction' }, testContext).type)
-        .toBe('mota_moveAction_s');
-      expect(parseEvent({ type: 'setHeroIcon', name: 'hero.png' }, testContext).type)
-        .toBe('mota_setHeroIcon_s');
+      expect(parseEvent({ type: 'drawIcon', id: 'yellowKey', x: 0, y: 32 }, testContext).type).toBe('mota_drawIcon_s');
+      expect(parseEvent({ type: 'drawSelector', code: 1 }, testContext).type).toBe('mota_drawSelector_s');
+      expect(parseEvent({ type: 'moveAction' }, testContext).type).toBe('mota_moveAction_s');
+      expect(parseEvent({ type: 'setHeroIcon', name: 'hero.png' }, testContext).type).toBe('mota_setHeroIcon_s');
     });
 
     it('应该解析 trigger 事件', () => {
@@ -363,9 +362,7 @@ describe('事件列表解析', () => {
       {
         type: 'if',
         condition: 'true',
-        true: [
-          { type: 'comment', text: '嵌套注释' },
-        ],
+        true: [{ type: 'comment', text: '嵌套注释' }],
       },
       { type: 'comment', text: '最后一条' },
     ];

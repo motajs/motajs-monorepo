@@ -1,5 +1,5 @@
-import { useDependentState } from "./state";
-import { useRef, useEffect, useMemo } from "react";
+import { useDependentState } from './state';
+import { useRef, useEffect, useMemo } from 'react';
 
 export const usePromiseValue = <T>(promise: Promise<T>) => {
   const [result, setResult] = useDependentState<[undefined, true] | [T, false]>(promise, () => {

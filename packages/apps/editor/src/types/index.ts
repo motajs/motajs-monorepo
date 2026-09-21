@@ -11,4 +11,4 @@ export type {
   FloorData,
   FloorImageData,
   FunctionsType,
-} from "./game";
+} from './game';

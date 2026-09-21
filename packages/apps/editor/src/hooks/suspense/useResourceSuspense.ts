@@ -1,27 +1,25 @@
-import { useCallback } from "react";
-import type { DataResource } from "@/project/data/DataResource";
-import { useSignal } from "../useFs";
-import { deferredEnsureLoaded } from "./deferredEnsureLoaded";
+import { useCallback } from 'react';
+import type { DataResource } from '@/project/data/DataResource';
+import { useSignal } from '../useFs';
+import { deferredEnsureLoaded } from './deferredEnsureLoaded';
 
 export type ResourceUpdateFn<T> = {
   (value: T): void;
   (transform: (current: T) => T): void;
 };
 
-export function useResourceSuspense<T>(
-  resource: DataResource<T>,
-): [T, ResourceUpdateFn<T>] {
+export function useResourceSuspense<T>(resource: DataResource<T>): [T, ResourceUpdateFn<T>] {
   const content = useSignal(resource.content);
 
-  if (content.status === "idle") {
+  if (content.status === 'idle') {
     throw deferredEnsureLoaded(resource);
   }
 
-  if (content.status === "loading") {
+  if (content.status === 'loading') {
     throw resource.waitForSettled();
   }
 
-  if (content.status !== "loaded") {
+  if (content.status !== 'loaded') {
     throw resource;
   }
 

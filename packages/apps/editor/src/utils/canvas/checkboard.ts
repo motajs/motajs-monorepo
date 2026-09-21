@@ -1,5 +1,5 @@
-import { once } from "es-toolkit";
-import { createEmptyCanvas } from "./create";
+import { once } from 'es-toolkit';
+import { createEmptyCanvas } from './create';
 
 const createCheckboardPattern = once(() => {
   const ctx = createEmptyCanvas([16, 16]);

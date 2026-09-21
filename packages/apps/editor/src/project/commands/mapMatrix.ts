@@ -6,7 +6,10 @@ export interface ParseMapMatrixOptions {
 }
 
 function stripTrailingCommas(value: string): string {
-  return value.trim().replace(/,\s*$/g, "").replace(/,\s*([\]}])/g, "$1");
+  return value
+    .trim()
+    .replace(/,\s*$/g, '')
+    .replace(/,\s*([\]}])/g, '$1');
 }
 
 function parseCandidate(value: string): unknown {
@@ -15,7 +18,7 @@ function parseCandidate(value: string): unknown {
 
 function normalizeParsedMatrix(value: unknown): MapMatrix {
   if (!Array.isArray(value)) {
-    throw new Error("Map data must be an array");
+    throw new Error('Map data must be an array');
   }
 
   return value.map((row, y) => {
@@ -23,7 +26,7 @@ function normalizeParsedMatrix(value: unknown): MapMatrix {
       throw new Error(`Map row ${y} must be an array`);
     }
     return row.map((cell, x) => {
-      const num = typeof cell === "number" ? cell : Number(cell);
+      const num = typeof cell === 'number' ? cell : Number(cell);
       if (!Number.isInteger(num) || num < 0) {
         throw new Error(`Invalid map idnum at ${x},${y}: ${String(cell)}`);
       }
@@ -32,10 +35,7 @@ function normalizeParsedMatrix(value: unknown): MapMatrix {
   });
 }
 
-export function assertMapMatrixSize(
-  matrix: MapMatrix,
-  options: ParseMapMatrixOptions,
-): void {
+export function assertMapMatrixSize(matrix: MapMatrix, options: ParseMapMatrixOptions): void {
   if (options.height != null && matrix.length !== options.height) {
     throw new Error(`Map height mismatch: expected ${options.height}, got ${matrix.length}`);
   }
@@ -52,12 +52,9 @@ export function assertMapMatrixSize(
   }
 }
 
-export function parseMapMatrixText(
-  text: string,
-  options: ParseMapMatrixOptions = {},
-): MapMatrix {
+export function parseMapMatrixText(text: string, options: ParseMapMatrixOptions = {}): MapMatrix {
   const trimmed = text.trim();
-  if (!trimmed) throw new Error("Map data is empty");
+  if (!trimmed) throw new Error('Map data is empty');
 
   let parsed: unknown;
   try {
@@ -74,13 +71,14 @@ export function parseMapMatrixText(
 export function formatMapMatrixText(matrix: MapMatrix): string {
   assertMapMatrixSize(matrix, {});
   return matrix
-    .map((row) =>
-      `[${row
-        .map((cell) => {
-          const value = String(cell);
-          return `${" ".repeat(Math.max(4 - value.length, 0))}${value}`;
-        })
-        .join(",")}]`
+    .map(
+      (row) =>
+        `[${row
+          .map((cell) => {
+            const value = String(cell);
+            return `${' '.repeat(Math.max(4 - value.length, 0))}${value}`;
+          })
+          .join(',')}]`,
     )
-    .join(",\n");
+    .join(',\n');
 }

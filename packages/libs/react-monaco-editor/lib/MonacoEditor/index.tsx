@@ -1,9 +1,9 @@
-import "../localization/zh-cn";
-import { useEffect, useState, type CSSProperties, type FC } from "react";
-import * as monaco from "monaco-editor/editor/editor.api";
-import { setupMonacoTextmate } from "../setup";
-import { noop } from "lodash-es";
-import { useCurrentFn, useNodeAsEffect, useWatch } from "@motajs/react-hooks";
+import '../localization/zh-cn';
+import { useEffect, useState, type CSSProperties, type FC } from 'react';
+import * as monaco from 'monaco-editor/editor/editor.api';
+import { setupMonacoTextmate } from '../setup';
+import { noop } from 'lodash-es';
+import { useCurrentFn, useNodeAsEffect, useWatch } from '@motajs/react-hooks';
 
 const viewStates = new WeakMap<monaco.editor.ITextModel, monaco.editor.ICodeEditorViewState>();
 
@@ -78,12 +78,12 @@ const MonacoEditor: FC<IMonacoEditorProps> = (props) => {
     <div
       className={className}
       style={{
-        display: "flex",
-        position: "relative",
+        display: 'flex',
+        position: 'relative',
         ...style,
       }}
     >
-      <div style={{ width: "100%", textAlign: "left" }} ref={mountContainerDiv} />
+      <div style={{ width: '100%', textAlign: 'left' }} ref={mountContainerDiv} />
     </div>
   );
 };

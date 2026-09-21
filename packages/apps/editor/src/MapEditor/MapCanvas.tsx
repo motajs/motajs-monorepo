@@ -5,24 +5,20 @@
  * 迁移自 editor_mappanel.ts 的鼠标事件处理
  */
 
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, type FC, type MouseEvent } from "react";
-import { useNode } from "@motajs/react-hooks";
-import { useModelResourceSuspense, useTowerDataSuspense } from "@/hooks/suspense";
-import { deferredEnsureLoaded } from "@/hooks/suspense/deferredEnsureLoaded";
-import { useSignal } from "@/hooks/useFs";
-import {
-  mapCommands,
-  type MapLayer,
-  type TilesetPaintPattern,
-} from "@/project/commands/mapCommands";
-import { projectData } from "@/project/data/projectData";
-import { projectModel, type BlockRegistry, type RegistryBlockInfo } from "@/project/model/projectModel";
-import { useMapLayerSettings } from "@/project/settings/mapLayerSettings";
-import type { FloorData } from "@/types";
-import { notifyCommandResult, notifyError, notifySuccess } from "@/utils/notify";
-import type { LocPOD } from "@/utils/coordinate";
-import { MapEditorStore } from "./MapEditorStore";
-import { EventOverlay } from "./EventOverlay";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, type FC, type MouseEvent } from 'react';
+import { useNode } from '@motajs/react-hooks';
+import { useModelResourceSuspense, useTowerDataSuspense } from '@/hooks/suspense';
+import { deferredEnsureLoaded } from '@/hooks/suspense/deferredEnsureLoaded';
+import { useSignal } from '@/hooks/useFs';
+import { mapCommands, type MapLayer, type TilesetPaintPattern } from '@/project/commands/mapCommands';
+import { projectData } from '@/project/data/projectData';
+import { projectModel, type BlockRegistry, type RegistryBlockInfo } from '@/project/model/projectModel';
+import { useMapLayerSettings } from '@/project/settings/mapLayerSettings';
+import type { FloorData } from '@/types';
+import { notifyCommandResult, notifyError, notifySuccess } from '@/utils/notify';
+import type { LocPOD } from '@/utils/coordinate';
+import { MapEditorStore } from './MapEditorStore';
+import { EventOverlay } from './EventOverlay';
 import {
   eToLoc,
   locToPos,
@@ -33,16 +29,12 @@ import {
   CANVAS_SIZE,
   TILE_SIZE,
   GRID_COUNT,
-} from "./utils/coordinate";
-import {
-  drawArrow,
-  drawSelectionRect,
-  drawSelectionRectBigmap,
-} from "./utils/drawHelpers";
-import { walkOrthogonalPath } from "./utils/brushGeometry";
-import { createPaintPreviewFloor, resolvePaintPositions } from "./utils/paintPreview";
-import type { BlockInfo, SelectedBlock } from "./MaterialPanel/types";
-import { MapPixiRenderer } from "./rendering/MapPixiRenderer";
+} from './utils/coordinate';
+import { drawArrow, drawSelectionRect, drawSelectionRectBigmap } from './utils/drawHelpers';
+import { walkOrthogonalPath } from './utils/brushGeometry';
+import { createPaintPreviewFloor, resolvePaintPositions } from './utils/paintPreview';
+import type { BlockInfo, SelectedBlock } from './MaterialPanel/types';
+import { MapPixiRenderer } from './rendering/MapPixiRenderer';
 
 export interface MapCanvasProps {
   /** 楼层 ID */
@@ -68,52 +60,52 @@ function blockToSelectedBlock(block: RegistryBlockInfo): BlockInfo {
   return {
     ...record,
     idnum: block.idnum,
-    id: record.id ?? "",
-    images: record.images ?? record.cls ?? "terrains",
-    y: typeof record.y === "number" ? record.y : block.idnum,
-    isTile: block.kind === "tileset",
+    id: record.id ?? '',
+    images: record.images ?? record.cls ?? 'terrains',
+    y: typeof record.y === 'number' ? record.y : block.idnum,
+    isTile: block.kind === 'tileset',
   };
 }
 
 function cellToSelectedBlock(cell: MapCell, registry: BlockRegistry): SelectedBlock | undefined {
   if (cell == null) return undefined;
   if (cell === 0) return 0;
-  if (typeof cell === "number") {
+  if (typeof cell === 'number') {
     const block = registry.get(cell);
     if (block) return blockToSelectedBlock(block);
-    return { idnum: cell, id: "", images: "terrains", y: cell };
+    return { idnum: cell, id: '', images: 'terrains', y: cell };
   }
-  if (typeof cell === "object") {
+  if (typeof cell === 'object') {
     const record = cell as Partial<BlockInfo>;
-    if (typeof record.idnum === "number") return record as BlockInfo;
+    if (typeof record.idnum === 'number') return record as BlockInfo;
   }
   return undefined;
 }
 
 function parseLocKey(key: string): { x: number; y: number } | null {
-  const [x, y] = key.split(",").map(Number);
+  const [x, y] = key.split(',').map(Number);
   if (!Number.isInteger(x) || !Number.isInteger(y)) return null;
   return { x, y };
 }
 
 function isEnemyBlock(block: SelectedBlock | undefined): boolean {
   if (block === undefined || block === 0) return false;
-  return block.images === "enemys" || block.images === "enemy48";
+  return block.images === 'enemys' || block.images === 'enemy48';
 }
 
 function useDisplayFloor(floorId: string): DisplayFloorState {
   const resource = useMemo(() => projectData.floor(floorId), [floorId]);
   const content = useSignal(resource.content);
 
-  if (content.status === "idle") {
+  if (content.status === 'idle') {
     throw deferredEnsureLoaded(resource);
   }
 
-  if (content.status === "loaded") {
+  if (content.status === 'loaded') {
     return { floorId, floor: content.value };
   }
 
-  if (content.status === "loading") {
+  if (content.status === 'loading') {
     throw resource.waitForSettled();
   }
 
@@ -143,13 +135,17 @@ export const MapCanvas: FC<MapCanvasProps> = ({
   const [tower] = useTowerDataSuspense();
   const layerSettings = useMapLayerSettings();
   const tilesets = useMemo(
-    () => Array.isArray(tower.main.tilesets) ? tower.main.tilesets.filter((item): item is string => typeof item === "string") : [],
+    () =>
+      Array.isArray(tower.main.tilesets)
+        ? tower.main.tilesets.filter((item): item is string => typeof item === 'string')
+        : [],
     [tower.main.tilesets],
   );
   const imageNameMap = useMemo(
-    () => tower.main.nameMap && typeof tower.main.nameMap === "object"
-      ? tower.main.nameMap as Record<string, string>
-      : {},
+    () =>
+      tower.main.nameMap && typeof tower.main.nameMap === 'object'
+        ? (tower.main.nameMap as Record<string, string>)
+        : {},
     [tower.main.nameMap],
   );
   const blockRegistryResource = useMemo(() => projectModel.blockRegistry(), []);
@@ -189,31 +185,31 @@ export const MapCanvas: FC<MapCanvasProps> = ({
 
   // 获取当前图层的地图数据
   const activeLayerMap = useMemo(() => {
-    const source = Array.isArray(floor[layerMod]) ? floor[layerMod] as unknown[] : [];
+    const source = Array.isArray(floor[layerMod]) ? (floor[layerMod] as unknown[]) : [];
     return Array.from({ length: floorHeight }, (_, y) => {
       const row = source[y];
-      return Array.from({ length: floorWidth }, (_, x) => Array.isArray(row) ? row[x] ?? 0 : 0);
+      return Array.from({ length: floorWidth }, (_, x) => (Array.isArray(row) ? (row[x] ?? 0) : 0));
     });
   }, [floor, floorHeight, floorWidth, layerMod]);
   const getLayerMap = useCallback(() => activeLayerMap, [activeLayerMap]);
 
-  const selectedInfo = selectedBlock && typeof selectedBlock === "object" ? selectedBlock : undefined;
-  const selectedTileset = selectedInfo?.isTile
-    ? tilesetCatalog.byName.get(selectedInfo.images)
-    : undefined;
-  const selectedPattern = useMemo<TilesetPaintPattern | undefined>(() => (
-    selectedInfo && selectedTileset
-      ? {
-          startIdnum: selectedTileset.startIdnum,
-          sourceX: selectedInfo.x ?? 0,
-          sourceY: selectedInfo.y ?? 0,
-          width: tileSize[0],
-          height: tileSize[1],
-          columns: selectedTileset.columns,
-          rows: selectedTileset.rows,
-        }
-      : undefined
-  ), [selectedInfo, selectedTileset, tileSize]);
+  const selectedInfo = selectedBlock && typeof selectedBlock === 'object' ? selectedBlock : undefined;
+  const selectedTileset = selectedInfo?.isTile ? tilesetCatalog.byName.get(selectedInfo.images) : undefined;
+  const selectedPattern = useMemo<TilesetPaintPattern | undefined>(
+    () =>
+      selectedInfo && selectedTileset
+        ? {
+            startIdnum: selectedTileset.startIdnum,
+            sourceX: selectedInfo.x ?? 0,
+            sourceY: selectedInfo.y ?? 0,
+            width: tileSize[0],
+            height: tileSize[1],
+            columns: selectedTileset.columns,
+            rows: selectedTileset.rows,
+          }
+        : undefined,
+    [selectedInfo, selectedTileset, tileSize],
+  );
 
   const previewPositions = useMemo(() => {
     if (!holdingPath || selectedBlock === undefined || !startPos) return [];
@@ -240,23 +236,25 @@ export const MapCanvas: FC<MapCanvasProps> = ({
     tileSize,
   ]);
 
-  const previewFloor = useMemo(() => (
-    holdingPath && selectedBlock !== undefined && startPos
-      ? createPaintPreviewFloor(
-          floor,
-          layerMod as MapLayer,
-          previewPositions,
-          startPos,
-          selectedBlock,
-          selectedPattern,
-        )
-      : floor
-  ), [floor, holdingPath, layerMod, previewPositions, selectedBlock, selectedPattern, startPos]);
+  const previewFloor = useMemo(
+    () =>
+      holdingPath && selectedBlock !== undefined && startPos
+        ? createPaintPreviewFloor(
+            floor,
+            layerMod as MapLayer,
+            previewPositions,
+            startPos,
+            selectedBlock,
+            selectedPattern,
+          )
+        : floor,
+    [floor, holdingPath, layerMod, previewPositions, selectedBlock, selectedPattern, startPos],
+  );
 
   // 清除 UI Canvas
   const clearUiCanvas = useCallback(() => {
     if (!uiCanvas) return;
-    const ctx = uiCanvas.getContext("2d");
+    const ctx = uiCanvas.getContext('2d');
     if (ctx) {
       ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
     }
@@ -283,15 +281,18 @@ export const MapCanvas: FC<MapCanvasProps> = ({
 
       return locToPos(loc, viewportOffset);
     },
-    [bigmap, bigmapInfo, viewportOffset, floorWidth, floorHeight]
+    [bigmap, bigmapInfo, viewportOffset, floorWidth, floorHeight],
   );
 
   // 判断是否已选中素材
   const isBlockSelected = useCallback(() => selectedBlock !== undefined, [selectedBlock]);
 
-  useEffect(() => () => {
-    if (pendingLocSelect.current != null) window.clearTimeout(pendingLocSelect.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (pendingLocSelect.current != null) window.clearTimeout(pendingLocSelect.current);
+    },
+    [],
+  );
 
   // 鼠标按下
   const handleMouseDown = useCallback(
@@ -354,11 +355,11 @@ export const MapCanvas: FC<MapCanvasProps> = ({
                 return parsed;
               }),
             );
-            notifyCommandResult(result, "绑定机关门事件成功");
+            notifyCommandResult(result, '绑定机关门事件成功');
             store.clearBindSpecialDoor();
           }
         } else {
-          notifyError("请选择怪物位置");
+          notifyError('请选择怪物位置');
         }
         return;
       }
@@ -398,7 +399,7 @@ export const MapCanvas: FC<MapCanvasProps> = ({
       clearPaintGesture,
       holdingPath,
       onLocSelect,
-    ]
+    ],
   );
 
   // 鼠标移动
@@ -420,7 +421,7 @@ export const MapCanvas: FC<MapCanvasProps> = ({
         store.setEndPos(currentPos);
 
         if (!uiCanvas) return;
-        const ctx = uiCanvas.getContext("2d");
+        const ctx = uiCanvas.getContext('2d');
         if (!ctx) return;
 
         clearUiCanvas();
@@ -453,7 +454,7 @@ export const MapCanvas: FC<MapCanvasProps> = ({
               startDraw[0] + TILE_SIZE / 2,
               startDraw[1] + TILE_SIZE / 2,
               endDraw[0] + TILE_SIZE / 2,
-              endDraw[1] + TILE_SIZE / 2
+              endDraw[1] + TILE_SIZE / 2,
             );
           }
         }
@@ -463,9 +464,9 @@ export const MapCanvas: FC<MapCanvasProps> = ({
       // 绘图模式
       if (!gestureStart.current || (e.buttons & 1) === 0) return;
 
-      if (brushMod === "fill") return;
+      if (brushMod === 'fill') return;
 
-      if (brushMod === "rectangle") {
+      if (brushMod === 'rectangle') {
         if (!isSamePos(endPos, currentPos)) store.setEndPos(currentPos);
         return;
       }
@@ -497,7 +498,7 @@ export const MapCanvas: FC<MapCanvasProps> = ({
       viewportOffset,
       brushMod,
       clearUiCanvas,
-    ]
+    ],
   );
 
   // 鼠标抬起
@@ -532,7 +533,7 @@ export const MapCanvas: FC<MapCanvasProps> = ({
         if (e.button === 2 && startPos && endPos) {
           // 右键拖拽：选中区域
           store.setSelectedArea([startPos, endPos]);
-          notifySuccess("已经选中该区域");
+          notifySuccess('已经选中该区域');
         } else if (startPos && endPos && !isSamePos(startPos, endPos)) {
           // 左键拖拽：交换位置
           const result = await mapCommands.exchangeLoc({
@@ -541,7 +542,7 @@ export const MapCanvas: FC<MapCanvasProps> = ({
             from: { x: startPos[0], y: startPos[1] },
             to: { x: endPos[0], y: endPos[1] },
           });
-          notifyCommandResult(result, "交换位置成功");
+          notifyCommandResult(result, '交换位置成功');
         }
         clearUiCanvas();
         store.clearDragState();
@@ -574,22 +575,22 @@ export const MapCanvas: FC<MapCanvasProps> = ({
         try {
           const result = selectedPattern
             ? await mapCommands.paintPattern({
-              floorId: displayFloorId,
-              layer: layerMod as MapLayer,
-              targetPositions,
-              anchor: { x: firstPos[0], y: firstPos[1] },
-              tileset: selectedPattern,
-            })
+                floorId: displayFloorId,
+                layer: layerMod as MapLayer,
+                targetPositions,
+                anchor: { x: firstPos[0], y: firstPos[1] },
+                tileset: selectedPattern,
+              })
             : await mapCommands.paint({
-              floorId: displayFloorId,
-              layer: layerMod as MapLayer,
-              positions: targetPositions,
-              block: selectedBlock,
-            });
+                floorId: displayFloorId,
+                layer: layerMod as MapLayer,
+                positions: targetPositions,
+                block: selectedBlock,
+              });
           if (result.ok) {
-            if (selectedBlock && typeof selectedBlock === "object") onPaintSuccess?.(selectedBlock);
+            if (selectedBlock && typeof selectedBlock === 'object') onPaintSuccess?.(selectedBlock);
           } else {
-            notifyCommandResult(result, "");
+            notifyCommandResult(result, '');
           }
         } catch (error) {
           notifyError(error);
@@ -619,7 +620,7 @@ export const MapCanvas: FC<MapCanvasProps> = ({
       isStale,
       onPaintSuccess,
       selectedPattern,
-    ]
+    ],
   );
 
   // 鼠标移出
@@ -647,7 +648,7 @@ export const MapCanvas: FC<MapCanvasProps> = ({
         onDoubleClickSelect?.(block);
       }
     },
-    [bindSpecialDoor, isStale, getPos, getLayerMap, blockRegistry, onDoubleClickSelect]
+    [bindSpecialDoor, isStale, getPos, getLayerMap, blockRegistry, onDoubleClickSelect],
   );
 
   // 阻止右键菜单
@@ -662,10 +663,10 @@ export const MapCanvas: FC<MapCanvasProps> = ({
       id="mapEdit"
       data-test-id="map-editor-surface"
       data-floor-id={floorId}
-      data-bigmap={bigmap ? "true" : "false"}
+      data-bigmap={bigmap ? 'true' : 'false'}
       data-viewport-x={viewportOffset[0]}
       data-viewport-y={viewportOffset[1]}
-      data-selected-idnum={typeof selectedBlock === "object" ? selectedBlock.idnum : selectedBlock === 0 ? 0 : ""}
+      data-selected-idnum={typeof selectedBlock === 'object' ? selectedBlock.idnum : selectedBlock === 0 ? 0 : ''}
       data-paint-preview-count={previewPositions.length}
     >
       {/* 背景层 Pixi 渲染 */}
@@ -690,7 +691,7 @@ export const MapCanvas: FC<MapCanvasProps> = ({
         data-test-id="map-canvas-input"
         width={CANVAS_SIZE}
         height={CANVAS_SIZE}
-        style={{ position: "absolute", zIndex: 100, pointerEvents: isStale ? "none" : undefined }}
+        style={{ position: 'absolute', zIndex: 100, pointerEvents: isStale ? 'none' : undefined }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}

@@ -1,7 +1,7 @@
-import { ResponseUtils } from "./utils";
+import { ResponseUtils } from './utils';
 
-const CACHE_PREFIX = "motajs-service-worker:";
-const CACHE_VERSION = `${import.meta.env.PACKAGE_VERSION ?? "1"}:${import.meta.env.VITE_DEPLOY_REVISION ?? "dev"}`;
+const CACHE_PREFIX = 'motajs-service-worker:';
+const CACHE_VERSION = `${import.meta.env.PACKAGE_VERSION ?? '1'}:${import.meta.env.VITE_DEPLOY_REVISION ?? 'dev'}`;
 const CACHE_NAME = `${CACHE_PREFIX}${CACHE_VERSION}`;
 const fetchCachePromise = caches.open(CACHE_NAME);
 
@@ -20,11 +20,10 @@ const matchCache = async (request: Request) => {
 };
 
 export const networkFirst = async (request: Request) => {
-  return fetchAndUpdate(request)
-    .catch(async () => {
-      const cachedResponse = await matchCache(request);
-      return cachedResponse ?? Response.error();
-    });
+  return fetchAndUpdate(request).catch(async () => {
+    const cachedResponse = await matchCache(request);
+    return cachedResponse ?? Response.error();
+  });
 };
 
 export const cacheFirstWithRefresh = async (request: Request) => {
@@ -40,7 +39,7 @@ export const cacheFirst = async (request: Request) => {
 
 export const cleanupCaches = async () => {
   const names = await caches.keys();
-  await Promise.all(names
-    .filter((name) => name.startsWith(CACHE_PREFIX) && name !== CACHE_NAME)
-    .map((name) => caches.delete(name)));
+  await Promise.all(
+    names.filter((name) => name.startsWith(CACHE_PREFIX) && name !== CACHE_NAME).map((name) => caches.delete(name)),
+  );
 };

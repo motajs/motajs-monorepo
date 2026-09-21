@@ -1,10 +1,10 @@
-import { computed, effect, signal } from "alien-signals";
-import { ContentUtils } from "@/fs/ContentUtils";
-import type { ReadonlySignal } from "@/fs/interfaces";
-import type { Content } from "@/fs/types";
-import type { PersistStatus } from "@/project/data/DataResource";
-import type { Fs } from "@/services/fs";
-import { waitUntil } from "@/utils/base/signal";
+import { computed, effect, signal } from 'alien-signals';
+import { ContentUtils } from '@/fs/ContentUtils';
+import type { ReadonlySignal } from '@/fs/interfaces';
+import type { Content } from '@/fs/types';
+import type { PersistStatus } from '@/project/data/DataResource';
+import type { Fs } from '@/services/fs';
+import { waitUntil } from '@/utils/base/signal';
 import {
   appendRasterRow,
   assertSheetShape,
@@ -13,8 +13,8 @@ import {
   readPngDimensions,
   removeRasterRow,
   replaceRasterRow,
-} from "./raster";
-import { materialRowHeight } from "./materialSpecs";
+} from './raster';
+import { materialRowHeight } from './materialSpecs';
 import type {
   ImageAssetResourceLike,
   MaterialCollectionAppendOptions,
@@ -24,7 +24,7 @@ import type {
   MaterialMutation,
   RasterCodec,
   RasterImage,
-} from "./types";
+} from './types';
 
 function emptyRemap(): Map<number, number> {
   return new Map<number, number>();
@@ -61,7 +61,7 @@ abstract class BaseMaterialCollection implements MaterialCollectionResource {
   }
 
   async waitForSettled(): Promise<void> {
-    await waitUntil(() => !["idle", "loading"].includes(this.snapshot().status));
+    await waitUntil(() => !['idle', 'loading'].includes(this.snapshot().status));
   }
 
   entries(): MaterialAssetEntry[] {
@@ -87,7 +87,7 @@ export class SpriteSheetMaterialCollection extends BaseMaterialCollection {
     this.rowHeight = materialRowHeight(images);
     this.content = computed(() => {
       const content = image.content();
-      if (content.status !== "loaded") return content as Content<MaterialCollectionSnapshot>;
+      if (content.status !== 'loaded') return content as Content<MaterialCollectionSnapshot>;
       try {
         const dimensions = readPngDimensions(content.value.bytes);
         const rowCount = assertSheetShape(dimensions, this.rowHeight);
@@ -95,16 +95,16 @@ export class SpriteSheetMaterialCollection extends BaseMaterialCollection {
           key: `${images}:row:${row}`,
           images,
           path: image.path,
-          slot: { kind: "sheet-row", row },
+          slot: { kind: 'sheet-row', row },
           width: dimensions.width,
           height: this.rowHeight,
         }));
         return {
-          status: "loaded",
+          status: 'loaded',
           value: { images, revision: content.value.revision, entries },
         };
       } catch (error) {
-        return { status: "error", error: toError(error) };
+        return { status: 'error', error: toError(error) };
       }
     });
   }
@@ -152,17 +152,12 @@ export class SpriteSheetMaterialCollection extends BaseMaterialCollection {
 
   insert(entry: MaterialAssetEntry, inserted: RasterImage): Promise<MaterialMutation> {
     return this.enqueue(async () => {
-      if (entry.images !== this.images || entry.slot.kind !== "sheet-row") {
+      if (entry.images !== this.images || entry.slot.kind !== 'sheet-row') {
         throw new Error(`Material entry does not belong to ${this.images}`);
       }
       await ensureImage(this.image);
       const current = await this.codec.decode(this.image.value().bytes);
-      const { image, rowRemap } = insertRasterRow(
-        current,
-        this.rowHeight,
-        entry.slot.row,
-        inserted,
-      );
+      const { image, rowRemap } = insertRasterRow(current, this.rowHeight, entry.slot.row, inserted);
       this.image.setBytes(await this.codec.encode(image));
       return {
         entry: this.value().entries[entry.slot.row],
@@ -198,7 +193,7 @@ export class SpriteSheetMaterialCollection extends BaseMaterialCollection {
   }
 
   private assertEntry(entry: MaterialAssetEntry): number {
-    if (entry.images !== this.images || entry.slot.kind !== "sheet-row") {
+    if (entry.images !== this.images || entry.slot.kind !== 'sheet-row') {
       throw new Error(`Material entry does not belong to ${this.images}`);
     }
     return entry.slot.row;
@@ -206,7 +201,10 @@ export class SpriteSheetMaterialCollection extends BaseMaterialCollection {
 
   private enqueue<T>(operation: () => Promise<T>): Promise<T> {
     const result = this.mutationQueue.then(operation, operation);
-    this.mutationQueue = result.then(() => undefined, () => undefined);
+    this.mutationQueue = result.then(
+      () => undefined,
+      () => undefined,
+    );
     return result;
   }
 }
@@ -219,10 +217,10 @@ interface AutotileCollectionDependencies {
 }
 
 export class AutotileMaterialCollection extends BaseMaterialCollection {
-  readonly id = "material-directory:autotile";
-  readonly images = "autotile";
+  readonly id = 'material-directory:autotile';
+  readonly images = 'autotile';
   readonly content: ReadonlySignal<Content<MaterialCollectionSnapshot>>;
-  private readonly mutableContent = signal<Content<MaterialCollectionSnapshot>>({ status: "idle" });
+  private readonly mutableContent = signal<Content<MaterialCollectionSnapshot>>({ status: 'idle' });
   private readonly dependencies: AutotileCollectionDependencies;
   private mutationQueue: Promise<void> = Promise.resolve();
   private revision = 0;
@@ -238,45 +236,47 @@ export class AutotileMaterialCollection extends BaseMaterialCollection {
   }
 
   async reload(): Promise<void> {
-    if (this.mutableContent().status === "loading") {
+    if (this.mutableContent().status === 'loading') {
       await this.waitForSettled();
       return;
     }
-    this.mutableContent({ status: "loading" });
+    this.mutableContent({ status: 'loading' });
     try {
-      const files = (await this.dependencies.fs.promises.readdir("project/autotiles"))
-        .map((file) => file.replace(/\\/g, "/").split("/").pop() ?? file)
-        .filter((file) => file.toLowerCase().endsWith(".png"))
+      const files = (await this.dependencies.fs.promises.readdir('project/autotiles'))
+        .map((file) => file.replace(/\\/g, '/').split('/').pop() ?? file)
+        .filter((file) => file.toLowerCase().endsWith('.png'))
         .sort();
-      const entries = await Promise.all(files.map(async (file) => {
-        const path = `project/autotiles/${file}`;
-        const resource = this.dependencies.image(path);
-        await ensureImage(resource);
-        const { width, height } = readPngDimensions(resource.value().bytes);
-        return this.fileEntry(file.replace(/\.png$/i, ""), width, height);
-      }));
+      const entries = await Promise.all(
+        files.map(async (file) => {
+          const path = `project/autotiles/${file}`;
+          const resource = this.dependencies.image(path);
+          await ensureImage(resource);
+          const { width, height } = readPngDimensions(resource.value().bytes);
+          return this.fileEntry(file.replace(/\.png$/i, ''), width, height);
+        }),
+      );
       this.revision += 1;
-      this.mutableContent({ status: "loaded", value: { images: this.images, revision: this.revision, entries } });
+      this.mutableContent({ status: 'loaded', value: { images: this.images, revision: this.revision, entries } });
     } catch (error) {
-      this.mutableContent({ status: "error", error: toError(error) });
+      this.mutableContent({ status: 'error', error: toError(error) });
     }
   }
 
   async ensureLoaded(): Promise<void> {
     const content = this.snapshot();
-    if (content.status === "idle") await this.reload();
-    else if (content.status === "loading") await this.waitForSettled();
+    if (content.status === 'idle') await this.reload();
+    else if (content.status === 'loading') await this.waitForSettled();
   }
 
   persistStatus(): PersistStatus {
-    if (this.snapshot().status !== "loaded") return { status: "unknown" };
+    if (this.snapshot().status !== 'loaded') return { status: 'unknown' };
     let pending = 0;
     for (const entry of this.entries()) {
       const status = this.dependencies.image(entry.path).persistStatus();
-      if (status.status === "error") return status;
-      if (status.status === "persisting") pending += status.pending ?? 1;
+      if (status.status === 'error') return status;
+      if (status.status === 'persisting') pending += status.pending ?? 1;
     }
-    return pending > 0 ? { status: "persisting", pending } : { status: "idle" };
+    return pending > 0 ? { status: 'persisting', pending } : { status: 'idle' };
   }
 
   async read(entry: MaterialAssetEntry): Promise<RasterImage> {
@@ -291,7 +291,7 @@ export class AutotileMaterialCollection extends BaseMaterialCollection {
       this.assertAutotile(image);
       await this.ensureValueLoaded();
       const name = options?.name ?? this.nextName();
-      if (this.entries().some((entry) => entry.slot.kind === "file" && entry.slot.name === name)) {
+      if (this.entries().some((entry) => entry.slot.kind === 'file' && entry.slot.name === name)) {
         throw new Error(`Autotile already exists: ${name}`);
       }
       const path = `project/autotiles/${name}.png`;
@@ -304,8 +304,8 @@ export class AutotileMaterialCollection extends BaseMaterialCollection {
   }
 
   insert(entry: MaterialAssetEntry, image: RasterImage): Promise<MaterialMutation> {
-    if (entry.images !== this.images || entry.slot.kind !== "file") {
-      return Promise.reject(new Error("Material entry does not belong to autotile"));
+    if (entry.images !== this.images || entry.slot.kind !== 'file') {
+      return Promise.reject(new Error('Material entry does not belong to autotile'));
     }
     return this.append(image, { name: entry.slot.name });
   }
@@ -318,7 +318,7 @@ export class AutotileMaterialCollection extends BaseMaterialCollection {
       await ensureImage(resource);
       resource.setBytes(await this.dependencies.codec.encode(image));
       const nextEntry = this.fileEntry(name, image.width, image.height);
-      this.updateEntries(this.entries().map((current) => current.key === entry.key ? nextEntry : current));
+      this.updateEntries(this.entries().map((current) => (current.key === entry.key ? nextEntry : current)));
       return { entry: nextEntry, rowRemap: emptyRemap(), revision: this.revision };
     });
   }
@@ -342,13 +342,17 @@ export class AutotileMaterialCollection extends BaseMaterialCollection {
   private updateEntries(entries: MaterialAssetEntry[]): void {
     this.revision += 1;
     this.mutableContent({
-      status: "loaded",
-      value: { images: this.images, revision: this.revision, entries: [...entries].sort((a, b) => a.key.localeCompare(b.key)) },
+      status: 'loaded',
+      value: {
+        images: this.images,
+        revision: this.revision,
+        entries: [...entries].sort((a, b) => a.key.localeCompare(b.key)),
+      },
     });
   }
 
   private nextName(): string {
-    const names = new Set(this.entries().map((entry) => entry.slot.kind === "file" ? entry.slot.name : ""));
+    const names = new Set(this.entries().map((entry) => (entry.slot.kind === 'file' ? entry.slot.name : '')));
     for (let index = 1; ; index += 1) {
       const name = `autotile${index}`;
       if (!names.has(name)) return name;
@@ -357,13 +361,13 @@ export class AutotileMaterialCollection extends BaseMaterialCollection {
 
   private assertAutotile(image: RasterImage): void {
     if (image.width <= 0 || image.width % 96 !== 0 || image.height !== 128) {
-      throw new Error("Autotile must have a width divisible by 96 and a height of 128");
+      throw new Error('Autotile must have a width divisible by 96 and a height of 128');
     }
   }
 
   private assertEntry(entry: MaterialAssetEntry): string {
-    if (entry.images !== this.images || entry.slot.kind !== "file") {
-      throw new Error("Material entry does not belong to autotile");
+    if (entry.images !== this.images || entry.slot.kind !== 'file') {
+      throw new Error('Material entry does not belong to autotile');
     }
     return entry.slot.name;
   }
@@ -373,7 +377,7 @@ export class AutotileMaterialCollection extends BaseMaterialCollection {
       key: `autotile:file:${name}`,
       images: this.images,
       path: `project/autotiles/${name}.png`,
-      slot: { kind: "file", name },
+      slot: { kind: 'file', name },
       width,
       height,
     };
@@ -381,7 +385,10 @@ export class AutotileMaterialCollection extends BaseMaterialCollection {
 
   private enqueue<T>(operation: () => Promise<T>): Promise<T> {
     const result = this.mutationQueue.then(operation, operation);
-    this.mutationQueue = result.then(() => undefined, () => undefined);
+    this.mutationQueue = result.then(
+      () => undefined,
+      () => undefined,
+    );
     return result;
   }
 }

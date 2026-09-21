@@ -54,9 +54,17 @@
   text-align: left;
 }
 
-.scriptTree button:hover { background: rgba(128, 128, 128, 0.08); }
-.scriptTree span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.scriptTreeGroup { font-weight: 600; }
+.scriptTree button:hover {
+  background: rgba(128, 128, 128, 0.08);
+}
+.scriptTree span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.scriptTreeGroup {
+  font-weight: 600;
+}
 
 .scriptEditorWorkspace {
   display: flex;
@@ -87,12 +95,43 @@
   cursor: pointer;
 }
 
-.scriptTab.is-active { background: #fff; box-shadow: inset 0 -2px #1677ff; }
-.scriptTab > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; text-align: left; }
-.scriptTab i { display: inline-flex; color: #fa8c16; font-style: normal; line-height: 0; }
-.scriptTab b { display: inline-flex; width: 14px; height: 14px; border-radius: 50%; align-items: center; justify-content: center; background: #ff4d4f; color: #fff; font-size: 10px; }
-.scriptTab > span:last-child { display: inline-flex; padding: 2px; border-radius: 3px; }
-.scriptTab > span:last-child:hover { background: rgba(128, 128, 128, 0.15); }
+.scriptTab.is-active {
+  background: #fff;
+  box-shadow: inset 0 -2px #1677ff;
+}
+.scriptTab > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  text-align: left;
+}
+.scriptTab i {
+  display: inline-flex;
+  color: #fa8c16;
+  font-style: normal;
+  line-height: 0;
+}
+.scriptTab b {
+  display: inline-flex;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  align-items: center;
+  justify-content: center;
+  background: #ff4d4f;
+  color: #fff;
+  font-size: 10px;
+}
+.scriptTab > span:last-child {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 3px;
+}
+.scriptTab > span:last-child:hover {
+  background: rgba(128, 128, 128, 0.15);
+}
 
 .scriptEditorToolbar {
   display: flex;
@@ -114,21 +153,48 @@
   font-size: 12px;
 }
 
-.scriptEditorToolbar button { display: inline-flex; padding: 4px 10px; align-items: center; gap: 4px; }
+.scriptEditorToolbar button {
+  display: inline-flex;
+  padding: 4px 10px;
+  align-items: center;
+  gap: 4px;
+}
 .scriptEditorToolbar .scriptValidateButton {
   padding-right: 4px;
   padding-left: 4px;
   border: 0;
   background: transparent;
 }
-.scriptEditorToolbar .scriptValidateButton:hover { background: rgba(128, 128, 128, 0.08); }
-.scriptValidateButton.is-valid { color: #389e0d; }
-.scriptValidateButton.is-invalid { color: #cf1322; }
-.scriptValidateButton.is-warning { color: #ad6800; }
-.scriptConflictActions { display: flex; align-items: center; gap: 5px; color: #d46b08; font-size: 12px; }
-.scriptCustomHint { color: #888; font-size: 11px; }
-.scriptPluginActions { display: flex; gap: 4px; }
-.scriptPluginActions .danger { color: #d4380d; }
+.scriptEditorToolbar .scriptValidateButton:hover {
+  background: rgba(128, 128, 128, 0.08);
+}
+.scriptValidateButton.is-valid {
+  color: #389e0d;
+}
+.scriptValidateButton.is-invalid {
+  color: #cf1322;
+}
+.scriptValidateButton.is-warning {
+  color: #ad6800;
+}
+.scriptConflictActions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #d46b08;
+  font-size: 12px;
+}
+.scriptCustomHint {
+  color: #888;
+  font-size: 11px;
+}
+.scriptPluginActions {
+  display: flex;
+  gap: 4px;
+}
+.scriptPluginActions .danger {
+  color: #d4380d;
+}
 
 .scriptCodeSurface {
   min-height: 0;
@@ -143,7 +209,10 @@
 .scriptCodeEditor .monaco-editor {
   width: 100%;
   height: 100%;
-  font: 13px/1.5 "SFMono-Regular", Consolas, monospace;
+  font:
+    13px/1.5 'SFMono-Regular',
+    Consolas,
+    monospace;
 }
 
 .scriptValidationError pre {
@@ -154,11 +223,16 @@
   overflow: auto;
   background: rgba(255, 77, 79, 0.08);
   color: #cf1322;
-  font: 12px/1.5 "SFMono-Regular", Consolas, monospace;
+  font:
+    12px/1.5 'SFMono-Regular',
+    Consolas,
+    monospace;
   white-space: pre-wrap;
 }
 
-.scriptValidationError p { margin: 4px 0; }
+.scriptValidationError p {
+  margin: 4px 0;
+}
 
 .scriptValidationPopover {
   width: min(420px, calc(100vw - 32px));
@@ -173,11 +247,19 @@
   font-weight: 600;
 }
 
-.scriptValidationSummary.is-valid { color: #389e0d; }
-.scriptValidationSummary.is-invalid { color: #cf1322; }
-.scriptValidationSummary.is-warning { color: #ad6800; }
+.scriptValidationSummary.is-valid {
+  color: #389e0d;
+}
+.scriptValidationSummary.is-invalid {
+  color: #cf1322;
+}
+.scriptValidationSummary.is-warning {
+  color: #ad6800;
+}
 
-.scriptDiagnosticFilter { margin-bottom: 7px; }
+.scriptDiagnosticFilter {
+  margin-bottom: 7px;
+}
 
 .scriptDiagnosticEmpty {
   padding: 14px 8px;
@@ -207,12 +289,28 @@
   text-align: left;
 }
 
-button.scriptDiagnosticItem { cursor: pointer; }
-button.scriptDiagnosticItem:hover { background: rgba(128, 128, 128, 0.1); }
-.scriptDiagnosticItem > span { color: #888; font-size: 11px; white-space: nowrap; }
-.scriptDiagnosticItem > b { overflow-wrap: anywhere; font-size: 12px; font-weight: 400; }
-.scriptDiagnosticItem.is-error > b { color: #cf1322; }
-.scriptDiagnosticItem.is-warning > b { color: #ad6800; }
+button.scriptDiagnosticItem {
+  cursor: pointer;
+}
+button.scriptDiagnosticItem:hover {
+  background: rgba(128, 128, 128, 0.1);
+}
+.scriptDiagnosticItem > span {
+  color: #888;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.scriptDiagnosticItem > b {
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  font-weight: 400;
+}
+.scriptDiagnosticItem.is-error > b {
+  color: #cf1322;
+}
+.scriptDiagnosticItem.is-warning > b {
+  color: #ad6800;
+}
 
 .scriptEmpty {
   display: flex;

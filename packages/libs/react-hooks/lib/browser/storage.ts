@@ -1,7 +1,7 @@
-import { useState } from "react";
-import { useDependentState, useSetStateWithOnChange } from "../core/state";
-import type { State } from "../utils/type";
-import type { Optional } from "@motajs/utils";
+import { useState } from 'react';
+import { useDependentState, useSetStateWithOnChange } from '../core/state';
+import type { State } from '../utils/type';
+import type { Optional } from '@motajs/utils';
 
 export const useStorageItem = (storage: Storage, key: string, defaultValue?: string): State<Optional<string>> => {
   const [rawValue, setRawValue] = useDependentState(key, () => storage.getItem(key) ?? void 0);

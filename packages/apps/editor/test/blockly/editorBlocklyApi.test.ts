@@ -21,7 +21,7 @@ describe('EditorBlockly import lifecycle', () => {
     expect(loadEntryData).not.toHaveBeenCalled();
 
     workspaceRef = {
-      getApi: () => ({ isReady: true } as ReturnType<BlocklyWorkspaceRef['getApi']>),
+      getApi: () => ({ isReady: true }) as ReturnType<BlocklyWorkspaceRef['getApi']>,
       loadEventData: vi.fn(),
       loadEntryData,
       getTopBlockType: vi.fn(),
@@ -42,7 +42,7 @@ describe('EditorBlockly import lifecycle', () => {
     api.import(first, { type: 'afterGetItem' }, { onConfirm: vi.fn() });
     api.import(second, { type: 'commonEvent' }, { onConfirm: vi.fn() });
     workspaceRef = {
-      getApi: () => ({ isReady: true } as ReturnType<BlocklyWorkspaceRef['getApi']>),
+      getApi: () => ({ isReady: true }) as ReturnType<BlocklyWorkspaceRef['getApi']>,
       loadEventData: vi.fn(),
       loadEntryData,
       getTopBlockType: vi.fn(),
@@ -56,19 +56,15 @@ describe('EditorBlockly import lifecycle', () => {
   it('opens the generic point picker when the selected block has no point interaction', async () => {
     const selectPoint = vi.fn().mockResolvedValue(undefined);
     const workspaceRef = {
-      getApi: () => ({
-        runSelectedPointInteraction: vi.fn().mockResolvedValue(false),
-      } as unknown as ReturnType<BlocklyWorkspaceRef['getApi']>),
+      getApi: () =>
+        ({
+          runSelectedPointInteraction: vi.fn().mockResolvedValue(false),
+        }) as unknown as ReturnType<BlocklyWorkspaceRef['getApi']>,
       loadEventData: vi.fn(),
       loadEntryData: vi.fn(),
       getTopBlockType: vi.fn(),
     } satisfies BlocklyWorkspaceRef;
-    const api = createEditorBlocklyApi(
-      () => workspaceRef,
-      vi.fn(),
-      vi.fn(),
-      { selectPoint },
-    );
+    const api = createEditorBlocklyApi(() => workspaceRef, vi.fn(), vi.fn(), { selectPoint });
 
     await api.selectPointFromButton();
 

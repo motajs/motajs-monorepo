@@ -14,51 +14,51 @@
 export enum H5AnimateErrorCode {
   // ============ 文件格式错误 (001-099) ============
   /** 无效的文件签名 */
-  INVALID_SIGNATURE = "H5A001",
+  INVALID_SIGNATURE = 'H5A001',
   /** 无效的版本号 */
-  INVALID_VERSION = "H5A002",
+  INVALID_VERSION = 'H5A002',
   /** 损坏的文件头 */
-  CORRUPTED_HEADER = "H5A003",
+  CORRUPTED_HEADER = 'H5A003',
   /** 无效的图像数据 */
-  INVALID_IMAGE_DATA = "H5A004",
+  INVALID_IMAGE_DATA = 'H5A004',
   /** 无效的元数据 */
-  INVALID_METADATA = "H5A005",
+  INVALID_METADATA = 'H5A005',
   /** 文件截断 */
-  FILE_TRUNCATED = "H5A006",
+  FILE_TRUNCATED = 'H5A006',
   /** 数据大小不匹配 */
-  SIZE_MISMATCH = "H5A007",
+  SIZE_MISMATCH = 'H5A007',
 
   // ============ 数据验证错误 (100-199) ============
   /** 验证错误 */
-  VALIDATION_ERROR = "H5A100",
+  VALIDATION_ERROR = 'H5A100',
   /** 类型不匹配 */
-  TYPE_MISMATCH = "H5A101",
+  TYPE_MISMATCH = 'H5A101',
   /** 必需字段缺失 */
-  MISSING_REQUIRED_FIELD = "H5A102",
+  MISSING_REQUIRED_FIELD = 'H5A102',
   /** 值超出范围 */
-  VALUE_OUT_OF_RANGE = "H5A103",
+  VALUE_OUT_OF_RANGE = 'H5A103',
   /** 无效的数组长度 */
-  INVALID_ARRAY_LENGTH = "H5A104",
+  INVALID_ARRAY_LENGTH = 'H5A104',
 
   // ============ 转换错误 (200-299) ============
   /** 转换失败 */
-  CONVERSION_FAILED = "H5A200",
+  CONVERSION_FAILED = 'H5A200',
   /** JSON 解析失败 */
-  JSON_PARSE_ERROR = "H5A201",
+  JSON_PARSE_ERROR = 'H5A201',
   /** Base64 解码失败 */
-  BASE64_DECODE_ERROR = "H5A202",
+  BASE64_DECODE_ERROR = 'H5A202',
 
   // ============ 处理错误 (300-399) ============
   /** WebP 处理错误 */
-  WEBP_PROCESSING_ERROR = "H5A300",
+  WEBP_PROCESSING_ERROR = 'H5A300',
   /** 图像合并错误 */
-  IMAGE_MERGE_ERROR = "H5A301",
+  IMAGE_MERGE_ERROR = 'H5A301',
   /** 帧提取错误 */
-  FRAME_EXTRACTION_ERROR = "H5A302",
+  FRAME_EXTRACTION_ERROR = 'H5A302',
 
   // ============ 兼容性保留 (旧代码映射) ============
   /** @deprecated 使用 VALIDATION_ERROR 代替 */
-  VALIDATION_ERROR_LEGACY = "H5A008",
+  VALIDATION_ERROR_LEGACY = 'H5A008',
 }
 
 /**
@@ -90,7 +90,7 @@ export class H5AnimateError extends Error {
     },
   ) {
     super(message);
-    this.name = "H5AnimateError";
+    this.name = 'H5AnimateError';
     this.code = code;
     this.position = options?.position;
     this.expectedType = options?.expectedType;
@@ -100,8 +100,8 @@ export class H5AnimateError extends Error {
   }
 
   /**
- * 获取完整的错误描述
- */
+   * 获取完整的错误描述
+   */
   getFullDescription(): string {
     let description = `[${this.code}] ${this.message}`;
 
@@ -118,7 +118,7 @@ export class H5AnimateError extends Error {
     }
 
     if (this.missingFields && this.missingFields.length > 0) {
-      description += ` (缺失字段: ${this.missingFields.join(", ")})`;
+      description += ` (缺失字段: ${this.missingFields.join(', ')})`;
     }
 
     if (this.fieldPath) {
@@ -149,95 +149,65 @@ export class H5AnimateError extends Error {
  * 创建无效签名错误
  */
 export function createInvalidSignatureError(actual: string): H5AnimateError {
-  return new H5AnimateError(
-    H5AnimateErrorCode.INVALID_SIGNATURE,
-    `无效的文件签名: 期望 "ANIM", 实际为 "${actual}"`,
-    { position: 0, expectedType: "ANIM" },
-  );
+  return new H5AnimateError(H5AnimateErrorCode.INVALID_SIGNATURE, `无效的文件签名: 期望 "ANIM", 实际为 "${actual}"`, {
+    position: 0,
+    expectedType: 'ANIM',
+  });
 }
 
 /**
  * 创建无效版本错误
  */
 export function createInvalidVersionError(version: number): H5AnimateError {
-  return new H5AnimateError(
-    H5AnimateErrorCode.INVALID_VERSION,
-    `不支持的版本号: ${version}`,
-    { position: 4 },
-  );
+  return new H5AnimateError(H5AnimateErrorCode.INVALID_VERSION, `不支持的版本号: ${version}`, { position: 4 });
 }
 
 /**
  * 创建损坏的文件头错误
  */
 export function createCorruptedHeaderError(position: number, reason: string): H5AnimateError {
-  return new H5AnimateError(
-    H5AnimateErrorCode.CORRUPTED_HEADER,
-    `文件头损坏: ${reason}`,
-    { position },
-  );
+  return new H5AnimateError(H5AnimateErrorCode.CORRUPTED_HEADER, `文件头损坏: ${reason}`, { position });
 }
 
 /**
  * 创建无效图像数据错误
  */
 export function createInvalidImageDataError(reason: string): H5AnimateError {
-  return new H5AnimateError(
-    H5AnimateErrorCode.INVALID_IMAGE_DATA,
-    `无效的图像数据: ${reason}`,
-  );
+  return new H5AnimateError(H5AnimateErrorCode.INVALID_IMAGE_DATA, `无效的图像数据: ${reason}`);
 }
 
 /**
  * 创建无效元数据错误
  */
 export function createInvalidMetadataError(reason: string, missingFields?: string[]): H5AnimateError {
-  return new H5AnimateError(
-    H5AnimateErrorCode.INVALID_METADATA,
-    `无效的元数据: ${reason}`,
-    { missingFields },
-  );
+  return new H5AnimateError(H5AnimateErrorCode.INVALID_METADATA, `无效的元数据: ${reason}`, { missingFields });
 }
 
 /**
  * 创建转换失败错误
  */
 export function createConversionFailedError(reason: string): H5AnimateError {
-  return new H5AnimateError(
-    H5AnimateErrorCode.CONVERSION_FAILED,
-    `格式转换失败: ${reason}`,
-  );
+  return new H5AnimateError(H5AnimateErrorCode.CONVERSION_FAILED, `格式转换失败: ${reason}`);
 }
 
 /**
  * 创建 WebP 处理错误
  */
 export function createWebPProcessingError(reason: string): H5AnimateError {
-  return new H5AnimateError(
-    H5AnimateErrorCode.WEBP_PROCESSING_ERROR,
-    `WebP 处理错误: ${reason}`,
-  );
+  return new H5AnimateError(H5AnimateErrorCode.WEBP_PROCESSING_ERROR, `WebP 处理错误: ${reason}`);
 }
 
 /**
  * 创建验证错误
  */
 export function createValidationError(reason: string, missingFields?: string[]): H5AnimateError {
-  return new H5AnimateError(
-    H5AnimateErrorCode.VALIDATION_ERROR,
-    `验证错误: ${reason}`,
-    { missingFields },
-  );
+  return new H5AnimateError(H5AnimateErrorCode.VALIDATION_ERROR, `验证错误: ${reason}`, { missingFields });
 }
 
 /**
  * 创建类型不匹配错误
  */
-export function createTypeMismatchError(
-  fieldPath: string,
-  expectedType: string,
-  actualType: string,
-): H5AnimateError {
+export function createTypeMismatchError(fieldPath: string, expectedType: string, actualType: string): H5AnimateError {
   return new H5AnimateError(
     H5AnimateErrorCode.TYPE_MISMATCH,
     `类型不匹配: 字段 "${fieldPath}" 期望 ${expectedType}，实际为 ${actualType}`,
@@ -249,10 +219,10 @@ export function createTypeMismatchError(
  * 创建必需字段缺失错误
  */
 export function createMissingFieldError(missingFields: string[], fieldPath?: string): H5AnimateError {
-  const pathPrefix = fieldPath ? `在 "${fieldPath}" 中` : "";
+  const pathPrefix = fieldPath ? `在 "${fieldPath}" 中` : '';
   return new H5AnimateError(
     H5AnimateErrorCode.MISSING_REQUIRED_FIELD,
-    `${pathPrefix}缺少必需字段: ${missingFields.join(", ")}`,
+    `${pathPrefix}缺少必需字段: ${missingFields.join(', ')}`,
     { missingFields, fieldPath },
   );
 }
@@ -266,7 +236,7 @@ export function createValueOutOfRangeError(
   min?: number,
   max?: number,
 ): H5AnimateError {
-  let rangeDesc = "";
+  let rangeDesc = '';
   if (min !== undefined && max !== undefined) {
     rangeDesc = `[${min}, ${max}]`;
   } else if (min !== undefined) {
@@ -327,43 +297,29 @@ export function createSizeMismatchError(
  * 创建 JSON 解析错误
  */
 export function createJsonParseError(reason: string, position?: number): H5AnimateError {
-  return new H5AnimateError(
-    H5AnimateErrorCode.JSON_PARSE_ERROR,
-    `JSON 解析失败: ${reason}`,
-    { position },
-  );
+  return new H5AnimateError(H5AnimateErrorCode.JSON_PARSE_ERROR, `JSON 解析失败: ${reason}`, { position });
 }
 
 /**
  * 创建 Base64 解码错误
  */
 export function createBase64DecodeError(reason: string, fieldPath?: string): H5AnimateError {
-  return new H5AnimateError(
-    H5AnimateErrorCode.BASE64_DECODE_ERROR,
-    `Base64 解码失败: ${reason}`,
-    { fieldPath },
-  );
+  return new H5AnimateError(H5AnimateErrorCode.BASE64_DECODE_ERROR, `Base64 解码失败: ${reason}`, { fieldPath });
 }
 
 /**
  * 创建图像合并错误
  */
 export function createImageMergeError(reason: string): H5AnimateError {
-  return new H5AnimateError(
-    H5AnimateErrorCode.IMAGE_MERGE_ERROR,
-    `图像合并错误: ${reason}`,
-  );
+  return new H5AnimateError(H5AnimateErrorCode.IMAGE_MERGE_ERROR, `图像合并错误: ${reason}`);
 }
 
 /**
  * 创建帧提取错误
  */
 export function createFrameExtractionError(reason: string, frameIndex?: number): H5AnimateError {
-  const indexInfo = frameIndex !== undefined ? ` (帧索引: ${frameIndex})` : "";
-  return new H5AnimateError(
-    H5AnimateErrorCode.FRAME_EXTRACTION_ERROR,
-    `帧提取错误: ${reason}${indexInfo}`,
-  );
+  const indexInfo = frameIndex !== undefined ? ` (帧索引: ${frameIndex})` : '';
+  return new H5AnimateError(H5AnimateErrorCode.FRAME_EXTRACTION_ERROR, `帧提取错误: ${reason}${indexInfo}`);
 }
 
 /**
@@ -371,25 +327,25 @@ export function createFrameExtractionError(reason: string, frameIndex?: number):
  */
 export function getErrorCodeDescription(code: H5AnimateErrorCode): string {
   const descriptions: Record<H5AnimateErrorCode, string> = {
-    [H5AnimateErrorCode.INVALID_SIGNATURE]: "文件签名无效，不是有效的 h5animate 文件",
-    [H5AnimateErrorCode.INVALID_VERSION]: "文件版本不受支持",
-    [H5AnimateErrorCode.CORRUPTED_HEADER]: "文件头数据损坏",
-    [H5AnimateErrorCode.INVALID_IMAGE_DATA]: "图像数据无效或损坏",
-    [H5AnimateErrorCode.INVALID_METADATA]: "元数据格式无效",
-    [H5AnimateErrorCode.FILE_TRUNCATED]: "文件不完整，数据被截断",
-    [H5AnimateErrorCode.SIZE_MISMATCH]: "声明的数据大小与实际不符",
-    [H5AnimateErrorCode.VALIDATION_ERROR]: "数据验证失败",
-    [H5AnimateErrorCode.TYPE_MISMATCH]: "数据类型不匹配",
-    [H5AnimateErrorCode.MISSING_REQUIRED_FIELD]: "缺少必需的字段",
-    [H5AnimateErrorCode.VALUE_OUT_OF_RANGE]: "数值超出有效范围",
-    [H5AnimateErrorCode.INVALID_ARRAY_LENGTH]: "数组长度不符合要求",
-    [H5AnimateErrorCode.CONVERSION_FAILED]: "格式转换失败",
-    [H5AnimateErrorCode.JSON_PARSE_ERROR]: "JSON 解析失败",
-    [H5AnimateErrorCode.BASE64_DECODE_ERROR]: "Base64 解码失败",
-    [H5AnimateErrorCode.WEBP_PROCESSING_ERROR]: "WebP 图像处理失败",
-    [H5AnimateErrorCode.IMAGE_MERGE_ERROR]: "图像合并失败",
-    [H5AnimateErrorCode.FRAME_EXTRACTION_ERROR]: "帧提取失败",
-    [H5AnimateErrorCode.VALIDATION_ERROR_LEGACY]: "数据验证失败（旧版）",
+    [H5AnimateErrorCode.INVALID_SIGNATURE]: '文件签名无效，不是有效的 h5animate 文件',
+    [H5AnimateErrorCode.INVALID_VERSION]: '文件版本不受支持',
+    [H5AnimateErrorCode.CORRUPTED_HEADER]: '文件头数据损坏',
+    [H5AnimateErrorCode.INVALID_IMAGE_DATA]: '图像数据无效或损坏',
+    [H5AnimateErrorCode.INVALID_METADATA]: '元数据格式无效',
+    [H5AnimateErrorCode.FILE_TRUNCATED]: '文件不完整，数据被截断',
+    [H5AnimateErrorCode.SIZE_MISMATCH]: '声明的数据大小与实际不符',
+    [H5AnimateErrorCode.VALIDATION_ERROR]: '数据验证失败',
+    [H5AnimateErrorCode.TYPE_MISMATCH]: '数据类型不匹配',
+    [H5AnimateErrorCode.MISSING_REQUIRED_FIELD]: '缺少必需的字段',
+    [H5AnimateErrorCode.VALUE_OUT_OF_RANGE]: '数值超出有效范围',
+    [H5AnimateErrorCode.INVALID_ARRAY_LENGTH]: '数组长度不符合要求',
+    [H5AnimateErrorCode.CONVERSION_FAILED]: '格式转换失败',
+    [H5AnimateErrorCode.JSON_PARSE_ERROR]: 'JSON 解析失败',
+    [H5AnimateErrorCode.BASE64_DECODE_ERROR]: 'Base64 解码失败',
+    [H5AnimateErrorCode.WEBP_PROCESSING_ERROR]: 'WebP 图像处理失败',
+    [H5AnimateErrorCode.IMAGE_MERGE_ERROR]: '图像合并失败',
+    [H5AnimateErrorCode.FRAME_EXTRACTION_ERROR]: '帧提取失败',
+    [H5AnimateErrorCode.VALIDATION_ERROR_LEGACY]: '数据验证失败（旧版）',
   };
-  return descriptions[code] || "未知错误";
+  return descriptions[code] || '未知错误';
 }

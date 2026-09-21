@@ -13,12 +13,12 @@
  * - 写入时自动 stringify 并更新 FileHandler
  */
 
-import { computed, effect } from "alien-signals";
-import { waitUntil } from "@/utils/base/signal";
-import type { FileHandler } from "./FileHandler";
-import type { Content } from "./types";
-import type { IDataHandler, ReadonlySignal } from "./interfaces";
-import { ContentUtils } from "./ContentUtils";
+import { computed, effect } from 'alien-signals';
+import { waitUntil } from '@/utils/base/signal';
+import type { FileHandler } from './FileHandler';
+import type { Content } from './types';
+import type { IDataHandler, ReadonlySignal } from './interfaces';
+import { ContentUtils } from './ContentUtils';
 
 export abstract class DataHandler<T> implements IDataHandler<T> {
   // 数据层 signal（computed，自动追踪 FileHandler）
@@ -39,9 +39,9 @@ export abstract class DataHandler<T> implements IDataHandler<T> {
       return ContentUtils.andThen(fileContent, (text) => {
         try {
           const data = this.parse(text);
-          return { status: "loaded" as const, value: data };
+          return { status: 'loaded' as const, value: data };
         } catch (err) {
-          return { status: "error" as const, error: err as Error };
+          return { status: 'error' as const, error: err as Error };
         }
       });
     });
@@ -123,7 +123,7 @@ export abstract class DataHandler<T> implements IDataHandler<T> {
    * （比如用户执行 retry 操作后）
    */
   waitForLoaded(): Promise<void> {
-    return waitUntil(() => this.content().status === "loaded");
+    return waitUntil(() => this.content().status === 'loaded');
   }
 
   /**
@@ -135,7 +135,7 @@ export abstract class DataHandler<T> implements IDataHandler<T> {
   waitForSettled(): Promise<void> {
     return waitUntil(() => {
       const status = this.content().status;
-      return status !== "loading" && status !== "idle";
+      return status !== 'loading' && status !== 'idle';
     });
   }
 
@@ -161,11 +161,9 @@ export abstract class DataHandler<T> implements IDataHandler<T> {
   update(value: T): void;
   update(transform: (current: T) => T): void;
   update(transform: (current: T) => Promise<T>): Promise<void>;
-  update(
-    valueOrTransform: T | ((current: T) => T | Promise<T>),
-  ): void | Promise<void> {
+  update(valueOrTransform: T | ((current: T) => T | Promise<T>)): void | Promise<void> {
     // 情况 1: 直接值
-    if (typeof valueOrTransform !== "function") {
+    if (typeof valueOrTransform !== 'function') {
       const text = this.stringify(valueOrTransform);
       this.fileHandler.update(text);
       return;
@@ -177,9 +175,7 @@ export abstract class DataHandler<T> implements IDataHandler<T> {
     // 获取当前数据
     const currentContent = this.content();
     if (!ContentUtils.isLoaded(currentContent)) {
-      throw new Error(
-        `Cannot update: data not loaded (status: ${currentContent.status})`,
-      );
+      throw new Error(`Cannot update: data not loaded (status: ${currentContent.status})`);
     }
 
     const currentData = currentContent.value;
@@ -200,5 +196,4 @@ export abstract class DataHandler<T> implements IDataHandler<T> {
       this.fileHandler.update(text);
     }
   }
-
 }

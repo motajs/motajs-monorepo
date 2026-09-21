@@ -1,4 +1,4 @@
-import type { GridPOD, LocPOD } from "@/utils/coordinate";
+import type { GridPOD, LocPOD } from '@/utils/coordinate';
 
 /**
  * 绘制单个选择框
@@ -16,7 +16,7 @@ export function drawSelectionBox(
   gridPos: LocPOD,
   gridSize: GridPOD,
   label?: string,
-  labelOffset: { top: number; left: number } = { top: 0, left: 2 }
+  labelOffset: { top: number; left: number } = { top: 0, left: 2 },
 ): void {
   const [gridX, gridY] = gridPos;
   const [gridWidth, gridHeight] = gridSize;
@@ -37,27 +37,17 @@ export function drawSelectionBox(
   ctx.globalAlpha = 0.8;
 
   // 绘制外层黑边 (box-shadow: 0 0 0 3px #000)
-  ctx.strokeStyle = "#000000";
+  ctx.strokeStyle = '#000000';
   ctx.lineWidth = 3;
-  ctx.strokeRect(
-    adjustedX - 1.5,
-    adjustedY - 1.5,
-    adjustedWidth + 3,
-    adjustedHeight + 3
-  );
+  ctx.strokeRect(adjustedX - 1.5, adjustedY - 1.5, adjustedWidth + 3, adjustedHeight + 3);
 
   // 绘制中间白边 (box-shadow: 0 0 0 2px #fff)
-  ctx.strokeStyle = "#ffffff";
+  ctx.strokeStyle = '#ffffff';
   ctx.lineWidth = 2;
-  ctx.strokeRect(
-    adjustedX - 0.5,
-    adjustedY - 0.5,
-    adjustedWidth + 1,
-    adjustedHeight + 1
-  );
+  ctx.strokeRect(adjustedX - 0.5, adjustedY - 0.5, adjustedWidth + 1, adjustedHeight + 1);
 
   // 绘制内层黑边 (border: 1px solid #000)
-  ctx.strokeStyle = "#000000";
+  ctx.strokeStyle = '#000000';
   ctx.lineWidth = 1;
   ctx.strokeRect(adjustedX, adjustedY, adjustedWidth, adjustedHeight);
 
@@ -69,14 +59,14 @@ export function drawSelectionBox(
     const labelY = adjustedY + labelOffset.top;
 
     // 绘制文字描边
-    ctx.strokeStyle = "#000";
+    ctx.strokeStyle = '#000';
     ctx.lineWidth = 2;
-    ctx.font = "bold 14px Arial";
-    ctx.textBaseline = "top";
+    ctx.font = 'bold 14px Arial';
+    ctx.textBaseline = 'top';
     ctx.strokeText(label, labelX, labelY);
 
     // 绘制文字填充
-    ctx.fillStyle = "#fff";
+    ctx.fillStyle = '#fff';
     ctx.fillText(label, labelX, labelY);
   }
 

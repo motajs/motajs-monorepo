@@ -1,5 +1,5 @@
-import type { CSSProperties, MouseEvent } from "react";
-import type { GridPOD, LocPOD } from "@/utils/coordinate";
+import type { CSSProperties, MouseEvent } from 'react';
+import type { GridPOD, LocPOD } from '@/utils/coordinate';
 
 /**
  * 标记渲染器类型 - 纯函数
@@ -7,11 +7,7 @@ import type { GridPOD, LocPOD } from "@/utils/coordinate";
  * @param pixelPos - 像素位置（网格左上角）
  * @param gridSize - 网格大小 [宽度, 高度]
  */
-export type MarkerRenderer = (
-  ctx: CanvasRenderingContext2D,
-  pixelPos: LocPOD,
-  gridSize: GridPOD,
-) => void;
+export type MarkerRenderer = (ctx: CanvasRenderingContext2D, pixelPos: LocPOD, gridSize: GridPOD) => void;
 
 /**
  * 网格标记

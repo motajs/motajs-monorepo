@@ -1,7 +1,7 @@
-import { useCallback, useState } from "react";
-import { ModalShell } from "../shared/ModalShell";
-import type { SelectMaterialOptions, UseModalReturn } from "../shared/types";
-import { SelectMaterialContent } from "./SelectMaterialContent";
+import { useCallback, useState } from 'react';
+import { ModalShell } from '../shared/ModalShell';
+import type { SelectMaterialOptions, UseModalReturn } from '../shared/types';
+import { SelectMaterialContent } from './SelectMaterialContent';
 
 interface SelectMaterialState extends SelectMaterialOptions {
   resolve: (value: string[] | null) => void;

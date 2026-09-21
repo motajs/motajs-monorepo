@@ -1,8 +1,8 @@
-import { existsSync, mkdirSync, statSync } from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { expect, type Page, test } from "@playwright/test";
-import { ProjectSandbox } from "./utils/projectSandbox";
+import { existsSync, mkdirSync, statSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { expect, type Page, test } from '@playwright/test';
+import { ProjectSandbox } from './utils/projectSandbox';
 
 /**
  * 基线截图（D-07/D-08）：把编辑器 shell 与四个界面冻结成人工比对的 PNG。
@@ -19,7 +19,7 @@ import { ProjectSandbox } from "./utils/projectSandbox";
 const VIEWPORT = { width: 1440, height: 900 };
 
 /** 从 `packages/apps/editor/e2e` 上溯四级即仓库根。 */
-const SCREENSHOTS_DIR = fileURLToPath(new URL("../../../../.planning/baseline/screenshots/", import.meta.url));
+const SCREENSHOTS_DIR = fileURLToPath(new URL('../../../../.planning/baseline/screenshots/', import.meta.url));
 
 /** 关闭动画以避免帧间抖动；把运行时宿主与运行时预览表面显式隐藏（它们本就在屏幕外）。 */
 const CAPTURE_CSS = `
@@ -41,11 +41,11 @@ const CAPTURE_CSS = `
  * 完全相同的位图（实测两份 PNG 逐字节相同）。固定到 `sample1` 让这两张基线各自有信息量。
  */
 const surfaces = [
-  { file: "shell.png", mode: null, anchors: ["workbench"], floorId: null },
-  { file: "editor-map.png", mode: "map", anchors: ["map-pixi-renderer", "floor-management-list"], floorId: "sample1" },
-  { file: "editor-table.png", mode: "tower", anchors: ["panel-tower", "schema-table"], floorId: null },
-  { file: "editor-code.png", mode: "functions", anchors: ["scripts-workspace"], floorId: null },
-  { file: "editor-asset.png", mode: "appendpic", anchors: ["resources-workspace"], floorId: null },
+  { file: 'shell.png', mode: null, anchors: ['workbench'], floorId: null },
+  { file: 'editor-map.png', mode: 'map', anchors: ['map-pixi-renderer', 'floor-management-list'], floorId: 'sample1' },
+  { file: 'editor-table.png', mode: 'tower', anchors: ['panel-tower', 'schema-table'], floorId: null },
+  { file: 'editor-code.png', mode: 'functions', anchors: ['scripts-workspace'], floorId: null },
+  { file: 'editor-asset.png', mode: 'appendpic', anchors: ['resources-workspace'], floorId: null },
 ] as const;
 
 /** 写出一张截图并立即断言它存在且非空，避免「没截到」被当成通过。 */
@@ -57,35 +57,35 @@ async function capture(page: Page, file: string): Promise<void> {
   expect(bytes, `${file} must be a non-empty PNG`).toBeGreaterThan(0);
 }
 
-test.describe("baseline capture", () => {
+test.describe('baseline capture', () => {
   test.beforeAll(() => {
     mkdirSync(SCREENSHOTS_DIR, { recursive: true });
   });
 
-  test("freezes the shell and the four editor surfaces", async ({ page }) => {
+  test('freezes the shell and the four editor surfaces', async ({ page }) => {
     // 这个 spec 会独自冷启动整个编辑器（Vite dev 首次 transform 全量模块），
     // 比默认 30s 预算慢，故显式放宽（与 workspace-shell.spec.ts 的写法一致）。
     test.setTimeout(120_000);
     await page.setViewportSize(VIEWPORT);
     // 与单测共享同一个确定性输入：ProjectSandbox 提供 MOTA_JS_ROOT/project。
     await ProjectSandbox.create(page);
-    await page.goto("/");
+    await page.goto('/');
     await page.addStyleTag({ content: CAPTURE_CSS });
-    await expect(page.getByTestId("workbench")).toBeVisible();
+    await expect(page.getByTestId('workbench')).toBeVisible();
 
     for (const surface of surfaces) {
       if (surface.mode) {
-        await page.getByTestId("edit-mode-select").selectOption(surface.mode);
+        await page.getByTestId('edit-mode-select').selectOption(surface.mode);
       }
       if (surface.floorId) {
-        await page.getByTestId("floor-select").selectOption(surface.floorId);
-        await expect(page.getByTestId("floor-select")).toHaveValue(surface.floorId);
+        await page.getByTestId('floor-select').selectOption(surface.floorId);
+        await expect(page.getByTestId('floor-select')).toHaveValue(surface.floorId);
       }
       for (const anchor of surface.anchors) {
         await expect(page.getByTestId(anchor)).toBeVisible();
       }
-      if (surface.file === "editor-map.png") {
-        await expect(page.getByTestId("map-pixi-renderer").locator("canvas")).toBeVisible();
+      if (surface.file === 'editor-map.png') {
+        await expect(page.getByTestId('map-pixi-renderer').locator('canvas')).toBeVisible();
       }
       // Pixi/Monaco 是画面帧相关的表面：等一次绘制稳定后再冻结画面。
       await page.waitForTimeout(500);

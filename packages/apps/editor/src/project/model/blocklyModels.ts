@@ -27,15 +27,10 @@ export interface FlagUsageIndex {
 type UnknownRecord = Record<string, unknown>;
 
 function record(value: unknown): UnknownRecord {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value as UnknownRecord : {};
+  return value && typeof value === 'object' && !Array.isArray(value) ? (value as UnknownRecord) : {};
 }
 
-function addEntries(
-  target: BlocklyCompletionItem[],
-  value: unknown,
-  kind: string,
-  prefix = '',
-): void {
+function addEntries(target: BlocklyCompletionItem[], value: unknown, kind: string, prefix = ''): void {
   for (const [id, data] of Object.entries(record(value))) {
     const info = record(data);
     target.push({
@@ -82,22 +77,57 @@ export function buildBlocklyCompletionCatalog(input: {
   }
 
   const materialFields: Array<[string, unknown]> = [
-    ['image', main.images], ['animate', main.animates], ['bgm', main.bgms],
-    ['sound', main.sounds], ['image', main.autotiles], ['image', main.tilesets],
+    ['image', main.images],
+    ['animate', main.animates],
+    ['bgm', main.bgms],
+    ['sound', main.sounds],
+    ['image', main.autotiles],
+    ['image', main.tilesets],
   ];
-  materialFields.forEach(([kind, values]) => stringArray(values).forEach((value) => {
-    source(kind).push({ value, kind });
-  }));
+  materialFields.forEach(([kind, values]) =>
+    stringArray(values).forEach((value) => {
+      source(kind).push({ value, kind });
+    }),
+  );
   stringArray(main.fonts).forEach((value) => source('font').push({ value, kind: 'font' }));
   const mainStyle = record(main.styles).font;
   if (typeof mainStyle === 'string') source('font').push({ value: mainStyle, kind: 'font' });
-  ['aqua', 'black', 'blue', 'fuchsia', 'gray', 'green', 'lime', 'maroon', 'navy',
-    'gold', 'olive', 'orange', 'purple', 'red', 'silver', 'teal', 'white', 'yellow']
-    .forEach((value) => source('color').push({ value, kind: 'color' }));
+  [
+    'aqua',
+    'black',
+    'blue',
+    'fuchsia',
+    'gray',
+    'green',
+    'lime',
+    'maroon',
+    'navy',
+    'gold',
+    'olive',
+    'orange',
+    'purple',
+    'red',
+    'silver',
+    'teal',
+    'white',
+    'yellow',
+  ].forEach((value) => source('color').push({ value, kind: 'color' }));
 
   const expression = source('expression');
-  ['status:hp', 'status:atk', 'status:def', 'status:mdef', 'status:money', 'status:exp',
-    'hero.hp', 'hero.atk', 'hero.def', 'hero.money', 'flags.', 'core.'].forEach((value) => {
+  [
+    'status:hp',
+    'status:atk',
+    'status:def',
+    'status:mdef',
+    'status:money',
+    'status:exp',
+    'hero.hp',
+    'hero.atk',
+    'hero.def',
+    'hero.money',
+    'flags.',
+    'core.',
+  ].forEach((value) => {
     expression.push({ value, kind: 'expression' });
   });
   Object.keys(record(tower.values)).forEach((id) => expression.push({ value: `value:${id}`, kind: 'value' }));
@@ -105,20 +135,39 @@ export function buildBlocklyCompletionCatalog(input: {
     source('flag').push({ value: id, kind: 'flag' });
     expression.push({ value: `flag:${id}`, kind: 'flag' });
   });
-  ['hp', 'atk', 'def', 'mdef', 'money', 'exp', 'lv', 'name', 'loc', 'direction', 'items', 'equipment']
-    .forEach((value) => source('status').push({ value, kind: 'status' }));
-  ['status', 'material', 'events', 'ui', 'maps', 'items', 'enemys', 'flags', 'values',
-    'getBlockInfo', 'insertAction', 'getFlag', 'setFlag', 'hasFlag', 'removeFlag']
-    .forEach((value) => source('core').push({ value, kind: 'core' }));
+  ['hp', 'atk', 'def', 'mdef', 'money', 'exp', 'lv', 'name', 'loc', 'direction', 'items', 'equipment'].forEach(
+    (value) => source('status').push({ value, kind: 'status' }),
+  );
+  [
+    'status',
+    'material',
+    'events',
+    'ui',
+    'maps',
+    'items',
+    'enemys',
+    'flags',
+    'values',
+    'getBlockInfo',
+    'insertAction',
+    'getFlag',
+    'setFlag',
+    'hasFlag',
+    'removeFlag',
+  ].forEach((value) => source('core').push({ value, kind: 'core' }));
   Object.keys(record(main.nameMap)).forEach((alias) => source('id').push({ value: alias, kind: 'alias' }));
   ['bg', 'event', 'event2', 'fg', 'ui', 'data'].forEach((id) => source('id').push({ value: id, kind: 'canvas' }));
   const enemyAttributes = new Set<string>();
   Object.values(record(input.enemys)).forEach((enemy) => {
     Object.keys(record(enemy)).forEach((key) => enemyAttributes.add(key));
   });
-  source('enemy').slice().forEach((enemy) => enemyAttributes.forEach((attribute) => {
-    expression.push({ value: `enemy:${enemy.value}:${attribute}`, kind: 'enemy-attribute' });
-  }));
+  source('enemy')
+    .slice()
+    .forEach((enemy) =>
+      enemyAttributes.forEach((attribute) => {
+        expression.push({ value: `enemy:${enemy.value}:${attribute}`, kind: 'enemy-attribute' });
+      }),
+    );
   source('textEscape').push(
     { value: '\\n', kind: 'escape', label: '换行' },
     { value: '\\i[]', kind: 'escape', label: '图标' },
@@ -133,15 +182,24 @@ export function buildBlocklyCompletionCatalog(input: {
     { value: '\\e', kind: 'escape', label: '切换斜体' },
   );
 
-  const all = Array.from(new Map(
-    Object.values(bySource).flat().map((item) => [item.value, item]),
-  ).values());
+  const all = Array.from(
+    new Map(
+      Object.values(bySource)
+        .flat()
+        .map((item) => [item.value, item]),
+    ).values(),
+  );
   return { all, bySource, diagnostics: [] };
 }
 
 const FLAG_PATTERN = /(?:flag:|变量[:：])([A-Za-z0-9_\u4E00-\u9FCC\u3040-\u30FF\u2160-\u216B\u0391-\u03C9]+)/g;
 
-function collectFlags(value: unknown, usage: Omit<FlagUsage, 'path'>, path: string, output: Record<string, FlagUsage[]>): void {
+function collectFlags(
+  value: unknown,
+  usage: Omit<FlagUsage, 'path'>,
+  path: string,
+  output: Record<string, FlagUsage[]>,
+): void {
   if (typeof value === 'string') {
     FLAG_PATTERN.lastIndex = 0;
     let match: RegExpExecArray | null;
@@ -157,9 +215,9 @@ function collectFlags(value: unknown, usage: Omit<FlagUsage, 'path'>, path: stri
     return;
   }
   if (value && typeof value === 'object') {
-    Object.entries(value as UnknownRecord).forEach(([key, item]) => (
-      collectFlags(item, usage, path ? `${path}.${key}` : key, output)
-    ));
+    Object.entries(value as UnknownRecord).forEach(([key, item]) =>
+      collectFlags(item, usage, path ? `${path}.${key}` : key, output),
+    );
   }
 }
 
@@ -174,7 +232,9 @@ export function buildFlagUsageIndex(input: {
   const usages: Record<string, FlagUsage[]> = {};
   const scan = (value: unknown, source: string, label: string) => collectFlags(value, { source, label }, '$', usages);
   scan(input.tower, 'tower', '全塔属性');
-  Object.entries(record(input.commonEvents)).forEach(([id, value]) => scan(value, `commonEvent:${id}`, `公共事件 ${id}`));
+  Object.entries(record(input.commonEvents)).forEach(([id, value]) =>
+    scan(value, `commonEvent:${id}`, `公共事件 ${id}`),
+  );
   Object.entries(record(input.items)).forEach(([id, value]) => scan(value, `item:${id}`, `道具 ${id}`));
   Object.entries(record(input.enemys)).forEach(([id, value]) => scan(value, `enemy:${id}`, `怪物 ${id}`));
   Object.entries(record(input.mapBlocks)).forEach(([id, value]) => scan(value, `mapBlock:${id}`, `图块 ${id}`));

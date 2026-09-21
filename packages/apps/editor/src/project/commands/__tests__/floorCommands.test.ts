@@ -1,11 +1,11 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { FileHandler } from "@/fs/FileHandler";
-import { FileHandlerManager } from "@/fs/FileHandlerManager";
-import { MemoryFileSystem } from "@test/utils/MemoryFileSystem";
-import { serializeToJsMapFile } from "@/utils/serialize";
-import { floorCommands } from "../floorCommands";
-import { projectData } from "@/project/data/projectData";
-import type { FloorData } from "@/types";
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { FileHandler } from '@/fs/FileHandler';
+import { FileHandlerManager } from '@/fs/FileHandlerManager';
+import { MemoryFileSystem } from '@test/utils/MemoryFileSystem';
+import { serializeToJsMapFile } from '@/utils/serialize';
+import { floorCommands } from '../floorCommands';
+import { projectData } from '@/project/data/projectData';
+import type { FloorData } from '@/types';
 
 function createFloorData(floorId: string, overrides: Partial<FloorData> = {}): FloorData {
   return {
@@ -25,13 +25,13 @@ function createFloorData(floorId: string, overrides: Partial<FloorData> = {}): F
       [0, 6],
     ],
     fgmap: [],
-    events: { "0,0": [{ type: "event" }] },
+    events: { '0,0': [{ type: 'event' }] },
     beforeBattle: {},
-    afterBattle: { "1,1": [{ type: "afterBattle" }] },
+    afterBattle: { '1,1': [{ type: 'afterBattle' }] },
     afterGetItem: {},
     afterOpenDoor: {},
-    changeFloor: { "1,0": { floorId: "NEXT" } },
-    autoEvent: { "0,1": { "2": null } },
+    changeFloor: { '1,0': { floorId: 'NEXT' } },
+    autoEvent: { '0,1': { '2': null } },
     cannotMove: {},
     upFloor: [0, 0],
     downFloor: [1, 1],
@@ -40,7 +40,7 @@ function createFloorData(floorId: string, overrides: Partial<FloorData> = {}): F
   };
 }
 
-describe("floorCommands", () => {
+describe('floorCommands', () => {
   let memoryFs: MemoryFileSystem;
 
   beforeEach(() => {
@@ -61,8 +61,8 @@ describe("floorCommands", () => {
     projectData.clearFloorCache(floorId);
   }
 
-  it("resizes maps and shifts coordinate fields with positive offsets", async () => {
-    const floorId = "ResizePositive";
+  it('resizes maps and shifts coordinate fields with positive offsets', async () => {
+    const floorId = 'ResizePositive';
     await setupFloor(floorId, createFloorData(floorId));
 
     const result = await floorCommands.resize(floorId, {
@@ -86,17 +86,17 @@ describe("floorCommands", () => {
       [0, 5, 0],
       [0, 0, 6],
     ]);
-    expect(floor.events).toEqual({ "1,1": [{ type: "event" }] });
-    expect(floor.afterBattle).toEqual({ "2,2": [{ type: "afterBattle" }] });
-    expect(floor.changeFloor).toEqual({ "2,1": { floorId: "NEXT" } });
-    expect(floor.autoEvent).toEqual({ "1,2": { "2": null } });
+    expect(floor.events).toEqual({ '1,1': [{ type: 'event' }] });
+    expect(floor.afterBattle).toEqual({ '2,2': [{ type: 'afterBattle' }] });
+    expect(floor.changeFloor).toEqual({ '2,1': { floorId: 'NEXT' } });
+    expect(floor.autoEvent).toEqual({ '1,2': { '2': null } });
     expect(floor.upFloor).toEqual([1, 1]);
     expect(floor.downFloor).toEqual([2, 2]);
     expect(floor.flyPoint).toEqual([2, 1]);
   });
 
-  it("crops maps and drops out-of-bounds coordinate fields with negative offsets", async () => {
-    const floorId = "ResizeNegative";
+  it('crops maps and drops out-of-bounds coordinate fields with negative offsets', async () => {
+    const floorId = 'ResizeNegative';
     await setupFloor(floorId, createFloorData(floorId));
 
     const result = await floorCommands.resize(floorId, {
@@ -113,7 +113,7 @@ describe("floorCommands", () => {
     expect(floor.map).toEqual([[4]]);
     expect(floor.bgmap).toEqual([[6]]);
     expect(floor.events).toEqual({});
-    expect(floor.afterBattle).toEqual({ "0,0": [{ type: "afterBattle" }] });
+    expect(floor.afterBattle).toEqual({ '0,0': [{ type: 'afterBattle' }] });
     expect(floor.changeFloor).toEqual({});
     expect(floor.autoEvent).toEqual({});
     expect(floor.upFloor).toBeNull();

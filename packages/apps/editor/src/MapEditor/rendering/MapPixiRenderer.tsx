@@ -1,16 +1,12 @@
-import { type ImageAssetSnapshot, projectAssets } from "@/project/assets";
-import type { BlockRegistry, SpriteRegistry } from "@/project/model/projectModel";
-import type { FloorData } from "@/types";
-import type { MapLayerDefinition } from "@/project/settings/mapLayerSettings";
-import { Application as PixiApplication, Container, Graphics, Rectangle, Sprite, Texture } from "pixi.js";
-import { type FC, useEffect, useMemo, useRef, useState } from "react";
-import { CANVAS_SIZE, GRID_COUNT, TILE_SIZE } from "../utils/coordinate";
-import { collectFloorImagePaths, type FloorImagePart, resolveFloorImageParts } from "./floorImages";
-import {
-  resolveCellSprite,
-  resolveDefaultGroundSprite,
-  type ResolvedSpriteInfo,
-} from "./spriteResolver";
+import { type ImageAssetSnapshot, projectAssets } from '@/project/assets';
+import type { BlockRegistry, SpriteRegistry } from '@/project/model/projectModel';
+import type { FloorData } from '@/types';
+import type { MapLayerDefinition } from '@/project/settings/mapLayerSettings';
+import { Application as PixiApplication, Container, Graphics, Rectangle, Sprite, Texture } from 'pixi.js';
+import { type FC, useEffect, useMemo, useRef, useState } from 'react';
+import { CANVAS_SIZE, GRID_COUNT, TILE_SIZE } from '../utils/coordinate';
+import { collectFloorImagePaths, type FloorImagePart, resolveFloorImageParts } from './floorImages';
+import { resolveCellSprite, resolveDefaultGroundSprite, type ResolvedSpriteInfo } from './spriteResolver';
 
 type MapCell = unknown;
 
@@ -23,7 +19,7 @@ interface RenderCell {
   height: number;
   alpha: number;
   order: number;
-  reverse?: ":x" | ":y" | ":o";
+  reverse?: ':x' | ':y' | ':o';
 }
 
 interface MissingCell {
@@ -48,10 +44,10 @@ const DEFAULT_VIEWPORT_SIZE = [CANVAS_SIZE, CANVAS_SIZE] as const;
 const frameTextureCache = new Map<string, Texture>();
 
 function imageMimeType(path: string): string {
-  if (/\.jpe?g$/i.test(path)) return "image/jpeg";
-  if (/\.gif$/i.test(path)) return "image/gif";
-  if (/\.webp$/i.test(path)) return "image/webp";
-  return "image/png";
+  if (/\.jpe?g$/i.test(path)) return 'image/jpeg';
+  if (/\.gif$/i.test(path)) return 'image/gif';
+  if (/\.webp$/i.test(path)) return 'image/webp';
+  return 'image/png';
 }
 
 function loadImageTexture(path: string, snapshot: ImageAssetSnapshot): Promise<Texture> {
@@ -104,7 +100,7 @@ function releasePixiApplication(app: PixiApplication, scene: Container): void {
   if (pooledPixiApps.has(app)) return;
   app.stop();
   app.canvas.remove();
-  app.canvas.style.visibility = "hidden";
+  app.canvas.style.visibility = 'hidden';
   pooledPixiApps.add(app);
   pixiApplicationPool.push({ app, scene });
 }
@@ -112,7 +108,7 @@ function releasePixiApplication(app: PixiApplication, scene: Container): void {
 function abandonPixiApplication(app: PixiApplication): void {
   app.stop();
   app.canvas.remove();
-  app.canvas.style.visibility = "hidden";
+  app.canvas.style.visibility = 'hidden';
 }
 
 interface PixiRenderSession {
@@ -151,38 +147,30 @@ function getMapCell(map: unknown, x: number, y: number): MapCell {
 
 function cellIdnum(cell: MapCell): number {
   if (cell == null || cell === 0) return 0;
-  if (typeof cell === "number") return cell;
-  if (typeof cell === "object") {
+  if (typeof cell === 'number') return cell;
+  if (typeof cell === 'object') {
     const idnum = (cell as Record<string, unknown>).idnum;
-    return typeof idnum === "number" ? idnum : Number.NaN;
+    return typeof idnum === 'number' ? idnum : Number.NaN;
   }
   return Number(cell);
 }
 
-function textureFrame(
-  texture: Texture,
-  sprite: ResolvedSpriteInfo,
-): Texture | string {
+function textureFrame(texture: Texture, sprite: ResolvedSpriteInfo): Texture | string {
   const tilesetWidth = Math.floor(texture.width / 32);
-  if (typeof sprite.tilesetLocalIndex === "number" && tilesetWidth <= 0) {
+  if (typeof sprite.tilesetLocalIndex === 'number' && tilesetWidth <= 0) {
     return `Invalid tileset texture width: ${sprite.path}`;
   }
 
-  const sourceX = typeof sprite.tilesetLocalIndex === "number"
-    ? (sprite.tilesetLocalIndex % tilesetWidth) * 32
-    : sprite.x * 32;
-  const sourceY = typeof sprite.tilesetLocalIndex === "number"
-    ? Math.floor(sprite.tilesetLocalIndex / tilesetWidth) * 32
-    : sprite.y * sprite.height;
+  const sourceX =
+    typeof sprite.tilesetLocalIndex === 'number' ? (sprite.tilesetLocalIndex % tilesetWidth) * 32 : sprite.x * 32;
+  const sourceY =
+    typeof sprite.tilesetLocalIndex === 'number'
+      ? Math.floor(sprite.tilesetLocalIndex / tilesetWidth) * 32
+      : sprite.y * sprite.height;
   const sourceWidth = sprite.width;
   const sourceHeight = sprite.height;
 
-  if (
-    sourceX < 0
-    || sourceY < 0
-    || sourceX + sourceWidth > texture.width
-    || sourceY + sourceHeight > texture.height
-  ) {
+  if (sourceX < 0 || sourceY < 0 || sourceX + sourceWidth > texture.width || sourceY + sourceHeight > texture.height) {
     return `Sprite crop outside ${sprite.path}: ${sprite.id} (${sourceX},${sourceY},${sourceWidth},${sourceHeight})`;
   }
 
@@ -206,12 +194,7 @@ function frameTexture(
   sourceHeight: number,
   diagnosticLabel: string,
 ): Texture | string {
-  if (
-    sourceX < 0
-    || sourceY < 0
-    || sourceX + sourceWidth > texture.width
-    || sourceY + sourceHeight > texture.height
-  ) {
+  if (sourceX < 0 || sourceY < 0 || sourceX + sourceWidth > texture.width || sourceY + sourceHeight > texture.height) {
     return `Sprite crop outside ${diagnosticLabel}: (${sourceX},${sourceY},${sourceWidth},${sourceHeight})`;
   }
 
@@ -237,7 +220,7 @@ function collectPaths(
 ): string[] {
   const paths = new Set<string>();
   const defaultGround = resolveDefaultGroundSprite(floor, blockRegistry, spriteRegistry, tilesets);
-  if (defaultGround && typeof defaultGround !== "string") paths.add(defaultGround.path);
+  if (defaultGround && typeof defaultGround !== 'string') paths.add(defaultGround.path);
 
   for (const definition of layers) {
     const layer = floor[definition.property];
@@ -246,7 +229,7 @@ function collectPaths(
       if (!Array.isArray(row)) continue;
       for (const cell of row) {
         const resolved = resolveCellSprite(cellIdnum(cell), blockRegistry, tilesets);
-        if (resolved && typeof resolved !== "string") paths.add(resolved.path);
+        if (resolved && typeof resolved !== 'string') paths.add(resolved.path);
       }
     }
   }
@@ -274,10 +257,7 @@ function floorImageViewportRect(
 
   const floorWidth = (floor.width ?? GRID_COUNT) as number;
   const floorHeight = (floor.height ?? GRID_COUNT) as number;
-  const tileSize = Math.min(
-    viewportSize[0] / Math.max(floorWidth, 1),
-    viewportSize[1] / Math.max(floorHeight, 1),
-  );
+  const tileSize = Math.min(viewportSize[0] / Math.max(floorWidth, 1), viewportSize[1] / Math.max(floorHeight, 1));
   const left = Math.max(0, (viewportSize[0] - floorWidth * tileSize) / 2);
   const top = Math.max(0, (viewportSize[1] - floorHeight * tileSize) / 2);
   const scale = tileSize / TILE_SIZE;
@@ -290,7 +270,7 @@ function floorImageViewportRect(
 }
 
 function useMaterialTextures(paths: string[]): TextureState {
-  const pathsKey = paths.join("\n");
+  const pathsKey = paths.join('\n');
   const loadedRevisions = useRef(new Map<string, number>());
   const requestedRevisions = useRef(new Map<string, number>());
   const texturesRef = useRef(new Map<string, Texture>());
@@ -303,7 +283,7 @@ function useMaterialTextures(paths: string[]): TextureState {
 
   useEffect(() => {
     let cancelled = false;
-    const nextPaths = pathsKey ? pathsKey.split("\n") : [];
+    const nextPaths = pathsKey ? pathsKey.split('\n') : [];
     if (nextPaths.length === 0) {
       for (const texture of texturesRef.current.values()) {
         destroyMaterialTexture(texture);
@@ -339,20 +319,20 @@ function useMaterialTextures(paths: string[]): TextureState {
     const loadResource = (path: string) => {
       const resource = projectAssets.image(path);
       const content = resource.content();
-      if (content.status === "idle") {
+      if (content.status === 'idle') {
         pending.add(path);
         publish();
         void resource.ensureLoaded();
         return;
       }
-      if (content.status === "loading") {
+      if (content.status === 'loading') {
         pending.add(path);
         publish();
         return;
       }
-      if (content.status !== "loaded") {
+      if (content.status !== 'loaded') {
         pending.delete(path);
-        diagnostics.set(path, content.status === "error" ? content.error.message : `Missing material ${path}`);
+        diagnostics.set(path, content.status === 'error' ? content.error.message : `Missing material ${path}`);
         publish();
         return;
       }
@@ -365,28 +345,30 @@ function useMaterialTextures(paths: string[]): TextureState {
       pending.add(path);
       requestedRevisions.current.set(path, content.value.revision);
       publish();
-      void loadImageTexture(path, content.value).then((texture) => {
-        if (cancelled) {
-          destroyMaterialTexture(texture);
-          return;
-        }
-        if (requestedRevisions.current.get(path) !== content.value.revision) {
-          destroyMaterialTexture(texture);
-          return;
-        }
-        const old = texturesRef.current.get(path);
-        if (old) destroyMaterialTexture(old);
-        texturesRef.current.set(path, texture);
-        loadedRevisions.current.set(path, content.value.revision);
-        pending.delete(path);
-        diagnostics.delete(path);
-        publish();
-      }).catch((error) => {
-        if (requestedRevisions.current.get(path) !== content.value.revision) return;
-        pending.delete(path);
-        diagnostics.set(path, error instanceof Error ? error.message : String(error));
-        publish();
-      });
+      void loadImageTexture(path, content.value)
+        .then((texture) => {
+          if (cancelled) {
+            destroyMaterialTexture(texture);
+            return;
+          }
+          if (requestedRevisions.current.get(path) !== content.value.revision) {
+            destroyMaterialTexture(texture);
+            return;
+          }
+          const old = texturesRef.current.get(path);
+          if (old) destroyMaterialTexture(old);
+          texturesRef.current.set(path, texture);
+          loadedRevisions.current.set(path, content.value.revision);
+          pending.delete(path);
+          diagnostics.delete(path);
+          publish();
+        })
+        .catch((error) => {
+          if (requestedRevisions.current.get(path) !== content.value.revision) return;
+          pending.delete(path);
+          diagnostics.set(path, error instanceof Error ? error.message : String(error));
+          publish();
+        });
     };
 
     const unsubscribes = nextPaths.map((path) => projectAssets.image(path).subscribe(() => loadResource(path)));
@@ -397,14 +379,17 @@ function useMaterialTextures(paths: string[]): TextureState {
     };
   }, [pathsKey]);
 
-  useEffect(() => () => {
-    for (const texture of texturesRef.current.values()) {
-      destroyMaterialTexture(texture);
-    }
-    texturesRef.current.clear();
-    loadedRevisions.current.clear();
-    requestedRevisions.current.clear();
-  }, []);
+  useEffect(
+    () => () => {
+      for (const texture of texturesRef.current.values()) {
+        destroyMaterialTexture(texture);
+      }
+      texturesRef.current.clear();
+      loadedRevisions.current.clear();
+      requestedRevisions.current.clear();
+    },
+    [],
+  );
 
   return state;
 }
@@ -420,10 +405,7 @@ function visibleCells(
   const cells: Array<{ cellX: number; cellY: number; drawX: number; drawY: number; size: number }> = [];
 
   if (bigmap) {
-    const size = Math.min(
-      viewportSize[0] / Math.max(floorWidth, 1),
-      viewportSize[1] / Math.max(floorHeight, 1),
-    );
+    const size = Math.min(viewportSize[0] / Math.max(floorWidth, 1), viewportSize[1] / Math.max(floorHeight, 1));
     const left = Math.max(0, (viewportSize[0] - floorWidth * size) / 2);
     const top = Math.max(0, (viewportSize[1] - floorHeight * size) / 2);
     for (let y = 0; y < floorHeight; y += 1) {
@@ -450,12 +432,12 @@ function visibleCells(
 }
 
 function layerAlpha(layer: MapLayerName, activeLayer: MapLayerName): number {
-  if (activeLayer === "map") return 1;
+  if (activeLayer === 'map') return 1;
   return layer === activeLayer ? 1 : 0.3;
 }
 
 function isAutotileSprite(sprite: ResolvedSpriteInfo): boolean {
-  return sprite.images === "autotile";
+  return sprite.images === 'autotile';
 }
 
 function sameAutotileId(currId: number | undefined, x: number, y: number, map: unknown): boolean {
@@ -469,70 +451,34 @@ function sameAutotileId(currId: number | undefined, x: number, y: number, map: u
 function autotileIndexData(status: number, index: number, x: number, y: number, size: number): number[][] | undefined {
   return [
     [[96 * status, 0, 32, 32, x, y, size, size]],
-    [[96 * status, 3 * 32, 16, 32, x, y, size / 2, size], [
-      96 * status + 2 * 32 + 16,
-      3 * 32,
-      16,
-      32,
-      x + size / 2,
-      y,
-      size / 2,
-      size,
-    ]],
-    [[96 * status + 2 * 32, 32, 32, 16, x, y, size, size / 2], [
-      96 * status + 2 * 32,
-      3 * 32 + 16,
-      32,
-      16,
-      x,
-      y + size / 2,
-      size,
-      size / 2,
-    ]],
+    [
+      [96 * status, 3 * 32, 16, 32, x, y, size / 2, size],
+      [96 * status + 2 * 32 + 16, 3 * 32, 16, 32, x + size / 2, y, size / 2, size],
+    ],
+    [
+      [96 * status + 2 * 32, 32, 32, 16, x, y, size, size / 2],
+      [96 * status + 2 * 32, 3 * 32 + 16, 32, 16, x, y + size / 2, size, size / 2],
+    ],
     [[96 * status + 2 * 32, 3 * 32, 32, 32, x, y, size, size]],
-    [[96 * status, 32, 16, 32, x, y, size / 2, size], [
-      96 * status + 2 * 32 + 16,
-      32,
-      16,
-      32,
-      x + size / 2,
-      y,
-      size / 2,
-      size,
-    ]],
-    [[96 * status, 2 * 32, 16, 32, x, y, size / 2, size], [
-      96 * status + 2 * 32 + 16,
-      2 * 32,
-      16,
-      32,
-      x + size / 2,
-      y,
-      size / 2,
-      size,
-    ]],
+    [
+      [96 * status, 32, 16, 32, x, y, size / 2, size],
+      [96 * status + 2 * 32 + 16, 32, 16, 32, x + size / 2, y, size / 2, size],
+    ],
+    [
+      [96 * status, 2 * 32, 16, 32, x, y, size / 2, size],
+      [96 * status + 2 * 32 + 16, 2 * 32, 16, 32, x + size / 2, y, size / 2, size],
+    ],
     [[96 * status + 2 * 32, 32, 32, 32, x, y, size, size]],
     [[96 * status + 2 * 32, 2 * 32, 32, 32, x, y, size, size]],
-    [[96 * status, 32, 32, 16, x, y, size, size / 2], [
-      96 * status,
-      3 * 32 + 16,
-      32,
-      16,
-      x,
-      y + size / 2,
-      size,
-      size / 2,
-    ]],
+    [
+      [96 * status, 32, 32, 16, x, y, size, size / 2],
+      [96 * status, 3 * 32 + 16, 32, 16, x, y + size / 2, size, size / 2],
+    ],
     [[96 * status, 3 * 32, 32, 32, x, y, size, size]],
-    [[96 * status + 32, 32, 32, 16, x, y, size, size / 2], [
-      96 * status + 32,
-      3 * 32 + 16,
-      32,
-      16,
-      x,
-      y + size / 2,
-      size,
-      size / 2,
-    ]],
+    [
+      [96 * status + 32, 32, 32, 16, x, y, size, size / 2],
+      [96 * status + 32, 3 * 32 + 16, 32, 16, x, y + size / 2, size, size / 2],
+    ],
     [[96 * status + 32, 3 * 32, 32, 32, x, y, size, size]],
     [[96 * status, 32, 32, 32, x, y, size, size]],
     [[96 * status, 2 * 32, 32, 32, x, y, size, size]],
@@ -574,14 +520,16 @@ function renderAutotileCut(
 
   return drawData.flatMap((point, index) => {
     if (!point) return [];
-    return [{
-      sx: point[0],
-      sy: point[1],
-      dx: index % 2,
-      dy: Math.floor(index / 2),
-      width: 16,
-      height: 16,
-    }];
+    return [
+      {
+        sx: point[0],
+        sy: point[1],
+        dx: index % 2,
+        dy: Math.floor(index / 2),
+        width: 16,
+        height: 16,
+      },
+    ];
   });
 }
 
@@ -630,8 +578,8 @@ function autotileParts(
     parts.push({
       sx: part.sx,
       sy: part.sy,
-      x: drawX + part.dx * size / 2,
-      y: drawY + part.dy * size / 2,
+      x: drawX + (part.dx * size) / 2,
+      y: drawY + (part.dy * size) / 2,
       width: size / 2,
       height: size / 2,
     });
@@ -662,20 +610,16 @@ function buildRenderCells(
   );
   const floorImages = resolveFloorImageParts(floor.images, textureSizes, imageNameMap);
   for (const diagnostic of floorImages.diagnostics) diagnostics.add(diagnostic);
-  const eventLayerIndex = Math.max(0, layers.findIndex((layer) => layer.property === "map"));
+  const eventLayerIndex = Math.max(
+    0,
+    layers.findIndex((layer) => layer.property === 'map'),
+  );
   const foregroundImageOrder = 25 + eventLayerIndex * 10;
   for (const part of floorImages.parts) {
     const baseTexture = textures.get(part.path);
     if (!baseTexture) continue;
-    const frame = frameTexture(
-      baseTexture,
-      part.sourceX,
-      part.sourceY,
-      part.sourceWidth,
-      part.sourceHeight,
-      part.path,
-    );
-    if (typeof frame === "string") {
+    const frame = frameTexture(baseTexture, part.sourceX, part.sourceY, part.sourceWidth, part.sourceHeight, part.path);
+    if (typeof frame === 'string') {
       diagnostics.add(frame);
       continue;
     }
@@ -684,8 +628,8 @@ function buildRenderCells(
       key: part.key,
       texture: frame,
       ...rect,
-      alpha: layerAlpha(part.layer === "bg" ? "bgmap" : "fgmap", activeLayer),
-      order: part.layer === "bg" ? 10 : foregroundImageOrder,
+      alpha: layerAlpha(part.layer === 'bg' ? 'bgmap' : 'fgmap', activeLayer),
+      order: part.layer === 'bg' ? 10 : foregroundImageOrder,
       reverse: part.reverse,
     });
   }
@@ -695,7 +639,7 @@ function buildRenderCells(
     if (defaultSprite) {
       const sprite = defaultSprite;
       if (!sprite) continue;
-      if (typeof sprite === "string") {
+      if (typeof sprite === 'string') {
         diagnostics.add(sprite);
         missingCells.push({
           key: `${loc.cellX},${loc.cellY}:${sprite}`,
@@ -722,7 +666,7 @@ function buildRenderCells(
       }
 
       const frame = textureFrame(baseTexture, sprite);
-      if (typeof frame === "string") {
+      if (typeof frame === 'string') {
         diagnostics.add(frame);
         missingCells.push({
           key: `${loc.cellX},${loc.cellY}:${frame}`,
@@ -754,7 +698,7 @@ function buildRenderCells(
       const alpha = layerAlpha(layerName, activeLayer);
 
       if (!sprite) continue;
-      if (typeof sprite === "string") {
+      if (typeof sprite === 'string') {
         diagnostics.add(sprite);
         missingCells.push({
           key: `${loc.cellX},${loc.cellY}:${layerName}:${sprite}`,
@@ -781,19 +725,17 @@ function buildRenderCells(
       }
 
       if (isAutotileSprite(sprite)) {
-        for (
-          const [partIndex, part] of autotileParts(
-            layerMap,
-            loc.cellX,
-            loc.cellY,
-            loc.drawX,
-            loc.drawY,
-            loc.size,
-            idnum,
-          ).entries()
-        ) {
+        for (const [partIndex, part] of autotileParts(
+          layerMap,
+          loc.cellX,
+          loc.cellY,
+          loc.drawX,
+          loc.drawY,
+          loc.size,
+          idnum,
+        ).entries()) {
           const frame = frameTexture(baseTexture, part.sx, part.sy, 16, 16, sprite.path);
-          if (typeof frame === "string") {
+          if (typeof frame === 'string') {
             diagnostics.add(frame);
             missingCells.push({
               key: `${loc.cellX},${loc.cellY}:${layerName}:${frame}`,
@@ -819,7 +761,7 @@ function buildRenderCells(
       }
 
       const frame = textureFrame(baseTexture, sprite);
-      if (typeof frame === "string") {
+      if (typeof frame === 'string') {
         diagnostics.add(frame);
         missingCells.push({
           key: `${loc.cellX},${loc.cellY}:${layerName}:${frame}`,
@@ -862,10 +804,7 @@ export const MapPixiRenderer: FC<MapPixiRendererProps> = ({
 }) => {
   const viewportWidth = requestedViewportSize[0];
   const viewportHeight = requestedViewportSize[1];
-  const viewportSize = useMemo(
-    () => [viewportWidth, viewportHeight] as const,
-    [viewportHeight, viewportWidth],
-  );
+  const viewportSize = useMemo(() => [viewportWidth, viewportHeight] as const, [viewportHeight, viewportWidth]);
   const rootRef = useRef<HTMLDivElement>(null);
   const sessionRef = useRef<PixiRenderSession | null>(null);
   const generationRef = useRef(0);
@@ -876,24 +815,24 @@ export const MapPixiRenderer: FC<MapPixiRendererProps> = ({
     [floor, blockRegistry, spriteRegistry, tilesets, imageNameMap, layers],
   );
   const textureState = useMaterialTextures(paths);
-  const pathsKey = paths.join("\n");
+  const pathsKey = paths.join('\n');
   const renderReady = textureState.pathsKey === pathsKey && !textureState.loading;
   const { renderCells, missingCells, diagnostics } = useMemo(
     () =>
       renderReady
         ? buildRenderCells(
-          floor,
-          blockRegistry,
-          spriteRegistry,
-          textureState.textures,
-          tilesets,
-          activeLayer,
-          bigmap,
-          viewportOffset,
-          viewportSize,
-          imageNameMap,
-          layers,
-        )
+            floor,
+            blockRegistry,
+            spriteRegistry,
+            textureState.textures,
+            tilesets,
+            activeLayer,
+            bigmap,
+            viewportOffset,
+            viewportSize,
+            imageNameMap,
+            layers,
+          )
         : { renderCells: [], missingCells: [], diagnostics: [] },
     [
       renderReady,
@@ -911,9 +850,8 @@ export const MapPixiRenderer: FC<MapPixiRendererProps> = ({
     ],
   );
 
-  const allDiagnostics = textureState.pathsKey === pathsKey && !textureState.loading
-    ? [...textureState.diagnostics, ...diagnostics]
-    : [];
+  const allDiagnostics =
+    textureState.pathsKey === pathsKey && !textureState.loading ? [...textureState.diagnostics, ...diagnostics] : [];
 
   useEffect(() => {
     let initialized = false;
@@ -940,34 +878,38 @@ export const MapPixiRenderer: FC<MapPixiRendererProps> = ({
         return;
       }
       app.renderer.resize(viewportWidth, viewportHeight);
-      app.canvas.style.display = "block";
-      app.canvas.style.imageRendering = "pixelated";
-      app.canvas.style.visibility = "hidden";
+      app.canvas.style.display = 'block';
+      app.canvas.style.imageRendering = 'pixelated';
+      app.canvas.style.visibility = 'hidden';
       root.appendChild(app.canvas);
       setReadyGeneration(session.generation);
     };
 
     if (pooled) {
       activate(pooled.scene);
-    } else void app.init({
-      width: viewportWidth,
-      height: viewportHeight,
-      backgroundAlpha: 0,
-      antialias: false,
-      autoDensity: false,
-      preference: "webgl",
-      preserveDrawingBuffer: true,
-      autoStart: false,
-    }).then(() => {
-      const scene = new Container();
-      app.stage.addChild(scene);
-      activate(scene);
-    }).catch((error: unknown) => {
-      if (session.disposed || sessionRef.current !== session) return;
-      session.disposed = true;
-      sessionRef.current = null;
-      setInitializationError(error instanceof Error ? error : new Error(String(error)));
-    });
+    } else
+      void app
+        .init({
+          width: viewportWidth,
+          height: viewportHeight,
+          backgroundAlpha: 0,
+          antialias: false,
+          autoDensity: false,
+          preference: 'webgl',
+          preserveDrawingBuffer: true,
+          autoStart: false,
+        })
+        .then(() => {
+          const scene = new Container();
+          app.stage.addChild(scene);
+          activate(scene);
+        })
+        .catch((error: unknown) => {
+          if (session.disposed || sessionRef.current !== session) return;
+          session.disposed = true;
+          sessionRef.current = null;
+          setInitializationError(error instanceof Error ? error : new Error(String(error)));
+        });
 
     return () => {
       session.disposed = true;
@@ -982,12 +924,7 @@ export const MapPixiRenderer: FC<MapPixiRendererProps> = ({
   useEffect(() => {
     if (!renderReady) return;
     const session = sessionRef.current;
-    if (
-      !session
-      || session.disposed
-      || session.generation !== readyGeneration
-      || !session.scene
-    ) return;
+    if (!session || session.disposed || session.generation !== readyGeneration || !session.scene) return;
     const { app, scene } = session;
 
     const previousChildren = scene.removeChildren();
@@ -1008,8 +945,8 @@ export const MapPixiRenderer: FC<MapPixiRendererProps> = ({
         sprite.anchor.set(0.5);
         sprite.x += cell.width / 2;
         sprite.y += cell.height / 2;
-        if (cell.reverse === ":x" || cell.reverse === ":o") sprite.scale.x *= -1;
-        if (cell.reverse === ":y" || cell.reverse === ":o") sprite.scale.y *= -1;
+        if (cell.reverse === ':x' || cell.reverse === ':o') sprite.scale.x *= -1;
+        if (cell.reverse === ':y' || cell.reverse === ':o') sprite.scale.y *= -1;
       }
       sprite.roundPixels = true;
       scene.addChild(sprite);
@@ -1044,7 +981,7 @@ export const MapPixiRenderer: FC<MapPixiRendererProps> = ({
         session.reusable = false;
         throw error;
       }
-      app.canvas.style.visibility = "visible";
+      app.canvas.style.visibility = 'visible';
       destroyDisplayObjects(previousChildren);
     }
   }, [
@@ -1074,20 +1011,20 @@ export const MapPixiRenderer: FC<MapPixiRendererProps> = ({
         <div
           data-test-id="map-render-diagnostics"
           style={{
-            position: "absolute",
+            position: 'absolute',
             left: 4,
             top: 4,
             zIndex: 80,
             maxWidth: viewportWidth - 8,
-            padding: "3px 5px",
-            color: "#e60012",
-            background: "rgba(255,255,255,0.9)",
+            padding: '3px 5px',
+            color: '#e60012',
+            background: 'rgba(255,255,255,0.9)',
             fontSize: 12,
-            lineHeight: "14px",
-            pointerEvents: "none",
+            lineHeight: '14px',
+            pointerEvents: 'none',
           }}
         >
-          {allDiagnostics.slice(0, 4).join(" / ")}
+          {allDiagnostics.slice(0, 4).join(' / ')}
         </div>
       )}
     </div>

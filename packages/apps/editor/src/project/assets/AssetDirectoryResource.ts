@@ -1,12 +1,12 @@
-import { effect, signal } from "alien-signals";
+import { effect, signal } from 'alien-signals';
 
-import { ContentUtils } from "@/fs/ContentUtils";
-import type { ReadonlySignal } from "@/fs/interfaces";
-import type { Content } from "@/fs/types";
-import type { Fs } from "@/services/fs";
-import { waitUntil } from "@/utils/base/signal";
-import type { AssetDirectoryResourceLike, AssetDirectorySnapshot } from "./types";
-import { isFileNotFoundError } from "@/fs/errors";
+import { ContentUtils } from '@/fs/ContentUtils';
+import type { ReadonlySignal } from '@/fs/interfaces';
+import type { Content } from '@/fs/types';
+import type { Fs } from '@/services/fs';
+import { waitUntil } from '@/utils/base/signal';
+import type { AssetDirectoryResourceLike, AssetDirectorySnapshot } from './types';
+import { isFileNotFoundError } from '@/fs/errors';
 
 function toError(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error));
@@ -21,10 +21,10 @@ export class AssetDirectoryResource implements AssetDirectoryResourceLike {
   private revision = 0;
 
   constructor(path: string, fs: Fs) {
-    this.path = path.endsWith("/") ? path : `${path}/`;
+    this.path = path.endsWith('/') ? path : `${path}/`;
     this.id = `asset-directory:${this.path}`;
     this.fs = fs;
-    this.mutableContent = signal<Content<AssetDirectorySnapshot>>({ status: "idle" });
+    this.mutableContent = signal<Content<AssetDirectorySnapshot>>({ status: 'idle' });
     this.content = this.mutableContent as ReadonlySignal<Content<AssetDirectorySnapshot>>;
   }
 
@@ -41,33 +41,33 @@ export class AssetDirectoryResource implements AssetDirectoryResourceLike {
   }
 
   async reload(): Promise<void> {
-    if (this.mutableContent().status === "loading") {
+    if (this.mutableContent().status === 'loading') {
       await this.waitForSettled();
       return;
     }
-    this.mutableContent({ status: "loading" });
+    this.mutableContent({ status: 'loading' });
     try {
       const entries = (await this.fs.promises.readdir(this.path))
-        .filter((entry) => typeof entry === "string")
-        .map((entry) => entry.replace(/^\.\//, "").replace(this.path, ""))
-        .filter((entry) => entry.length > 0 && !entry.includes("/"))
+        .filter((entry) => typeof entry === 'string')
+        .map((entry) => entry.replace(/^\.\//, '').replace(this.path, ''))
+        .filter((entry) => entry.length > 0 && !entry.includes('/'))
         .sort((left, right) => left.localeCompare(right));
       this.revision += 1;
-      this.mutableContent({ status: "loaded", value: { entries, revision: this.revision } });
+      this.mutableContent({ status: 'loaded', value: { entries, revision: this.revision } });
     } catch (error) {
       const normalized = toError(error);
-      if (isFileNotFoundError(normalized)) this.mutableContent({ status: "not-found" });
-      else this.mutableContent({ status: "error", error: normalized });
+      if (isFileNotFoundError(normalized)) this.mutableContent({ status: 'not-found' });
+      else this.mutableContent({ status: 'error', error: normalized });
     }
   }
 
   async ensureLoaded(): Promise<void> {
     const content = this.mutableContent();
-    if (content.status === "idle") await this.reload();
-    else if (content.status === "loading") await this.waitForSettled();
+    if (content.status === 'idle') await this.reload();
+    else if (content.status === 'loading') await this.waitForSettled();
   }
 
   async waitForSettled(): Promise<void> {
-    await waitUntil(() => !["idle", "loading"].includes(this.mutableContent().status));
+    await waitUntil(() => !['idle', 'loading'].includes(this.mutableContent().status));
   }
 }

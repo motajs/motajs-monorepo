@@ -4,7 +4,7 @@
  * 数据序列化工具函数，用于将数据对象序列化为 JS 文件格式。
  */
 
-import { encodeGameData2x, encodeGameMapData2x } from "@motajs/file2x";
+import { encodeGameData2x, encodeGameMapData2x } from '@motajs/file2x';
 
 /**
  * 将数据序列化为 JS 数据文件格式
@@ -49,5 +49,5 @@ export function serializeToJsDataFile(varName: string, data: unknown): string {
  * // }
  */
 export function serializeToJsMapFile(floorId: string, data: unknown): string {
-  return encodeGameMapData2x({ prefix: ["main", "floors"], mapId: floorId, data });
+  return encodeGameMapData2x({ prefix: ['main', 'floors'], mapId: floorId, data });
 }

@@ -1,5 +1,5 @@
-import { FileHandlerManager } from "@/fs/FileHandlerManager";
-import type { AppliedOperation, EditorOperation, OperationMeta, OperationTarget } from "./operations";
+import { FileHandlerManager } from '@/fs/FileHandlerManager';
+import type { AppliedOperation, EditorOperation, OperationMeta, OperationTarget } from './operations';
 
 export interface TextFileOperationOptions {
   invalidate?: () => void;
@@ -11,10 +11,10 @@ interface TextFileCheckpoint {
 }
 
 async function readText(path: string): Promise<string | undefined> {
-  if (!await FileHandlerManager.exists(path)) return undefined;
+  if (!(await FileHandlerManager.exists(path))) return undefined;
   const handler = await FileHandlerManager.load(path);
   const content = handler.getContent();
-  if (content.status !== "loaded") throw new Error(`Cannot read ${path} from ${content.status}`);
+  if (content.status !== 'loaded') throw new Error(`Cannot read ${path} from ${content.status}`);
   return content.value;
 }
 
@@ -39,7 +39,7 @@ function textFileTarget(path: string, options: TextFileOperationOptions): Operat
     },
     restore: async (checkpoint) => {
       const value = checkpoint as TextFileCheckpoint;
-      if (value.exists) await writeText(path, value.text ?? "", options);
+      if (value.exists) await writeText(path, value.text ?? '', options);
       else if (await FileHandlerManager.exists(path)) await deleteText(path, options);
     },
   };
@@ -52,12 +52,7 @@ class WriteTextFileOperation implements EditorOperation {
   private readonly text: string;
   private readonly options: TextFileOperationOptions;
 
-  constructor(
-    meta: OperationMeta,
-    path: string,
-    text: string,
-    options: TextFileOperationOptions,
-  ) {
+  constructor(meta: OperationMeta, path: string, text: string, options: TextFileOperationOptions) {
     this.meta = meta;
     this.path = path;
     this.text = text;
@@ -73,9 +68,10 @@ class WriteTextFileOperation implements EditorOperation {
     await writeText(this.path, this.text, this.options);
     return {
       value: undefined,
-      inverse: previous === undefined
-        ? new DeleteTextFileOperation(this.meta, this.path, this.options)
-        : new WriteTextFileOperation(this.meta, this.path, previous, this.options),
+      inverse:
+        previous === undefined
+          ? new DeleteTextFileOperation(this.meta, this.path, this.options)
+          : new WriteTextFileOperation(this.meta, this.path, previous, this.options),
       changed: true,
     };
   }
@@ -87,11 +83,7 @@ class DeleteTextFileOperation implements EditorOperation {
   private readonly path: string;
   private readonly options: TextFileOperationOptions;
 
-  constructor(
-    meta: OperationMeta,
-    path: string,
-    options: TextFileOperationOptions,
-  ) {
+  constructor(meta: OperationMeta, path: string, options: TextFileOperationOptions) {
     this.meta = meta;
     this.path = path;
     this.options = options;

@@ -1,11 +1,11 @@
-import { useImageAssetUrl } from "@/hooks/useImageAssetUrl";
-import { useResourceSuspense } from "@/hooks/suspense";
-import { floorImagePath } from "@/MapEditor/rendering/floorImages";
-import { projectData } from "@/project/data/projectData";
-import type { FloorData, FloorImageData } from "@/types";
-import { FloorThumbnail } from "@/Workbench/modals/shared/FloorThumbnail";
-import { Checkbox, InputNumber, Modal, Select } from "antd";
-import { Image } from "lucide-react";
+import { useImageAssetUrl } from '@/hooks/useImageAssetUrl';
+import { useResourceSuspense } from '@/hooks/suspense';
+import { floorImagePath } from '@/MapEditor/rendering/floorImages';
+import { projectData } from '@/project/data/projectData';
+import type { FloorData, FloorImageData } from '@/types';
+import { FloorThumbnail } from '@/Workbench/modals/shared/FloorThumbnail';
+import { Checkbox, InputNumber, Modal, Select } from 'antd';
+import { Image } from 'lucide-react';
 import {
   Suspense,
   type FC,
@@ -15,15 +15,11 @@ import {
   useMemo,
   useRef,
   useState,
-} from "react";
-import { CollectionControl } from "./CollectionControl";
-import { evaluateExpression } from "./expression";
-import {
-  ImageAssetPickerModal,
-  type ImageAssetSelection,
-  type ImageCrop,
-} from "./ImageAssetPickerModal";
-import type { FieldSchema, SchemaScope } from "./types";
+} from 'react';
+import { CollectionControl } from './CollectionControl';
+import { evaluateExpression } from './expression';
+import { ImageAssetPickerModal, type ImageAssetSelection, type ImageCrop } from './ImageAssetPickerModal';
+import type { FieldSchema, SchemaScope } from './types';
 
 interface FloorImagesFieldEditorProps {
   schema: FieldSchema;
@@ -36,26 +32,23 @@ interface FloorImagesFieldEditorProps {
 type EditableFloorImage = Record<string, unknown>;
 
 function isRecord(value: unknown): value is EditableFloorImage {
-  return value != null && typeof value === "object" && !Array.isArray(value);
+  return value != null && typeof value === 'object' && !Array.isArray(value);
 }
 
 function isEditableFloorImage(value: unknown): value is EditableFloorImage & { name: string } {
-  return isRecord(value) && typeof value.name === "string" && value.name.length > 0;
+  return isRecord(value) && typeof value.name === 'string' && value.name.length > 0;
 }
 
 function finite(value: unknown, fallback = 0): number {
-  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
 
 function positiveInteger(value: unknown, fallback = 1): number {
-  return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : fallback;
+  return typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : fallback;
 }
 
-function RawFloorImageItem({ value, onChange }: {
-  value: unknown;
-  onChange(value: unknown): void;
-}) {
-  const [text, setText] = useState(() => JSON.stringify(value, null, 2) ?? "null");
+function RawFloorImageItem({ value, onChange }: { value: unknown; onChange(value: unknown): void }) {
+  const [text, setText] = useState(() => JSON.stringify(value, null, 2) ?? 'null');
   const [error, setError] = useState<string>();
   const commit = () => {
     try {
@@ -81,11 +74,18 @@ function imageCrop(value: unknown): ImageCrop | undefined {
   const width = value.w;
   const height = value.h;
   if (
-    typeof x !== "number" || !Number.isFinite(x)
-    || typeof y !== "number" || !Number.isFinite(y)
-    || typeof width !== "number" || !Number.isFinite(width) || width <= 0
-    || typeof height !== "number" || !Number.isFinite(height) || height <= 0
-  ) return undefined;
+    typeof x !== 'number' ||
+    !Number.isFinite(x) ||
+    typeof y !== 'number' ||
+    !Number.isFinite(y) ||
+    typeof width !== 'number' ||
+    !Number.isFinite(width) ||
+    width <= 0 ||
+    typeof height !== 'number' ||
+    !Number.isFinite(height) ||
+    height <= 0
+  )
+    return undefined;
   return { x, y, width, height };
 }
 
@@ -159,7 +159,7 @@ const FloorImageHitbox: FC<FloorImageHitboxProps> = ({
 
   return (
     <div
-      className={`floorImageHitbox${selected ? " selected" : ""}${item.disable || item.disabled ? " disabled" : ""}`}
+      className={`floorImageHitbox${selected ? ' selected' : ''}${item.disable || item.disabled ? ' disabled' : ''}`}
       data-test-id={`floor-image-hitbox-${index}`}
       title={`${item.name} (${x}, ${y})`}
       style={{
@@ -198,12 +198,7 @@ interface FloorImageEditorModalProps {
   onConfirm(value: unknown[]): Promise<void>;
 }
 
-const FloorImageEditorModal: FC<FloorImageEditorModalProps> = ({
-  floorId,
-  initialValue,
-  onClose,
-  onConfirm,
-}) => {
+const FloorImageEditorModal: FC<FloorImageEditorModalProps> = ({ floorId, initialValue, onClose, onConfirm }) => {
   const [floor] = useResourceSuspense(projectData.floor(floorId));
   const [tower] = useResourceSuspense(projectData.tower());
   const [draft, setDraft] = useState<unknown[]>(() => structuredClone(initialValue));
@@ -212,40 +207,42 @@ const FloorImageEditorModal: FC<FloorImageEditorModalProps> = ({
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string>();
   const previewSize = 440;
-  const nameMap = tower.main.nameMap && typeof tower.main.nameMap === "object"
-    ? tower.main.nameMap as Record<string, string>
-    : {};
+  const nameMap =
+    tower.main.nameMap && typeof tower.main.nameMap === 'object' ? (tower.main.nameMap as Record<string, string>) : {};
 
   const updateItem = useCallback((index: number, update: (item: EditableFloorImage) => EditableFloorImage) => {
-    setDraft((current) => current.map((item, itemIndex) => {
-      if (itemIndex !== index) return item;
-      return update(isRecord(item) ? item : {});
-    }));
+    setDraft((current) =>
+      current.map((item, itemIndex) => {
+        if (itemIndex !== index) return item;
+        return update(isRecord(item) ? item : {});
+      }),
+    );
   }, []);
 
-  const setProperty = useCallback((index: number, key: string, value: unknown) => {
-    updateItem(index, (item) => {
-      const next = { ...item };
-      if (value === undefined || value === "") delete next[key];
-      else next[key] = value;
-      return next;
-    });
-  }, [updateItem]);
+  const setProperty = useCallback(
+    (index: number, key: string, value: unknown) => {
+      updateItem(index, (item) => {
+        const next = { ...item };
+        if (value === undefined || value === '') delete next[key];
+        else next[key] = value;
+        return next;
+      });
+    },
+    [updateItem],
+  );
 
   const selected = draft[selectedIndex];
   const imagePickerValue = imagePicker?.index == null ? undefined : draft[imagePicker.index];
   const imagePickerInitial = isRecord(imagePickerValue) ? imagePickerValue : undefined;
-  const imagePickerInitialSelection = imagePickerInitial && typeof imagePickerInitial.name === "string"
-    ? {
-        name: imagePickerInitial.name,
-        path: floorImagePath(imagePickerInitial as unknown as FloorImageData, nameMap),
-        crop: imageCrop(imagePickerInitial),
-      }
-    : undefined;
-  const previewFloor = useMemo<FloorData>(
-    () => ({ ...floor, images: draft as FloorImageData[] }),
-    [draft, floor],
-  );
+  const imagePickerInitialSelection =
+    imagePickerInitial && typeof imagePickerInitial.name === 'string'
+      ? {
+          name: imagePickerInitial.name,
+          path: floorImagePath(imagePickerInitial as unknown as FloorImageData, nameMap),
+          crop: imageCrop(imagePickerInitial),
+        }
+      : undefined;
+  const previewFloor = useMemo<FloorData>(() => ({ ...floor, images: draft as FloorImageData[] }), [draft, floor]);
 
   const submit = useCallback(async () => {
     setSaving(true);
@@ -274,7 +271,7 @@ const FloorImageEditorModal: FC<FloorImageEditorModalProps> = ({
       }}
       onOk={() => void submit()}
       destroyOnHidden
-      styles={{ body: { maxHeight: "calc(100vh - 168px)", overflow: "auto" } }}
+      styles={{ body: { maxHeight: 'calc(100vh - 168px)', overflow: 'auto' } }}
     >
       <div className="floorImageEditor" data-test-id="floor-image-editor">
         <div className="floorImageEditorConfig">
@@ -285,22 +282,26 @@ const FloorImageEditorModal: FC<FloorImageEditorModalProps> = ({
             createLabel="添加贴图"
             reorderMode="drag"
             selectedIndex={selectedIndex}
-            renderItem={(item) => isEditableFloorImage(item)
-              ? (
+            renderItem={(item) =>
+              isEditableFloorImage(item) ? (
                 <div className="floorImageListItem">
                   <Image size={15} aria-hidden="true" />
                   <span title={item.name}>{item.name}</span>
-                  <small>{String(item.canvas ?? "bg")} · ({finite(item.x)}, {finite(item.y)})</small>
+                  <small>
+                    {String(item.canvas ?? 'bg')} · ({finite(item.x)}, {finite(item.y)})
+                  </small>
                 </div>
+              ) : (
+                <span className="schemaTableError">无效贴图项</span>
               )
-              : <span className="schemaTableError">无效贴图项</span>}
+            }
             onSelect={setSelectedIndex}
             onCreate={() => setImagePicker({ index: null })}
             onRemove={(index) => {
               setDraft((items) => items.filter((_item, itemIndex) => itemIndex !== index));
-              setSelectedIndex((current) => current === index
-                ? Math.min(index, draft.length - 2)
-                : current > index ? current - 1 : current);
+              setSelectedIndex((current) =>
+                current === index ? Math.min(index, draft.length - 2) : current > index ? current - 1 : current,
+              );
             }}
             onMove={(index, nextIndex) => {
               setDraft((items) => {
@@ -320,87 +321,93 @@ const FloorImageEditorModal: FC<FloorImageEditorModalProps> = ({
 
           {selectedIndex >= 0 && selected != null ? (
             <div className="floorImageProperties">
-              {isRecord(selected)
-                ? (
-                  <>
-                    <label className="wide">
-                      图片
-                      <button
-                        type="button"
-                        className="floorImageSelectButton"
-                        onClick={() => setImagePicker({ index: selectedIndex })}
-                      >
-                        <Image size={15} aria-hidden="true" />
-                        <span>{typeof selected.name === "string" && selected.name ? selected.name : "选择图片"}</span>
-                        <small>更换</small>
-                      </button>
-                    </label>
-                    <label>
-                      图层
-                      <Select
-                        value={selected.canvas === "auto" || selected.canvas === "fg" ? selected.canvas : "bg"}
-                        options={[
-                          { value: "bg", label: "背景层" },
-                          { value: "auto", label: "自动分层" },
-                          { value: "fg", label: "前景层" },
-                        ]}
-                        onChange={(value) => setProperty(selectedIndex, "canvas", value)}
-                      />
-                    </label>
-                    <label>
-                      翻转
-                      <Select
-                        value={typeof selected.reverse === "string" ? selected.reverse : ""}
-                        options={[
-                          { value: "", label: "不翻转" },
-                          { value: ":x", label: "水平" },
-                          { value: ":y", label: "垂直" },
-                          { value: ":o", label: "中心" },
-                        ]}
-                        onChange={(value) => setProperty(selectedIndex, "reverse", value)}
-                      />
-                    </label>
-                    <label>
-                      X
-                      <InputNumber value={finite(selected.x)} onChange={(value) => setProperty(selectedIndex, "x", value ?? 0)} />
-                    </label>
-                    <label>
-                      Y
-                      <InputNumber value={finite(selected.y)} onChange={(value) => setProperty(selectedIndex, "y", value ?? 0)} />
-                    </label>
-                    <label>
-                      帧数
-                      <InputNumber
-                        min={1}
-                        precision={0}
-                        placeholder="自动"
-                        value={typeof selected.frame === "number" ? selected.frame : undefined}
-                        onChange={(value) => setProperty(selectedIndex, "frame", value ?? undefined)}
-                      />
-                    </label>
-                    <label className="wide floorImageDisable">
-                      <Checkbox
-                        checked={selected.disable === true || selected.disabled === true}
-                        onChange={(event) => {
-                          updateItem(selectedIndex, (item) => {
-                            const next = { ...item };
-                            delete next.disabled;
-                            if (event.target.checked) next.disable = true;
-                            else delete next.disable;
-                            return next;
-                          });
-                        }}
-                      />
-                      初始禁用
-                    </label>
-                  </>
-                )
-                : (
-                  <RawFloorImageItem
-                    value={selected}
-                    onChange={(value) => setDraft((items) => items.map((item, index) => index === selectedIndex ? value : item))}
-                  />
-                )}
+              {isRecord(selected) ? (
+                <>
+                  <label className="wide">
+                    图片
+                    <button
+                      type="button"
+                      className="floorImageSelectButton"
+                      onClick={() => setImagePicker({ index: selectedIndex })}
+                    >
+                      <Image size={15} aria-hidden="true" />
+                      <span>{typeof selected.name === 'string' && selected.name ? selected.name : '选择图片'}</span>
+                      <small>更换</small>
+                    </button>
+                  </label>
+                  <label>
+                    图层
+                    <Select
+                      value={selected.canvas === 'auto' || selected.canvas === 'fg' ? selected.canvas : 'bg'}
+                      options={[
+                        { value: 'bg', label: '背景层' },
+                        { value: 'auto', label: '自动分层' },
+                        { value: 'fg', label: '前景层' },
+                      ]}
+                      onChange={(value) => setProperty(selectedIndex, 'canvas', value)}
+                    />
+                  </label>
+                  <label>
+                    翻转
+                    <Select
+                      value={typeof selected.reverse === 'string' ? selected.reverse : ''}
+                      options={[
+                        { value: '', label: '不翻转' },
+                        { value: ':x', label: '水平' },
+                        { value: ':y', label: '垂直' },
+                        { value: ':o', label: '中心' },
+                      ]}
+                      onChange={(value) => setProperty(selectedIndex, 'reverse', value)}
+                    />
+                  </label>
+                  <label>
+                    X
+                    <InputNumber
+                      value={finite(selected.x)}
+                      onChange={(value) => setProperty(selectedIndex, 'x', value ?? 0)}
+                    />
+                  </label>
+                  <label>
+                    Y
+                    <InputNumber
+                      value={finite(selected.y)}
+                      onChange={(value) => setProperty(selectedIndex, 'y', value ?? 0)}
+                    />
+                  </label>
+                  <label>
+                    帧数
+                    <InputNumber
+                      min={1}
+                      precision={0}
+                      placeholder="自动"
+                      value={typeof selected.frame === 'number' ? selected.frame : undefined}
+                      onChange={(value) => setProperty(selectedIndex, 'frame', value ?? undefined)}
+                    />
+                  </label>
+                  <label className="wide floorImageDisable">
+                    <Checkbox
+                      checked={selected.disable === true || selected.disabled === true}
+                      onChange={(event) => {
+                        updateItem(selectedIndex, (item) => {
+                          const next = { ...item };
+                          delete next.disabled;
+                          if (event.target.checked) next.disable = true;
+                          else delete next.disable;
+                          return next;
+                        });
+                      }}
+                    />
+                    初始禁用
+                  </label>
+                </>
+              ) : (
+                <RawFloorImageItem
+                  value={selected}
+                  onChange={(value) =>
+                    setDraft((items) => items.map((item, index) => (index === selectedIndex ? value : item)))
+                  }
+                />
+              )}
             </div>
           ) : null}
         </div>
@@ -414,24 +421,26 @@ const FloorImageEditorModal: FC<FloorImageEditorModalProps> = ({
               floorOverride={previewFloor}
               bigmap
               viewportSize={[previewSize, previewSize]}
-              style={{ position: "absolute", inset: 0, margin: 0, pointerEvents: "none" }}
+              style={{ position: 'absolute', inset: 0, margin: 0, pointerEvents: 'none' }}
             />
             <div className="floorImageHitboxes">
-              {draft.map((item, index) => isEditableFloorImage(item) ? (
-                <FloorImageHitbox
-                  key={index}
-                  item={item}
-                  index={index}
-                  selected={selectedIndex === index}
-                  floor={floor}
-                  nameMap={nameMap}
-                  previewSize={previewSize}
-                  onSelect={setSelectedIndex}
-                  onMove={(itemIndex, x, y) => {
-                    updateItem(itemIndex, (current) => ({ ...current, x, y }));
-                  }}
-                />
-              ) : null)}
+              {draft.map((item, index) =>
+                isEditableFloorImage(item) ? (
+                  <FloorImageHitbox
+                    key={index}
+                    item={item}
+                    index={index}
+                    selected={selectedIndex === index}
+                    floor={floor}
+                    nameMap={nameMap}
+                    previewSize={previewSize}
+                    onSelect={setSelectedIndex}
+                    onMove={(itemIndex, x, y) => {
+                      updateItem(itemIndex, (current) => ({ ...current, x, y }));
+                    }}
+                  />
+                ) : null,
+              )}
             </div>
           </div>
           {saveError ? <div className="schemaTableError">{saveError}</div> : null}
@@ -439,27 +448,21 @@ const FloorImageEditorModal: FC<FloorImageEditorModalProps> = ({
       </div>
       {imagePicker ? (
         <Suspense
-          fallback={(
-            <Modal
-              title="加载图片"
-              open
-              footer={null}
-              onCancel={() => setImagePicker(null)}
-              destroyOnHidden
-            >
+          fallback={
+            <Modal title="加载图片" open footer={null} onCancel={() => setImagePicker(null)} destroyOnHidden>
               <div className="floorImageAssetLoading">正在读取图片资源...</div>
             </Modal>
-          )}
+          }
         >
           <ImageAssetPickerModal
-            title={imagePicker.index == null ? "添加楼层贴图" : "选择或裁剪图片"}
+            title={imagePicker.index == null ? '添加楼层贴图' : '选择或裁剪图片'}
             initial={imagePickerInitialSelection}
             crop
             onClose={() => setImagePicker(null)}
             onConfirm={(selection) => {
               if (imagePicker.index == null) {
                 const nextIndex = draft.length;
-                setDraft((items) => [...items, applyImageSelection({ canvas: "bg", x: 0, y: 0 }, selection)]);
+                setDraft((items) => [...items, applyImageSelection({ canvas: 'bg', x: 0, y: 0 }, selection)]);
                 setSelectedIndex(nextIndex);
               } else {
                 updateItem(imagePicker.index, (item) => applyImageSelection(item, selection));
@@ -482,18 +485,19 @@ export const FloorImagesFieldEditor: FC<FloorImagesFieldEditorProps> = ({
 }) => {
   const descriptor = schema.editor;
   const [open, setOpen] = useState(false);
-  if (descriptor.kind !== "floorImages") return null;
+  if (descriptor.kind !== 'floorImages') return null;
   const floorIdResult = evaluateExpression(descriptor.floorId, scope);
-  const floorId = floorIdResult.status === "ready" && typeof floorIdResult.value === "string"
-    ? floorIdResult.value
-    : undefined;
+  const floorId =
+    floorIdResult.status === 'ready' && typeof floorIdResult.value === 'string' ? floorIdResult.value : undefined;
   const items = Array.isArray(value) ? value : [];
 
   return (
     <>
       <div className="schemaTableExternalValue floorImagesFieldValue">
-        <span>{items.length > 0 ? `${items.length} 张贴图` : "未设置贴图"}</span>
-        <button type="button" disabled={disabled || !floorId} onClick={() => setOpen(true)}>预览编辑</button>
+        <span>{items.length > 0 ? `${items.length} 张贴图` : '未设置贴图'}</span>
+        <button type="button" disabled={disabled || !floorId} onClick={() => setOpen(true)}>
+          预览编辑
+        </button>
       </div>
       {!floorId ? <div className="schemaTableError">无法解析当前楼层 ID</div> : null}
       {open && floorId ? (

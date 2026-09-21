@@ -1,22 +1,10 @@
 import type * as Blockly from 'blockly';
 
-import type {
-  BlockDefinition,
-  BlockState,
-  EventObject,
-  ParseContext,
-} from '../parser/types';
+import type { BlockDefinition, BlockState, EventObject, ParseContext } from '../parser/types';
 
 export type BindingKind = 'field' | 'value' | 'statement';
 export type BindingValueType =
-  | 'raw'
-  | 'string'
-  | 'number'
-  | 'boolean'
-  | 'json'
-  | 'expression'
-  | 'colour'
-  | 'json-or-string';
+  'raw' | 'string' | 'number' | 'boolean' | 'json' | 'expression' | 'colour' | 'json-or-string';
 
 export interface EventMatcher {
   path: string;
@@ -41,22 +29,9 @@ export interface DeclarativeEventMapping {
   preserveUnbound?: boolean;
 }
 
-export type MaterialKind =
-  | 'image'
-  | 'animate'
-  | 'bgm'
-  | 'sound'
-  | 'tileset'
-  | 'autotile'
-  | 'hero';
+export type MaterialKind = 'image' | 'animate' | 'bgm' | 'sound' | 'tileset' | 'autotile' | 'hero';
 
-export type BlocklyPreviewAdapterId =
-  | 'event'
-  | 'text'
-  | 'textDrawing'
-  | 'setText'
-  | 'waitRect'
-  | 'floorImage';
+export type BlocklyPreviewAdapterId = 'event' | 'text' | 'textDrawing' | 'setText' | 'waitRect' | 'floorImage';
 
 export type BlocklyCompletionSourceId =
   | 'auto'

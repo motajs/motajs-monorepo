@@ -1,9 +1,5 @@
-import { useConfigItem } from "@/stores/useEditorConfig";
-import {
-  DEFAULT_FONT_SIZE,
-  FONT_BOLD_CONFIG_KEY,
-  FONT_SIZE_CONFIG_KEY,
-} from "./config/commands";
+import { useConfigItem } from '@/stores/useEditorConfig';
+import { DEFAULT_FONT_SIZE, FONT_BOLD_CONFIG_KEY, FONT_SIZE_CONFIG_KEY } from './config/commands';
 
 export interface CodeEditorAppearance {
   fontSize: number;

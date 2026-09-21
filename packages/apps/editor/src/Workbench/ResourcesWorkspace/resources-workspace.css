@@ -250,7 +250,9 @@
   cursor: pointer;
 }
 
-.resourceDetailActions button.danger { color: #d4380d; }
+.resourceDetailActions button.danger {
+  color: #d4380d;
+}
 
 .splitImageForm {
   display: grid;
@@ -265,7 +267,9 @@
   gap: 8px;
 }
 
-.splitImageForm .ant-input-number { width: 100%; }
+.splitImageForm .ant-input-number {
+  width: 100%;
+}
 
 .resourceFontSample {
   margin-top: 18px;
@@ -279,7 +283,10 @@
   border-top: 1px solid rgba(128, 128, 128, 0.2);
 }
 
-.tilesetOrder h3 { margin: 0; font-size: 15px; }
+.tilesetOrder h3 {
+  margin: 0;
+  font-size: 15px;
+}
 .tilesetOrderItem {
   display: flex;
   max-width: 420px;
@@ -320,7 +327,13 @@
 }
 
 @media (max-width: 980px) {
-  .resourcesWorkspace { grid-template-columns: 156px minmax(0, 1fr); }
-  .resourceBrowser { grid-template-columns: minmax(0, 1fr); }
-  .resourceDetailPane { display: none; }
+  .resourcesWorkspace {
+    grid-template-columns: 156px minmax(0, 1fr);
+  }
+  .resourceBrowser {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .resourceDetailPane {
+    display: none;
+  }
 }

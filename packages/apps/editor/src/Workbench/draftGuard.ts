@@ -1,4 +1,4 @@
-import { persistenceMonitor } from "@/fs/PersistenceMonitor";
+import { persistenceMonitor } from '@/fs/PersistenceMonitor';
 
 const dirtyDraftScopes = new Set<string>();
 let suppressNextUnloadWarning = false;
@@ -17,8 +17,7 @@ export function suppressNextWorkspaceDraftWarning(): void {
 }
 
 export function shouldWarnBeforeWorkspaceUnload(): boolean {
-  const persistenceUnsafe = persistenceMonitor.hasUnsavedChanges()
-    || persistenceMonitor.hasPersistErrors();
+  const persistenceUnsafe = persistenceMonitor.hasUnsavedChanges() || persistenceMonitor.hasPersistErrors();
   if (suppressNextUnloadWarning) {
     suppressNextUnloadWarning = false;
     return persistenceUnsafe;

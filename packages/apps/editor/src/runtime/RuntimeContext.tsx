@@ -1,7 +1,16 @@
-import { createContext, useContext } from "react";
-import type { RuntimeLanguageSnapshot, RuntimeStatus, RuntimeStatusBarRequest, RuntimeUIPreviewRequest } from "./protocol";
+import { createContext, useContext } from 'react';
+import type {
+  RuntimeLanguageSnapshot,
+  RuntimeStatus,
+  RuntimeStatusBarRequest,
+  RuntimeUIPreviewRequest,
+} from './protocol';
 
-export interface RuntimeState { status: RuntimeStatus; error?: Error; instanceId?: string }
+export interface RuntimeState {
+  status: RuntimeStatus;
+  error?: Error;
+  instanceId?: string;
+}
 
 export interface RuntimeSurfaceLease {
   id: string;
@@ -23,6 +32,6 @@ export const RuntimeContext = createContext<RuntimePreviewCapability | null>(nul
 
 export function useRuntimePreview(): RuntimePreviewCapability {
   const value = useContext(RuntimeContext);
-  if (!value) throw new Error("RuntimeProvider is missing");
+  if (!value) throw new Error('RuntimeProvider is missing');
   return value;
 }

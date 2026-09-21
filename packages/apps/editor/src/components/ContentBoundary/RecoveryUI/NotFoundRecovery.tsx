@@ -2,7 +2,7 @@
  * NotFoundRecovery - 文件不存在恢复 UI
  */
 
-import type { FC } from "react";
+import type { FC } from 'react';
 
 export interface NotFoundRecoveryProps {
   /** 文件路径 */
@@ -27,7 +27,7 @@ export const NotFoundRecovery: FC<NotFoundRecoveryProps> = ({
   onRetry,
   onCreate,
   onRestore,
-  restoreLabel = "撤销导致缺失的操作",
+  restoreLabel = '撤销导致缺失的操作',
   onOpenAsText,
 }) => (
   <div className="leftTabError">

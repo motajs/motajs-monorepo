@@ -1,5 +1,5 @@
-import sharp from "sharp";
-import { stat } from "node:fs/promises";
+import sharp from 'sharp';
+import { stat } from 'node:fs/promises';
 
 /** 图片压缩阈值（256KB） */
 const COMPRESS_THRESHOLD = 256 * 1024;
@@ -27,10 +27,7 @@ export interface ImageCompressOptions {
  * @param options 压缩选项
  * @returns 是否进行了压缩
  */
-export async function compressImage(
-  imagePath: string,
-  options?: ImageCompressOptions,
-): Promise<boolean> {
+export async function compressImage(imagePath: string, options?: ImageCompressOptions): Promise<boolean> {
   const stats = await stat(imagePath);
 
   // 小于阈值，不需要压缩
@@ -38,7 +35,7 @@ export async function compressImage(
     return false;
   }
 
-  const isPng = imagePath.toLowerCase().endsWith(".png");
+  const isPng = imagePath.toLowerCase().endsWith('.png');
   const isJpg = /\.jpe?g$/i.test(imagePath);
 
   if (!isPng && !isJpg) {
@@ -56,34 +53,34 @@ export async function compressImage(
           quality: 80,
           compressionLevel: 9,
         })
-        .toFile(imagePath + ".tmp");
+        .toFile(imagePath + '.tmp');
     } else if (isJpg) {
       // JPG: 降低质量
       await image
         .jpeg({
           quality: options?.quality ?? JPG_QUALITY,
         })
-        .toFile(imagePath + ".tmp");
+        .toFile(imagePath + '.tmp');
     }
 
     // 检查压缩后的文件大小
-    const { rename, unlink } = await import("node:fs/promises");
-    const tmpStats = await stat(imagePath + ".tmp");
+    const { rename, unlink } = await import('node:fs/promises');
+    const tmpStats = await stat(imagePath + '.tmp');
 
     // 只有压缩后更小才替换原文件
     if (tmpStats.size < stats.size) {
       await unlink(imagePath);
-      await rename(imagePath + ".tmp", imagePath);
+      await rename(imagePath + '.tmp', imagePath);
       return true;
     } else {
-      await unlink(imagePath + ".tmp");
+      await unlink(imagePath + '.tmp');
       return false;
     }
   } catch {
     // 压缩失败，保留原文件
     try {
-      const { unlink } = await import("node:fs/promises");
-      await unlink(imagePath + ".tmp");
+      const { unlink } = await import('node:fs/promises');
+      await unlink(imagePath + '.tmp');
     } catch {
       // 忽略清理错误
     }
@@ -97,11 +94,7 @@ export async function compressImage(
  * @param width 宽度
  * @param height 高度
  */
-export async function createTransparentImage(
-  outputPath: string,
-  width: number,
-  height: number,
-): Promise<void> {
+export async function createTransparentImage(outputPath: string, width: number, height: number): Promise<void> {
   await sharp({
     create: {
       width,
@@ -130,9 +123,7 @@ export async function cropImage(
   width: number,
   height: number,
 ): Promise<Buffer> {
-  return sharp(imagePath)
-    .extract({ left: x, top: y, width, height })
-    .toBuffer();
+  return sharp(imagePath).extract({ left: x, top: y, width, height }).toBuffer();
 }
 
 /**
@@ -152,9 +143,7 @@ export async function cropImageToFile(
   width: number,
   height: number,
 ): Promise<void> {
-  await sharp(imagePath)
-    .extract({ left: x, top: y, width, height })
-    .toFile(outputPath);
+  await sharp(imagePath).extract({ left: x, top: y, width, height }).toFile(outputPath);
 }
 
 /**
@@ -162,9 +151,7 @@ export async function cropImageToFile(
  * @param imagePath 图片路径
  * @returns 图片宽高
  */
-export async function getImageSize(
-  imagePath: string,
-): Promise<{ width: number; height: number }> {
+export async function getImageSize(imagePath: string): Promise<{ width: number; height: number }> {
   const metadata = await sharp(imagePath).metadata();
   return {
     width: metadata.width ?? 0,

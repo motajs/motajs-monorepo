@@ -1,2 +1,2 @@
-export * from "./store";
-export * from "./merge";
+export * from './store';
+export * from './merge';

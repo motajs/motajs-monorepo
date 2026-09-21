@@ -1,12 +1,18 @@
-import type { IContentHandler } from "@/fs/interfaces";
-import { projectAssets } from "@/project/assets";
-import { projectData } from "@/project/data/projectData";
-import type { DataResource } from "@/project/data/DataResource";
-import type { Content } from "@/fs/types";
-import type { ProjectResourceChange } from "./protocol";
+import type { IContentHandler } from '@/fs/interfaces';
+import { projectAssets } from '@/project/assets';
+import { projectData } from '@/project/data/projectData';
+import type { DataResource } from '@/project/data/DataResource';
+import type { Content } from '@/fs/types';
+import type { ProjectResourceChange } from './protocol';
 
-export interface RuntimeTextResource { revision: number; text: string }
-export interface RuntimeBinaryResource { revision: number; bytes: Uint8Array }
+export interface RuntimeTextResource {
+  revision: number;
+  text: string;
+}
+export interface RuntimeBinaryResource {
+  revision: number;
+  bytes: Uint8Array;
+}
 
 function floorId(path: string): string | null {
   return /^project\/floors\/(.+)\.js$/.exec(path)?.[1] ?? null;
@@ -16,14 +22,14 @@ function dataResource(path: string): DataResource<unknown> | null {
   const floor = floorId(path);
   if (floor) return projectData.floor(floor);
   const entries: Array<[string, () => DataResource<unknown>]> = [
-    ["project/data.js", () => projectData.tower()],
-    ["project/items.js", () => projectData.items()],
-    ["project/enemys.js", () => projectData.enemys()],
-    ["project/maps.js", () => projectData.mapBlocks()],
-    ["project/icons.js", () => projectData.icons()],
-    ["project/functions.js", () => projectData.functions()],
-    ["project/plugins.js", () => projectData.plugins()],
-    ["project/events.js", () => projectData.events()],
+    ['project/data.js', () => projectData.tower()],
+    ['project/items.js', () => projectData.items()],
+    ['project/enemys.js', () => projectData.enemys()],
+    ['project/maps.js', () => projectData.mapBlocks()],
+    ['project/icons.js', () => projectData.icons()],
+    ['project/functions.js', () => projectData.functions()],
+    ['project/plugins.js', () => projectData.plugins()],
+    ['project/events.js', () => projectData.events()],
   ];
   return entries.find(([candidate]) => candidate === path)?.[1]() ?? null;
 }
@@ -49,25 +55,28 @@ export class RuntimeResourceGateway {
     this.onChange = null;
   }
 
-  private kind(path: string): ProjectResourceChange["kind"] {
-    if (path.includes("/floors/")) return "floor";
-    if (path.includes("/animates/")) return "animation";
-    if (path.includes("/bgms/") || path.includes("/sounds/")) return "audio";
-    if (path.includes("/fonts/")) return "font";
-    if (/\.js$/i.test(path)) return "data";
-    return "image";
+  private kind(path: string): ProjectResourceChange['kind'] {
+    if (path.includes('/floors/')) return 'floor';
+    if (path.includes('/animates/')) return 'animation';
+    if (path.includes('/bgms/') || path.includes('/sounds/')) return 'audio';
+    if (path.includes('/fonts/')) return 'font';
+    if (/\.js$/i.test(path)) return 'data';
+    return 'image';
   }
 
   private watch(path: string, subscribe: (listener: (content: Content<unknown>) => void) => () => void): void {
     if (this.watched.has(path)) return;
     let baseline = true;
     const unsubscribe = subscribe((content) => {
-      if (baseline) { baseline = false; return; }
-      if (content.status === "loading" || content.status === "idle") return;
+      if (baseline) {
+        baseline = false;
+        return;
+      }
+      if (content.status === 'loading' || content.status === 'idle') return;
       this.onChange?.({
         revision: ++this.revision,
         path,
-        state: content.status === "loaded" ? "loaded" : content.status === "not-found" ? "deleted" : "error",
+        state: content.status === 'loaded' ? 'loaded' : content.status === 'not-found' ? 'deleted' : 'error',
         kind: this.kind(path),
       });
     });
@@ -75,13 +84,13 @@ export class RuntimeResourceGateway {
   }
 
   async readText(path: string): Promise<RuntimeTextResource> {
-    if (!path.startsWith("project/")) throw new Error(`Runtime resource denied: ${path}`);
+    if (!path.startsWith('project/')) throw new Error(`Runtime resource denied: ${path}`);
     const resource = dataResource(path);
     if (resource) {
       this.watch(path, (listener) => resource.subscribe(listener));
       const raw = await loadedRaw(resource);
       const content = raw.getContent();
-      if (content.status !== "loaded") throw new Error(`Runtime resource unavailable: ${path}`);
+      if (content.status !== 'loaded') throw new Error(`Runtime resource unavailable: ${path}`);
       return { revision: ++this.revision, text: content.value };
     }
     const binary = await this.readBinary(path);
@@ -89,12 +98,12 @@ export class RuntimeResourceGateway {
   }
 
   async readBinary(path: string): Promise<RuntimeBinaryResource> {
-    if (!path.startsWith("project/")) throw new Error(`Runtime resource denied: ${path}`);
+    if (!path.startsWith('project/')) throw new Error(`Runtime resource denied: ${path}`);
     const resource = projectAssets.image(path);
     this.watch(path, (listener) => resource.subscribe(listener));
     await resource.ensureLoaded();
     const content = resource.snapshot();
-    if (content.status !== "loaded") throw new Error(`Runtime resource unavailable: ${path}`);
+    if (content.status !== 'loaded') throw new Error(`Runtime resource unavailable: ${path}`);
     return { revision: content.value.revision, bytes: new Uint8Array(content.value.bytes) };
   }
 }

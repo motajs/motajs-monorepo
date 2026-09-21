@@ -46,11 +46,7 @@ async function loadProjectImage(name: string): Promise<ImageBitmap | null> {
   return createImageBitmap(new Blob([bytes.buffer], { type: 'image/png' }));
 }
 
-async function drawEvent(
-  ctx: CanvasRenderingContext2D,
-  raw: UIData,
-  isCancelled: () => boolean,
-): Promise<void> {
+async function drawEvent(ctx: CanvasRenderingContext2D, raw: UIData, isCancelled: () => boolean): Promise<void> {
   const data = typeof raw === 'string' ? { type: 'text', text: raw } : raw;
   if (!data || typeof data !== 'object') return;
   const event = data as Record<string, unknown>;
@@ -117,10 +113,20 @@ async function drawEvent(
   if (type === 'drawImage' && typeof event.image === 'string') {
     const image = await loadProjectImage(event.image);
     if (!image || isCancelled()) return;
-    const x = number(event.x); const y = number(event.y);
+    const x = number(event.x);
+    const y = number(event.y);
     if (event.x1 != null) {
-      ctx.drawImage(image, number(event.x1), number(event.y1), number(event.w1), number(event.h1),
-        x, y, number(event.w, number(event.w1)), number(event.h, number(event.h1)));
+      ctx.drawImage(
+        image,
+        number(event.x1),
+        number(event.y1),
+        number(event.w1),
+        number(event.h1),
+        x,
+        y,
+        number(event.w, number(event.w1)),
+        number(event.h, number(event.h1)),
+      );
     } else ctx.drawImage(image, x, y, number(event.w, image.width), number(event.h, image.height));
     image.close();
   }
@@ -151,7 +157,9 @@ export const PreviewUIContent: FC<PreviewUIContentProps> = ({ list, background }
         if (cancelled) return;
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [background, floorId, list]);
 
   return (
@@ -161,7 +169,7 @@ export const PreviewUIContent: FC<PreviewUIContentProps> = ({ list, background }
         className="gameCanvas"
         id="uievent"
         data-test-id="blockly-static-preview"
-        style={{ position: "static", display: "block" }}
+        style={{ position: 'static', display: 'block' }}
       />
       <div id="uieventExtraBody" style={{ display: 'none', marginTop: '-10px' }} />
     </>

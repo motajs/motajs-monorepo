@@ -1,13 +1,13 @@
-import { Button, Input, Modal, Tooltip } from "antd";
-import { GripVertical, Plus, Settings, Trash2 } from "lucide-react";
-import { type FC, useCallback, useEffect, useRef, useState } from "react";
+import { Button, Input, Modal, Tooltip } from 'antd';
+import { GripVertical, Plus, Settings, Trash2 } from 'lucide-react';
+import { type FC, useCallback, useEffect, useRef, useState } from 'react';
 import {
   saveMapLayerSettings,
   type MapLayerDefinition,
   type MapLayerSettingsState,
   validateMapLayers,
-} from "@/project/settings/mapLayerSettings";
-import { notifyError, notifySuccess } from "@/utils/notify";
+} from '@/project/settings/mapLayerSettings';
+import { notifyError, notifySuccess } from '@/utils/notify';
 
 export interface LayerSettingsButtonProps {
   settings: MapLayerSettingsState;
@@ -40,14 +40,14 @@ export const LayerSettingsButton: FC<LayerSettingsButtonProps> = ({ settings }) 
 
   const show = useCallback(() => {
     setDraft(settings.layers.map((layer) => ({ ...layer })));
-    setError(settings.status === "error" ? settings.error.message : undefined);
+    setError(settings.status === 'error' ? settings.error.message : undefined);
     setOpen(true);
   }, [settings]);
 
   const update = useCallback((index: number, key: keyof MapLayerDefinition, value: string) => {
-    setDraft((current) => current.map((layer, currentIndex) => (
-      currentIndex === index ? { ...layer, [key]: value } : layer
-    )));
+    setDraft((current) =>
+      current.map((layer, currentIndex) => (currentIndex === index ? { ...layer, [key]: value } : layer)),
+    );
     setError(undefined);
   }, []);
 
@@ -62,7 +62,7 @@ export const LayerSettingsButton: FC<LayerSettingsButtonProps> = ({ settings }) 
       setSaving(true);
       await saveMapLayerSettings(normalized);
       setOpen(false);
-      notifySuccess("地图图层配置已保存");
+      notifySuccess('地图图层配置已保存');
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : String(cause);
       setError(message);
@@ -74,11 +74,11 @@ export const LayerSettingsButton: FC<LayerSettingsButtonProps> = ({ settings }) 
 
   return (
     <>
-      <Tooltip title={settings.status === "error" ? `图层配置错误：${settings.error.message}` : "配置地图图层"}>
+      <Tooltip title={settings.status === 'error' ? `图层配置错误：${settings.error.message}` : '配置地图图层'}>
         <Button
           type="text"
           size="small"
-          danger={settings.status === "error"}
+          danger={settings.status === 'error'}
           aria-label="配置地图图层"
           data-test-id="layer-settings-open"
           icon={<Settings size={15} />}
@@ -125,27 +125,29 @@ export const LayerSettingsButton: FC<LayerSettingsButtonProps> = ({ settings }) 
                 aria-label={`拖动${layer.name}`}
                 onDragStart={(event) => {
                   dragIndex.current = index;
-                  event.dataTransfer.effectAllowed = "move";
+                  event.dataTransfer.effectAllowed = 'move';
                 }}
-                onDragEnd={() => { dragIndex.current = null; }}
+                onDragEnd={() => {
+                  dragIndex.current = null;
+                }}
               >
                 <GripVertical size={16} />
               </button>
               <Input
                 value={layer.name}
                 aria-label={`图层名称 ${index + 1}`}
-                onChange={(event) => update(index, "name", event.target.value)}
+                onChange={(event) => update(index, 'name', event.target.value)}
               />
               <Input
                 value={layer.property}
-                disabled={layer.property === "map"}
+                disabled={layer.property === 'map'}
                 aria-label={`图层属性名 ${index + 1}`}
-                onChange={(event) => update(index, "property", event.target.value)}
+                onChange={(event) => update(index, 'property', event.target.value)}
               />
               <Button
                 type="text"
                 danger
-                disabled={layer.property === "map"}
+                disabled={layer.property === 'map'}
                 aria-label={`删除${layer.name}`}
                 icon={<Trash2 size={15} />}
                 onClick={() => remove(index)}
@@ -161,7 +163,11 @@ export const LayerSettingsButton: FC<LayerSettingsButtonProps> = ({ settings }) 
         >
           添加图层
         </Button>
-        {error && <div className="map-layer-settings-error" role="alert">{error}</div>}
+        {error && (
+          <div className="map-layer-settings-error" role="alert">
+            {error}
+          </div>
+        )}
       </Modal>
     </>
   );

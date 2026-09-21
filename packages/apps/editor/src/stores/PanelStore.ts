@@ -5,26 +5,15 @@
  * 仍然使用旧的九面板命名，但新的应用壳只暴露五个一级工作区。
  */
 
-import { useCallback, useMemo, useState } from "react";
-import { createStore } from "@motajs/react-store";
+import { useCallback, useMemo, useState } from 'react';
+import { createStore } from '@motajs/react-store';
 
-export type WorkspaceId =
-  | "map"
-  | "resources"
-  | "tower"
-  | "common-events"
-  | "scripts";
+export type WorkspaceId = 'map' | 'resources' | 'tower' | 'common-events' | 'scripts';
 
-export type MapPanelId = "map" | "loc" | "enemyitem" | "floor";
-export type ScriptWorkspaceId = "functions" | "plugins";
+export type MapPanelId = 'map' | 'loc' | 'enemyitem' | 'floor';
+export type ScriptWorkspaceId = 'functions' | 'plugins';
 
-export type PanelId =
-  | MapPanelId
-  | "tower"
-  | "functions"
-  | "appendpic"
-  | "commonevent"
-  | "plugins";
+export type PanelId = MapPanelId | 'tower' | 'functions' | 'appendpic' | 'commonevent' | 'plugins';
 
 export interface PanelStoreValue {
   activeWorkspace: WorkspaceId;
@@ -39,63 +28,58 @@ export interface PanelStoreValue {
   setActivePanel: (panel: PanelId) => void;
 }
 
-function legacyPanelFor(
-  workspace: WorkspaceId,
-  mapPanel: MapPanelId,
-  scriptWorkspace: ScriptWorkspaceId,
-): PanelId {
+function legacyPanelFor(workspace: WorkspaceId, mapPanel: MapPanelId, scriptWorkspace: ScriptWorkspaceId): PanelId {
   switch (workspace) {
-    case "map":
+    case 'map':
       return mapPanel;
-    case "resources":
-      return "appendpic";
-    case "tower":
-      return "tower";
-    case "common-events":
-      return "commonevent";
-    case "scripts":
+    case 'resources':
+      return 'appendpic';
+    case 'tower':
+      return 'tower';
+    case 'common-events':
+      return 'commonevent';
+    case 'scripts':
       return scriptWorkspace;
   }
 }
 
 function usePanelStore(): PanelStoreValue {
-  const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceId>("map");
-  const [activeMapPanel, setActiveMapPanelState] = useState<MapPanelId>("map");
-  const [activeScriptWorkspace, setActiveScriptWorkspaceState] =
-    useState<ScriptWorkspaceId>("functions");
+  const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceId>('map');
+  const [activeMapPanel, setActiveMapPanelState] = useState<MapPanelId>('map');
+  const [activeScriptWorkspace, setActiveScriptWorkspaceState] = useState<ScriptWorkspaceId>('functions');
 
   const setActiveMapPanel = useCallback((panel: MapPanelId) => {
     setActiveMapPanelState(panel);
-    setActiveWorkspace("map");
+    setActiveWorkspace('map');
   }, []);
 
   const setActiveScriptWorkspace = useCallback((workspace: ScriptWorkspaceId) => {
     setActiveScriptWorkspaceState(workspace);
-    setActiveWorkspace("scripts");
+    setActiveWorkspace('scripts');
   }, []);
 
   const setActivePanel = useCallback((panel: PanelId) => {
     switch (panel) {
-      case "map":
-      case "loc":
-      case "enemyitem":
-      case "floor":
+      case 'map':
+      case 'loc':
+      case 'enemyitem':
+      case 'floor':
         setActiveMapPanelState(panel);
-        setActiveWorkspace("map");
+        setActiveWorkspace('map');
         break;
-      case "tower":
-        setActiveWorkspace("tower");
+      case 'tower':
+        setActiveWorkspace('tower');
         break;
-      case "appendpic":
-        setActiveWorkspace("resources");
+      case 'appendpic':
+        setActiveWorkspace('resources');
         break;
-      case "commonevent":
-        setActiveWorkspace("common-events");
+      case 'commonevent':
+        setActiveWorkspace('common-events');
         break;
-      case "functions":
-      case "plugins":
+      case 'functions':
+      case 'plugins':
         setActiveScriptWorkspaceState(panel);
-        setActiveWorkspace("scripts");
+        setActiveWorkspace('scripts');
         break;
     }
   }, []);

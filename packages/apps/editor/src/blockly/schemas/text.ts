@@ -14,10 +14,7 @@ import { BlockColours } from './colours';
 // 辅助函数
 // ============================================
 
-function extractControlDirective(
-  text: string,
-  prefixes: readonly string[],
-): { token: string; value: string } | null {
+function extractControlDirective(text: string, prefixes: readonly string[]): { token: string; value: string } | null {
   for (const prefix of prefixes) {
     const start = text.indexOf(`${prefix}[`);
     if (start < 0) continue;
@@ -72,12 +69,7 @@ function parseTitleAndPosition(text: string): {
 /**
  * 构建带标题和位置的文本
  */
-function buildTextWithTitleAndPosition(
-  title: string,
-  icon: string,
-  position: string,
-  content: string,
-): string {
+function buildTextWithTitleAndPosition(title: string, icon: string, position: string, content: string): string {
   let text = '';
   if (title || icon) {
     text += '\t[';
@@ -140,12 +132,14 @@ export const text0Schema: BlockSchema = {
       return '';
     }
     if (block.isCollapsed() || !block.isEnabled()) {
-      return JSON.stringify({
-        type: 'text',
-        text,
-        ...(block.isCollapsed() ? { _collapsed: true } : {}),
-        ...(!block.isEnabled() ? { _disabled: true } : {}),
-      }) + ',\n';
+      return (
+        JSON.stringify({
+          type: 'text',
+          text,
+          ...(block.isCollapsed() ? { _collapsed: true } : {}),
+          ...(!block.isEnabled() ? { _disabled: true } : {}),
+        }) + ',\n'
+      );
     }
     // 与旧编辑器一致，普通文本保持字符串简写。
     return JSON.stringify(text) + ',\n';

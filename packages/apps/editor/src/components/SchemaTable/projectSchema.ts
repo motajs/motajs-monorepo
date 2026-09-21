@@ -1,16 +1,16 @@
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { FileHandlerManager } from "@/fs/FileHandlerManager";
-import type { FileHandler } from "@/fs/FileHandler";
-import type { Content } from "@/fs/types";
-import type { FieldSchema, FieldSchemaBundle, UISchema } from "./types";
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { FileHandlerManager } from '@/fs/FileHandlerManager';
+import type { FileHandler } from '@/fs/FileHandler';
+import type { Content } from '@/fs/types';
+import type { FieldSchema, FieldSchemaBundle, UISchema } from './types';
 import {
   createFieldSchemaRegistry,
   createGlobalFieldSchemaRegistry,
   parseFieldSchemaBundle,
   parseUISchema,
-} from "./schema";
+} from './schema';
 
-export type SchemaLayer = "field" | "ui";
+export type SchemaLayer = 'field' | 'ui';
 
 export interface BuiltinSchemaDefinition {
   fieldSource: FieldSchemaBundle;
@@ -25,17 +25,17 @@ interface ResolutionBase {
   hasUiOverride: boolean;
 }
 
-export type ProjectSchemaResolution
-  = | { status: "loading" }
-    | ResolutionBase & {
-      status: "error";
+export type ProjectSchemaResolution =
+  | { status: 'loading' }
+  | (ResolutionBase & {
+      status: 'error';
       layer: SchemaLayer;
       error: Error;
       fieldSchemas?: ReadonlyMap<string, FieldSchema>;
       ambiguousFieldIds?: ReadonlySet<string>;
-    }
-    | ResolutionBase & {
-      status: "ready";
+    })
+  | (ResolutionBase & {
+      status: 'ready';
       fieldBundle: FieldSchemaBundle;
       fieldSchemas: ReadonlyMap<string, FieldSchema>;
       ambiguousFieldIds: ReadonlySet<string>;
@@ -43,7 +43,7 @@ export type ProjectSchemaResolution
       uiSchema: UISchema;
       fieldSource: FieldSchemaBundle;
       uiSource: UISchema;
-    };
+    });
 
 let revision = 0;
 const listeners = new Set<() => void>();
@@ -103,8 +103,8 @@ export function getBuiltinSchemaDefinitions(): readonly BuiltinSchemaDefinition[
 
 function registeredSchemaPaths(): string[] {
   return getBuiltinSchemaDefinitions().flatMap((definition) => [
-    schemaOverridePath(definition, "field"),
-    schemaOverridePath(definition, "ui"),
+    schemaOverridePath(definition, 'field'),
+    schemaOverridePath(definition, 'ui'),
   ]);
 }
 
@@ -123,7 +123,7 @@ function loadRegisteredProjectSchemas(): Promise<void> {
 }
 
 export function schemaOverridePath(definition: BuiltinSchemaDefinition, layer: SchemaLayer): string {
-  const schemaId = layer === "field" ? definition.fieldBundle.schemaId : definition.uiSchema.schemaId;
+  const schemaId = layer === 'field' ? definition.fieldBundle.schemaId : definition.uiSchema.schemaId;
   return `.metaphysics/schemas/${layer}/${schemaId}.json`;
 }
 
@@ -137,21 +137,15 @@ function parseJson(text: string, path: string): unknown {
 }
 
 function settled(content: Content<string>): boolean {
-  return content.status !== "idle" && content.status !== "loading";
+  return content.status !== 'idle' && content.status !== 'loading';
 }
 
-function fieldContentFor(
-  definition: BuiltinSchemaDefinition,
-  override?: Content<string>,
-): Content<string> {
-  return override ?? FileHandlerManager.get(schemaOverridePath(definition, "field")).getContent();
+function fieldContentFor(definition: BuiltinSchemaDefinition, override?: Content<string>): Content<string> {
+  return override ?? FileHandlerManager.get(schemaOverridePath(definition, 'field')).getContent();
 }
 
-function uiContentFor(
-  definition: BuiltinSchemaDefinition,
-  override?: Content<string>,
-): Content<string> {
-  return override ?? FileHandlerManager.get(schemaOverridePath(definition, "ui")).getContent();
+function uiContentFor(definition: BuiltinSchemaDefinition, override?: Content<string>): Content<string> {
+  return override ?? FileHandlerManager.get(schemaOverridePath(definition, 'ui')).getContent();
 }
 
 interface ContentOverrides {
@@ -167,11 +161,13 @@ function resolveRegisteredProjectSchema(
   const targetOverride = overrides.get(target);
   const targetFieldContent = fieldContentFor(target, targetOverride?.field);
   const targetUiContent = uiContentFor(target, targetOverride?.ui);
-  const hasFieldOverride = targetFieldContent.status === "loaded";
-  const hasUiOverride = targetUiContent.status === "loaded";
-  if (!all.every((definition) => settled(fieldContentFor(definition, overrides.get(definition)?.field)))
-    || !settled(targetUiContent)) {
-    return { status: "loading" };
+  const hasFieldOverride = targetFieldContent.status === 'loaded';
+  const hasUiOverride = targetUiContent.status === 'loaded';
+  if (
+    !all.every((definition) => settled(fieldContentFor(definition, overrides.get(definition)?.field))) ||
+    !settled(targetUiContent)
+  ) {
+    return { status: 'loading' };
   }
 
   const bundles: FieldSchemaBundle[] = [];
@@ -179,13 +175,12 @@ function resolveRegisteredProjectSchema(
   const bundleErrors = new Map<string, Error>();
   const resolvedBundles = new Map<string, FieldSchemaBundle>();
   for (const definition of all) {
-    const path = schemaOverridePath(definition, "field");
+    const path = schemaOverridePath(definition, 'field');
     const content = fieldContentFor(definition, overrides.get(definition)?.field);
     try {
-      if (content.status === "error") throw content.error;
-      const bundle = content.status === "loaded"
-        ? parseFieldSchemaBundle(parseJson(content.value, path))
-        : definition.fieldBundle;
+      if (content.status === 'error') throw content.error;
+      const bundle =
+        content.status === 'loaded' ? parseFieldSchemaBundle(parseJson(content.value, path)) : definition.fieldBundle;
       if (bundle.schemaId !== definition.fieldBundle.schemaId) {
         throw new Error(`${path} 的 schemaId 应为 ${definition.fieldBundle.schemaId}，实际为 ${bundle.schemaId}`);
       }
@@ -198,7 +193,7 @@ function resolveRegisteredProjectSchema(
   }
 
   const ownFieldError = bundleErrors.get(target.fieldBundle.schemaId);
-  if (ownFieldError) return { status: "error", layer: "field", error: ownFieldError, hasFieldOverride, hasUiOverride };
+  if (ownFieldError) return { status: 'error', layer: 'field', error: ownFieldError, hasFieldOverride, hasUiOverride };
   const registry = createGlobalFieldSchemaRegistry(bundles);
   const fieldOwners = new Map<string, BuiltinSchemaDefinition>();
   for (const bundle of bundles) {
@@ -209,17 +204,18 @@ function resolveRegisteredProjectSchema(
     }
   }
   const fieldBundle = resolvedBundles.get(target.fieldBundle.schemaId) as FieldSchemaBundle;
-  const uiPath = schemaOverridePath(target, "ui");
+  const uiPath = schemaOverridePath(target, 'ui');
   try {
-    if (targetUiContent.status === "error") throw targetUiContent.error;
-    const uiSchema = targetUiContent.status === "loaded"
-      ? parseUISchema(parseJson(targetUiContent.value, uiPath), registry.schemas, registry.ambiguous)
-      : parseUISchema(target.uiSource, registry.schemas, registry.ambiguous);
+    if (targetUiContent.status === 'error') throw targetUiContent.error;
+    const uiSchema =
+      targetUiContent.status === 'loaded'
+        ? parseUISchema(parseJson(targetUiContent.value, uiPath), registry.schemas, registry.ambiguous)
+        : parseUISchema(target.uiSource, registry.schemas, registry.ambiguous);
     if (uiSchema.schemaId !== target.uiSchema.schemaId) {
       throw new Error(`${uiPath} 的 schemaId 应为 ${target.uiSchema.schemaId}，实际为 ${uiSchema.schemaId}`);
     }
     return {
-      status: "ready",
+      status: 'ready',
       fieldBundle,
       fieldSchemas: registry.schemas,
       ambiguousFieldIds: registry.ambiguous,
@@ -232,8 +228,8 @@ function resolveRegisteredProjectSchema(
     };
   } catch (error) {
     return {
-      status: "error",
-      layer: "ui",
+      status: 'error',
+      layer: 'ui',
       error: error instanceof Error ? error : new Error(String(error)),
       fieldSchemas: registry.schemas,
       ambiguousFieldIds: registry.ambiguous,
@@ -249,12 +245,14 @@ export function resolveProjectSchema(
   fieldContent: Content<string>,
   uiContent: Content<string>,
 ): ProjectSchemaResolution {
-  const overrides = new Map(getBuiltinSchemaDefinitions().map((current) => [
-    current,
-    current === definition
-      ? { field: fieldContent, ui: uiContent }
-      : { field: { status: "not-found" } as const, ui: { status: "not-found" } as const },
-  ]));
+  const overrides = new Map(
+    getBuiltinSchemaDefinitions().map((current) => [
+      current,
+      current === definition
+        ? { field: fieldContent, ui: uiContent }
+        : { field: { status: 'not-found' } as const, ui: { status: 'not-found' } as const },
+    ]),
+  );
   return resolveRegisteredProjectSchema(definition, overrides);
 }
 
@@ -263,14 +261,11 @@ export function useProjectSchema(definition: BuiltinSchemaDefinition): ProjectSc
   const [loadRevision, setLoadRevision] = useState(0);
   const all = useMemo(() => getBuiltinSchemaDefinitions(), []);
   useEffect(() => {
-    const paths = all.flatMap((current) => [
-      schemaOverridePath(current, "field"),
-      schemaOverridePath(current, "ui"),
-    ]);
+    const paths = all.flatMap((current) => [schemaOverridePath(current, 'field'), schemaOverridePath(current, 'ui')]);
     for (const path of paths) ensureHandlerSubscription(path);
     const pendingPaths = paths.filter((path) => {
       const status = FileHandlerManager.get(path).getContent().status;
-      return status === "idle" || status === "loading";
+      return status === 'idle' || status === 'loading';
     });
     if (pendingPaths.length > 0) {
       void FileHandlerManager.loadAll(pendingPaths).finally(() => {
@@ -289,8 +284,8 @@ export function useProjectSchema(definition: BuiltinSchemaDefinition): ProjectSc
 /** Startup boundary: React retries the workbench after all known override reads settle. */
 export function useProjectSchemaSuspense(
   definition: BuiltinSchemaDefinition,
-): Exclude<ProjectSchemaResolution, { status: "loading" }> {
+): Exclude<ProjectSchemaResolution, { status: 'loading' }> {
   const resolution = resolveRegisteredProjectSchema(definition);
-  if (resolution.status === "loading") throw loadRegisteredProjectSchemas();
+  if (resolution.status === 'loading') throw loadRegisteredProjectSchemas();
   return resolution;
 }

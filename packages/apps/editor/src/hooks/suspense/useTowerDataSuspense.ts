@@ -5,9 +5,9 @@
  * 业务组件只需要处理数据已加载的情况
  */
 
-import { towerService, type TowerData } from "@/services/tower";
-import type { UpdateFn } from "../useFs";
-import { useDataSuspense } from "./useDataSuspense";
+import { towerService, type TowerData } from '@/services/tower';
+import type { UpdateFn } from '../useFs';
+import { useDataSuspense } from './useDataSuspense';
 
 /**
  * Suspense 版本的全塔数据 Hook

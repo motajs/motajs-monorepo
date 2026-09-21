@@ -1,16 +1,12 @@
-import type {
-  EditorHostStatus,
-  EditorReleaseIdentity,
-  EditorUpdateState,
-} from "@/idl";
-import { ReleaseAssetCoordinator, type ReleaseAssetPriority } from "./releaseAssetCoordinator";
+import type { EditorHostStatus, EditorReleaseIdentity, EditorUpdateState } from '@/idl';
+import { ReleaseAssetCoordinator, type ReleaseAssetPriority } from './releaseAssetCoordinator';
 
 const EDITOR_MANIFEST_SCHEMA_VERSION = 2;
 const EDITOR_ENVIRONMENT_PROTOCOL_VERSION = 1;
 const EDITOR_CHANNEL_SCHEMA_VERSION = 1;
-const RELEASE_CACHE_PREFIX = "motajs-editor-release:";
-const META_CACHE_NAME = "motajs-editor-meta";
-const BLOB_CACHE_NAME = "motajs-editor-blobs";
+const RELEASE_CACHE_PREFIX = 'motajs-editor-release:';
+const META_CACHE_NAME = 'motajs-editor-meta';
+const BLOB_CACHE_NAME = 'motajs-editor-blobs';
 const CACHE_STATE_VERSION = 2;
 const UPDATE_CHECK_INTERVAL = 10 * 60_000;
 
@@ -26,7 +22,7 @@ export interface EditorArtifactManifest {
   runtimeProtocolVersion: number;
   editorVersion: string;
   buildId: string;
-  entrypoints: { editor: "index.html"; runtime: "runtime.html" };
+  entrypoints: { editor: 'index.html'; runtime: 'runtime.html' };
   files: EditorArtifactFile[];
 }
 
@@ -40,7 +36,7 @@ export interface ResolvedEditorRelease {
   manifest: EditorArtifactManifest;
   html: string;
   releaseRoot: URL;
-  source: "network" | "validated-cache" | "cache";
+  source: 'network' | 'validated-cache' | 'cache';
 }
 
 interface EditorStagingState {
@@ -69,7 +65,7 @@ interface LegacyEditorCacheState {
 
 export class EditorReleaseError extends Error {
   constructor(
-    public readonly reason: Extract<EditorHostStatus, { status: "unavailable" }>["reason"],
+    public readonly reason: Extract<EditorHostStatus, { status: 'unavailable' }>['reason'],
     message: string,
   ) {
     super(message);
@@ -77,79 +73,80 @@ export class EditorReleaseError extends Error {
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
 }
 
 export function isSafeArtifactPath(value: string): boolean {
-  if (!value || value.includes("\0") || value.includes("\\") || value.startsWith("/")) return false;
-  return value.split("/").every((segment) => segment !== "" && segment !== "." && segment !== "..");
+  if (!value || value.includes('\0') || value.includes('\\') || value.startsWith('/')) return false;
+  return value.split('/').every((segment) => segment !== '' && segment !== '.' && segment !== '..');
 }
 
 function isBuildId(value: unknown): value is string {
-  return typeof value === "string" && /^[a-f0-9]{64}$/.test(value);
+  return typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
 }
 
 function assertBuildId(value: unknown): asserts value is string {
-  if (!isBuildId(value)) throw new EditorReleaseError("invalid-artifact", "Editor buildId is invalid");
+  if (!isBuildId(value)) throw new EditorReleaseError('invalid-artifact', 'Editor buildId is invalid');
 }
 
 export function parseEditorChannel(value: unknown): EditorChannelPointer {
   if (!isRecord(value) || value.schemaVersion !== EDITOR_CHANNEL_SCHEMA_VERSION) {
-    throw new EditorReleaseError("invalid-artifact", "Unsupported Editor channel schema");
+    throw new EditorReleaseError('invalid-artifact', 'Unsupported Editor channel schema');
   }
   assertBuildId(value.buildId);
   if (value.previousBuildId !== undefined) assertBuildId(value.previousBuildId);
   return {
     schemaVersion: 1,
     buildId: value.buildId,
-    ...(typeof value.previousBuildId === "string" ? { previousBuildId: value.previousBuildId } : {}),
+    ...(typeof value.previousBuildId === 'string' ? { previousBuildId: value.previousBuildId } : {}),
   };
 }
 
 export function parseEditorManifest(value: unknown): EditorArtifactManifest {
   if (!isRecord(value) || value.schemaVersion !== EDITOR_MANIFEST_SCHEMA_VERSION) {
-    throw new EditorReleaseError("invalid-artifact", "Unsupported Editor artifact schema");
+    throw new EditorReleaseError('invalid-artifact', 'Unsupported Editor artifact schema');
   }
   if (value.environmentProtocolVersion !== EDITOR_ENVIRONMENT_PROTOCOL_VERSION) {
     throw new EditorReleaseError(
-      "incompatible-environment",
+      'incompatible-environment',
       `Editor environment protocol ${String(value.environmentProtocolVersion)} is not supported`,
     );
   }
   assertBuildId(value.buildId);
-  if (typeof value.editorVersion !== "string" || !value.editorVersion) {
-    throw new EditorReleaseError("invalid-artifact", "Editor version is missing");
+  if (typeof value.editorVersion !== 'string' || !value.editorVersion) {
+    throw new EditorReleaseError('invalid-artifact', 'Editor version is missing');
   }
-  if (typeof value.runtimeProtocolVersion !== "number" || !Number.isInteger(value.runtimeProtocolVersion)) {
-    throw new EditorReleaseError("invalid-artifact", "Editor runtime protocol is invalid");
+  if (typeof value.runtimeProtocolVersion !== 'number' || !Number.isInteger(value.runtimeProtocolVersion)) {
+    throw new EditorReleaseError('invalid-artifact', 'Editor runtime protocol is invalid');
   }
   if (
-    !isRecord(value.entrypoints)
-    || value.entrypoints.editor !== "index.html"
-    || value.entrypoints.runtime !== "runtime.html"
+    !isRecord(value.entrypoints) ||
+    value.entrypoints.editor !== 'index.html' ||
+    value.entrypoints.runtime !== 'runtime.html'
   ) {
-    throw new EditorReleaseError("invalid-artifact", "Editor entrypoints are incompatible");
+    throw new EditorReleaseError('invalid-artifact', 'Editor entrypoints are incompatible');
   }
   if (!Array.isArray(value.files) || value.files.length === 0) {
-    throw new EditorReleaseError("invalid-artifact", "Editor artifact file list is missing");
+    throw new EditorReleaseError('invalid-artifact', 'Editor artifact file list is missing');
   }
   const paths = new Set<string>();
   const files = value.files.map((item): EditorArtifactFile => {
-    if (!isRecord(item) || typeof item.path !== "string" || !isSafeArtifactPath(item.path)) {
-      throw new EditorReleaseError("invalid-artifact", "Editor artifact contains an unsafe file path");
+    if (!isRecord(item) || typeof item.path !== 'string' || !isSafeArtifactPath(item.path)) {
+      throw new EditorReleaseError('invalid-artifact', 'Editor artifact contains an unsafe file path');
     }
-    if (paths.has(item.path)) throw new EditorReleaseError("invalid-artifact", `Duplicate Editor file: ${item.path}`);
+    if (paths.has(item.path)) throw new EditorReleaseError('invalid-artifact', `Duplicate Editor file: ${item.path}`);
     paths.add(item.path);
     if (!Number.isSafeInteger(item.size) || (item.size as number) < 0) {
-      throw new EditorReleaseError("invalid-artifact", `Invalid Editor file size: ${item.path}`);
+      throw new EditorReleaseError('invalid-artifact', `Invalid Editor file size: ${item.path}`);
     }
-    if (typeof item.sha256 !== "string" || !/^[a-f0-9]{64}$/.test(item.sha256)) {
-      throw new EditorReleaseError("invalid-artifact", `Invalid Editor file hash: ${item.path}`);
+    if (typeof item.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(item.sha256)) {
+      throw new EditorReleaseError('invalid-artifact', `Invalid Editor file hash: ${item.path}`);
     }
     return { path: item.path, size: item.size as number, sha256: item.sha256 };
   });
-  for (const required of ["index.html", "runtime.html"]) {
-    if (!paths.has(required)) throw new EditorReleaseError("invalid-artifact", `Editor artifact is missing ${required}`);
+  for (const required of ['index.html', 'runtime.html']) {
+    if (!paths.has(required))
+      throw new EditorReleaseError('invalid-artifact', `Editor artifact is missing ${required}`);
   }
   return {
     schemaVersion: 2,
@@ -157,13 +154,13 @@ export function parseEditorManifest(value: unknown): EditorArtifactManifest {
     runtimeProtocolVersion: value.runtimeProtocolVersion,
     editorVersion: value.editorVersion,
     buildId: value.buildId,
-    entrypoints: { editor: "index.html", runtime: "runtime.html" },
+    entrypoints: { editor: 'index.html', runtime: 'runtime.html' },
     files,
   };
 }
 
 function staticRoot(scopeUrl: URL): URL {
-  return new URL("static/editor/", new URL("./", scopeUrl));
+  return new URL('static/editor/', new URL('./', scopeUrl));
 }
 
 function releaseRoot(scopeUrl: URL, buildId: string): URL {
@@ -175,62 +172,65 @@ function releaseCacheName(buildId: string): string {
 }
 
 function stateUrl(scopeUrl: URL): URL {
-  return new URL(".host-state", staticRoot(scopeUrl));
+  return new URL('.host-state', staticRoot(scopeUrl));
 }
 
 function blobUrl(scopeUrl: URL, file: EditorArtifactFile): URL {
-  const extension = file.path.includes(".") ? file.path.slice(file.path.lastIndexOf(".") + 1).toLowerCase() : "bin";
+  const extension = file.path.includes('.') ? file.path.slice(file.path.lastIndexOf('.') + 1).toLowerCase() : 'bin';
   return new URL(`.blobs/${file.sha256}.${extension}`, staticRoot(scopeUrl));
 }
 
 async function responseJson(response: Response, label: string): Promise<unknown> {
   if (!response.ok) {
-    const reason = response.status === 404 ? "not-installed" : "offline";
+    const reason = response.status === 404 ? 'not-installed' : 'offline';
     throw new EditorReleaseError(reason, `${label} returned HTTP ${response.status}`);
   }
   try {
     return await response.json();
   } catch (error) {
     throw new EditorReleaseError(
-      "invalid-artifact",
+      'invalid-artifact',
       `${label} is not valid JSON: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
 }
 
 async function sha256(content: ArrayBuffer): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", content);
-  return [...new Uint8Array(digest)].map((value) => value.toString(16).padStart(2, "0")).join("");
+  const digest = await crypto.subtle.digest('SHA-256', content);
+  return [...new Uint8Array(digest)].map((value) => value.toString(16).padStart(2, '0')).join('');
 }
 
-const errorMessage = (error: unknown): string => error instanceof Error ? error.message : String(error);
+const errorMessage = (error: unknown): string => (error instanceof Error ? error.message : String(error));
 
 function normalizeState(value: unknown): EditorCacheState {
   if (isRecord(value) && value.schemaVersion === CACHE_STATE_VERSION) {
     const runningBuilds = isRecord(value.runningBuilds)
-      ? Object.fromEntries(Object.entries(value.runningBuilds).filter((entry): entry is [string, string] => isBuildId(entry[1])))
+      ? Object.fromEntries(
+          Object.entries(value.runningBuilds).filter((entry): entry is [string, string] => isBuildId(entry[1])),
+        )
       : undefined;
-    const staging = isRecord(value.staging) && isBuildId(value.staging.buildId)
-      ? {
-          buildId: value.staging.buildId,
-          generation: typeof value.staging.generation === "number" ? value.staging.generation : 0,
-          completedFiles: typeof value.staging.completedFiles === "number" ? value.staging.completedFiles : 0,
-          totalFiles: typeof value.staging.totalFiles === "number" ? value.staging.totalFiles : 0,
-          completedBytes: typeof value.staging.completedBytes === "number" ? value.staging.completedBytes : 0,
-          totalBytes: typeof value.staging.totalBytes === "number" ? value.staging.totalBytes : 0,
-          ...(typeof value.staging.error === "string" ? { error: value.staging.error } : {}),
-        }
-      : undefined;
+    const staging =
+      isRecord(value.staging) && isBuildId(value.staging.buildId)
+        ? {
+            buildId: value.staging.buildId,
+            generation: typeof value.staging.generation === 'number' ? value.staging.generation : 0,
+            completedFiles: typeof value.staging.completedFiles === 'number' ? value.staging.completedFiles : 0,
+            totalFiles: typeof value.staging.totalFiles === 'number' ? value.staging.totalFiles : 0,
+            completedBytes: typeof value.staging.completedBytes === 'number' ? value.staging.completedBytes : 0,
+            totalBytes: typeof value.staging.totalBytes === 'number' ? value.staging.totalBytes : 0,
+            ...(typeof value.staging.error === 'string' ? { error: value.staging.error } : {}),
+          }
+        : undefined;
     return {
       schemaVersion: 2,
       ...(isBuildId(value.launch) ? { launch: value.launch } : {}),
       ...(isBuildId(value.candidate) ? { candidate: value.candidate } : {}),
       ...(staging ? { staging } : {}),
       ...(runningBuilds && Object.keys(runningBuilds).length > 0 ? { runningBuilds } : {}),
-      ...(typeof value.lastCheckedAt === "number" ? { lastCheckedAt: value.lastCheckedAt } : {}),
+      ...(typeof value.lastCheckedAt === 'number' ? { lastCheckedAt: value.lastCheckedAt } : {}),
     };
   }
-  const legacy = isRecord(value) ? value as LegacyEditorCacheState : {};
+  const legacy = isRecord(value) ? (value as LegacyEditorCacheState) : {};
   const launch = isBuildId(legacy.current) ? legacy.current : isBuildId(legacy.previous) ? legacy.previous : undefined;
   return { schemaVersion: 2, ...(launch ? { launch } : {}) };
 }
@@ -267,23 +267,26 @@ export class EditorReleaseManager {
       return result;
     });
     this.stateQueue = task.catch(() => undefined);
-    void task.then(() => this.broadcastState(), () => undefined);
+    void task.then(
+      () => this.broadcastState(),
+      () => undefined,
+    );
     return task;
   }
 
   private async fetchChannel(): Promise<EditorChannelPointer> {
     let response: Response;
     try {
-      response = await fetch(new URL("current.json", staticRoot(this.scopeUrl)), { cache: "no-cache" });
+      response = await fetch(new URL('current.json', staticRoot(this.scopeUrl)), { cache: 'no-cache' });
     } catch (error) {
-      throw new EditorReleaseError("offline", `Cannot load Editor channel: ${errorMessage(error)}`);
+      throw new EditorReleaseError('offline', `Cannot load Editor channel: ${errorMessage(error)}`);
     }
-    return parseEditorChannel(await responseJson(response, "Editor channel"));
+    return parseEditorChannel(await responseJson(response, 'Editor channel'));
   }
 
   private async acquireManifest(buildId: string, priority: ReleaseAssetPriority): Promise<EditorArtifactManifest> {
     const root = releaseRoot(this.scopeUrl, buildId);
-    const request = new Request(new URL("editor-manifest.json", root));
+    const request = new Request(new URL('editor-manifest.json', root));
     const cacheName = releaseCacheName(buildId);
     const load = async () => {
       const response = await this.coordinator.acquire({
@@ -294,13 +297,13 @@ export class EditorReleaseManager {
           const value = JSON.parse(new TextDecoder().decode(bytes)) as unknown;
           const manifest = parseEditorManifest(value);
           if (manifest.buildId !== buildId) {
-            throw new EditorReleaseError("invalid-artifact", "Editor manifest buildId does not match its release");
+            throw new EditorReleaseError('invalid-artifact', 'Editor manifest buildId does not match its release');
           }
         },
       });
       const manifest = parseEditorManifest(await response.json());
       if (manifest.buildId !== buildId) {
-        throw new EditorReleaseError("invalid-artifact", "Editor manifest buildId does not match its release");
+        throw new EditorReleaseError('invalid-artifact', 'Editor manifest buildId does not match its release');
       }
       return manifest;
     };
@@ -308,7 +311,7 @@ export class EditorReleaseManager {
       return await load();
     } catch (error) {
       const cache = await caches.open(cacheName);
-      if (!await cache.match(request)) throw error;
+      if (!(await cache.match(request))) throw error;
       await cache.delete(request);
       return await load();
     }
@@ -330,7 +333,7 @@ export class EditorReleaseManager {
       },
       verify: async (bytes) => {
         if (bytes.byteLength !== file.size) throw new Error(`${file.path} has an unexpected size`);
-        if (await sha256(bytes) !== file.sha256) throw new Error(`${file.path} failed SHA-256 validation`);
+        if ((await sha256(bytes)) !== file.sha256) throw new Error(`${file.path} failed SHA-256 validation`);
       },
     });
   }
@@ -356,7 +359,7 @@ export class EditorReleaseManager {
     if (!isBuildId(buildId)) return null;
     const cache = await caches.open(releaseCacheName(buildId));
     const root = releaseRoot(this.scopeUrl, buildId);
-    const manifestResponse = await cache.match(new URL("editor-manifest.json", root));
+    const manifestResponse = await cache.match(new URL('editor-manifest.json', root));
     if (!manifestResponse) return null;
     try {
       const manifest = parseEditorManifest(await manifestResponse.json());
@@ -369,7 +372,7 @@ export class EditorReleaseManager {
         const files = await Promise.all(manifest.files.map((file) => this.matchCachedFile(buildId, file)));
         if (files.some((file) => !file)) return null;
       }
-      return { manifest, html: await htmlResponse.text(), releaseRoot: root, source: "cache" };
+      return { manifest, html: await htmlResponse.text(), releaseRoot: root, source: 'cache' };
     } catch {
       return null;
     }
@@ -379,19 +382,19 @@ export class EditorReleaseManager {
     buildId: string,
     schedule?: (task: Promise<unknown>) => void,
   ): Promise<ResolvedEditorRelease> {
-    const manifest = await this.acquireManifest(buildId, "foreground");
+    const manifest = await this.acquireManifest(buildId, 'foreground');
     const generation = await this.beginStaging(manifest);
     const index = manifest.files.find((file) => file.path === manifest.entrypoints.editor)!;
-    const html = await (await this.acquireFile(manifest, index, "foreground")).text();
+    const html = await (await this.acquireFile(manifest, index, 'foreground')).text();
     const stage = this.stageRelease(manifest, generation);
     if (schedule) {
-      schedule(stage.catch((error) => console.warn("Failed to cache complete Editor release", error)));
-    } else void stage.catch((error) => console.warn("Failed to cache complete Editor release", error));
+      schedule(stage.catch((error) => console.warn('Failed to cache complete Editor release', error)));
+    } else void stage.catch((error) => console.warn('Failed to cache complete Editor release', error));
     return {
       manifest,
       html,
       releaseRoot: releaseRoot(this.scopeUrl, buildId),
-      source: "network",
+      source: 'network',
     };
   }
 
@@ -416,33 +419,38 @@ export class EditorReleaseManager {
     if (existing) return existing;
     let completedFiles = 0;
     let completedBytes = 0;
-    const task = Promise.all(manifest.files.map(async (file) => {
-      await this.acquireFile(manifest, file, "background");
-      completedFiles += 1;
-      completedBytes += file.size;
-      await this.mutateState((state) => {
-        if (state.staging?.buildId !== manifest.buildId || state.staging.generation !== generation) return;
-        state.staging.completedFiles = completedFiles;
-        state.staging.completedBytes = completedBytes;
-        delete state.staging.error;
+    const task = Promise.all(
+      manifest.files.map(async (file) => {
+        await this.acquireFile(manifest, file, 'background');
+        completedFiles += 1;
+        completedBytes += file.size;
+        await this.mutateState((state) => {
+          if (state.staging?.buildId !== manifest.buildId || state.staging.generation !== generation) return;
+          state.staging.completedFiles = completedFiles;
+          state.staging.completedBytes = completedBytes;
+          delete state.staging.error;
+        });
+      }),
+    )
+      .then(async () => {
+        await this.mutateState((state) => {
+          if (state.staging?.buildId !== manifest.buildId || state.staging.generation !== generation) return;
+          if (!state.launch) state.launch = manifest.buildId;
+          else if (state.launch !== manifest.buildId) state.candidate = manifest.buildId;
+          delete state.staging;
+        });
+        await this.cleanupCaches();
+      })
+      .catch(async (error) => {
+        await this.mutateState((state) => {
+          if (state.staging?.buildId !== manifest.buildId || state.staging.generation !== generation) return;
+          state.staging.error = errorMessage(error);
+        });
+        throw error;
+      })
+      .finally(() => {
+        if (this.stageTasks.get(manifest.buildId) === task) this.stageTasks.delete(manifest.buildId);
       });
-    })).then(async () => {
-      await this.mutateState((state) => {
-        if (state.staging?.buildId !== manifest.buildId || state.staging.generation !== generation) return;
-        if (!state.launch) state.launch = manifest.buildId;
-        else if (state.launch !== manifest.buildId) state.candidate = manifest.buildId;
-        delete state.staging;
-      });
-      await this.cleanupCaches();
-    }).catch(async (error) => {
-      await this.mutateState((state) => {
-        if (state.staging?.buildId !== manifest.buildId || state.staging.generation !== generation) return;
-        state.staging.error = errorMessage(error);
-      });
-      throw error;
-    }).finally(() => {
-      if (this.stageTasks.get(manifest.buildId) === task) this.stageTasks.delete(manifest.buildId);
-    });
     this.stageTasks.set(manifest.buildId, task);
     return task;
   }
@@ -466,7 +474,7 @@ export class EditorReleaseManager {
         }
         return;
       }
-      const manifest = await this.acquireManifest(pointer.buildId, "background");
+      const manifest = await this.acquireManifest(pointer.buildId, 'background');
       const generation = await this.beginStaging(manifest);
       await this.stageRelease(manifest, generation);
     })();
@@ -506,7 +514,7 @@ export class EditorReleaseManager {
       if (!cached) continue;
       if (clientId) await this.recordRunningBuild(clientId, buildId);
       const maintenance = Promise.all([
-        this.checkForUpdates().catch((error) => console.debug("Editor update check failed", error)),
+        this.checkForUpdates().catch((error) => console.debug('Editor update check failed', error)),
         this.cleanupCaches(),
       ]);
       if (schedule) schedule(maintenance);
@@ -523,12 +531,12 @@ export class EditorReleaseManager {
   async activateCandidate(buildId: string): Promise<void> {
     const state = await this.readState();
     if (state.launch === buildId) return;
-    if (state.candidate !== buildId || !await this.loadCachedBuild(buildId, true)) {
-      throw new EditorReleaseError("invalid-artifact", "The requested Editor candidate is not ready");
+    if (state.candidate !== buildId || !(await this.loadCachedBuild(buildId, true))) {
+      throw new EditorReleaseError('invalid-artifact', 'The requested Editor candidate is not ready');
     }
     await this.mutateState((next) => {
       if (next.candidate !== buildId) {
-        throw new EditorReleaseError("invalid-artifact", "The Editor candidate changed before activation");
+        throw new EditorReleaseError('invalid-artifact', 'The Editor candidate changed before activation');
       }
       next.launch = buildId;
       delete next.candidate;
@@ -546,7 +554,7 @@ export class EditorReleaseManager {
   private async activeClientIds(): Promise<Set<string> | undefined> {
     const container = (globalThis as { clients?: Clients }).clients;
     if (!container) return undefined;
-    const active = await container.matchAll({ type: "window", includeUncontrolled: true });
+    const active = await container.matchAll({ type: 'window', includeUncontrolled: true });
     return new Set(active.map((client) => client.id));
   }
 
@@ -559,32 +567,37 @@ export class EditorReleaseManager {
         );
         if (Object.keys(state.runningBuilds).length === 0) delete state.runningBuilds;
       }
-      return new Set([
-        state.launch,
-        state.candidate,
-        state.staging?.buildId,
-        ...Object.values(state.runningBuilds ?? {}),
-      ].filter((value): value is string => Boolean(value)));
+      return new Set(
+        [state.launch, state.candidate, state.staging?.buildId, ...Object.values(state.runningBuilds ?? {})].filter(
+          (value): value is string => Boolean(value),
+        ),
+      );
     });
     const names = await caches.keys();
-    await Promise.all(names
-      .filter((name) => name.startsWith(RELEASE_CACHE_PREFIX) && !retained.has(name.slice(RELEASE_CACHE_PREFIX.length)))
-      .map((name) => caches.delete(name)));
+    await Promise.all(
+      names
+        .filter(
+          (name) => name.startsWith(RELEASE_CACHE_PREFIX) && !retained.has(name.slice(RELEASE_CACHE_PREFIX.length)),
+        )
+        .map((name) => caches.delete(name)),
+    );
     await this.cleanupBlobs(retained);
   }
 
   private async cleanupBlobs(retainedBuilds: ReadonlySet<string>): Promise<void> {
     const manifests = await Promise.all([...retainedBuilds].map((buildId) => this.acquireCachedManifest(buildId)));
-    const referenced = new Set(manifests.flatMap((manifest) => (
-      manifest?.files.map((file) => blobUrl(this.scopeUrl, file).href) ?? []
-    )));
+    const referenced = new Set(
+      manifests.flatMap((manifest) => manifest?.files.map((file) => blobUrl(this.scopeUrl, file).href) ?? []),
+    );
     if (referenced.size === 0) {
       await caches.delete(BLOB_CACHE_NAME);
       return;
     }
     const cache = await caches.open(BLOB_CACHE_NAME);
     const requests = await cache.keys();
-    await Promise.all(requests.filter((request) => !referenced.has(request.url)).map((request) => cache.delete(request)));
+    await Promise.all(
+      requests.filter((request) => !referenced.has(request.url)).map((request) => cache.delete(request)),
+    );
   }
 
   private async identity(buildId: string | undefined): Promise<EditorReleaseIdentity | undefined> {
@@ -602,7 +615,7 @@ export class EditorReleaseManager {
     ]);
     return {
       protocolVersion: 2,
-      status: "ready",
+      status: 'ready',
       ...(launch ? { launch } : {}),
       ...(candidate ? { candidate } : {}),
       ...(state.staging
@@ -624,7 +637,7 @@ export class EditorReleaseManager {
 
   private async acquireCachedManifest(buildId: string): Promise<EditorArtifactManifest | undefined> {
     const cache = await caches.open(releaseCacheName(buildId));
-    const response = await cache.match(new URL("editor-manifest.json", releaseRoot(this.scopeUrl, buildId)));
+    const response = await cache.match(new URL('editor-manifest.json', releaseRoot(this.scopeUrl, buildId)));
     if (!response) return undefined;
     try {
       return parseEditorManifest(await response.json());
@@ -640,29 +653,32 @@ export class EditorReleaseManager {
     if (!match || !isSafeArtifactPath(match[2]!)) return fetch(request);
     const [buildId, path] = [match[1]!, match[2]!];
     try {
-      const manifest = await this.acquireManifest(buildId, "foreground");
-      if (path === "editor-manifest.json") {
+      const manifest = await this.acquireManifest(buildId, 'foreground');
+      if (path === 'editor-manifest.json') {
         const cache = await caches.open(releaseCacheName(buildId));
         return (await cache.match(request)) ?? Response.json(manifest);
       }
       const file = manifest.files.find((candidate) => candidate.path === path);
       if (!file) {
-        return new Response("Editor release does not contain this asset", {
+        return new Response('Editor release does not contain this asset', {
           status: 404,
-          headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" },
+          headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' },
         });
       }
-      return await this.acquireFile(manifest, file, "foreground");
+      return await this.acquireFile(manifest, file, 'foreground');
     } catch (error) {
       console.warn(`Failed to restore Editor release ${buildId} asset ${path}`, error);
-      return new Response("Editor cache is incomplete and the missing asset could not be restored. Reconnect and reload the Editor.", {
-        status: 503,
-        headers: {
-          "content-type": "text/plain; charset=utf-8",
-          "cache-control": "no-store",
-          "x-motajs-editor-cache": "repair-failed",
+      return new Response(
+        'Editor cache is incomplete and the missing asset could not be restored. Reconnect and reload the Editor.',
+        {
+          status: 503,
+          headers: {
+            'content-type': 'text/plain; charset=utf-8',
+            'cache-control': 'no-store',
+            'x-motajs-editor-cache': 'repair-failed',
+          },
         },
-      });
+      );
     }
   }
 
@@ -670,15 +686,15 @@ export class EditorReleaseManager {
     const container = (globalThis as { clients?: Clients }).clients;
     if (!container) return;
     const state = await this.getUpdateState();
-    const active = await container.matchAll({ type: "window", includeUncontrolled: true });
-    for (const client of active) client.postMessage({ type: "motajs-editor-release-state", state });
+    const active = await container.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const client of active) client.postMessage({ type: 'motajs-editor-release-state', state });
   }
 }
 
 const managers = new Map<string, EditorReleaseManager>();
 
 export function getEditorReleaseManager(scopeUrl: URL): EditorReleaseManager {
-  const key = new URL("./", scopeUrl).href;
+  const key = new URL('./', scopeUrl).href;
   let manager = managers.get(key);
   if (!manager) {
     manager = new EditorReleaseManager(new URL(key));
@@ -703,16 +719,16 @@ export async function getEditorHostStatus(scopeUrl: URL): Promise<EditorHostStat
   try {
     const release = await resolveEditorRelease(scopeUrl);
     return {
-      status: "ready",
+      status: 'ready',
       buildId: release.manifest.buildId,
       editorVersion: release.manifest.editorVersion,
       source: release.source,
     };
   } catch (error) {
     if (error instanceof EditorReleaseError) {
-      return { status: "unavailable", reason: error.reason, message: error.message };
+      return { status: 'unavailable', reason: error.reason, message: error.message };
     }
-    return { status: "unavailable", reason: "offline", message: errorMessage(error) };
+    return { status: 'unavailable', reason: 'offline', message: errorMessage(error) };
   }
 }
 

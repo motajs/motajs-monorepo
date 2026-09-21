@@ -1,18 +1,18 @@
-import { describe, test, expect } from "vitest";
+import { describe, test, expect } from 'vitest';
 import {
   parseHeader,
   parseSpriteInfo,
   getSpriteInfoSize,
   convertArraysToObjects,
   decodeH5Animate,
-} from "../decoder.js";
-import { BinaryParser, BinaryWriter } from "../binary.js";
-import { H5AnimateError, H5AnimateErrorCode } from "../errors.js";
+} from '../decoder.js';
+import { BinaryParser, BinaryWriter } from '../binary.js';
+import { H5AnimateError, H5AnimateErrorCode } from '../errors.js';
 
-describe("parseHeader", () => {
-  test("应该正确解析有效的文件头", () => {
+describe('parseHeader', () => {
+  test('应该正确解析有效的文件头', () => {
     const writer = new BinaryWriter(16);
-    writer.writeString("ANIM");
+    writer.writeString('ANIM');
     writer.writeUInt32LE(1); // version
     writer.writeUInt32LE(100); // imageDataSize
     writer.writeUInt32LE(50); // metaDataSize
@@ -20,15 +20,15 @@ describe("parseHeader", () => {
     const parser = new BinaryParser(writer.getBuffer());
     const header = parseHeader(parser);
 
-    expect(header.signature).toBe("ANIM");
+    expect(header.signature).toBe('ANIM');
     expect(header.version).toBe(1);
     expect(header.imageDataSize).toBe(100);
     expect(header.metaDataSize).toBe(50);
   });
 
-  test("无效签名应该抛出错误", () => {
+  test('无效签名应该抛出错误', () => {
     const writer = new BinaryWriter(16);
-    writer.writeString("XXXX");
+    writer.writeString('XXXX');
     writer.writeUInt32LE(1);
     writer.writeUInt32LE(100);
     writer.writeUInt32LE(50);
@@ -45,8 +45,8 @@ describe("parseHeader", () => {
   });
 });
 
-describe("parseSpriteInfo", () => {
-  test("应该正确解析单个精灵图信息", () => {
+describe('parseSpriteInfo', () => {
+  test('应该正确解析单个精灵图信息', () => {
     const writer = new BinaryWriter(12);
     writer.writeUInt32LE(1); // count
     writer.writeUInt32LE(100); // width
@@ -60,7 +60,7 @@ describe("parseSpriteInfo", () => {
     expect(spriteInfo.dimensions[0]).toEqual({ width: 100, height: 200 });
   });
 
-  test("应该正确解析多个精灵图信息", () => {
+  test('应该正确解析多个精灵图信息', () => {
     const writer = new BinaryWriter(20);
     writer.writeUInt32LE(2); // count
     writer.writeUInt32LE(100); // sprite 1 width
@@ -78,8 +78,8 @@ describe("parseSpriteInfo", () => {
   });
 });
 
-describe("getSpriteInfoSize", () => {
-  test("应该正确计算单个精灵图的大小", () => {
+describe('getSpriteInfoSize', () => {
+  test('应该正确计算单个精灵图的大小', () => {
     const spriteInfo = {
       count: 1,
       dimensions: [{ width: 100, height: 200 }],
@@ -89,7 +89,7 @@ describe("getSpriteInfoSize", () => {
     expect(getSpriteInfoSize(spriteInfo)).toBe(12);
   });
 
-  test("应该正确计算多个精灵图的大小", () => {
+  test('应该正确计算多个精灵图的大小', () => {
     const spriteInfo = {
       count: 3,
       dimensions: [
@@ -104,8 +104,8 @@ describe("getSpriteInfoSize", () => {
   });
 });
 
-describe("convertArraysToObjects", () => {
-  test("应该正确转换数组格式到对象格式", () => {
+describe('convertArraysToObjects', () => {
+  test('应该正确转换数组格式到对象格式', () => {
     const rawMeta = {
       ratio: 2,
       frame: [
@@ -131,7 +131,7 @@ describe("convertArraysToObjects", () => {
     });
   });
 
-  test("应该为缺失的可选字段提供默认值", () => {
+  test('应该为缺失的可选字段提供默认值', () => {
     const rawMeta = {
       ratio: 2,
       frame: [
@@ -147,12 +147,12 @@ describe("convertArraysToObjects", () => {
     expect(result.frame[0].objects![0].rotate).toBe(0);
   });
 
-  test("应该保留音效数据", () => {
+  test('应该保留音效数据', () => {
     const rawMeta = {
       ratio: 2,
       frame: [
         {
-          sound: [{ name: "attack.mp3", volume: 0.8 }],
+          sound: [{ name: 'attack.mp3', volume: 0.8 }],
           objects: [[0, 10, 20, 100, 255]],
         },
       ],
@@ -160,10 +160,10 @@ describe("convertArraysToObjects", () => {
 
     const result = convertArraysToObjects(rawMeta);
 
-    expect(result.frame[0].sound).toEqual([{ name: "attack.mp3", volume: 0.8 }]);
+    expect(result.frame[0].sound).toEqual([{ name: 'attack.mp3', volume: 0.8 }]);
   });
 
-  test("应该处理空帧", () => {
+  test('应该处理空帧', () => {
     const rawMeta = {
       ratio: 2,
       frame: [
@@ -180,7 +180,7 @@ describe("convertArraysToObjects", () => {
   });
 });
 
-describe("decodeH5Animate", () => {
+describe('decodeH5Animate', () => {
   /**
    * 创建一个有效的 h5animate 测试文件
    */
@@ -190,7 +190,7 @@ describe("decodeH5Animate", () => {
     webpData: Buffer,
   ): Buffer {
     const metaJson = JSON.stringify(meta);
-    const metaBuffer = Buffer.from(metaJson, "utf8");
+    const metaBuffer = Buffer.from(metaJson, 'utf8');
 
     // 计算精灵图信息大小
     const spriteInfoSize = 4 + spriteInfo.count * 8;
@@ -203,7 +203,7 @@ describe("decodeH5Animate", () => {
     const writer = new BinaryWriter(totalSize);
 
     // 写入文件头
-    writer.writeString("ANIM");
+    writer.writeString('ANIM');
     writer.writeUInt32LE(1); // version
     writer.writeUInt32LE(imageDataSize);
     writer.writeUInt32LE(metaBuffer.length);
@@ -224,7 +224,7 @@ describe("decodeH5Animate", () => {
     return writer.getBuffer();
   }
 
-  test("应该正确解码有效的 h5animate 文件", () => {
+  test('应该正确解码有效的 h5animate 文件', () => {
     const meta = {
       ratio: 2,
       frame: [
@@ -237,7 +237,7 @@ describe("decodeH5Animate", () => {
       count: 1,
       dimensions: [{ width: 100, height: 200 }],
     };
-    const webpData = Buffer.from("fake-webp-data");
+    const webpData = Buffer.from('fake-webp-data');
 
     const buffer = createValidH5AnimateBuffer(meta, spriteInfo, webpData);
     const result = decodeH5Animate(buffer);
@@ -257,12 +257,12 @@ describe("decodeH5Animate", () => {
     expect(result.webpData).toEqual(webpData);
   });
 
-  test("应该正确解码包含音效的文件", () => {
+  test('应该正确解码包含音效的文件', () => {
     const meta = {
       ratio: 2,
       frame: [
         {
-          sound: [{ name: "attack.mp3", pitch: 1.2 }],
+          sound: [{ name: 'attack.mp3', pitch: 1.2 }],
           objects: [[0, 0, 0, 100, 255]],
         },
       ],
@@ -271,33 +271,33 @@ describe("decodeH5Animate", () => {
       count: 1,
       dimensions: [{ width: 50, height: 50 }],
     };
-    const webpData = Buffer.from("webp");
+    const webpData = Buffer.from('webp');
 
     const buffer = createValidH5AnimateBuffer(meta, spriteInfo, webpData);
     const result = decodeH5Animate(buffer);
 
-    expect(result.meta.frame[0].sound).toEqual([{ name: "attack.mp3", pitch: 1.2 }]);
+    expect(result.meta.frame[0].sound).toEqual([{ name: 'attack.mp3', pitch: 1.2 }]);
   });
 
-  test("无效签名应该抛出错误", () => {
+  test('无效签名应该抛出错误', () => {
     const buffer = Buffer.alloc(32);
-    buffer.write("XXXX", 0, "ascii");
+    buffer.write('XXXX', 0, 'ascii');
 
     expect(() => decodeH5Animate(buffer)).toThrow(H5AnimateError);
   });
 
-  test("无效 JSON 元数据应该抛出错误", () => {
+  test('无效 JSON 元数据应该抛出错误', () => {
     // 创建一个带有无效 JSON 的文件
-    const invalidJson = Buffer.from("{ invalid json }");
+    const invalidJson = Buffer.from('{ invalid json }');
     const spriteInfoSize = 12; // 1 sprite
-    const webpData = Buffer.from("webp");
+    const webpData = Buffer.from('webp');
     const imageDataSize = spriteInfoSize + webpData.length;
 
     const headerSize = 16;
     const totalSize = headerSize + imageDataSize + invalidJson.length;
 
     const writer = new BinaryWriter(totalSize);
-    writer.writeString("ANIM");
+    writer.writeString('ANIM');
     writer.writeUInt32LE(1);
     writer.writeUInt32LE(imageDataSize);
     writer.writeUInt32LE(invalidJson.length);
@@ -315,7 +315,7 @@ describe("decodeH5Animate", () => {
     }
   });
 
-  test("应该正确处理多帧动画", () => {
+  test('应该正确处理多帧动画', () => {
     const meta = {
       ratio: 1,
       frame: [
@@ -328,7 +328,7 @@ describe("decodeH5Animate", () => {
       count: 1,
       dimensions: [{ width: 64, height: 192 }],
     };
-    const webpData = Buffer.from("multi-frame-webp");
+    const webpData = Buffer.from('multi-frame-webp');
 
     const buffer = createValidH5AnimateBuffer(meta, spriteInfo, webpData);
     const result = decodeH5Animate(buffer);

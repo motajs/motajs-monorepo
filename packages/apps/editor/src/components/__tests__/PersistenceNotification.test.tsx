@@ -1,14 +1,14 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { persistenceMonitor } from "@/fs/PersistenceMonitor";
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { persistenceMonitor } from '@/fs/PersistenceMonitor';
 
 const mocks = vi.hoisted(() => ({
   open: vi.fn(),
   destroy: vi.fn(),
 }));
 
-vi.mock("antd", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("antd")>();
+vi.mock('antd', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('antd')>();
   return {
     ...actual,
     notification: {
@@ -17,24 +17,24 @@ vi.mock("antd", async (importOriginal) => {
   };
 });
 
-import { PersistenceNotification } from "../PersistenceNotification";
+import { PersistenceNotification } from '../PersistenceNotification';
 
-describe("PersistenceNotification", () => {
+describe('PersistenceNotification', () => {
   beforeEach(() => {
     persistenceMonitor.resetForTests();
     mocks.open.mockReset();
     mocks.destroy.mockReset();
   });
 
-  it("opens one permanent bottom-right aggregate and closes it after retry succeeds", async () => {
+  it('opens one permanent bottom-right aggregate and closes it after retry succeeds', async () => {
     let shouldFail = true;
     render(<PersistenceNotification />);
 
     await act(async () => {
-      persistenceMonitor.schedule("project/data.js", {
-        kind: "write",
+      persistenceMonitor.schedule('project/data.js', {
+        kind: 'write',
         execute: async () => {
-          if (shouldFail) throw new Error("disk unavailable");
+          if (shouldFail) throw new Error('disk unavailable');
         },
       });
       await persistenceMonitor.whenQuiescent();
@@ -43,20 +43,20 @@ describe("PersistenceNotification", () => {
     await waitFor(() => expect(mocks.open).toHaveBeenCalled());
     const options = mocks.open.mock.calls.at(-1)?.[0];
     expect(options).toMatchObject({
-      key: "project-persistence-failures",
-      message: "工程文件写入失败（1）",
-      placement: "bottomRight",
+      key: 'project-persistence-failures',
+      message: '工程文件写入失败（1）',
+      placement: 'bottomRight',
       duration: 0,
       closable: false,
     });
 
     render(options.description);
     shouldFail = false;
-    fireEvent.click(screen.getByRole("button", { name: "重试全部" }));
+    fireEvent.click(screen.getByRole('button', { name: '重试全部' }));
 
     await waitFor(() => {
       expect(persistenceMonitor.failedFiles()).toEqual([]);
-      expect(mocks.destroy).toHaveBeenCalledWith("project-persistence-failures");
+      expect(mocks.destroy).toHaveBeenCalledWith('project-persistence-failures');
     });
   });
 });

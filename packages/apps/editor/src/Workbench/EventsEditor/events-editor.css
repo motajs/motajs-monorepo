@@ -8,7 +8,7 @@
 }
 
 #left6 .eventEditorToolbar button,
-#left6 .eventEditorToolbar input[type="text"] {
+#left6 .eventEditorToolbar input[type='text'] {
   border: 1px solid var(--editor-border, #d0d7de);
   border-radius: 3px;
   background: var(--editor-toolbar-bg, #fff);
@@ -19,7 +19,7 @@
   border-color: #1677ff;
 }
 
-#left6 .eventEditorToolbar input[type="text"]::placeholder {
+#left6 .eventEditorToolbar input[type='text']::placeholder {
   color: var(--editor-muted, #656d76);
 }
 
@@ -43,21 +43,21 @@
   border-right: 1px solid var(--editor-border, #d0d7de);
 }
 
-:root[data-editor-theme="dark"] #left6 .blocklyToolboxCategory:not(.blocklyToolboxSelected):hover {
+:root[data-editor-theme='dark'] #left6 .blocklyToolboxCategory:not(.blocklyToolboxSelected):hover {
   background: rgba(255, 255, 255, 0.08);
 }
 
-:root[data-editor-theme="dark"] #left6 .blocklyToolboxCategoryLabel {
+:root[data-editor-theme='dark'] #left6 .blocklyToolboxCategoryLabel {
   color: inherit;
 }
 
-:root[data-editor-theme="dark"] #left6 .blocklyNonEditableField > text,
-:root[data-editor-theme="dark"] #left6 .blocklyEditableField:not(.blocklyEditing) > text,
-:root[data-editor-theme="dark"] #left6 .blocklyNonEditableField > g > text,
-:root[data-editor-theme="dark"] #left6 .blocklyEditableField:not(.blocklyEditing) > g > text {
+:root[data-editor-theme='dark'] #left6 .blocklyNonEditableField > text,
+:root[data-editor-theme='dark'] #left6 .blocklyEditableField:not(.blocklyEditing) > text,
+:root[data-editor-theme='dark'] #left6 .blocklyNonEditableField > g > text,
+:root[data-editor-theme='dark'] #left6 .blocklyEditableField:not(.blocklyEditing) > g > text {
   fill: #f0f1f4 !important;
 }
 
-:root[data-editor-theme="dark"] #left6 .blocklyTreeSeparator {
+:root[data-editor-theme='dark'] #left6 .blocklyTreeSeparator {
   border-color: var(--editor-border, #4b4b52);
 }

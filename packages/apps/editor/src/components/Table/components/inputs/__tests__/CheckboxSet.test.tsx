@@ -20,12 +20,7 @@ describe('CheckboxSet', () => {
     it('应该渲染所有复选框', () => {
       const onChange = vi.fn();
       render(
-        <CheckboxSet
-          value={[]}
-          keys={['a', 'b', 'c']}
-          prefixStrings={['A: ', 'B: ', 'C: ']}
-          onChange={onChange}
-        />,
+        <CheckboxSet value={[]} keys={['a', 'b', 'c']} prefixStrings={['A: ', 'B: ', 'C: ']} onChange={onChange} />,
       );
 
       const checkboxes = screen.getAllByRole('checkbox');
@@ -52,13 +47,7 @@ describe('CheckboxSet', () => {
     it('当 disabled 为 true 时应该禁用所有复选框', () => {
       const onChange = vi.fn();
       render(
-        <CheckboxSet
-          value={[]}
-          keys={['a', 'b']}
-          prefixStrings={['A: ', 'B: ']}
-          onChange={onChange}
-          disabled={true}
-        />,
+        <CheckboxSet value={[]} keys={['a', 'b']} prefixStrings={['A: ', 'B: ']} onChange={onChange} disabled={true} />,
       );
 
       const checkboxes = screen.getAllByRole('checkbox') as HTMLInputElement[];
@@ -69,14 +58,7 @@ describe('CheckboxSet', () => {
 
     it('应该处理 null 值', () => {
       const onChange = vi.fn();
-      render(
-        <CheckboxSet
-          value={null}
-          keys={['a', 'b']}
-          prefixStrings={['A: ', 'B: ']}
-          onChange={onChange}
-        />,
-      );
+      render(<CheckboxSet value={null} keys={['a', 'b']} prefixStrings={['A: ', 'B: ']} onChange={onChange} />);
 
       const checkboxes = screen.getAllByRole('checkbox') as HTMLInputElement[];
       checkboxes.forEach((checkbox) => {
@@ -86,14 +68,7 @@ describe('CheckboxSet', () => {
 
     it('应该处理值为 0 的情况（视为空数组）', () => {
       const onChange = vi.fn();
-      render(
-        <CheckboxSet
-          value={0}
-          keys={['a', 'b']}
-          prefixStrings={['A: ', 'B: ']}
-          onChange={onChange}
-        />,
-      );
+      render(<CheckboxSet value={0} keys={['a', 'b']} prefixStrings={['A: ', 'B: ']} onChange={onChange} />);
 
       const checkboxes = screen.getAllByRole('checkbox') as HTMLInputElement[];
       checkboxes.forEach((checkbox) => {
@@ -104,12 +79,7 @@ describe('CheckboxSet', () => {
     it('应该动态添加未知选项', () => {
       const onChange = vi.fn();
       render(
-        <CheckboxSet
-          value={['a', 'unknown']}
-          keys={['a', 'b']}
-          prefixStrings={['A: ', 'B: ']}
-          onChange={onChange}
-        />,
+        <CheckboxSet value={['a', 'unknown']} keys={['a', 'b']} prefixStrings={['A: ', 'B: ']} onChange={onChange} />,
       );
 
       // 应该有 3 个复选框（2 个已知 + 1 个未知）
@@ -122,12 +92,7 @@ describe('CheckboxSet', () => {
     it('点击未选中的复选框应该添加到值数组', () => {
       const onChange = vi.fn();
       render(
-        <CheckboxSet
-          value={['a']}
-          keys={['a', 'b', 'c']}
-          prefixStrings={['A: ', 'B: ', 'C: ']}
-          onChange={onChange}
-        />,
+        <CheckboxSet value={['a']} keys={['a', 'b', 'c']} prefixStrings={['A: ', 'B: ', 'C: ']} onChange={onChange} />,
       );
 
       const checkboxes = screen.getAllByRole('checkbox');
@@ -157,14 +122,7 @@ describe('CheckboxSet', () => {
 
     it('应该支持数字类型的 key', () => {
       const onChange = vi.fn();
-      render(
-        <CheckboxSet
-          value={[1]}
-          keys={[1, 2, 3]}
-          prefixStrings={['一: ', '二: ', '三: ']}
-          onChange={onChange}
-        />,
-      );
+      render(<CheckboxSet value={[1]} keys={[1, 2, 3]} prefixStrings={['一: ', '二: ', '三: ']} onChange={onChange} />);
 
       const checkboxes = screen.getAllByRole('checkbox');
       fireEvent.click(checkboxes[1]); // 点击 2

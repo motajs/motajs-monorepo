@@ -1,14 +1,14 @@
-import type { DataResource } from "@/project/data/DataResource";
-import { projectData } from "@/project/data/projectData";
-import type { LocPos } from "@/stores/locState";
-import { applyActions, type Action } from "@/utils/action";
-import { floorCommands } from "./floorCommands";
-import { locCommands } from "./locCommands";
-import { prefabCommands } from "./prefabCommands";
-import type { PrefabInfo } from "@/services/prefab";
-import { executePatchCommand } from "@/project/history";
-import { produce } from "immer";
-import { commandError, type CommandResult } from "./types";
+import type { DataResource } from '@/project/data/DataResource';
+import { projectData } from '@/project/data/projectData';
+import type { LocPos } from '@/stores/locState';
+import { applyActions, type Action } from '@/utils/action';
+import { floorCommands } from './floorCommands';
+import { locCommands } from './locCommands';
+import { prefabCommands } from './prefabCommands';
+import type { PrefabInfo } from '@/services/prefab';
+import { executePatchCommand } from '@/project/history';
+import { produce } from 'immer';
+import { commandError, type CommandResult } from './types';
 
 class TableCommands {
   async patchResource<T>(resource: DataResource<T>, actions: Action[]): Promise<CommandResult> {
@@ -31,24 +31,15 @@ class TableCommands {
       const floorIds = preview.main.floorIds;
       const firstFloorId = preview.firstData.floorId;
       const normalizedActions = [...actions];
-      if (
-        Array.isArray(floorIds) &&
-        firstFloorId &&
-        !floorIds.includes(firstFloorId) &&
-        floorIds.length > 0
-      ) {
-        normalizedActions.push([
-          "change",
-          "['firstData']['floorId']",
-          floorIds[0],
-        ]);
+      if (Array.isArray(floorIds) && firstFloorId && !floorIds.includes(firstFloorId) && floorIds.length > 0) {
+        normalizedActions.push(['change', "['firstData']['floorId']", floorIds[0]]);
       }
       return executePatchCommand(tower, normalizedActions, {
-        label: "修改全塔属性",
-        stage: "patch-tower",
+        label: '修改全塔属性',
+        stage: 'patch-tower',
       });
     } catch (error) {
-      return Promise.resolve(commandError("patch-tower", error));
+      return Promise.resolve(commandError('patch-tower', error));
     }
   }
 

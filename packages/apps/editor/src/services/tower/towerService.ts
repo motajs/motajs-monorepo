@@ -10,14 +10,14 @@
  * - 内存数据源 + 异步落盘
  */
 
-import { produce } from "immer";
-import { FileHandlerManager } from "@/fs/FileHandlerManager";
-import type { Content } from "@/fs";
-import { applyActions, type Action } from "@/utils/action";
-import { TowerDataHandler } from "./TowerDataHandler";
+import { produce } from 'immer';
+import { FileHandlerManager } from '@/fs/FileHandlerManager';
+import type { Content } from '@/fs';
+import { applyActions, type Action } from '@/utils/action';
+import { TowerDataHandler } from './TowerDataHandler';
 
 /** 全塔数据文件路径 */
-const TOWER_DATA_PATH = "project/data.js";
+const TOWER_DATA_PATH = 'project/data.js';
 
 /**
  * 全塔数据类型
@@ -136,10 +136,7 @@ class TowerServiceImpl {
     this.getDataHandler().update((currentData) =>
       produce(currentData, (draft) => {
         // 应用 actions
-        applyActions(
-          draft as unknown as Record<string, unknown>,
-          actions,
-        );
+        applyActions(draft as unknown as Record<string, unknown>, actions);
 
         // 验证 firstData.floorId 是否在 main.floorIds 中
         const mainFloorIds = draft.main.floorIds;
@@ -153,7 +150,7 @@ class TowerServiceImpl {
             }
           }
         }
-      })
+      }),
     );
   }
 

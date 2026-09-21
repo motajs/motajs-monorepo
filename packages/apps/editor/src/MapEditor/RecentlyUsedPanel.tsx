@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, type FC, type MouseEvent } from "react";
-import { Segmented } from "antd";
-import { useImageAssetUrl } from "@/hooks/useImageAssetUrl";
+import { useCallback, useEffect, useMemo, useRef, type FC, type MouseEvent } from 'react';
+import { Segmented } from 'antd';
+import { useImageAssetUrl } from '@/hooks/useImageAssetUrl';
 
 export interface LastUsedItem {
   idnum: number;
@@ -15,7 +15,7 @@ export interface LastUsedItem {
   istop?: number;
 }
 
-export type SortType = "recent" | "frequent";
+export type SortType = 'recent' | 'frequent';
 
 export interface RecentlyUsedPanelProps {
   items: LastUsedItem[];
@@ -30,7 +30,7 @@ export interface RecentlyUsedPanelProps {
 function materialPath(item: LastUsedItem): string {
   if (item.materialPath) return item.materialPath;
   if (item.isTile) return `project/tilesets/${item.images}`;
-  if (item.images === "autotile") return `project/autotiles/${item.id}.png`;
+  if (item.images === 'autotile') return `project/autotiles/${item.id}.png`;
   return `project/materials/${item.images}.png`;
 }
 
@@ -48,15 +48,20 @@ const RecentTile: FC<{
     if (!canvas || !url) return;
     const image = new Image();
     image.onload = () => {
-      const context = canvas.getContext("2d");
+      const context = canvas.getContext('2d');
       if (!context) return;
       context.clearRect(0, 0, 32, 32);
       context.imageSmoothingEnabled = false;
-      const sourceHeight = item.materialPath || item.isTile || item.images === "autotile"
-        ? 32
-        : item.images.endsWith("48") ? 48 : 32;
+      const sourceHeight =
+        item.materialPath || item.isTile || item.images === 'autotile' ? 32 : item.images.endsWith('48') ? 48 : 32;
       const sourceX = item.materialPath ? item.x * 32 : item.isTile ? item.x * 32 : 0;
-      const sourceY = item.materialPath ? item.y * sourceHeight : item.isTile ? item.y * 32 : item.images === "autotile" ? 0 : item.y * sourceHeight;
+      const sourceY = item.materialPath
+        ? item.y * sourceHeight
+        : item.isTile
+          ? item.y * 32
+          : item.images === 'autotile'
+            ? 0
+            : item.y * sourceHeight;
       context.drawImage(image, sourceX, sourceY, 32, sourceHeight, 0, 0, 32, 32);
     };
     image.src = url;
@@ -76,30 +81,30 @@ const RecentTile: FC<{
       onMouseUp={handleMouseUp}
       onContextMenu={(event) => event.preventDefault()}
       style={{
-        position: "relative",
+        position: 'relative',
         width: 32,
         height: 32,
         padding: 0,
         border: 0,
-        background: "transparent",
+        background: 'transparent',
       }}
     >
-      <canvas ref={canvasRef} width={32} height={32} style={{ display: "block" }} />
+      <canvas ref={canvasRef} width={32} height={32} style={{ display: 'block' }} />
       {selected ? (
         <span
           aria-hidden="true"
           data-test-id={`recent-material-selection-${item.idnum}`}
           style={{
-            position: "absolute",
+            position: 'absolute',
             inset: 0,
-            border: "3px solid rgba(255,128,0,0.85)",
-            boxSizing: "border-box",
-            pointerEvents: "none",
+            border: '3px solid rgba(255,128,0,0.85)',
+            boxSizing: 'border-box',
+            pointerEvents: 'none',
           }}
         />
       ) : null}
       {item.istop ? (
-        <span style={{ position: "absolute", left: 0, bottom: 0, width: 8, height: 8, background: "red" }} />
+        <span style={{ position: 'absolute', left: 0, bottom: 0, width: 8, height: 8, background: 'red' }} />
       ) : null}
     </button>
   );
@@ -116,15 +121,21 @@ export const RecentlyUsedPanel: FC<RecentlyUsedPanelProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const sortedItems = useMemo(
-    () => [...items].sort((a, b) => {
-      if ((a.istop || 0) !== (b.istop || 0)) return (b.istop || 0) - (a.istop || 0);
-      return (b[sortType] || 0) - (a[sortType] || 0);
-    }),
+    () =>
+      [...items].sort((a, b) => {
+        if ((a.istop || 0) !== (b.istop || 0)) return (b.istop || 0) - (a.istop || 0);
+        return (b[sortType] || 0) - (a[sortType] || 0);
+      }),
     [items, sortType],
   );
 
   const handleClear = useCallback(() => {
-    if (!window.confirm("你确定要清理全部最近使用图块么？\n所有最近使用和最常使用图块（含置顶图块）都将被清除；此过程不可逆！")) return;
+    if (
+      !window.confirm(
+        '你确定要清理全部最近使用图块么？\n所有最近使用和最常使用图块（含置顶图块）都将被清除；此过程不可逆！',
+      )
+    )
+      return;
     onClear?.();
     containerRef.current?.scrollTo(0, 0);
   }, [onClear]);
@@ -140,17 +151,19 @@ export const RecentlyUsedPanel: FC<RecentlyUsedPanelProps> = ({
             containerRef.current?.scrollTo(0, 0);
           }}
           options={[
-            { label: "最近使用", value: "recent" },
-            { label: "最常使用", value: "frequent" },
+            { label: '最近使用', value: 'recent' },
+            { label: '最常使用', value: 'frequent' },
           ]}
         />
-        <small>（右键置顶）</small>{" "}
-        <button type="button" data-test-id="recent-material-clear" onClick={handleClear}>清除</button>
+        <small>（右键置顶）</small>{' '}
+        <button type="button" data-test-id="recent-material-clear" onClick={handleClear}>
+          清除
+        </button>
       </div>
       <div className="map" id="lastUsedDiv" ref={containerRef}>
         <div
           data-test-id="recent-material-grid"
-          style={{ display: "grid", gridTemplateColumns: "repeat(12, 32px)", alignContent: "start" }}
+          style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 32px)', alignContent: 'start' }}
         >
           {sortedItems.map((item) => (
             <RecentTile

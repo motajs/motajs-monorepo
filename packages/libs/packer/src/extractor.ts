@@ -1,9 +1,9 @@
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { readdir, stat, access } from "node:fs/promises";
-import { randomUUID } from "node:crypto";
-import { extractZip } from "./utils/zip-utils";
-import { ensureDir, removeDir } from "./utils/file-utils";
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { readdir, stat, access } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
+import { extractZip } from './utils/zip-utils';
+import { ensureDir, removeDir } from './utils/file-utils';
 
 /**
  * 解压结果
@@ -37,7 +37,7 @@ async function findMainJsDir(dir: string, maxDepth: number = 5): Promise<string 
   if (maxDepth <= 0) return null;
 
   // 检查当前目录是否包含 main.js
-  const mainJsPath = join(dir, "main.js");
+  const mainJsPath = join(dir, 'main.js');
   if (await fileExists(mainJsPath)) {
     return dir;
   }
@@ -69,7 +69,7 @@ export async function findRootDir(extractedDir: string): Promise<string> {
   const rootDir = await findMainJsDir(extractedDir);
 
   if (!rootDir) {
-    throw new Error("找不到游戏根目录（缺少 main.js）");
+    throw new Error('找不到游戏根目录（缺少 main.js）');
   }
 
   return rootDir;
@@ -94,7 +94,7 @@ export async function extract(zipPath: string): Promise<ExtractResult> {
       throw new Error(`不是有效的 ZIP 文件：${zipPath}`);
     }
   } catch (err) {
-    if ((err as Error).message.includes("不是有效的")) {
+    if ((err as Error).message.includes('不是有效的')) {
       throw err;
     }
     throw new Error(`压缩文件不存在：${zipPath}`);
@@ -118,12 +118,12 @@ export async function extract(zipPath: string): Promise<ExtractResult> {
 
     // 重新抛出错误
     const message = (err as Error).message;
-    if (message.includes("找不到游戏根目录") || message.includes("压缩文件")) {
+    if (message.includes('找不到游戏根目录') || message.includes('压缩文件')) {
       throw err;
     }
 
     // JSZip 错误通常表示文件损坏或无效
-    if (message.includes("Invalid") || message.includes("Corrupted") || message.includes("not a valid")) {
+    if (message.includes('Invalid') || message.includes('Corrupted') || message.includes('not a valid')) {
       throw new Error(`ZIP 文件已损坏：${zipPath}`);
     }
 

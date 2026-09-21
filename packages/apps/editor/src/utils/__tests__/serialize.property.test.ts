@@ -26,7 +26,7 @@ describe('serializeToJsDataFile 属性测试', () => {
             new Function(output);
           }).not.toThrow();
         }),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
 
@@ -45,7 +45,7 @@ describe('serializeToJsDataFile 属性测试', () => {
           // 使用 JSON.stringify 比较以忽略 -0/+0 的差异
           expect(JSON.stringify(result)).toEqual(JSON.stringify(data));
         }),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
 
@@ -57,7 +57,7 @@ describe('serializeToJsDataFile 属性测试', () => {
           // 对于非空对象，输出应包含 tab 缩进
           expect(output).toContain('\t');
         }),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
 
@@ -69,7 +69,7 @@ describe('serializeToJsDataFile 属性测试', () => {
           // 验证输出以 var 声明开头
           expect(output.startsWith(`var ${varName} =\n`)).toBe(true);
         }),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
   });
@@ -88,7 +88,7 @@ describe('serializeToJsMapFile 属性测试', () => {
             new Function(`var main = { floors: {} }; ${output}`);
           }).not.toThrow();
         }),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
 
@@ -105,7 +105,7 @@ describe('serializeToJsMapFile 属性测试', () => {
           // 验证解析后的值与原始数据等价
           expect(JSON.stringify(result)).toEqual(JSON.stringify(data));
         }),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
 
@@ -117,7 +117,7 @@ describe('serializeToJsMapFile 属性测试', () => {
           // 对于非空对象，输出应包含 tab 缩进
           expect(output).toContain('\t');
         }),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
 
@@ -129,7 +129,7 @@ describe('serializeToJsMapFile 属性测试', () => {
           // 验证输出以 main.floors.xxx = 开头
           expect(output.startsWith(`main.floors.${floorId} =\n`)).toBe(true);
         }),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
   });

@@ -8,13 +8,7 @@ import type * as Blockly from 'blockly';
 import { javascriptGenerator, Order } from 'blockly/javascript';
 import JSON5 from 'json5';
 
-import type {
-  BlockState,
-  ConnectionState,
-  EventData,
-  EventObject,
-  ParseContext,
-} from '../parser/types';
+import type { BlockState, ConnectionState, EventData, EventObject, ParseContext } from '../parser/types';
 import type { BlockSchema } from '../registry/types';
 import { createExpressionBlock, parseEventList } from '../registry/utils';
 import { checkbox, expression, expressionValue } from './legacyHelpers';
@@ -81,7 +75,14 @@ export const insertSchema: BlockSchema = {
     type: 'mota_insert_s',
     message0: '插入 %1 公共事件 %2 位置 [%3,%4] 类型 %5 楼层 %6',
     args0: [
-      { type: 'field_dropdown', name: 'MODE', options: [['公共事件', 'common'], ['坐标事件', 'point']] },
+      {
+        type: 'field_dropdown',
+        name: 'MODE',
+        options: [
+          ['公共事件', 'common'],
+          ['坐标事件', 'point'],
+        ],
+      },
       { type: 'field_input', name: 'NAME', text: '' },
       { type: 'field_input', name: 'X', text: '' },
       { type: 'field_input', name: 'Y', text: '' },
@@ -89,9 +90,7 @@ export const insertSchema: BlockSchema = {
       { type: 'field_input', name: 'FLOOR_ID', text: '' },
     ],
     message1: '参数列表 JSON %1',
-    args1: [
-      { type: 'field_input', name: 'ARGS', text: '' },
-    ],
+    args1: [{ type: 'field_input', name: 'ARGS', text: '' }],
     previousStatement: null,
     nextStatement: null,
     colour: 'auto', // 使用 category 默认颜色 (330)
@@ -172,7 +171,11 @@ export const functionSchema: BlockSchema = {
   category: 'misc',
   fieldMapping: {
     CODE: 'function',
-    ASYNC: { eventField: 'async', parse: (v) => v === true, generate: (v) => v === 'TRUE' || v === true ? true : undefined },
+    ASYNC: {
+      eventField: 'async',
+      parse: (v) => v === true,
+      generate: (v) => (v === 'TRUE' || v === true ? true : undefined),
+    },
   },
 };
 
@@ -190,7 +193,14 @@ export const setViewportSchema: BlockSchema = {
     type: 'mota_setViewport_s',
     message0: '设置视角 %1 坐标 [%2,%3] 移动方式 %4 动画时间 %5 异步 %6',
     args0: [
-      { type: 'field_dropdown', name: 'MODE', options: [['绝对位置', 'loc'], ['坐标增量', 'dxy']] },
+      {
+        type: 'field_dropdown',
+        name: 'MODE',
+        options: [
+          ['绝对位置', 'loc'],
+          ['坐标增量', 'dxy'],
+        ],
+      },
       { type: 'field_input', name: 'X', text: '' },
       { type: 'field_input', name: 'Y', text: '' },
       { type: 'field_input', name: 'MOVE_MODE', text: '' },
@@ -206,7 +216,7 @@ export const setViewportSchema: BlockSchema = {
   category: 'misc',
   parser: (event: EventObject, _context: ParseContext): BlockState => {
     const mode = Array.isArray(event.dxy) ? 'dxy' : 'loc';
-    const loc = (event[mode] as unknown[] | undefined);
+    const loc = event[mode] as unknown[] | undefined;
     return {
       type: 'mota_setViewport_s',
       fields: {
@@ -266,7 +276,11 @@ export const lockViewportSchema: BlockSchema = {
   },
   category: 'misc',
   fieldMapping: {
-    LOCK: { eventField: 'lock', parse: (v) => v === true, generate: (v) => v === 'TRUE' || v === true ? true : undefined },
+    LOCK: {
+      eventField: 'lock',
+      parse: (v) => v === true,
+      generate: (v) => (v === 'TRUE' || v === true ? true : undefined),
+    },
   },
 };
 
@@ -357,7 +371,8 @@ export const showImageSchema: BlockSchema = {
 
     if (reverse) event.reverse = reverse;
     if (sx !== '' || sy !== '' || sw !== '' || sh !== '') event.sloc = [sx, sy, sw, sh].map(expressionValue);
-    if (x !== '' || y !== '' || w !== '' || h !== '') event.loc = [x, y, ...(w !== '' || h !== '' ? [w, h] : [])].map(expressionValue);
+    if (x !== '' || y !== '' || w !== '' || h !== '')
+      event.loc = [x, y, ...(w !== '' || h !== '' ? [w, h] : [])].map(expressionValue);
     event.opacity = Number(opacity);
     event.time = Number(time);
     if (checkbox(block, 'ASYNC')) event.async = true;
@@ -553,7 +568,11 @@ export const openShopSchema: BlockSchema = {
   category: 'misc',
   fieldMapping: {
     ID: 'id',
-    OPEN: { eventField: 'open', parse: (v) => v === true, generate: (v) => v === 'TRUE' || v === true ? true : undefined },
+    OPEN: {
+      eventField: 'open',
+      parse: (v) => v === true,
+      generate: (v) => (v === 'TRUE' || v === true ? true : undefined),
+    },
   },
 };
 
@@ -674,7 +693,11 @@ export const autoSaveSchema: BlockSchema = {
   },
   category: 'misc',
   fieldMapping: {
-    REMOVE_LAST: { eventField: 'removeLast', parse: (v) => v === true, generate: (v) => v === 'TRUE' || v === true ? true : undefined },
+    REMOVE_LAST: {
+      eventField: 'removeLast',
+      parse: (v) => v === true,
+      generate: (v) => (v === 'TRUE' || v === true ? true : undefined),
+    },
   },
 };
 
@@ -703,10 +726,11 @@ export const forbidSaveSchema: BlockSchema = {
     type: 'mota_forbidSave_s',
     fields: { FORBID: event.forbid === true },
   }),
-  generator: (block: Blockly.Block): string => JSON.stringify({
-    type: 'forbidSave',
-    forbid: checkbox(block, 'FORBID'),
-  }) + ',\n',
+  generator: (block: Blockly.Block): string =>
+    JSON.stringify({
+      type: 'forbidSave',
+      forbid: checkbox(block, 'FORBID'),
+    }) + ',\n',
 };
 
 // ============================================
@@ -750,7 +774,11 @@ export const hideStatusBarSchema: BlockSchema = {
   },
   category: 'misc',
   fieldMapping: {
-    TOOLBOX: { eventField: 'toolbox', parse: (v) => v === true, generate: (v) => v === 'TRUE' || v === true ? true : undefined },
+    TOOLBOX: {
+      eventField: 'toolbox',
+      parse: (v) => v === true,
+      generate: (v) => (v === 'TRUE' || v === true ? true : undefined),
+    },
   },
 };
 
@@ -947,8 +975,7 @@ export const switchSchema: BlockSchema = {
     return result;
   },
   generator: (block: Blockly.Block): string => {
-    const conditionCode =
-      javascriptGenerator.valueToCode(block, 'CONDITION', Order.NONE) || '""';
+    const conditionCode = javascriptGenerator.valueToCode(block, 'CONDITION', Order.NONE) || '""';
 
     let condition = conditionCode;
     if (condition.startsWith('"') && condition.endsWith('"')) {
@@ -1049,8 +1076,7 @@ export const forEachSchema: BlockSchema = {
     };
   },
   generator: (block: Blockly.Block): string => {
-    const varName =
-      javascriptGenerator.valueToCode(block, 'VAR', Order.NONE) || '"temp:A"';
+    const varName = javascriptGenerator.valueToCode(block, 'VAR', Order.NONE) || '"temp:A"';
     const listStr = block.getFieldValue('LIST');
     const doCode = javascriptGenerator.statementToCode(block, 'DO');
 

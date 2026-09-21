@@ -55,9 +55,7 @@ export const unknownSchema: BlockSchema = {
       fields: {
         EVENT_TYPE: event.type || 'unknown',
         JSON_DATA: JSON.stringify(event, null, 2),
-        DIAGNOSTIC: event.type === 'animateImage'
-          ? '旧版兼容事件，无可确认执行语义，已按原始 JSON 保留'
-          : '',
+        DIAGNOSTIC: event.type === 'animateImage' ? '旧版兼容事件，无可确认执行语义，已按原始 JSON 保留' : '',
       },
     };
   },

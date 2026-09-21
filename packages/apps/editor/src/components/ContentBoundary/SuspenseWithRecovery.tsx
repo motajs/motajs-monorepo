@@ -6,15 +6,12 @@
  * - handler → 由 Error boundary 处理（显示 RecoveryUI）
  */
 
-import { Component, Suspense, type ReactNode } from "react";
-import type { IContentHandler, RecoverableResource } from "@/fs/interfaces";
-import { DataHandler } from "@/fs/DataHandler";
-import { FileHandler } from "@/fs/FileHandler";
-import {
-  SuspenseRecoveryView,
-  type SuspenseHandler,
-} from "./SuspenseRecoveryView";
-import { LoadingRecovery } from "./RecoveryUI";
+import { Component, Suspense, type ReactNode } from 'react';
+import type { IContentHandler, RecoverableResource } from '@/fs/interfaces';
+import { DataHandler } from '@/fs/DataHandler';
+import { FileHandler } from '@/fs/FileHandler';
+import { SuspenseRecoveryView, type SuspenseHandler } from './SuspenseRecoveryView';
+import { LoadingRecovery } from './RecoveryUI';
 
 export interface SuspenseWithRecoveryProps {
   children: ReactNode;
@@ -37,12 +34,12 @@ interface State {
 
 function isRecoverableResource(value: unknown): value is RecoverableResource {
   return Boolean(
-    value
-      && typeof value === "object"
-      && "content" in value
-      && "refetch" in value
-      && "waitForSettled" in value
-      && "recoverable" in value,
+    value &&
+    typeof value === 'object' &&
+    'content' in value &&
+    'refetch' in value &&
+    'waitForSettled' in value &&
+    'recoverable' in value,
   );
 }
 
@@ -51,10 +48,7 @@ function isRecoverableResource(value: unknown): value is RecoverableResource {
  *
  * 使用 class component 因为需要 getDerivedStateFromError
  */
-export class SuspenseWithRecovery extends Component<
-  SuspenseWithRecoveryProps,
-  State
-> {
+export class SuspenseWithRecovery extends Component<SuspenseWithRecoveryProps, State> {
   state: State = {
     handler: null,
   };
@@ -82,10 +76,6 @@ export class SuspenseWithRecovery extends Component<
     }
 
     // 包 Suspense 处理 Promise（loading 状态）
-    return (
-      <Suspense fallback={loadingUI || <LoadingRecovery />}>
-        {children}
-      </Suspense>
-    );
+    return <Suspense fallback={loadingUI || <LoadingRecovery />}>{children}</Suspense>;
   }
 }

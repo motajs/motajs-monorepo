@@ -5,9 +5,9 @@
  * 业务组件只需要处理数据已加载的情况
  */
 
-import { useCallback } from "react";
-import { commonEventService, type CommonEventData } from "@/services/commonEvent";
-import { useDataSuspense } from "./useDataSuspense";
+import { useCallback } from 'react';
+import { commonEventService, type CommonEventData } from '@/services/commonEvent';
+import { useDataSuspense } from './useDataSuspense';
 
 /**
  * 完整的 events.js 数据结构（内部类型）
@@ -34,10 +34,7 @@ type CommonEventUpdateFn = {
  * @returns [CommonEventData, UpdateFn] - 数据和更新函数
  * @throws IDataHandler - 当数据未就绪时抛出
  */
-export function useCommonEventDataSuspense(): [
-  CommonEventData,
-  CommonEventUpdateFn,
-] {
+export function useCommonEventDataSuspense(): [CommonEventData, CommonEventUpdateFn] {
   const handler = commonEventService.getHandler();
   const [eventsData, updateEvents] = useDataSuspense(handler);
 
@@ -46,12 +43,8 @@ export function useCommonEventDataSuspense(): [
 
   // 包装 update 函数，只操作 commonEvent 字段
   const update = useCallback(
-    (
-      valueOrTransform:
-        | CommonEventData
-        | ((current: CommonEventData) => CommonEventData),
-    ): void => {
-      if (typeof valueOrTransform !== "function") {
+    (valueOrTransform: CommonEventData | ((current: CommonEventData) => CommonEventData)): void => {
+      if (typeof valueOrTransform !== 'function') {
         // 直接值模式
         updateEvents((current: EventsData) => ({
           ...current,

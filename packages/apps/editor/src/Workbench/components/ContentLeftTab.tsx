@@ -9,12 +9,9 @@
  * - 使用 LeftTab 的样式显示 loading/error
  */
 
-import type { FC, ReactNode } from "react";
-import {
-  ContentBoundary,
-  type SuspenseWithRecoveryProps,
-} from "@/components/ContentBoundary";
-import type { IContentHandler } from "@/fs/interfaces";
+import type { FC, ReactNode } from 'react';
+import { ContentBoundary, type SuspenseWithRecoveryProps } from '@/components/ContentBoundary';
+import type { IContentHandler } from '@/fs/interfaces';
 
 export interface ContentLeftTabProps {
   /** 面板 ID，如 "left5" */
@@ -81,18 +78,10 @@ export interface ContentLeftTabProps {
  * </ContentLeftTab>
  */
 export const ContentLeftTab: FC<ContentLeftTabProps> = (props) => {
-  const {
-    id,
-    testId,
-    title,
-    actions,
-    children,
-    recoveryUI,
-    loadingUI,
-  } = props;
+  const { id, testId, title, actions, children, recoveryUI, loadingUI } = props;
 
   // 构建 ContentBoundary props
-  const boundaryProps: Omit<SuspenseWithRecoveryProps, "children"> = {
+  const boundaryProps: Omit<SuspenseWithRecoveryProps, 'children'> = {
     recoveryUI,
     loadingUI: loadingUI ?? <></>,
   };

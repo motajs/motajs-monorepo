@@ -2,7 +2,7 @@
  * IOErrorRecovery - IO 错误恢复 UI
  */
 
-import type { FC } from "react";
+import type { FC } from 'react';
 
 export interface IOErrorRecoveryProps {
   /** 错误对象 */
@@ -14,10 +14,7 @@ export interface IOErrorRecoveryProps {
 /**
  * IO 错误恢复 UI
  */
-export const IOErrorRecovery: FC<IOErrorRecoveryProps> = ({
-  error,
-  onRetry,
-}) => {
+export const IOErrorRecovery: FC<IOErrorRecoveryProps> = ({ error, onRetry }) => {
   return (
     <div className="leftTabError">
       <div>加载失败: {error.message}</div>

@@ -1,15 +1,11 @@
-import type { FC, ReactNode } from "react";
-import type { Store } from "./store";
+import type { FC, ReactNode } from 'react';
+import type { Store } from './store';
 
 export const mergeStores = (stores: Store<unknown>[]) => {
   const providers = stores
     .map((store) => store.Provider)
     .reduceRight(
-      (prevProviders, CurrentProvider) => (children) => (
-        <CurrentProvider>
-          {prevProviders(children)}
-        </CurrentProvider>
-      ),
+      (prevProviders, CurrentProvider) => (children) => <CurrentProvider>{prevProviders(children)}</CurrentProvider>,
       (children: ReactNode) => children,
     );
 

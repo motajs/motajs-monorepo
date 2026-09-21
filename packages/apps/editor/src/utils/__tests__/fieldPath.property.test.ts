@@ -9,12 +9,7 @@
 
 import { describe, expect, it } from 'vitest';
 import * as fc from 'fast-check';
-import {
-  buildFieldPath,
-  deleteByFieldPath,
-  getByFieldPath,
-  setByFieldPath,
-} from '@/utils/fieldPath';
+import { buildFieldPath, deleteByFieldPath, getByFieldPath, setByFieldPath } from '@/utils/fieldPath';
 
 /**
  * 生成有效的字段路径键（不包含单引号和 JavaScript 保留属性名）
@@ -34,9 +29,7 @@ const reservedKeys = new Set([
   '__lookupSetter__',
 ]);
 
-const validKeyArb = fc
-  .string({ minLength: 1, maxLength: 10 })
-  .filter((s) => !s.includes("'") && !reservedKeys.has(s));
+const validKeyArb = fc.string({ minLength: 1, maxLength: 10 }).filter((s) => !s.includes("'") && !reservedKeys.has(s));
 
 /**
  * 生成有效的键数组（1-5 层嵌套）
@@ -62,7 +55,7 @@ describe('fieldPath 属性测试', () => {
           const result = getByFieldPath(obj, fieldPath);
           expect(result).toEqual(value);
         }),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
 
@@ -84,7 +77,7 @@ describe('fieldPath 属性测试', () => {
           const result = getByFieldPath(obj, fieldPath);
           expect(result).toBeUndefined();
         }),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
 
@@ -108,7 +101,7 @@ describe('fieldPath 属性测试', () => {
           // 验证最终值正确
           expect(getByFieldPath(obj, fieldPath)).toEqual(value);
         }),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
 
@@ -123,7 +116,7 @@ describe('fieldPath 属性测试', () => {
 
           expect(retrieved).toEqual(value);
         }),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
   });

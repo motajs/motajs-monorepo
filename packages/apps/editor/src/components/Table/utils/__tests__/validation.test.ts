@@ -5,12 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import {
-  checkRange,
-  validateId,
-  allowsNull,
-  parseJsonValue,
-} from '../validation';
+import { checkRange, validateId, allowsNull, parseJsonValue } from '../validation';
 import type { FieldConfig } from '../../types';
 
 describe('validation', () => {

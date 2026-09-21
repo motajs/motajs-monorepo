@@ -17,7 +17,7 @@
     /* Linting */
     "strict": true,
     "paths": {
-      "@/*": ["${configDir}/lib/*"],
+      "@/*": ["${configDir}/lib/*"]
     },
     "plugins": [
       {
@@ -27,5 +27,5 @@
         }
       }
     ]
-  },
+  }
 }

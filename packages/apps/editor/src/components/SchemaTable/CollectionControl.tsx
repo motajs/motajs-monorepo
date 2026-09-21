@@ -1,5 +1,5 @@
-import { ArrowDown, ArrowUp, GripVertical, Plus, Trash2 } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { ArrowDown, ArrowUp, GripVertical, Plus, Trash2 } from 'lucide-react';
+import { type ReactNode, useState } from 'react';
 
 export interface CollectionControlProps<T> {
   items: readonly T[];
@@ -13,14 +13,14 @@ export interface CollectionControlProps<T> {
   onMove: (index: number, nextIndex: number) => void;
   onSelect?: (index: number) => void;
   selectedIndex?: number;
-  reorderMode?: "buttons" | "drag";
+  reorderMode?: 'buttons' | 'drag';
 }
 
 export function CollectionControl<T>({
   items,
   disabled = false,
-  emptyText = "暂无项目",
-  createLabel = "添加",
+  emptyText = '暂无项目',
+  createLabel = '添加',
   itemKey = (_item, index) => String(index),
   renderItem,
   onCreate,
@@ -28,7 +28,7 @@ export function CollectionControl<T>({
   onMove,
   onSelect,
   selectedIndex,
-  reorderMode = "buttons",
+  reorderMode = 'buttons',
 }: CollectionControlProps<T>) {
   const [draggingIndex, setDraggingIndex] = useState<number>();
   const [dragOverIndex, setDragOverIndex] = useState<number>();
@@ -39,24 +39,24 @@ export function CollectionControl<T>({
         {items.map((item, index) => (
           <div
             key={itemKey(item, index)}
-            className={`schemaCollectionItem${selectedIndex === index ? " selected" : ""}${draggingIndex === index ? " dragging" : ""}${dragOverIndex === index ? " dragOver" : ""}`}
+            className={`schemaCollectionItem${selectedIndex === index ? ' selected' : ''}${draggingIndex === index ? ' dragging' : ''}${dragOverIndex === index ? ' dragOver' : ''}`}
             data-test-id={`schema-collection-item-${index}`}
             onClick={() => onSelect?.(index)}
             onDragOver={(event) => {
-              if (reorderMode !== "drag" || draggingIndex == null || disabled) return;
+              if (reorderMode !== 'drag' || draggingIndex == null || disabled) return;
               event.preventDefault();
-              event.dataTransfer.dropEffect = "move";
+              event.dataTransfer.dropEffect = 'move';
               setDragOverIndex(index);
             }}
             onDrop={(event) => {
-              if (reorderMode !== "drag" || draggingIndex == null || disabled) return;
+              if (reorderMode !== 'drag' || draggingIndex == null || disabled) return;
               event.preventDefault();
               if (draggingIndex !== index) onMove(draggingIndex, index);
               setDraggingIndex(undefined);
               setDragOverIndex(undefined);
             }}
           >
-            {reorderMode === "drag" ? (
+            {reorderMode === 'drag' ? (
               <span
                 className="schemaCollectionDragHandle"
                 draggable={!disabled}
@@ -69,7 +69,7 @@ export function CollectionControl<T>({
                     return;
                   }
                   event.stopPropagation();
-                  event.dataTransfer.effectAllowed = "move";
+                  event.dataTransfer.effectAllowed = 'move';
                   setDraggingIndex(index);
                   setDragOverIndex(index);
                 }}
@@ -83,7 +83,7 @@ export function CollectionControl<T>({
             ) : null}
             <div className="schemaCollectionContent">{renderItem(item, index)}</div>
             <div className="schemaCollectionActions">
-              {reorderMode === "buttons" ? (
+              {reorderMode === 'buttons' ? (
                 <>
                   <button
                     type="button"
@@ -130,12 +130,7 @@ export function CollectionControl<T>({
           </div>
         ))}
       </div>
-      <button
-        type="button"
-        className="schemaCollectionCreate"
-        disabled={disabled}
-        onClick={onCreate}
-      >
+      <button type="button" className="schemaCollectionCreate" disabled={disabled} onClick={onCreate}>
         <Plus size={14} aria-hidden="true" />
         {createLabel}
       </button>

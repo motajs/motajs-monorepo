@@ -66,15 +66,16 @@ export function openExternalEditor(
         const currentValue = getValue(field);
 
         // 旧编辑器根据表格中 JSON 值是否带引号判断字符串模式。
-        const isString = config._string === true
-          || typeof currentValue === 'string'
-          || (currentValue == null && /^\s*function\b/.test(config._template || ''));
+        const isString =
+          config._string === true ||
+          typeof currentValue === 'string' ||
+          (currentValue == null && /^\s*function\b/.test(config._template || ''));
 
         // 准备初始值
         let initialValue: string;
         if (isString) {
           // 字符串模式：直接使用字符串值
-          initialValue = currentValue != null ? String(currentValue) : (config._template || '');
+          initialValue = currentValue != null ? String(currentValue) : config._template || '';
         } else {
           // 对象模式：JSON 序列化
           if (currentValue != null) {
@@ -121,9 +122,7 @@ export function openExternalEditor(
       const selectMaterial = capabilities.selectMaterial;
       if (selectMaterial && config._directory) {
         const currentValue = getValue(field);
-        const title = config._docs
-          || (typeof config._data === 'string' ? config._data : '')
-          || '请选择素材';
+        const title = config._docs || (typeof config._data === 'string' ? config._data : '') || '请选择素材';
         const transform = (one: string): string | null => {
           if (!/^[-A-Za-z0-9_.]+$/.test(one)) return null;
           if (!config._transform) return one;
@@ -137,11 +136,9 @@ export function openExternalEditor(
         const applySelection = (data: string[]) => {
           let newValue: unknown = data;
           if (config._onconfirm) {
-            newValue = callTableMetaFunctionString<unknown>(
-              config._onconfirm,
-              [currentValue, data],
-              getTableMetaContext(config),
-            ).value ?? data;
+            newValue =
+              callTableMetaFunctionString<unknown>(config._onconfirm, [currentValue, data], getTableMetaContext(config))
+                .value ?? data;
           }
           setValue(field, newValue);
         };
@@ -150,7 +147,7 @@ export function openExternalEditor(
           title,
           value: currentValue as string | string[] | undefined,
           directory: config._directory,
-          source: config._directory.includes(":images")
+          source: config._directory.includes(':images')
             ? { kind: 'project-images', includeLogical: true }
             : config._directory.includes('animates')
               ? { kind: 'animations' }

@@ -20,11 +20,11 @@
  * ```
  */
 export function encode64(str: string): string {
-  if (!str) return "";
+  if (!str) return '';
   return btoa(
     encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (_match, p1) => {
       return String.fromCharCode(parseInt(p1, 16));
-    })
+    }),
   );
 }
 
@@ -43,15 +43,15 @@ export function encode64(str: string): string {
  * ```
  */
 export function decode64(str: string): string {
-  if (!str) return "";
+  if (!str) return '';
   // 支持 URL-safe Base64：将 - 替换为 +，_ 替换为 /，移除空白
-  const normalizedStr = str.replace(/-/g, "+").replace(/_/g, "/").replace(/\s/g, "");
+  const normalizedStr = str.replace(/-/g, '+').replace(/_/g, '/').replace(/\s/g, '');
   return decodeURIComponent(
     atob(normalizedStr)
-      .split("")
+      .split('')
       .map((c) => {
-        return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
       })
-      .join("")
+      .join(''),
   );
 }

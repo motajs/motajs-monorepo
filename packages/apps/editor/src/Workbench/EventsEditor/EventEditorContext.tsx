@@ -1,12 +1,4 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useRef,
-  type FC,
-  type ReactNode,
-} from 'react';
+import { createContext, useCallback, useContext, useMemo, useRef, type FC, type ReactNode } from 'react';
 
 export interface EventEditorOpenRequest {
   contextId: string;

@@ -13,9 +13,7 @@ export type RelativeFloor = ':now' | ':before' | ':next';
 /**
  * 检查是否为相对楼层
  */
-export function isRelativeFloor(
-  value: string | undefined,
-): value is RelativeFloor {
+export function isRelativeFloor(value: string | undefined): value is RelativeFloor {
   return value === ':now' || value === ':before' || value === ':next';
 }
 

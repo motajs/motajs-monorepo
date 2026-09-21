@@ -16,10 +16,25 @@
   margin: 0 !important;
   box-sizing: border-box;
 }
-.floorManagementHeader { display: flex; align-items: center; justify-content: space-between; }
-.floorManagementHeader > div { display: flex; min-width: 0; align-items: baseline; gap: 8px; }
-.floorManagementHeader h2 { margin: 0; font-size: 18px; }
-.floorManagementHeader span { color: #888; font-size: 12px; }
+.floorManagementHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.floorManagementHeader > div {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 8px;
+}
+.floorManagementHeader h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.floorManagementHeader span {
+  color: #888;
+  font-size: 12px;
+}
 
 .floorManagementList {
   min-width: 0;
@@ -42,12 +57,25 @@
   box-sizing: border-box;
   align-items: center;
 }
-.floorManagementRow > * { min-width: 0; }
-.floorManagementRow.is-draggable { cursor: grab; }
-.floorManagementRow.is-draggable:active { cursor: grabbing; }
-.floorManagementRow:hover { background: rgba(22, 119, 255, 0.06); }
-.floorManagementRow.is-selected { background: rgba(22, 119, 255, 0.12); color: #1677ff; }
-.floorManagementRow.is-missing { color: #999; }
+.floorManagementRow > * {
+  min-width: 0;
+}
+.floorManagementRow.is-draggable {
+  cursor: grab;
+}
+.floorManagementRow.is-draggable:active {
+  cursor: grabbing;
+}
+.floorManagementRow:hover {
+  background: rgba(22, 119, 255, 0.06);
+}
+.floorManagementRow.is-selected {
+  background: rgba(22, 119, 255, 0.12);
+  color: #1677ff;
+}
+.floorManagementRow.is-missing {
+  color: #999;
+}
 .floorManagementSelect {
   display: flex;
   min-width: 0;
@@ -62,10 +90,28 @@
   text-align: left;
 }
 .floorManagementSelect strong,
-.floorManagementSelect span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.floorManagementSelect strong { max-width: 58%; min-width: 0; font-size: 14px; font-weight: 600; flex: 0 1 auto; }
-.floorManagementSelect span { max-width: 42%; color: #888; font-size: 12px; flex: 0 1 auto; }
-.floorManagementMissing { display: inline-flex; color: #fa8c16; }
+.floorManagementSelect span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.floorManagementSelect strong {
+  max-width: 58%;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+  flex: 0 1 auto;
+}
+.floorManagementSelect span {
+  max-width: 42%;
+  color: #888;
+  font-size: 12px;
+  flex: 0 1 auto;
+}
+.floorManagementMissing {
+  display: inline-flex;
+  color: #fa8c16;
+}
 .floorManagementMore {
   display: inline-flex;
   width: 28px;
@@ -80,7 +126,9 @@
   color: inherit;
   cursor: pointer;
 }
-.floorManagementMore:hover { background: rgba(0, 0, 0, 0.06); }
+.floorManagementMore:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
 
 .floorPartitionBoundary {
   display: flex;
@@ -92,9 +140,19 @@
   cursor: grab;
   font-size: 12px;
 }
-.floorPartitionBoundary::after { height: 1px; background: currentColor; content: ""; flex: 1; opacity: 0.55; }
-.floorPartitionBoundary.is-end { flex-direction: row-reverse; }
-.floorPartitionBoundary.is-end::after { order: 2; }
+.floorPartitionBoundary::after {
+  height: 1px;
+  background: currentColor;
+  content: '';
+  flex: 1;
+  opacity: 0.55;
+}
+.floorPartitionBoundary.is-end {
+  flex-direction: row-reverse;
+}
+.floorPartitionBoundary.is-end::after {
+  order: 2;
+}
 
 .floorOrganizationDiagnostic {
   display: flex;
@@ -106,10 +164,27 @@
   background: rgba(250, 140, 22, 0.08);
   color: #ad6800;
 }
-.floorOrganizationDiagnostic > div { display: flex; min-width: 0; flex: 1; flex-direction: column; }
-.floorOrganizationDiagnostic span { overflow: hidden; text-overflow: ellipsis; font-size: 11px; white-space: nowrap; }
-.floorManagementFilterHint { color: #888; font-size: 11px; }
-.floorManagementEmpty { padding: 36px 0; color: #999; text-align: center; }
+.floorOrganizationDiagnostic > div {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+}
+.floorOrganizationDiagnostic span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.floorManagementFilterHint {
+  color: #888;
+  font-size: 11px;
+}
+.floorManagementEmpty {
+  padding: 36px 0;
+  color: #999;
+  text-align: center;
+}
 .floorOrganizationDropEnd {
   margin: 4px 6px;
   padding: 7px;
@@ -121,21 +196,65 @@
 }
 
 .mapCreateForm,
-.mapBatchCreateForm { display: flex; flex-direction: column; gap: 12px; }
+.mapBatchCreateForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
 .mapCreateForm label,
 .mapBatchCreateForm label,
-.mapDialogField { display: flex; flex-direction: column; gap: 4px; }
-.mapCreateDimensions { display: flex; max-width: 330px; align-items: flex-end; gap: 9px; }
-.mapCreateDimensions label { flex: 1; }
-.mapCreateDimensions > span { padding-bottom: 6px; }
-.mapCreateForm > .ant-btn { align-self: flex-end; }
-.mapBatchRange { display: flex; max-width: 330px; align-items: flex-end; gap: 9px; }
-.mapBatchRange label { flex: 1; }
-.mapBatchRange > span { padding-bottom: 6px; }
-.mapBatchTemplateHint { margin: 0; color: #888; font-size: 12px; }
-.mapBatchCreateForm > .ant-btn { align-self: flex-end; }
-.mapDataTextarea { min-height: 390px !important; font-family: "Fira Code", monospace; white-space: pre; }
+.mapDialogField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.mapCreateDimensions {
+  display: flex;
+  max-width: 330px;
+  align-items: flex-end;
+  gap: 9px;
+}
+.mapCreateDimensions label {
+  flex: 1;
+}
+.mapCreateDimensions > span {
+  padding-bottom: 6px;
+}
+.mapCreateForm > .ant-btn {
+  align-self: flex-end;
+}
+.mapBatchRange {
+  display: flex;
+  max-width: 330px;
+  align-items: flex-end;
+  gap: 9px;
+}
+.mapBatchRange label {
+  flex: 1;
+}
+.mapBatchRange > span {
+  padding-bottom: 6px;
+}
+.mapBatchTemplateHint {
+  margin: 0;
+  color: #888;
+  font-size: 12px;
+}
+.mapBatchCreateForm > .ant-btn {
+  align-self: flex-end;
+}
+.mapDataTextarea {
+  min-height: 390px !important;
+  font-family: 'Fira Code', monospace;
+  white-space: pre;
+}
 
-:root[data-editor-theme="dark"] .floorManagementRow:hover { background: rgba(255, 255, 255, 0.06); }
-:root[data-editor-theme="dark"] .floorManagementRow.is-selected { background: rgba(22, 119, 255, 0.24); }
-:root[data-editor-theme="dark"] .floorManagementMore:hover { background: rgba(255, 255, 255, 0.08); }
+:root[data-editor-theme='dark'] .floorManagementRow:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+:root[data-editor-theme='dark'] .floorManagementRow.is-selected {
+  background: rgba(22, 119, 255, 0.24);
+}
+:root[data-editor-theme='dark'] .floorManagementMore:hover {
+  background: rgba(255, 255, 255, 0.08);
+}

@@ -21,10 +21,21 @@ type FlyoutItemInfoArray = utils.toolbox.FlyoutItemInfoArray;
  * 最近使用的块类型列表
  */
 const DEFAULT_RECENT_BLOCKS = [
-  'mota_text_s', 'mota_comment_s', 'mota_show_s', 'mota_hide_s',
-  'mota_setValue_s', 'mota_if_s', 'mota_while_s', 'mota_battle_s',
-  'mota_openDoor_s', 'mota_choices_s', 'mota_setText_s', 'mota_exit_s',
-  'mota_sleep_s', 'mota_setBlock_s', 'mota_insert_s',
+  'mota_text_s',
+  'mota_comment_s',
+  'mota_show_s',
+  'mota_hide_s',
+  'mota_setValue_s',
+  'mota_if_s',
+  'mota_while_s',
+  'mota_battle_s',
+  'mota_openDoor_s',
+  'mota_choices_s',
+  'mota_setText_s',
+  'mota_exit_s',
+  'mota_sleep_s',
+  'mota_setBlock_s',
+  'mota_insert_s',
 ];
 let recentBlocks: string[] | null = null;
 let searchQuery = '';
@@ -42,15 +53,15 @@ export function setBlockSearchQuery(query: string): void {
 
 export function getSearchBlockTypes(query = searchQuery): string[] {
   const normalized = query.trim().toLocaleLowerCase();
-  const schemas = blockRegistry.getRegisteredSchemas().length
-    ? blockRegistry.getRegisteredSchemas()
-    : allSchemas;
+  const schemas = blockRegistry.getRegisteredSchemas().length ? blockRegistry.getRegisteredSchemas() : allSchemas;
   if (!normalized) return getRecentBlocks();
   return schemas
     .filter((schema) => {
       const definition = schema.definition;
       const text = [definition.type, definition.message0, definition.tooltip]
-        .filter(Boolean).join(' ').toLocaleLowerCase();
+        .filter(Boolean)
+        .join(' ')
+        .toLocaleLowerCase();
       return text.includes(normalized);
     })
     .map((schema) => schema.definition.type);
@@ -112,9 +123,7 @@ export function createEntranceCategoryCallback(
     }
 
     // 筛选入口块
-    const entrySchemas = allSchemas.filter(
-      (schema) => schema.category === 'entry' && !schema.isValue,
-    );
+    const entrySchemas = allSchemas.filter((schema) => schema.category === 'entry' && !schema.isValue);
 
     const blocks: FlyoutItemInfoArray = [];
 
@@ -151,15 +160,11 @@ export function createEntranceCategoryCallback(
  * @param _workspace - Blockly workspace（未使用，但回调签名需要）
  * @returns 块配置的 JSON 数组
  */
-export function createSearchBlockCategoryCallback(
-  _workspace: Blockly.Workspace,
-): FlyoutItemInfoArray {
+export function createSearchBlockCategoryCallback(_workspace: Blockly.Workspace): FlyoutItemInfoArray {
   const recent = getRecentBlocks();
   const blocks: FlyoutItemInfoArray = [];
 
-  const schemas = blockRegistry.getRegisteredSchemas().length
-    ? blockRegistry.getRegisteredSchemas()
-    : allSchemas;
+  const schemas = blockRegistry.getRegisteredSchemas().length ? blockRegistry.getRegisteredSchemas() : allSchemas;
   const candidates = searchQuery ? getSearchBlockTypes() : recent;
 
   for (const blockType of candidates) {
@@ -185,19 +190,10 @@ export function createSearchBlockCategoryCallback(
  * @param workspace - Blockly workspace
  * @param entryType - 当前编辑的入口类型
  */
-export function registerToolboxCallbacks(
-  workspace: Blockly.WorkspaceSvg,
-  entryType?: string,
-): void {
+export function registerToolboxCallbacks(workspace: Blockly.WorkspaceSvg, entryType?: string): void {
   // 注册入口方块回调
-  workspace.registerToolboxCategoryCallback(
-    'entranceCategory',
-    createEntranceCategoryCallback(entryType),
-  );
+  workspace.registerToolboxCategoryCallback('entranceCategory', createEntranceCategoryCallback(entryType));
 
   // 注册最近使用回调
-  workspace.registerToolboxCategoryCallback(
-    'searchBlockCategory',
-    createSearchBlockCategoryCallback,
-  );
+  workspace.registerToolboxCategoryCallback('searchBlockCategory', createSearchBlockCategoryCallback);
 }

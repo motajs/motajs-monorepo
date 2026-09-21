@@ -8,13 +8,7 @@ import type * as Blockly from 'blockly';
 import { javascriptGenerator } from 'blockly/javascript';
 import JSON5 from 'json5';
 
-import type {
-  BlockState,
-  ConnectionState,
-  EventData,
-  EventObject,
-  ParseContext,
-} from '../parser/types';
+import type { BlockState, ConnectionState, EventData, EventObject, ParseContext } from '../parser/types';
 import type { BlockSchema } from '../registry/types';
 import { parseEventList } from '../registry/utils';
 import { BlockColours } from './colours';
@@ -60,9 +54,7 @@ export const choiceItemSchema: BlockSchema = {
     helpUrl: '',
   },
   category: 'interaction',
-  interactions: [
-    { type: 'autocomplete', field: 'ICON', source: 'id' },
-  ],
+  interactions: [{ type: 'autocomplete', field: 'ICON', source: 'id' }],
   // 这是一个内部块，不需要独立的 parser/generator
   // 由 choices 块统一处理
   fieldMapping: {},
@@ -109,14 +101,15 @@ export const choicesSchema: BlockSchema = {
   category: 'interaction',
   parser: (event: EventObject, context: ParseContext): BlockState => {
     const text = (event.text as string) || '';
-    const choices = (event.choices as Array<{
-      text: string;
-      icon?: string;
-      color?: Array<number | string>;
-      need?: string;
-      condition?: string;
-      action: EventData[];
-    }>) || [];
+    const choices =
+      (event.choices as Array<{
+        text: string;
+        icon?: string;
+        color?: Array<number | string>;
+        need?: string;
+        condition?: string;
+        action: EventData[];
+      }>) || [];
 
     // 解析文本中的标题和图标
     let title = '';
@@ -233,7 +226,9 @@ export const choicesSchema: BlockSchema = {
         }
       }
 
-      const color = String(colorText).split(',').map((part) => Number(part.trim()));
+      const color = String(colorText)
+        .split(',')
+        .map((part) => Number(part.trim()));
       choices.push({
         text: choiceText,
         ...(choiceIcon ? { icon: choiceIcon } : {}),

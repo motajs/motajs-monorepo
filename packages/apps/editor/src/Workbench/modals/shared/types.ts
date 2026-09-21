@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactNode } from 'react';
 
 export type UIData = string | Record<string, unknown>;
 
@@ -8,10 +8,7 @@ export interface CheckboxSetConfig {
 }
 
 // Modal hook 返回类型
-export type UseModalReturn<Options, Result> = [
-  (options: Options) => Promise<Result | null>,
-  ReactNode,
-];
+export type UseModalReturn<Options, Result> = [(options: Options) => Promise<Result | null>, ReactNode];
 
 // SelectFloor
 export interface SelectFloorOptions {
@@ -25,9 +22,7 @@ export interface SelectMaterialOptions {
   value?: string | string[];
   directory: string;
   source?:
-    | { kind: "directory"; path: string }
-    | { kind: "project-images"; includeLogical: boolean }
-    | { kind: "animations" };
+    { kind: 'directory'; path: string } | { kind: 'project-images'; includeLogical: boolean } | { kind: 'animations' };
   multiple?: boolean;
   transform?: ((one: string) => string | null) | null;
 }
@@ -35,7 +30,7 @@ export interface SelectMaterialOptions {
 // SelectPoint
 export interface SelectPointOptions {
   floorId?: string;
-  floorSelection?: "selectable" | "fixed";
+  floorSelection?: 'selectable' | 'fixed';
   x?: number | string;
   y?: number | string;
   bigmap?: boolean;

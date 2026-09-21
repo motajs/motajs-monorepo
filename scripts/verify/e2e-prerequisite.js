@@ -14,21 +14,21 @@
  *
  * 纯 Node ESM：只从仓库根运行、不导入任何 workspace 包、不安装依赖。
  */
-import { spawn } from "node:child_process";
-import process from "node:process";
+import { spawn } from 'node:child_process';
+import process from 'node:process';
 
 const PLAYWRIGHT_TARGET = [
-  "--filter",
-  "@motajs/service-worker",
-  "exec",
-  "playwright",
-  "test",
-  "e2e/project-host.spec.ts",
-  "--grep",
-  "live Editor cache",
+  '--filter',
+  '@motajs/service-worker',
+  'exec',
+  'playwright',
+  'test',
+  'e2e/project-host.spec.ts',
+  '--grep',
+  'live Editor cache',
 ];
 
-const NAMED_FAILURE = "Editor release is not staged";
+const NAMED_FAILURE = 'Editor release is not staged';
 
 /**
  * 运行一次 Playwright 并返回 { code, output }（stdout + stderr 合并）。
@@ -36,28 +36,28 @@ const NAMED_FAILURE = "Editor release is not staged";
  */
 function runPlaywright(env) {
   return new Promise((resolve, reject) => {
-    const child = spawn("pnpm", PLAYWRIGHT_TARGET, {
+    const child = spawn('pnpm', PLAYWRIGHT_TARGET, {
       env,
       shell: true,
-      stdio: ["ignore", "pipe", "pipe"],
+      stdio: ['ignore', 'pipe', 'pipe'],
     });
-    let output = "";
-    child.stdout.on("data", (chunk) => {
+    let output = '';
+    child.stdout.on('data', (chunk) => {
       output += chunk;
       process.stdout.write(chunk);
     });
-    child.stderr.on("data", (chunk) => {
+    child.stderr.on('data', (chunk) => {
       output += chunk;
       process.stderr.write(chunk);
     });
-    child.on("error", reject);
-    child.on("close", (code) => resolve({ code: code ?? -1, output }));
+    child.on('error', reject);
+    child.on('close', (code) => resolve({ code: code ?? -1, output }));
   });
 }
 
 /** 已 stage 极性的环境：CI=1，且显式去掉任何继承来的 MOTA_WITH_EDITOR 覆盖。 */
 function stagedEnvironment() {
-  const env = { ...process.env, CI: "1" };
+  const env = { ...process.env, CI: '1' };
   delete env.MOTA_WITH_EDITOR;
   return env;
 }
@@ -69,12 +69,12 @@ if (staged.code !== 0) {
   );
   process.exit(1);
 }
-console.log("\n[e2e-prerequisite] staged polarity passed (exit 0).");
+console.log('\n[e2e-prerequisite] staged polarity passed (exit 0).');
 
-const unstaged = await runPlaywright({ ...process.env, CI: "1", MOTA_WITH_EDITOR: "0" });
+const unstaged = await runPlaywright({ ...process.env, CI: '1', MOTA_WITH_EDITOR: '0' });
 if (unstaged.code === 0) {
   console.error(
-    "\n[e2e-prerequisite] unstaged polarity unexpectedly passed (exit 0): the silent-skip regression has returned — the test did not fail without a staged Editor release.",
+    '\n[e2e-prerequisite] unstaged polarity unexpectedly passed (exit 0): the silent-skip regression has returned — the test did not fail without a staged Editor release.',
   );
   process.exit(1);
 }

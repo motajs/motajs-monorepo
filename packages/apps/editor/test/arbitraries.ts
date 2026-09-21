@@ -12,34 +12,130 @@ import * as fc from 'fast-check';
  */
 const JS_RESERVED_WORDS = new Set([
   // 关键字
-  'break', 'case', 'catch', 'continue', 'debugger', 'default', 'delete',
-  'do', 'else', 'finally', 'for', 'function', 'if', 'in', 'instanceof',
-  'new', 'return', 'switch', 'this', 'throw', 'try', 'typeof', 'var',
-  'void', 'while', 'with',
+  'break',
+  'case',
+  'catch',
+  'continue',
+  'debugger',
+  'default',
+  'delete',
+  'do',
+  'else',
+  'finally',
+  'for',
+  'function',
+  'if',
+  'in',
+  'instanceof',
+  'new',
+  'return',
+  'switch',
+  'this',
+  'throw',
+  'try',
+  'typeof',
+  'var',
+  'void',
+  'while',
+  'with',
   // ES6+ 关键字
-  'class', 'const', 'enum', 'export', 'extends', 'import', 'super',
+  'class',
+  'const',
+  'enum',
+  'export',
+  'extends',
+  'import',
+  'super',
   // 严格模式保留字
-  'implements', 'interface', 'let', 'package', 'private',
-  'protected', 'public', 'static', 'yield',
+  'implements',
+  'interface',
+  'let',
+  'package',
+  'private',
+  'protected',
+  'public',
+  'static',
+  'yield',
   // 字面量
-  'null', 'true', 'false',
+  'null',
+  'true',
+  'false',
 ]);
 
 /**
  * 有效 JS 标识符首字符：小写字母和下划线
  */
 const identifierFirstCharArb = fc.constantFrom(
-  'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
-  'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '_'
+  'a',
+  'b',
+  'c',
+  'd',
+  'e',
+  'f',
+  'g',
+  'h',
+  'i',
+  'j',
+  'k',
+  'l',
+  'm',
+  'n',
+  'o',
+  'p',
+  'q',
+  'r',
+  's',
+  't',
+  'u',
+  'v',
+  'w',
+  'x',
+  'y',
+  'z',
+  '_',
 );
 
 /**
  * 有效 JS 标识符后续字符：小写字母、数字和下划线
  */
 const identifierRestCharArb = fc.constantFrom(
-  'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
-  'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
-  '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '_'
+  'a',
+  'b',
+  'c',
+  'd',
+  'e',
+  'f',
+  'g',
+  'h',
+  'i',
+  'j',
+  'k',
+  'l',
+  'm',
+  'n',
+  'o',
+  'p',
+  'q',
+  'r',
+  's',
+  't',
+  'u',
+  'v',
+  'w',
+  'x',
+  'y',
+  'z',
+  '0',
+  '1',
+  '2',
+  '3',
+  '4',
+  '5',
+  '6',
+  '7',
+  '8',
+  '9',
+  '_',
 );
 
 export interface JsIdentifierOptions {
@@ -78,7 +174,7 @@ export function jsIdentifierArb(options: JsIdentifierOptions = {}): fc.Arbitrary
       fc.array(identifierRestCharArb, {
         minLength: restMinLength,
         maxLength: restMaxLength,
-      })
+      }),
     )
     .map(([first, rest]) => first + rest.join(''))
     .filter((name) => !JS_RESERVED_WORDS.has(name));
@@ -120,7 +216,7 @@ export function safeJsonValueArb(): fc.Arbitrary<unknown> {
       fc.double({ noNaN: true, noDefaultInfinity: true }),
       fc.string(),
       fc.array(tie('value'), { maxLength: 5 }),
-      fc.dictionary(safeObjectKeyArb(), tie('value'), { maxKeys: 5 })
+      fc.dictionary(safeObjectKeyArb(), tie('value'), { maxKeys: 5 }),
     ),
   })).value;
 }

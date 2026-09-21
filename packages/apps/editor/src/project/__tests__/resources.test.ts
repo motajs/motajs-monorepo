@@ -1,15 +1,10 @@
-import { effect, signal } from "alien-signals";
-import { describe, expect, it } from "vitest";
+import { effect, signal } from 'alien-signals';
+import { describe, expect, it } from 'vitest';
 
-import type { ReadonlySignal } from "@/fs/interfaces";
-import type { Content } from "@/fs/types";
-import {
-  aggregateResource,
-  computedResource,
-  optional,
-  type LoadableResource,
-} from "@/project/resources";
-import { waitUntil } from "@/utils/base/signal";
+import type { ReadonlySignal } from '@/fs/interfaces';
+import type { Content } from '@/fs/types';
+import { aggregateResource, computedResource, optional, type LoadableResource } from '@/project/resources';
+import { waitUntil } from '@/utils/base/signal';
 
 class TestResource<T> implements LoadableResource<T> {
   readonly content: ReadonlySignal<Content<T>>;
@@ -33,7 +28,7 @@ class TestResource<T> implements LoadableResource<T> {
 
   value(): T {
     const content = this.mutableContent();
-    if (content.status !== "loaded") throw new Error(`${this.id} is ${content.status}`);
+    if (content.status !== 'loaded') throw new Error(`${this.id} is ${content.status}`);
     return content.value;
   }
 
@@ -44,79 +39,71 @@ class TestResource<T> implements LoadableResource<T> {
   async ensureLoaded(): Promise<void> {
     this.ensureCalls += 1;
     const content = this.mutableContent();
-    if (content.status === "loading") {
+    if (content.status === 'loading') {
       await this.waitForSettled();
       return;
     }
-    if (content.status !== "idle") return;
+    if (content.status !== 'idle') return;
     this.initialLoads += 1;
-    this.mutableContent({ status: "loading" });
+    this.mutableContent({ status: 'loading' });
     await Promise.resolve();
-    this.mutableContent({ status: "loaded", value: this.loadedValue });
+    this.mutableContent({ status: 'loaded', value: this.loadedValue });
   }
 
   async reload(): Promise<void> {
     this.reloadCalls += 1;
-    if (this.mutableContent().status === "loading") {
+    if (this.mutableContent().status === 'loading') {
       await this.waitForSettled();
       return;
     }
-    this.mutableContent({ status: "loading" });
+    this.mutableContent({ status: 'loading' });
     await Promise.resolve();
-    this.mutableContent({ status: "loaded", value: this.loadedValue });
+    this.mutableContent({ status: 'loaded', value: this.loadedValue });
   }
 
   async waitForSettled(): Promise<void> {
-    await waitUntil(() => !["idle", "loading"].includes(this.mutableContent().status));
+    await waitUntil(() => !['idle', 'loading'].includes(this.mutableContent().status));
   }
 }
 
-describe("computed resources", () => {
-  it("optional converts only not-found into a loaded fallback", async () => {
-    const source = new TestResource<Record<string, number>>(
-      "source",
-      { status: "not-found" },
-      { answer: 42 },
-    );
+describe('computed resources', () => {
+  it('optional converts only not-found into a loaded fallback', async () => {
+    const source = new TestResource<Record<string, number>>('source', { status: 'not-found' }, { answer: 42 });
     const optionalSource = optional(source, {});
 
-    expect(optionalSource.snapshot()).toEqual({ status: "loaded", value: {} });
+    expect(optionalSource.snapshot()).toEqual({ status: 'loaded', value: {} });
     await optionalSource.ensureLoaded();
     expect(source.reloadCalls).toBe(0);
-    expect(optionalSource.snapshot()).toEqual({ status: "loaded", value: {} });
+    expect(optionalSource.snapshot()).toEqual({ status: 'loaded', value: {} });
 
     await optionalSource.reload();
     expect(source.reloadCalls).toBe(1);
     expect(optionalSource.value()).toEqual({ answer: 42 });
   });
 
-  it("aggregate ensure loads only idle leaves without invalidating loaded siblings", async () => {
-    const first = new TestResource("first", { status: "loaded", value: 1 }, 1);
-    const second = new TestResource("second", { status: "loaded", value: 2 }, 2);
-    const third = new TestResource("third", { status: "loaded", value: 3 }, 3);
-    const missing = new TestResource("missing", { status: "idle" }, 4);
+  it('aggregate ensure loads only idle leaves without invalidating loaded siblings', async () => {
+    const first = new TestResource('first', { status: 'loaded', value: 1 }, 1);
+    const second = new TestResource('second', { status: 'loaded', value: 2 }, 2);
+    const third = new TestResource('third', { status: 'loaded', value: 3 }, 3);
+    const missing = new TestResource('missing', { status: 'idle' }, 4);
     const firstStatuses: string[] = [];
     const unsubscribe = first.subscribe((content) => firstStatuses.push(content.status));
-    const aggregate = aggregateResource(
-      "sum",
-      [first, second, third, missing] as const,
-      (a, b, c, d) => a + b + c + d,
-    );
+    const aggregate = aggregateResource('sum', [first, second, third, missing] as const, (a, b, c, d) => a + b + c + d);
 
-    expect(aggregate.snapshot().status).toBe("idle");
+    expect(aggregate.snapshot().status).toBe('idle');
     await aggregate.ensureLoaded();
 
     expect(aggregate.value()).toBe(10);
     expect(missing.ensureCalls).toBe(1);
     expect([first.reloadCalls, second.reloadCalls, third.reloadCalls]).toEqual([0, 0, 0]);
-    expect(firstStatuses).toEqual(["loaded"]);
+    expect(firstStatuses).toEqual(['loaded']);
     unsubscribe();
   });
 
-  it("aggregate reload explicitly reloads every dependency", async () => {
-    const first = new TestResource("first", { status: "loaded", value: 1 }, 10);
-    const second = new TestResource("second", { status: "loaded", value: 2 }, 20);
-    const aggregate = aggregateResource("sum", [first, second] as const, (a, b) => a + b);
+  it('aggregate reload explicitly reloads every dependency', async () => {
+    const first = new TestResource('first', { status: 'loaded', value: 1 }, 10);
+    const second = new TestResource('second', { status: 'loaded', value: 2 }, 20);
+    const aggregate = aggregateResource('sum', [first, second] as const, (a, b) => a + b);
 
     await aggregate.reload();
 
@@ -124,9 +111,9 @@ describe("computed resources", () => {
     expect(aggregate.value()).toBe(30);
   });
 
-  it("coalesces concurrent initial loading at the leaf", async () => {
-    const source = new TestResource("source", { status: "idle" }, 7);
-    const aggregate = aggregateResource("mapped", [source] as const, (value) => value * 2);
+  it('coalesces concurrent initial loading at the leaf', async () => {
+    const source = new TestResource('source', { status: 'idle' }, 7);
+    const aggregate = aggregateResource('mapped', [source] as const, (value) => value * 2);
 
     await Promise.all([aggregate.ensureLoaded(), aggregate.ensureLoaded(), aggregate.ensureLoaded()]);
 
@@ -136,15 +123,13 @@ describe("computed resources", () => {
     expect(source.initialLoads).toBe(1);
   });
 
-  it("ensures dependencies discovered after a parent loads", async () => {
-    const parent = new TestResource("parent", { status: "idle" }, ["child"]);
-    const child = new TestResource("child", { status: "idle" }, 5);
-    const dependencies = () => parent.snapshot().status === "loaded"
-      ? [parent, child]
-      : [parent];
-    const dynamic = computedResource("dynamic", dependencies, () => {
+  it('ensures dependencies discovered after a parent loads', async () => {
+    const parent = new TestResource('parent', { status: 'idle' }, ['child']);
+    const child = new TestResource('child', { status: 'idle' }, 5);
+    const dependencies = () => (parent.snapshot().status === 'loaded' ? [parent, child] : [parent]);
+    const dynamic = computedResource('dynamic', dependencies, () => {
       const parentContent = parent.content();
-      if (parentContent.status !== "loaded") return parentContent as Content<number>;
+      if (parentContent.status !== 'loaded') return parentContent as Content<number>;
       return child.content();
     });
 

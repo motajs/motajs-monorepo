@@ -17,12 +17,7 @@ const MULTIPOINT_PATTERN = /^\d+(,\d+)+$/;
  * isMultipointString(1, 2) // false (非字符串)
  */
 export function isMultipointString(x: unknown, y: unknown): boolean {
-  return (
-    typeof x === "string" &&
-    typeof y === "string" &&
-    MULTIPOINT_PATTERN.test(x) &&
-    MULTIPOINT_PATTERN.test(y)
-  );
+  return typeof x === 'string' && typeof y === 'string' && MULTIPOINT_PATTERN.test(x) && MULTIPOINT_PATTERN.test(y);
 }
 
 /**
@@ -36,8 +31,8 @@ export function isMultipointString(x: unknown, y: unknown): boolean {
  * parseMultipoints("1,2,3", "4,5,6") // ["1,4", "2,5", "3,6"]
  */
 export function parseMultipoints(x: string, y: string): string[] {
-  const xx = x.split(",");
-  const yy = y.split(",");
+  const xx = x.split(',');
+  const yy = y.split(',');
   return xx.map((xVal, i) => `${xVal},${yy[i]}`);
 }
 
@@ -51,6 +46,6 @@ export function parseMultipoints(x: string, y: string): string[] {
  * getLastCoordinate("1,2,3") // 3
  */
 export function getLastCoordinate(coordString: string): number {
-  const parts = coordString.split(",");
+  const parts = coordString.split(',');
   return parseInt(parts[parts.length - 1], 10) || 0;
 }

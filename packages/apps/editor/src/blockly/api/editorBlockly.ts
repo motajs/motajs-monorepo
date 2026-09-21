@@ -76,7 +76,7 @@ export interface EditorBlocklyApi {
   import: (
     initialValue: unknown,
     options: { type?: string; contextId?: string; project?: ParseContext['project'] },
-    callbacks: EditorBlocklyCallbacks
+    callbacks: EditorBlocklyCallbacks,
   ) => void;
   /** 确认/应用编辑 */
   confirm: (apply?: boolean) => Promise<void>;
@@ -113,7 +113,7 @@ export function createEditorBlocklyApi(
     import(
       initialValue: unknown,
       options: { type?: string; contextId?: string; project?: ParseContext['project'] } = {},
-      callbacks: EditorBlocklyCallbacks
+      callbacks: EditorBlocklyCallbacks,
     ) {
       const entryType = options.type || 'common';
       const generation = ++importGeneration;
@@ -138,10 +138,12 @@ export function createEditorBlocklyApi(
         if (workspaceRef && workspaceApi?.isReady) {
           if (options.project) workspaceRef.loadEntryData(initialValue, entryType, options.project);
           else workspaceRef.loadEntryData(initialValue, entryType);
-          window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
-            if (!currentContext || generation !== importGeneration) return;
-            currentContext.callbacks.onLoaded?.();
-          }));
+          window.requestAnimationFrame(() =>
+            window.requestAnimationFrame(() => {
+              if (!currentContext || generation !== importGeneration) return;
+              currentContext.callbacks.onLoaded?.();
+            }),
+          );
           return;
         }
         setTimeout(loadWhenReady, 50);

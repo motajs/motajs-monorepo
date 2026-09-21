@@ -6,11 +6,8 @@
  * - useEditorConfig() - 获取整个配置对象（Suspense 模式）
  */
 
-import { useSyncExternalStore, useCallback } from "react";
-import {
-  editorConfigService,
-  type EditorConfig,
-} from "@/services/editorConfig";
+import { useSyncExternalStore, useCallback } from 'react';
+import { editorConfigService, type EditorConfig } from '@/services/editorConfig';
 
 /**
  * 获取单个配置项
@@ -35,14 +32,8 @@ import {
  * }
  * ```
  */
-export function useConfigItem<T>(
-  key: string,
-  defaultValue: T,
-): [T, (value: T) => void] {
-  const config = useSyncExternalStore(
-    editorConfigService.subscribe,
-    editorConfigService.getSnapshot,
-  );
+export function useConfigItem<T>(key: string, defaultValue: T): [T, (value: T) => void] {
+  const config = useSyncExternalStore(editorConfigService.subscribe, editorConfigService.getSnapshot);
 
   const value = config === null ? defaultValue : ((config[key] as T) ?? defaultValue);
 
@@ -77,10 +68,7 @@ export function useConfigItem<T>(
  * ```
  */
 export function useEditorConfig(): EditorConfig {
-  const config = useSyncExternalStore(
-    editorConfigService.subscribe,
-    editorConfigService.getSnapshot,
-  );
+  const config = useSyncExternalStore(editorConfigService.subscribe, editorConfigService.getSnapshot);
 
   if (config === null) {
     throw editorConfigService.waitForLoaded(); // Suspense: 抛 Promise

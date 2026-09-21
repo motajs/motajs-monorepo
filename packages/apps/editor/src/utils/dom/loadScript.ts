@@ -13,7 +13,7 @@ export function loadScript(
     id?: string;
     crossOrigin?: string;
     integrity?: string;
-  }
+  },
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     // 检查是否已经加载过该脚本

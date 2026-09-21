@@ -137,10 +137,7 @@
                   "ref": "prefab:cls"
                 },
                 {
-                  "literal": [
-                    "animates",
-                    "npc48"
-                  ]
+                  "literal": ["animates", "npc48"]
                 }
               ]
             },

@@ -2,30 +2,30 @@
  * PersistenceMonitor 单元测试
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
-import { PersistenceMonitor } from "../PersistenceMonitor";
-import { wait } from "@test/utils/testHelpers";
-import { effect } from "alien-signals";
+import { describe, it, expect, beforeEach } from 'vitest';
+import { PersistenceMonitor } from '../PersistenceMonitor';
+import { wait } from '@test/utils/testHelpers';
+import { effect } from 'alien-signals';
 
-describe("PersistenceMonitor", () => {
+describe('PersistenceMonitor', () => {
   let monitor: PersistenceMonitor;
 
   beforeEach(() => {
     monitor = new PersistenceMonitor();
   });
 
-  describe("createExecutor", () => {
-    it("应该创建 PersistExecutor 实例", () => {
-      const executor = monitor.createExecutor("test.txt", async () => {
+  describe('createExecutor', () => {
+    it('应该创建 PersistExecutor 实例', () => {
+      const executor = monitor.createExecutor('test.txt', async () => {
         await wait(10);
       });
 
       expect(executor).toBeDefined();
-      expect(typeof executor.exec).toBe("function");
+      expect(typeof executor.exec).toBe('function');
     });
 
-    it("创建的 executor 应该被自动监控", async () => {
-      const executor = monitor.createExecutor("test.txt", async () => {
+    it('创建的 executor 应该被自动监控', async () => {
+      const executor = monitor.createExecutor('test.txt', async () => {
         await wait(50);
       });
 
@@ -39,7 +39,7 @@ describe("PersistenceMonitor", () => {
       await wait(10);
 
       // 应该在持久化列表中
-      expect(monitor.persistingFiles()).toContain("test.txt");
+      expect(monitor.persistingFiles()).toContain('test.txt');
 
       // 等待完成
       await executor.waitForIdle();
@@ -49,25 +49,25 @@ describe("PersistenceMonitor", () => {
     });
   });
 
-  describe("persistingFiles signal", () => {
-    it("应该追踪正在持久化的文件", async () => {
-      const executor1 = monitor.createExecutor("file1.txt", async () => {
+  describe('persistingFiles signal', () => {
+    it('应该追踪正在持久化的文件', async () => {
+      const executor1 = monitor.createExecutor('file1.txt', async () => {
         await wait(50);
       });
-      const executor2 = monitor.createExecutor("file2.txt", async () => {
+      const executor2 = monitor.createExecutor('file2.txt', async () => {
         await wait(50);
       });
 
       executor1.exec();
       await wait(10);
 
-      expect(monitor.persistingFiles()).toEqual(["file1.txt"]);
+      expect(monitor.persistingFiles()).toEqual(['file1.txt']);
 
       executor2.exec();
       await wait(10);
 
-      expect(monitor.persistingFiles()).toContain("file1.txt");
-      expect(monitor.persistingFiles()).toContain("file2.txt");
+      expect(monitor.persistingFiles()).toContain('file1.txt');
+      expect(monitor.persistingFiles()).toContain('file2.txt');
 
       await executor1.waitForIdle();
       await executor2.waitForIdle();
@@ -75,8 +75,8 @@ describe("PersistenceMonitor", () => {
       expect(monitor.persistingFiles()).toEqual([]);
     });
 
-    it("应该能够订阅状态变化", async () => {
-      const executor = monitor.createExecutor("test.txt", async () => {
+    it('应该能够订阅状态变化', async () => {
+      const executor = monitor.createExecutor('test.txt', async () => {
         await wait(30);
       });
 
@@ -93,15 +93,15 @@ describe("PersistenceMonitor", () => {
       // 应该收到状态变化：[] -> ["test.txt"] -> []
       expect(states.length).toBeGreaterThanOrEqual(2);
       expect(states[0]).toEqual([]);
-      expect(states.some(s => s.includes("test.txt"))).toBe(true);
+      expect(states.some((s) => s.includes('test.txt'))).toBe(true);
     });
   });
 
-  describe("failedFiles signal", () => {
-    it("应该追踪持久化失败的文件", async () => {
-      const executor = monitor.createExecutor("test.txt", async () => {
+  describe('failedFiles signal', () => {
+    it('应该追踪持久化失败的文件', async () => {
+      const executor = monitor.createExecutor('test.txt', async () => {
         await wait(10);
-        throw new Error("Persist failed");
+        throw new Error('Persist failed');
       });
 
       executor.exec();
@@ -109,16 +109,16 @@ describe("PersistenceMonitor", () => {
 
       const failed = monitor.failedFiles();
       expect(failed).toHaveLength(1);
-      expect(failed[0].path).toBe("test.txt");
-      expect(failed[0].error.message).toBe("Persist failed");
+      expect(failed[0].path).toBe('test.txt');
+      expect(failed[0].error.message).toBe('Persist failed');
     });
 
-    it("成功持久化后应该清除失败记录", async () => {
+    it('成功持久化后应该清除失败记录', async () => {
       let shouldFail = true;
-      const executor = monitor.createExecutor("test.txt", async () => {
+      const executor = monitor.createExecutor('test.txt', async () => {
         await wait(10);
         if (shouldFail) {
-          throw new Error("Persist failed");
+          throw new Error('Persist failed');
         }
       });
 
@@ -137,9 +137,9 @@ describe("PersistenceMonitor", () => {
     });
   });
 
-  describe("hasUnsavedChanges", () => {
-    it("有文件正在持久化时应该返回 true", async () => {
-      const executor = monitor.createExecutor("test.txt", async () => {
+  describe('hasUnsavedChanges', () => {
+    it('有文件正在持久化时应该返回 true', async () => {
+      const executor = monitor.createExecutor('test.txt', async () => {
         await wait(50);
       });
 
@@ -156,11 +156,11 @@ describe("PersistenceMonitor", () => {
     });
   });
 
-  describe("hasPersistErrors", () => {
-    it("有文件持久化失败时应该返回 true", async () => {
-      const executor = monitor.createExecutor("test.txt", async () => {
+  describe('hasPersistErrors', () => {
+    it('有文件持久化失败时应该返回 true', async () => {
+      const executor = monitor.createExecutor('test.txt', async () => {
         await wait(10);
-        throw new Error("Persist failed");
+        throw new Error('Persist failed');
       });
 
       expect(monitor.hasPersistErrors()).toBe(false);
@@ -172,16 +172,16 @@ describe("PersistenceMonitor", () => {
     });
   });
 
-  describe("多文件场景", () => {
-    it("应该正确追踪多个文件的持久化状态", async () => {
-      const executor1 = monitor.createExecutor("file1.txt", async () => {
+  describe('多文件场景', () => {
+    it('应该正确追踪多个文件的持久化状态', async () => {
+      const executor1 = monitor.createExecutor('file1.txt', async () => {
         await wait(30);
       });
-      const executor2 = monitor.createExecutor("file2.txt", async () => {
+      const executor2 = monitor.createExecutor('file2.txt', async () => {
         await wait(30);
-        throw new Error("File2 failed");
+        throw new Error('File2 failed');
       });
-      const executor3 = monitor.createExecutor("file3.txt", async () => {
+      const executor3 = monitor.createExecutor('file3.txt', async () => {
         await wait(30);
       });
 
@@ -202,14 +202,14 @@ describe("PersistenceMonitor", () => {
       // file1 和 file3 成功，file2 失败
       expect(monitor.persistingFiles()).toEqual([]);
       expect(monitor.failedFiles()).toHaveLength(1);
-      expect(monitor.failedFiles()[0].path).toBe("file2.txt");
+      expect(monitor.failedFiles()[0].path).toBe('file2.txt');
     });
   });
 
-  describe("队列优化场景", () => {
-    it("快速连续触发应该合并持久化", async () => {
+  describe('队列优化场景', () => {
+    it('快速连续触发应该合并持久化', async () => {
       let executionCount = 0;
-      const executor = monitor.createExecutor("test.txt", async () => {
+      const executor = monitor.createExecutor('test.txt', async () => {
         await wait(50);
         executionCount++;
       });
@@ -226,38 +226,38 @@ describe("PersistenceMonitor", () => {
     });
   });
 
-  describe("memory-first intents", () => {
-    it("normalizes paths and keeps one controller for recreated resources", async () => {
+  describe('memory-first intents', () => {
+    it('normalizes paths and keeps one controller for recreated resources', async () => {
       const values: string[] = [];
-      monitor.schedule("./project\\data.js", {
-        kind: "write",
+      monitor.schedule('./project\\data.js', {
+        kind: 'write',
         execute: async () => {
           await wait(20);
-          values.push("old resource");
+          values.push('old resource');
         },
       });
-      monitor.schedule("project/data.js", {
-        kind: "write",
+      monitor.schedule('project/data.js', {
+        kind: 'write',
         execute: async () => {
-          values.push("new resource");
+          values.push('new resource');
         },
       });
 
-      await monitor.flush(["project/data.js"]);
-      expect(values).toEqual(["old resource", "new resource"]);
+      await monitor.flush(['project/data.js']);
+      expect(values).toEqual(['old resource', 'new resource']);
     });
 
-    it("retries the latest failed intent and clears the failure only after success", async () => {
+    it('retries the latest failed intent and clears the failure only after success', async () => {
       let shouldFail = true;
       let attempts = 0;
-      monitor.schedule("project/data.js", {
-        kind: "write",
+      monitor.schedule('project/data.js', {
+        kind: 'write',
         execute: async () => {
           attempts += 1;
-          if (shouldFail) throw new Error("disk unavailable");
+          if (shouldFail) throw new Error('disk unavailable');
         },
       });
-      await monitor.whenQuiescent(["project/data.js"]);
+      await monitor.whenQuiescent(['project/data.js']);
       expect(monitor.failedFiles()).toHaveLength(1);
 
       shouldFail = false;
@@ -266,25 +266,25 @@ describe("PersistenceMonitor", () => {
       expect(monitor.failedFiles()).toEqual([]);
     });
 
-    it("keeps partial retry failures in the aggregate", async () => {
+    it('keeps partial retry failures in the aggregate', async () => {
       let recoverFirst = false;
-      monitor.schedule("first.js", {
-        kind: "write",
+      monitor.schedule('first.js', {
+        kind: 'write',
         execute: async () => {
-          if (!recoverFirst) throw new Error("first failed");
+          if (!recoverFirst) throw new Error('first failed');
         },
       });
-      monitor.schedule("second.js", {
-        kind: "write",
+      monitor.schedule('second.js', {
+        kind: 'write',
         execute: async () => {
-          throw new Error("second failed");
+          throw new Error('second failed');
         },
       });
       await monitor.whenQuiescent();
 
       recoverFirst = true;
       const remaining = await monitor.retryFailed();
-      expect(remaining.map((failure) => failure.path)).toEqual(["second.js"]);
+      expect(remaining.map((failure) => failure.path)).toEqual(['second.js']);
     });
   });
 });

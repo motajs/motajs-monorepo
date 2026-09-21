@@ -1,10 +1,10 @@
-import { useEventEditor } from "@/Workbench/EventsEditor/EventEditorContext";
-import { Zap } from "lucide-react";
-import { type FC, useMemo } from "react";
-import { CollectionControl } from "./CollectionControl";
-import { evaluateExpression } from "./expression";
-import type { AutoEventEditingPage } from "./normalizers";
-import type { DataReference, FieldSchema, SchemaScope } from "./types";
+import { useEventEditor } from '@/Workbench/EventsEditor/EventEditorContext';
+import { Zap } from 'lucide-react';
+import { type FC, useMemo } from 'react';
+import { CollectionControl } from './CollectionControl';
+import { evaluateExpression } from './expression';
+import type { AutoEventEditingPage } from './normalizers';
+import type { DataReference, FieldSchema, SchemaScope } from './types';
 
 interface AutoEventListFieldEditorProps {
   fieldSchemaId: string;
@@ -18,26 +18,24 @@ interface AutoEventListFieldEditorProps {
 function referencedValue(reference: DataReference | undefined, scope: SchemaScope): unknown {
   if (!reference) return undefined;
   const result = evaluateExpression(reference, scope);
-  return result.status === "ready" ? result.value : undefined;
+  return result.status === 'ready' ? result.value : undefined;
 }
 
 function eventPosition(value: unknown): { x: number; y: number } | undefined {
   if (Array.isArray(value) && value.length >= 2 && value.every(Number.isFinite)) {
     return { x: Number(value[0]), y: Number(value[1]) };
   }
-  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
   const record = value as Record<string, unknown>;
   return Number.isFinite(record.x) && Number.isFinite(record.y)
     ? { x: Number(record.x), y: Number(record.y) }
     : undefined;
 }
 
-function pageSummary(value: AutoEventEditingPage["value"]): string {
-  if (value == null) return "未配置";
-  const condition = typeof value.condition === "string" && value.condition
-    ? value.condition
-    : "无条件";
-  const priority = typeof value.priority === "number" ? `优先级 ${value.priority}` : "优先级 0";
+function pageSummary(value: AutoEventEditingPage['value']): string {
+  if (value == null) return '未配置';
+  const condition = typeof value.condition === 'string' && value.condition ? value.condition : '无条件';
+  const priority = typeof value.priority === 'number' ? `优先级 ${value.priority}` : '优先级 0';
   return `${condition} · ${priority}`;
 }
 
@@ -55,15 +53,12 @@ export const AutoEventListFieldEditor: FC<AutoEventListFieldEditorProps> = ({
 }) => {
   const eventEditor = useEventEditor();
   const descriptor = schema.editor;
-  const pages = useMemo(
-    () => Array.isArray(value) ? value as AutoEventEditingPage[] : [],
-    [value],
-  );
-  if (descriptor.kind !== "autoEventList") return null;
+  const pages = useMemo(() => (Array.isArray(value) ? (value as AutoEventEditingPage[]) : []), [value]);
+  if (descriptor.kind !== 'autoEventList') return null;
 
   const floorIdValue = referencedValue(descriptor.floorId, scope);
   const positionValue = referencedValue(descriptor.position, scope);
-  const floorId = typeof floorIdValue === "string" ? floorIdValue : undefined;
+  const floorId = typeof floorIdValue === 'string' ? floorIdValue : undefined;
   const position = eventPosition(positionValue);
 
   const editPage = (index: number) => {
@@ -71,13 +66,13 @@ export const AutoEventListFieldEditor: FC<AutoEventListFieldEditorProps> = ({
     if (!page || disabled) return;
     eventEditor.open({
       contextId: `schema-table:${fieldSchemaId}:${page.id}`,
-      entryType: "autoEvent",
+      entryType: 'autoEvent',
       initialValue: page.value,
       floorId,
       position,
       onConfirm: async (nextValue) => {
-        if (!nextValue || typeof nextValue !== "object" || Array.isArray(nextValue)) {
-          throw new Error("自动事件编辑器必须返回一个自动事件对象");
+        if (!nextValue || typeof nextValue !== 'object' || Array.isArray(nextValue)) {
+          throw new Error('自动事件编辑器必须返回一个自动事件对象');
         }
         const next = [...pages];
         next[index] = {

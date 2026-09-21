@@ -5,13 +5,7 @@
  */
 
 import { isEqual } from 'es-toolkit';
-import {
-  deleteByFieldPath,
-  buildFieldPath,
-  getByFieldPath,
-  parseFieldPath,
-  setByFieldPath,
-} from '@/utils/fieldPath';
+import { deleteByFieldPath, buildFieldPath, getByFieldPath, parseFieldPath, setByFieldPath } from '@/utils/fieldPath';
 
 /** 操作类型 */
 export type ActionType = 'change' | 'add' | 'delete';
@@ -108,11 +102,7 @@ function firstMissingFieldPath(target: unknown, path: string): string | null {
   let current = target;
   for (let index = 0; index < keys.length; index += 1) {
     const key = keys[index];
-    if (
-      current == null ||
-      typeof current !== 'object' ||
-      !Object.prototype.hasOwnProperty.call(current, key)
-    ) {
+    if (current == null || typeof current !== 'object' || !Object.prototype.hasOwnProperty.call(current, key)) {
       return buildFieldPath(keys.slice(0, index + 1));
     }
     current = (current as Record<string, unknown>)[key];
@@ -124,10 +114,7 @@ function firstMissingFieldPath(target: unknown, path: string): string | null {
  * Applies actions and returns the smallest inverse action list needed to restore
  * the original value. Inverses are returned in execution order.
  */
-export function applyActionsWithInverse(
-  target: Record<string, unknown>,
-  actions: Action[],
-): Action[] {
+export function applyActionsWithInverse(target: Record<string, unknown>, actions: Action[]): Action[] {
   const inverse: Action[] = [];
 
   for (const action of actions) {
@@ -142,11 +129,7 @@ export function applyActionsWithInverse(
     }
 
     applyAction(target, action);
-    inverse.unshift(
-      existed
-        ? ['change', path, previous]
-        : ['delete', missingPath ?? path, undefined],
-    );
+    inverse.unshift(existed ? ['change', path, previous] : ['delete', missingPath ?? path, undefined]);
   }
 
   return inverse;

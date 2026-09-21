@@ -1,14 +1,14 @@
-import { readdir, readFile } from "node:fs/promises";
-import path from "node:path";
-import { MOTA_JS_ROOT } from "../../mota-root";
+import { readdir, readFile } from 'node:fs/promises';
+import path from 'node:path';
+import { MOTA_JS_ROOT } from '../../mota-root';
 
-import { FileHandler } from "@/fs/FileHandler";
-import { FileHandlerManager } from "@/fs/FileHandlerManager";
-import { persistenceMonitor } from "@/fs/PersistenceMonitor";
-import { projectData } from "@/project/data/projectData";
-import { projectModel } from "@/project/model/projectModel";
-import type { DataResource } from "@/project/data/DataResource";
-import { MemoryFileSystem } from "./MemoryFileSystem";
+import { FileHandler } from '@/fs/FileHandler';
+import { FileHandlerManager } from '@/fs/FileHandlerManager';
+import { persistenceMonitor } from '@/fs/PersistenceMonitor';
+import { projectData } from '@/project/data/projectData';
+import { projectModel } from '@/project/model/projectModel';
+import type { DataResource } from '@/project/data/DataResource';
+import { MemoryFileSystem } from './MemoryFileSystem';
 
 interface FileHandlerManagerInternals {
   handlers: Map<string, FileHandler>;
@@ -24,7 +24,7 @@ export interface SampleProjectContext {
   hasFile(path: string): boolean;
 }
 
-const PROJECT_ROOT = path.join(MOTA_JS_ROOT, "project");
+const PROJECT_ROOT = path.join(MOTA_JS_ROOT, 'project');
 
 async function collectProjectFiles(dir: string = PROJECT_ROOT): Promise<string[]> {
   const entries = await readdir(dir, { withFileTypes: true });
@@ -33,7 +33,7 @@ async function collectProjectFiles(dir: string = PROJECT_ROOT): Promise<string[]
   for (const entry of entries) {
     const absolute = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      result.push(...await collectProjectFiles(absolute));
+      result.push(...(await collectProjectFiles(absolute)));
     } else if (entry.isFile()) {
       result.push(absolute);
     }
@@ -43,7 +43,7 @@ async function collectProjectFiles(dir: string = PROJECT_ROOT): Promise<string[]
 }
 
 function toProjectPath(absolute: string): string {
-  return `project/${path.relative(PROJECT_ROOT, absolute).split(path.sep).join("/")}`;
+  return `project/${path.relative(PROJECT_ROOT, absolute).split(path.sep).join('/')}`;
 }
 
 function injectHandler(filePath: string, handler: FileHandler): void {
@@ -60,11 +60,11 @@ export async function loadSampleProject(): Promise<SampleProjectContext> {
   for (const absolute of await collectProjectFiles()) {
     const filePath = toProjectPath(absolute);
     const content = await readFile(absolute);
-    if (!absolute.endsWith(".js")) {
-      fs.setFile(filePath, content.toString("base64"));
+    if (!absolute.endsWith('.js')) {
+      fs.setFile(filePath, content.toString('base64'));
       continue;
     }
-    fs.setFile(filePath, content.toString("utf-8"));
+    fs.setFile(filePath, content.toString('utf-8'));
     const handler = new FileHandler(filePath, fs.createFsInterface());
     await handler.load();
     injectHandler(filePath, handler);
@@ -104,7 +104,7 @@ export async function loadSampleProject(): Promise<SampleProjectContext> {
     readBytes(filePath: string): Uint8Array {
       const content = fs.getFile(filePath);
       if (content == null) throw new Error(`Missing file ${filePath}`);
-      return new Uint8Array(Buffer.from(content, "base64"));
+      return new Uint8Array(Buffer.from(content, 'base64'));
     },
     hasFile(filePath: string): boolean {
       return fs.hasFile(filePath);

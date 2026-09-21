@@ -1,7 +1,7 @@
-import { useCallback, useState } from "react";
-import { ModalShell } from "../shared/ModalShell";
-import type { CheckboxSetConfig, CheckboxSetOptions, UseModalReturn } from "../shared/types";
-import { CheckboxSetContent } from "./CheckboxSetContent";
+import { useCallback, useState } from 'react';
+import { ModalShell } from '../shared/ModalShell';
+import type { CheckboxSetConfig, CheckboxSetOptions, UseModalReturn } from '../shared/types';
+import { CheckboxSetContent } from './CheckboxSetContent';
 
 interface CheckboxSetState extends CheckboxSetOptions {
   resolvedComments: CheckboxSetConfig;
@@ -20,9 +20,7 @@ export function useCheckboxSetModal(): UseModalReturn<CheckboxSetOptions, Array<
 
   const open = useCallback((options: CheckboxSetOptions) => {
     return new Promise<Array<string | number> | null>((resolve) => {
-      const resolvedComments = typeof options.comments === "function"
-        ? options.comments()
-        : options.comments;
+      const resolvedComments = typeof options.comments === 'function' ? options.comments() : options.comments;
       setState({ ...options, resolvedComments, resolve });
       setSelected(normalizeInitialValue(options.value));
     });
@@ -46,11 +44,7 @@ export function useCheckboxSetModal(): UseModalReturn<CheckboxSetOptions, Array<
       onConfirm={handleConfirm}
       overflow="auto"
     >
-      <CheckboxSetContent
-        value={selected}
-        comments={state.resolvedComments}
-        onChange={setSelected}
-      />
+      <CheckboxSetContent value={selected} comments={state.resolvedComments} onChange={setSelected} />
     </ModalShell>
   ) : null;
 

@@ -9,13 +9,13 @@
  * - 提供 Suspense 友好的 API
  */
 
-import { signal, effect } from "alien-signals";
-import { FileHandlerManager } from "@/fs/FileHandlerManager";
-import { waitUntil } from "@/utils/base/signal";
-import type { ReadonlySignal } from "@/fs/interfaces";
+import { signal, effect } from 'alien-signals';
+import { FileHandlerManager } from '@/fs/FileHandlerManager';
+import { waitUntil } from '@/utils/base/signal';
+import type { ReadonlySignal } from '@/fs/interfaces';
 
 /** 配置文件路径 */
-const CONFIG_PATH = "_server/config.json";
+const CONFIG_PATH = '_server/config.json';
 
 /**
  * 编辑器配置类型
@@ -48,7 +48,7 @@ class EditorConfigServiceImpl {
     await this.fileHandler.load();
     const rawContent = this.fileHandler.getContent();
 
-    if (rawContent.status === "loaded") {
+    if (rawContent.status === 'loaded') {
       try {
         const parsed = JSON.parse(rawContent.value) as EditorConfig;
         const merged = { ...parsed, ...this.pendingUpdates };
@@ -59,10 +59,10 @@ class EditorConfigServiceImpl {
         }
         return;
       } catch {
-        console.warn("配置文件损坏，切换到 in-memory 模式");
+        console.warn('配置文件损坏，切换到 in-memory 模式');
       }
     } else {
-      console.warn("配置文件不存在，切换到 in-memory 模式");
+      console.warn('配置文件不存在，切换到 in-memory 模式');
     }
 
     // 进入 in-memory 模式

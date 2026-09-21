@@ -1,11 +1,11 @@
-import { projectData } from "@/project/data/projectData";
-import type { Action } from "@/utils/action";
-import { cloneDeep } from "es-toolkit";
-import { executePatchCommand } from "@/project/history";
-import { commandError, type CommandResult } from "./types";
-import { assertMapMatrixSize, type MapMatrix } from "./mapMatrix";
-import { buildFieldPath } from "@/utils/fieldPath";
-import { getMapLayerSettingsSnapshot } from "@/project/settings/mapLayerSettings";
+import { projectData } from '@/project/data/projectData';
+import type { Action } from '@/utils/action';
+import { cloneDeep } from 'es-toolkit';
+import { executePatchCommand } from '@/project/history';
+import { commandError, type CommandResult } from './types';
+import { assertMapMatrixSize, type MapMatrix } from './mapMatrix';
+import { buildFieldPath } from '@/utils/fieldPath';
+import { getMapLayerSettingsSnapshot } from '@/project/settings/mapLayerSettings';
 
 /** 楼层上的图块矩阵属性名。map 是唯一携带坐标事件的图层。 */
 export type MapLayer = string;
@@ -89,19 +89,18 @@ export interface ChangeFloorTarget {
 }
 
 export type ResolveChangeFloorTargetResult =
-  | { ok: true; target: ChangeFloorTarget }
-  | { ok: false; stage: string; error: Error };
+  { ok: true; target: ChangeFloorTarget } | { ok: false; stage: string; error: Error };
 
 export const MAP_EVENT_FIELDS = [
-  "events",
-  "beforeBattle",
-  "afterBattle",
-  "afterGetItem",
-  "afterOpenDoor",
-  "changeFloor",
-  "autoEvent",
-  "cannotMove",
-  "cannotMoveIn",
+  'events',
+  'beforeBattle',
+  'afterBattle',
+  'afterGetItem',
+  'afterOpenDoor',
+  'changeFloor',
+  'autoEvent',
+  'cannotMove',
+  'cannotMoveIn',
 ] as const;
 
 function layerPath(layer: MapLayer, pos: MapPosition): string {
@@ -112,7 +111,7 @@ function locKey(pos: MapPosition): string {
   return `${pos.x},${pos.y}`;
 }
 
-function normalizePositions(options: Pick<PaintOptions, "positions" | "pos">): MapPosition[] {
+function normalizePositions(options: Pick<PaintOptions, 'positions' | 'pos'>): MapPosition[] {
   const positions = options.positions ?? (options.pos ? [options.pos] : []);
   const unique = new Map<string, MapPosition>();
 
@@ -124,54 +123,48 @@ function normalizePositions(options: Pick<PaintOptions, "positions" | "pos">): M
   }
 
   if (unique.size === 0) {
-    throw new Error("No map positions to paint");
+    throw new Error('No map positions to paint');
   }
 
   return [...unique.values()];
 }
 
-export function tilesetPatternIdnum(
-  pattern: TilesetPaintPattern,
-  anchor: MapPosition,
-  position: MapPosition,
-): number {
-  const dx = ((position.x - anchor.x) % pattern.width + pattern.width) % pattern.width;
-  const dy = ((position.y - anchor.y) % pattern.height + pattern.height) % pattern.height;
-  return pattern.startIdnum
-    + (pattern.sourceY + dy) * pattern.columns
-    + pattern.sourceX + dx;
+export function tilesetPatternIdnum(pattern: TilesetPaintPattern, anchor: MapPosition, position: MapPosition): number {
+  const dx = (((position.x - anchor.x) % pattern.width) + pattern.width) % pattern.width;
+  const dy = (((position.y - anchor.y) % pattern.height) + pattern.height) % pattern.height;
+  return pattern.startIdnum + (pattern.sourceY + dy) * pattern.columns + pattern.sourceX + dx;
 }
 
 function resolvePaintValue(options: PaintOptions): number {
-  if (typeof options.idnum === "number") return options.idnum;
+  if (typeof options.idnum === 'number') return options.idnum;
   if (options.block === 0) return 0;
-  if (typeof options.block === "number") return options.block;
+  if (typeof options.block === 'number') return options.block;
   if (options.block?.idnum != null) return options.block.idnum;
-  throw new Error("Paint block is missing idnum");
+  throw new Error('Paint block is missing idnum');
 }
 
 function stairActions(layer: MapLayer, pos: MapPosition, block: PaintBlock | undefined): Action[] {
-  if (layer !== "map" || !block || typeof block !== "object") return [];
+  if (layer !== 'map' || !block || typeof block !== 'object') return [];
 
   const changeFloor = changeFloorForStairBlock(block.id);
   if (!changeFloor) return [];
 
   const key = locKey(pos);
-  return [["change", `['changeFloor']['${key}']`, changeFloor]];
+  return [['change', `['changeFloor']['${key}']`, changeFloor]];
 }
 
 function changeFloorForStairBlock(blockId: string | undefined): Record<string, unknown> | null {
   switch (blockId) {
-    case "upFloor":
-      return { floorId: ":next", stair: "downFloor" };
-    case "downFloor":
-      return { floorId: ":before", stair: "upFloor" };
-    case "leftPortal":
-    case "rightPortal":
-      return { floorId: ":next", stair: ":symmetry_x" };
-    case "upPortal":
-    case "downPortal":
-      return { floorId: ":next", stair: ":symmetry_y" };
+    case 'upFloor':
+      return { floorId: ':next', stair: 'downFloor' };
+    case 'downFloor':
+      return { floorId: ':before', stair: 'upFloor' };
+    case 'leftPortal':
+    case 'rightPortal':
+      return { floorId: ':next', stair: ':symmetry_x' };
+    case 'upPortal':
+    case 'downPortal':
+      return { floorId: ':next', stair: ':symmetry_y' };
     default:
       return null;
   }
@@ -179,11 +172,7 @@ function changeFloorForStairBlock(blockId: string | undefined): Record<string, u
 
 function clearEventActions(pos: MapPosition): Action[] {
   const key = locKey(pos);
-  return MAP_EVENT_FIELDS.map((field) => [
-    "delete",
-    `['${field}']['${key}']`,
-    undefined,
-  ]);
+  return MAP_EVENT_FIELDS.map((field) => ['delete', `['${field}']['${key}']`, undefined]);
 }
 
 function isInsideLayer(layerMap: unknown, pos: MapPosition): boolean {
@@ -194,8 +183,8 @@ function isInsideLayer(layerMap: unknown, pos: MapPosition): boolean {
 
 function getMatrixSize(floor: Record<string, unknown>): { width: number; height: number } {
   const map = Array.isArray(floor.map) ? floor.map : [];
-  const width = typeof floor.width === "number" ? floor.width : (Array.isArray(map[0]) ? map[0].length : 0);
-  const height = typeof floor.height === "number" ? floor.height : map.length;
+  const width = typeof floor.width === 'number' ? floor.width : Array.isArray(map[0]) ? map[0].length : 0;
+  const height = typeof floor.height === 'number' ? floor.height : map.length;
   return { width, height };
 }
 
@@ -205,27 +194,28 @@ function createZeroMatrix(width: number, height: number): number[][] {
 
 function normalizedLayerMatrix(floor: Record<string, unknown>, layer: MapLayer): unknown[][] {
   const { width, height } = getMatrixSize(floor);
-  const source = Array.isArray(floor[layer]) ? floor[layer] as unknown[] : [];
+  const source = Array.isArray(floor[layer]) ? (floor[layer] as unknown[]) : [];
   return Array.from({ length: height }, (_, y) => {
     const row = source[y];
-    return Array.from({ length: width }, (_, x) => Array.isArray(row) ? row[x] ?? 0 : 0);
+    return Array.from({ length: width }, (_, x) => (Array.isArray(row) ? (row[x] ?? 0) : 0));
   });
 }
 
 function initializeLayerActions(floor: Record<string, unknown>, layer: MapLayer): Action[] {
   const { width, height } = getMatrixSize(floor);
   const current = floor[layer];
-  const valid = Array.isArray(current)
-    && current.length === height
-    && current.every((row) => Array.isArray(row) && row.length === width);
-  return valid ? [] : [["change", buildFieldPath([layer]), normalizedLayerMatrix(floor, layer)]];
+  const valid =
+    Array.isArray(current) &&
+    current.length === height &&
+    current.every((row) => Array.isArray(row) && row.length === width);
+  return valid ? [] : [['change', buildFieldPath([layer]), normalizedLayerMatrix(floor, layer)]];
 }
 
 function readLayerCell(floor: Record<string, unknown>, layer: MapLayer, pos: MapPosition): unknown {
   const layerMap = floor[layer];
   if (!Array.isArray(layerMap)) return 0;
   const row = layerMap[pos.y];
-  return Array.isArray(row) ? row[pos.x] ?? 0 : 0;
+  return Array.isArray(row) ? (row[pos.x] ?? 0) : 0;
 }
 
 function readLocEvents(floor: Record<string, unknown>, pos: MapPosition): Record<string, unknown> {
@@ -241,7 +231,7 @@ function readLocEvents(floor: Record<string, unknown>, pos: MapPosition): Record
 function normalizeRect(rect: MapRect): MapRect {
   const values = [rect.x0, rect.y0, rect.x1, rect.y1];
   if (values.some((value) => !Number.isInteger(value))) {
-    throw new Error(`Invalid map rectangle: ${values.join(",")}`);
+    throw new Error(`Invalid map rectangle: ${values.join(',')}`);
   }
   return {
     x0: Math.min(rect.x0, rect.x1),
@@ -251,11 +241,7 @@ function normalizeRect(rect: MapRect): MapRect {
   };
 }
 
-export function readMapInfo(
-  floor: Record<string, unknown>,
-  layer: MapLayer,
-  rect: MapRect,
-): CopiedMapInfo {
+export function readMapInfo(floor: Record<string, unknown>, layer: MapLayer, rect: MapRect): CopiedMapInfo {
   const normalized = normalizeRect(rect);
   const data: CopiedMapCell[] = [];
   for (let y = normalized.y0; y <= normalized.y1; y += 1) {
@@ -263,7 +249,7 @@ export function readMapInfo(
       const pos = { x, y };
       data.push({
         map: cloneDeep(readLayerCell(floor, layer, pos)),
-        events: layer === "map" ? readLocEvents(floor, pos) : {},
+        events: layer === 'map' ? readLocEvents(floor, pos) : {},
       });
     }
   }
@@ -275,36 +261,28 @@ export function readMapInfo(
   };
 }
 
-function writeLocEventActions(
-  actions: Action[],
-  pos: MapPosition,
-  events: Record<string, unknown>,
-): void {
+function writeLocEventActions(actions: Action[], pos: MapPosition, events: Record<string, unknown>): void {
   const key = locKey(pos);
   for (const field of MAP_EVENT_FIELDS) {
-    actions.push([
-      events[field] == null ? "delete" : "change",
-      `['${field}']['${key}']`,
-      cloneDeep(events[field]),
-    ]);
+    actions.push([events[field] == null ? 'delete' : 'change', `['${field}']['${key}']`, cloneDeep(events[field])]);
   }
 }
 
 function resolveRelativeFloorId(currentFloorId: string, targetFloorId: unknown, floorIds: string[]): string {
-  if (typeof targetFloorId !== "string" || targetFloorId.length === 0) {
-    throw new Error("changeFloor target is missing floorId");
+  if (typeof targetFloorId !== 'string' || targetFloorId.length === 0) {
+    throw new Error('changeFloor target is missing floorId');
   }
 
-  if (targetFloorId === ":next" || targetFloorId === ":before") {
+  if (targetFloorId === ':next' || targetFloorId === ':before') {
     const index = floorIds.indexOf(currentFloorId);
     if (index < 0) throw new Error(`Current floor ${currentFloorId} is not in floorIds`);
-    const offset = targetFloorId === ":next" ? 1 : -1;
+    const offset = targetFloorId === ':next' ? 1 : -1;
     const resolved = floorIds[index + offset];
     if (!resolved) throw new Error(`Cannot resolve ${targetFloorId} from ${currentFloorId}`);
     return resolved;
   }
 
-  if (targetFloorId.startsWith(":")) {
+  if (targetFloorId.startsWith(':')) {
     throw new Error(`Unsupported dynamic floor target: ${targetFloorId}`);
   }
 
@@ -329,21 +307,21 @@ class MapCommands {
     floorId: string,
     actions: Action[],
     label = `修改地图 ${floorId}`,
-    stage = "patch-map-floor",
+    stage = 'patch-map-floor',
   ): Promise<CommandResult> {
     return executePatchCommand(projectData.floor(floorId), actions, { label, stage });
   }
 
   async paint(options: PaintOptions): Promise<CommandResult> {
     try {
-      const layer = options.layer ?? "map";
+      const layer = options.layer ?? 'map';
       const positions = normalizePositions(options);
       const value = resolvePaintValue(options);
       const floor = projectData.floor(options.floorId).value() as unknown as Record<string, unknown>;
       const actions: Action[] = initializeLayerActions(floor, layer);
 
       for (const pos of positions) {
-        actions.push(["change", layerPath(layer, pos), value]);
+        actions.push(['change', layerPath(layer, pos), value]);
         actions.push(...stairActions(layer, pos, options.block));
       }
 
@@ -351,57 +329,60 @@ class MapCommands {
         options.floorId,
         actions,
         `绘制地图 ${options.floorId}（${positions.length} 格）`,
-        "paint-map",
+        'paint-map',
       );
     } catch (error) {
-      return commandError("paint-map", error);
+      return commandError('paint-map', error);
     }
   }
 
   async paintPattern(options: PaintPatternOptions): Promise<CommandResult> {
     try {
-      const layer = options.layer ?? "map";
+      const layer = options.layer ?? 'map';
       const positions = normalizePositions({ positions: options.targetPositions });
       const pattern = options.tileset;
       if (
-        !Number.isInteger(pattern.width) || pattern.width <= 0
-        || !Number.isInteger(pattern.height) || pattern.height <= 0
-        || !Number.isInteger(pattern.columns) || pattern.columns <= 0
-        || !Number.isInteger(pattern.rows) || pattern.rows <= 0
+        !Number.isInteger(pattern.width) ||
+        pattern.width <= 0 ||
+        !Number.isInteger(pattern.height) ||
+        pattern.height <= 0 ||
+        !Number.isInteger(pattern.columns) ||
+        pattern.columns <= 0 ||
+        !Number.isInteger(pattern.rows) ||
+        pattern.rows <= 0
       ) {
-        throw new Error("Invalid tileset pattern dimensions");
+        throw new Error('Invalid tileset pattern dimensions');
       }
       if (
-        pattern.sourceX < 0 || pattern.sourceY < 0
-        || pattern.sourceX + pattern.width > pattern.columns
-        || pattern.sourceY + pattern.height > pattern.rows
+        pattern.sourceX < 0 ||
+        pattern.sourceY < 0 ||
+        pattern.sourceX + pattern.width > pattern.columns ||
+        pattern.sourceY + pattern.height > pattern.rows
       ) {
-        throw new Error("Tileset pattern source is outside the image");
+        throw new Error('Tileset pattern source is outside the image');
       }
 
       const floor = projectData.floor(options.floorId).value() as unknown as Record<string, unknown>;
-      const actions: Action[] = [...initializeLayerActions(floor, layer), ...positions.map((pos): Action => [
-        "change",
-        layerPath(layer, pos),
-        tilesetPatternIdnum(pattern, options.anchor, pos),
-      ])];
+      const actions: Action[] = [
+        ...initializeLayerActions(floor, layer),
+        ...positions.map((pos): Action => [
+          'change',
+          layerPath(layer, pos),
+          tilesetPatternIdnum(pattern, options.anchor, pos),
+        ]),
+      ];
       return this.patchFloor(
         options.floorId,
         actions,
         `平铺 tileset ${options.floorId}（${positions.length} 格）`,
-        "paint-tileset-pattern",
+        'paint-tileset-pattern',
       );
     } catch (error) {
-      return commandError("paint-tileset-pattern", error);
+      return commandError('paint-tileset-pattern', error);
     }
   }
 
-  async clearArea(
-    floorId: string,
-    layer: MapLayer,
-    rect: MapRect,
-    includeEvents = true,
-  ): Promise<CommandResult> {
+  async clearArea(floorId: string, layer: MapLayer, rect: MapRect, includeEvents = true): Promise<CommandResult> {
     try {
       const normalized = normalizeRect(rect);
       const floor = projectData.floor(floorId).value() as unknown as Record<string, unknown>;
@@ -411,19 +392,14 @@ class MapCommands {
         for (let x = normalized.x0; x <= normalized.x1; x += 1) {
           const pos = { x, y };
           if (!isInsideLayer(layerMap, pos)) continue;
-          actions.push(["change", layerPath(layer, pos), 0]);
-          if (layer === "map" && includeEvents) actions.push(...clearEventActions(pos));
+          actions.push(['change', layerPath(layer, pos), 0]);
+          if (layer === 'map' && includeEvents) actions.push(...clearEventActions(pos));
         }
       }
-      if (actions.length === 0) throw new Error("Map area does not intersect the floor");
-      return this.patchFloor(
-        floorId,
-        actions,
-        `清除地图区域 ${floorId}`,
-        "clear-map-area",
-      );
+      if (actions.length === 0) throw new Error('Map area does not intersect the floor');
+      return this.patchFloor(floorId, actions, `清除地图区域 ${floorId}`, 'clear-map-area');
     } catch (error) {
-      return commandError("clear-map-area", error);
+      return commandError('clear-map-area', error);
     }
   }
 
@@ -432,7 +408,7 @@ class MapCommands {
       floorId,
       clearEventActions(pos),
       `清除位置事件 ${floorId} (${pos.x},${pos.y})`,
-      "clear-map-events",
+      'clear-map-events',
     );
   }
 
@@ -440,35 +416,30 @@ class MapCommands {
     const floor = projectData.floor(floorId).value() as unknown as Record<string, unknown>;
     return this.patchFloor(
       floorId,
-      [...initializeLayerActions(floor, layer), ["change", layerPath(layer, pos), 0]],
+      [...initializeLayerActions(floor, layer), ['change', layerPath(layer, pos), 0]],
       `清除图块 ${floorId} (${pos.x},${pos.y})`,
-      "clear-map-block",
+      'clear-map-block',
     );
   }
 
   async clearLoc(floorId: string, layer: MapLayer, pos: MapPosition): Promise<CommandResult> {
     const floor = projectData.floor(floorId).value() as unknown as Record<string, unknown>;
-    const actions: Action[] = [...initializeLayerActions(floor, layer), ["change", layerPath(layer, pos), 0]];
-    if (layer === "map") actions.push(...clearEventActions(pos));
+    const actions: Action[] = [...initializeLayerActions(floor, layer), ['change', layerPath(layer, pos), 0]];
+    if (layer === 'map') actions.push(...clearEventActions(pos));
 
-    return this.patchFloor(
-      floorId,
-      actions,
-      `清除位置 ${floorId} (${pos.x},${pos.y})`,
-      "clear-map-loc",
-    );
+    return this.patchFloor(floorId, actions, `清除位置 ${floorId} (${pos.x},${pos.y})`, 'clear-map-loc');
   }
 
   async pasteInfo(options: PasteMapInfoOptions): Promise<CommandResult> {
-    const targetLayer = options.layer ?? "map";
-    const sourceLayer = options.info.layer ?? "map";
+    const targetLayer = options.layer ?? 'map';
+    const sourceLayer = options.info.layer ?? 'map';
     const width = options.info.w ?? 1;
     const height = options.info.h ?? 1;
     const data = options.info.data ?? [];
 
     try {
       if (!Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0) {
-        throw new Error("Copied map info has invalid size");
+        throw new Error('Copied map info has invalid size');
       }
 
       const floor = projectData.floor(options.floorId).value() as Record<string, unknown>;
@@ -482,13 +453,13 @@ class MapCommands {
           if (!one || !isInsideLayer(layerMap, { x, y })) continue;
 
           const targetPos = { x, y };
-          actions.push(["change", layerPath(targetLayer, targetPos), one.map]);
+          actions.push(['change', layerPath(targetLayer, targetPos), one.map]);
 
-          if (sourceLayer === "map" && targetLayer === "map") {
+          if (sourceLayer === 'map' && targetLayer === 'map') {
             const key = locKey(targetPos);
             for (const field of MAP_EVENT_FIELDS) {
               actions.push([
-                one.events[field] == null ? "delete" : "change",
+                one.events[field] == null ? 'delete' : 'change',
                 `['${field}']['${key}']`,
                 structuredClone(one.events[field]),
               ]);
@@ -501,30 +472,26 @@ class MapCommands {
         options.floorId,
         actions,
         `粘贴地图区域 ${options.floorId}（${width}x${height}）`,
-        "paste-map-info",
+        'paste-map-info',
       );
     } catch (error) {
-      return commandError("paste-map-info", error);
+      return commandError('paste-map-info', error);
     }
   }
 
-  async replaceLayer(
-    floorId: string,
-    layer: MapLayer,
-    matrix: MapMatrix,
-  ): Promise<CommandResult> {
+  async replaceLayer(floorId: string, layer: MapLayer, matrix: MapMatrix): Promise<CommandResult> {
     try {
       const floor = projectData.floor(floorId).value() as Record<string, unknown>;
       const { width, height } = getMatrixSize(floor);
       assertMapMatrixSize(matrix, { width, height });
       return this.patchFloor(
         floorId,
-        [["change", `['${layer}']`, matrix]],
+        [['change', `['${layer}']`, matrix]],
         `替换地图图层 ${floorId} / ${layer}`,
-        "replace-map-layer",
+        'replace-map-layer',
       );
     } catch (error) {
-      return commandError("replace-map-layer", error);
+      return commandError('replace-map-layer', error);
     }
   }
 
@@ -535,27 +502,28 @@ class MapCommands {
       const { width, height } = getMatrixSize(record);
       const zero = createZeroMatrix(width, height);
       const actions: Action[] = [
-        ...layers.map(({ property }): Action => ["change", buildFieldPath([property]), cloneDeep(zero)]),
-        ["change", "['firstArrive']", []],
-        ["change", "['eachArrive']", []],
-        ...MAP_EVENT_FIELDS.map((field): Action => ["change", `['${field}']`, {}]),
+        ...layers.map(({ property }): Action => ['change', buildFieldPath([property]), cloneDeep(zero)]),
+        ['change', "['firstArrive']", []],
+        ['change', "['eachArrive']", []],
+        ...MAP_EVENT_FIELDS.map((field): Action => ['change', `['${field}']`, {}]),
       ];
-      return this.patchFloor(floorId, actions, `清空楼层地图 ${floorId}`, "clear-floor-map");
+      return this.patchFloor(floorId, actions, `清空楼层地图 ${floorId}`, 'clear-floor-map');
     } catch (error) {
-      return commandError("clear-floor-map", error);
+      return commandError('clear-floor-map', error);
     }
   }
 
   async moveLoc(options: MoveLocOptions): Promise<CommandResult> {
-    const layer = options.layer ?? "map";
+    const layer = options.layer ?? 'map';
     try {
       const record = projectData.floor(options.floorId).value() as unknown as Record<string, unknown>;
       const value = cloneDeep(readLayerCell(record, layer, options.from));
-      const actions: Action[] = [...initializeLayerActions(record, layer),
-        ["change", layerPath(layer, options.from), 0],
-        ["change", layerPath(layer, options.to), value],
+      const actions: Action[] = [
+        ...initializeLayerActions(record, layer),
+        ['change', layerPath(layer, options.from), 0],
+        ['change', layerPath(layer, options.to), value],
       ];
-      if (layer === "map") {
+      if (layer === 'map') {
         actions.push(...clearEventActions(options.from));
         writeLocEventActions(actions, options.to, readLocEvents(record, options.from));
       }
@@ -563,22 +531,23 @@ class MapCommands {
         options.floorId,
         actions,
         `移动位置 ${options.floorId} (${options.from.x},${options.from.y}) -> (${options.to.x},${options.to.y})`,
-        "move-map-loc",
+        'move-map-loc',
       );
     } catch (error) {
-      return commandError("move-map-loc", error);
+      return commandError('move-map-loc', error);
     }
   }
 
   async exchangeLoc(options: MoveLocOptions): Promise<CommandResult> {
-    const layer = options.layer ?? "map";
+    const layer = options.layer ?? 'map';
     try {
       const record = projectData.floor(options.floorId).value() as unknown as Record<string, unknown>;
-      const actions: Action[] = [...initializeLayerActions(record, layer),
-        ["change", layerPath(layer, options.from), cloneDeep(readLayerCell(record, layer, options.to))],
-        ["change", layerPath(layer, options.to), cloneDeep(readLayerCell(record, layer, options.from))],
+      const actions: Action[] = [
+        ...initializeLayerActions(record, layer),
+        ['change', layerPath(layer, options.from), cloneDeep(readLayerCell(record, layer, options.to))],
+        ['change', layerPath(layer, options.to), cloneDeep(readLayerCell(record, layer, options.from))],
       ];
-      if (layer === "map") {
+      if (layer === 'map') {
         writeLocEventActions(actions, options.from, readLocEvents(record, options.to));
         writeLocEventActions(actions, options.to, readLocEvents(record, options.from));
       }
@@ -586,22 +555,26 @@ class MapCommands {
         options.floorId,
         actions,
         `交换位置 ${options.floorId} (${options.from.x},${options.from.y}) <-> (${options.to.x},${options.to.y})`,
-        "exchange-map-loc",
+        'exchange-map-loc',
       );
     } catch (error) {
-      return commandError("exchange-map-loc", error);
+      return commandError('exchange-map-loc', error);
     }
   }
 
   async bindStartPoint(floorId: string, pos: MapPosition): Promise<CommandResult> {
-    return executePatchCommand(projectData.tower(), [
-      ["change", "['firstData']['floorId']", floorId],
-      ["change", "['firstData']['hero']['loc']['x']", pos.x],
-      ["change", "['firstData']['hero']['loc']['y']", pos.y],
-    ], {
-      label: `绑定出生点 ${floorId} (${pos.x},${pos.y})`,
-      stage: "bind-start-point",
-    });
+    return executePatchCommand(
+      projectData.tower(),
+      [
+        ['change', "['firstData']['floorId']", floorId],
+        ['change', "['firstData']['hero']['loc']['x']", pos.x],
+        ['change', "['firstData']['hero']['loc']['y']", pos.y],
+      ],
+      {
+        label: `绑定出生点 ${floorId} (${pos.x},${pos.y})`,
+        stage: 'bind-start-point',
+      },
+    );
   }
 
   async bindStair(floorId: string, pos: MapPosition, blockId: string): Promise<CommandResult> {
@@ -610,76 +583,65 @@ class MapCommands {
       if (!changeFloor) throw new Error(`Unsupported stair block: ${blockId}`);
       return this.patchFloor(
         floorId,
-        [["change", `['changeFloor']['${locKey(pos)}']`, changeFloor]],
+        [['change', `['changeFloor']['${locKey(pos)}']`, changeFloor]],
         `绑定楼传 ${floorId} (${pos.x},${pos.y})`,
-        "bind-stair",
+        'bind-stair',
       );
     } catch (error) {
-      return commandError("bind-stair", error);
+      return commandError('bind-stair', error);
     }
   }
 
-  async bindSpecialDoor(
-    floorId: string,
-    doorPos: MapPosition,
-    enemyPositions: MapPosition[],
-  ): Promise<CommandResult> {
+  async bindSpecialDoor(floorId: string, doorPos: MapPosition, enemyPositions: MapPosition[]): Promise<CommandResult> {
     try {
       if (enemyPositions.length === 0) {
-        throw new Error("Special door binding requires at least one enemy");
+        throw new Error('Special door binding requires at least one enemy');
       }
 
       const doorKey = locKey(doorPos);
-      const doorFlag = `flag:door_${floorId}_${doorKey.replace(",", "_")}`;
+      const doorFlag = `flag:door_${floorId}_${doorKey.replace(',', '_')}`;
       const floor = projectData.floor(floorId).value() as unknown as Record<string, unknown>;
       const afterBattle = floor.afterBattle as Record<string, unknown> | undefined;
-      const actions: Action[] = [[
-        "change",
-        `['autoEvent']['${doorKey}']`,
-        {
-          "0": {
-            condition: `${doorFlag}==${enemyPositions.length}`,
-            currentFloor: true,
-            priority: 0,
-            delayExecute: false,
-            multiExecute: false,
-            data: [
-              { type: "openDoor" },
-              { type: "setValue", name: doorFlag, operator: "=", value: "null" },
-            ],
+      const actions: Action[] = [
+        [
+          'change',
+          `['autoEvent']['${doorKey}']`,
+          {
+            '0': {
+              condition: `${doorFlag}==${enemyPositions.length}`,
+              currentFloor: true,
+              priority: 0,
+              delayExecute: false,
+              multiExecute: false,
+              data: [{ type: 'openDoor' }, { type: 'setValue', name: doorFlag, operator: '=', value: 'null' }],
+            },
           },
-        },
-      ]];
+        ],
+      ];
 
       for (const enemyPos of enemyPositions) {
         const enemyKey = locKey(enemyPos);
-        const events = Array.isArray(afterBattle?.[enemyKey])
-            ? cloneDeep(afterBattle[enemyKey]) as unknown[]
-            : [];
-        events.push({ type: "setValue", name: doorFlag, operator: "+=", value: "1" });
-        actions.push(["change", `['afterBattle']['${enemyKey}']`, events]);
+        const events = Array.isArray(afterBattle?.[enemyKey]) ? (cloneDeep(afterBattle[enemyKey]) as unknown[]) : [];
+        events.push({ type: 'setValue', name: doorFlag, operator: '+=', value: '1' });
+        actions.push(['change', `['afterBattle']['${enemyKey}']`, events]);
       }
       return this.patchFloor(
         floorId,
         actions,
         `绑定机关门 ${floorId} (${doorPos.x},${doorPos.y})`,
-        "bind-special-door",
+        'bind-special-door',
       );
     } catch (error) {
-      return commandError("bind-special-door", error);
+      return commandError('bind-special-door', error);
     }
   }
 
-  resolveChangeFloorTarget(
-    floorId: string,
-    pos: MapPosition,
-    floorIds: string[],
-  ): ResolveChangeFloorTargetResult {
+  resolveChangeFloorTarget(floorId: string, pos: MapPosition, floorIds: string[]): ResolveChangeFloorTargetResult {
     try {
       const floor = projectData.floor(floorId).value() as Record<string, unknown>;
       const changeFloorRecord = floor.changeFloor as Record<string, unknown> | undefined;
       const changeFloor = changeFloorRecord?.[locKey(pos)];
-      if (!changeFloor || typeof changeFloor !== "object") {
+      if (!changeFloor || typeof changeFloor !== 'object') {
         throw new Error(`No changeFloor event at ${locKey(pos)}`);
       }
 
@@ -694,7 +656,7 @@ class MapCommands {
     } catch (error) {
       return {
         ok: false,
-        stage: "resolve-change-floor-target",
+        stage: 'resolve-change-floor-target',
         error: error instanceof Error ? error : new Error(String(error)),
       };
     }

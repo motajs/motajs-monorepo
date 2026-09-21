@@ -2,7 +2,7 @@
  * ParseErrorRecovery - 解析错误恢复 UI
  */
 
-import type { FC } from "react";
+import type { FC } from 'react';
 
 export interface ParseErrorRecoveryProps {
   /** 错误对象 */
@@ -16,11 +16,7 @@ export interface ParseErrorRecoveryProps {
 /**
  * 解析错误恢复 UI
  */
-export const ParseErrorRecovery: FC<ParseErrorRecoveryProps> = ({
-  error,
-  onRetry,
-  onOpenAsText,
-}) => {
+export const ParseErrorRecovery: FC<ParseErrorRecoveryProps> = ({ error, onRetry, onOpenAsText }) => {
   return (
     <div className="leftTabError">
       <div>解析失败: {error.message}</div>

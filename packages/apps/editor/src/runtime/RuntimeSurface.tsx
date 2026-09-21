@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
-import type { RuntimeSurfaceLease } from "./RuntimeContext";
+import { useEffect, useRef } from 'react';
+import type { RuntimeSurfaceLease } from './RuntimeContext';
 
 export function RuntimeSurface({ lease, testId }: { lease: RuntimeSurfaceLease; testId: string }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -22,9 +22,11 @@ export function RuntimeSurface({ lease, testId }: { lease: RuntimeSurfaceLease; 
     };
   }, [lease]);
 
-  return <div
-    ref={containerRef}
-    data-test-id={testId}
-    style={{ width: lease.width, height: lease.height, maxWidth: "100%", overflow: "hidden" }}
-  />;
+  return (
+    <div
+      ref={containerRef}
+      data-test-id={testId}
+      style={{ width: lease.width, height: lease.height, maxWidth: '100%', overflow: 'hidden' }}
+    />
+  );
 }

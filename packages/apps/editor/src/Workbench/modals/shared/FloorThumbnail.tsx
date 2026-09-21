@@ -1,10 +1,10 @@
-import { useMemo, type FC } from "react";
-import { useModelResourceSuspense, useResourceSuspense } from "@/hooks/suspense";
-import { projectData } from "@/project/data/projectData";
-import { projectModel } from "@/project/model/projectModel";
-import { useMapLayerSettings } from "@/project/settings/mapLayerSettings";
-import { MapPixiRenderer } from "@/MapEditor/rendering/MapPixiRenderer";
-import type { FloorData } from "@/types";
+import { useMemo, type FC } from 'react';
+import { useModelResourceSuspense, useResourceSuspense } from '@/hooks/suspense';
+import { projectData } from '@/project/data/projectData';
+import { projectModel } from '@/project/model/projectModel';
+import { useMapLayerSettings } from '@/project/settings/mapLayerSettings';
+import { MapPixiRenderer } from '@/MapEditor/rendering/MapPixiRenderer';
+import type { FloorData } from '@/types';
 
 interface FloorThumbnailProps {
   floorId: string;
@@ -16,14 +16,7 @@ interface FloorThumbnailProps {
 }
 
 export const FloorThumbnail: FC<FloorThumbnailProps> = (props) => {
-  const {
-    floorId,
-    style,
-    bigmap = true,
-    viewportOffset = [0, 0],
-    viewportSize = [416, 416],
-    floorOverride,
-  } = props;
+  const { floorId, style, bigmap = true, viewportOffset = [0, 0], viewportSize = [416, 416], floorOverride } = props;
   const [loadedFloor] = useResourceSuspense(projectData.floor(floorId));
   const floor = floorOverride ?? loadedFloor;
   const layerSettings = useMapLayerSettings();
@@ -33,14 +26,22 @@ export const FloorThumbnail: FC<FloorThumbnailProps> = (props) => {
   const spriteResource = useMemo(() => projectModel.spriteRegistry(), []);
   const sprites = useModelResourceSuspense(spriteResource);
   const tilesets = Array.isArray(tower.main.tilesets)
-    ? tower.main.tilesets.filter((name): name is string => typeof name === "string")
+    ? tower.main.tilesets.filter((name): name is string => typeof name === 'string')
     : [];
-  const imageNameMap = tower.main.nameMap && typeof tower.main.nameMap === "object"
-    ? tower.main.nameMap as Record<string, string>
-    : {};
+  const imageNameMap =
+    tower.main.nameMap && typeof tower.main.nameMap === 'object' ? (tower.main.nameMap as Record<string, string>) : {};
 
   return (
-    <div style={{ position: "relative", width: viewportSize[0], height: viewportSize[1], marginLeft: -10, marginTop: 5, ...style }}>
+    <div
+      style={{
+        position: 'relative',
+        width: viewportSize[0],
+        height: viewportSize[1],
+        marginLeft: -10,
+        marginTop: 5,
+        ...style,
+      }}
+    >
       <MapPixiRenderer
         floor={floor}
         blockRegistry={blocks}

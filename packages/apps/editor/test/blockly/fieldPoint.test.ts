@@ -36,9 +36,8 @@ describe('FieldPoint', () => {
 
       Blockly.serialization.workspaces.load(eventsToWorkspaceState([event]), workspace);
       javascriptGenerator.init(workspace);
-      const generated = withDisabledBlocksEnabled(
-        workspace,
-        () => javascriptGenerator.blockToCode(workspace.getTopBlocks(false)[0]),
+      const generated = withDisabledBlocksEnabled(workspace, () =>
+        javascriptGenerator.blockToCode(workspace.getTopBlocks(false)[0]),
       );
       const code = Array.isArray(generated) ? generated[0] : generated;
       const result = JSON5.parse(`[${code.trim().replace(/,$/, '')}]`)[0];

@@ -1,6 +1,6 @@
-export { SchemaTable, type SchemaTableProps } from "./SchemaTable";
-export { ProjectSchemaTable, type ProjectSchemaTableProps } from "./ProjectSchemaTable";
-export { SchemaCustomizationButton } from "./SchemaCustomizationButton";
+export { SchemaTable, type SchemaTableProps } from './SchemaTable';
+export { ProjectSchemaTable, type ProjectSchemaTableProps } from './ProjectSchemaTable';
+export { SchemaCustomizationButton } from './SchemaCustomizationButton';
 export {
   defineBuiltinSchema,
   resolveProjectSchema,
@@ -10,8 +10,8 @@ export {
   type BuiltinSchemaDefinition,
   type ProjectSchemaResolution,
   type SchemaLayer,
-} from "./projectSchema";
-export { createFieldSchemaRegistry, parseFieldSchemaBundle, parseUISchema } from "./schema";
+} from './projectSchema';
+export { createFieldSchemaRegistry, parseFieldSchemaBundle, parseUISchema } from './schema';
 export {
   ConstantValueSource,
   ContentValueSource,
@@ -21,7 +21,7 @@ export {
   parseReference,
   resolveReference,
   resolveCombinedReferences,
-} from "./reference";
-export { builtinNormalizers } from "./normalizers";
-export { evaluateExpression } from "./expression";
-export type * from "./types";
+} from './reference';
+export { builtinNormalizers } from './normalizers';
+export { evaluateExpression } from './expression';
+export type * from './types';

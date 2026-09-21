@@ -144,10 +144,7 @@
                   "ref": "prefab:cls"
                 },
                 {
-                  "literal": [
-                    "constants",
-                    "tools"
-                  ]
+                  "literal": ["constants", "tools"]
                 }
               ]
             },

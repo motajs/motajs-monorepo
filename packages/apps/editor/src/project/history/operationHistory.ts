@@ -1,15 +1,7 @@
-import { Store } from "@tanstack/store";
-import { useStore } from "@tanstack/react-store";
-import type {
-  AppliedOperation,
-  EditorOperation,
-  OperationTarget,
-} from "./operations";
-import {
-  captureEditorViewport,
-  restoreEditorViewport,
-  type EditorViewport,
-} from "./viewport";
+import { Store } from '@tanstack/store';
+import { useStore } from '@tanstack/react-store';
+import type { AppliedOperation, EditorOperation, OperationTarget } from './operations';
+import { captureEditorViewport, restoreEditorViewport, type EditorViewport } from './viewport';
 
 interface OperationCheckpoint {
   target: OperationTarget;
@@ -49,13 +41,13 @@ function uniqueTargets(targets: readonly OperationTarget[]): OperationTarget[] {
   return [...new Map(targets.map((target) => [target.key, target])).values()];
 }
 
-async function captureTargets(
-  targets: readonly OperationTarget[],
-): Promise<OperationCheckpoint[]> {
-  return Promise.all(uniqueTargets(targets).map(async (target) => ({
-    target,
-    content: await target.capture(),
-  })));
+async function captureTargets(targets: readonly OperationTarget[]): Promise<OperationCheckpoint[]> {
+  return Promise.all(
+    uniqueTargets(targets).map(async (target) => ({
+      target,
+      content: await target.capture(),
+    })),
+  );
 }
 
 async function restoreTargets(checkpoints: readonly OperationCheckpoint[]): Promise<void> {
@@ -68,7 +60,7 @@ async function restoreTargets(checkpoints: readonly OperationCheckpoint[]): Prom
     }
   }
   if (errors.length > 0) {
-    throw new AggregateError(errors, "Failed to restore operation checkpoint");
+    throw new AggregateError(errors, 'Failed to restore operation checkpoint');
   }
 }
 
@@ -154,10 +146,8 @@ class OperationHistory {
       const index = state.current - 1;
       const entry = state.entries[index];
       const rollbackViewport = captureEditorViewport();
-      const applied = await this.applyWithCheckpoint(
-        entry.operation,
-        rollbackViewport,
-        () => restoreEditorViewport(entry.beforeViewport),
+      const applied = await this.applyWithCheckpoint(entry.operation, rollbackViewport, () =>
+        restoreEditorViewport(entry.beforeViewport),
       );
       historyStore.setState((currentState) => {
         const entries = [...currentState.entries];
@@ -174,10 +164,8 @@ class OperationHistory {
       const index = state.current;
       const entry = state.entries[index];
       const rollbackViewport = captureEditorViewport();
-      const applied = await this.applyWithCheckpoint(
-        entry.operation,
-        rollbackViewport,
-        () => restoreEditorViewport(entry.afterViewport),
+      const applied = await this.applyWithCheckpoint(entry.operation, rollbackViewport, () =>
+        restoreEditorViewport(entry.afterViewport),
       );
       historyStore.setState((currentState) => {
         const entries = [...currentState.entries];

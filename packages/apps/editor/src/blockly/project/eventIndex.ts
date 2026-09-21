@@ -31,9 +31,7 @@ function abortIfNeeded(signal?: AbortSignal): void {
 }
 
 function segment(key: string): string {
-  return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(key)
-    ? `.${key}`
-    : `[${JSON.stringify(key)}]`;
+  return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(key) ? `.${key}` : `[${JSON.stringify(key)}]`;
 }
 
 function collectFromValue(
@@ -55,9 +53,9 @@ function collectFromValue(
   if (Array.isArray(value)) {
     value.forEach((item, index) => collectFromValue(item, type, source, `${path}[${index}]`, output, seen, signal));
   } else {
-    Object.entries(value as Record<string, unknown>).forEach(([key, item]) => (
-      collectFromValue(item, type, source, `${path}${segment(key)}`, output, seen, signal)
-    ));
+    Object.entries(value as Record<string, unknown>).forEach(([key, item]) =>
+      collectFromValue(item, type, source, `${path}${segment(key)}`, output, seen, signal),
+    );
   }
 }
 
@@ -73,9 +71,7 @@ export function collectEventSamplesInValue(
   return output;
 }
 
-async function loadResource<T>(
-  resource: DataResource<T>,
-): Promise<T> {
+async function loadResource<T>(resource: DataResource<T>): Promise<T> {
   await resource.ensureLoaded();
   const snapshot = resource.snapshot();
   if (snapshot.status === 'loaded') return snapshot.value;
@@ -95,11 +91,17 @@ export async function collectProjectEventSamples(
   const samples: ProjectEventSample[] = [];
   const failures: ProjectEventIndexFailure[] = [];
   const towerResource = projectData.tower();
-  let tower: Awaited<ReturnType<typeof loadResource<typeof towerResource extends DataResource<infer T> ? T : never>>> | undefined;
+  let tower:
+    | Awaited<ReturnType<typeof loadResource<typeof towerResource extends DataResource<infer T> ? T : never>>>
+    | undefined;
   try {
     tower = await loadResource(towerResource);
   } catch (cause) {
-    failures.push({ source: 'tower', path: towerResource.path, error: cause instanceof Error ? cause : new Error(String(cause)) });
+    failures.push({
+      source: 'tower',
+      path: towerResource.path,
+      error: cause instanceof Error ? cause : new Error(String(cause)),
+    });
   }
 
   const resources: Array<{ source: string; resource: DataResource<unknown> }> = [
@@ -108,9 +110,10 @@ export async function collectProjectEventSamples(
     { source: 'mapBlocks', resource: projectData.mapBlocks() },
     { source: 'commonEvents', resource: projectData.commonEvents() },
   ];
-  const floorIds = tower && Array.isArray(tower.main?.floorIds)
-    ? tower.main.floorIds.filter((id): id is string => typeof id === 'string' && id.length > 0)
-    : [];
+  const floorIds =
+    tower && Array.isArray(tower.main?.floorIds)
+      ? tower.main.floorIds.filter((id): id is string => typeof id === 'string' && id.length > 0)
+      : [];
   floorIds.forEach((id) => resources.push({ source: `floor:${id}`, resource: projectData.floor(id) }));
   const total = resources.length + (tower ? 1 : 0);
   let completed = 0;
@@ -140,7 +143,10 @@ export async function collectUnknownEventSamples(
 ): Promise<ProjectEventSample[]> {
   const result = await collectProjectEventSamples(type, { ...options, requireUnknown: true });
   if (result.failures.length) {
-    throw new AggregateError(result.failures.map((item) => item.error), '部分工程事件来源读取失败');
+    throw new AggregateError(
+      result.failures.map((item) => item.error),
+      '部分工程事件来源读取失败',
+    );
   }
   return result.samples;
 }

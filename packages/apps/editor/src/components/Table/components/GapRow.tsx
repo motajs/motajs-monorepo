@@ -28,10 +28,7 @@ export const GapRow: FC<GapRowProps> = (props) => {
 
   // 生成 data-gap 属性值
   // "['main']['floorIds']" => "main-floorIds"
-  const dataGap = useMemo(
-    () => field.slice(2, -2).split("']['").join('-'),
-    [field],
-  );
+  const dataGap = useMemo(() => field.slice(2, -2).split("']['").join('-'), [field]);
 
   // 生成 data-field 属性值（父级路径）
   // "['main']['floorIds']" => "main"
@@ -49,11 +46,7 @@ export const GapRow: FC<GapRowProps> = (props) => {
         <td>----</td>
         <td>['{shortField}']</td>
         <td>
-          <button
-            className="editorTableFoldBtn"
-            data-fold={isFolded ? 'true' : 'false'}
-            onClick={toggleFold}
-          >
+          <button className="editorTableFoldBtn" data-fold={isFolded ? 'true' : 'false'} onClick={toggleFold}>
             {isFolded ? '展开' : '折叠'}
           </button>
         </td>

@@ -1,14 +1,10 @@
-import { useImageAssetUrl } from "@/hooks/useImageAssetUrl";
-import { useModelResourceSuspense } from "@/hooks/suspense";
-import {
-  projectModel,
-  TILESET_START_OFFSET,
-  type BlockRegistry,
-} from "@/project/model/projectModel";
-import { useMemo, useState, type FC } from "react";
+import { useImageAssetUrl } from '@/hooks/useImageAssetUrl';
+import { useModelResourceSuspense } from '@/hooks/suspense';
+import { projectModel, TILESET_START_OFFSET, type BlockRegistry } from '@/project/model/projectModel';
+import { useMemo, useState, type FC } from 'react';
 
-type Direction = "up" | "down" | "left" | "right";
-type PassabilitySide = "cannotOut" | "cannotIn";
+type Direction = 'up' | 'down' | 'left' | 'right';
+type PassabilitySide = 'cannotOut' | 'cannotIn';
 
 export interface PassabilityEditingValue {
   cannotOut: string[];
@@ -22,8 +18,8 @@ interface PassabilityFieldEditorProps {
   onCommit(value: PassabilityEditingValue): Promise<void>;
 }
 
-const directions: Direction[] = ["up", "right", "down", "left"];
-const labels: Record<Direction, string> = { up: "上", right: "右", down: "下", left: "左" };
+const directions: Direction[] = ['up', 'right', 'down', 'left'];
+const labels: Record<Direction, string> = { up: '上', right: '右', down: '下', left: '左' };
 
 interface BlockFrame {
   path: string;
@@ -33,8 +29,8 @@ interface BlockFrame {
 
 function resolveRegistryBlockFrame(idnum: number, blocks: BlockRegistry): BlockFrame | undefined {
   const block = blocks.get(idnum);
-  if (!block?.materialPath || typeof block.y !== "number") return undefined;
-  const height = block.images?.endsWith("48") ? 48 : 32;
+  if (!block?.materialPath || typeof block.y !== 'number') return undefined;
+  const height = block.images?.endsWith('48') ? 48 : 32;
   return {
     path: block.materialPath,
     sourceX: (block.x ?? 0) * 32,
@@ -53,24 +49,22 @@ const BlockFrameImage: FC<{ frame: BlockFrame }> = ({ frame }) => {
         style={{
           left: -frame.sourceX * 2,
           top: -frame.sourceY * 2,
-          transform: "scale(2)",
-          transformOrigin: "top left",
+          transform: 'scale(2)',
+          transformOrigin: 'top left',
         }}
       />
     </span>
-  ) : <span>…</span>;
+  ) : (
+    <span>…</span>
+  );
 };
 
 const RegistryBlockPreview: FC<{ block: string | number }> = ({ block }) => {
   const blockResource = useMemo(() => projectModel.blockRegistry(), []);
   const blocks = useModelResourceSuspense(blockResource);
-  const idnum = typeof block === "number"
-    ? block
-    : [...blocks.values()].find((candidate) => candidate.id === block)?.idnum;
-  const frame = useMemo(
-    () => idnum == null ? undefined : resolveRegistryBlockFrame(idnum, blocks),
-    [blocks, idnum],
-  );
+  const idnum =
+    typeof block === 'number' ? block : [...blocks.values()].find((candidate) => candidate.id === block)?.idnum;
+  const frame = useMemo(() => (idnum == null ? undefined : resolveRegistryBlockFrame(idnum, blocks)), [blocks, idnum]);
   return frame ? <BlockFrameImage frame={frame} /> : <span>?</span>;
 };
 
@@ -93,16 +87,16 @@ const TilesetBlockPreview: FC<{ idnum: number }> = ({ idnum }) => {
   return frame ? <BlockFrameImage frame={frame} /> : <span>?</span>;
 };
 
-const PassabilityBlockPreview: FC<{ block: string | number }> = ({ block }) => (
-  typeof block === "number" && block >= TILESET_START_OFFSET
-    ? <TilesetBlockPreview idnum={block} />
-    : <RegistryBlockPreview block={block} />
-);
+const PassabilityBlockPreview: FC<{ block: string | number }> = ({ block }) =>
+  typeof block === 'number' && block >= TILESET_START_OFFSET ? (
+    <TilesetBlockPreview idnum={block} />
+  ) : (
+    <RegistryBlockPreview block={block} />
+  );
 
 function editingValue(value: unknown): PassabilityEditingValue {
-  const record = value && typeof value === "object" && !Array.isArray(value)
-    ? value as Partial<PassabilityEditingValue>
-    : {};
+  const record =
+    value && typeof value === 'object' && !Array.isArray(value) ? (value as Partial<PassabilityEditingValue>) : {};
   return {
     cannotOut: Array.isArray(record.cannotOut) ? [...record.cannotOut] : [],
     cannotIn: Array.isArray(record.cannotIn) ? [...record.cannotIn] : [],
@@ -122,8 +116,9 @@ export const PassabilityFieldEditor: FC<PassabilityFieldEditorProps> = ({ value,
     setDraft(next);
     await onCommit(next);
   };
-  const unknown = [...new Set([...draft.cannotOut, ...draft.cannotIn])]
-    .filter((item) => !directions.includes(item as Direction));
+  const unknown = [...new Set([...draft.cannotOut, ...draft.cannotIn])].filter(
+    (item) => !directions.includes(item as Direction),
+  );
 
   return (
     <div className="schemaPassabilityEditor">
@@ -131,29 +126,42 @@ export const PassabilityFieldEditor: FC<PassabilityFieldEditorProps> = ({ value,
         <div className="schemaPassabilityTile">
           {block == null ? <span>?</span> : <PassabilityBlockPreview block={block} />}
         </div>
-        {directions.flatMap((direction) => (["cannotIn", "cannotOut"] as PassabilitySide[]).map((side) => {
-          const blocked = draft[side].includes(direction);
-          const sideLabel = side === "cannotOut" ? "内侧（出）" : "外侧（入）";
-          const stateLabel = blocked ? "禁止" : "允许";
-          return (
-            <button
-              key={`${direction}:${side}`}
-              type="button"
-              className={`schemaPassabilityEdge ${direction} ${side === "cannotOut" ? "inner" : "outer"}${blocked ? " blocked" : ""}`}
-              aria-label={`${labels[direction]}边${sideLabel}：${stateLabel}`}
-              title={`${labels[direction]}边${sideLabel}：${stateLabel}，点击切换`}
-              disabled={disabled}
-              onClick={() => void toggle(side, direction)}
-            />
-          );
-        }))}
+        {directions.flatMap((direction) =>
+          (['cannotIn', 'cannotOut'] as PassabilitySide[]).map((side) => {
+            const blocked = draft[side].includes(direction);
+            const sideLabel = side === 'cannotOut' ? '内侧（出）' : '外侧（入）';
+            const stateLabel = blocked ? '禁止' : '允许';
+            return (
+              <button
+                key={`${direction}:${side}`}
+                type="button"
+                className={`schemaPassabilityEdge ${direction} ${side === 'cannotOut' ? 'inner' : 'outer'}${blocked ? ' blocked' : ''}`}
+                aria-label={`${labels[direction]}边${sideLabel}：${stateLabel}`}
+                title={`${labels[direction]}边${sideLabel}：${stateLabel}，点击切换`}
+                disabled={disabled}
+                onClick={() => void toggle(side, direction)}
+              />
+            );
+          }),
+        )}
       </div>
       <div className="schemaPassabilityLegend">
-        <span><i className="inner" />内侧控制出</span>
-        <span><i className="outer" />外侧控制入</span>
-        <span><i className="blocked" />红色表示禁止</span>
+        <span>
+          <i className="inner" />
+          内侧控制出
+        </span>
+        <span>
+          <i className="outer" />
+          外侧控制入
+        </span>
+        <span>
+          <i className="blocked" />
+          红色表示禁止
+        </span>
       </div>
-      {unknown.length > 0 ? <div className="schemaTableDiagnostic warning">其他方向值：{unknown.join("、")}</div> : null}
+      {unknown.length > 0 ? (
+        <div className="schemaTableDiagnostic warning">其他方向值：{unknown.join('、')}</div>
+      ) : null}
     </div>
   );
 };

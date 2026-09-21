@@ -5,13 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import {
-  parseFieldPath,
-  getShortField,
-  buildFieldPath,
-  getParentField,
-  fieldToDataAttr,
-} from '@/utils/fieldPath';
+import { parseFieldPath, getShortField, buildFieldPath, getParentField, fieldToDataAttr } from '@/utils/fieldPath';
 
 describe('fieldPath', () => {
   describe('parseFieldPath', () => {

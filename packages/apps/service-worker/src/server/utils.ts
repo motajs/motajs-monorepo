@@ -16,23 +16,26 @@ export class ResponseUtils {
   }
 
   static create404() {
-    return new Response("404 not found", {
+    return new Response('404 not found', {
       status: 404,
-      statusText: "Not found",
+      statusText: 'Not found',
     });
   }
 
   static error(status: number, code: string, message: string, path?: string) {
-    return Response.json({ error: { code, message, ...(path ? { path } : {}) } }, {
-      status,
-      headers: { "cache-control": "no-store" },
-    });
+    return Response.json(
+      { error: { code, message, ...(path ? { path } : {}) } },
+      {
+        status,
+        headers: { 'cache-control': 'no-store' },
+      },
+    );
   }
 
-  static create500(reason = "500 Internal Server Error") {
+  static create500(reason = '500 Internal Server Error') {
     return new Response(reason, {
       status: 500,
-      statusText: "Internal Server Error",
+      statusText: 'Internal Server Error',
     });
   }
 }
@@ -50,12 +53,11 @@ export class HttpError extends Error {
 
 export const isNotFoundError = (error: unknown): boolean => {
   const candidate = error as { name?: string; code?: string; message?: string };
-  return candidate?.name === "NotFoundError"
-    || candidate?.code === "ENOENT"
-    || (
-      candidate?.code === "ERR_INVALID_ARG_VALUE"
-      && candidate?.message === "Unable to open file as blob"
-    );
+  return (
+    candidate?.name === 'NotFoundError' ||
+    candidate?.code === 'ENOENT' ||
+    (candidate?.code === 'ERR_INVALID_ARG_VALUE' && candidate?.message === 'Unable to open file as blob')
+  );
 };
 
 export const errorResponse = (error: unknown, path?: string) => {
@@ -63,11 +65,11 @@ export const errorResponse = (error: unknown, path?: string) => {
     return ResponseUtils.error(error.status, error.code, error.message, error.path);
   }
   const candidate = error as { name?: string; code?: string; message?: string };
-  if (candidate?.name === "NotAllowedError" || candidate?.code === "EACCES") {
-    return ResponseUtils.error(403, "project-permission-required", "Project permission is required", path);
+  if (candidate?.name === 'NotAllowedError' || candidate?.code === 'EACCES') {
+    return ResponseUtils.error(403, 'project-permission-required', 'Project permission is required', path);
   }
   if (isNotFoundError(error)) {
-    return ResponseUtils.error(404, "file-not-found", candidate.message ?? "File not found", path);
+    return ResponseUtils.error(404, 'file-not-found', candidate.message ?? 'File not found', path);
   }
-  return ResponseUtils.error(500, "internal-error", candidate?.message ?? String(error), path);
+  return ResponseUtils.error(500, 'internal-error', candidate?.message ?? String(error), path);
 };

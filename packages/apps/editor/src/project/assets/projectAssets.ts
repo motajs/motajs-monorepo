@@ -1,10 +1,10 @@
-import { fs as defaultFs, type Fs } from "@/services/fs";
-import { CanvasRasterCodec } from "./CanvasRasterCodec";
-import { ImageAssetResource } from "./ImageAssetResource";
-import { AutotileMaterialCollection, SpriteSheetMaterialCollection } from "./MaterialCollectionResource";
-import type { MaterialCollectionResource, RasterCodec } from "./types";
-import { AssetDirectoryResource } from "./AssetDirectoryResource";
-import { AnimationAssetResource } from "./AnimationAssetResource";
+import { fs as defaultFs, type Fs } from '@/services/fs';
+import { CanvasRasterCodec } from './CanvasRasterCodec';
+import { ImageAssetResource } from './ImageAssetResource';
+import { AutotileMaterialCollection, SpriteSheetMaterialCollection } from './MaterialCollectionResource';
+import type { MaterialCollectionResource, RasterCodec } from './types';
+import { AssetDirectoryResource } from './AssetDirectoryResource';
+import { AnimationAssetResource } from './AnimationAssetResource';
 
 export class ProjectAssets {
   private readonly fs: Fs;
@@ -20,7 +20,7 @@ export class ProjectAssets {
   }
 
   image(path: string): ImageAssetResource {
-    const normalized = path.replace(/^\.\//, "");
+    const normalized = path.replace(/^\.\//, '');
     let resource = this.images.get(normalized);
     if (!resource) {
       resource = new ImageAssetResource(normalized, this.fs);
@@ -30,7 +30,7 @@ export class ProjectAssets {
   }
 
   directory(path: string): AssetDirectoryResource {
-    const normalized = path.replace(/^\.\//, "").replace(/\/*$/, "/");
+    const normalized = path.replace(/^\.\//, '').replace(/\/*$/, '/');
     let resource = this.directories.get(normalized);
     if (!resource) {
       resource = new AssetDirectoryResource(normalized, this.fs);
@@ -40,7 +40,7 @@ export class ProjectAssets {
   }
 
   animation(path: string): AnimationAssetResource {
-    const normalized = path.replace(/^\.\//, "");
+    const normalized = path.replace(/^\.\//, '');
     let resource = this.animations.get(normalized);
     if (!resource) {
       resource = new AnimationAssetResource(normalized, this.image(normalized));
@@ -52,7 +52,7 @@ export class ProjectAssets {
   materialCollection(images: string): MaterialCollectionResource {
     let collection = this.collections.get(images);
     if (collection) return collection;
-    if (images === "autotile") {
+    if (images === 'autotile') {
       collection = new AutotileMaterialCollection({
         fs: this.fs,
         codec: this.codec,
@@ -60,11 +60,7 @@ export class ProjectAssets {
         release: (path) => this.release(path),
       });
     } else {
-      collection = new SpriteSheetMaterialCollection(
-        images,
-        this.image(`project/materials/${images}.png`),
-        this.codec,
-      );
+      collection = new SpriteSheetMaterialCollection(images, this.image(`project/materials/${images}.png`), this.codec);
     }
     this.collections.set(images, collection);
     return collection;
@@ -75,7 +71,7 @@ export class ProjectAssets {
   }
 
   release(path: string): void {
-    this.images.delete(path.replace(/^\.\//, ""));
+    this.images.delete(path.replace(/^\.\//, ''));
   }
 
   reset(): void {

@@ -9,12 +9,7 @@
 
 import { describe, expect, it } from 'vitest';
 import * as fc from 'fast-check';
-import {
-  validateMapDimensions,
-  isValidMapDimensions,
-  MAX_MAP_DIMENSION,
-  type MapDimensions,
-} from '@/utils/validation';
+import { validateMapDimensions, isValidMapDimensions, MAX_MAP_DIMENSION, type MapDimensions } from '@/utils/validation';
 
 /**
  * 生成有效的地图尺寸参数

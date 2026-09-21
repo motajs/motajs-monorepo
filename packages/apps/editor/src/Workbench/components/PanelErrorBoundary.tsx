@@ -1,6 +1,6 @@
-import { DataHandler } from "@/fs/DataHandler";
-import { FileHandler } from "@/fs/FileHandler";
-import { Component, type ErrorInfo, type ReactNode } from "react";
+import { DataHandler } from '@/fs/DataHandler';
+import { FileHandler } from '@/fs/FileHandler';
+import { Component, type ErrorInfo, type ReactNode } from 'react';
 
 interface Props {
   panelId: string;
@@ -13,12 +13,12 @@ interface State {
 
 function isRecoverableResource(value: unknown): boolean {
   return Boolean(
-    value
-      && typeof value === "object"
-      && "content" in value
-      && "refetch" in value
-      && "waitForSettled" in value
-      && "recoverable" in value,
+    value &&
+    typeof value === 'object' &&
+    'content' in value &&
+    'refetch' in value &&
+    'waitForSettled' in value &&
+    'recoverable' in value,
   );
 }
 
@@ -41,19 +41,15 @@ export class PanelErrorBoundary extends Component<Props, State> {
   render(): ReactNode {
     if (this.state.error) {
       return (
-        <div
-          className="leftTab"
-          data-test-id={`panel-error-${this.props.panelId}`}
-          role="alert"
-        >
+        <div className="leftTab" data-test-id={`panel-error-${this.props.panelId}`} role="alert">
           <div
             style={{
-              boxSizing: "border-box",
-              maxWidth: "100%",
-              color: "#8a4b00",
-              overflowWrap: "anywhere",
-              whiteSpace: "pre-wrap",
-              wordBreak: "break-word",
+              boxSizing: 'border-box',
+              maxWidth: '100%',
+              color: '#8a4b00',
+              overflowWrap: 'anywhere',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
             }}
           >
             {`面板暂不可用：${this.state.error.message}`}

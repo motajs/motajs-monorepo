@@ -8,8 +8,8 @@
  * - 处理标准 JSON 文件（非 2.x 风格的 var xxx = {json}）
  */
 
-import { DataHandler } from "./DataHandler";
-import type { FileHandler } from "./FileHandler";
+import { DataHandler } from './DataHandler';
+import type { FileHandler } from './FileHandler';
 
 /**
  * JsonDataHandler - 通用纯 JSON 数据处理器

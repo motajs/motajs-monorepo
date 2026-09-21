@@ -1,11 +1,8 @@
 /** Project-scoped, path-owned persistence manager. */
 
-import { effect, signal } from "alien-signals";
-import {
-  PersistExecutor,
-  type PersistenceIntent,
-} from "./PersistExecutor";
-import type { ReadonlySignal } from "./interfaces";
+import { effect, signal } from 'alien-signals';
+import { PersistExecutor, type PersistenceIntent } from './PersistExecutor';
+import type { ReadonlySignal } from './interfaces';
 
 export interface PersistFailure {
   path: string;
@@ -13,7 +10,7 @@ export interface PersistFailure {
 }
 
 function normalizePath(path: string): string {
-  return path.replace(/\\/g, "/").replace(/^\.\/+/, "");
+  return path.replace(/\\/g, '/').replace(/^\.\/+/, '');
 }
 
 export class PersistenceMonitor {
@@ -37,10 +34,10 @@ export class PersistenceMonitor {
     this.controllers.set(normalized, controller);
     effect(() => {
       const status = controller.status();
-      if (status.status === "executing") {
+      if (status.status === 'executing') {
         this.persistingSet.add(normalized);
         // Keep an existing failure visible while its retry is in progress.
-      } else if (status.status === "error") {
+      } else if (status.status === 'error') {
         this.persistingSet.delete(normalized);
         this.failedMap.set(normalized, status.error);
       } else {
@@ -68,7 +65,7 @@ export class PersistenceMonitor {
     try {
       for (const path of paths) {
         const controller = this.controllers.get(path);
-        if (controller?.status().status === "error") controller.retry();
+        if (controller?.status().status === 'error') controller.retry();
       }
       await Promise.all(paths.map((path) => this.controllers.get(path)?.whenQuiescent()));
       return this.failedFiles();
@@ -84,12 +81,15 @@ export class PersistenceMonitor {
     await Promise.all(controllers.map((controller) => controller.whenQuiescent()));
     const failures = paths
       ? paths.flatMap((path) => {
-        const error = this.failedMap.get(normalizePath(path));
-        return error ? [{ path: normalizePath(path), error }] : [];
-      })
+          const error = this.failedMap.get(normalizePath(path));
+          return error ? [{ path: normalizePath(path), error }] : [];
+        })
       : this.failedFiles();
     if (failures.length > 0) {
-      throw new AggregateError(failures.map((failure) => failure.error), "工程文件写入失败");
+      throw new AggregateError(
+        failures.map((failure) => failure.error),
+        '工程文件写入失败',
+      );
     }
   }
 
@@ -101,11 +101,11 @@ export class PersistenceMonitor {
     await Promise.all(controllers.map((controller) => controller.whenQuiescent()));
   }
 
-  statusFor(path: string): "idle" | "persisting" | "error" {
+  statusFor(path: string): 'idle' | 'persisting' | 'error' {
     const normalized = normalizePath(path);
-    if (this.failedMap.has(normalized)) return "error";
-    if (this.persistingSet.has(normalized)) return "persisting";
-    return "idle";
+    if (this.failedMap.has(normalized)) return 'error';
+    if (this.persistingSet.has(normalized)) return 'persisting';
+    return 'idle';
   }
 
   errorFor(path: string): Error | undefined {

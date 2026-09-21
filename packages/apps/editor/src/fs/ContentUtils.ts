@@ -4,8 +4,8 @@
  * 提供函数式操作工具，简化 Content<T> 的使用
  */
 
-import { match } from "ts-pattern";
-import type { Content } from "./types";
+import { match } from 'ts-pattern';
+import type { Content } from './types';
 
 export const ContentUtils = {
   /**
@@ -16,11 +16,11 @@ export const ContentUtils = {
    */
   map<T, R>(content: Content<T>, fn: (value: T) => R): Content<R> {
     return match(content)
-      .with({ status: "loaded" }, (c) => {
+      .with({ status: 'loaded' }, (c) => {
         try {
-          return { status: "loaded" as const, value: fn(c.value) };
+          return { status: 'loaded' as const, value: fn(c.value) };
         } catch (err) {
-          return { status: "error" as const, error: err as Error };
+          return { status: 'error' as const, error: err as Error };
         }
       })
       .otherwise((c) => c as Content<R>);
@@ -40,11 +40,11 @@ export const ContentUtils = {
    */
   andThen<T, R>(content: Content<T>, fn: (value: T) => Content<R>): Content<R> {
     return match(content)
-      .with({ status: "loaded" }, (c) => {
+      .with({ status: 'loaded' }, (c) => {
         try {
           return fn(c.value);
         } catch (err) {
-          return { status: "error" as const, error: err as Error };
+          return { status: 'error' as const, error: err as Error };
         }
       })
       .otherwise((c) => c as Content<R>);
@@ -58,7 +58,7 @@ export const ContentUtils = {
    */
   unwrapOr<T>(content: Content<T>, defaultValue: T): T {
     return match(content)
-      .with({ status: "loaded" }, (c) => c.value)
+      .with({ status: 'loaded' }, (c) => c.value)
       .otherwise(() => defaultValue);
   },
 
@@ -70,46 +70,44 @@ export const ContentUtils = {
    */
   unwrapOrElse<T>(content: Content<T>, fn: (content: Content<T>) => T): T {
     return match(content)
-      .with({ status: "loaded" }, (c) => c.value)
+      .with({ status: 'loaded' }, (c) => c.value)
       .otherwise(() => fn(content));
   },
 
   // 类型守卫
 
-  isIdle<T>(content: Content<T>): content is { status: "idle" } {
-    return content.status === "idle";
+  isIdle<T>(content: Content<T>): content is { status: 'idle' } {
+    return content.status === 'idle';
   },
 
-  isLoading<T>(content: Content<T>): content is { status: "loading" } {
-    return content.status === "loading";
+  isLoading<T>(content: Content<T>): content is { status: 'loading' } {
+    return content.status === 'loading';
   },
 
-  isLoaded<T>(content: Content<T>): content is { status: "loaded"; value: T } {
-    return content.status === "loaded";
+  isLoaded<T>(content: Content<T>): content is { status: 'loaded'; value: T } {
+    return content.status === 'loaded';
   },
 
-  isNotFound<T>(content: Content<T>): content is { status: "not-found" } {
-    return content.status === "not-found";
+  isNotFound<T>(content: Content<T>): content is { status: 'not-found' } {
+    return content.status === 'not-found';
   },
 
-  isError<T>(content: Content<T>): content is { status: "error"; error: Error } {
-    return content.status === "error";
+  isError<T>(content: Content<T>): content is { status: 'error'; error: Error } {
+    return content.status === 'error';
   },
 
   /**
    * 是否可用（已加载）
    */
-  isAvailable<T>(content: Content<T>): content is { status: "loaded"; value: T } {
-    return content.status === "loaded";
+  isAvailable<T>(content: Content<T>): content is { status: 'loaded'; value: T } {
+    return content.status === 'loaded';
   },
 
   /**
    * 是否处于错误状态
    */
-  hasError<T>(
-    content: Content<T>,
-  ): content is { status: "not-found" } | { status: "error"; error: Error } {
-    return content.status === "not-found" || content.status === "error";
+  hasError<T>(content: Content<T>): content is { status: 'not-found' } | { status: 'error'; error: Error } {
+    return content.status === 'not-found' || content.status === 'error';
   },
 
   /**
@@ -127,11 +125,11 @@ export const ContentUtils = {
    */
   unwrap<T>(content: Content<T>, name: string): T {
     return match(content)
-      .with({ status: "loaded" }, (c) => c.value)
-      .with({ status: "not-found" }, () => {
+      .with({ status: 'loaded' }, (c) => c.value)
+      .with({ status: 'not-found' }, () => {
         throw new Error(`${name} file not found`);
       })
-      .with({ status: "error" }, (c) => {
+      .with({ status: 'error' }, (c) => {
         throw new Error(`Failed to load ${name}: ${c.error.message}`);
       })
       .otherwise(() => {

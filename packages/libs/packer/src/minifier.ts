@@ -1,8 +1,8 @@
-import { readFile, writeFile } from "node:fs/promises";
-import { join, basename } from "node:path";
-import { minify } from "terser";
-import type { MainConfig, GameData } from "./types.js";
-import { Logger } from "./logger.js";
+import { readFile, writeFile } from 'node:fs/promises';
+import { join, basename } from 'node:path';
+import { minify } from 'terser';
+import type { MainConfig, GameData } from './types.js';
+import { Logger } from './logger.js';
 
 /**
  * 压缩结果
@@ -22,7 +22,7 @@ export interface MinifyResult {
  * @returns 压缩后的代码
  */
 export async function minifyFile(filePath: string): Promise<string> {
-  const content = await readFile(filePath, "utf-8");
+  const content = await readFile(filePath, 'utf-8');
 
   const result = await minify(content, {
     compress: {
@@ -60,26 +60,26 @@ export async function minifyFile(filePath: string): Promise<string> {
  */
 export async function minifyMultiple(filePaths: string[]): Promise<string> {
   if (filePaths.length === 0) {
-    return "";
+    return '';
   }
 
   // 读取所有文件内容
   const contents = await Promise.all(
     filePaths.map(async (filePath) => {
       try {
-        return await readFile(filePath, "utf-8");
+        return await readFile(filePath, 'utf-8');
       } catch {
         // 文件不存在时跳过
-        return "";
+        return '';
       }
     }),
   );
 
   // 合并内容，用分号分隔
-  const combined = contents.filter((c) => c.length > 0).join(";\n");
+  const combined = contents.filter((c) => c.length > 0).join(';\n');
 
   if (!combined) {
-    return "";
+    return '';
   }
 
   const result = await minify(combined, {
@@ -118,7 +118,7 @@ export async function minifyMultiple(filePaths: string[]): Promise<string> {
  * @returns 压缩后的代码
  */
 export async function minifyLibs(rootDir: string, loadList: string[]): Promise<string> {
-  const libsDir = join(rootDir, "libs");
+  const libsDir = join(rootDir, 'libs');
   const filePaths = loadList.map((name) => join(libsDir, `${name}.js`));
   return minifyMultiple(filePaths);
 }
@@ -130,7 +130,7 @@ export async function minifyLibs(rootDir: string, loadList: string[]): Promise<s
  * @returns 压缩后的代码
  */
 export async function minifyProject(rootDir: string, pureData: string[]): Promise<string> {
-  const projectDir = join(rootDir, "project");
+  const projectDir = join(rootDir, 'project');
   const filePaths = pureData.map((name) => join(projectDir, `${name}.js`));
   return minifyMultiple(filePaths);
 }
@@ -142,7 +142,7 @@ export async function minifyProject(rootDir: string, pureData: string[]): Promis
  * @returns 压缩后的代码
  */
 export async function minifyFloors(rootDir: string, floorIds: string[]): Promise<string> {
-  const floorsDir = join(rootDir, "project", "floors");
+  const floorsDir = join(rootDir, 'project', 'floors');
   const filePaths = floorIds.map((id) => join(floorsDir, `${id}.js`));
   return minifyMultiple(filePaths);
 }
@@ -160,13 +160,13 @@ function generateVersion(): string {
  * @param rootDir 游戏根目录
  */
 async function appendMainJsConfig(rootDir: string): Promise<void> {
-  const mainJsPath = join(rootDir, "main.js");
-  const content = await readFile(mainJsPath, "utf-8");
+  const mainJsPath = join(rootDir, 'main.js');
+  const content = await readFile(mainJsPath, 'utf-8');
 
   const version = generateVersion();
   const appendContent = `\nmain.useCompress = true;\nmain.version = "${version}";\n`;
 
-  await writeFile(mainJsPath, content + appendContent, "utf-8");
+  await writeFile(mainJsPath, content + appendContent, 'utf-8');
 }
 
 /**
@@ -183,40 +183,40 @@ export async function minifyAll(
   gameData: GameData,
   logger?: Logger,
 ): Promise<MinifyResult> {
-  logger?.group("压缩 JavaScript 文件");
+  logger?.group('压缩 JavaScript 文件');
 
   // 压缩 libs
-  logger?.log("压缩 libs/*.js -> libs/libs.min.js");
+  logger?.log('压缩 libs/*.js -> libs/libs.min.js');
   const libsContent = await minifyLibs(rootDir, mainConfig.loadList);
   if (libsContent) {
-    const libsMinPath = join(rootDir, "libs", "libs.min.js");
+    const libsMinPath = join(rootDir, 'libs', 'libs.min.js');
     // 追加 localForage 初始化代码
-    const libsWithInit = libsContent + ";\nlocalforage.config({name:\"mota\"});";
-    await writeFile(libsMinPath, libsWithInit, "utf-8");
+    const libsWithInit = libsContent + ';\nlocalforage.config({name:"mota"});';
+    await writeFile(libsMinPath, libsWithInit, 'utf-8');
   }
 
   // 压缩 project
-  logger?.log("压缩 project/*.js -> project/project.min.js");
+  logger?.log('压缩 project/*.js -> project/project.min.js');
   const projectContent = await minifyProject(rootDir, mainConfig.pureData);
   if (projectContent) {
-    const projectMinPath = join(rootDir, "project", "project.min.js");
-    await writeFile(projectMinPath, projectContent, "utf-8");
+    const projectMinPath = join(rootDir, 'project', 'project.min.js');
+    await writeFile(projectMinPath, projectContent, 'utf-8');
   }
 
   // 压缩 floors
-  logger?.log("压缩 project/floors/*.js -> project/floors.min.js");
+  logger?.log('压缩 project/floors/*.js -> project/floors.min.js');
   const floorsContent = await minifyFloors(rootDir, gameData.floorIds);
   if (floorsContent) {
-    const floorsMinPath = join(rootDir, "project", "floors.min.js");
-    await writeFile(floorsMinPath, floorsContent, "utf-8");
+    const floorsMinPath = join(rootDir, 'project', 'floors.min.js');
+    await writeFile(floorsMinPath, floorsContent, 'utf-8');
   }
 
   // 追加 useCompress 和 version 到 main.js
-  logger?.log("更新 main.js 配置");
+  logger?.log('更新 main.js 配置');
   await appendMainJsConfig(rootDir);
 
   logger?.groupEnd();
-  logger?.success("所有核心文件已压缩");
+  logger?.success('所有核心文件已压缩');
 
   return {
     libsContent,

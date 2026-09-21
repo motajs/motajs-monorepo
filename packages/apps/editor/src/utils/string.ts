@@ -19,7 +19,7 @@
  */
 export function escapeNewlines(str: string): string {
   if (!str) return str;
-  return str.split("\n").join("\\n");
+  return str.split('\n').join('\\n');
 }
 
 /**
@@ -37,7 +37,7 @@ export function escapeNewlines(str: string): string {
  */
 export function unescapeNewlines(str: string): string {
   if (!str) return str;
-  return str.split("\\n").join("\n");
+  return str.split('\\n').join('\n');
 }
 
 /**
@@ -53,7 +53,7 @@ export function unescapeNewlines(str: string): string {
  * ```
  */
 export function isFunctionString(str: string): boolean {
-  return typeof str === "string" && str.slice(0, 8) === "function";
+  return typeof str === 'string' && str.slice(0, 8) === 'function';
 }
 
 /**
@@ -69,7 +69,7 @@ export function isFunctionString(str: string): boolean {
  * ```
  */
 export function isJsonStringFormat(value: string): boolean {
-  return typeof value === "string" && value.slice(0, 1) === '"';
+  return typeof value === 'string' && value.slice(0, 1) === '"';
 }
 
 /** floorId 格式验证正则：字母或下划线开头，后跟字母、数字或下划线 */

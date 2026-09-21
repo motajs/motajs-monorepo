@@ -11,13 +11,9 @@
  * - 叶子节点是函数，解析后转为字符串存储
  */
 
-import { DataHandler } from "./DataHandler";
-import type { FileHandler } from "./FileHandler";
-import {
-  decodeGameScript2x,
-  encodeGameScript2x,
-  type ScriptDataObject,
-} from "@motajs/file2x";
+import { DataHandler } from './DataHandler';
+import type { FileHandler } from './FileHandler';
+import { decodeGameScript2x, encodeGameScript2x, type ScriptDataObject } from '@motajs/file2x';
 
 /** 嵌套 Record 类型，叶子节点为字符串（函数文本） */
 export type ScriptData = ScriptDataObject;

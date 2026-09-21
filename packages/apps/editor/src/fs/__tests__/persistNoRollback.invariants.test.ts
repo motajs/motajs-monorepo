@@ -14,17 +14,17 @@
  * 从失败输出读出真实值后再固化，而不是从实现源码推导。
  */
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { FileHandlerManager } from "@/fs/FileHandlerManager";
-import { persistenceMonitor } from "@/fs/PersistenceMonitor";
-import { tableCommands } from "@/project/commands/tableCommands";
-import { projectData } from "@/project/data/projectData";
-import { loadSampleProject, type SampleProjectContext } from "@test/utils/sampleProject";
+import { FileHandlerManager } from '@/fs/FileHandlerManager';
+import { persistenceMonitor } from '@/fs/PersistenceMonitor';
+import { tableCommands } from '@/project/commands/tableCommands';
+import { projectData } from '@/project/data/projectData';
+import { loadSampleProject, type SampleProjectContext } from '@test/utils/sampleProject';
 
-const TOWER_PATH = "project/data.js";
+const TOWER_PATH = 'project/data.js';
 
-describe("persistence never rolls editor state back", () => {
+describe('persistence never rolls editor state back', () => {
   let project: SampleProjectContext;
 
   beforeEach(async () => {
@@ -38,38 +38,38 @@ describe("persistence never rolls editor state back", () => {
     projectData.resetForTests();
   });
 
-  it("keeps the in-memory value while the disk keeps the previous content, then recovers on retry", async () => {
+  it('keeps the in-memory value while the disk keeps the previous content, then recovers on retry', async () => {
     const tower = projectData.tower();
     await project.loadResource(tower);
     const originalDisk = project.readText(TOWER_PATH);
 
-    project.fs.setWriteError(new Error("tower persist failed"));
+    project.fs.setWriteError(new Error('tower persist failed'));
     const result = await tableCommands.patchResource(tower, [
-      ["change", "['firstData']['title']", "No Rollback Title"],
+      ['change', "['firstData']['title']", 'No Rollback Title'],
     ]);
 
     // 编辑命令本身成功：失败发生在持久化边界，而不是编辑本身
     expect(result).toEqual({ ok: true });
     // 内存值保留新值（不回滚）
-    expect(tower.value().firstData.title).toBe("No Rollback Title");
+    expect(tower.value().firstData.title).toBe('No Rollback Title');
 
     await persistenceMonitor.whenQuiescent([tower.path]);
 
     // 失败同时体现在资源 persistStatus 与 monitor 的 failed 集合上
-    expect(tower.persistStatus().status).toBe("error");
+    expect(tower.persistStatus().status).toBe('error');
     expect(persistenceMonitor.failedFiles().map((failure) => failure.path)).toContain(tower.path);
 
     // 磁盘仍是编辑前的内容
     expect(project.readText(TOWER_PATH)).toBe(originalDisk);
-    expect(project.readText(TOWER_PATH)).not.toContain("No Rollback Title");
+    expect(project.readText(TOWER_PATH)).not.toContain('No Rollback Title');
 
     // 清除注入故障并重试：状态回到 idle，磁盘写入新值
     project.fs.clearWriteError();
     await persistenceMonitor.retryFailed();
     await persistenceMonitor.whenQuiescent([tower.path]);
 
-    expect(tower.persistStatus().status).toBe("idle");
-    expect(project.readText(TOWER_PATH)).toContain("No Rollback Title");
+    expect(tower.persistStatus().status).toBe('idle');
+    expect(project.readText(TOWER_PATH)).toContain('No Rollback Title');
     expect(persistenceMonitor.failedFiles()).toEqual([]);
   });
 });

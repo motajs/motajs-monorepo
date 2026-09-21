@@ -5,12 +5,12 @@
  * 只读，不支持写入
  */
 
-import { signal, effect } from "alien-signals";
-import { fs as defaultFs, type Fs } from "@/services/fs";
-import { waitUntil } from "@/utils/base/signal";
-import type { Content } from "./types";
-import type { IContentView, ReadonlySignal } from "./interfaces";
-import { isFileNotFoundError } from "./errors";
+import { signal, effect } from 'alien-signals';
+import { fs as defaultFs, type Fs } from '@/services/fs';
+import { waitUntil } from '@/utils/base/signal';
+import type { Content } from './types';
+import type { IContentView, ReadonlySignal } from './interfaces';
+import { isFileNotFoundError } from './errors';
 
 export class BinaryFileHandler implements IContentView<HTMLImageElement> {
   private _content: ReturnType<typeof signal<Content<HTMLImageElement>>>;
@@ -20,7 +20,7 @@ export class BinaryFileHandler implements IContentView<HTMLImageElement> {
 
   constructor(path: string, fs?: Fs) {
     this.path = path;
-    this._content = signal<Content<HTMLImageElement>>({ status: "idle" });
+    this._content = signal<Content<HTMLImageElement>>({ status: 'idle' });
     this.content = this._content as ReadonlySignal<Content<HTMLImageElement>>;
     this.fs = fs || defaultFs;
   }
@@ -43,8 +43,8 @@ export class BinaryFileHandler implements IContentView<HTMLImageElement> {
 
   async ensureLoaded(): Promise<void> {
     const status = this._content().status;
-    if (status === "idle") await this.load();
-    else if (status === "loading") await this.waitForSettled();
+    if (status === 'idle') await this.load();
+    else if (status === 'loading') await this.waitForSettled();
   }
 
   getPath(): string {
@@ -54,16 +54,16 @@ export class BinaryFileHandler implements IContentView<HTMLImageElement> {
   // ==================== 加载方法 ====================
 
   async load(): Promise<void> {
-    if (this._content().status === "loading") {
-      await waitUntil(() => this._content().status !== "loading");
+    if (this._content().status === 'loading') {
+      await waitUntil(() => this._content().status !== 'loading');
       return;
     }
 
-    this._content({ status: "loading" });
+    this._content({ status: 'loading' });
 
     try {
       const buffer = await this.fs.promises.readFileBinary(this.path);
-      const blob = new Blob([buffer], { type: "image/png" });
+      const blob = new Blob([buffer], { type: 'image/png' });
       const url = URL.createObjectURL(blob);
 
       const img = new Image();
@@ -73,14 +73,14 @@ export class BinaryFileHandler implements IContentView<HTMLImageElement> {
         img.src = url;
       });
 
-      this._content({ status: "loaded", value: img });
+      this._content({ status: 'loaded', value: img });
     } catch (err) {
       const error = err as Error;
 
       if (isFileNotFoundError(error)) {
-        this._content({ status: "not-found" });
+        this._content({ status: 'not-found' });
       } else {
-        this._content({ status: "error", error });
+        this._content({ status: 'error', error });
       }
     }
   }
@@ -89,7 +89,7 @@ export class BinaryFileHandler implements IContentView<HTMLImageElement> {
    * 等待图片加载完成
    */
   waitForLoaded(): Promise<void> {
-    return waitUntil(() => this._content().status === "loaded");
+    return waitUntil(() => this._content().status === 'loaded');
   }
 
   /**
@@ -98,7 +98,7 @@ export class BinaryFileHandler implements IContentView<HTMLImageElement> {
   waitForSettled(): Promise<void> {
     return waitUntil(() => {
       const status = this._content().status;
-      return status !== "loading" && status !== "idle";
+      return status !== 'loading' && status !== 'idle';
     });
   }
 
@@ -107,6 +107,6 @@ export class BinaryFileHandler implements IContentView<HTMLImageElement> {
    */
   isLoaded(): boolean {
     const status = this._content().status;
-    return status !== "idle" && status !== "loading";
+    return status !== 'idle' && status !== 'loading';
   }
 }

@@ -6,12 +6,12 @@
  * - Promise 风格 API（fs.promises 命名空间）
  */
 
-import { editorEndpoint } from "@/environment";
+import { editorEndpoint } from '@/environment';
 
 // ==================== 类型定义 ====================
 
 /** 文件编码类型 */
-export type FileEncoding = "utf-8" | "base64";
+export type FileEncoding = 'utf-8' | 'base64';
 
 /** 标准回调函数类型 */
 export type Callback<T = string> = (err: string | null, data?: T | null) => void;
@@ -49,7 +49,7 @@ export interface Fs {
  * base64 转 ArrayBuffer（兼容浏览器与 Node 环境）
  */
 function decodeBase64ToArrayBuffer(base64: string): ArrayBuffer {
-  if (typeof atob === "function") {
+  if (typeof atob === 'function') {
     const binary = atob(base64);
     const bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i += 1) {
@@ -60,26 +60,22 @@ function decodeBase64ToArrayBuffer(base64: string): ArrayBuffer {
 
   const nodeBuffer = (globalThis as { Buffer?: { from: (input: string, encoding: string) => Uint8Array } }).Buffer;
   if (!nodeBuffer) {
-    throw new Error("Base64 decode not supported in this environment.");
+    throw new Error('Base64 decode not supported in this environment.');
   }
 
-  const buffer = nodeBuffer.from(base64, "base64");
+  const buffer = nodeBuffer.from(base64, 'base64');
   return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer;
 }
 
 /**
  * 发送 HTTP 请求（fetch）
  */
-async function httpRequest(
-  type: string,
-  url: string,
-  formData: string | null,
-): Promise<string> {
+async function httpRequest(type: string, url: string, formData: string | null): Promise<string> {
   try {
     const response = await fetch(url, {
       method: type,
       headers: {
-        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
       },
       body: formData ?? undefined,
     });
@@ -90,12 +86,12 @@ async function httpRequest(
       try {
         const payload = JSON.parse(responseText) as { error?: { code?: string; message?: string; path?: string } };
         const error = payload.error;
-        if (error) detail = [error.code, error.message, error.path].filter(Boolean).join(": ");
+        if (error) detail = [error.code, error.message, error.path].filter(Boolean).join(': ');
       } catch {
         // Preserve non-JSON server errors as text.
       }
-      const requestPath = new URLSearchParams(formData ?? "").get("name");
-      throw new Error(`HTTP ${response.status}${detail ? `: ${detail}` : ""}${requestPath ? ` [${requestPath}]` : ""}`);
+      const requestPath = new URLSearchParams(formData ?? '').get('name');
+      throw new Error(`HTTP ${response.status}${detail ? `: ${detail}` : ''}${requestPath ? ` [${requestPath}]` : ''}`);
     }
 
     return responseText;
@@ -109,13 +105,13 @@ async function httpRequest(
  * 向服务器发送 POST 请求并处理响应
  */
 function postData(data: string | null, endpoint: string, callback: Callback): void {
-  if (typeof data === "undefined" || data === null) {
+  if (typeof data === 'undefined' || data === null) {
     data = JSON.stringify({ 1: 2 });
   }
 
-  httpRequest("POST", editorEndpoint("fs", endpoint), data)
+  httpRequest('POST', editorEndpoint('fs', endpoint), data)
     .then((response) => {
-      if (response.slice(0, 6) === "error:") {
+      if (response.slice(0, 6) === 'error:') {
         callback(response, null);
       } else {
         callback(null, response);
@@ -136,9 +132,7 @@ function postData(data: string | null, endpoint: string, callback: Callback): vo
 /**
  * 将回调函数转换为 Promise
  */
-function promisify<T>(
-  fn: (callback: Callback<T>) => void,
-): Promise<T> {
+function promisify<T>(fn: (callback: Callback<T>) => void): Promise<T> {
   return new Promise((resolve, reject) => {
     fn((err, data) => {
       if (err) {
@@ -159,7 +153,7 @@ const promises: FsPromiseApi = {
 
   readFileBinary(filename: string): Promise<ArrayBuffer> {
     return promisify<string>((callback) => {
-      fs.readFile(filename, "base64", callback);
+      fs.readFile(filename, 'base64', callback);
     }).then((base64) => decodeBase64ToArrayBuffer(base64));
   },
 
@@ -204,68 +198,68 @@ const promises: FsPromiseApi = {
 
 export const fs: Fs = {
   readFile(filename: string, encoding: FileEncoding, callback: Callback<string>): void {
-    if (typeof filename !== "string") {
-      throw "Type Error in fs.readFile";
+    if (typeof filename !== 'string') {
+      throw 'Type Error in fs.readFile';
     }
-    if (encoding === "utf-8") {
+    if (encoding === 'utf-8') {
       const params = new URLSearchParams();
-      params.set("type", "utf8");
-      params.set("name", filename);
-      postData(params.toString(), "readFile", callback);
+      params.set('type', 'utf8');
+      params.set('name', filename);
+      postData(params.toString(), 'readFile', callback);
       return;
     }
-    if (encoding === "base64") {
+    if (encoding === 'base64') {
       const params = new URLSearchParams();
-      params.set("type", "base64");
-      params.set("name", filename);
-      postData(params.toString(), "readFile", callback);
+      params.set('type', 'base64');
+      params.set('name', filename);
+      postData(params.toString(), 'readFile', callback);
       return;
     }
-    throw "Type Error in fs.readFile";
+    throw 'Type Error in fs.readFile';
   },
 
   writeFile(filename: string, datastr: string, encoding: FileEncoding, callback: VoidCallback): void {
-    if (typeof filename !== "string" || typeof datastr !== "string") {
-      throw "Type Error in fs.writeFile";
+    if (typeof filename !== 'string' || typeof datastr !== 'string') {
+      throw 'Type Error in fs.writeFile';
     }
-    if (encoding === "utf-8") {
+    if (encoding === 'utf-8') {
       const params = new URLSearchParams();
-      params.set("type", "utf8");
-      params.set("name", filename);
-      params.set("value", datastr);
-      postData(params.toString(), "writeFile", callback);
+      params.set('type', 'utf8');
+      params.set('name', filename);
+      params.set('value', datastr);
+      postData(params.toString(), 'writeFile', callback);
       return;
     }
-    if (encoding === "base64") {
+    if (encoding === 'base64') {
       const params = new URLSearchParams();
-      params.set("type", "base64");
-      params.set("name", filename);
-      params.set("value", datastr);
-      postData(params.toString(), "writeFile", callback);
+      params.set('type', 'base64');
+      params.set('name', filename);
+      params.set('value', datastr);
+      postData(params.toString(), 'writeFile', callback);
       return;
     }
-    throw "Type Error in fs.writeFile";
+    throw 'Type Error in fs.writeFile';
   },
 
   writeMultiFiles(filenames: string[], datastrs: string[], callback: VoidCallback): void {
     const params = new URLSearchParams();
-    params.set("name", filenames.join(";"));
-    params.set("value", datastrs.join(";"));
-    postData(params.toString(), "writeMultiFiles", callback);
+    params.set('name', filenames.join(';'));
+    params.set('value', datastrs.join(';'));
+    postData(params.toString(), 'writeMultiFiles', callback);
   },
 
   readdir(path: string, callback: Callback<string[]>): void {
-    if (typeof path !== "string") {
-      throw "Type Error in fs.readdir";
+    if (typeof path !== 'string') {
+      throw 'Type Error in fs.readdir';
     }
     const params = new URLSearchParams();
-    params.set("name", path);
-    postData(params.toString(), "listFile", (err, response) => {
+    params.set('name', path);
+    postData(params.toString(), 'listFile', (err, response) => {
       let parsedData: string[] | null = null;
       try {
         parsedData = JSON.parse(response as string);
       } catch {
-        err = "Invalid /listFile";
+        err = 'Invalid /listFile';
         parsedData = null;
       }
       callback(err, parsedData);
@@ -273,31 +267,31 @@ export const fs: Fs = {
   },
 
   mkdir(path: string, callback: VoidCallback): void {
-    if (typeof path !== "string") {
-      throw "Type Error in fs.readdir";
+    if (typeof path !== 'string') {
+      throw 'Type Error in fs.readdir';
     }
     const params = new URLSearchParams();
-    params.set("name", path);
-    postData(params.toString(), "makeDir", callback);
+    params.set('name', path);
+    postData(params.toString(), 'makeDir', callback);
   },
 
   moveFile(src: string, dest: string, callback: VoidCallback): void {
-    if (typeof src !== "string" || typeof dest !== "string") {
-      throw "Type Error in fs.readdir";
+    if (typeof src !== 'string' || typeof dest !== 'string') {
+      throw 'Type Error in fs.readdir';
     }
     const params = new URLSearchParams();
-    params.set("src", src);
-    params.set("dest", dest);
-    postData(params.toString(), "moveFile", callback);
+    params.set('src', src);
+    params.set('dest', dest);
+    postData(params.toString(), 'moveFile', callback);
   },
 
   deleteFile(path: string, callback: VoidCallback): void {
-    if (typeof path !== "string") {
-      throw "Type Error in fs.readdir";
+    if (typeof path !== 'string') {
+      throw 'Type Error in fs.readdir';
     }
     const params = new URLSearchParams();
-    params.set("name", path);
-    postData(params.toString(), "deleteFile", callback);
+    params.set('name', path);
+    postData(params.toString(), 'deleteFile', callback);
   },
 
   promises,

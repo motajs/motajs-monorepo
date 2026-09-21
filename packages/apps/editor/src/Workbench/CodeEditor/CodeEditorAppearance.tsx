@@ -1,12 +1,12 @@
-import { Checkbox, InputNumber, Popover, Tooltip } from "antd";
-import { Settings2 } from "lucide-react";
-import type { FC } from "react";
-import type { CodeEditorAppearance } from "./useCodeEditorAppearance";
+import { Checkbox, InputNumber, Popover, Tooltip } from 'antd';
+import { Settings2 } from 'lucide-react';
+import type { FC } from 'react';
+import type { CodeEditorAppearance } from './useCodeEditorAppearance';
 
 export const CodeEditorSettingsButton: FC<{ appearance: CodeEditorAppearance }> = ({ appearance }) => (
   <Popover
     arrow={false}
-    content={(
+    content={
       <div className="codeEditorAppearanceSettings">
         <label>
           <span>字号</span>
@@ -21,14 +21,11 @@ export const CodeEditorSettingsButton: FC<{ appearance: CodeEditorAppearance }> 
             }}
           />
         </label>
-        <Checkbox
-          checked={appearance.fontBold}
-          onChange={(event) => appearance.setFontBold(event.target.checked)}
-        >
+        <Checkbox checked={appearance.fontBold} onChange={(event) => appearance.setFontBold(event.target.checked)}>
           字体加粗
         </Checkbox>
       </div>
-    )}
+    }
     placement="bottomRight"
     trigger="click"
   >

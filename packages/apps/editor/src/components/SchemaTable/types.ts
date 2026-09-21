@@ -1,4 +1,4 @@
-export type JsonSchemaType = "null" | "boolean" | "number" | "integer" | "string" | "array" | "object";
+export type JsonSchemaType = 'null' | 'boolean' | 'number' | 'integer' | 'string' | 'array' | 'object';
 
 export interface JsonShape {
   type?: JsonSchemaType | JsonSchemaType[];
@@ -15,15 +15,12 @@ export type Expression =
   | DataReference
   | {
       operator:
-        | "eq" | "ne"
-        | "gt" | "gte" | "lt" | "lte"
-        | "and" | "or" | "not"
-        | "in" | "includes" | "exists" | "empty";
+        'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte' | 'and' | 'or' | 'not' | 'in' | 'includes' | 'exists' | 'empty';
       args: Expression[];
     }
   | { call: string; args?: Expression[] };
 
-export type ConditionFallback = "hidden" | "hidden-if-empty" | "disabled" | "inactive";
+export type ConditionFallback = 'hidden' | 'hidden-if-empty' | 'disabled' | 'inactive';
 
 export interface Condition {
   when: Expression;
@@ -44,79 +41,79 @@ export type CombineInputDescriptor =
   | {
       key: string;
       label?: string;
-      editor: { kind: "suggestion"; suggestions: SuggestionOption[] };
+      editor: { kind: 'suggestion'; suggestions: SuggestionOption[] };
     }
   | {
       key: string;
       label?: string;
-      editor: { kind: "number"; min?: number; max?: number; step?: number; integer?: boolean };
+      editor: { kind: 'number'; min?: number; max?: number; step?: number; integer?: boolean };
     };
 
 export type EditorDescriptor =
-  | { kind: "readonly" }
-  | { kind: "text" }
-  | { kind: "number" }
-  | { kind: "checkbox" }
+  | { kind: 'readonly' }
+  | { kind: 'text' }
+  | { kind: 'number' }
+  | { kind: 'checkbox' }
   | {
-      kind: "select";
+      kind: 'select';
       options?: ChoiceOption[];
       reference?: DataReference;
     }
-  | { kind: "stringList"; placeholder?: string }
-  | { kind: "orderedStringList"; placeholder?: string; createLabel?: string }
+  | { kind: 'stringList'; placeholder?: string }
+  | { kind: 'orderedStringList'; placeholder?: string; createLabel?: string }
   | {
-      kind: "checkboxSet";
+      kind: 'checkboxSet';
       options?: Array<{ value: string | number; label?: string }>;
       reference?: DataReference;
     }
-  | { kind: "passability"; block?: DataReference }
-  | { kind: "dimensions" }
+  | { kind: 'passability'; block?: DataReference }
+  | { kind: 'dimensions' }
   | {
-      kind: "initialPosition";
+      kind: 'initialPosition';
       floors: DataReference;
       directions?: ChoiceOption[];
     }
   | {
-      kind: "equipmentSlots";
+      kind: 'equipmentSlots';
       slots: DataReference;
       items: DataReference;
     }
   | {
-      kind: "itemCountRecord";
+      kind: 'itemCountRecord';
       items: DataReference;
-      category: "constants" | "tools" | "equips";
+      category: 'constants' | 'tools' | 'equips';
     }
-  | { kind: "json" }
+  | { kind: 'json' }
   | {
-      kind: "event";
+      kind: 'event';
       entryType: string;
       floorId?: DataReference;
       position?: DataReference;
     }
   | {
-      kind: "autoEventList";
+      kind: 'autoEventList';
       floorId?: DataReference;
       position?: DataReference;
     }
-  | { kind: "code"; lint?: boolean; template?: string }
-  | { kind: "point"; floorId?: DataReference }
-  | { kind: "color" }
-  | { kind: "block" }
-  | { kind: "combine"; inputs: CombineInputDescriptor[] }
+  | { kind: 'code'; lint?: boolean; template?: string }
+  | { kind: 'point'; floorId?: DataReference }
+  | { kind: 'color' }
+  | { kind: 'block' }
+  | { kind: 'combine'; inputs: CombineInputDescriptor[] }
   | {
-      kind: "bgmList";
+      kind: 'bgmList';
       reference: DataReference;
       directory: string;
     }
   | {
-      kind: "floorImages";
+      kind: 'floorImages';
       floorId: DataReference;
     }
   | {
-      kind: "material";
+      kind: 'material';
       reference: DataReference;
       directory: string;
-      selection: "single" | "multiple";
+      selection: 'single' | 'multiple';
     };
 
 export interface FieldSchema extends JsonShape {
@@ -128,7 +125,7 @@ export interface FieldSchema extends JsonShape {
 }
 
 export interface FieldSchemaBundle {
-  kind: "field-bundle";
+  kind: 'field-bundle';
   formatVersion: 1;
   schemaId: string;
   revision: number;
@@ -142,7 +139,7 @@ export interface SchemaFork {
 }
 
 export interface FieldNode {
-  kind: "field";
+  kind: 'field';
   id: string;
   fieldSchema: string;
   source?: DataReference;
@@ -151,7 +148,7 @@ export interface FieldNode {
 }
 
 export interface GroupNode {
-  kind: "group";
+  kind: 'group';
   id: string;
   label: string;
   bind?: Record<string, DataReference>;
@@ -160,7 +157,7 @@ export interface GroupNode {
 }
 
 export interface RestNode {
-  kind: "rest";
+  kind: 'rest';
   id: string;
   label: string;
   path: DataReference;
@@ -171,7 +168,7 @@ export interface RestNode {
 export type UINode = FieldNode | GroupNode | RestNode;
 
 export interface UISchema {
-  kind: "table-schema";
+  kind: 'table-schema';
   formatVersion: 1;
   schemaId: string;
   revision: number;
@@ -179,21 +176,19 @@ export interface UISchema {
   nodes: UINode[];
 }
 
-export type RawSlot<T> =
-  | { present: true; value: T }
-  | { present: false };
+export type RawSlot<T> = { present: true; value: T } | { present: false };
 
 export type BlockResolution<T> =
-  | { status: "loading" }
-  | { status: "error"; error: Error }
-  | { status: "type-mismatch"; rawValue: unknown; error: Error }
-  | { status: "ready"; value: T };
+  | { status: 'loading' }
+  | { status: 'error'; error: Error }
+  | { status: 'type-mismatch'; rawValue: unknown; error: Error }
+  | { status: 'ready'; value: T };
 
 export interface Diagnostic {
   source: string;
   path?: string;
   code: string;
-  severity: "error" | "warning" | "info";
+  severity: 'error' | 'warning' | 'info';
   message: string;
 }
 

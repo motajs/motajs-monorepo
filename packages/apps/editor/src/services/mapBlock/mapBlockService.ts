@@ -10,14 +10,14 @@
  * - 内存数据源 + 异步落盘
  */
 
-import { FileHandlerManager } from "@/fs/FileHandlerManager";
-import type { Content } from "@/fs";
-import type { Action } from "@/utils/action";
-import { MapsBlocksDataHandler } from "./MapsBlocksDataHandler";
-import { projectData } from "@/project/data/projectData";
+import { FileHandlerManager } from '@/fs/FileHandlerManager';
+import type { Content } from '@/fs';
+import type { Action } from '@/utils/action';
+import { MapsBlocksDataHandler } from './MapsBlocksDataHandler';
+import { projectData } from '@/project/data/projectData';
 
 /** 地图块数据文件路径 */
-const MAPS_BLOCKS_DATA_PATH = "project/maps.js";
+const MAPS_BLOCKS_DATA_PATH = 'project/maps.js';
 
 /**
  * 地图块信息类型
@@ -45,7 +45,7 @@ export interface BlockInfo {
    * lets logical or invisible blocks remain visible while editing a map.
    */
   editorDisplay?: {
-    type: "image";
+    type: 'image';
     path: string;
     x?: number;
     y?: number;
@@ -125,11 +125,7 @@ class MapBlockServiceImpl {
 
     const idnumStr = String(idnum);
 
-    const prefixedActions: Action[] = actions.map(([type, path, value]) => [
-      type,
-      `['${idnumStr}']${path}`,
-      value,
-    ]);
+    const prefixedActions: Action[] = actions.map(([type, path, value]) => [type, `['${idnumStr}']${path}`, value]);
     void projectData.mapBlocks().patch(prefixedActions);
   }
 

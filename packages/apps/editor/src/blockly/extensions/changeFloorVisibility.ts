@@ -60,48 +60,42 @@ export function registerChangeFloorVisibilityExtension(): void {
     return;
   }
 
-  Blockly.Extensions.register(
-    CHANGE_FLOOR_VISIBILITY_EXTENSION,
-    function (this: Blockly.Block) {
-      // 初始化时更新一次可见性
+  Blockly.Extensions.register(CHANGE_FLOOR_VISIBILITY_EXTENSION, function (this: Blockly.Block) {
+    // 初始化时更新一次可见性
+    updateFieldVisibility(this);
+
+    // 监听变化事件
+    this.setOnChange(function (this: Blockly.Block, e: Blockly.Events.Abstract) {
+      // 只处理块变化事件
+      if (e.type !== Blockly.Events.BLOCK_CHANGE) {
+        return;
+      }
+
+      const changeEvent = e as Blockly.Events.BlockChange;
+
+      // 只处理当前块的变化
+      if (changeEvent.blockId !== this.id) {
+        return;
+      }
+
+      // 只处理字段值变化
+      if (changeEvent.element !== 'field') {
+        return;
+      }
+
+      // 只处理相关字段的变化
+      const fieldName = changeEvent.name;
+      if (fieldName !== 'FLOOR_LIST' && fieldName !== 'STAIR') {
+        return;
+      }
+
+      // 更新字段可见性
       updateFieldVisibility(this);
 
-      // 监听变化事件
-      this.setOnChange(function (
-        this: Blockly.Block,
-        e: Blockly.Events.Abstract,
-      ) {
-        // 只处理块变化事件
-        if (e.type !== Blockly.Events.BLOCK_CHANGE) {
-          return;
-        }
-
-        const changeEvent = e as Blockly.Events.BlockChange;
-
-        // 只处理当前块的变化
-        if (changeEvent.blockId !== this.id) {
-          return;
-        }
-
-        // 只处理字段值变化
-        if (changeEvent.element !== 'field') {
-          return;
-        }
-
-        // 只处理相关字段的变化
-        const fieldName = changeEvent.name;
-        if (fieldName !== 'FLOOR_LIST' && fieldName !== 'STAIR') {
-          return;
-        }
-
-        // 更新字段可见性
-        updateFieldVisibility(this);
-
-        // 重新渲染块以更新布局
-        if (this instanceof Blockly.BlockSvg && this.rendered) {
-          this.render();
-        }
-      });
-    },
-  );
+      // 重新渲染块以更新布局
+      if (this instanceof Blockly.BlockSvg && this.rendered) {
+        this.render();
+      }
+    });
+  });
 }

@@ -1,8 +1,7 @@
 export type FloorPartition = [string, string];
 
 export type FloorOrganizationToken =
-  | { kind: "floor"; floorId: string }
-  | { kind: "boundary"; partition: number; edge: "start" | "end" };
+  { kind: 'floor'; floorId: string } | { kind: 'boundary'; partition: number; edge: 'start' | 'end' };
 
 export interface FloorOrganizationValidation {
   valid: boolean;
@@ -19,8 +18,7 @@ export interface SearchableFloor {
 export function floorMatchesQuery(floor: SearchableFloor, query: string): boolean {
   const normalized = query.trim().toLocaleLowerCase();
   if (!normalized) return true;
-  return [floor.id, floor.title, floor.name]
-    .some((value) => value?.toLocaleLowerCase().includes(normalized));
+  return [floor.id, floor.title, floor.name].some((value) => value?.toLocaleLowerCase().includes(normalized));
 }
 
 function duplicateValues(values: readonly string[]): string[] {
@@ -39,13 +37,13 @@ export function validateFloorOrganization(
 ): FloorOrganizationValidation {
   const diagnostics: string[] = [];
   const duplicates = duplicateValues(floorIds);
-  if (duplicates.length) diagnostics.push(`楼层 ID 重复：${duplicates.join("、")}`);
+  if (duplicates.length) diagnostics.push(`楼层 ID 重复：${duplicates.join('、')}`);
 
   if (rawPartitions == null) {
     return { valid: diagnostics.length === 0, partitions: [], diagnostics };
   }
   if (!Array.isArray(rawPartitions)) {
-    return { valid: false, partitions: [], diagnostics: [...diagnostics, "floorPartitions 必须是数组或 null"] };
+    return { valid: false, partitions: [], diagnostics: [...diagnostics, 'floorPartitions 必须是数组或 null'] };
   }
 
   const index = new Map(floorIds.map((floorId, position) => [floorId, position]));
@@ -53,12 +51,7 @@ export function validateFloorOrganization(
   let previousEnd = -1;
 
   rawPartitions.forEach((raw, partitionIndex) => {
-    if (
-      !Array.isArray(raw)
-      || raw.length !== 2
-      || typeof raw[0] !== "string"
-      || typeof raw[1] !== "string"
-    ) {
+    if (!Array.isArray(raw) || raw.length !== 2 || typeof raw[0] !== 'string' || typeof raw[1] !== 'string') {
       diagnostics.push(`分区 ${partitionIndex + 1} 必须是 [起始楼层, 结束楼层]`);
       return;
     }
@@ -102,12 +95,12 @@ export function buildFloorOrganizationTokens(
   const result: FloorOrganizationToken[] = [];
   for (let offset = 0; offset <= floorIds.length; offset += 1) {
     for (const partition of ends.get(offset) ?? []) {
-      result.push({ kind: "boundary", partition, edge: "end" });
+      result.push({ kind: 'boundary', partition, edge: 'end' });
     }
     for (const partition of starts.get(offset) ?? []) {
-      result.push({ kind: "boundary", partition, edge: "start" });
+      result.push({ kind: 'boundary', partition, edge: 'start' });
     }
-    if (offset < floorIds.length) result.push({ kind: "floor", floorId: floorIds[offset] });
+    if (offset < floorIds.length) result.push({ kind: 'floor', floorId: floorIds[offset] });
   }
   return result;
 }
@@ -117,20 +110,20 @@ export function organizationFromTokens(tokens: readonly FloorOrganizationToken[]
   floorPartitions: FloorPartition[];
   diagnostics: string[];
 } {
-  const floorIds = tokens.flatMap((token) => token.kind === "floor" ? [token.floorId] : []);
+  const floorIds = tokens.flatMap((token) => (token.kind === 'floor' ? [token.floorId] : []));
   const diagnostics: string[] = [];
   const active = new Map<number, string[]>();
   const completed = new Map<number, FloorPartition>();
   let openPartition: number | undefined;
 
   for (const token of tokens) {
-    if (token.kind === "floor") {
+    if (token.kind === 'floor') {
       if (openPartition != null) active.get(openPartition)?.push(token.floorId);
       continue;
     }
-    if (token.edge === "start") {
+    if (token.edge === 'start') {
       if (openPartition != null) {
-        diagnostics.push("分区边界不能交叉或嵌套");
+        diagnostics.push('分区边界不能交叉或嵌套');
         continue;
       }
       openPartition = token.partition;
@@ -138,14 +131,14 @@ export function organizationFromTokens(tokens: readonly FloorOrganizationToken[]
       continue;
     }
     if (openPartition !== token.partition) {
-      diagnostics.push("分区结束边界没有对应的开始边界");
+      diagnostics.push('分区结束边界没有对应的开始边界');
       continue;
     }
     const members = active.get(token.partition) ?? [];
     if (members.length > 0) completed.set(token.partition, [members[0], members.at(-1)!]);
     openPartition = undefined;
   }
-  if (openPartition != null) diagnostics.push("分区开始边界没有对应的结束边界");
+  if (openPartition != null) diagnostics.push('分区开始边界没有对应的结束边界');
 
   const floorPartitions = [...completed.entries()]
     .sort(([left], [right]) => left - right)

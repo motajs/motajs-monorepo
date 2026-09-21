@@ -1,10 +1,16 @@
-export type PlainData = null | number | string | boolean | PlainData[] | {
-  [key: string]: PlainData;
-};
+export type PlainData =
+  | null
+  | number
+  | string
+  | boolean
+  | PlainData[]
+  | {
+      [key: string]: PlainData;
+    };
 
 export interface Encode2xOptions {
   indent?: string | number;
-  declaration?: "var" | "let" | "const";
+  declaration?: 'var' | 'let' | 'const';
 }
 
 export interface GameData2x<T = PlainData> {

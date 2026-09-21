@@ -1,18 +1,18 @@
-import { useEffect, useRef, useState, useMemo, type FC, type ChangeEvent, type FormEvent } from "react";
-import { GridCanvas, selectionBox } from "@/components/GridCanvas";
-import type { GridMarker } from "@/components/GridCanvas";
-import { EditorStore } from "@/stores/EditorStore";
-import { useAppendPicTemplate, consumeAppendPicTemplate } from "@/stores/appendPicState";
-import { TList } from "./constants";
-import { hueRotate } from "@/utils/canvas/hue";
-import { getGridSizeForMaterial, getFrameCountForMaterial } from "@/utils/appendPic/materialConfig";
-import { createEmptyCanvas } from "@/utils/canvas/create";
-import type { LocPOD } from "@/utils/coordinate";
-import { appendAutotileMaterial, appendMaterial, quickAppendMaterial } from "./appendOperations";
-import { processImageFile } from "./imageProcessing";
-import { projectAssets, type RasterImage } from "@/project/assets";
-import { useSignal } from "@/hooks/useFs";
-import { notifyError } from "@/utils/notify";
+import { useEffect, useRef, useState, useMemo, type FC, type ChangeEvent, type FormEvent } from 'react';
+import { GridCanvas, selectionBox } from '@/components/GridCanvas';
+import type { GridMarker } from '@/components/GridCanvas';
+import { EditorStore } from '@/stores/EditorStore';
+import { useAppendPicTemplate, consumeAppendPicTemplate } from '@/stores/appendPicState';
+import { TList } from './constants';
+import { hueRotate } from '@/utils/canvas/hue';
+import { getGridSizeForMaterial, getFrameCountForMaterial } from '@/utils/appendPic/materialConfig';
+import { createEmptyCanvas } from '@/utils/canvas/create';
+import type { LocPOD } from '@/utils/coordinate';
+import { appendAutotileMaterial, appendMaterial, quickAppendMaterial } from './appendOperations';
+import { processImageFile } from './imageProcessing';
+import { projectAssets, type RasterImage } from '@/project/assets';
+import { useSignal } from '@/hooks/useFs';
+import { notifyError } from '@/utils/notify';
 
 function rasterCanvas(raster: RasterImage): HTMLCanvasElement {
   const context = createEmptyCanvas([raster.width, raster.height]);
@@ -32,7 +32,7 @@ export const AppendPicPanel: FC<AppendPicPanelProps> = ({ embedded = false }) =>
 
   // 状态管理
   const [sourceImage, setSourceImage] = useState<HTMLImageElement | null>(null);
-  const [materialType, setMaterialType] = useState<string>("terrains");
+  const [materialType, setMaterialType] = useState<string>('terrains');
   const [currentFrame, setCurrentFrame] = useState<number>(0);
   const [frameSelections, setFrameSelections] = useState<LocPOD[]>([]);
   const [hueRotateDegree, setHueRotateDegree] = useState<number>(0);
@@ -42,8 +42,8 @@ export const AppendPicPanel: FC<AppendPicPanelProps> = ({ embedded = false }) =>
   const targetCollection = useMemo(() => projectAssets.materialCollection(materialType), [materialType]);
   const targetCollectionContent = useSignal(targetCollection.content);
   const frameCount = useMemo(() => {
-    if (materialType === "autotile") return 1;
-    if (targetCollectionContent.status === "loaded") {
+    if (materialType === 'autotile') return 1;
+    if (targetCollectionContent.status === 'loaded') {
       const width = targetCollectionContent.value.entries[0]?.width;
       if (width) return width / 32;
     }
@@ -51,7 +51,7 @@ export const AppendPicPanel: FC<AppendPicPanelProps> = ({ embedded = false }) =>
   }, [materialType, targetCollectionContent]);
 
   useEffect(() => {
-    if (targetCollectionContent.status === "idle") void targetCollection.ensureLoaded();
+    if (targetCollectionContent.status === 'idle') void targetCollection.ensureLoaded();
   }, [targetCollection, targetCollectionContent.status]);
 
   // hueRotate 后的图像
@@ -84,13 +84,16 @@ export const AppendPicPanel: FC<AppendPicPanelProps> = ({ embedded = false }) =>
   // Canvas 尺寸和样式
   const canvasWidth = displayImage?.width ?? 0;
   const canvasHeight = displayImage?.height ?? 0;
-  const canvasStyle = useMemo(() => ({
-    position: "absolute" as const,
-    zIndex: 100,
-    width: canvasWidth / uiRatio + "px",
-    height: canvasHeight / uiRatio + "px",
-    imageRendering: "pixelated" as const,
-  }), [canvasWidth, canvasHeight, uiRatio]);
+  const canvasStyle = useMemo(
+    () => ({
+      position: 'absolute' as const,
+      zIndex: 100,
+      width: canvasWidth / uiRatio + 'px',
+      height: canvasHeight / uiRatio + 'px',
+      imageRendering: 'pixelated' as const,
+    }),
+    [canvasWidth, canvasHeight, uiRatio],
+  );
 
   // --- selectAppend (现在通过 React state 管理)
   const handleSelectAppendChange = (value: string) => {
@@ -105,7 +108,7 @@ export const AppendPicPanel: FC<AppendPicPanelProps> = ({ embedded = false }) =>
 
   const handleFileInputChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    event.target.value = "";
+    event.target.value = '';
     if (!file) return;
 
     const reader = new FileReader();
@@ -130,11 +133,11 @@ export const AppendPicPanel: FC<AppendPicPanelProps> = ({ embedded = false }) =>
   // appendConfirm
   const handleAppendConfirmClick = () => {
     if (!displayImage) {
-      notifyError("请先导入图片！");
+      notifyError('请先导入图片！');
       return;
     }
 
-    if (materialType === "autotile") {
+    if (materialType === 'autotile') {
       appendAutotileMaterial(displayImage);
     } else {
       appendMaterial({
@@ -148,7 +151,7 @@ export const AppendPicPanel: FC<AppendPicPanelProps> = ({ embedded = false }) =>
 
   const handleQuickAppendConfirmClick = () => {
     if (!displayImage) {
-      notifyError("请先导入图片！");
+      notifyError('请先导入图片！');
       return;
     }
 
@@ -176,11 +179,11 @@ export const AppendPicPanel: FC<AppendPicPanelProps> = ({ embedded = false }) =>
       const info = consumeAppendPicTemplate();
       if (!info) return;
       if (info.isTile) {
-        notifyError("额外素材不支持此功能！");
+        notifyError('额外素材不支持此功能！');
         return;
       }
       if (!info.images) {
-        notifyError("素材信息缺少 images");
+        notifyError('素材信息缺少 images');
         return;
       }
 
@@ -189,10 +192,13 @@ export const AppendPicPanel: FC<AppendPicPanelProps> = ({ embedded = false }) =>
         const grid = getGridSizeForMaterial(info.images);
         const collection = projectAssets.materialCollection(info.images);
         await collection.ensureLoaded();
-        const entry = collection.entries().find((candidate) =>
-          info.images === "autotile"
-            ? candidate.slot.kind === "file" && candidate.slot.name === info.id
-            : candidate.slot.kind === "sheet-row" && candidate.slot.row === (info.y ?? 0));
+        const entry = collection
+          .entries()
+          .find((candidate) =>
+            info.images === 'autotile'
+              ? candidate.slot.kind === 'file' && candidate.slot.name === info.id
+              : candidate.slot.kind === 'sheet-row' && candidate.slot.row === (info.y ?? 0),
+          );
         if (!entry) throw new Error(`无法加载素材：${info.images}`);
         source = rasterCanvas(await collection.read(entry));
 
@@ -210,8 +216,8 @@ export const AppendPicPanel: FC<AppendPicPanelProps> = ({ embedded = false }) =>
 
   return (
     <div
-      id={embedded ? undefined : "left1"}
-      className={embedded ? "appendPicEmbedded" : "leftTab leftTabLayout"}
+      id={embedded ? undefined : 'left1'}
+      className={embedded ? 'appendPicEmbedded' : 'leftTab leftTabLayout'}
       data-test-id="panel-appendpic"
     >
       {/* appendpic */}
@@ -223,15 +229,10 @@ export const AppendPicPanel: FC<AppendPicPanelProps> = ({ embedded = false }) =>
             data-test-id="appendpic-file-input"
             type="file"
             accept="image/*"
-            style={{ display: "none" }}
+            style={{ display: 'none' }}
             onChange={handleFileInputChange}
           />
-          <input
-            id="selectFileBtn"
-            type="button"
-            value="导入文件到画板"
-            onClick={handleSelectFileClick}
-          />
+          <input id="selectFileBtn" type="button" value="导入文件到画板" onClick={handleSelectFileClick} />
           <select
             id="selectAppend"
             data-test-id="appendpic-material-type"
@@ -246,7 +247,13 @@ export const AppendPicPanel: FC<AppendPicPanelProps> = ({ embedded = false }) =>
               </option>
             ))}
           </select>
-          <input id="appendConfirm" data-test-id="appendpic-append" type="button" defaultValue="追加" onClick={handleAppendConfirmClick} />
+          <input
+            id="appendConfirm"
+            data-test-id="appendpic-append"
+            type="button"
+            defaultValue="追加"
+            onClick={handleAppendConfirmClick}
+          />
           <input
             id="quickAppendConfirm"
             data-test-id="appendpic-quick-append"
@@ -255,7 +262,13 @@ export const AppendPicPanel: FC<AppendPicPanelProps> = ({ embedded = false }) =>
             onClick={handleQuickAppendConfirmClick}
           />
           <span style={{ fontSize: 13 }}>&nbsp;&nbsp;自动注册</span>
-          <input id="appendRegister" data-test-id="appendpic-auto-register" type="checkbox" checked={autoRegisterChecked} onChange={(e) => setAppendRegisterChecked(e.target.checked)} />
+          <input
+            id="appendRegister"
+            data-test-id="appendpic-auto-register"
+            type="checkbox"
+            checked={autoRegisterChecked}
+            onChange={(e) => setAppendRegisterChecked(e.target.checked)}
+          />
         </p>
         <p>
           <small>
@@ -272,10 +285,10 @@ export const AppendPicPanel: FC<AppendPicPanelProps> = ({ embedded = false }) =>
             step={1}
             defaultValue={0}
             list="huelists"
-            style={{ width: "60%", marginLeft: "3%", verticalAlign: "middle" }}
+            style={{ width: '60%', marginLeft: '3%', verticalAlign: 'middle' }}
             onInput={handleChangeColorInput}
           />
-          <datalist id="huelists" style={{ display: "none" }}>
+          <datalist id="huelists" style={{ display: 'none' }}>
             <option value={0} />
             <option value={1} />
             <option value={2}></option>
@@ -294,7 +307,7 @@ export const AppendPicPanel: FC<AppendPicPanelProps> = ({ embedded = false }) =>
         <div
           id="appendPicCanvas"
           data-test-id="appendpic-canvas"
-          style={{ position: "relative", overflow: "auto", height: 470 }}
+          style={{ position: 'relative', overflow: 'auto', height: 470 }}
         >
           <GridCanvas
             source={displayImage}

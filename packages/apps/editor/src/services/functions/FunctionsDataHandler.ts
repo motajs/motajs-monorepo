@@ -10,15 +10,11 @@
  * - 叶子节点是函数，解析后转为字符串存储
  */
 
-import {
-  ScriptDataHandler,
-  stringifyScriptData,
-  type ScriptData,
-} from "@/fs/ScriptDataHandler";
-import type { FileHandler } from "@/fs/FileHandler";
+import { ScriptDataHandler, stringifyScriptData, type ScriptData } from '@/fs/ScriptDataHandler';
+import type { FileHandler } from '@/fs/FileHandler';
 
 /** 数据变量名 */
-const FUNCTIONS_VAR_NAME = "functions_d6ad677b_427a_4623_b50f_a445a3b0ef8a";
+const FUNCTIONS_VAR_NAME = 'functions_d6ad677b_427a_4623_b50f_a445a3b0ef8a';
 
 /** 类型别名：兼容旧代码 */
 export type { ScriptData as FunctionsData };
@@ -36,6 +32,6 @@ export function stringifyFunctionsData(data: ScriptData): string {
  */
 export class FunctionsDataHandler extends ScriptDataHandler {
   constructor(fileHandler: FileHandler) {
-    super(fileHandler, FUNCTIONS_VAR_NAME, "Functions Data");
+    super(fileHandler, FUNCTIONS_VAR_NAME, 'Functions Data');
   }
 }

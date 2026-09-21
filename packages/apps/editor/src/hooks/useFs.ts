@@ -4,11 +4,11 @@
  * 提供 FS 层的所有 React Hooks
  */
 
-import { useCallback, useSyncExternalStore } from "react";
-import { effect } from "alien-signals";
-import type { Content } from "@/fs/types";
-import type { FileHandler } from "@/fs/FileHandler";
-import type { IContentHandler, ReadonlySignal } from "@/fs/interfaces";
+import { useCallback, useSyncExternalStore } from 'react';
+import { effect } from 'alien-signals';
+import type { Content } from '@/fs/types';
+import type { FileHandler } from '@/fs/FileHandler';
+import type { IContentHandler, ReadonlySignal } from '@/fs/interfaces';
 
 /**
  * 订阅任何 signal
@@ -57,9 +57,7 @@ export function useHandlerUpdate<T>(handler: IContentHandler<T>): UpdateFn<T> {
  *   // ...
  * }
  */
-export function useFileHandler(
-  handler: FileHandler,
-): [Content<string>, UpdateFn<string>] {
+export function useFileHandler(handler: FileHandler): [Content<string>, UpdateFn<string>] {
   const content = useSignal(handler.content);
   return [content, useHandlerUpdate(handler)];
 }

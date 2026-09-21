@@ -1,6 +1,6 @@
-import type { FloorImageData } from "@/types";
+import type { FloorImageData } from '@/types';
 
-export type FloorImageLayer = "bg" | "fg";
+export type FloorImageLayer = 'bg' | 'fg';
 
 export interface FloorImageTextureSize {
   width: number;
@@ -17,7 +17,7 @@ export interface FloorImagePart {
   sourceHeight: number;
   x: number;
   y: number;
-  reverse?: ":x" | ":y" | ":o";
+  reverse?: ':x' | ':y' | ':o';
 }
 
 export interface FloorImageResolution {
@@ -25,39 +25,30 @@ export interface FloorImageResolution {
   diagnostics: string[];
 }
 
-export function mappedFloorImageName(
-  name: string,
-  nameMap: Readonly<Record<string, string>> = {},
-): string {
+export function mappedFloorImageName(name: string, nameMap: Readonly<Record<string, string>> = {}): string {
   const mapped = nameMap[name];
-  return typeof mapped === "string" && mapped.length > 0 ? mapped : name;
+  return typeof mapped === 'string' && mapped.length > 0 ? mapped : name;
 }
 
-export function floorImagePath(
-  image: FloorImageData,
-  nameMap: Readonly<Record<string, string>> = {},
-): string {
+export function floorImagePath(image: FloorImageData, nameMap: Readonly<Record<string, string>> = {}): string {
   return `project/images/${mappedFloorImageName(image.name, nameMap)}`;
 }
 
 function finiteNumber(value: unknown, fallback: number): number {
-  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
 
 function positiveInteger(value: unknown, fallback: number): number {
-  return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : fallback;
+  return typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : fallback;
 }
 
-export function collectFloorImagePaths(
-  images: unknown,
-  nameMap: Readonly<Record<string, string>> = {},
-): string[] {
+export function collectFloorImagePaths(images: unknown, nameMap: Readonly<Record<string, string>> = {}): string[] {
   if (!Array.isArray(images)) return [];
   const paths = new Set<string>();
   for (const value of images) {
-    if (!value || typeof value !== "object") continue;
+    if (!value || typeof value !== 'object') continue;
     const image = value as Partial<FloorImageData>;
-    if (image.disabled || image.disable || typeof image.name !== "string" || image.name.length === 0) continue;
+    if (image.disabled || image.disable || typeof image.name !== 'string' || image.name.length === 0) continue;
     paths.add(floorImagePath(image as FloorImageData, nameMap));
   }
   return [...paths];
@@ -74,17 +65,17 @@ export function resolveFloorImageParts(
   if (!Array.isArray(images)) return { parts, diagnostics };
 
   images.forEach((value, index) => {
-    if (!value || typeof value !== "object") {
+    if (!value || typeof value !== 'object') {
       diagnostics.push(`Invalid floor image at index ${index}`);
       return;
     }
     const image = value as Partial<FloorImageData>;
     if (image.disabled || image.disable) return;
-    if (typeof image.name !== "string" || image.name.length === 0) {
+    if (typeof image.name !== 'string' || image.name.length === 0) {
       diagnostics.push(`Missing floor image name at index ${index}`);
       return;
     }
-    if (image.canvas !== "bg" && image.canvas !== "fg" && image.canvas !== "auto") {
+    if (image.canvas !== 'bg' && image.canvas !== 'fg' && image.canvas !== 'auto') {
       diagnostics.push(`Invalid floor image canvas: ${image.name}`);
       return;
     }
@@ -129,13 +120,13 @@ export function resolveFloorImageParts(
       });
     };
 
-    if (image.canvas === "auto") {
+    if (image.canvas === 'auto') {
       if (sourceHeight < 32) {
         diagnostics.push(`Floor image auto height must be at least 32: ${image.name}`);
         return;
       }
-      addPart("fg", sourceY, sourceHeight - 32, y, "auto-fg");
-      addPart("bg", sourceY + sourceHeight - 32, 32, y + sourceHeight - 32, "auto-bg");
+      addPart('fg', sourceY, sourceHeight - 32, y, 'auto-fg');
+      addPart('bg', sourceY + sourceHeight - 32, 32, y + sourceHeight - 32, 'auto-bg');
       return;
     }
 

@@ -1,35 +1,31 @@
-import { Json2xDataHandler } from "@/fs/Json2xDataHandler";
-import { FileHandlerManager } from "@/fs/FileHandlerManager";
-import { TowerDataHandler } from "@/services/tower/TowerDataHandler";
-import type { TowerData } from "@/services/tower";
-import { FloorDataHandler } from "@/services/floor/FloorDataHandler";
-import type { FloorData } from "@/types";
-import { ItemsDataHandler, type ItemsData } from "@/services/item";
-import { EnemysDataHandler, type EnemysData } from "@/services/enemy";
-import { MapsBlocksDataHandler, type MapsBlocksData } from "@/services/mapBlock";
-import { IconsDataHandler, type IconsData } from "@/services/icons";
-import { FunctionsDataHandler, type FunctionsData } from "@/services/functions/FunctionsDataHandler";
-import { PluginsDataHandler, type PluginsData } from "@/services/plugins/PluginsDataHandler";
-import { TableMetaDataHandler } from "@/services/tableMeta/TableMetaDataHandler";
-import {
-  META_FILE_CONFIG,
-  VALID_META_FILE_KEYS,
-  type MetaFileKey,
-} from "@/services/tableMeta/tableMetaService";
-import type { CommentObject } from "@/components/Table";
-import type { CommonEventData } from "@/services/commonEvent";
-import { HandlerDataResource, MappedDataResource, type DataResource } from "./DataResource";
-import type { Action } from "@/utils/action";
+import { Json2xDataHandler } from '@/fs/Json2xDataHandler';
+import { FileHandlerManager } from '@/fs/FileHandlerManager';
+import { TowerDataHandler } from '@/services/tower/TowerDataHandler';
+import type { TowerData } from '@/services/tower';
+import { FloorDataHandler } from '@/services/floor/FloorDataHandler';
+import type { FloorData } from '@/types';
+import { ItemsDataHandler, type ItemsData } from '@/services/item';
+import { EnemysDataHandler, type EnemysData } from '@/services/enemy';
+import { MapsBlocksDataHandler, type MapsBlocksData } from '@/services/mapBlock';
+import { IconsDataHandler, type IconsData } from '@/services/icons';
+import { FunctionsDataHandler, type FunctionsData } from '@/services/functions/FunctionsDataHandler';
+import { PluginsDataHandler, type PluginsData } from '@/services/plugins/PluginsDataHandler';
+import { TableMetaDataHandler } from '@/services/tableMeta/TableMetaDataHandler';
+import { META_FILE_CONFIG, VALID_META_FILE_KEYS, type MetaFileKey } from '@/services/tableMeta/tableMetaService';
+import type { CommentObject } from '@/components/Table';
+import type { CommonEventData } from '@/services/commonEvent';
+import { HandlerDataResource, MappedDataResource, type DataResource } from './DataResource';
+import type { Action } from '@/utils/action';
 
-const TOWER_DATA_PATH = "project/data.js";
-const ITEMS_DATA_PATH = "project/items.js";
-const ENEMYS_DATA_PATH = "project/enemys.js";
-const MAPS_BLOCKS_DATA_PATH = "project/maps.js";
-const ICONS_DATA_PATH = "project/icons.js";
-const FUNCTIONS_DATA_PATH = "project/functions.js";
-const PLUGINS_DATA_PATH = "project/plugins.js";
-const EVENTS_DATA_PATH = "project/events.js";
-const EVENTS_VAR_NAME = "events_c12a15a8_c380_4b28_8144_256cba95f760";
+const TOWER_DATA_PATH = 'project/data.js';
+const ITEMS_DATA_PATH = 'project/items.js';
+const ENEMYS_DATA_PATH = 'project/enemys.js';
+const MAPS_BLOCKS_DATA_PATH = 'project/maps.js';
+const ICONS_DATA_PATH = 'project/icons.js';
+const FUNCTIONS_DATA_PATH = 'project/functions.js';
+const PLUGINS_DATA_PATH = 'project/plugins.js';
+const EVENTS_DATA_PATH = 'project/events.js';
+const EVENTS_VAR_NAME = 'events_c12a15a8_c380_4b28_8144_256cba95f760';
 
 interface EventsData {
   commonEvent: CommonEventData;
@@ -51,15 +47,15 @@ const PRELOAD_CONCURRENCY = 6;
 
 async function preloadResource<T>(resource: DataResource<T>): Promise<T> {
   const initial = resource.snapshot();
-  if (initial.status === "loaded") return initial.value;
-  if (["idle", "loading"].includes(initial.status)) {
+  if (initial.status === 'loaded') return initial.value;
+  if (['idle', 'loading'].includes(initial.status)) {
     await FileHandlerManager.load(resource.path);
     await resource.waitForSettled();
   }
 
   const settled = resource.snapshot();
-  if (settled.status === "loaded") return settled.value;
-  if (settled.status === "error") throw settled.error;
+  if (settled.status === 'loaded') return settled.value;
+  if (settled.status === 'error') throw settled.error;
   throw new Error(`Cannot preload ${resource.path}: ${settled.status}`);
 }
 
@@ -68,15 +64,12 @@ async function preloadInBatches(
   load: (resource: DataResource<unknown>) => Promise<void>,
 ): Promise<void> {
   let next = 0;
-  const workers = Array.from(
-    { length: Math.min(PRELOAD_CONCURRENCY, resources.length) },
-    async () => {
-      while (next < resources.length) {
-        const resource = resources[next++];
-        await load(resource);
-      }
-    },
-  );
+  const workers = Array.from({ length: Math.min(PRELOAD_CONCURRENCY, resources.length) }, async () => {
+    while (next < resources.length) {
+      const resource = resources[next++];
+      await load(resource);
+    }
+  });
   await Promise.all(workers);
 }
 
@@ -105,7 +98,7 @@ class ProjectDataImpl {
   tower(): DataResource<TowerData> {
     if (!this.towerResource) {
       this.towerResource = new HandlerDataResource(
-        "tower",
+        'tower',
         TOWER_DATA_PATH,
         new TowerDataHandler(FileHandlerManager.get(TOWER_DATA_PATH)),
       );
@@ -130,7 +123,7 @@ class ProjectDataImpl {
   items(): DataResource<ItemsData> {
     if (!this.itemResource) {
       this.itemResource = new HandlerDataResource(
-        "items",
+        'items',
         ITEMS_DATA_PATH,
         new ItemsDataHandler(FileHandlerManager.get(ITEMS_DATA_PATH)),
       );
@@ -141,7 +134,7 @@ class ProjectDataImpl {
   enemys(): DataResource<EnemysData> {
     if (!this.enemyResource) {
       this.enemyResource = new HandlerDataResource(
-        "enemys",
+        'enemys',
         ENEMYS_DATA_PATH,
         new EnemysDataHandler(FileHandlerManager.get(ENEMYS_DATA_PATH)),
       );
@@ -152,7 +145,7 @@ class ProjectDataImpl {
   mapBlocks(): DataResource<MapsBlocksData> {
     if (!this.mapBlockResource) {
       this.mapBlockResource = new HandlerDataResource(
-        "mapBlocks",
+        'mapBlocks',
         MAPS_BLOCKS_DATA_PATH,
         new MapsBlocksDataHandler(FileHandlerManager.get(MAPS_BLOCKS_DATA_PATH)),
       );
@@ -163,7 +156,7 @@ class ProjectDataImpl {
   icons(): DataResource<IconsData> {
     if (!this.iconsResource) {
       this.iconsResource = new HandlerDataResource(
-        "icons",
+        'icons',
         ICONS_DATA_PATH,
         new IconsDataHandler(FileHandlerManager.get(ICONS_DATA_PATH)),
       );
@@ -174,7 +167,7 @@ class ProjectDataImpl {
   functions(): DataResource<FunctionsData> {
     if (!this.functionsResource) {
       this.functionsResource = new HandlerDataResource(
-        "functions",
+        'functions',
         FUNCTIONS_DATA_PATH,
         new FunctionsDataHandler(FileHandlerManager.get(FUNCTIONS_DATA_PATH)),
       );
@@ -185,7 +178,7 @@ class ProjectDataImpl {
   plugins(): DataResource<PluginsData> {
     if (!this.pluginsResource) {
       this.pluginsResource = new HandlerDataResource(
-        "plugins",
+        'plugins',
         PLUGINS_DATA_PATH,
         new PluginsDataHandler(FileHandlerManager.get(PLUGINS_DATA_PATH)),
       );
@@ -196,13 +189,9 @@ class ProjectDataImpl {
   events(): DataResource<EventsData> {
     if (!this.eventsResource) {
       this.eventsResource = new HandlerDataResource(
-        "events",
+        'events',
         EVENTS_DATA_PATH,
-        new Json2xDataHandler<EventsData>(
-          FileHandlerManager.get(EVENTS_DATA_PATH),
-          EVENTS_VAR_NAME,
-          "Events Data",
-        ),
+        new Json2xDataHandler<EventsData>(FileHandlerManager.get(EVENTS_DATA_PATH), EVENTS_VAR_NAME, 'Events Data'),
       );
     }
     return this.eventsResource;
@@ -211,7 +200,7 @@ class ProjectDataImpl {
   commonEvents(): DataResource<CommonEventData> {
     if (!this.commonEventsResource) {
       this.commonEventsResource = new MappedDataResource(
-        "commonEvents",
+        'commonEvents',
         EVENTS_DATA_PATH,
         this.events(),
         (events) => events.commonEvent,
@@ -229,11 +218,7 @@ class ProjectDataImpl {
       resource = new HandlerDataResource(
         `tableMeta:${key}`,
         config.filePath,
-        new TableMetaDataHandler(
-          FileHandlerManager.get(config.filePath),
-          config.varName,
-          config.resourceName,
-        ),
+        new TableMetaDataHandler(FileHandlerManager.get(config.filePath), config.varName, config.resourceName),
       );
       this.tableMetaResources.set(key, resource);
     }
@@ -292,11 +277,9 @@ class ProjectDataImpl {
 
       const floorTrack = towerTrack.then(async (towerValue) => {
         if (!towerValue) return;
-        const floorIds = Array.isArray(towerValue.main?.floorIds)
-          ? towerValue.main.floorIds
-          : [];
+        const floorIds = Array.isArray(towerValue.main?.floorIds) ? towerValue.main.floorIds : [];
         const floorResources = [...new Set(floorIds)]
-          .filter((floorId): floorId is string => typeof floorId === "string" && floorId.length > 0)
+          .filter((floorId): floorId is string => typeof floorId === 'string' && floorId.length > 0)
           .map((floorId) => this.floor(floorId));
         await preloadInBatches(floorResources, load);
       });

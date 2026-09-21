@@ -50,7 +50,7 @@ export function optionalExpression(event: Record<string, unknown>, key: string, 
 
 export function parseMultiLoc(loc: unknown): { x: string; y: string } {
   if (!Array.isArray(loc)) return { x: '', y: '' };
-  const points = Array.isArray(loc[0]) ? loc as unknown[][] : [loc];
+  const points = Array.isArray(loc[0]) ? (loc as unknown[][]) : [loc];
   return {
     x: points.map((point) => expression(point[0])).join(','),
     y: points.map((point) => expression(point[1])).join(','),
@@ -70,11 +70,7 @@ export function generateMultiLoc(x: string, y: string): unknown {
   return points.length === 1 ? points[0] : points;
 }
 
-export function locationState(
-  type: string,
-  event: EventObject,
-  fields: Record<string, unknown> = {},
-): BlockState {
+export function locationState(type: string, event: EventObject, fields: Record<string, unknown> = {}): BlockState {
   const loc = parseMultiLoc(event.loc);
   return { type, fields: { X: loc.x, Y: loc.y, ...fields } };
 }

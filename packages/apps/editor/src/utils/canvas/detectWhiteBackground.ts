@@ -1,4 +1,4 @@
-import { getPixel } from "./pixel";
+import { getPixel } from './pixel';
 
 /**
  * Detect if an image has a white background
@@ -6,7 +6,9 @@ import { getPixel } from "./pixel";
  * @returns True if the image appears to have a white background
  */
 export function detectWhiteBackground(imgData: ImageData): boolean {
-  let trans = 0, white = 0, black = 0;
+  let trans = 0,
+    white = 0,
+    black = 0;
 
   for (let i = 0; i < imgData.width; i++) {
     for (let j = 0; j < imgData.height; j++) {

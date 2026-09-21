@@ -14,15 +14,7 @@ import type { ProjectEventSample } from './eventIndex';
 import { PROJECT_BLOCK_CATEGORY_ID } from './projectBlocks';
 
 export type CustomBlockControl =
-  | 'text'
-  | 'number'
-  | 'checkbox'
-  | 'dropdown'
-  | 'multiline'
-  | 'json'
-  | 'colour'
-  | 'value'
-  | 'statement';
+  'text' | 'number' | 'checkbox' | 'dropdown' | 'multiline' | 'json' | 'colour' | 'value' | 'statement';
 
 export interface CustomBlockFieldDraft {
   id: string;
@@ -58,8 +50,17 @@ export interface CustomBlockDraft {
 
 const RESERVED_FIELDS = new Set(['type', '_collapsed', '_disabled']);
 const REGISTRY_SOURCES: BlocklyCompletionSourceId[] = [
-  'image', 'animate', 'bgm', 'sound', 'font', 'id', 'enemy', 'item',
-  'floor', 'shop', 'commonEvent',
+  'image',
+  'animate',
+  'bgm',
+  'sound',
+  'font',
+  'id',
+  'enemy',
+  'item',
+  'floor',
+  'shop',
+  'commonEvent',
 ];
 const MATERIAL_SOURCE: Partial<Record<BlocklyCompletionSourceId, MaterialKind>> = {
   image: 'image',
@@ -78,7 +79,11 @@ function hash(input: string): string {
 }
 
 export function blockTypeForEvent(type: string): string {
-  const safe = type.replace(/[^A-Za-z0-9_]/g, '_').replace(/^([^A-Za-z_])/, '_$1').slice(0, 40) || 'event';
+  const safe =
+    type
+      .replace(/[^A-Za-z0-9_]/g, '_')
+      .replace(/^([^A-Za-z_])/, '_$1')
+      .slice(0, 40) || 'event';
   return `project_event_${safe}_${hash(type)}`;
 }
 
@@ -141,7 +146,7 @@ export function inferCustomBlockDraft(
     const control = inferControl(values);
     const present = values.filter((value) => value !== undefined);
     const defaultValue = values[0] !== undefined ? values[0] : present[0];
-    const strings = present.every((value) => typeof value === 'string') ? present as string[] : [];
+    const strings = present.every((value) => typeof value === 'string') ? (present as string[]) : [];
     const completionSource = control === 'text' ? uniqueCompletionSource(strings, catalog) : undefined;
     return {
       id: `FIELD_${index + 1}`,
@@ -168,29 +173,42 @@ export function inferCustomBlockDraft(
 }
 
 function argForField(field: CustomBlockFieldDraft): Record<string, unknown> {
-  if (field.control === 'number') return {
-    type: 'field_number', name: field.id,
-    value: typeof field.defaultValue === 'number' ? field.defaultValue : 0,
-    ...(field.min === undefined ? {} : { min: field.min }),
-    ...(field.max === undefined ? {} : { max: field.max }),
-    ...(field.precision === undefined ? {} : { precision: field.precision }),
-  };
-  if (field.control === 'checkbox') return {
-    type: 'field_checkbox', name: field.id, checked: field.defaultValue === true,
-  };
-  if (field.control === 'dropdown') return {
-    type: 'field_dropdown', name: field.id,
-    options: field.dropdownOptions?.length ? field.dropdownOptions : [['', '']],
-  };
-  if (field.control === 'multiline' || field.control === 'json') return {
-    type: 'field_multilinetext', name: field.id,
-    text: field.control === 'json'
-      ? JSON.stringify(field.defaultValue ?? null, null, 2)
-      : String(field.defaultValue ?? ''),
-  };
-  if (field.control === 'colour') return {
-    type: 'field_colour', name: field.id, colour: String(field.defaultValue ?? '#ffffff'),
-  };
+  if (field.control === 'number')
+    return {
+      type: 'field_number',
+      name: field.id,
+      value: typeof field.defaultValue === 'number' ? field.defaultValue : 0,
+      ...(field.min === undefined ? {} : { min: field.min }),
+      ...(field.max === undefined ? {} : { max: field.max }),
+      ...(field.precision === undefined ? {} : { precision: field.precision }),
+    };
+  if (field.control === 'checkbox')
+    return {
+      type: 'field_checkbox',
+      name: field.id,
+      checked: field.defaultValue === true,
+    };
+  if (field.control === 'dropdown')
+    return {
+      type: 'field_dropdown',
+      name: field.id,
+      options: field.dropdownOptions?.length ? field.dropdownOptions : [['', '']],
+    };
+  if (field.control === 'multiline' || field.control === 'json')
+    return {
+      type: 'field_multilinetext',
+      name: field.id,
+      text:
+        field.control === 'json'
+          ? JSON.stringify(field.defaultValue ?? null, null, 2)
+          : String(field.defaultValue ?? ''),
+    };
+  if (field.control === 'colour')
+    return {
+      type: 'field_colour',
+      name: field.id,
+      colour: String(field.defaultValue ?? '#ffffff'),
+    };
   if (field.control === 'value') return { type: 'input_value', name: field.id };
   if (field.control === 'statement') return { type: 'input_statement', name: field.id };
   return { type: 'field_input', name: field.id, text: String(field.defaultValue ?? '') };
@@ -229,9 +247,12 @@ export function compileCustomBlockDraft(draft: CustomBlockDraft): DeclarativeBlo
     if (field.defaultValue !== undefined) setAtPath(template, field.path, structuredClone(field.defaultValue));
     return {
       input: field.id,
-      kind: field.control === 'statement' ? 'statement' as const
-        : field.control === 'value' ? 'value' as const
-        : 'field' as const,
+      kind:
+        field.control === 'statement'
+          ? ('statement' as const)
+          : field.control === 'value'
+            ? ('value' as const)
+            : ('field' as const),
       path: field.path,
       optional: field.optional,
       default: field.defaultValue,
@@ -246,7 +267,9 @@ export function compileCustomBlockDraft(draft: CustomBlockDraft): DeclarativeBlo
     }
     if (field.materialKind) {
       interactions.push({
-        type: 'selectMaterial', field: field.id, materialKind: field.materialKind,
+        type: 'selectMaterial',
+        field: field.id,
+        materialKind: field.materialKind,
         aliasPolicy: 'preserve',
       });
     }
@@ -255,14 +278,15 @@ export function compileCustomBlockDraft(draft: CustomBlockDraft): DeclarativeBlo
     }
   });
   if (draft.previewAdapter) interactions.push({ type: 'preview', adapter: draft.previewAdapter });
-  if (draft.pointInteraction) interactions.push({
-    type: 'selectPoint',
-    xField: draft.pointInteraction.xField,
-    yField: draft.pointInteraction.yField,
-    floorField: draft.pointInteraction.floorField,
-    floorPolicy: draft.pointInteraction.floorField ? 'explicit' : 'current',
-    multiple: draft.pointInteraction.multiple,
-  });
+  if (draft.pointInteraction)
+    interactions.push({
+      type: 'selectPoint',
+      xField: draft.pointInteraction.xField,
+      yField: draft.pointInteraction.yField,
+      floorField: draft.pointInteraction.floorField,
+      floorPolicy: draft.pointInteraction.floorField ? 'explicit' : 'current',
+      multiple: draft.pointInteraction.multiple,
+    });
   return {
     type: blockType,
     definition: definition as unknown as DeclarativeBlockSchema['definition'],
@@ -308,8 +332,12 @@ export function draftFromCustomBlock(schema: DeclarativeBlockSchema): CustomBloc
   }
   const fields = schema.event.bindings.map((binding, index): CustomBlockFieldDraft => {
     const info = args.get(binding.input) ?? { arg: { type: 'field_input' }, label: binding.path };
-    const completion = schema.interactions?.find((item) => item.type === 'autocomplete' && item.field === binding.input);
-    const material = schema.interactions?.find((item) => item.type === 'selectMaterial' && item.field === binding.input);
+    const completion = schema.interactions?.find(
+      (item) => item.type === 'autocomplete' && item.field === binding.input,
+    );
+    const material = schema.interactions?.find(
+      (item) => item.type === 'selectMaterial' && item.field === binding.input,
+    );
     return {
       id: binding.input || `FIELD_${index + 1}`,
       label: info.label,
@@ -336,14 +364,16 @@ export function draftFromCustomBlock(schema: DeclarativeBlockSchema): CustomBloc
     tooltip: typeof definition.tooltip === 'string' ? definition.tooltip : '',
     fields,
     ...(preview?.type === 'preview' ? { previewAdapter: preview.adapter } : {}),
-    ...(point?.type === 'selectPoint' ? {
-      pointInteraction: {
-        xField: point.xField,
-        yField: point.yField,
-        floorField: point.floorField,
-        multiple: point.multiple,
-      },
-    } : {}),
+    ...(point?.type === 'selectPoint'
+      ? {
+          pointInteraction: {
+            xField: point.xField,
+            yField: point.yField,
+            floorField: point.floorField,
+            multiple: point.multiple,
+          },
+        }
+      : {}),
   };
 }
 
@@ -358,7 +388,11 @@ export function validateCustomBlockRoundTrips(
 ): RoundTripDifference[] {
   return samples.flatMap((sample) => {
     const output = roundTripDeclarativeEvent(
-      { ...schema, eventType: String(schema.event.match.equals), definition: { ...schema.definition, type: schema.type } },
+      {
+        ...schema,
+        eventType: String(schema.event.match.equals),
+        definition: { ...schema.definition, type: schema.type },
+      },
       sample.event as { type: string; [key: string]: unknown },
     );
     return isEqual(output, sample.event) ? [] : [{ sample, output }];

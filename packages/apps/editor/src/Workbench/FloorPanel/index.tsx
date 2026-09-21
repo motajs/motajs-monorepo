@@ -5,25 +5,25 @@ import {
   RegistryReferenceRoot,
   SchemaCustomizationButton,
   type SchemaScope,
-} from "@/components/SchemaTable";
-import { floorSchemaDefinition } from "@/components/SchemaTable/builtinSchemas";
-import { EditModeSegmented, Table } from "@/components/Table";
-import type { EditMode, TableAction } from "@/components/Table/types";
-import type { Content } from "@/fs/types";
-import { selectFloorMeta, useTableMetaSuspense } from "@/hooks";
-import { useResourceSuspense } from "@/hooks/suspense";
-import { projectAssets } from "@/project/assets";
-import type { AssetDirectorySnapshot } from "@/project/assets";
-import { floorCommands } from "@/project/commands";
-import { projectData } from "@/project/data/projectData";
-import { buildFloorDiagnostics } from "@/project/model/floorDiagnostics";
-import { setCurrentFloorId, useCurrentFloorId } from "@/stores/editorState";
-import type { FloorData } from "@/types";
-import type { Action } from "@/utils/action";
-import { buildFieldPath } from "@/utils/fieldPath";
-import { notifyCommandResult, notifyError, notifySuccess } from "@/utils/notify";
-import { isValidFloorId } from "@/utils/string";
-import { Input, InputNumber, Modal, Segmented } from "antd";
+} from '@/components/SchemaTable';
+import { floorSchemaDefinition } from '@/components/SchemaTable/builtinSchemas';
+import { EditModeSegmented, Table } from '@/components/Table';
+import type { EditMode, TableAction } from '@/components/Table/types';
+import type { Content } from '@/fs/types';
+import { selectFloorMeta, useTableMetaSuspense } from '@/hooks';
+import { useResourceSuspense } from '@/hooks/suspense';
+import { projectAssets } from '@/project/assets';
+import type { AssetDirectorySnapshot } from '@/project/assets';
+import { floorCommands } from '@/project/commands';
+import { projectData } from '@/project/data/projectData';
+import { buildFloorDiagnostics } from '@/project/model/floorDiagnostics';
+import { setCurrentFloorId, useCurrentFloorId } from '@/stores/editorState';
+import type { FloorData } from '@/types';
+import type { Action } from '@/utils/action';
+import { buildFieldPath } from '@/utils/fieldPath';
+import { notifyCommandResult, notifyError, notifySuccess } from '@/utils/notify';
+import { isValidFloorId } from '@/utils/string';
+import { Input, InputNumber, Modal, Segmented } from 'antd';
 import {
   type FC,
   type PointerEvent as ReactPointerEvent,
@@ -33,16 +33,17 @@ import {
   useMemo,
   useRef,
   useState,
-} from "react";
-import { ContentLeftTab } from "../components/ContentLeftTab";
-import { FloorThumbnail } from "../modals/shared/FloorThumbnail";
-import "./floor-panel.css";
+} from 'react';
+import { ContentLeftTab } from '../components/ContentLeftTab';
+import { FloorThumbnail } from '../modals/shared/FloorThumbnail';
+import './floor-panel.css';
 
-type FloorTableVersion = "schema" | "legacy";
+type FloorTableVersion = 'schema' | 'legacy';
 
-function getFallbackFloorId(
-  tower: { firstData?: { floorId?: string }; main?: { floorIds?: string[] } },
-): string | undefined {
+function getFallbackFloorId(tower: {
+  firstData?: { floorId?: string };
+  main?: { floorIds?: string[] };
+}): string | undefined {
   return tower.firstData?.floorId || tower.main?.floorIds?.[0];
 }
 
@@ -58,22 +59,25 @@ const LegacyFloorTable: FC<{ floor: FloorData; floorId: string; editMode: EditMo
   floorId,
   editMode,
 }) => {
-  const meta = selectFloorMeta(useTableMetaSuspense("comment"));
-  const handleChange = useCallback(async (action: TableAction) => {
-    try {
-      const result = await floorCommands.patch(floorId, [action as Action]);
-      notifyCommandResult(result, "保存成功！");
-    } catch (error) {
-      notifyError(error);
-    }
-  }, [floorId]);
+  const meta = selectFloorMeta(useTableMetaSuspense('comment'));
+  const handleChange = useCallback(
+    async (action: TableAction) => {
+      try {
+        const result = await floorCommands.patch(floorId, [action as Action]);
+        notifyCommandResult(result, '保存成功！');
+      } catch (error) {
+        notifyError(error);
+      }
+    },
+    [floorId],
+  );
   return <Table data={floor} commentObj={meta} onChange={handleChange} editMode={editMode} />;
 };
 
 function mapBgmDirectory(content: Content<AssetDirectorySnapshot>): Content<string[]> {
-  if (content.status !== "loaded") return content;
+  if (content.status !== 'loaded') return content;
   return {
-    status: "loaded",
+    status: 'loaded',
     value: content.value.entries.filter((name) => /\.(mp3|ogg|wav|m4a|flac)$/i.test(name)),
   };
 }
@@ -84,48 +88,58 @@ const FloorSchemaTable: FC<{ floor: FloorData; floorId: string; onRename: () => 
   onRename,
   onResize,
 }) => {
-  const bgmDirectory = useMemo(() => projectAssets.directory("project/bgms"), []);
-  const bgmSource = useMemo(() =>
-    new ContentValueSource<string[]>(
-      "project:materials.bgms",
-      () => mapBgmDirectory(bgmDirectory.snapshot()),
-      (listener) => bgmDirectory.subscribe(() => listener()),
-      () => bgmDirectory.ensureLoaded(),
-      () => bgmDirectory.reload(),
-    ), [bgmDirectory]);
+  const bgmDirectory = useMemo(() => projectAssets.directory('project/bgms'), []);
+  const bgmSource = useMemo(
+    () =>
+      new ContentValueSource<string[]>(
+        'project:materials.bgms',
+        () => mapBgmDirectory(bgmDirectory.snapshot()),
+        (listener) => bgmDirectory.subscribe(() => listener()),
+        () => bgmDirectory.ensureLoaded(),
+        () => bgmDirectory.reload(),
+      ),
+    [bgmDirectory],
+  );
   const scope = useMemo<SchemaScope>(() => {
     const writeFloor = async (
       path: readonly string[],
       slot: { present: true; value: unknown } | { present: false },
     ) => {
-      if (path.length === 0) throw new Error("不能直接替换整个楼层对象");
+      if (path.length === 0) throw new Error('不能直接替换整个楼层对象');
       const action: Action = slot.present
-        ? ["change", buildFieldPath([...path]), slot.value]
-        : ["delete", buildFieldPath([...path]), undefined];
+        ? ['change', buildFieldPath([...path]), slot.value]
+        : ['delete', buildFieldPath([...path]), undefined];
       const result = await floorCommands.patch(floorId, [action]);
       if (!result.ok) throw new Error(`${result.stage}: ${result.error.message}`);
-      notifySuccess("保存成功！");
+      notifySuccess('保存成功！');
     };
     return {
       roots: {
-        floor: new ObjectReferenceRoot("floor", () => floor, writeFloor),
-        params: new ObjectReferenceRoot("params", () => ({ floorId })),
-        project: new RegistryReferenceRoot(new Map([["materials.bgms", bgmSource]])),
+        floor: new ObjectReferenceRoot('floor', () => floor, writeFloor),
+        params: new ObjectReferenceRoot('params', () => ({ floorId })),
+        project: new RegistryReferenceRoot(new Map([['materials.bgms', bgmSource]])),
       },
     };
   }, [bgmSource, floor, floorId]);
   const diagnostics = useMemo(() => buildFloorDiagnostics(floor, floorId), [floor, floorId]);
-  const fieldActions = useMemo(() =>
-    new Map<string, ReactNode>([
-      [
-        "floor:floorId",
-        <button key="rename" type="button" data-test-id="floor-rename-open" onClick={onRename}>重命名</button>,
-      ],
-      [
-        "floor.size",
-        <button key="resize" type="button" data-test-id="floor-resize-open" onClick={onResize}>调整</button>,
-      ],
-    ]), [onRename, onResize]);
+  const fieldActions = useMemo(
+    () =>
+      new Map<string, ReactNode>([
+        [
+          'floor:floorId',
+          <button key="rename" type="button" data-test-id="floor-rename-open" onClick={onRename}>
+            重命名
+          </button>,
+        ],
+        [
+          'floor.size',
+          <button key="resize" type="button" data-test-id="floor-resize-open" onClick={onResize}>
+            调整
+          </button>,
+        ],
+      ]),
+    [onRename, onResize],
+  );
   return (
     <ProjectSchemaTable
       definition={floorSchemaDefinition}
@@ -139,8 +153,8 @@ const FloorSchemaTable: FC<{ floor: FloorData; floorId: string; onRename: () => 
 const FloorResizeControls: FC<{ floor: FloorData; floorId: string }> = ({ floor, floorId }) => {
   const [newWidth, setNewWidth] = useState(String(floor.width ?? 13));
   const [newHeight, setNewHeight] = useState(String(floor.height ?? 13));
-  const [offsetX, setOffsetX] = useState("0");
-  const [offsetY, setOffsetY] = useState("0");
+  const [offsetX, setOffsetX] = useState('0');
+  const [offsetY, setOffsetY] = useState('0');
   const handleChangeFloorSize = useCallback(async () => {
     const width = Number.parseInt(newWidth, 10);
     const height = Number.parseInt(newHeight, 10);
@@ -148,15 +162,15 @@ const FloorResizeControls: FC<{ floor: FloorData; floorId: string }> = ({ floor,
     let y = Number.parseInt(offsetY, 10);
 
     if (!Number.isInteger(width) || !Number.isInteger(height) || !Number.isInteger(x) || !Number.isInteger(y)) {
-      notifyError("参数错误！宽、高、偏移量都必须是整数");
+      notifyError('参数错误！宽、高、偏移量都必须是整数');
       return;
     }
     if (width <= 0 || height <= 0 || width > 128 || height > 128) {
-      notifyError("参数错误！宽高必须在 1 到 128 之间");
+      notifyError('参数错误！宽高必须在 1 到 128 之间');
       return;
     }
     if (x < 0 || y < 0) {
-      notifyError("参数错误！偏移量不得小于0");
+      notifyError('参数错误！偏移量不得小于0');
       return;
     }
 
@@ -166,7 +180,7 @@ const FloorResizeControls: FC<{ floor: FloorData; floorId: string }> = ({ floor,
     if (height < currentHeight) y = -y;
 
     const result = await floorCommands.resize(floorId, { width, height, offsetX: x, offsetY: y });
-    notifyCommandResult(result, "地图大小修改成功，请检查所有点的事件是否存在问题。");
+    notifyCommandResult(result, '地图大小修改成功，请检查所有点的事件是否存在问题。');
   }, [floor.height, floor.width, floorId, newHeight, newWidth, offsetX, offsetY]);
   return (
     <div id="changeFloorSize" data-test-id="floor-resize" style={{ fontSize: 13 }}>
@@ -183,7 +197,7 @@ const FloorResizeControls: FC<{ floor: FloorData; floorId: string }> = ({ floor,
   );
 };
 
-type ResizeDragHandle = "move" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w" | "nw";
+type ResizeDragHandle = 'move' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw';
 
 interface ResizeDragState {
   handle: ResizeDragHandle;
@@ -233,22 +247,25 @@ const FloorResizeModal: FC<{ floor: FloorData; floorId: string; onClose: () => v
   const stageTranslateX = stageWidth % 2 === 1 ? -scale / 2 : 0;
   const stageTranslateY = stageHeight % 2 === 1 ? -scale / 2 : 0;
 
-  const startDrag = useCallback((handle: ResizeDragHandle, event: ReactPointerEvent<HTMLElement>) => {
-    if (saving) return;
-    event.preventDefault();
-    event.stopPropagation();
-    event.currentTarget.setPointerCapture(event.pointerId);
-    dragRef.current = {
-      handle,
-      pointerX: event.clientX,
-      pointerY: event.clientY,
-      scale,
-      width: newWidth,
-      height: newHeight,
-      offsetX,
-      offsetY,
-    };
-  }, [newHeight, newWidth, offsetX, offsetY, saving, scale]);
+  const startDrag = useCallback(
+    (handle: ResizeDragHandle, event: ReactPointerEvent<HTMLElement>) => {
+      if (saving) return;
+      event.preventDefault();
+      event.stopPropagation();
+      event.currentTarget.setPointerCapture(event.pointerId);
+      dragRef.current = {
+        handle,
+        pointerX: event.clientX,
+        pointerY: event.clientY,
+        scale,
+        width: newWidth,
+        height: newHeight,
+        offsetX,
+        offsetY,
+      };
+    },
+    [newHeight, newWidth, offsetX, offsetY, saving, scale],
+  );
 
   const updateDrag = useCallback((event: ReactPointerEvent<HTMLElement>) => {
     const drag = dragRef.current;
@@ -259,20 +276,20 @@ const FloorResizeModal: FC<{ floor: FloorData; floorId: string; onClose: () => v
     const startLeft = -drag.offsetX;
     const startTop = -drag.offsetY;
 
-    if (drag.handle === "move") {
+    if (drag.handle === 'move') {
       setOffsetX(drag.offsetX - deltaX);
       setOffsetY(drag.offsetY - deltaY);
       return;
     }
 
-    if (drag.handle.includes("e")) setNewWidth(clampFloorDimension(drag.width + deltaX));
-    if (drag.handle.includes("s")) setNewHeight(clampFloorDimension(drag.height + deltaY));
-    if (drag.handle.includes("w")) {
+    if (drag.handle.includes('e')) setNewWidth(clampFloorDimension(drag.width + deltaX));
+    if (drag.handle.includes('s')) setNewHeight(clampFloorDimension(drag.height + deltaY));
+    if (drag.handle.includes('w')) {
       const width = clampFloorDimension(drag.width - deltaX);
       setNewWidth(width);
       setOffsetX(-(startLeft + drag.width - width));
     }
-    if (drag.handle.includes("n")) {
+    if (drag.handle.includes('n')) {
       const height = clampFloorDimension(drag.height - deltaY);
       setNewHeight(height);
       setOffsetY(-(startTop + drag.height - height));
@@ -289,23 +306,25 @@ const FloorResizeModal: FC<{ floor: FloorData; floorId: string; onClose: () => v
 
   const submit = useCallback(async () => {
     if (
-      !Number.isInteger(newWidth) || !Number.isInteger(newHeight)
-      || newWidth < 1 || newWidth > 128 || newHeight < 1 || newHeight > 128
+      !Number.isInteger(newWidth) ||
+      !Number.isInteger(newHeight) ||
+      newWidth < 1 ||
+      newWidth > 128 ||
+      newHeight < 1 ||
+      newHeight > 128
     ) {
-      notifyError("宽和高必须是 1 到 128 之间的整数");
+      notifyError('宽和高必须是 1 到 128 之间的整数');
       return;
     }
     if (!Number.isInteger(offsetX) || !Number.isInteger(offsetY)) {
-      notifyError("地图偏移必须是整数");
+      notifyError('地图偏移必须是整数');
       return;
     }
     setSaving(true);
     try {
       const result = await floorCommands.resize(floorId, { width: newWidth, height: newHeight, offsetX, offsetY });
       const cropsExistingMap = newLeft > 0 || newTop > 0 || newRight < oldWidth || newBottom < oldHeight;
-      const successMessage = cropsExistingMap
-        ? "地图大小修改成功，请检查被裁切区域中的事件。"
-        : "地图大小修改成功！";
+      const successMessage = cropsExistingMap ? '地图大小修改成功，请检查被裁切区域中的事件。' : '地图大小修改成功！';
       if (notifyCommandResult(result, successMessage)) onClose();
     } finally {
       setSaving(false);
@@ -337,7 +356,7 @@ const FloorResizeModal: FC<{ floor: FloorData; floorId: string; onClose: () => v
         if (!saving) onClose();
       }}
       onOk={() => void submit()}
-      okButtonProps={{ "data-test-id": "floor-resize-submit" }}
+      okButtonProps={{ 'data-test-id': 'floor-resize-submit' }}
       destroyOnHidden
     >
       <div className="floorResizeForm">
@@ -397,9 +416,11 @@ const FloorResizeModal: FC<{ floor: FloorData; floorId: string; onClose: () => v
                   floorId={floorId}
                   bigmap
                   viewportSize={[oldWidth * scale, oldHeight * scale]}
-                  style={{ position: "absolute", inset: 0, margin: 0, pointerEvents: "none" }}
+                  style={{ position: 'absolute', inset: 0, margin: 0, pointerEvents: 'none' }}
                 />
-                <span>{oldWidth} × {oldHeight}</span>
+                <span>
+                  {oldWidth} × {oldHeight}
+                </span>
               </div>
               <div
                 className="floorResizeNewMap"
@@ -410,13 +431,15 @@ const FloorResizeModal: FC<{ floor: FloorData; floorId: string; onClose: () => v
                   width: newWidth * scale,
                   height: newHeight * scale,
                 }}
-                onPointerDown={(event) => startDrag("move", event)}
+                onPointerDown={(event) => startDrag('move', event)}
                 onPointerMove={updateDrag}
                 onPointerUp={endDrag}
                 onPointerCancel={endDrag}
               >
-                <span>{newWidth} × {newHeight}</span>
-                {(["n", "ne", "e", "se", "s", "sw", "w", "nw"] as const).map((handle) => (
+                <span>
+                  {newWidth} × {newHeight}
+                </span>
+                {(['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw'] as const).map((handle) => (
                   <i
                     key={handle}
                     className={`floorResizeHandle ${handle}`}
@@ -431,14 +454,20 @@ const FloorResizeModal: FC<{ floor: FloorData; floorId: string; onClose: () => v
             </div>
           </div>
           <div className="floorResizeLegend">
-            <span><i className="old" />当前地图</span>
-            <span><i className="next" />调整后范围</span>
+            <span>
+              <i className="old" />
+              当前地图
+            </span>
+            <span>
+              <i className="next" />
+              调整后范围
+            </span>
           </div>
         </div>
 
-        {(newLeft > 0 || newTop > 0 || newRight < oldWidth || newBottom < oldHeight)
-          ? <div className="floorResizeWarning">调整后范围之外的图块与点位事件会被删除。</div>
-          : null}
+        {newLeft > 0 || newTop > 0 || newRight < oldWidth || newBottom < oldHeight ? (
+          <div className="floorResizeWarning">调整后范围之外的图块与点位事件会被删除。</div>
+        ) : null}
       </div>
     </Modal>
   );
@@ -446,7 +475,7 @@ const FloorResizeModal: FC<{ floor: FloorData; floorId: string; onClose: () => v
 
 const FloorPanelReady: FC<FloorPanelReadyProps> = ({ editMode, floorId, floorIds, tableVersion }) => {
   const [floor] = useResourceSuspense(projectData.floor(floorId));
-  const [floorIdValue, setFloorIdValue] = useState("");
+  const [floorIdValue, setFloorIdValue] = useState('');
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameSaving, setRenameSaving] = useState(false);
   const [resizeOpen, setResizeOpen] = useState(false);
@@ -463,11 +492,11 @@ const FloorPanelReady: FC<FloorPanelReadyProps> = ({ editMode, floorId, floorIds
   const handleChangeFloorId = useCallback(async () => {
     const newFloorId = floorIdValue.trim();
     if (!newFloorId) {
-      notifyError("请输入要修改到的 floorId");
+      notifyError('请输入要修改到的 floorId');
       return;
     }
     if (newFloorId === floorId) {
-      setFloorIdValue("");
+      setFloorIdValue('');
       setRenameOpen(false);
       return;
     }
@@ -483,9 +512,9 @@ const FloorPanelReady: FC<FloorPanelReadyProps> = ({ editMode, floorId, floorIds
     setRenameSaving(true);
     try {
       const result = await floorCommands.rename(floorId, newFloorId);
-      if (notifyCommandResult(result, "修改 floorId 成功！")) {
+      if (notifyCommandResult(result, '修改 floorId 成功！')) {
         setCurrentFloorId(newFloorId);
-        setFloorIdValue("");
+        setFloorIdValue('');
         setRenameOpen(false);
       }
     } finally {
@@ -495,30 +524,25 @@ const FloorPanelReady: FC<FloorPanelReadyProps> = ({ editMode, floorId, floorIds
 
   return (
     <>
-      {tableVersion === "schema"
-        ? (
-            <FloorSchemaTable
-              floor={floor}
-              floorId={floorId}
-              onRename={openRename}
-              onResize={() => setResizeOpen(true)}
-            />
-          )
-        : <LegacyFloorTable floor={floor} floorId={floorId} editMode={editMode} />}
+      {tableVersion === 'schema' ? (
+        <FloorSchemaTable floor={floor} floorId={floorId} onRename={openRename} onResize={() => setResizeOpen(true)} />
+      ) : (
+        <LegacyFloorTable floor={floor} floorId={floorId} editMode={editMode} />
+      )}
 
-      {tableVersion === "legacy"
-        ? (
-            <div id="changeFloorId" data-test-id="floor-rename">
-              <input
-                data-test-id="floor-rename-input"
-                value={floorIdValue}
-                onChange={(event) => setFloorIdValue(event.target.value)}
-                placeholder="修改 floorId 为"
-              />
-              <button data-test-id="floor-rename-submit" onClick={handleChangeFloorId}>确定</button>
-            </div>
-          )
-        : null}
+      {tableVersion === 'legacy' ? (
+        <div id="changeFloorId" data-test-id="floor-rename">
+          <input
+            data-test-id="floor-rename-input"
+            value={floorIdValue}
+            onChange={(event) => setFloorIdValue(event.target.value)}
+            placeholder="修改 floorId 为"
+          />
+          <button data-test-id="floor-rename-submit" onClick={handleChangeFloorId}>
+            确定
+          </button>
+        </div>
+      ) : null}
 
       <Modal
         title="重命名楼层"
@@ -528,7 +552,7 @@ const FloorPanelReady: FC<FloorPanelReadyProps> = ({ editMode, floorId, floorIds
         confirmLoading={renameSaving}
         onCancel={closeRename}
         onOk={() => void handleChangeFloorId()}
-        okButtonProps={{ "data-test-id": "floor-rename-submit" }}
+        okButtonProps={{ 'data-test-id': 'floor-rename-submit' }}
         destroyOnHidden
       >
         <Input
@@ -543,15 +567,13 @@ const FloorPanelReady: FC<FloorPanelReadyProps> = ({ editMode, floorId, floorIds
 
       {resizeOpen ? <FloorResizeModal floor={floor} floorId={floorId} onClose={() => setResizeOpen(false)} /> : null}
 
-      {tableVersion === "legacy"
-        ? (
-            <FloorResizeControls
-              key={`${floorId}:${String(floor.width)}:${String(floor.height)}`}
-              floor={floor}
-              floorId={floorId}
-            />
-          )
-        : null}
+      {tableVersion === 'legacy' ? (
+        <FloorResizeControls
+          key={`${floorId}:${String(floor.width)}:${String(floor.height)}`}
+          floor={floor}
+          floorId={floorId}
+        />
+      ) : null}
     </>
   );
 };
@@ -561,8 +583,8 @@ export const FloorPanel: FC = () => {
   const currentFloorId = useCurrentFloorId();
   const floorId = currentFloorId ?? getFallbackFloorId(tower);
 
-  const [editMode, setEditMode] = useState<EditMode>("change");
-  const [tableVersion, setTableVersion] = useState<FloorTableVersion>("schema");
+  const [editMode, setEditMode] = useState<EditMode>('change');
+  const [tableVersion, setTableVersion] = useState<FloorTableVersion>('schema');
 
   useEffect(() => {
     if (!currentFloorId && floorId) {
@@ -578,19 +600,23 @@ export const FloorPanel: FC = () => {
         value={tableVersion}
         onChange={(value) => setTableVersion(value as FloorTableVersion)}
         options={[
-          { label: "新版", value: "schema" },
-          { label: "旧版", value: "legacy" },
+          { label: '新版', value: 'schema' },
+          { label: '旧版', value: 'legacy' },
         ]}
       />
-      {tableVersion === "legacy"
-        ? <EditModeSegmented value={editMode} onChange={setEditMode} />
-        : <SchemaCustomizationButton definition={floorSchemaDefinition} />}
+      {tableVersion === 'legacy' ? (
+        <EditModeSegmented value={editMode} onChange={setEditMode} />
+      ) : (
+        <SchemaCustomizationButton definition={floorSchemaDefinition} />
+      )}
     </>
   );
 
   return (
     <ContentLeftTab id="left4" testId="panel-floor" title="楼层属性" actions={actions}>
-      {!floorId ? <div>请先选择一个楼层</div> : (
+      {!floorId ? (
+        <div>请先选择一个楼层</div>
+      ) : (
         <FloorPanelReady
           floorId={floorId}
           floorIds={tower.main.floorIds}

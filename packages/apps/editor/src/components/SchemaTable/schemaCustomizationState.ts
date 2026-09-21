@@ -1,7 +1,4 @@
-import {
-  useLayoutEffect,
-  useState,
-} from "react";
+import { useLayoutEffect, useState } from 'react';
 
 export interface SchemaCustomizationState {
   enabled: boolean;
@@ -21,15 +18,15 @@ interface SharedSchemaCustomizationStore {
 const sharedGlobal = globalThis as typeof globalThis & {
   __MOTA_SCHEMA_CUSTOMIZATION_STORE__?: SharedSchemaCustomizationStore;
 };
-const shared = sharedGlobal.__MOTA_SCHEMA_CUSTOMIZATION_STORE__ ??= {
+const shared = (sharedGlobal.__MOTA_SCHEMA_CUSTOMIZATION_STORE__ ??= {
   states: new Map<string, SchemaCustomizationState>(),
   snapshot: 0,
-};
-const SCHEMA_CUSTOMIZATION_EVENT = "motajs:schema-customization-change";
+});
+const SCHEMA_CUSTOMIZATION_EVENT = 'motajs:schema-customization-change';
 
 function emit(): void {
   shared.snapshot += 1;
-  if (typeof window !== "undefined") window.dispatchEvent(new Event(SCHEMA_CUSTOMIZATION_EVENT));
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(SCHEMA_CUSTOMIZATION_EVENT));
 }
 
 export function getSchemaCustomizationState(schemaId: string): SchemaCustomizationState {

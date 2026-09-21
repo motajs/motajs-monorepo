@@ -2,7 +2,7 @@
  * LoadingRecovery - 加载中恢复 UI
  */
 
-import type { FC } from "react";
+import type { FC } from 'react';
 
 export interface LoadingRecoveryProps {
   /** 可选：自定义消息 */
@@ -12,8 +12,6 @@ export interface LoadingRecoveryProps {
 /**
  * 加载中恢复 UI
  */
-export const LoadingRecovery: FC<LoadingRecoveryProps> = ({
-  message = "加载中...",
-}) => {
+export const LoadingRecovery: FC<LoadingRecoveryProps> = ({ message = '加载中...' }) => {
   return <div className="leftTabLoading">{message}</div>;
 };

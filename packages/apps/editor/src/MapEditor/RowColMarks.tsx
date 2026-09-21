@@ -4,9 +4,9 @@
  * 显示地图编辑器的行列坐标标记，并支持悬停高亮
  */
 
-import { memo, type FC } from "react";
-import { MapEditorStore } from "./MapEditorStore";
-import { TILE_SIZE, GRID_COUNT } from "./utils/coordinate";
+import { memo, type FC } from 'react';
+import { MapEditorStore } from './MapEditorStore';
+import { TILE_SIZE, GRID_COUNT } from './utils/coordinate';
 
 export interface RowColMarksProps {
   /** 地图宽度（格子数） */
@@ -27,16 +27,13 @@ const ColMark: FC<{
   displayNum: number;
   isHighlighted: boolean;
 }> = memo(({ index, displayNum, isHighlighted }) => (
-  <td className={isHighlighted ? "highlight" : ""}>
+  <td className={isHighlighted ? 'highlight' : ''}>
     {displayNum}
-    <div
-      className="colBlock"
-      style={{ left: `${index * TILE_SIZE + 1}px` }}
-    />
+    <div className="colBlock" style={{ left: `${index * TILE_SIZE + 1}px` }} />
   </td>
 ));
 
-ColMark.displayName = "ColMark";
+ColMark.displayName = 'ColMark';
 
 /**
  * 行标记组件
@@ -47,17 +44,14 @@ const RowMark: FC<{
   isHighlighted: boolean;
 }> = memo(({ index, displayNum, isHighlighted }) => (
   <tr>
-    <td className={isHighlighted ? "highlight" : ""}>
+    <td className={isHighlighted ? 'highlight' : ''}>
       {displayNum}
-      <div
-        className="rowBlock"
-        style={{ top: `${index * TILE_SIZE + 1}px` }}
-      />
+      <div className="rowBlock" style={{ top: `${index * TILE_SIZE + 1}px` }} />
     </td>
   </tr>
 ));
 
-RowMark.displayName = "RowMark";
+RowMark.displayName = 'RowMark';
 
 /**
  * RowColMarks 组件
@@ -87,12 +81,7 @@ export const RowColMarks: FC<RowColMarksProps> = ({
   const colMarks = [];
   for (let i = 0; i < width; i++) {
     colMarks.push(
-      <ColMark
-        key={i}
-        index={i}
-        displayNum={i + offsetX}
-        isHighlighted={hoverPos !== null && hoverPos[0] === i}
-      />
+      <ColMark key={i} index={i} displayNum={i + offsetX} isHighlighted={hoverPos !== null && hoverPos[0] === i} />,
     );
   }
 
@@ -100,12 +89,7 @@ export const RowColMarks: FC<RowColMarksProps> = ({
   const rowMarks = [];
   for (let i = 0; i < height; i++) {
     rowMarks.push(
-      <RowMark
-        key={i}
-        index={i}
-        displayNum={i + offsetY}
-        isHighlighted={hoverPos !== null && hoverPos[1] === i}
-      />
+      <RowMark key={i} index={i} displayNum={i + offsetY} isHighlighted={hoverPos !== null && hoverPos[1] === i} />,
     );
   }
 

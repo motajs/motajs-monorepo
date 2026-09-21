@@ -1,4 +1,4 @@
-import type { LocPOD } from "../coordinate";
+import type { LocPOD } from '../coordinate';
 
 export const resizeAsSource = (ctx: CanvasRenderingContext2D, source: HTMLImageElement | HTMLCanvasElement) => {
   ctx.canvas.width = source.width;

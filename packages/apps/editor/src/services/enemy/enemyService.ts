@@ -10,14 +10,14 @@
  * - 内存数据源 + 异步落盘
  */
 
-import { FileHandlerManager } from "@/fs/FileHandlerManager";
-import type { Content } from "@/fs";
-import type { Action } from "@/utils/action";
-import { EnemysDataHandler } from "./EnemysDataHandler";
-import { projectData } from "@/project/data/projectData";
+import { FileHandlerManager } from '@/fs/FileHandlerManager';
+import type { Content } from '@/fs';
+import type { Action } from '@/utils/action';
+import { EnemysDataHandler } from './EnemysDataHandler';
+import { projectData } from '@/project/data/projectData';
 
 /** 怪物数据文件路径 */
-const ENEMYS_DATA_PATH = "project/enemys.js";
+const ENEMYS_DATA_PATH = 'project/enemys.js';
 
 /**
  * 怪物信息类型
@@ -113,11 +113,7 @@ class EnemyServiceImpl {
       return;
     }
 
-    const prefixedActions: Action[] = actions.map(([type, path, value]) => [
-      type,
-      `['${id}']${path}`,
-      value,
-    ]);
+    const prefixedActions: Action[] = actions.map(([type, path, value]) => [type, `['${id}']${path}`, value]);
     void projectData.enemys().patch(prefixedActions);
   }
 

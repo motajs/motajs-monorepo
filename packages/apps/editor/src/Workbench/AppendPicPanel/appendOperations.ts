@@ -1,10 +1,10 @@
-import type { LocPOD } from "@/utils/coordinate";
-import { getGridSizeForMaterial } from "@/utils/appendPic/materialConfig";
-import { drawImageFromGrid } from "@/utils/appendPic/draw";
-import { createEmptyCanvas } from "@/utils/canvas/create";
-import { projectAssets } from "@/project/assets";
-import { materialCommands, type MaterialAppendResult } from "@/project/commands";
-import { notifyCommandResult, notifyError, notifySuccess } from "@/utils/notify";
+import type { LocPOD } from '@/utils/coordinate';
+import { getGridSizeForMaterial } from '@/utils/appendPic/materialConfig';
+import { drawImageFromGrid } from '@/utils/appendPic/draw';
+import { createEmptyCanvas } from '@/utils/canvas/create';
+import { projectAssets } from '@/project/assets';
+import { materialCommands, type MaterialAppendResult } from '@/project/commands';
+import { notifyCommandResult, notifyError, notifySuccess } from '@/utils/notify';
 
 type ImageSource = HTMLImageElement | HTMLCanvasElement;
 
@@ -30,7 +30,7 @@ async function ensureCollection(materialType: string) {
 
 function throwCommandError(result: MaterialAppendResult): never {
   if (!result.ok) throw result.error;
-  throw new Error("Unexpected material command result");
+  throw new Error('Unexpected material command result');
 }
 
 function assertFrameSelections(frameSelections: LocPOD[], expected: number): void {
@@ -47,19 +47,19 @@ function assertFrameSelections(frameSelections: LocPOD[], expected: number): voi
  */
 export async function appendAutotileMaterial(sourceImage: ImageSource): Promise<void> {
   if (sourceImage.width % 96 !== 0 || sourceImage.height !== 128) {
-    notifyError("不合法的Autotile图片！");
+    notifyError('不合法的Autotile图片！');
     return;
   }
 
   const result = await materialCommands.append({
-    images: "autotile",
+    images: 'autotile',
     image: projectAssets.rasterCodec().fromSource(sourceImage),
     autoRegister: true,
   });
   if (result.ok) {
-    notifySuccess(`自动元件${result.filename ?? ""}注册成功`);
+    notifySuccess(`自动元件${result.filename ?? ''}注册成功`);
   } else {
-    notifyCommandResult(result, "");
+    notifyCommandResult(result, '');
   }
 }
 
@@ -88,8 +88,8 @@ export async function appendMaterial(params: AppendMaterialParams): Promise<void
       image: projectAssets.rasterCodec().fromSource(spriteCtx.canvas),
       autoRegister,
     });
-    if (notifyCommandResult(result, autoRegister ? "追加素材并自动注册成功！" : "追加素材成功！")) {
-      notifySuccess("你可以继续追加其他素材。");
+    if (notifyCommandResult(result, autoRegister ? '追加素材并自动注册成功！' : '追加素材成功！')) {
+      notifySuccess('你可以继续追加其他素材。');
     }
   } catch (err) {
     notifyError(err);
@@ -103,8 +103,8 @@ export async function appendMaterial(params: AppendMaterialParams): Promise<void
 export async function quickAppendMaterial(params: QuickAppendMaterialParams): Promise<void> {
   const { sourceImage, materialType, autoRegister } = params;
 
-  if (!["items", "enemys", "enemy48", "npcs", "npc48"].includes(materialType)) {
-    notifyError("只有怪物或NPC才能快速导入！");
+  if (!['items', 'enemys', 'enemy48', 'npcs', 'npc48'].includes(materialType)) {
+    notifyError('只有怪物或NPC才能快速导入！');
     return;
   }
 
@@ -112,14 +112,14 @@ export async function quickAppendMaterial(params: QuickAppendMaterialParams): Pr
   const [, gridHeight] = gridSize;
   let sw = sourceImage.width,
     sh = sourceImage.height;
-  if (materialType === "items") {
+  if (materialType === 'items') {
     if (sw % 32 || sh % 32) {
-      notifyError("只有长宽都是32的倍数的道具图才可以快速导入！");
+      notifyError('只有长宽都是32的倍数的道具图才可以快速导入！');
       return;
     }
   } else {
     if ((sw !== 128 && sw !== 96) || sh !== 4 * gridHeight) {
-      notifyError("只有 3*4 或 4*4 的素材图片才可以快速导入！");
+      notifyError('只有 3*4 或 4*4 的素材图片才可以快速导入！');
       return;
     }
   }
@@ -142,9 +142,7 @@ export async function quickAppendMaterial(params: QuickAppendMaterialParams): Pr
       rows.push(row.canvas);
     }
   } else {
-    const frameColumns = targetWidth === 64
-      ? (sw === 3 ? [0, 2] : [1, 2])
-      : (sw === 3 ? [1, 0, 1, 2] : [0, 1, 2, 3]);
+    const frameColumns = targetWidth === 64 ? (sw === 3 ? [0, 2] : [1, 2]) : sw === 3 ? [1, 0, 1, 2] : [0, 1, 2, 3];
     if (targetWidth !== frameColumns.length * 32) {
       throw new Error(`不支持宽度为 ${targetWidth} 的素材表`);
     }
@@ -167,9 +165,9 @@ export async function quickAppendMaterial(params: QuickAppendMaterialParams): Pr
       });
       if (!result.ok) throwCommandError(result);
     }
-    if (!result) throw new Error("没有可追加的素材");
-    if (notifyCommandResult(result, autoRegister ? "快速追加素材并自动注册成功！" : "快速追加素材成功！")) {
-      notifySuccess("你可以继续追加其他素材。");
+    if (!result) throw new Error('没有可追加的素材');
+    if (notifyCommandResult(result, autoRegister ? '快速追加素材并自动注册成功！' : '快速追加素材成功！')) {
+      notifySuccess('你可以继续追加其他素材。');
     }
   } catch (err) {
     notifyError(err);

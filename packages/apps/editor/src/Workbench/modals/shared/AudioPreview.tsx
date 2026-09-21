@@ -1,5 +1,5 @@
-import { clamp } from "es-toolkit";
-import { useEffect, useRef, useState, type ChangeEvent, type FC, type MouseEvent } from "react";
+import { clamp } from 'es-toolkit';
+import { useEffect, useRef, useState, type ChangeEvent, type FC, type MouseEvent } from 'react';
 
 interface AudioPreviewProps {
   src: string;
@@ -8,16 +8,16 @@ interface AudioPreviewProps {
 
 const formatTime = (time: number) => {
   const minutes = Math.floor(time / 60);
-  const seconds = String(Math.floor(time) % 60).padStart(2, "0");
+  const seconds = String(Math.floor(time) % 60).padStart(2, '0');
   return `${minutes}:${seconds}`;
 };
 
-export const AudioPreview: FC<AudioPreviewProps> = ({ src, testId = "audio-preview" }) => {
+export const AudioPreview: FC<AudioPreviewProps> = ({ src, testId = 'audio-preview' }) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [open, setOpen] = useState(false);
-  const [pitch, setPitch] = useState("100");
+  const [pitch, setPitch] = useState('100');
   const [progress, setProgress] = useState(0);
-  const [timeText, setTimeText] = useState("0:00 / 0:00");
+  const [timeText, setTimeText] = useState('0:00 / 0:00');
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -67,17 +67,18 @@ export const AudioPreview: FC<AudioPreviewProps> = ({ src, testId = "audio-previ
   return (
     <span data-test-id={testId}>
       <button data-test-id={`${testId}-toggle`} onClick={() => void toggle()} style={{ marginLeft: 10 }}>
-        {open ? "暂停" : "播放"}
+        {open ? '暂停' : '播放'}
       </button>
       <small>
-        {" "}音调：
+        {' '}
+        音调：
         <input value={pitch} style={{ width: 28 }} onChange={handlePitchChange} />
       </small>
       {open && (
         <>
           <small style={{ marginLeft: 15 }}>{timeText}</small>
           <br />
-          <progress value={progress} max={1} style={{ width: "100%" }} onClick={handleSeek} />
+          <progress value={progress} max={1} style={{ width: '100%' }} onClick={handleSeek} />
         </>
       )}
       <audio

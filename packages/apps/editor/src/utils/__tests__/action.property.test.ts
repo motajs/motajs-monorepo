@@ -10,12 +10,7 @@
 
 import { describe, expect, it } from 'vitest';
 import * as fc from 'fast-check';
-import {
-  applyAction,
-  applyActions,
-  applyActionsWithInverse,
-  type Action,
-} from '@/utils/action';
+import { applyAction, applyActions, applyActionsWithInverse, type Action } from '@/utils/action';
 import { buildFieldPath, getByFieldPath } from '@/utils/fieldPath';
 
 /**
@@ -37,9 +32,7 @@ const reservedKeys = new Set([
   '__inverseTemporary',
 ]);
 
-const validKeyArb = fc
-  .string({ minLength: 1, maxLength: 10 })
-  .filter((s) => !s.includes("'") && !reservedKeys.has(s));
+const validKeyArb = fc.string({ minLength: 1, maxLength: 10 }).filter((s) => !s.includes("'") && !reservedKeys.has(s));
 
 /**
  * 生成有效的键数组（1-5 层嵌套）
@@ -66,7 +59,7 @@ describe('applyAction 属性测试', () => {
           const result = getByFieldPath(obj, fieldPath);
           expect(result).toEqual(value);
         }),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
 
@@ -83,7 +76,7 @@ describe('applyAction 属性测试', () => {
           const result = getByFieldPath(obj, fieldPath);
           expect(result).toEqual(value);
         }),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
 
@@ -101,7 +94,7 @@ describe('applyAction 属性测试', () => {
           applyAction(obj, ['change', fieldPath, newValue]);
           expect(getByFieldPath(obj, fieldPath)).toEqual(newValue);
         }),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
   });
@@ -124,7 +117,7 @@ describe('applyAction 属性测试', () => {
           const result = getByFieldPath(obj, fieldPath);
           expect(result).toBeUndefined();
         }),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
 
@@ -145,7 +138,7 @@ describe('applyAction 属性测试', () => {
           const result = getByFieldPath(obj, fieldPath);
           expect(result).toBeUndefined();
         }),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
   });
@@ -167,7 +160,7 @@ describe('applyAction 属性测试', () => {
           // 最终值应为 value2
           expect(getByFieldPath(obj, fieldPath)).toEqual(value2);
         }),
-        { numRuns: 100 }
+        { numRuns: 100 },
       );
     });
 
@@ -205,9 +198,7 @@ describe('applyAction 属性测试', () => {
     it('inverse 应保留 JSON 对象自身的 __proto__ 字段', () => {
       const original = JSON.parse('{"__proto__":null}') as Record<string, unknown>;
       const obj: Record<string, unknown> = { value: original };
-      const inverse = applyActionsWithInverse(obj, [
-        ['change', "['value']", { changed: true }],
-      ]);
+      const inverse = applyActionsWithInverse(obj, [['change', "['value']", { changed: true }]]);
 
       applyActions(obj, inverse);
       expect(obj.value).toEqual(original);

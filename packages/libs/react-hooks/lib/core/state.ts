@@ -1,14 +1,17 @@
-import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
-import { calValue } from "../utils/common";
-import type { State } from "../utils/type";
-import { useCurrentFn, useForceUpdate } from "./common";
+import { useMemo, useState, type Dispatch, type SetStateAction } from 'react';
+import { calValue } from '../utils/common';
+import type { State } from '../utils/type';
+import { useCurrentFn, useForceUpdate } from './common';
 
 export const useStatic = <T>(initializer: () => T) => {
   const [data] = useState(initializer);
   return data;
 };
 
-export const useSetStateWithOnChange = <S>(setState: Dispatch<SetStateAction<S>>, onChange: (value: S) => void): Dispatch<SetStateAction<S>> => {
+export const useSetStateWithOnChange = <S>(
+  setState: Dispatch<SetStateAction<S>>,
+  onChange: (value: S) => void,
+): Dispatch<SetStateAction<S>> => {
   return useCurrentFn((value) => {
     setState((prev) => {
       const newValue = calValue(value, prev);

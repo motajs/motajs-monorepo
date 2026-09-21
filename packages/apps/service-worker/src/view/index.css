@@ -16,7 +16,7 @@ body {
   min-width: 320px;
   min-height: 100vh;
   background-color: var(--semi-color-bg-1);
-  color: var(--semi-color-text-1)
+  color: var(--semi-color-text-1);
 }
 
 #root {

@@ -1,4 +1,4 @@
-import { Rect, type RectPOD } from "../coordinate";
+import { Rect, type RectPOD } from '../coordinate';
 
 export const strokeByRect = (ctx: CanvasRenderingContext2D, rect: RectPOD, lineWidth: number, style: string) => {
   ctx.strokeStyle = style;

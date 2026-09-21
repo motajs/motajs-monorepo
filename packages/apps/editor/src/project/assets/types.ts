@@ -1,5 +1,5 @@
-import type { PersistStatus } from "@/project/data/DataResource";
-import type { LoadableResource } from "@/project/resources";
+import type { PersistStatus } from '@/project/data/DataResource';
+import type { LoadableResource } from '@/project/resources';
 
 export interface ImageAssetSnapshot {
   bytes: Uint8Array;
@@ -36,9 +36,7 @@ export interface ImageAssetResourceLike extends LoadableResource<ImageAssetSnaps
   delete(): Promise<void>;
 }
 
-export type MaterialSlot =
-  | { kind: "sheet-row"; row: number }
-  | { kind: "file"; name: string };
+export type MaterialSlot = { kind: 'sheet-row'; row: number } | { kind: 'file'; name: string };
 
 export interface MaterialAssetEntry {
   key: string;

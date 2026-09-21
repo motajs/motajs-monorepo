@@ -1,6 +1,6 @@
-import { Store } from "@tanstack/store";
-import { useStore } from "@tanstack/react-store";
-import type { PrefabInfo } from "@/services/prefab";
+import { Store } from '@tanstack/store';
+import { useStore } from '@tanstack/react-store';
+import type { PrefabInfo } from '@/services/prefab';
 
 interface AppendPicState {
   template: PrefabInfo | null;

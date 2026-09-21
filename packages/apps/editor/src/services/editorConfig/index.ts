@@ -1,1 +1,1 @@
-export * from "./editorConfigService";
+export * from './editorConfigService';

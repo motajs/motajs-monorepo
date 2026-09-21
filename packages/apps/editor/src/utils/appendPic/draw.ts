@@ -1,5 +1,5 @@
-import { Grid, type GridPOD, type LocPOD } from "@/utils/coordinate";
-import { createEmptyCanvas } from "@/utils/canvas/create";
+import { Grid, type GridPOD, type LocPOD } from '@/utils/coordinate';
+import { createEmptyCanvas } from '@/utils/canvas/create';
 
 /**
  * 从源图像的格子坐标绘制到目标 canvas 的像素坐标
@@ -16,7 +16,7 @@ export const drawImageFromGrid = (
   srcPos: LocPOD,
   srcGrid: GridPOD,
   destPos: LocPOD,
-  destGrid?: GridPOD
+  destGrid?: GridPOD,
 ): void => {
   const [srcPixelX, srcPixelY] = Grid.mapLoc(srcPos, srcGrid);
   const [srcWidth, srcHeight] = srcGrid;
@@ -44,7 +44,7 @@ export const drawImageFromGrid = (
  */
 export const createSpriteCanvas = (
   targetImage: HTMLImageElement,
-  gridHeight: number
+  gridHeight: number,
 ): { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D } => {
   const ctx = createEmptyCanvas([targetImage.width, targetImage.height + gridHeight]);
   const canvas = ctx.canvas;

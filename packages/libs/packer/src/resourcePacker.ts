@@ -1,9 +1,9 @@
-import { readFile, stat } from "node:fs/promises";
-import { join, basename, extname } from "node:path";
-import { createZip, type FileEntry } from "./utils/zip-utils";
-import { compressImage } from "./utils/image-utils";
-import type { MainConfig, GameData, IconsData } from "./types";
-import { Logger } from "./logger";
+import { readFile, stat } from 'node:fs/promises';
+import { join, basename, extname } from 'node:path';
+import { createZip, type FileEntry } from './utils/zip-utils';
+import { compressImage } from './utils/image-utils';
+import type { MainConfig, GameData, IconsData } from './types';
+import { Logger } from './logger';
 
 /** 默认分块阈值 2MB */
 const DEFAULT_CHUNK_THRESHOLD = 2 * 1024 * 1024;
@@ -87,7 +87,7 @@ export async function packResources(options: PackOptions): Promise<PackResult> {
     sourceDir,
     files,
     outputName,
-    extension = ".h5data",
+    extension = '.h5data',
     transform,
     compressImages: shouldCompress = false,
     logger,
@@ -101,7 +101,7 @@ export async function packResources(options: PackOptions): Promise<PackResult> {
     if (shouldCompress) {
       const filePath = join(sourceDir, file);
       const ext = extname(file).toLowerCase();
-      if (ext === ".png" || ext === ".jpg" || ext === ".jpeg") {
+      if (ext === '.png' || ext === '.jpg' || ext === '.jpeg') {
         try {
           const compressed = await compressImage(filePath);
           if (compressed) {
@@ -149,7 +149,7 @@ export async function packWithChunks(options: PackWithChunksOptions): Promise<Pa
     sourceDir,
     files,
     outputName,
-    extension = ".h5data",
+    extension = '.h5data',
     transform,
     compressImages: shouldCompress = false,
     chunkThreshold = DEFAULT_CHUNK_THRESHOLD,
@@ -165,7 +165,7 @@ export async function packWithChunks(options: PackWithChunksOptions): Promise<Pa
     if (shouldCompress) {
       const filePath = join(sourceDir, file);
       const ext = extname(file).toLowerCase();
-      if (ext === ".png" || ext === ".jpg" || ext === ".jpeg") {
+      if (ext === '.png' || ext === '.jpg' || ext === '.jpeg') {
         try {
           const compressed = await compressImage(filePath);
           if (compressed) {
@@ -195,7 +195,10 @@ export async function packWithChunks(options: PackWithChunksOptions): Promise<Pa
   // 如果总大小未超过阈值，直接打包为单个文件
   if (totalSize <= chunkThreshold) {
     const outputPath = join(sourceDir, `${outputName}${extension}`);
-    await createZip(fileEntries.map((f) => f.entry), outputPath);
+    await createZip(
+      fileEntries.map((f) => f.entry),
+      outputPath,
+    );
     return {
       outputFiles: [outputPath],
       totalFiles: fileEntries.length,
@@ -260,15 +263,15 @@ interface ResourceTypeConfig {
  */
 async function detectExtension(rootDir: string): Promise<string> {
   try {
-    const libsMinPath = join(rootDir, "libs", "libs.min.js");
-    const content = await readFile(libsMinPath, "utf-8");
-    if (content.includes("images.zip")) {
-      return ".zip";
+    const libsMinPath = join(rootDir, 'libs', 'libs.min.js');
+    const content = await readFile(libsMinPath, 'utf-8');
+    if (content.includes('images.zip')) {
+      return '.zip';
     }
   } catch {
     // 文件不存在，使用默认扩展名
   }
-  return ".h5data";
+  return '.h5data';
 }
 
 /**
@@ -277,11 +280,7 @@ async function detectExtension(rootDir: string): Promise<string> {
  * @param files 文件列表
  * @param logger 日志记录器
  */
-async function checkLargeFiles(
-  sourceDir: string,
-  files: string[],
-  logger?: Logger,
-): Promise<void> {
+async function checkLargeFiles(sourceDir: string, files: string[], logger?: Logger): Promise<void> {
   for (const file of files) {
     try {
       const filePath = join(sourceDir, file);
@@ -329,55 +328,55 @@ export async function packAll(
 ): Promise<Record<string, string[]>> {
   // 如果跳过资源打包，直接返回
   if (options?.skipResourcePackage || mainConfig.skipResourcePackage) {
-    logger?.log("跳过资源打包（skipResourcePackage = true）");
+    logger?.log('跳过资源打包（skipResourcePackage = true）');
     return {};
   }
 
-  logger?.group("打包资源文件");
+  logger?.group('打包资源文件');
 
   const extension = await detectExtension(rootDir);
   const enableSplitChunks = options?.enableSplitChunks ?? mainConfig.enableSplitChunks;
   const chunkThreshold = options?.chunkThreshold ?? DEFAULT_CHUNK_THRESHOLD;
   const compressImages = options?.compressImages ?? true;
 
-  const projectDir = join(rootDir, "project");
+  const projectDir = join(rootDir, 'project');
   const splitChunkMap: Record<string, string[]> = {};
 
   // 定义资源类型配置
   const resourceTypes: ResourceTypeConfig[] = [
     {
-      type: "images",
-      dir: "images",
+      type: 'images',
+      dir: 'images',
       files: gameData.images.map((name) => `${name}.png`),
     },
     {
-      type: "materials",
-      dir: "materials",
+      type: 'materials',
+      dir: 'materials',
       files: mainConfig.materials.map((name) => `${name}.png`),
     },
     {
-      type: "tilesets",
-      dir: "tilesets",
+      type: 'tilesets',
+      dir: 'tilesets',
       files: gameData.tilesets.map((name) => `${name}.png`),
     },
     {
-      type: "autotiles",
-      dir: "autotiles",
+      type: 'autotiles',
+      dir: 'autotiles',
       files: iconsData.autotiles.map((name) => `${name}.png`),
     },
     {
-      type: "animates",
-      dir: "animates",
+      type: 'animates',
+      dir: 'animates',
       files: gameData.animates.map((name) => `${name}.animate`),
     },
     {
-      type: "sounds",
-      dir: "sounds",
+      type: 'sounds',
+      dir: 'sounds',
       files: gameData.sounds,
     },
     {
-      type: "bgms",
-      dir: "bgms",
+      type: 'bgms',
+      dir: 'bgms',
       files: gameData.bgms,
     },
   ];
@@ -430,7 +429,7 @@ export async function packAll(
   }
 
   logger?.groupEnd();
-  logger?.success("所有资源文件已打包");
+  logger?.success('所有资源文件已打包');
 
   return splitChunkMap;
 }
@@ -440,21 +439,16 @@ export async function packAll(
  * @param rootDir 游戏根目录
  * @param splitChunkMap 分块映射表
  */
-export async function writeSplitChunkMap(
-  rootDir: string,
-  splitChunkMap: Record<string, string[]>,
-): Promise<void> {
+export async function writeSplitChunkMap(rootDir: string, splitChunkMap: Record<string, string[]>): Promise<void> {
   if (Object.keys(splitChunkMap).length === 0) {
     return;
   }
 
-  const mainJsPath = join(rootDir, "main.js");
-  const content = await readFile(mainJsPath, "utf-8");
+  const mainJsPath = join(rootDir, 'main.js');
+  const content = await readFile(mainJsPath, 'utf-8');
 
   const mapJson = JSON.stringify(splitChunkMap);
   const appendContent = `\nmain.splitChunkMap = ${mapJson};\n`;
 
-  await import("node:fs/promises").then((fs) =>
-    fs.writeFile(mainJsPath, content + appendContent, "utf-8"),
-  );
+  await import('node:fs/promises').then((fs) => fs.writeFile(mainJsPath, content + appendContent, 'utf-8'));
 }

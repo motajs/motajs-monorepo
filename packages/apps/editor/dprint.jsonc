@@ -2,17 +2,9 @@
   "typescript": {
     // 该文件当前处于休眠状态（仓库的格式化权威是根目录 .prettierrc.json）。
     // 这里对齐成单引号优先，避免它日后被启用时与 Prettier 的 singleQuote 相矛盾。
-    "quoteStyle": "preferSingle"
+    "quoteStyle": "preferSingle",
   },
-  "json": {
-  },
-  "excludes": [
-    "**/node_modules",
-    "public/**",
-    "**/*-lock.json"
-  ],
-  "plugins": [
-    "https://plugins.dprint.dev/typescript-0.95.13.wasm",
-    "https://plugins.dprint.dev/json-0.21.0.wasm"
-  ]
+  "json": {},
+  "excludes": ["**/node_modules", "public/**", "**/*-lock.json"],
+  "plugins": ["https://plugins.dprint.dev/typescript-0.95.13.wasm", "https://plugins.dprint.dev/json-0.21.0.wasm"],
 }

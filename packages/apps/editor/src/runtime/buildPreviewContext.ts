@@ -1,8 +1,8 @@
-import { projectData } from "@/project/data/projectData";
-import { getCurrentFloorId } from "@/stores/editorState";
-import type { DataResource } from "@/project/data/DataResource";
-import type { RuntimePreviewContext } from "./protocol";
-import { projectModel, type ModelResource, type BlockRegistry } from "@/project/model/projectModel";
+import { projectData } from '@/project/data/projectData';
+import { getCurrentFloorId } from '@/stores/editorState';
+import type { DataResource } from '@/project/data/DataResource';
+import type { RuntimePreviewContext } from './protocol';
+import { projectModel, type ModelResource, type BlockRegistry } from '@/project/model/projectModel';
 
 async function loadValue<T>(resource: DataResource<T>): Promise<T> {
   await resource.ensureLoaded();
@@ -41,7 +41,7 @@ export async function buildRuntimePreviewContext(): Promise<RuntimePreviewContex
       items: items as Record<string, Record<string, unknown>>,
       enemys: enemys as Record<string, Record<string, unknown>>,
       assets: [...(registry as BlockRegistry).values()]
-        .filter((entry) => typeof entry.materialPath === "string")
+        .filter((entry) => typeof entry.materialPath === 'string')
         .map((entry) => ({ path: entry.materialPath!, images: entry.images, id: entry.id })),
     },
   };

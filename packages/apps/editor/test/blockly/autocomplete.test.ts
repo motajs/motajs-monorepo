@@ -14,10 +14,19 @@ const catalog: BlocklyCompletionCatalog = {
     { value: 'sample0', kind: 'floor' },
   ],
   bySource: {
-    item: [{ value: 'yellowKey', kind: 'item' }, { value: 'redKey', kind: 'item' }],
+    item: [
+      { value: 'yellowKey', kind: 'item' },
+      { value: 'redKey', kind: 'item' },
+    ],
     floor: [{ value: 'sample0', kind: 'floor' }],
-    status: [{ value: 'hp', kind: 'status' }, { value: 'atk', kind: 'status' }],
-    core: [{ value: 'getBlockInfo', kind: 'core' }, { value: 'status', kind: 'core' }],
+    status: [
+      { value: 'hp', kind: 'status' },
+      { value: 'atk', kind: 'status' },
+    ],
+    core: [
+      { value: 'getBlockInfo', kind: 'core' },
+      { value: 'status', kind: 'core' },
+    ],
     textEscape: [{ value: '\\i[]', kind: 'escape' }],
   },
   diagnostics: [],
