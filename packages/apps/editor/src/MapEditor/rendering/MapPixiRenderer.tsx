@@ -291,6 +291,7 @@ function useMaterialTextures(paths: string[]): TextureState {
       texturesRef.current = new Map();
       loadedRevisions.current.clear();
       requestedRevisions.current.clear();
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- 该 setState 是销毁 ref 持有的 Pixi 纹理这一外部系统拆卸的可见结果，并非可派生状态
       setState({ pathsKey, textures: new Map(), diagnostics: [], loading: false });
       return;
     }

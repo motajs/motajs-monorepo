@@ -35,6 +35,7 @@ export function useSearchFlagsModal(): UseModalReturn<SearchFlagsOptions, null> 
   );
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- flag 索引懒加载，到达后需回填受控 select 的值；改为派生会在首帧改变受控值
     if (state && !selectedFlag && index?.flags[0]) setSelectedFlag(`flag:${index.flags[0]}`);
   }, [index, selectedFlag, state]);
 

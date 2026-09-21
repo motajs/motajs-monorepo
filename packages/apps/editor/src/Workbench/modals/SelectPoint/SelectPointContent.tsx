@@ -114,6 +114,7 @@ export const SelectPointContent: FC<SelectPointContentProps> = ({
   const top = clamp(topRaw, 0, maxTop);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 地图尺寸收缩时需把夹取后的坐标持久写回 state，渲染期只能重算不能持久化
     setPosX((value) => clamp(value, 0, width - 1));
     setPosY((value) => clamp(value, 0, height - 1));
     setLeft((value) => clamp(value, 0, maxLeft));

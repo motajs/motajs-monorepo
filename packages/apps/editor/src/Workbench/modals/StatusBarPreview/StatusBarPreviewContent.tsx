@@ -50,6 +50,7 @@ export const StatusBarPreviewContent: FC<StatusBarPreviewContentProps> = ({ code
 
   useEffect(() => {
     if (!/^function(?:\s+[$\w]+)?\s*\(/.test(code)) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 仅在代码变化时解析一次用户脚本；改为渲染期派生会在每次渲染重复解析
     setValues((prev) => ({
       ...prev,
       flags: JSON.stringify(extractFlags(code)),
@@ -70,6 +71,7 @@ export const StatusBarPreviewContent: FC<StatusBarPreviewContentProps> = ({ code
   }, [code, orientation, runtime, values]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 该 effect 驱动返回 Promise 的预览租约，异步回调内部写 state，属对外部系统订阅
     void preview();
     return () => lease?.close();
   }, [preview]);
@@ -77,6 +79,7 @@ export const StatusBarPreviewContent: FC<StatusBarPreviewContentProps> = ({ code
   useEffect(() => {
     if (runtime.state.status !== 'error' || !lease) return;
     lease.close();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 运行时进入 error 时关闭租约并同步清理 React 持有的租约引用，属外部系统清理
     setLease(null);
   }, [lease, runtime.state.status]);
 
