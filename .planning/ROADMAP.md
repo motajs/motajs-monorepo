@@ -41,7 +41,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. A recorded baseline exists (per-package unit counts, e2e run, build output, bundle/artifact size vs the 20 MiB ceiling, `editor-manifest.json`, protocol constants) plus Playwright screenshot baselines for the four editors + shell.
   5. No e2e test is silently skipped — each is either a required fixture or carries a CI-visible marker.
 
-**Plans**: 9 plans
+**Plans**: 10 plans
 Plans:
 **Wave 1**
 
@@ -70,6 +70,10 @@ Plans:
 - [ ] 01-09-PLAN.md — Make `pnpm lint` green: fix the remaining pre-existing lint errors (VERIFY-02)
 
 **Wave 7** *(blocked on Wave 6 completion)*
+
+- [ ] 01-10-PLAN.md — Adopt pnpm 12.5.1 as the single project toolchain version (VERIFY-02)
+
+**Wave 8** *(blocked on Wave 7 completion)*
 
 - [ ] 01-07-PLAN.md — Four-job PR CI workflow and required status checks (VERIFY-02)
 
