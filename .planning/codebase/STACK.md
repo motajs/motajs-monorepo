@@ -22,7 +22,7 @@
 - Browser runtime - both apps are browser-targeted SPAs; service-worker app runs inside a Service Worker global scope (`packages/apps/service-worker/src/server/index.ts`)
 
 **Package Manager:**
-- pnpm 11.10.0 (pinned in `.github/workflows/deploy-editor-h5test.yml`); no `packageManager` field in root `package.json`
+- pnpm 12.5.1 (pinned in `.github/workflows/deploy-editor-h5test.yml` and declared in root `package.json` as `engines.pnpm: ">=12.5.1"`; there is no `packageManager` field — pnpm 12 would record the pnpm binary plus 14 `@pnpm/exe.*` platform packages into `pnpm-lock.yaml`, so the lighter `engines` declaration is used instead)
 - Workspace catalogs — dependency versions centralized in `pnpm-workspace.yaml` (`catalog:` references across all manifests)
 - Lockfile: present (`pnpm-lock.yaml`)
 - `.npmrc`: `ignore-workspace-root-check = true`
@@ -114,7 +114,7 @@
 ## Platform Requirements
 
 **Development:**
-- Node.js 24 recommended (CI), pnpm 11.x
+- Node.js 24 recommended (CI), pnpm >=12.5.1 (declared via `engines.pnpm`)
 - Git submodule initialized: `packages/external/mota-js`
 - Native/build-tool approvals in `pnpm-workspace.yaml` (`allowBuilds`): `@parcel/watcher`, `dprint`, `esbuild`, `less`, `sharp`
 - Dev ports: editor `127.0.0.1:1055`; service-worker preview `127.0.0.1:4178`
