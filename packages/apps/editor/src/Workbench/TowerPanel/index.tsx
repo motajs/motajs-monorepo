@@ -44,7 +44,7 @@ type TowerTableVersion = 'schema' | 'legacy';
 
 function processMainFields(data: Record<string, unknown>, commentObj: CommentObject): Record<string, unknown> {
   const result = { ...data, main: {} };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- main 注释数据来自 mota-js 动态结构，此处仅做透传读取
   const mainCommentData = (commentObj as any)?._data?.main?._data;
   const dataMain = data.main as Record<string, unknown> | undefined;
   if (mainCommentData && typeof mainCommentData === 'object') {

@@ -22,7 +22,7 @@ describe('serializeToJsDataFile 属性测试', () => {
           // 验证输出可以被 JavaScript 解析
           // 使用 Function 构造函数来验证语法有效性
           expect(() => {
-            // eslint-disable-next-line @typescript-eslint/no-implied-eval
+            // eslint-disable-next-line @typescript-eslint/no-implied-eval -- 属性测试需以 Function 动态构造函数体来验证反序列化输出可被解析
             new Function(output);
           }).not.toThrow();
         }),
@@ -36,7 +36,7 @@ describe('serializeToJsDataFile 属性测试', () => {
           const output = serializeToJsDataFile(varName, data);
 
           // 执行代码并获取变量值
-          // eslint-disable-next-line @typescript-eslint/no-implied-eval
+          // eslint-disable-next-line @typescript-eslint/no-implied-eval -- 属性测试需动态执行序列化输出以验证其运行结果
           const fn = new Function(`${output}; return ${varName};`);
           const result = fn();
 
@@ -84,7 +84,7 @@ describe('serializeToJsMapFile 属性测试', () => {
 
           // 验证输出可以被 JavaScript 解析（需要预先定义 main.floors）
           expect(() => {
-            // eslint-disable-next-line @typescript-eslint/no-implied-eval
+            // eslint-disable-next-line @typescript-eslint/no-implied-eval -- 属性测试需以 Function 动态构造函数体来验证反序列化输出可被解析
             new Function(`var main = { floors: {} }; ${output}`);
           }).not.toThrow();
         }),
@@ -98,7 +98,7 @@ describe('serializeToJsMapFile 属性测试', () => {
           const output = serializeToJsMapFile(floorId, data);
 
           // 执行代码并获取变量值
-          // eslint-disable-next-line @typescript-eslint/no-implied-eval
+          // eslint-disable-next-line @typescript-eslint/no-implied-eval -- 属性测试需动态执行序列化输出以验证其运行结果
           const fn = new Function(`var main = { floors: {} }; ${output}; return main.floors.${floorId};`);
           const result = fn();
 

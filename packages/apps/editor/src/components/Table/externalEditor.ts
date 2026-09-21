@@ -96,7 +96,7 @@ export function openExternalEditor(
           } else {
             try {
               // Legacy table values are JavaScript expressions, not strict JSON.
-              // eslint-disable-next-line @typescript-eslint/no-implied-eval
+              // eslint-disable-next-line @typescript-eslint/no-implied-eval -- 外部代码编辑器协议以字符串下发取值，需动态求值以兼容既有脚本
               newValue = eval(`(${value || 'null'})`);
             } catch {
               newValue = value;

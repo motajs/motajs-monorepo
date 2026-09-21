@@ -91,7 +91,7 @@ const MonacoEditor: FC<IMonacoEditorProps> = (props) => {
 export default MonacoEditor;
 
 // Kept beside the WeakMap so model scopes can release view-state entries.
-// eslint-disable-next-line react-refresh/only-export-components
+// eslint-disable-next-line react-refresh/only-export-components -- 语言作用域助手需与组件同模块导出，拆分模块会改变 Monaco 视图状态的注册顺序
 export function clearMonacoViewState(model: monaco.editor.ITextModel): void {
   viewStates.delete(model);
 }

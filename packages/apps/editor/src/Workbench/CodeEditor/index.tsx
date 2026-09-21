@@ -182,7 +182,7 @@ export const CodeEditor: FC = () => {
       queueMicrotask(() => {
         // The delayed generation check deliberately distinguishes a real unmount
         // from React StrictMode's immediate mount/unmount/remount probe.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- 仅需在挂载时释放本代作用域，依赖数组刻意留空
         if (scopeGenerationRef.current === generation) modelScopeRef.current?.dispose();
       });
   }, []);

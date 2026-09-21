@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any -- 测试需要访问管理器私有处理器映射以构造前置状态 */
 /**
  * FileHandlerManager 单元测试
  */

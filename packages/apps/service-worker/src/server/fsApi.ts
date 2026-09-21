@@ -9,8 +9,20 @@ const ENCODINGS = new Map<string, BufferEncoding>([
   ['base64', 'base64'],
 ]);
 
+/**
+ * 判断字符串是否含有控制字符（U+0000–U+001F 与 U+007F–U+009F）。
+ * 与原先的 /[\u0000-\u001f\u007f-\u009f]/ 等价：逐 UTF-16 码元扫描，命中同一集合。
+ */
+const hasControlCharacter = (value: string): boolean => {
+  for (let index = 0; index < value.length; index++) {
+    const code = value.charCodeAt(index);
+    if (code <= 0x1f || (code >= 0x7f && code <= 0x9f)) return true;
+  }
+  return false;
+};
+
 export const normalizeProjectPath = (input: string, allowEmpty = false): string => {
-  if (/[\u0000-\u001f\u007f-\u009f]/.test(input) || input.includes('\\') || input.startsWith('/')) {
+  if (hasControlCharacter(input) || input.includes('\\') || input.startsWith('/')) {
     throw new HttpError(400, 'invalid-path', 'Project path must be relative', input);
   }
   const segments = input.split('/');

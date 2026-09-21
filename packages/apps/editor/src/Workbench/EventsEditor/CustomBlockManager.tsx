@@ -397,7 +397,7 @@ export const CustomBlockManager: FC<CustomBlockManagerProps> = ({ open, registra
         setEditingIndex(null);
       }
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 仅在弹窗打开状态变化时重取注册信息，其余依赖由事件驱动
   }, [open]);
 
   useEffect(() => {
@@ -434,7 +434,7 @@ export const CustomBlockManager: FC<CustomBlockManagerProps> = ({ open, registra
       });
     return () => controller.abort();
     // requestId is the stable identity for one registration action.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- requestId 是本次注册动作的稳定标识，故只依赖它
   }, [open, registration?.requestId]);
 
   const schema = useMemo(() => {

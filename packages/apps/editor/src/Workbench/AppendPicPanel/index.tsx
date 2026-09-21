@@ -188,7 +188,6 @@ export const AppendPicPanel: FC<AppendPicPanelProps> = ({ embedded = false }) =>
       }
 
       try {
-        let source: HTMLCanvasElement;
         const grid = getGridSizeForMaterial(info.images);
         const collection = projectAssets.materialCollection(info.images);
         await collection.ensureLoaded();
@@ -200,7 +199,7 @@ export const AppendPicPanel: FC<AppendPicPanelProps> = ({ embedded = false }) =>
               : candidate.slot.kind === 'sheet-row' && candidate.slot.row === (info.y ?? 0),
           );
         if (!entry) throw new Error(`无法加载素材：${info.images}`);
-        source = rasterCanvas(await collection.read(entry));
+        const source = rasterCanvas(await collection.read(entry));
 
         const processedImage = await processImageFile(source, grid);
         setSourceImage(processedImage);

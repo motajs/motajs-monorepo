@@ -32,7 +32,7 @@ const CommonEventPanelContent: FC<CommonEventPanelContentProps> = ({ editMode })
   const eventsMeta = useTableMetaSuspense('eventsComment');
 
   // 只取 commonEvent 的元数据（与原实现一致）
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- eventsComment 元数据在 mota-js 侧为动态结构，此处仅透传读取
   const meta = (eventsMeta._data as any)?.commonEvent as CommentObject;
 
   // 统一的变更处理 - 即时保存

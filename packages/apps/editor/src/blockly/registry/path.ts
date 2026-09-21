@@ -5,7 +5,7 @@ export function parseDataPath(path: string): string[] {
 
   const normalized = path.startsWith('$.') ? path.slice(2) : path;
   const segments: string[] = [];
-  const pattern = /(?:^|\.)([^.\[\]]+)|\[(?:"([^"]+)"|'([^']+)'|(\d+))\]/g;
+  const pattern = /(?:^|\.)([^.[\]]+)|\[(?:"([^"]+)"|'([^']+)'|(\d+))\]/g;
   let consumed = 0;
   let match: RegExpExecArray | null;
 

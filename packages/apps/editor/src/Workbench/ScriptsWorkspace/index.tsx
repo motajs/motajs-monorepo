@@ -262,7 +262,7 @@ const MonacoSurface = forwardRef<
       queueMicrotask(() => {
         // Keep models across React StrictMode's probe, but release them after a
         // real unmount if no newer mount generation claimed this scope.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- 依赖 modelScope 实例，额外依赖会在 StrictMode 探测中重建模型
         if (scopeGenerationRef.current === generation) modelScope.dispose();
       });
   }, [modelScope]);

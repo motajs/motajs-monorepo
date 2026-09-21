@@ -405,7 +405,7 @@ describe('FileHandler', () => {
       };
 
       // 替换 handler 的 fs（通过私有属性访问）
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 测试需强制改写被测处理器的私有状态以覆盖持久化失败分支
       (handler as any).fs = failingFs;
 
       handler.update('new');
