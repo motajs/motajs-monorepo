@@ -2,6 +2,9 @@
   "name": "@motajs/monorepo",
   "version": "0.0.0",
   "private": true,
+  "engines": {
+    "pnpm": ">=12.5.1"
+  },
   "description": "",
   "type": "module",
   "scripts": {
