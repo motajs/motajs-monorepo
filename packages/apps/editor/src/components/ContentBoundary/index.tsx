@@ -57,4 +57,3 @@ export const ContentBoundary: FC<ContentBoundaryProps> = (props) => {
 
 // 导出相关类型和组件
 export { SuspenseWithRecovery, type SuspenseWithRecoveryProps };
-export * from './RecoveryUI';

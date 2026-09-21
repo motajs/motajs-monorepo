@@ -15,7 +15,8 @@
 import { type ReactNode } from 'react';
 import { useIsPanelActive, type PanelId } from '@/stores/PanelStore';
 import { PanelErrorBoundary } from './PanelErrorBoundary';
-import { ContentBoundary, NotFoundRecovery } from '@/components/ContentBoundary';
+import { ContentBoundary } from '@/components/ContentBoundary';
+import { NotFoundRecovery } from '@/components/ContentBoundary/RecoveryUI';
 import type { IContentHandler } from '@/fs/interfaces';
 import { operationHistory, useOperationHistory } from '@/project/history';
 import { notifyError } from '@/utils/notify';

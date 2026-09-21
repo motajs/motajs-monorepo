@@ -39,6 +39,3 @@ export type {
   UseFoldReturn,
   TableContextValue,
 } from './types';
-
-// Legacy 集成辅助函数导出
-export { openExternalEditor } from './externalEditor';

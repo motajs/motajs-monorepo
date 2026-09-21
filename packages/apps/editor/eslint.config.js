@@ -28,6 +28,20 @@ export default defineConfig([
     },
     rules: {
       'prettier/prettier': 'error',
+      // 仅把三个 context 模块导出的 4 个 hook 列入白名单（其余仍按 only-export-components 校验）；
+      // 这是规则自身的选项，用于收窄既有的误报类别，不改动严重度。
+      'react-refresh/only-export-components': [
+        'error',
+        {
+          allowConstantExport: true,
+          allowExportNames: [
+            'useBlocklyInteractionCapabilities',
+            'useEventEditor',
+            'useEventEditorRegistration',
+            'useCheckboxSetModalAction',
+          ],
+        },
+      ],
       '@typescript-eslint/no-unused-vars': 'warn',
       'prefer-arrow-callback': 'warn',
       'object-shorthand': 'warn',

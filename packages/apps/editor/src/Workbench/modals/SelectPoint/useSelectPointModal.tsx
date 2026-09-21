@@ -1,50 +1,11 @@
-import { ContentBoundary } from '@/components/ContentBoundary';
-import { Component, type ErrorInfo, type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import { Component, type ErrorInfo, type ReactNode, useCallback, useRef, useState } from 'react';
 import type { SelectPointOptions, SelectPointResult, UseModalReturn } from '../shared/types';
 import { SelectPointContent } from './SelectPointContent';
+import { SelectPointShell } from './SelectPointShell';
 
 interface SelectPointState extends SelectPointOptions {
   resolve: (value: SelectPointResult | null) => void;
 }
-
-// Custom shell for SelectPoint (different layout from ModalShell)
-const SelectPointShell: React.FC<{
-  title: string;
-  onClose: () => void;
-  onConfirm?: () => void;
-  children: React.ReactNode;
-}> = ({ title, onClose, onConfirm, children }) => {
-  // ESC handled by ModalShell pattern, but we need custom implementation here
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' || e.keyCode === 27) {
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
-
-  return (
-    <div id="uieventDiv" data-test-id="select-point-modal" style={{ display: 'block' }}>
-      <div id="uieventDialog" className="selectPointDialog">
-        <div id="uieventHead">
-          <span id="uieventTitle">{title}</span>
-          <button id="uieventNo" data-test-id="select-point-cancel" onClick={onClose}>
-            关闭
-          </button>
-          {onConfirm ? (
-            <button id="uieventYes" data-test-id="select-point-confirm" onClick={onConfirm}>
-              确定
-            </button>
-          ) : null}
-        </div>
-        <hr style={{ clear: 'both', marginTop: 0 }} />
-        <ContentBoundary loadingUI={<></>}>{children}</ContentBoundary>
-      </div>
-    </div>
-  );
-};
 
 class SelectPointErrorBoundary extends Component<
   {

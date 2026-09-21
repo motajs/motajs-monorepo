@@ -36,7 +36,7 @@ interface SelectPointContentProps {
   onConfirm: () => void;
 }
 
-export function parseStaticPointCoordinate(value: number | string | undefined): number {
+function parseStaticPointCoordinate(value: number | string | undefined): number {
   if (typeof value === 'number' && Number.isFinite(value)) return Math.trunc(value);
   if (typeof value === 'string' && /^[-+]?\d+$/.test(value.trim())) {
     return Number.parseInt(value, 10);
