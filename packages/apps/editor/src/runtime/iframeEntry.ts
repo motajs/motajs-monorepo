@@ -7,6 +7,7 @@ import {
   type RuntimePreviewContext,
 } from './protocol';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- 引擎注入到 iframe window 上的未类型化 mota-js 全局桥；本侧没有其类型定义，后续逐值收窄
 const runtime: any = window;
 let port: MessagePort | null = null;
 let resourceSequence = 0;
@@ -433,6 +434,7 @@ async function buildLanguageSnapshot(): Promise<import('./protocol').RuntimeLang
 
 function beginPreview(context: RuntimePreviewContext): void {
   closePreview();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- runtime.core 是引擎侧未类型化的 mota-js core 对象，本侧无其类型，读取处逐值收窄
   const core: any = runtime.core;
   const floorId = context.floorId;
   const previousFloor = floorId ? core.floors[floorId] : undefined;
@@ -493,6 +495,7 @@ function beginPreview(context: RuntimePreviewContext): void {
 }
 
 function applyContext(context: RuntimePreviewContext): void {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- runtime.core 是引擎侧未类型化的 mota-js core 对象，本侧无其类型，读取处逐值收窄
   const core: any = runtime.core;
   const firstData = structuredClone(context.tower.firstData ?? {}) as {
     floorId?: string;
@@ -560,6 +563,7 @@ async function renderUI(
   await syncChangedResources();
   await syncContextAssets(payload.context);
   beginPreview(payload.context);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- runtime.core 是引擎侧未类型化的 mota-js core 对象，本侧无其类型，读取处逐值收窄
   const core: any = runtime.core;
   core.setAlpha('uievent', 1);
   core.clearMap('uievent');
@@ -603,6 +607,7 @@ async function renderStatusBar(
   await syncChangedResources();
   await syncContextAssets(payload.context);
   beginPreview(payload.context);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- runtime.core 是引擎侧未类型化的 mota-js core 对象，本侧无其类型，读取处逐值收窄
   const core: any = runtime.core;
   const width = payload.orientation === 'vertical' ? core.__PIXELS__ : Math.round(core.__PIXELS__ * 0.31);
   const height =

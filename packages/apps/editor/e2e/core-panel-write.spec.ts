@@ -49,24 +49,29 @@ async function expectPublicProjectUnchanged(snapshot: Map<string, string>): Prom
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Playwright 用例读写的是动态形状的项目 JSON 文件，为整个夹具建模精确类型不划算
 function readFloorData(sandbox: ProjectSandbox, floorId: string): Record<string, any> {
   const text = sandbox.readText(`project/floors/${floorId}.js`);
   return JSON.parse(text.replace(new RegExp(`^main\\.floors\\.${floorId}\\s*=\\s*`), ''));
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Playwright 用例读写的是动态形状的项目 JSON 文件，为整个夹具建模精确类型不划算
 function writeFloorData(sandbox: ProjectSandbox, floorId: string, data: Record<string, any>): void {
   sandbox.writeText(`project/floors/${floorId}.js`, `main.floors.${floorId} = \n${JSON.stringify(data, null, '\t')}`);
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Playwright 用例读写的是动态形状的项目 JSON 文件，为整个夹具建模精确类型不划算
 function readTowerData(sandbox: ProjectSandbox): Record<string, any> {
   const text = sandbox.readText('project/data.js');
   return JSON.parse(text.replace(/^var\s+\w+\s*=\s*/, ''));
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Playwright 用例读写的是动态形状的项目 JSON 文件，为整个夹具建模精确类型不划算
 function readMapBlocks(sandbox: ProjectSandbox): Record<string, any> {
   return JSON.parse(sandbox.readText('project/maps.js').replace(/^var\s+\w+\s*=\s*/, ''));
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Playwright 用例读写的是动态形状的项目 JSON 文件，为整个夹具建模精确类型不划算
 function readItems(sandbox: ProjectSandbox): Record<string, any> {
   return JSON.parse(sandbox.readText('project/items.js').replace(/^var\s+\w+\s*=\s*/, ''));
 }
@@ -1170,6 +1175,7 @@ test.describe('core panels write to sandbox project', () => {
     const editor = page.getByTestId('event-editor');
     await expect(editor).toContainText('数值提升项');
     const source = page.getByTestId('event-editor-source');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 事件编辑器面板输出的 JSON5 为动态结构，用例需就地改写字段
     const equip = JSON5.parse(await source.inputValue()) as Record<string, any>;
     equip.value.atk = 11;
     await source.fill(JSON.stringify(equip, null, 2));

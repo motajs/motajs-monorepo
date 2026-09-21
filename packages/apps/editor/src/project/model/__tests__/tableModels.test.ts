@@ -71,6 +71,7 @@ describe('table project models', () => {
       'meta',
       context,
     );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 测试读取的是深度嵌套、动态生成的表结构元数据，其形状正是被测对象；为夹具而非生产代码补类型不划算
     const data = schema._data as Record<string, any>;
     const fieldContext = getTableMetaContext(data.floorIds);
     expect(evaluateTableMetaExpression(data.floorIds._range, ['sample0'], fieldContext).value).toBe(true);

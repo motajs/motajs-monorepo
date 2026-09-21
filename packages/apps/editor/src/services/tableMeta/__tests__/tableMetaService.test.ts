@@ -39,6 +39,7 @@ describe('tableMetaService', () => {
     await handler.load();
 
     // 注入到 FileHandlerManager
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 需把绑定内存文件系统的 handler 注入私有 handlers 映射；FileHandlerManager 只有 clear() 没有注入接口，新增生产方法仅为测试不划算
     (FileHandlerManager as any).handlers.set(path, handler);
   }
 

@@ -98,6 +98,7 @@ describe('ProjectData + Commands with real sample project', () => {
 
     const schemaResource = projectModel.tableSchema('dataComment');
     await schemaResource.reload();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 测试读取的是深度嵌套、动态生成的表结构元数据，其形状正是被测对象；为夹具而非生产代码补类型不划算
     const schema = schemaResource.value().schema as any;
     const floorId = schema._data.firstData._data.floorId;
     const heroImage = schema._data.firstData._data.hero._data.image;
@@ -107,6 +108,7 @@ describe('ProjectData + Commands with real sample project', () => {
 
     const commentResource = projectModel.tableSchema('comment');
     await commentResource.reload();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 测试读取的是深度嵌套、动态生成的表结构元数据，其形状正是被测对象；为夹具而非生产代码补类型不划算
     const comment = commentResource.value().schema as any;
     const specialOptions = comment._data.enemys._data.special._checkboxSet();
     expect(specialOptions.key).toEqual(expect.arrayContaining([1, 6, 27]));

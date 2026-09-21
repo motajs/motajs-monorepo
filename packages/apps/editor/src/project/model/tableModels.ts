@@ -37,6 +37,7 @@ export interface TableSchemaBundle {
   diagnostics: ProjectDiagnostic[];
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- 遍历 acorn 节点的动态属性读取器，属性名在运行时决定；收紧为精确类型需在每处属性访问加断言，属独立议题
 type Node = Record<string, any>;
 
 function functionExpression(source: string): Node | undefined {
@@ -82,8 +83,8 @@ function safeValue(node: Node | undefined, env: Record<string, unknown>): unknow
     if (node.operator === '??') return left ?? safeValue(node.right, env);
   }
   if (node.type === 'BinaryExpression') {
-    const left = safeValue(node.left, env) as any;
-    const right = safeValue(node.right, env) as any;
+    const left = safeValue(node.left, env) as number;
+    const right = safeValue(node.right, env) as number;
     if (node.operator === '+') return left + right;
     if (node.operator === '-') return left - right;
     if (node.operator === '*') return left * right;
