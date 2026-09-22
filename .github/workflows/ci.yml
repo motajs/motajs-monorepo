@@ -50,6 +50,8 @@ jobs:
 
       - run: pnpm typecheck
 
+      - run: node scripts/verify/coreExports.js
+
   unit:
     runs-on: ubuntu-latest
     permissions:
