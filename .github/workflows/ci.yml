@@ -99,4 +99,8 @@ jobs:
       - name: Generate PandaCSS styled-system
         run: pnpm --filter @motajs/editor exec panda codegen
 
+      - run: node scripts/verify/corePandaClass.js
+
+      - run: node scripts/verify/coreReactCompiler.js
+
       - run: pnpm build
