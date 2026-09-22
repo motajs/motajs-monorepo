@@ -119,7 +119,20 @@ Plans:
   4. `EDITOR_CORE_API_VERSION`, `DiagnosticBus`, and all port interfaces (`EngineAdapter`, `FsPort`, `HostPort`, `PreviewAdapter`, capability ports) exist and are exported.
   5. Core source contains no default `Fs`, no DOM/environment parsing, and no direct `fetch` — every dependency is injected by the composition root.
 
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+**Wave 1**
+
+- [ ] 03-01-PLAN.md — Tracer: a live per-instance `EditorCore` — factory, capability registry, per-instance diagnostic bus, reverse-order dispose (KERN-01, KERN-02, KERN-03, KERN-05, KERN-06)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 03-02-PLAN.md — Atomic construction: required-registration resolution, reverse-order dispose then `EditorCoreStartupError` carrying all diagnostics; idempotent, failure-isolating teardown reporting through the bus and the console (KERN-04, KERN-02)
+- [ ] 03-03-PLAN.md — Declared ports (`EngineAdapter`, `FsPort`, `HostPort`, `PreviewAdapter`) and the honest public surface, with the Phase-2 subpath manifest and verifier updated together (PORT-01, KERN-05)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 03-04-PLAN.md — The two static gates: the core-scoped PORT-02 ESLint ban and the module-state rule, each proven able to fail, inside the existing `lint` job (KERN-06, PORT-02)
 
 ### Phase 4: Resource + Edit Layers Moved
 
@@ -267,7 +280,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 |-------|----------------|--------|-----------|
 | 1. Baseline & Verification Net | 10/10 | Complete    | 2026-09-21 |
 | 2. Package Boundary & Build Scaffolding | 3/3 | Complete    | 2026-09-22 |
-| 3. Kernel — Runtime, Ports, Registry, Diagnostics | 0/TBD | Not started | - |
+| 3. Kernel — Runtime, Ports, Registry, Diagnostics | 0/4 | Not started | - |
 | 4. Resource + Edit Layers Moved | 0/TBD | Not started | - |
 | 5. Engine Adapter Skeleton & Resource Descriptors | 0/TBD | Not started | - |
 | 6. Fixed Shell + Slots | 0/TBD | Not started | - |
