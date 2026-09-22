@@ -14,7 +14,7 @@ This milestone is a **packaging and boundary milestone**, not a feature mileston
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Baseline & Verification Net** - Quantify the current behavior and make the test/CI safety net actually run before any code moves (completed 2026-09-21)
-- [ ] **Phase 2: Package Boundary & Build Scaffolding** - Create `packages/libs/editor-core` and enforce the boundary, resolution, styling, and compiler rules
+- [x] **Phase 2: Package Boundary & Build Scaffolding** - Create `packages/libs/editor-core` and enforce the boundary, resolution, styling, and compiler rules (completed 2026-09-22)
 - [ ] **Phase 3: Kernel — Runtime, Ports, Registry, Diagnostics** - Replace the six module singletons with a per-instance `EditorCore`, public capability registry, and declared ports
 - [ ] **Phase 4: Resource + Edit Layers Moved** - Relocate the engine-agnostic resource and edit layers verbatim, preserving all invariants
 - [ ] **Phase 5: Engine Adapter Skeleton & Resource Descriptors** - Move paths, formats, vocabulary, and migrations into the adapter, proven with a fake engine B
@@ -90,7 +90,20 @@ Plans:
   4. PandaCSS generates a known core class and React Compiler transforms core TSX (both probed; workarounds applied if not).
   5. `dependency-cruiser` rules (forbidden edges, singleton `requireZero`, no-cycles) run in CI and fail on violation.
 
-**Plans**: TBD
+**Plans**: 3/3 plans executed
+Plans:
+**Wave 1**
+
+- [x] 02-01-PLAN.md — Create the `editor-core` skeleton, the probe, core's own Vitest project and the editor's cross-package resolution wiring (PKG-01, PKG-03)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [x] 02-02-PLAN.md — Fill the catalog gaps, declare the nine peers with Semi optional, and machine-check the package manifest, subpath status and single-copy resolution (PKG-01, PKG-02)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [x] 02-03-PLAN.md — Install the pinned boundary gate, assert PandaCSS extraction and React Compiler coverage, and wire all three into the existing four CI jobs (PKG-03, PKG-04, PKG-05, VERIFY-05)
+
 **UI hint**: yes
 
 ### Phase 3: Kernel — Runtime, Ports, Registry, Diagnostics
@@ -253,7 +266,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Baseline & Verification Net | 10/10 | Complete    | 2026-09-21 |
-| 2. Package Boundary & Build Scaffolding | 0/TBD | Not started | - |
+| 2. Package Boundary & Build Scaffolding | 3/3 | Complete    | 2026-09-22 |
 | 3. Kernel — Runtime, Ports, Registry, Diagnostics | 0/TBD | Not started | - |
 | 4. Resource + Edit Layers Moved | 0/TBD | Not started | - |
 | 5. Engine Adapter Skeleton & Resource Descriptors | 0/TBD | Not started | - |

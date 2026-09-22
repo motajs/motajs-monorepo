@@ -30,6 +30,8 @@ jobs:
 
       - run: pnpm lint
 
+      - run: node scripts/verify/coreBoundaries.js
+
   typecheck:
     runs-on: ubuntu-latest
     permissions:
@@ -49,6 +51,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - run: pnpm typecheck
+
+      - run: node scripts/verify/coreExports.js
 
   unit:
     runs-on: ubuntu-latest
@@ -95,4 +99,10 @@ jobs:
       - name: Generate PandaCSS styled-system
         run: pnpm --filter @motajs/editor exec panda codegen
 
+      - run: node scripts/verify/corePandaClass.js
+
+      - run: node scripts/verify/coreReactCompiler.js
+
       - run: pnpm build
+
+      - run: node scripts/verify/editorArtifactAssets.js

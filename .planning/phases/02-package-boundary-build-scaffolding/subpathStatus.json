@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "phase": "02-package-boundary-build-scaffolding",
+  "note": "`./react` 携带探针，是 Phase 2 的构建管线脚手架，Phase 4 起由真实 React 层替换；其余六个 subpath 是惰性空 barrel。",
+  "subpaths": {
+    ".": {
+      "target": "./lib/index.ts",
+      "content": "empty-barrel",
+      "carriesProbe": false
+    },
+    "./code": {
+      "target": "./lib/code/index.ts",
+      "content": "empty-barrel",
+      "carriesProbe": false
+    },
+    "./table": {
+      "target": "./lib/table/index.ts",
+      "content": "empty-barrel",
+      "carriesProbe": false
+    },
+    "./map": {
+      "target": "./lib/map/index.ts",
+      "content": "empty-barrel",
+      "carriesProbe": false
+    },
+    "./asset": {
+      "target": "./lib/asset/index.ts",
+      "content": "empty-barrel",
+      "carriesProbe": false
+    },
+    "./shell": {
+      "target": "./lib/shell/index.ts",
+      "content": "empty-barrel",
+      "carriesProbe": false
+    },
+    "./react": {
+      "target": "./lib/react/index.ts",
+      "content": "probe",
+      "carriesProbe": true
+    }
+  }
+}

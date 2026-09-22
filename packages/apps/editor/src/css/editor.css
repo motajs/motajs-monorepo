@@ -1317,7 +1317,9 @@ div.checkboxSet {
 
 @font-face {
   font-family: code;
-  src: url('@/assets/FiraCode.ttf');
+  /* 相对路径而非 `@/`：移除硬别名 '@' 后（D-05）Vite 的 CSS url() 解析不再经过 resolvePlugin，
+     只有相对路径才能被解析并把字体资源纳入产物。 */
+  src: url('../assets/FiraCode.ttf');
 }
 
 .main .CodeMirror {

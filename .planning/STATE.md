@@ -1,18 +1,18 @@
 ---
 gsd_state_version: "1.0"
-current_phase: 2
-current_phase_name: Package Boundary & Build Scaffolding
+current_phase: 3
+current_phase_name: Kernel — Runtime, Ports, Registry, Diagnostics
 status: planning
-stopped_at: "Phase 1 complete (10/10, verification PASSED). Branch strategy set to git.branching_strategy=phase in config; NO phase branch created yet (user instruction: create it only after Phase 2 starts). Phase 2 not started. main is 5 commits ahead of origin/main (unpushed)."
-last_updated: "2026-09-21T09:39:12.754Z"
-last_activity: 2026-09-21
-last_activity_desc: Phase 01 complete, transitioned to Phase 2
-state_head: 5b18b25e2bffcbc4659b824d8d5e13a4056f0b0d
+stopped_at: "Phase 2 complete (verification passed 7/7) and committed on branch `editor/boundary`, which the user merges to `main` manually. Branch rule changed 2026-09-22: ONE branch for the rest of the milestone (`editor/core-extract`, phases 3–12), not per-phase. Precondition before Phase 3: confirm the Phase 2 PR landed on `main`, then create `editor/core-extract` from that `main`. Phase 3 not started."
+last_updated: "2026-09-22T07:18:27.488Z"
+last_activity: 2026-09-22
+last_activity_desc: Phase 2 complete, transitioned to Phase 3
+state_head: 115c92fb60e4339a7f414f22f48b16b1d911bb7b
 progress:
   total_phases: 12
   completed_phases: 1
-  total_plans: 10
-  completed_plans: 10
+  total_plans: 13
+  completed_plans: 13
   percent: 8
 ---
 
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-09-20)
 
 ## Current Position
 
-Phase: 2 — Package Boundary & Build Scaffolding
+Phase: 3 — Kernel — Runtime, Ports, Registry, Diagnostics
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-09-21 — Phase 01 complete, transitioned to Phase 2
+Last activity: 2026-09-22 — Phase 2 complete, transitioned to Phase 3
 
 Progress: [█░░░░░░░░░] 8%
 
@@ -38,7 +38,7 @@ Progress: [█░░░░░░░░░] 8%
 
 **Velocity:**
 
-- Total plans completed: 10
+- Total plans completed: 13
 - Average duration: - min
 - Total execution time: 0.0 hours
 
@@ -47,6 +47,7 @@ Progress: [█░░░░░░░░░] 8%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01 | 10 | - | - |
+| 2 | 3 | - | - |
 
 **Recent Trend:**
 
@@ -65,6 +66,7 @@ Recent decisions affecting current work:
 - [Roadmap]: 12-phase structure adopted — verification net first, then boundary, kernel, verbatim resource/edit moves, adapter skeleton, shell, capabilities least-coupled-first (table→code→asset→map), preview/cutover, then extension freeze + parity gate.
 - [Roadmap]: `editor-core` package uses `lib/` (never `src/`) per `resolvePlugin.js` and `tsconfig.lib.base.json`; subpath exports (`.`, `./code`, `./table`, `./map`, `./asset`, `./shell`, `./react`) created up front.
 - [Roadmap]: Per-instance `EditorCore` via `createEditorCore(config)` replaces the six module singletons; registration returns diagnostics+rollback, construction fails loudly on unresolved required registration.
+- [Process, 2026-09-22, **supersedes the 2026-09-21 per-phase rule**]: **One branch for the whole milestone — `editor/core-extract`.** This is not a large project; per-phase branches added overhead without benefit. `git.branching_strategy` stays `none`, so GSD never auto-creates or auto-switches branches (and no `milestone` template is set — a literal one would also trip the W015 config-validation warning and would silently fork from `origin/main`, making "is the previous phase merged?" an implicit precondition). Phase 2 keeps its existing `editor/boundary` branch unchanged and is merged to `main` manually. From **Phase 3 onward**, all phases 3–12 land on `editor/core-extract`, created once from a `main` that already contains the merged Phase 2 work. Precondition before starting Phase 3: confirm the Phase 2 PR has landed on `main`.
 
 ### Pending Todos
 
@@ -74,7 +76,7 @@ None yet.
 
 - Phase 8 (Code) needs the Blockly split confirmed before planning; Phase 10 (Map) and Phase 11 (Preview/cutover) are flagged for phase-specific research.
 - Phase 7 (Table) has an open design question: built-in primitive field types vs engine-supplied, and whether the field-editor registry is core-mechanism or fully adapter-provided.
-- Phase 2 carries two MEDIUM-confidence open items (PandaCSS `include` across the package boundary, React Compiler coverage of `packages/libs/**`) — budget spikes, not research phases.
+- Phase 2 carries two MEDIUM-confidence open items — **now decided in 02-CONTEXT.md (D-09 PandaCSS 单点 include、D-11 React Compiler 先验证默认)**; verification still pending implementation, budget spikes not research phases.
 
 ## Deferred Items
 
@@ -86,6 +88,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-09-21T09:39:12.645Z
-Stopped at: Phase 1 complete (10/10, verification PASSED). Branch strategy set to git.branching_strategy=phase in config; NO phase branch created yet (user instruction: create it only after Phase 2 starts). Phase 2 not started. main is 5 commits ahead of origin/main (unpushed).
-Resume file: .planning/ROADMAP.md
+Last session: 2026-09-21T10:48:56.694Z
+Stopped at: Phase 2 complete, ready to plan Phase 3
+Resume file: .planning/phases/02-package-boundary-build-scaffolding/02-CONTEXT.md
