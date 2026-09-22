@@ -105,3 +105,16 @@
 | — | `pnpm-workspace.yaml` catalog entry `dependency-cruiser: 18.2.0` + root `devDependency` | catalog entry / dependency declaration | The tool. Pinned at `18.2.0` rather than the one-day-old `18.4.0` (D-20), installed only after the blocking human checkpoint in Task 1 confirms its provenance. |
 | — | `packages/apps/editor/panda.config.ts` widened `include` | config change | Adds `'../../libs/editor-core/lib/**/*.{ts,tsx}'` so the one editor-owned PandaCSS config covers core source too. No second config, no touched `postcss.config.cjs` (D-09). |
 | — | `.github/workflows/ci.yml` — one new step in `lint`, two in `build` | CI steps | D-13: no new job, no renamed job, so the four required status checks and `scripts/verify/ci-workflow.js` both stay valid. |
+
+## Section 4 — Gap closure after `02-VERIFICATION.md` (gaps_found)
+
+**Unit:** phase-2 gap closure (no new PLAN.md; authorized by the user's explicit approval of the A+B+C fix scope, 2026-09-21). Addresses the one BLOCKER and one WARNING raised by the phase verifier.
+**Names this section introduces:** G-01, G-02 — both confirmed by the user before landing.
+
+| # | Name | Kind | What it is for |
+|---|------|------|----------------|
+| G-01 | `scripts/verify/editorArtifactAssets.js` | verifier script | Makes "no shipped asset is silently dropped" executable. The BLOCKER it guards: removing the hard `'@'` alias (plan 01, D-05) stopped Vite's **CSS `url()`** resolution from reaching `resolvePlugin`, so `src/css/editor.css`'s `url('@/assets/FiraCode.ttf')` emitted a broken literal `url(@/assets/FiraCode.ttf)` and the 289,624-byte font vanished from `dist/`. The verifier asserts against the **built** artifact: no unresolved `url(@/` in any emitted CSS, every non-`data:` `url()` target resolvable to a file that exists in `dist`, and the FiraCode font actually emitted. It runs after `pnpm build` inside the existing `build` CI job (D-13: no new job). |
+| G-02 | `packages/apps/editor/src/__tests__/editorCoreResolution.test.tsx` | test file | Gives truth 3's fourth resolver axis a committed guard. `02-01` claimed four resolvers traverse core source (core `tsc -b`, editor `tsc -b`, editor Vite build, editor Vitest), but no committed editor test imported core, so the editor-Vitest claim was present-but-unexercised. This test imports `@motajs/editor-core/react` through the editor's own Vitest pipeline (which resolves `@/` via `resolvePlugin`) and asserts the probe symbol arrives from core's file, so a regression in the editor test resolver fails the `unit` job rather than passing silently. |
+| — | `packages/apps/editor/src/css/editor.css:1320` | source fix | The BLOCKER itself: `url('@/assets/FiraCode.ttf')` → a **relative** `url('../assets/FiraCode.ttf')`. Relative, not a restored alias: a global `'@'` alias would re-hijack core's `@/` imports (the exact failure D-05 removed). |
+
+**Deliberately not changed:** no restored `resolve.alias['@']`; no new CI job; no gate weakened.
