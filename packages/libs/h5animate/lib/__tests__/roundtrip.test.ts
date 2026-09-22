@@ -224,7 +224,11 @@ describe('编解码往返测试', () => {
 
     expect(decoded.meta).toEqual(meta);
     expect(decoded.spriteInfo).toEqual(spriteInfo);
-    expect(decoded.webpData).toEqual(webpData);
+    // 1MB 的数据用 Buffer.equals 逐字节判定，而不是 toEqual：toEqual 的深比较在这块数据上
+    // 本地就要 ~1.7s（编解码本身只有 ~3ms），CI 机器更慢会撞上 5s 默认超时；equals 语义等价
+    // 且是原生字节比较。先断言长度，避免失败信息只有一句 false。
+    expect(decoded.webpData.length).toBe(webpData.length);
+    expect(decoded.webpData.equals(webpData)).toBe(true);
   });
 
   test('边界值的往返一致性', () => {
