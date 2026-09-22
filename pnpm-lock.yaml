@@ -480,12 +480,18 @@ importers:
       '@types/react-dom':
         specifier: catalog:default
         version: 19.2.3(@types/react@19.2.9)
+      jsdom:
+        specifier: 26.1.0
+        version: 26.1.0(supports-color@7.2.0)
       react:
         specifier: catalog:default
         version: 19.2.3
       react-dom:
         specifier: catalog:default
         version: 19.2.3(react@19.2.3)
+      vitest:
+        specifier: catalog:default
+        version: 4.0.18(@types/node@25.0.3)(jsdom@26.1.0(supports-color@7.2.0))(less@4.5.1)(lightningcss@1.31.1)(sass@1.97.1)(stylus@0.62.0(supports-color@7.2.0))(terser@5.44.1)
 
   packages/libs/file2x:
     dependencies:

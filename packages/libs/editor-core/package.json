@@ -9,13 +9,16 @@
     "./react": "./lib/react/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc -b"
+    "typecheck": "tsc -b",
+    "test": "vitest run"
   },
   "devDependencies": {
     "@motajs/config": "workspace:*",
     "@types/react": "catalog:default",
     "@types/react-dom": "catalog:default",
+    "jsdom": "26.1.0",
     "react": "catalog:default",
-    "react-dom": "catalog:default"
+    "react-dom": "catalog:default",
+    "vitest": "catalog:default"
   }
 }
