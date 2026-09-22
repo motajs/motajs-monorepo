@@ -18,11 +18,34 @@
     "typecheck": "tsc -b",
     "test": "vitest run"
   },
+  "peerDependencies": {
+    "@douyinfe/semi-ui": "catalog:default",
+    "alien-signals": "catalog:default",
+    "antd": "catalog:default",
+    "blockly": "catalog:default",
+    "immer": "catalog:default",
+    "monaco-editor": "catalog:default",
+    "pixi.js": "catalog:default",
+    "react": "catalog:default",
+    "react-dom": "catalog:default"
+  },
+  "peerDependenciesMeta": {
+    "@douyinfe/semi-ui": {
+      "optional": true
+    }
+  },
   "devDependencies": {
+    "@douyinfe/semi-ui": "catalog:default",
     "@motajs/config": "workspace:*",
     "@types/react": "catalog:default",
     "@types/react-dom": "catalog:default",
+    "alien-signals": "catalog:default",
+    "antd": "catalog:default",
+    "blockly": "catalog:default",
+    "immer": "catalog:default",
     "jsdom": "26.1.0",
+    "monaco-editor": "catalog:default",
+    "pixi.js": "catalog:default",
     "react": "catalog:default",
     "react-dom": "catalog:default",
     "vitest": "catalog:default"
