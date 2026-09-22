@@ -1,6 +1,8 @@
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import { defineConfig } from 'vitest/config';
+import type { PluginOption } from 'vite';
+import { resolvePlugin } from '@motajs/config/resolvePlugin';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import motaServerPlugin from './vite-plugin-mota-server';
 import fs from 'node:fs/promises';
@@ -26,10 +28,14 @@ export default defineConfig({
     }),
     motaServerPlugin({ motaRoot: MOTA_JS_ROOT }),
     editorArtifactPlugin(packageInfo.version),
+    // 必须放在最后：`resolve.alias`（vite:alias，先于 enforce:'pre' 与 vite:resolve 求值）
+    // 会劫持被链接包内的 `@/`，因此硬别名 '@' 已移除，改由 importer 相对的 resolvePlugin 解析。
+    // 收窄类型：resolvePlugin 的 `Plugin` 类型来自 @motajs/config 侧解析到的另一份 vite 实例
+    // （peer 后缀不同），与 editor 自身实例名义不兼容；运行时是同一插件对象。
+    resolvePlugin as PluginOption,
   ],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
       '@test': path.resolve(__dirname, './test'),
       '@styled-system': path.resolve(__dirname, './styled-system'),
     },

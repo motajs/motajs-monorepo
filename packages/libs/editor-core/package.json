@@ -1,0 +1,21 @@
+{
+  "name": "@motajs/editor-core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "license": "BSD-3-Clause",
+  "exports": {
+    "./react": "./lib/react/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -b"
+  },
+  "devDependencies": {
+    "@motajs/config": "workspace:*",
+    "@types/react": "catalog:default",
+    "@types/react-dom": "catalog:default",
+    "react": "catalog:default",
+    "react-dom": "catalog:default"
+  }
+}
