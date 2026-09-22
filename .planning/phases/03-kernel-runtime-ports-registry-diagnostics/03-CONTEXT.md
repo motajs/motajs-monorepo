@@ -46,12 +46,19 @@
 - **D-15:** PORT-02 用**工具分工**保证：**ESLint 作用域规则**禁全局标识符（`no-restricted-globals`: `fetch`/`window`/`document`/`navigator`/`localStorage`/`XMLHttpRequest`；必要时 `no-restricted-properties` 禁 `process.env`/`import.meta.env`），作用域限定 `packages/libs/editor-core/**`；**dependency-cruiser** 继续管模块边界（core 不得 import 宿主/引擎）。复用已有的 `scripts/verify/lint-severities.js` 完整性检查（保证规则严重级别不被偷偷下调）。**注意**：适配器**可以**用 `fetch`（它负责 HTTP 传输），禁令只针对 core。
 - **D-16:** 目录划分：**`lib/kernel/` 放内核机制**（`core.ts` / `registry.ts` / `diagnostics.ts` / `errors.ts`），**`lib/ports/` 单放四个 port 接口**；`lib/index.ts` 汇总导出公开面。理由：ports 是「面向实现者的契约」，与「内核机制」概念不同，且 Phase 5+ 会显著长大。 — **Reversibility:** costly — 目录/文件迁移会牵动 core 内几乎所有 import 与测试路径。
 
+### E. 研究补充决策（2026-09-22，research 暴露的矛盾/缺口）
+- **D-17:** `kind` 的合法格式为**一段或多段**，字符集允许 camelCase 与连字符：`^[A-Za-z][\w-]*(\.[A-Za-z][\w-]*)*$`（因此 `command`、`keybinding` 这类单段名合法，`code.language`、`table.fieldEditor` 也合法）。这修正了 D-04 里「要求 `段.段` 却又把单段的 `command` 列为合法示例」的内部矛盾。同时**记录一处需求缺口**：ROADMAP 成功标准 4 把「capability ports」列为导出项，但 capability port 接口属于 Phase 7–10（D-14 只交付四个具名 port，Deferred Ideas 亦然）——**Phase 3 对 PORT-01 是部分满足**，需在计划假设中显式记录，供后续阶段补齐。
+- **D-18:** 组合根在**构造期间**满足必需注册的方式是 `config` 传入一个 **`install(registrar)` 回调**，其中 `registrar` 是一个**窄接口**（只含 `register(...)` 与拆除钩子），**不是** `EditorCore` 实例。这既符合 D-12「不暴露实例」，又让 KERN-02 的逆序释放顺序在测试中可观测。
+- **D-19:** `EditorCore.snapshotCapabilities()` 返回**扁平的、冻结的条目数组**：`readonly { kind, id, value, owner }[]`（而非嵌套 `ReadonlyMap` 或 `Record`）。理由：对 UI/调试消费方最直观，且避免嵌套只读 Map 的类型噪声。
+- **D-20:** `EDITOR_CORE_API_VERSION` 定义在 **`lib/kernel/core.ts`**（不新增第五个内核文件），并从 `lib/index.ts` 再导出。
+- **D-21:** `EditorCore.dispose()` 收集到的拆除失败走 **`DiagnosticBus`**（`severity: 'error'` + 专用 code）**并同时 `console` 一份**。这使其可被测试断言，也能在控制台被现场排查者看到。
+
 ### the agent's Discretion
 - 诊断 `code` 的具体命名规则与常量表（但需在 `INTERFACE-NAME.md` 中列明并经确认）。
-- `snapshotCapabilities()` 返回的具体容器形态（`Map` 嵌套 vs 普通对象）——须在 `INTERFACE-NAME.md` 里给出并确认。
-- `EditorCoreConfig` 的确切字段集（在 D-07/D-13/D-14 的约束下）。
+- `EditorCoreConfig` 的确切字段集（在 D-07/D-13/D-14/D-18 的约束下）。
 - 隔离测试与结构门禁的具体断言粒度。
 - ESLint 规则的具体选项形状与文件放置方式（放进根配置的 override，还是新建一个 core 专属配置片段）。
+- 诊断总线的内部实现细节（监听者容器、历史容量上限等）。
 
 </decisions>
 
