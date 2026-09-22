@@ -3,7 +3,7 @@ gsd_state_version: "1.0"
 current_phase: 3
 current_phase_name: Kernel — Runtime, Ports, Registry, Diagnostics
 status: planning
-stopped_at: Phase 2 complete, ready to plan Phase 3
+stopped_at: "Phase 2 complete (verification passed 7/7) and committed on branch `editor/boundary`, which the user merges to `main` manually. Branch rule changed 2026-09-22: ONE branch for the rest of the milestone (`editor/core-extract`, phases 3–12), not per-phase. Precondition before Phase 3: confirm the Phase 2 PR landed on `main`, then create `editor/core-extract` from that `main`. Phase 3 not started."
 last_updated: "2026-09-22T07:18:27.488Z"
 last_activity: 2026-09-22
 last_activity_desc: Phase 2 complete, transitioned to Phase 3
@@ -66,7 +66,7 @@ Recent decisions affecting current work:
 - [Roadmap]: 12-phase structure adopted — verification net first, then boundary, kernel, verbatim resource/edit moves, adapter skeleton, shell, capabilities least-coupled-first (table→code→asset→map), preview/cutover, then extension freeze + parity gate.
 - [Roadmap]: `editor-core` package uses `lib/` (never `src/`) per `resolvePlugin.js` and `tsconfig.lib.base.json`; subpath exports (`.`, `./code`, `./table`, `./map`, `./asset`, `./shell`, `./react`) created up front.
 - [Roadmap]: Per-instance `EditorCore` via `createEditorCore(config)` replaces the six module singletons; registration returns diagnostics+rollback, construction fails loudly on unresolved required registration.
-- [Process, 2026-09-21]: Per-phase branches are **semantic and manually created** (`editor/<topic>`); `git.branching_strategy` is now `none` so GSD no longer auto-creates `gsd/phase-*`. Phase 2 → `editor/boundary`. Planned: 3 `editor/kernel`, 4 `editor/resources`, 5 `editor/adapter`, 6 `editor/shell`, 7 `editor/table`, 8 `editor/code`, 9 `editor/asset`, 10 `editor/map`, 11 `editor/cutover`, 12 `editor/parity`.
+- [Process, 2026-09-22, **supersedes the 2026-09-21 per-phase rule**]: **One branch for the whole milestone — `editor/core-extract`.** This is not a large project; per-phase branches added overhead without benefit. `git.branching_strategy` stays `none`, so GSD never auto-creates or auto-switches branches (and no `milestone` template is set — a literal one would also trip the W015 config-validation warning and would silently fork from `origin/main`, making "is the previous phase merged?" an implicit precondition). Phase 2 keeps its existing `editor/boundary` branch unchanged and is merged to `main` manually. From **Phase 3 onward**, all phases 3–12 land on `editor/core-extract`, created once from a `main` that already contains the merged Phase 2 work. Precondition before starting Phase 3: confirm the Phase 2 PR has landed on `main`.
 
 ### Pending Todos
 
