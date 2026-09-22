@@ -30,6 +30,8 @@ jobs:
 
       - run: pnpm lint
 
+      - run: node scripts/verify/coreBoundaries.js
+
   typecheck:
     runs-on: ubuntu-latest
     permissions:
