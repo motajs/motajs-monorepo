@@ -104,3 +104,5 @@ jobs:
       - run: node scripts/verify/coreReactCompiler.js
 
       - run: pnpm build
+
+      - run: node scripts/verify/editorArtifactAssets.js
