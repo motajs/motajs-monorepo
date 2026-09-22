@@ -686,34 +686,36 @@ export function isFileNotFoundError(error: Error): boolean {
 | A7 | `EDITOR_CORE_API_VERSION` lives in `lib/kernel/core.ts` (D-16 enumerates only four kernel files) | §Open Question 2 | A dedicated `version.ts` may be preferred; both satisfy D-11 |
 | A8 | No capability-kind constants should be exported in Phase 3 (core owns no kind yet) | §Open Question 6 | D-04 permits exporting constants for owned kinds; defining `KIND_COMMAND` etc. now would freeze names for capabilities that arrive in Phases 7–10 |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **`kind` format: the locked decision is internally inconsistent, and capability ports are out of scope.**
+> All six questions below were resolved during phase planning and are consumed by plans 03-01..03-04. Each carries an inline `RESOLVED` marker naming the decision that settled it; no open planning question remains.
+
+1. **`kind` format: the locked decision is internally inconsistent, and capability ports are out of scope.** — **RESOLVED (D-17):** adopt one-or-more dot-separated segments with the camelCase-tolerant charset `^[A-Za-z][\w-]*(\.[A-Za-z][\w-]*)*$`, and record PORT-01 as partially satisfied in Phase 3 (capability ports land in Phases 7–10). Both points are carried in the plans' assumptions and in INTERFACE-NAME.md.
    - What we know: D-04 says runtime validation must require the shape `段.段` (segment-dot-segment) **and** lists `command` — a single segment — as a valid example. ARCHITECTURE's draft kind union also contains bare `command`/`keybinding` and camelCase `table.fieldEditor`. Separately, ROADMAP criterion 4 lists "capability ports" among the exports, while D-14 (four ports only), Deferred Ideas, and the REQUIREMENTS PORT-01 text ("及各 capability port 接口") put capability ports in Phases 7–10.
    - What's unclear: whether "段.段" is a literal two-segment minimum, and whether the plan must record a PORT-01 partial-satisfaction divergence.
    - Recommendation: adopt **one-or-more** segments with a camelCase-tolerant charset (e.g. `^[A-Za-z][\w-]*(\.[A-Za-z][\w-]*)*$`) and state in the plan that capability ports land in Phases 7–10, with Phase 3 satisfying the four named ports. Both points belong in `INTERFACE-NAME.md` / the plan's assumptions so the user can overrule.
 
-2. **Where does `EDITOR_CORE_API_VERSION` live?**
+2. **Where does `EDITOR_CORE_API_VERSION` live?** — **RESOLVED (D-20):** defined in `lib/kernel/core.ts` (no fifth kernel file) and re-exported from `lib/index.ts`; `version.ts` is recorded as the alternative in INTERFACE-NAME.md.
    - What we know: D-11 requires an exported const, not an instance member; D-16 enumerates four kernel files without a `version.ts`.
    - What's unclear: whether adding a fifth kernel file is acceptable.
    - Recommendation: define it in `lib/kernel/core.ts` and re-export from `lib/index.ts`. List `version.ts` as the alternative in `INTERFACE-NAME.md`.
 
-3. **`snapshotCapabilities()` container shape.**
+3. **`snapshotCapabilities()` container shape.** — **RESOLVED (D-19):** a flat, frozen array of entries (`readonly { kind, id, value, owner }[]`), pinned by the registry and API-surface tests.
    - What we know: CONTEXT leaves this to the agent; D-01 fixes the method name. The repo uses `ReadonlyMap` in ARCHITECTURE's sketch but plain objects/`Record` in most real code.
    - What's unclear: `ReadonlyMap<string, ReadonlyMap<string, unknown>>` (nested) vs `Record<kind, Record<id, unknown>>` vs a flat `readonly CapabilityRef[]`.
    - Recommendation: a flat, frozen **array of entries** (`readonly { kind, id, value, owner }[]`) is the most ergonomic for UI/debug consumers and avoids the nested-`ReadonlyMap` typing noise; a nested `ReadonlyMap` is the closest to ARCHITECTURE's sketch. Decide in `INTERFACE-NAME.md` and pin with a test.
 
-4. **Which channel reports teardown failures collected by `dispose()`?**
+4. **Which channel reports teardown failures collected by `EditorCore.dispose()`?** — **RESOLVED (D-21):** the `DiagnosticBus` (`severity: 'error'` + the dedicated `lifecycle.teardown-failed` code) plus a `console` line, both asserted by `coreLifecycle.test.ts`.
    - What we know: D-09 requires "collected + reported" with a sync `void` return and no aborting.
    - Recommendation: DiagnosticBus + console, as in A4. Confirm because it becomes observable contract.
 
-5. **How does the composition root satisfy required registrations during construction?**
+5. **How does the composition root satisfy required registrations during construction?** — **RESOLVED (D-18):** `config` carries an `install(registrar)` callback whose `registrar` is a narrow interface (`CapabilityRegistrar.register` + `CapabilityRegistrar.addTeardown`), never the `EditorCore` instance; this is what makes the reverse-order release observable in tests.
    - What we know: D-07 puts the required list in config; D-08 fails construction if unresolved; D-12 forbids exposing `host`/`engine` on the instance.
    - What's unclear: whether config carries a declarative `capabilities: readonly CapabilityRegistration[]` array, a `install(registrar)` callback, or both.
    - Recommendation: `install(registrar)` where `registrar` is a **narrow** interface (`register(...)` + a teardown hook), never the `EditorCore` instance — this satisfies D-12's spirit, keeps D-01's "instance is the only entry point" for post-construction callers, and is the only shape that makes KERN-02's ordering observable in tests.
 
-6. **Which names are proposed, and is `subpathStatus.json` updated?**
-   - Candidate names (**all pending user confirmation via `INTERFACE-NAME.md`**):
+6. **Which names are proposed, and is `subpathStatus.json` updated?** — **RESOLVED (INTERFACE-NAME.md N-01..N-26):** the full name set is confirmed and used verbatim by plans 03-01..03-04, and `.` in `subpathStatus.json` is updated to `kernel-exports` together with `scripts/verify/coreExports.js`.
+   - Candidate names (**all confirmed via `INTERFACE-NAME.md`, N-01..N-26**):
      - `lib/kernel/core.ts` — `createEditorCore`, `EditorCore`, `EditorCoreConfig`, `EDITOR_CORE_API_VERSION`
      - `lib/kernel/registry.ts` — capability registry implementation, `CapabilityRef`, `RegisterCapabilityOptions`, `RegisterCapabilityResult`, kind-format validator
      - `lib/kernel/diagnostics.ts` — `Diagnostic`, `DiagnosticBus`, `createDiagnosticBus`

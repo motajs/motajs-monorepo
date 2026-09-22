@@ -173,7 +173,7 @@ export class MotaBuilderError extends Error {
 }
 ```
 
-**Name to apply (confirmed, N-16):** `EditorCoreStartupError` — `readonly diagnostics: readonly Diagnostic[]` carrying **all** diagnostics (D-08), set `this.name`, and use `Error.captureStackTrace(this, EditorCoreStartupError)` per the packer precedent.
+**Name to apply (confirmed, N-16):** `EditorCoreStartupError` — `readonly diagnostics: readonly Diagnostic[]` carrying **all** diagnostics (D-08) and `this.name = 'EditorCoreStartupError'`. Do **not** copy the packer's `Error.captureStackTrace` line shown above: it is V8/`@types/node`-only and does not compile under core's tsconfig (`lib: ESNext, DOM, DOM.Iterable`, no `types`); `super(message)` already captures the stack. (The packer is a Node CLI; core is a browser-targeted library.)
 
 ---
 
