@@ -26,5 +26,8 @@ dist-ssr
 playwright-report
 test-results
 
+# GSD-generated machine state mirror (STATE.md is the versioned one)
+.planning/state.json
+
 /packages/external/*
 !/packages/external/mota-js
