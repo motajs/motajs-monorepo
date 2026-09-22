@@ -10,10 +10,10 @@ last_activity_desc: Phase 2 complete, transitioned to Phase 3
 state_head: c4c8504ce476c7d9006b8d51f1eaf3e22aa23c6c
 progress:
   total_phases: 12
-  completed_phases: 0
+  completed_phases: 2
   total_plans: 13
   completed_plans: 13
-  percent: 0
+  percent: 17
 ---
 
 # Project State
@@ -23,7 +23,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-09-20)
 
 **Core value:** Decouple the editor kernel from engine details through an engine-agnostic `editor-core` so old and new engines share one editing layer and third parties can customise freely.
-**Current focus:** Phase 01 — Baseline & Verification Net
+**Current focus:** Phase 3 — Kernel — Runtime, Ports, Registry, Diagnostics
 
 ## Current Position
 
@@ -32,7 +32,7 @@ Plan: Not started
 Status: Ready to plan
 Last activity: 2026-09-22 — Phase 2 complete, transitioned to Phase 3
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██░░░░░░░░] 17%
 
 ## Performance Metrics
 
