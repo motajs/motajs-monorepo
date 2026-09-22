@@ -14,7 +14,7 @@ This milestone is a **packaging and boundary milestone**, not a feature mileston
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Baseline & Verification Net** - Quantify the current behavior and make the test/CI safety net actually run before any code moves (completed 2026-09-21)
-- [ ] **Phase 2: Package Boundary & Build Scaffolding** - Create `packages/libs/editor-core` and enforce the boundary, resolution, styling, and compiler rules
+- [x] **Phase 2: Package Boundary & Build Scaffolding** - Create `packages/libs/editor-core` and enforce the boundary, resolution, styling, and compiler rules (completed 2026-09-22)
 - [ ] **Phase 3: Kernel — Runtime, Ports, Registry, Diagnostics** - Replace the six module singletons with a per-instance `EditorCore`, public capability registry, and declared ports
 - [ ] **Phase 4: Resource + Edit Layers Moved** - Relocate the engine-agnostic resource and edit layers verbatim, preserving all invariants
 - [ ] **Phase 5: Engine Adapter Skeleton & Resource Descriptors** - Move paths, formats, vocabulary, and migrations into the adapter, proven with a fake engine B
@@ -266,7 +266,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Baseline & Verification Net | 10/10 | Complete    | 2026-09-21 |
-| 2. Package Boundary & Build Scaffolding | 3/3 | In Progress|  |
+| 2. Package Boundary & Build Scaffolding | 3/3 | Complete    | 2026-09-22 |
 | 3. Kernel — Runtime, Ports, Registry, Diagnostics | 0/TBD | Not started | - |
 | 4. Resource + Edit Layers Moved | 0/TBD | Not started | - |
 | 5. Engine Adapter Skeleton & Resource Descriptors | 0/TBD | Not started | - |

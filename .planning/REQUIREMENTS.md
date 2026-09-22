@@ -85,11 +85,11 @@
 - [ ] **EXT-03**: 版本与弃用策略成文（major 内仅增量、能力门控后提升、minor 弃用 / 下个 major 移除、≥6 个月通知）
 - [ ] **EXT-04**: 每个扩展点有 `extensionPointId@v1` 与一份 ADR
 - [ ] **EXT-05**: 本期不实现插件加载/激活 loader（仅留描述符形状），生成 subpath exports `.` `./code` `./table` `./map` `./asset` `./shell` `./react`
-- [ ] **PKG-01**: 建立 `packages/libs/editor-core/`，使用 `lib/` 目录（非 `src/`）、`private: true`、`type: module`、`sideEffects: false`、完整 subpath exports
-- [ ] **PKG-02**: React/ReactDOM 及所有单例库（antd、Semi、alien-signals、immer、monaco-editor、pixi.js、blockly）声明为 `peerDependencies` + `catalog:default`
-- [ ] **PKG-03**: core tsconfig 与 `@/` 解析策略在 `tsc -b` 与 Vite 下行为一致（有验证）
-- [ ] **PKG-04**: PandaCSS `include` 覆盖 `../../libs/editor-core/lib/**/*.{ts,tsx}`，并断言生成 CSS 含已知 core class
-- [ ] **PKG-05**: React Compiler 覆盖 `packages/libs/editor-core/**` 验证通过
+- [x] **PKG-01**: 建立 `packages/libs/editor-core/`，使用 `lib/` 目录（非 `src/`）、`private: true`、`type: module`、`sideEffects: false`、完整 subpath exports
+- [x] **PKG-02**: React/ReactDOM 及所有单例库（antd、Semi、alien-signals、immer、monaco-editor、pixi.js、blockly）声明为 `peerDependencies` + `catalog:default`
+- [x] **PKG-03**: core tsconfig 与 `@/` 解析策略在 `tsc -b` 与 Vite 下行为一致（有验证）
+- [x] **PKG-04**: PandaCSS `include` 覆盖 `../../libs/editor-core/lib/**/*.{ts,tsx}`，并断言生成 CSS 含已知 core class
+- [x] **PKG-05**: React Compiler 覆盖 `packages/libs/editor-core/**` 验证通过
 
 ### Verification
 
@@ -97,7 +97,7 @@
 - [x] **VERIFY-02**: 新增 PR CI：lint + per-package typecheck + 单测 + 生产构建
 - [x] **VERIFY-03**: `PersistExecutor`/`PersistenceMonitor` 特性化测试（错误→重试→idle、并发 latest-wins、持久化失败不回滚 UI）
 - [x] **VERIFY-04**: `operationHistory` 特性化测试（容量 100、逆操作、多目标 checkpoint rollback、`set`/`patch` 后资源响应性）
-- [ ] **VERIFY-05**: `dependency-cruiser` 规则接入 CI（禁止边、singleton 的 `requireZero`、no-cycles）
+- [x] **VERIFY-05**: `dependency-cruiser` 规则接入 CI（禁止边、singleton 的 `requireZero`、no-cycles）
 
   > **注（2026-09-21 澄清）**：`requireZero` **不是** dependency-cruiser 或 ESLint 的选项，而是研究阶段提案里的示意简写，唯一出处为 `.planning/research/ARCHITECTURE.md:476`（一个虚构的 `tooling/boundaries.json`），后被抄进 `ROADMAP.md:91` 与本条。
   > 其真实含义是：**core 中的模块级 singleton 必须具有零个边界外依赖者**——只允许 composition root（`lib/kernel/core.ts`）导入它们，任何其他文件导入都算违规。它针对的是 core 自己的 6 个模块级 singleton（`projectData`/`projectModel`/`operationHistory`/`FileHandlerManager`/`persistenceMonitor`/`editorConfigService`），目的是在第一天就把 singleton 的引用面锁死在 composition root，避免四个能力迁完后才暴露 per-instance 障碍。
@@ -204,16 +204,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EXT-03 | 12 | Pending |
 | EXT-04 | 12 | Pending |
 | EXT-05 | 12 | Pending |
-| PKG-01 | 2 | Pending |
-| PKG-02 | 2 | Pending |
-| PKG-03 | 2 | Pending |
-| PKG-04 | 2 | Pending |
-| PKG-05 | 2 | Pending |
+| PKG-01 | 2 | Complete |
+| PKG-02 | 2 | Complete |
+| PKG-03 | 2 | Complete |
+| PKG-04 | 2 | Complete |
+| PKG-05 | 2 | Complete |
 | VERIFY-01 | 1 | Complete |
 | VERIFY-02 | 1 | Complete |
 | VERIFY-03 | 1 | Complete |
 | VERIFY-04 | 1 | Complete |
-| VERIFY-05 | 2 | Pending |
+| VERIFY-05 | 2 | Complete |
 | VERIFY-06 | 1 | Complete |
 | VERIFY-07 | 1 | Complete |
 | VERIFY-08 | 12 | Pending |
