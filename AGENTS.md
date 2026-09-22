@@ -491,6 +491,14 @@ Any **important naming** — file names, interface names, method names, function
 
 Because naming decisions are numerous and awkward to settle in chat, report them in a dedicated **`INTERFACE-NAME.md`** inside the corresponding Phase directory (`.planning/phases/<phase>/INTERFACE-NAME.md`), with **one section per Plan**. Each entry must state **what the thing is for** (its purpose/role) — a proposed name alone is not a report.
 
+### Method references use `ClassName.methodName` (MANDATORY)
+
+When a **method on a class** is named or described — in chat, plans, `CONTEXT.md`, `INTERFACE-NAME.md`, comments, or review notes — write it as **`ClassName.methodName`** (e.g. `EditorCore.registerCapability`), never as a bare method name. 描述类上的方法时必须使用 `类名.方法名` 的格式。
+
+Rationale: a bare method name is ambiguous — it cannot be told apart from a free function, a method owned by a different class, or a local helper. The `ClassName.methodName` form makes ownership explicit and prevents a mis-implementation that reads the same name against the wrong receiver.
+
+Free functions are written bare — that is the **only** bare form allowed. A method on a plain object literal is written with its owning symbol the same way (`symbol.member`).
+
 ### Questions are answer-only (MANDATORY)
 
 When the user asks a question, **answer it — change nothing.** No file edits, no commits, no branch creation, no config changes, no "helpful" side effects. An action may only be taken when the user explicitly gates it ("if your answer is X, then do Y").
