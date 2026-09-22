@@ -6,6 +6,12 @@
   "sideEffects": false,
   "license": "BSD-3-Clause",
   "exports": {
+    ".": "./lib/index.ts",
+    "./code": "./lib/code/index.ts",
+    "./table": "./lib/table/index.ts",
+    "./map": "./lib/map/index.ts",
+    "./asset": "./lib/asset/index.ts",
+    "./shell": "./lib/shell/index.ts",
     "./react": "./lib/react/index.ts"
   },
   "scripts": {
