@@ -138,6 +138,7 @@ function checkUrlTargetsResolve(cssFiles) {
     }
   }
   console.log(`editorArtifactAssets: 校验 ${checked} 个 url() 目标、跳过 ${skippedData} 个 data: URI`);
+  return checked;
 }
 
 // ==================== (c) FiraCode 字体必须真的产出 ====================
@@ -168,7 +169,7 @@ function main() {
   check(emittedCss.length > 0, `${relative(ASSETS_DIR)} 下没有任何 Vite 产出的 .css bundle —— 构建产物缺失或为空`);
 
   checkNoUnresolvedAlias(allCss);
-  checkUrlTargetsResolve(emittedCss);
+  const checkedTargets = checkUrlTargetsResolve(emittedCss);
   checkFontEmitted();
 
   if (failures.length > 0) {
@@ -176,7 +177,7 @@ function main() {
     process.exit(1);
   }
   console.log(
-    `editorArtifactAssets: 全部断言通过（${allCss.length} 个产物样式表无 url(@/、${emittedCss.length} 个 Vite bundle 的 url() 目标均可解析、FiraCode 字体已产出）`,
+    `editorArtifactAssets: 全部断言通过（${allCss.length} 个产物样式表无 url(@/、${emittedCss.length} 个 Vite bundle 中的 ${checkedTargets} 个 url() 目标均可解析、FiraCode 字体已产出）`,
   );
 }
 
