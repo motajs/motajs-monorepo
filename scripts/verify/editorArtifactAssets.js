@@ -18,7 +18,7 @@
  * `editor-artifact-plugin.ts` 用 `fs.cp` 原样拷贝（运行期经 `new URL('assets/theme/…', baseURI)`
  * 取用，不经过 Vite 处理），其中 `editor_color_dark.css` 引用 `../blockly/media/sprites_white.png`
  * 是一条**先于本阶段存在**的失效引用（blockly 12 已不再提供 `sprites_white.png`）；它不属于本
- * 缺陷类别，单独记录在 `.planning/phases/02-package-boundary-build-scaffolding/deferred-items.md`。
+ * 缺陷类别，单独记录在 `.planning/phases/02-package-boundary-build-scaffolding/gapClosureSummary.md`。
  *
  * 前置是产物已生成（CI 中位于 `pnpm build` 之后）。不访问网络、不构建，只读 dist。
  */
