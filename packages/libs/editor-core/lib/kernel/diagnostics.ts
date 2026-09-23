@@ -70,7 +70,18 @@ export function createDiagnosticBus(): DiagnosticBus {
 
   function dispatch(diagnostic: Diagnostic): void {
     for (const listener of [...listeners]) {
-      listener(diagnostic);
+      try {
+        listener(diagnostic);
+      } catch (error) {
+        // append-without-dispatch：订阅者抛错只追加一条历史，**不再派发**，因此结构上不可能递归
+        // （总线不会从 catch 里重新进入自己的派发循环），且其它订阅者仍会收到原始诊断。
+        history.push({
+          severity: 'warning',
+          code: DIAGNOSTIC_CODES.diagnosticSubscriberError,
+          message: '诊断订阅者抛出错误，已隔离该订阅者。',
+          cause: error,
+        });
+      }
     }
   }
 
