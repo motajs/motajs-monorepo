@@ -8,6 +8,10 @@
  *   1. PKG-01 结构：`packages/libs/editor-core/package.json` 的 private/type/sideEffects 取值、
  *      恰好七个 exports subpath、每个 exports 目标在磁盘上真实存在、且都在 subpathStatus.json 里登记；
  *      scripts 恰好是 typecheck + test，没有 build——一个指向不存在文件的 exports 是长期潜伏的隐性 bug；
+ *      每个 subpath 的 `content` 取值按 `SUBPATH_CONTENT` 逐项断言：Phase 3 起 `.` 已由空 barrel 变成
+ *      真实公开聚合（再导出内核与四个 port），故其值为 `kernel-exports`，不再是 Phase 2 的
+ *      `carriesProbe ? 'probe' : 'empty-barrel'` 二元判断。清单与校验器是**一对契约**：只改其一
+ *      会让 `typecheck` job 因为一条已过时的记录变红，因此二者必须在同一次变更里同步演进（Pitfall 8）；
  *   2. PKG-02 声明：peerDependencies 恰好是 PKG-02 点名的九个名字且全部 catalog:default，
  *      @douyinfe/semi-ui 被标记为 optional，且每个 peer 在 pnpm-workspace.yaml 的 catalog 里都有真实条目
  *      （catalog:default 只在该 catalog 定义了该包时才解析得出来）；
@@ -62,6 +66,19 @@ const OPTIONAL_PEER = '@douyinfe/semi-ui';
 
 /** 携带探针的 subpath（Phase 2 脚手架，Phase 4+ 由真实 React 层替换）。 */
 const PROBE_SUBPATH = './react';
+
+/**
+ * 每个 subpath 的 `content` 期望值表（N-26）。
+ *
+ * Phase 3 之前 `.` 是空 barrel，`content` 只需一个二元判断；Phase 3 让它再导出内核与四个 port，
+ * 于是改成**逐 subpath 表**。未列出的 subpath 一律期望 `empty-barrel`。这是精确断言：期望值写死在这里，
+ * 绝不从 subpathStatus.json 反读（那会自我指涉，把门禁变成同义反复）。
+ */
+const SUBPATH_CONTENT = {
+  '.': 'kernel-exports',
+  './react': 'probe',
+};
+const DEFAULT_SUBPATH_CONTENT = 'empty-barrel';
 
 /** PKG-01 允许的两个脚本：没有 build（noEmit 纯源码库，D-08）。 */
 const EXPECTED_SCRIPTS = { typecheck: 'tsc -b', test: 'vitest run' };
@@ -183,7 +200,7 @@ function checkStructure(manifest, status) {
       entry.carriesProbe === carriesProbe,
       `subpathStatus.json 的 "${subpath}" carriesProbe 应为 ${carriesProbe}，实际是 ${JSON.stringify(entry.carriesProbe)}`,
     );
-    const expectedContent = carriesProbe ? 'probe' : 'empty-barrel';
+    const expectedContent = SUBPATH_CONTENT[subpath] ?? DEFAULT_SUBPATH_CONTENT;
     check(
       entry.content === expectedContent,
       `subpathStatus.json 的 "${subpath}" content 应为 "${expectedContent}"，实际是 ${JSON.stringify(entry.content)}`,

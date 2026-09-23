@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "phase": "02-package-boundary-build-scaffolding",
-  "note": "`./react` 携带探针，是 Phase 2 的构建管线脚手架，Phase 4 起由真实 React 层替换；其余六个 subpath 是惰性空 barrel。",
+  "note": "Phase 3 起 `.` 不再是空 barrel：它再导出内核（`lib/kernel/*`）与四个 port（`lib/ports/*`），故其 content 为 `kernel-exports`；`./react` 携带探针，是 Phase 2 的构建管线脚手架，Phase 4 起由真实 React 层替换；其余五个能力 shell（`./code`、`./table`、`./map`、`./asset`、`./shell`）仍是惰性空 barrel。",
   "subpaths": {
     ".": {
       "target": "./lib/index.ts",
-      "content": "empty-barrel",
+      "content": "kernel-exports",
       "carriesProbe": false
     },
     "./code": {
