@@ -3,11 +3,11 @@ gsd_state_version: "1.0"
 current_phase: 4
 current_phase_name: Resource + Edit Layers Moved
 status: planning
-stopped_at: Phase 3 complete, ready to plan Phase 4
+stopped_at: "Phase 3 complete (4/4 plans, verification passed 12/12, UAT 2/2) and committed on branch `editor/core-extract`. Phase 4 not started — next is its discuss step on the SAME branch (single-branch rule; never create a per-phase branch). Known non-defect: `verification status` for a closed phase reads `stale` because `phase complete` rewrites ROADMAP.md, which is inside that phase's verification fingerprint — same terminal state as Phases 1 and 2; it was `passed` at the moment the completion gate required it."
 last_updated: "2026-09-23T08:04:04.229Z"
 last_activity: 2026-09-23
 last_activity_desc: Phase 3 complete, transitioned to Phase 4
-state_head: 01282657a5188fc0431a452f8e4794eb3a0a8e78
+state_head: "40f7637f4cdcc1de720ebf2d9140b022d2f78cc2"
 progress:
   total_phases: 12
   completed_phases: 3
@@ -68,6 +68,8 @@ Recent decisions affecting current work:
 - [Roadmap]: `editor-core` package uses `lib/` (never `src/`) per `resolvePlugin.js` and `tsconfig.lib.base.json`; subpath exports (`.`, `./code`, `./table`, `./map`, `./asset`, `./shell`, `./react`) created up front.
 - [Roadmap]: Per-instance `EditorCore` via `createEditorCore(config)` replaces the six module singletons; registration returns diagnostics+rollback, construction fails loudly on unresolved required registration.
 - [Process, 2026-09-22, **supersedes the 2026-09-21 per-phase rule**]: **One branch for the whole milestone — `editor/core-extract`.** This is not a large project; per-phase branches added overhead without benefit. `git.branching_strategy` stays `none`, so GSD never auto-creates or auto-switches branches (and no `milestone` template is set — a literal one would also trip the W015 config-validation warning and would silently fork from `origin/main`, making "is the previous phase merged?" an implicit precondition). Phase 2 keeps its existing `editor/boundary` branch unchanged and is merged to `main` manually. From **Phase 3 onward**, all phases 3–12 land on `editor/core-extract`, created once from a `main` that already contains the merged Phase 2 work. Precondition before starting Phase 3: confirm the Phase 2 PR has landed on `main`.
+
+- [Phase 3 complete, 2026-09-23]: The engine-agnostic kernel landed add-only (no `@motajs/editor` change, D-13). `packages/libs/editor-core/lib/kernel/` (core.ts / registry.ts / diagnostics.ts / errors.ts) + `lib/ports/` (EngineAdapter / FsPort / HostPort / PreviewAdapter) + 6 kernel tests (core suite 7 files / 34 tests). Two new machine gates enforce D-15/PORT-02 (no `fetch`/`window`/`document`/`navigator`/`localStorage`/`XMLHttpRequest`/`process.env`/`import.meta.env`) and D-10+D-22 (no module-level mutable binding in core production source), both two-polarity and wired into the existing four CI jobs. Decisions D-17..D-22 are recorded in `.planning/phases/03-kernel-runtime-ports-registry-diagnostics/03-CONTEXT.md`; confirmed names in that phase's `INTERFACE-NAME.md`. Two deliberate partial satisfactions: "replace the six singletons" → Phase 11, and PORT-01 capability ports → Phases 7–10.
 
 ### Pending Todos
 
