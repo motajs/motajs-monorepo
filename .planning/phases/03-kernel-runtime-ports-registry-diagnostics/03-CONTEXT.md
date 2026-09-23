@@ -53,6 +53,8 @@
 - **D-20:** `EDITOR_CORE_API_VERSION` 定义在 **`lib/kernel/core.ts`**（不新增第五个内核文件），并从 `lib/index.ts` 再导出。
 - **D-21:** `EditorCore.dispose()` 收集到的拆除失败走 **`DiagnosticBus`**（`severity: 'error'` + 专用 code）**并同时 `console` 一份**。这使其可被测试断言，也能在控制台被现场排查者看到。
 
+- **D-22:** **D-10 的有意识细化**（plan-checker 建议、用户批准）：module-state 结构门禁只覆盖**生产源码**，即在忽略列表中除组合根 `lib/kernel/core.ts` 之外，**再排除 `lib/__tests__/**`**。理由：测试文件不随产品发布，且测试合法地需要模块级 fixture 表；门禁的目的是生产模块状态。**测试侧的纪律作为约定保留**（每个建测试的任务都要求：模块级 fixture 表必须 `as const` / `Object.freeze(...)` 或声明在函数内），但它**不受机器强制**——这是本细化的已知代价，记录于此以便后续阶段可重新收紧。
+
 ### the agent's Discretion
 - 诊断 `code` 的具体命名规则与常量表（但需在 `INTERFACE-NAME.md` 中列明并经确认）。
 - `EditorCoreConfig` 的确切字段集（在 D-07/D-13/D-14/D-18 的约束下）。

@@ -34,7 +34,7 @@
 | `packages/libs/editor-core/lib/__tests__/coreApiSurface.test.ts` | test | transform | `coreProbe.test.tsx` | role-match |
 | `scripts/verify/coreModuleState.js` | verifier | batch | `scripts/verify/coreBoundaries.js` | exact |
 | `eslint.config.js` (modified) | config | n/a | itself (root block) + `packages/apps/editor/eslint.config.js` | role-match |
-| `.dependencyCruiser.cjs` (modified) | config | n/a | itself | exact |
+| `.dependencyCruiser.cjs` (unchanged) | config | n/a | itself | exact |
 | `.github/workflows/ci.yml` (modified) | config | n/a | itself | exact |
 | `.planning/phases/02-package-boundary-build-scaffolding/subpathStatus.json` (modified) | config / manifest data | n/a | itself + `scripts/verify/coreExports.js` assertion | exact |
 
@@ -399,7 +399,7 @@ Append a **core-scoped block after** the shared block (later blocks win in flat 
 ```javascript
 export default [...rootConfig, ...editorConfig.map((block) => ({ ...block, basePath: 'packages/apps/editor' }))];
 ```
-Use a **separate block** for the module-state selectors with `ignores: ['packages/libs/editor-core/lib/kernel/core.ts']`, and a **different** block for PORT-02 rules that still applies to `core.ts` (RESEARCH Pattern 5 caution: one block with one `ignores` would exempt `core.ts` from PORT-02 too).
+Use a **separate block** for the module-state selectors with `ignores: ['packages/libs/editor-core/lib/kernel/core.ts', 'packages/libs/editor-core/lib/__tests__/**']` (the composition-root exception plus the D-22 refinement — production source only), and a **different** block for PORT-02 rules that still applies to `core.ts` (RESEARCH Pattern 5 caution: one block with one `ignores` would exempt `core.ts` from PORT-02 too).
 
 **Per-package precedent (if the planner chooses a package config instead — RESEARCH Alternative):** `packages/apps/editor/eslint.config.js:10-50` shows a `defineConfig([...])` block with `files` + `rules`. Research **recommends the root override** (smaller change, keeps `lint-severities.js`'s root sample meaningful).
 
@@ -407,7 +407,7 @@ Use a **separate block** for the module-state selectors with `ignores: ['package
 
 ---
 
-### `.dependencyCruiser.cjs` (modified, config)
+### `.dependencyCruiser.cjs` (unchanged, config)
 
 **Analog:** itself — `forbidden`-only, `severity: 'error'` — `.dependencyCruiser.cjs:13-67`.
 

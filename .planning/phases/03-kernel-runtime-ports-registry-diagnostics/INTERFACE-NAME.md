@@ -43,7 +43,7 @@
 | N-10 | `Diagnostic` | type | `{ severity, code, message, owner?, target?, cause? }` (D-05). |
 | N-11 | `DiagnosticSeverity` | type | The three-level union `'error' \| 'warning' \| 'info'` (D-05/B1). Named separately so the union is referenceable without restating it. |
 | N-12 | `createDiagnosticBus` | factory function | Builds a **per-instance** bus (D-06). A factory (not a class) so the implementation can stay a closure and the module holds no mutable state — which the new structural gate would otherwise flag. |
-| N-13 | `DIAGNOSTIC_CODES` | const table (`as const`) | The single stable machine-code table (D-05): `capability.duplicate`, `capability.kind-invalid`, `capability.required-missing`, `diagnostic.subscriber-error`, `lifecycle.teardown-failed`. A table (not loose strings) so tests and CI can assert exact codes. |
+| N-13 | `DIAGNOSTIC_CODES` | const table (`as const`) | The single stable machine-code table (D-05): `capability.duplicate`, `capability.kind-invalid`, `capability.required-missing`, `diagnostic.subscriber-error`, `lifecycle.teardown-failed`. A table (not loose strings) so tests and CI can assert exact codes. Its five **key** names are also public surface (the table is re-exported) and are confirmed: `capabilityDuplicate`, `capabilityKindInvalid`, `capabilityRequiredMissing`, `diagnosticSubscriberError`, `lifecycleTeardownFailed` — camelCase derivations of the dotted values. |
 | N-14 | `DiagnosticCode` | type | The union derived from `DIAGNOSTIC_CODES` — lets consumers switch exhaustively over codes. |
 | N-15 | `packages/libs/editor-core/lib/kernel/errors.ts` | file | The startup-failure error type. |
 | N-16 | `EditorCoreStartupError` | class | Thrown by `createEditorCore` when a required registration is unresolved, carrying **all** diagnostics (D-08). A dedicated class so callers/tests can tell "startup failed" apart from a code bug. |
@@ -92,7 +92,7 @@
 | N-10 | `Diagnostic` | type | `{ severity, code, message, owner?, target?, cause? }` (D-05 — deliberately no `timestamp`, no `details`). | confirmed |
 | N-11 | `DiagnosticSeverity` | type | `'error' \| 'warning' \| 'info'` (D-05). | confirmed |
 | N-12 | `createDiagnosticBus` | factory function | Builds a **per-instance** bus in a closure so the module holds no mutable state (D-06). | confirmed |
-| N-13 | `DIAGNOSTIC_CODES` | `as const` table | The stable machine-code table (D-05): `capability.duplicate`, `capability.kind-invalid`, `capability.required-missing`, `diagnostic.subscriber-error`, `lifecycle.teardown-failed`. | confirmed |
+| N-13 | `DIAGNOSTIC_CODES` | `as const` table | The stable machine-code table (D-05): `capability.duplicate`, `capability.kind-invalid`, `capability.required-missing`, `diagnostic.subscriber-error`, `lifecycle.teardown-failed`. Because the table is re-exported from `.`, its five **keys** are public too and are confirmed: `capabilityDuplicate`, `capabilityKindInvalid`, `capabilityRequiredMissing`, `diagnosticSubscriberError`, `lifecycleTeardownFailed`. | confirmed |
 | N-14 | `DiagnosticCode` | type | The union derived from `DIAGNOSTIC_CODES`. | confirmed |
 | N-15 | `lib/kernel/errors.ts` | file | The startup-failure error type. | confirmed |
 | N-16 | `EditorCoreStartupError` | class | Carries **all** diagnostics when construction cannot complete (D-08). Declared here; first really thrown in Plan 02. | confirmed |
@@ -194,7 +194,7 @@ Every one is either inherited verbatim from existing repo source or follows the 
 | `packages/libs/editor-core/lib/__moduleStateProbe__.ts` | transient synthetic fixture | Holds a module-scope `let` (and an exported one) so the module-state selectors are proven able to fire. Created and deleted by `coreModuleState.js`; never committed. |
 | `packages/libs/editor-core/lib/__port02Probe__.ts` | transient synthetic fixture | Holds exactly one use of each banned construct. Created and deleted by `coreModuleState.js`; never committed. |
 | `RESTRICTED_RULES` | module-private `const` Set in the verifier | The three rule ids the real-tree assertion counts: `no-restricted-syntax`, `no-restricted-globals`, `no-restricted-properties`. Private to the script. |
-| the two flat-config blocks in `eslint.config.js` | config objects | Not identifiers: the first carries the PORT-02 rules (no `ignores`), the second carries the module-state selectors with `ignores: ['packages/libs/editor-core/lib/kernel/core.ts']`. The split is deliberate and must not be merged (see the plan's task action). |
+| the two flat-config blocks in `eslint.config.js` | config objects | Not identifiers: the first carries the PORT-02 rules (no `ignores`, so it also covers `lib/__tests__/**`), the second carries the module-state selectors with `ignores: ['packages/libs/editor-core/lib/kernel/core.ts', 'packages/libs/editor-core/lib/__tests__/**']` — the composition-root exception plus the D-22 refinement (production source only). The split is deliberate and must not be merged (see the plan's task action). |
 | the exact `no-restricted-syntax` selector strings | config values | The four module-state selectors and the `import.meta.env` selector; their exact text is fixed by the plan's task action because the selector text *is* the contract. |
 
 No export name is added or renamed by this plan.
