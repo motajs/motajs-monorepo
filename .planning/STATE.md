@@ -1,19 +1,19 @@
 ---
 gsd_state_version: "1.0"
-current_phase: 3
-current_phase_name: Kernel - Runtime, Ports, Registry, Diagnostics
-status: executing
-stopped_at: Phase 3 planned (4 plans / 3 waves; plan-checker iteration 2 = 0 blockers, 0 warnings, 3 advisories resolved). Reviewed and ready to execute; per AGENTS.md the orchestrator must brief plan 03-01 and wait for approval first.
-last_updated: "2026-09-23T03:24:12.264Z"
-last_activity: 2026-09-22
-last_activity_desc: Phase 2 complete, transitioned to Phase 3
-state_head: cf50ef7ada719e610718c8c6d6f26634d986513b
+current_phase: 4
+current_phase_name: Resource + Edit Layers Moved
+status: planning
+stopped_at: Phase 3 complete, ready to plan Phase 4
+last_updated: "2026-09-23T08:04:04.229Z"
+last_activity: 2026-09-23
+last_activity_desc: Phase 3 complete, transitioned to Phase 4
+state_head: 01282657a5188fc0431a452f8e4794eb3a0a8e78
 progress:
   total_phases: 12
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 17
-  completed_plans: 13
-  percent: 17
+  completed_plans: 17
+  percent: 25
 ---
 
 # Project State
@@ -23,22 +23,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-09-20)
 
 **Core value:** Decouple the editor kernel from engine details through an engine-agnostic `editor-core` so old and new engines share one editing layer and third parties can customise freely.
-**Current focus:** Phase 3 — Kernel — Runtime, Ports, Registry, Diagnostics
+**Current focus:** Phase 4 — Resource + Edit Layers Moved
 
 ## Current Position
 
-Phase: 3 (Kernel - Runtime, Ports, Registry, Diagnostics) — READY TO EXECUTE
+Phase: 4 — Resource + Edit Layers Moved
 Plan: Not started
-Status: Ready to execute
-Last activity: 2026-09-22 — Phase 2 complete, transitioned to Phase 3
+Status: Ready to plan
+Last activity: 2026-09-23 — Phase 3 complete, transitioned to Phase 4
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [███░░░░░░░] 25%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 13
+- Total plans completed: 17
 - Average duration: - min
 - Total execution time: 0.0 hours
 
@@ -48,6 +48,7 @@ Progress: [░░░░░░░░░░] 0%
 |-------|-------|-------|----------|
 | 01 | 10 | - | - |
 | 2 | 3 | - | - |
+| 3 | 4 | - | - |
 
 **Recent Trend:**
 
@@ -89,5 +90,5 @@ Items acknowledged and deferred at milestone close, most recent first:
 ## Session Continuity
 
 Last session: 2026-09-22T10:29:52.174Z
-Stopped at: Phase 3 context gathered
+Stopped at: Phase 3 complete, ready to plan Phase 4
 Resume file: .planning/phases/03-kernel-runtime-ports-registry-diagnostics/03-CONTEXT.md

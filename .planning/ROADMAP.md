@@ -280,7 +280,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 |-------|----------------|--------|-----------|
 | 1. Baseline & Verification Net | 10/10 | Complete    | 2026-09-21 |
 | 2. Package Boundary & Build Scaffolding | 3/3 | Complete    | 2026-09-22 |
-| 3. Kernel — Runtime, Ports, Registry, Diagnostics | 4/4 | Complete   | 2026-09-23 |
+| 3. Kernel — Runtime, Ports, Registry, Diagnostics | 4/4 | Complete    | 2026-09-23 |
 | 4. Resource + Edit Layers Moved | 0/TBD | Not started | - |
 | 5. Engine Adapter Skeleton & Resource Descriptors | 0/TBD | Not started | - |
 | 6. Fixed Shell + Slots | 0/TBD | Not started | - |

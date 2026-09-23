@@ -9,17 +9,17 @@
 
 ### Kernel & Runtime
 
-- [ ] **KERN-01**: `createEditorCore(config)` 返回 per-instance `EditorCore`，取代 6 个模块级 singleton（`projectData`/`projectModel`/`operationHistory`/`FileHandlerManager`/`persistenceMonitor`/`editorConfigService`）
-- [ ] **KERN-02**: `EditorCore` 提供 `dispose()`，按创建逆序释放
-- [ ] **KERN-03**: 公开 capability registry（`registerCapability(kind, id, value, {owner, replaceable})` 返回诊断 + rollback、`getCapability`、`getCapabilityOrThrow`、`snapshotCapabilities`），与私有 service wiring 分离
-- [ ] **KERN-04**: `createEditorCore()` 聚合所有注册诊断，必需注册未解析则启动即失败（registration 可诊断、construction 原子）
-- [ ] **KERN-05**: `EDITOR_CORE_API_VERSION` 常量 + `DiagnosticBus`
-- [ ] **KERN-06**: 两个 `EditorCore` 实例可并存互不干扰（隔离测试）
+- [x] **KERN-01**: `createEditorCore(config)` 返回 per-instance `EditorCore`，取代 6 个模块级 singleton（`projectData`/`projectModel`/`operationHistory`/`FileHandlerManager`/`persistenceMonitor`/`editorConfigService`）
+- [x] **KERN-02**: `EditorCore` 提供 `dispose()`，按创建逆序释放
+- [x] **KERN-03**: 公开 capability registry（`registerCapability(kind, id, value, {owner, replaceable})` 返回诊断 + rollback、`getCapability`、`getCapabilityOrThrow`、`snapshotCapabilities`），与私有 service wiring 分离
+- [x] **KERN-04**: `createEditorCore()` 聚合所有注册诊断，必需注册未解析则启动即失败（registration 可诊断、construction 原子）
+- [x] **KERN-05**: `EDITOR_CORE_API_VERSION` 常量 + `DiagnosticBus`
+- [x] **KERN-06**: 两个 `EditorCore` 实例可并存互不干扰（隔离测试）
 
 ### Ports & Adapter
 
-- [ ] **PORT-01**: core 声明 `EngineAdapter`、`FsPort`、`HostPort`、`PreviewAdapter` 及各 capability port 接口
-- [ ] **PORT-02**: core 无 default `Fs`、不解析 DOM/环境、不直接 fetch；由 composition root 注入
+- [x] **PORT-01**: core 声明 `EngineAdapter`、`FsPort`、`HostPort`、`PreviewAdapter` 及各 capability port 接口
+- [x] **PORT-02**: core 无 default `Fs`、不解析 DOM/环境、不直接 fetch；由 composition root 注入
 - [ ] **PORT-03**: `defineEngine({...})` 在适配器侧生成引擎描述；core 只认逻辑 id，不构造 `project/...` 路径、不检查扩展名
 - [ ] **PORT-04**: 10 条硬编码路径变为 `ResourceDescriptor`（逻辑 id、opaque path key、format id、handler、preload 依赖）
 - [ ] **PORT-05**: `Json2xDataHandler` 与各领域 `*DataHandler` 移入适配器；core 仅保留通用 `JsonDataHandler`
@@ -155,14 +155,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| KERN-01 | 3 | Pending |
-| KERN-02 | 3 | Pending |
-| KERN-03 | 3 | Pending |
-| KERN-04 | 3 | Pending |
-| KERN-05 | 3 | Pending |
-| KERN-06 | 3 | Pending |
-| PORT-01 | 3 | Pending |
-| PORT-02 | 3 | Pending |
+| KERN-01 | 3 | Complete |
+| KERN-02 | 3 | Complete |
+| KERN-03 | 3 | Complete |
+| KERN-04 | 3 | Complete |
+| KERN-05 | 3 | Complete |
+| KERN-06 | 3 | Complete |
+| PORT-01 | 3 | Complete |
+| PORT-02 | 3 | Complete |
 | PORT-03 | 5 | Pending |
 | PORT-04 | 5 | Pending |
 | PORT-05 | 5 | Pending |
