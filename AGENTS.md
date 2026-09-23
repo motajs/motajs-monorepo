@@ -506,3 +506,16 @@ When the user asks a question, **answer it — change nothing.** No file edits, 
 ### Direction is the user's call (MANDATORY)
 
 The user owns the project direction. Always hear the user's direction description first, and never decide scope, architecture direction, package structure, or roadmap changes on your own initiative.
+
+### Questions must be preceded by a detailed problem description (MANDATORY)
+
+The user is **not familiar with this project** — it is almost entirely AI-written. Before asking **any** question (any `question` call, any workflow prompt, any chat question), first **describe the problem in detail in plain language**: what the relevant code/mechanism is, what it currently does, why a decision is needed, and what each option means. Only then ask.
+
+A bare question with options the user cannot interpret is not acceptable. When the user asks "what is this / what is it for", answer fully first; do not assume they know the internals.
+
+### Network requests use the local proxy (MANDATORY)
+
+Any command that performs a network request — `git fetch` / `git pull` / `git push` / `git submodule update`, `pnpm add` / `pnpm install` / `pnpm update`, `npm`, `curl`, etc. — MUST go through the proxy **`http://127.0.0.1:7890`** to avoid request failures. Examples:
+
+- `git -c http.proxy=http://127.0.0.1:7890 fetch`
+- `set HTTP_PROXY=http://127.0.0.1:7890 && set HTTPS_PROXY=http://127.0.0.1:7890 && pnpm add ...`
