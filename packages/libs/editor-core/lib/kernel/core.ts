@@ -10,9 +10,12 @@
  * - 组合根持有私有 service wiring，但**不对外暴露**；公开面只有注册表四件套 + `.diagnostics` + `.dispose()`（D-12）。
  * - 配置回调只拿到一个**窄接口** `CapabilityRegistrar`，绝不拿到实例本身（D-18）。
  * - 注册表存储与种类格式校验都在本文件的闭包内（`registry.ts` 只放契约类型，D-01/N-03）。
+ * - 构造是**原子**的：构造末尾核对必需注册，任一未解析即逆序排空已创建的部分并抛出
+ *   `EditorCoreStartupError`（携带全部诊断），绝不交出半成品（D-07/D-08）。
  * - 本文件是 D-10 module-state 门禁唯一豁免的生产文件（它拥有拆除栈与 disposed 标志）。
  */
 import { createDiagnosticBus, DIAGNOSTIC_CODES, type Diagnostic, type DiagnosticBus } from './diagnostics';
+import { EditorCoreStartupError } from './errors';
 import type { CapabilityRef, RegisterCapabilityOptions, RegisterCapabilityResult } from './registry';
 
 /**
@@ -54,12 +57,17 @@ export interface EditorCore {
 
 /**
  * 种类格式（D-17）：一段或多段以点分隔的段，允许 camelCase 与连字符。
- *
- * 注意：`BUILTIN_REQUIRED_CAPABILITIES`（core 内置必需清单，Phase 3 为空 `Object.freeze([])`）
- * 与「必需注册」的核对/原子失败路径属于 Plan 03-02；本 plan 不声明它，以免留下未使用的模块级绑定
- * （那会打破 lint 的 108 warning 基线）。
  */
 const KIND_PATTERN = /^[A-Za-z][\w-]*(\.[A-Za-z][\w-]*)*$/;
+
+/**
+ * core 自有的必需注册清单（D-07 的「内置半边」）。
+ *
+ * Phase 3 刻意为空：core 还没有拥有任何 capability 种类（研究 A8）。常量存在是为了让 D-07 的
+ * 「`config` 显式清单 ∪ core 内置清单」这一并集机制真实可用，而非停留在纸面。它是冻结的常量，
+ * 不是可变状态；不导出，core 的种类常量随能力阶段到来（D-04）。
+ */
+const BUILTIN_REQUIRED_CAPABILITIES: readonly string[] = Object.freeze([]);
 
 /** registry 的存储行（module-private；`CapabilityRef` 是它唯一的公开视图）。 */
 interface RegistryEntry {
@@ -68,6 +76,32 @@ interface RegistryEntry {
   readonly value: unknown;
   readonly owner?: string;
   readonly replaceable: boolean;
+}
+
+/**
+ * 逆序排空拆除栈，并逐项隔离抛出（D-09/D-21）。
+ *
+ * 这是「逆序 + 逐项 `try`/`catch` + 报告」的**唯一实现**：`EditorCore.dispose()` 与启动失败路径
+ * 共用它，因此失败路径不会是第二份略有差异的副本。抛出的拆除钩子不会中断循环、不会被重跑、
+ * 也不会以 throw 逃逸；每个失败追加一条 `lifecycle.teardown-failed` 诊断到同一条总线，并额外打印
+ * 一行带 `editor-core:` 前缀的 console 记录（D-21 的两条通道：可被测试断言 + 现场可见）。
+ */
+function drainTeardowns(teardowns: Array<() => void>, diagnostics: DiagnosticBus): void {
+  for (let index = teardowns.length - 1; index >= 0; index -= 1) {
+    const teardown = teardowns[index];
+    try {
+      teardown();
+    } catch (error) {
+      const normalized = error instanceof Error ? error : new Error(String(error));
+      console.error('editor-core: teardown failed', normalized);
+      diagnostics.push({
+        severity: 'error',
+        code: DIAGNOSTIC_CODES.lifecycleTeardownFailed,
+        message: `拆除钩子抛出错误（位置 ${index}），已隔离并继续拆除其余钩子。`,
+        cause: error,
+      });
+    }
+  }
 }
 
 /**
@@ -159,23 +193,10 @@ export function createEditorCore(config: EditorCoreConfig): EditorCore {
   }
 
   function dispose(): void {
+    // 先置位再干活：从某个拆除钩子内部重入 `EditorCore.dispose()` 是 no-op，第二次调用也不会重跑或重报（D-09）。
     if (disposed) return;
     disposed = true;
-    for (let index = teardowns.length - 1; index >= 0; index -= 1) {
-      const teardown = teardowns[index];
-      try {
-        teardown();
-      } catch (error) {
-        const normalized = error instanceof Error ? error : new Error(String(error));
-        console.error('editor-core: teardown failed', normalized);
-        diagnostics.push({
-          severity: 'error',
-          code: DIAGNOSTIC_CODES.lifecycleTeardownFailed,
-          message: `拆除钩子抛出错误（位置 ${index}），已隔离并继续拆除其余钩子。`,
-          cause: error,
-        });
-      }
-    }
+    drainTeardowns(teardowns, diagnostics);
   }
 
   const registrar: CapabilityRegistrar = {
@@ -186,6 +207,27 @@ export function createEditorCore(config: EditorCoreConfig): EditorCore {
   };
 
   config.install?.(registrar);
+
+  // 构造末尾统一核对必需注册（D-07）：粒度是具体 `kind:id`，集合为 config 显式清单 ∪ core 内置清单。
+  const requiredRefs = new Set<string>([...(config.requiredCapabilities ?? []), ...BUILTIN_REQUIRED_CAPABILITIES]);
+  let missingCount = 0;
+  for (const ref of requiredRefs) {
+    if (entries.has(ref)) continue;
+    missingCount += 1;
+    diagnostics.push({
+      severity: 'error',
+      code: DIAGNOSTIC_CODES.capabilityRequiredMissing,
+      message: `缺少必需的能力注册：${ref}`,
+      target: ref,
+    });
+  }
+
+  // 只有「必需项缺失」阻断启动（D-08）：逆序释放已创建的部分，再抛出携带全部诊断的专用错误。
+  // 其它 error 级诊断（例如一次被拒的重复注册）不阻断，会随实例的正常返回保留在总线历史里。
+  if (missingCount > 0) {
+    drainTeardowns(teardowns, diagnostics);
+    throw new EditorCoreStartupError(diagnostics.snapshot());
+  }
 
   return {
     registerCapability,

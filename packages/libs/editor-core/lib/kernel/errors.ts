@@ -22,9 +22,10 @@ export class EditorCoreStartupError extends Error {
     const missing = diagnostics
       .filter((diagnostic) => diagnostic.code === DIAGNOSTIC_CODES.capabilityRequiredMissing)
       .map((diagnostic) => diagnostic.target ?? '(unknown)');
-    const summary = missing.length > 0 ? missing.join(', ') : 'unknown required capability';
+    const summary = missing.length > 0 ? missing.join('、') : 'unknown required capability';
     super(`Editor core startup failed: missing required capabilities: ${summary}`);
     this.name = 'EditorCoreStartupError';
-    this.diagnostics = diagnostics;
+    // 复制并冻结：`diagnostics` 承载传入的全量诊断，之后总线的历史再变化也不会改写它（D-08）。
+    this.diagnostics = Object.freeze([...diagnostics]);
   }
 }
