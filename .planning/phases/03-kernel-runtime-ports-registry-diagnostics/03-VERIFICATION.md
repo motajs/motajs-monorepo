@@ -1,6 +1,6 @@
 ---
 phase: 03-kernel-runtime-ports-registry-diagnostics
-verified: 2026-09-23T07:54:46.293Z
+verified: 2026-09-23T08:02:28.593Z
 status: passed
 score: 12/12 must-haves verified
 covered_files:
@@ -40,7 +40,7 @@ covered_files:
   - packages/libs/editor-core/lib/ports/preview.ts
   - scripts/verify/coreExports.js
   - scripts/verify/coreModuleState.js
-covered_digest: "v1:sha256:8f68e4cb74232e8a3f9bc10ba4c579f82127b1785a0394d1516ed214902c7e22"
+covered_digest: "v1:sha256:e4dd0d399e8f43c184f6f6143a280399eee4d8e6fe30ba1f5d1867532021ca07"
 behavior_unverified: 0
 overrides_applied: 0
 deferred:
@@ -81,9 +81,11 @@ re_verification:
 # Phase 3: Kernel — Runtime, Ports, Registry, Diagnostics Verification Report
 
 **Phase Goal:** Replace the six module singletons with a per-instance `EditorCore` graph that owns a public capability registry, declared ports, and aggregated startup diagnostics.
-**Verified:** 2026-09-23T07:54:46.293Z
+**Verified:** 2026-09-23T08:02:28.593Z
 **Status:** passed
 **Re-verification:** Yes — the two manual-only checks were performed by the user and closed via `03-UAT.md` (both `result: pass`, 0 issues); no source/config/gate file changed since the initial run
+
+**Fingerprint refresh (2026-09-23T08:02:28.593Z):** The digest was refreshed after the plan-progress bookkeeping commit `c824f27` (`docs(03): mark the four plans executed in the roadmap`), which modified exactly one covered file — `.planning/ROADMAP.md` (four `03-*-PLAN.md` checkboxes → `[x]`, phase row → `3/3 | Complete`). `git diff --name-status "716c378..c824f27"` is exactly `M .planning/ROADMAP.md`; no source, config, CI, or gate file changed. The bounded evidence set was re-run on the unchanged tree and stayed green (core typecheck exit 0; core tests 7 files / 34 tests exit 0; `coreExports.js` / `coreBoundaries.js` / `coreModuleState.js` / `ci-workflow.js` all exit 0; `pnpm lint` 108 problems / 0 errors exit 0; working tree clean). `status: passed` and all 12/12 must-haves are unchanged; only the timestamp and the recomputed `covered_digest` (over the identical `covered_files` list) were updated.
 
 ## Goal Achievement
 
@@ -261,5 +263,5 @@ No gaps. Every automated must-have is verified, both static gates are live and i
 
 ---
 
-_Verified: 2026-09-23T07:54:46.293Z_
+_Verified: 2026-09-23T08:02:28.593Z_
 _Verifier: the agent (gsd-verifier)_
