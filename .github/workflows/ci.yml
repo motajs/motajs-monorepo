@@ -32,6 +32,8 @@ jobs:
 
       - run: node scripts/verify/coreBoundaries.js
 
+      - run: node scripts/verify/coreModuleState.js
+
   typecheck:
     runs-on: ubuntu-latest
     permissions:
