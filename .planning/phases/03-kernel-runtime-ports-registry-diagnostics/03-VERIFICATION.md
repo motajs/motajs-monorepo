@@ -1,7 +1,7 @@
 ---
 phase: 03-kernel-runtime-ports-registry-diagnostics
-verified: 2026-09-23T07:26:09.455Z
-status: human_needed
+verified: 2026-09-23T07:54:46.293Z
+status: passed
 score: 12/12 must-haves verified
 covered_files:
   - .github/workflows/ci.yml
@@ -55,21 +55,35 @@ advisory:
     category: other
     reason: "Documentation-convention deviation from the mandatory `ClassName.methodName` rule; the code and every other plan/summary reference are compliant. No runtime effect."
     evidence_status: "direct file evidence (grep of the phase artifacts)"
-human_verification:
+human_verification_resolved:
   - test: "Run the editor (dev server or built artifact), open a project, and compare against the Phase 1 screenshot baseline."
     expected: "No new console errors and no visual/functional difference."
     why_human: "D-13 makes Phase 3 add-only (no `packages/apps/**` file changed), so the only meaningful parity check is a run-and-look; it is not expressible as a new automated assertion."
+    status: satisfied
+    performed_by: user
+    result: "pass — user reported: 没有问题，测试符合你提供的预期结果 (no problems; the tests matched the expected results)"
+    uat_ref: ".planning/phases/03-kernel-runtime-ports-registry-diagnostics/03-UAT.md (Test 1 — Editor runtime parity, result: pass)"
   - test: "Read `packages/libs/editor-core/lib/kernel/**` and `lib/ports/**` and confirm only logical ids and injected contracts appear."
     expected: "No engine-specific paths, formats, or vocabulary used as a design basis; engine-neutral (`acme.*`) fixtures only."
     why_human: "Design intent cannot be judged by a grep gate; the engine-neutrality evidence is a code-review judgment (declared manual-only in 03-VALIDATION.md)."
+    status: satisfied
+    performed_by: user
+    result: "pass — user reported: 没有问题，测试符合你提供的预期结果 (no problems; the tests matched the expected results)"
+    uat_ref: ".planning/phases/03-kernel-runtime-ports-registry-diagnostics/03-UAT.md (Test 2 — Engine-agnostic design review, result: pass)"
+re_verification:
+  previous_status: human_needed
+  previous_score: 12/12
+  gaps_closed: []
+  gaps_remaining: []
+  regressions: []
 ---
 
 # Phase 3: Kernel — Runtime, Ports, Registry, Diagnostics Verification Report
 
 **Phase Goal:** Replace the six module singletons with a per-instance `EditorCore` graph that owns a public capability registry, declared ports, and aggregated startup diagnostics.
-**Verified:** 2026-09-23T07:26:09.455Z
-**Status:** human_needed
-**Re-verification:** No — initial verification
+**Verified:** 2026-09-23T07:54:46.293Z
+**Status:** passed
+**Re-verification:** Yes — the two manual-only checks were performed by the user and closed via `03-UAT.md` (both `result: pass`, 0 issues); no source/config/gate file changed since the initial run
 
 ## Goal Achievement
 
@@ -160,6 +174,23 @@ No hardcoded-empty/static fallback terminates any of these chains.
 | Build + artifact budget | `panda codegen` then `pnpm build` | exit 0; **`Editor artifact: 57 files, raw 16.80 MiB`** = Phase-2 baseline | ✓ PASS |
 | Artifact assets | `node scripts/verify/editorArtifactAssets.js` | exit 0; `FiraCode-CzoQJ4O7.ttf` produced | ✓ PASS |
 
+### Re-verification Evidence (post-UAT, doc-only delta)
+
+The only commits since the initial run are `d85b2b5` and `a9edc24`; both touch **only** `.planning/` (`git diff --name-only "d85b2b5^..a9edc24" -- . ":(exclude).planning/**"` is empty), so the ~6-minute editor build was **skipped by design** — no build-input file changed and the artifact budget is unaffected. The bounded evidence set was re-run on the unchanged tree and is green:
+
+| Check | Command | Result | Status |
+| ----- | ------- | ------ | ------ |
+| Core typecheck | `pnpm --filter @motajs/editor-core typecheck` | `tsc -b`, exit 0 | ✓ PASS |
+| Core tests | `pnpm --filter @motajs/editor-core test` | 7 files / 34 tests passed, exit 0 | ✓ PASS |
+| Core export manifest | `node scripts/verify/coreExports.js` | exit 0 (`7 subpaths、9 peers、8 singletons 单副本`) | ✓ PASS |
+| Boundary gate | `node scripts/verify/coreBoundaries.js` | exit 0 (27 modules, 0 violations) | ✓ PASS |
+| Module-state + PORT-02 gate | `node scripts/verify/coreModuleState.js` | exit 0, `全部断言通过` | ✓ PASS |
+| CI job contract | `node scripts/verify/ci-workflow.js` | exit 0 (4 jobs) | ✓ PASS |
+| Lint | `pnpm lint` | `108 problems (0 errors, 108 warnings)`, exit 0 (Phase-1 baseline preserved) | ✓ PASS |
+| Format | `pnpm format:check` | `All matched files use Prettier code style!`, exit 0 | ✓ PASS |
+| Working tree | `git status --porcelain` | empty (clean) | ✓ PASS |
+| Covered-input fingerprint | `gsd-tools verification fingerprint …` | digest unchanged `v1:sha256:8f68e4cb…` (no covered file changed) | ✓ PASS |
+
 ### Negative-polarity re-proofs (independent, not trusted from SUMMARY)
 
 | Claim | Independent action | Result |
@@ -208,25 +239,27 @@ No orphaned requirements: `REQUIREMENTS.md` maps exactly KERN-01..KERN-06 + PORT
 - **`ClassName.methodName`** — compliant across PLANs/SUMMARYs except the single Info item above.
 - **`packages/apps/**` untouched** — `git status --porcelain -- packages/apps` empty; `git diff --name-only 0c20851..HEAD -- packages/apps` empty.
 
-### Human Verification Required
+### Human Verification — Satisfied
 
-#### 1. Editor runtime parity (D-13 add-only)
+Both manual-only checks from `03-VALIDATION.md` were performed by the user and are recorded as `result: pass` in `03-UAT.md` (`status: complete`; summary `total 2 / passed 2 / issues 0`; no Gaps). The user reported: **"没有问题，测试符合你提供的预期结果"** (no problems; the tests matched the expected results).
+
+#### 1. Editor runtime parity (D-13 add-only) — ✓ SATISFIED
 
 **Test:** Run the editor (dev server or built artifact), open a project, and compare against the Phase 1 screenshot baseline.
 **Expected:** No new console errors and no visual/functional difference.
-**Why human:** The phase changes no app code, so the only meaningful parity check is a run-and-look; it is not expressible as an automated assertion (declared manual-only in `03-VALIDATION.md`).
+**Result:** pass (`03-UAT.md` Test 1). The phase changes no app code, so this run-and-look was the only meaningful parity check; it is not expressible as an automated assertion.
 
-#### 2. Engine-agnostic design review
+#### 2. Engine-agnostic design review — ✓ SATISFIED
 
 **Test:** Read `packages/libs/editor-core/lib/kernel/**` and `lib/ports/**`.
 **Expected:** Only logical ids and injected contracts appear — no engine-specific paths, formats, or vocabulary (`mota`/`tower`/`floor`/`loc` etc.) used as a design basis.
-**Why human:** Design intent cannot be judged by a grep gate; this is a code-review judgment (declared manual-only in `03-VALIDATION.md`).
+**Result:** pass (`03-UAT.md` Test 2). Design intent cannot be judged by a grep gate; this was the declared manual-only code-review judgment.
 
 ### Gaps Summary
 
-No gaps. Every automated must-have is verified, both static gates are live and independently re-proved able to fail, the whole-phase regression is green, and the editor artifact still matches the Phase-2 baseline (57 files / 16.80 MiB). The two remaining items are human checks (runtime parity and design-intent review); the "replace the six singletons" clause is deferred to Phase 11 by locked decision D-13 and is recorded as deferred, not as a gap.
+No gaps. Every automated must-have is verified, both static gates are live and independently re-proved able to fail, the whole-phase regression is green, and the editor artifact still matches the Phase-2 baseline (57 files / 16.80 MiB). The two human checks (runtime parity and design-intent review) are now **satisfied** — performed by the user, `pass` in `03-UAT.md`. The "replace the six singletons" clause is deferred to Phase 11 by locked decision D-13 and is recorded as deferred, not as a gap.
 
 ---
 
-_Verified: 2026-09-23T07:26:09.455Z_
+_Verified: 2026-09-23T07:54:46.293Z_
 _Verifier: the agent (gsd-verifier)_
