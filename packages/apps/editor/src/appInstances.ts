@@ -7,10 +7,16 @@
  * `persistenceMonitor` 转发出去，使「同一对象被 FileHandler、DataResource.persistStatus、UI/草稿守卫
  * 与测试共同观察」这一不变量成立（两个实例会静默破坏它们）。
  *
- * 后续计划会在此文件继续挂载 `operationHistory` 实例（04-03）。
+ * 后续计划会在此文件继续挂载 `operationHistory` 实例（04-03，已完成）。
  */
-import { FileHandlerManager as FileHandlerManagerClass, PersistenceMonitor, type FsPort } from '@motajs/editor-core';
+import {
+  FileHandlerManager as FileHandlerManagerClass,
+  OperationHistory,
+  PersistenceMonitor,
+  type FsPort,
+} from '@motajs/editor-core';
 import { fs } from '@/services/fs';
+import { captureEditorViewport, restoreEditorViewport, type EditorViewport } from '@/project/history/viewport';
 
 /**
  * 单一的 `FsPort` 绑定。
@@ -34,3 +40,23 @@ export const persistenceMonitor = new PersistenceMonitor();
  * 与 `export const FileHandlerManager` 是 TS2440 重声明错误。
  */
 export const FileHandlerManager = new FileHandlerManagerClass({ fs: fsPort, persistenceMonitor });
+
+/**
+ * 编辑器的单一 `OperationHistory` 实例（D-06/D-07）。
+ *
+ * core 只导出 class；本文件是 `packages/apps/editor/src` 下**唯一**构造 `OperationHistory` 的站点。
+ */
+export const operationHistory = new OperationHistory();
+
+/**
+ * 把编辑器的 viewport 注册成 core 的 `UndoSystem`（D-03）。
+ *
+ * 这是对旧 `operationHistory.ts` 直接调 `captureEditorViewport`/`restoreEditorViewport` 并记录
+ * `beforeViewport`/`afterViewport` 的替代：core 只认识 `{ id, capture, restore }`，完全不认识视口语义。
+ * 注册顺序定义还原顺序（此处只有一个系统）。返回的 disposer 刻意不用：本模块与页面同生命周期。
+ */
+operationHistory.registerUndoSystem<EditorViewport | null>({
+  id: 'viewport',
+  capture: () => captureEditorViewport(),
+  restore: (snapshot) => restoreEditorViewport(snapshot),
+});

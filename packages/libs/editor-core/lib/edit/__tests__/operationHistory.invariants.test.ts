@@ -1,30 +1,25 @@
+// @vitest-environment node
 /**
- * operationHistory 不变量特性化测试
+ * operationHistory 不变量特性化测试（纯内存部分，D-13 由 editor 搬入 core）。
  *
- * 只冻结 D-11 列出的不变量（容量、逆操作、多目标 checkpoint、组合失败恢复、
- * patch/set 后资源响应性），不录制完整状态转移快照。
+ * 只冻结 D-11 列出的不变量（容量、逆操作、多目标 checkpoint、组合失败恢复），不录制完整状态转移快照。
  *
- * 本文件与现有 operationHistory.test.ts 并存且不改动它：现有测试是「原样」，
- * 这里是新增的独立安全网，供后续阶段迁移 lib/edit/* 时对照。
+ * 与 editor 的 `operationHistory.test.ts`（依赖真实 mota-js fixture）并存且不改动它：这里是从
+ * `src/project/history/__tests__/operationHistory.invariants.test.ts` 拆出的九个纯内存用例，
+ * 断言逐字保留；唯一变化是把模块级单例换成每个用例一个 `new OperationHistory()`。
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { FileHandlerManager } from '@/fs/FileHandlerManager';
-import { persistenceMonitor } from '@/fs/PersistenceMonitor';
-import { tableCommands } from '@/project/commands/tableCommands';
-import { projectData } from '@/project/data/projectData';
-import { operationHistory } from '../operationHistory';
+import { OperationHistory } from '../operationHistory';
 import { compositeOperation, type EditorOperation, type OperationTarget } from '../operations';
-// Type-only import: erased at build time, so the pure describes below never evaluate
-// the fixture module (whose `mota-root` import throws when the submodule is absent).
-import type { SampleProjectContext } from '@test/utils/sampleProject';
 
 describe('operationHistory invariants', () => {
   let value = 0;
+  let operationHistory: OperationHistory;
 
   beforeEach(() => {
     value = 0;
-    operationHistory.clear();
+    operationHistory = new OperationHistory();
   });
 
   afterEach(() => {
@@ -269,65 +264,5 @@ describe('operationHistory invariants', () => {
       ),
     ).rejects.toMatchObject({ commandStage: 'composite-child' });
     expect(counter).toBe(0);
-  });
-});
-
-/**
- * 资源响应性：唯一依赖真实 mota-js fixture 的 describe，与纯内存不变量隔离，
- * 便于后续 fixture 重写时只需改这一处。
- */
-describe('operationHistory resource reactivity', () => {
-  let project: SampleProjectContext;
-
-  beforeEach(async () => {
-    operationHistory.clear();
-    // Lazy import keeps the fixture (and its submodule-dependent `mota-root`) out of
-    // the pure describes' module graph; only this describe pays for it.
-    const { loadSampleProject } = await import('@test/utils/sampleProject');
-    project = await loadSampleProject();
-  });
-
-  afterEach(() => {
-    operationHistory.clear();
-    FileHandlerManager.clear();
-    projectData.resetForTests();
-  });
-
-  it('observes a history-routed patch immediately and reverts it on undo while the write is pending', async () => {
-    const floorResource = projectData.floor('sample0');
-    const floor = await project.loadResource(floorResource);
-    const originalTitle = floor.title;
-    project.fs.setWriteDelay(80);
-
-    expect(await tableCommands.patchFloor('sample0', [['change', "['title']", 'Memory first title']])).toEqual({
-      ok: true,
-    });
-
-    // The new value is observable on the resource itself within the same microtask
-    // chain: no re-read, no timer wait, no effect flush.
-    expect(floorResource.value().title).toBe('Memory first title');
-
-    await operationHistory.undo();
-    expect(floorResource.value().title).toBe(originalTitle);
-
-    await persistenceMonitor.flush([floorResource.path]);
-    expect(project.readText(floorResource.path)).not.toContain('Memory first title');
-  });
-
-  it('observes a direct resource.set immediately, before persistence flushes', async () => {
-    const floorResource = projectData.floor('sample0');
-    await project.loadResource(floorResource);
-    project.fs.setWriteDelay(80);
-
-    await floorResource.set({ ...floorResource.value(), title: 'Set direct title' });
-
-    // A direct set does not flow through the history, yet it is memory-first in
-    // exactly the same way: the value is observable before any persistence await,
-    // while the delayed disk write is still outstanding.
-    expect(floorResource.value().title).toBe('Set direct title');
-    expect(project.readText(floorResource.path)).not.toContain('Set direct title');
-
-    await persistenceMonitor.flush([floorResource.path]);
-    expect(project.readText(floorResource.path)).toContain('Set direct title');
   });
 });

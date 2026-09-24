@@ -68,3 +68,5 @@ export type {
   PatchableResource,
 } from './edit/operations';
 export type { UndoSystem } from './edit/undoSystem';
+export { OperationHistory } from './edit/operationHistory';
+export type { OperationHistoryEntry, OperationHistoryState } from './edit/operationHistory';

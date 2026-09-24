@@ -1,5 +1,6 @@
 export { executeCompositeCommand, executePatchCommand, type PatchCommandOptions } from './commandOperations';
-export { operationHistory, useOperationHistory } from './operationHistory';
+export { operationHistory } from './operationHistory';
+export { useOperationHistory } from './useOperationHistory';
 export {
   compositeOperation,
   operationPathTarget,

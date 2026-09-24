@@ -3,7 +3,7 @@
  *
  * core 的编辑层**不认识**视口 / 素材 / 引擎语义，只认识一个 `id` 加两个回调：每次
  * `OperationHistory.execute()` 都对每个已注册的系统各取一份快照，撤销/重做时按注册的**逆序**
- * 逐个回调 `restore`。编辑器把 viewport（或其他上层状态）实现成 system 注册进去即可。
+ * 逐个回调 `restore`。编辑器把视口（或其他上层状态）实现成 system 注册进去即可。
  */
 export interface UndoSystem<Snapshot = unknown> {
   /** 注册键；同一个 `OperationHistory` 内必须唯一。 */
