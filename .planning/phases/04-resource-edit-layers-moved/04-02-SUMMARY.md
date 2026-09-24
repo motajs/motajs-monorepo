@@ -87,7 +87,7 @@ coverage:
     description: "`FileHandler` has exactly one constructor form `(path, deps)`; no default `Fs`, no second positional parameter, no `fs.promises.*` call under `lib/resources/`; the `fs` field name is retained"
     requirement: RES-03
     verification:
-      - kind: typecheck
+      - kind: other
         ref: "pnpm --filter @motajs/editor-core typecheck && pnpm --filter @motajs/editor typecheck"
         status: pass
       - kind: unit
@@ -123,7 +123,7 @@ coverage:
     description: "`DataHandler`/`JsonDataHandler`/`BinaryFileHandler` and the three combinators are exported from the core root `.`; the editor reaches every one unchanged through a shim, and `Json2xDataHandler`/`ScriptDataHandler` still inherit core's `DataHandler`"
     requirement: RES-01
     verification:
-      - kind: typecheck
+      - kind: other
         ref: "pnpm --filter @motajs/editor-core typecheck && pnpm --filter @motajs/editor typecheck"
         status: pass
       - kind: unit

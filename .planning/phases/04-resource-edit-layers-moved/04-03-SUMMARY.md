@@ -77,7 +77,7 @@ coverage:
     description: "The generic edit primitives (`OperationMeta`/`OperationTarget`/`EditorOperation`/`AppliedOperation`/`compositeOperation`/`operationPathTarget`/`patchResourceOperation`/`UndoSystem` and the nine field-path + five action names) live in `lib/edit/*` and are all reachable from the core root `.`; the editor reaches every one unchanged through `// SHIM(phase4)` forwarders"
     requirement: RES-04
     verification:
-      - kind: typecheck
+      - kind: other
         ref: "pnpm --filter @motajs/editor-core typecheck && pnpm --filter @motajs/editor typecheck"
         status: pass
       - kind: unit
@@ -124,7 +124,7 @@ coverage:
     description: "`PatchableResource<T>` is the only write contract core's patch operation knows; the editor's `DataResource<T>` satisfies it structurally with zero edits, so `commandOperations.ts`/`floorCommands.ts` compile untouched"
     requirement: RES-04
     verification:
-      - kind: typecheck
+      - kind: other
         ref: "pnpm --filter @motajs/editor typecheck (commandOperations.ts and floorCommands.ts compile with no source edit)"
         status: pass
       - kind: other
