@@ -24,6 +24,11 @@
 - ✓ 素材管理（图片/动画/材质）— existing
 - ✓ Service Worker 宿主：FS API、项目注册表（Dexie + File System Access）、preview、editor release manager — existing
 - ✓ 开发宿主插件 `vite-plugin-mota-server.ts`（本地 FS API、预览、热重载）— existing
+- ✓ 引擎无关的资源层已下沉 `editor-core`：`lib/resources/*`（`Content<T>` 五态、`FileHandler`/`DataHandler`/`JsonDataHandler`/`BinaryFileHandler`、`PersistExecutor`/`PersistenceMonitor`、`combinators`、`ResourceRegistry`）— Phase 4
+- ✓ 引擎无关的编辑层已下沉 `editor-core`：`lib/edit/*`（`EditorOperation`/`OperationTarget`/`OperationHistory`/`UndoSystem`/`PatchableResource`、`Action`/`fieldPath`）— Phase 4
+- ✓ 三个模块级 singleton（`FileHandlerManager`/`PersistenceMonitor`/`OperationHistory`）已 per-instance 化；`src/appInstances.ts` 为唯一实例站点 — Phase 4
+- ✓ `@motajs/editor` 经 18 个可追踪 `// SHIM(phase4)` 转发文件保持 import 与行为不变 — Phase 4
+- ✓ `ResourceRegistry`（RES-02）已交付（Map 支撑、去重、disposer、冻结快照；刻意未接线，Phase 5 定型）— Phase 4
 
 ### Active
 
@@ -94,6 +99,14 @@
 | 重要命名必须先经用户确认（`INTERFACE-NAME.md`，每 Plan 一节） | 命名决策多且不宜在对话中逐个确认；集中成文档便于一次确认 | — Pending |
 | 用户提问时只答不改，除非显式动作授权 | 防止擅自产生副作用（曾误建分支） | — Pending |
 | `editor-next` 不做；改为 `editor-type` 纯类型包 + 引擎内置编辑器上层实现 | 用户更新方向：编辑器实现不再写在本项目，改由引擎调用 `editor-type` | — Pending |
+| [Phase 4] core 只消费注入的 `FsPort`，不持有任何 fs 实现 | 支持浏览器 / HTTP / Node(Electron) 多种实现，core 保持引擎无关 | ✓ Phase 4 |
+| [Phase 4] 三个单例去单例化；editor 侧临时 `src/appInstances.ts` 作唯一实例站点 | core 零模块级状态；Phase 11 由组合根接管后删除该模块 | ✓ Phase 4 |
+| [Phase 4] `lib/resources`/`lib/edit` 并入根 `.`，不新增对外 subpath | 对外保持 7 个 subpath，与 Phase 12 冻结面一致 | ✓ Phase 4 |
+| [Phase 4] 撤销改为「`UndoSystem` 注册表 + capture-all 委托 restore」 | core 不认识视口/素材/引擎；数据操作的 undo 仍恢复视口（`operationHistory.test.ts` 钉住） | ✓ Phase 4 |
+| [Phase 4] 逐文件 re-export shim + `// SHIM(phase4)` 标记 + `editorShims.js` 两极性 verifier | editor import 零改动；shim 清单是 Phase 11 删除依据，且门禁可失败 | ✓ Phase 4 |
+| [Phase 4] `es-toolkit` 收紧为精确 `1.44.0`；`@tanstack/store`/`@tanstack/react-store` 新增 catalog 条目 | 消除版本漂移；遵循 catalog 固定依赖版本 | ✓ Phase 4 |
+| [Phase 4] `ContentUtils` 以 `Object.freeze({...})` 进入 core | core module-state 门禁的官方修法（verbatim 会红） | ✓ Phase 4 |
+| [Process, 2026-09-23] 文件名小驼峰，仅 `.tsx` React 组件大驼峰 | 用户指定的项目约定；本阶段新建的 core 文件遵循 | ✓ Phase 4 |
 
 ## Evolution
 
@@ -113,4 +126,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-21 after Phase 1 completion and the direction update (editor-next → editor-type)*
+*Last updated: 2026-09-24 after Phase 4 completion*

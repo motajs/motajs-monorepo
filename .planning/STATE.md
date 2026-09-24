@@ -1,46 +1,46 @@
 ---
 gsd_state_version: "1.0"
-current_phase: 4
-current_phase_name: Resource + Edit Layers Moved
-current_plan: 4
-status: verifying
-stopped_at: Completed 04-04-PLAN.md
-last_updated: "2026-09-24T08:19:44.038Z"
+current_phase: 5
+current_phase_name: Engine Adapter Skeleton & Resource Descriptors
+current_plan: Not started
+status: planning
+stopped_at: Phase 4 complete, ready to plan Phase 5
+last_updated: "2026-09-24T11:29:29.076Z"
 last_activity: 2026-09-24
-last_activity_desc: Phase 4 planning complete
-state_head: 78f860c140fca76ab7f3f9d021d03b3e14e8b65f
+last_activity_desc: Phase 4 complete, transitioned to Phase 5
+state_head: b94e07adf7cd49c5772408207ac99d5d339ee8dc
 progress:
   total_phases: 12
-  completed_phases: 0
+  completed_phases: 4
   total_plans: 21
   completed_plans: 21
-  percent: 0
+  percent: 33
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-09-20)
+See: .planning/PROJECT.md (updated 2026-09-24)
 
 **Core value:** Decouple the editor kernel from engine details through an engine-agnostic `editor-core` so old and new engines share one editing layer and third parties can customise freely.
-**Current focus:** Phase 4 — Resource + Edit Layers Moved
+**Current focus:** Phase 5 — Engine Adapter Skeleton & Resource Descriptors
 
 ## Current Position
 
-Phase: 4 (Resource + Edit Layers Moved)
-Current Plan: 4
+Phase: 5 — Engine Adapter Skeleton & Resource Descriptors
+Current Plan: Not started
 Total Plans in Phase: 4
-Status: Phase complete — ready for verification
-Last activity: 2026-09-24 — 04-01 executed
+Status: Ready to plan
+Last activity: 2026-09-24 — Phase 4 complete, transitioned to Phase 5
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [████░░░░░░] 33%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 17
+- Total plans completed: 21
 - Average duration: - min
 - Total execution time: 0.0 hours
 
@@ -51,6 +51,7 @@ Progress: [░░░░░░░░░░] 0%
 | 01 | 10 | - | - |
 | 2 | 3 | - | - |
 | 3 | 4 | - | - |
+| 4 | 4 | - | - |
 
 **Recent Trend:**
 
@@ -103,7 +104,7 @@ None yet.
 
 - Phase 8 (Code) needs the Blockly split confirmed before planning; Phase 10 (Map) and Phase 11 (Preview/cutover) are flagged for phase-specific research.
 - Phase 7 (Table) has an open design question: built-in primitive field types vs engine-supplied, and whether the field-editor registry is core-mechanism or fully adapter-provided.
-- Phase 2 carries two MEDIUM-confidence open items — **now decided in 02-CONTEXT.md (D-09 PandaCSS 单点 include、D-11 React Compiler 先验证默认)**; verification still pending implementation, budget spikes not research phases.
+- Phase 5 (Adapter) must resolve RES-02's unwired `ResourceRegistry` shape against real engine descriptors — the registry shipped in Phase 4 with no production consumer by design.
 
 ## Deferred Items
 
@@ -115,6 +116,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-09-24T08:19:43.907Z
-Stopped at: Completed 04-04-PLAN.md
+Last session: 2026-09-24T11:29:29.076Z
+Stopped at: Phase 4 complete, ready to plan Phase 5
 Resume file: None

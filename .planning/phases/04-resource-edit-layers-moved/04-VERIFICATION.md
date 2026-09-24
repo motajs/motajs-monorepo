@@ -1,6 +1,6 @@
 ---
 phase: 04-resource-edit-layers-moved
-verified: 2026-09-24T10:13:44Z
+verified: 2026-09-24T11:27:55Z
 status: passed
 score: 15/15 must-haves verified
 covered_files:
@@ -17,6 +17,7 @@ covered_files:
   - .planning/phases/04-resource-edit-layers-moved/04-04-PLAN.md
   - .planning/phases/04-resource-edit-layers-moved/04-04-SUMMARY.md
   - .planning/phases/04-resource-edit-layers-moved/04-CONTEXT.md
+  - .planning/phases/04-resource-edit-layers-moved/04-SECURITY.md
   - .planning/phases/04-resource-edit-layers-moved/04-UAT.md
   - .planning/phases/04-resource-edit-layers-moved/04-VALIDATION.md
   - .planning/phases/04-resource-edit-layers-moved/INTERFACE-NAME.md
@@ -68,7 +69,7 @@ covered_files:
   - scripts/verify/coreExports.js
   - scripts/verify/coreModuleState.js
   - scripts/verify/editorShims.js
-covered_digest: "v1:sha256:911b2f89fc034d5140438ce0449917eac4f16a12c3bb85c9069ad22b88261537"
+covered_digest: "v1:sha256:e13f48def0694f0f3a53de2b064785b0e2776c200f5649b12512a8501f1e78b0"
 behavior_unverified: 0
 overrides_applied: 0
 re_verification:
@@ -83,9 +84,11 @@ re_verification:
 # Phase 4: Resource + Edit Layers Moved — Verification Report
 
 **Phase Goal:** Move the already-engine-agnostic resource and edit layers into core verbatim, with existing tests green and every behavioral invariant intact.
-**Verified:** 2026-09-24T10:13:44Z
+**Verified:** 2026-09-24T11:27:55Z
 **Status:** passed
 **Re-verification:** Yes — after gap/UAT closure (prior `status: human_needed`, no code gaps; the sole human item is now recorded passed in `04-UAT.md`, and the fingerprint was refreshed over the current summaries).
+
+**Fingerprint refresh (2026-09-24T11:27:55Z):** The digest was recomputed after two doc-only commits landed since the previous refresh (`50b8a98`): `98dff11` updated `04-VALIDATION.md` (the nyquist `validate-phase` step: `status: draft` → `validated`, `nyquist_compliant: true`, sign-off checked, a `Validation Audit 2026-09-24` section appended) and `b94e07a` added `04-SECURITY.md` (the `secure-phase` threat register: `status: verified`, `threats_open: 0`). `git status --short` shows no source/config/CI/gate file changed (only the unrelated `packages/external/mota-js` submodule pointer); both deltas are `.planning/` documents. The bounded evidence set was re-run on the unchanged tree and stayed green (core suite 18 files / 158 tests exit 0; editor suite 89 files / 785 tests exit 0; `editorShims.js` / `coreBoundaries.js` / `coreModuleState.js` / `coreExports.js` / `ci-workflow.js` all exit 0; 18 `// SHIM(phase4)` markers; exactly 3 construction sites in `appInstances.ts`; no `TBD`/`FIXME`/`XXX`/`HACK`/`PLACEHOLDER` in any phase-modified file). `status: passed` and all 15/15 must-haves are unchanged. The covered set was extended by exactly one genuinely-new phase artifact — `04-SECURITY.md` — which is the same verification-contract class as the already-covered `04-UAT.md` / `04-VALIDATION.md`; the timestamp and `covered_digest` were then recomputed over the resulting 65-file list.
 
 ## Goal Achievement
 
@@ -192,9 +195,9 @@ None outstanding. The prior report's single human item — `@motajs/editor` UI/b
 
 No code gaps. All 15 observable truths are VERIFIED with passing behavioral tests where the truth is behavior-dependent; all five machine gates exit 0; both package test suites are green (core 158, editor 785); the root fan-out red is exclusively the documented pre-existing `@motajs/react-monaco-editor` teardown flake (its own tests pass) plus the fan-out abort artifact on packer (green in isolation). The previous outstanding human item is closed by the completed UAT, so this report advances from `human_needed` to **`passed`**.
 
-The report was refreshed because two SUMMARY metadata corrections (`kind: typecheck` → `kind: other` in `04-02-SUMMARY.md` and `04-03-SUMMARY.md`, verification entries and their `status: pass` unchanged) had invalidated the stored covered-input digest and made `verification.status` read `stale`. The digest above was recomputed over the current covered set, which includes every live `04-*-PLAN.md`/`04-*-SUMMARY.md`.
+This run is a fingerprint refresh only: the last refresh (`50b8a98`) was itself triggered by two SUMMARY metadata corrections; since then the only deltas are the doc-only `98dff11` (`04-VALIDATION.md` validated) and `b94e07a` (added `04-SECURITY.md`), neither touching source. The covered set therefore grew by exactly one entry (`04-SECURITY.md`) and the digest above was recomputed over the current 65-file set, which includes every live `04-*-PLAN.md`/`04-*-SUMMARY.md`.
 
 ---
 
-_Verified: 2026-09-24T10:13:44Z_
+_Verified: 2026-09-24T11:27:55Z_
 _Verifier: the agent (gsd-verifier)_

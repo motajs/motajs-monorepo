@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Baseline & Verification Net** - Quantify the current behavior and make the test/CI safety net actually run before any code moves (completed 2026-09-21)
 - [x] **Phase 2: Package Boundary & Build Scaffolding** - Create `packages/libs/editor-core` and enforce the boundary, resolution, styling, and compiler rules (completed 2026-09-22)
 - [x] **Phase 3: Kernel — Runtime, Ports, Registry, Diagnostics** - Replace the six module singletons with a per-instance `EditorCore`, public capability registry, and declared ports (completed 2026-09-23)
-- [ ] **Phase 4: Resource + Edit Layers Moved** - Relocate the engine-agnostic resource and edit layers verbatim, preserving all invariants
+- [x] **Phase 4: Resource + Edit Layers Moved** - Relocate the engine-agnostic resource and edit layers verbatim, preserving all invariants (completed 2026-09-24)
 - [ ] **Phase 5: Engine Adapter Skeleton & Resource Descriptors** - Move paths, formats, vocabulary, and migrations into the adapter, proven with a fake engine B
 - [ ] **Phase 6: Fixed Shell + Slots** - Extract the fixed workbench shell with registry-driven named slots, visually identical to baseline
 - [ ] **Phase 7: Table Capability + Port** - Extract the schema-driven table editor with layered field-editor overrides and an injected asset-catalog port
@@ -297,7 +297,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 1. Baseline & Verification Net | 10/10 | Complete    | 2026-09-21 |
 | 2. Package Boundary & Build Scaffolding | 3/3 | Complete    | 2026-09-22 |
 | 3. Kernel — Runtime, Ports, Registry, Diagnostics | 4/4 | Complete    | 2026-09-23 |
-| 4. Resource + Edit Layers Moved | 4/4 | In Progress|  |
+| 4. Resource + Edit Layers Moved | 4/4 | Complete    | 2026-09-24 |
 | 5. Engine Adapter Skeleton & Resource Descriptors | 0/TBD | Not started | - |
 | 6. Fixed Shell + Slots | 0/TBD | Not started | - |
 | 7. Table Capability + Port | 0/TBD | Not started | - |
