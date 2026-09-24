@@ -41,3 +41,5 @@ export { FileHandlerManager } from './resources/fileHandlerManager';
 export { DataHandler } from './resources/dataHandler';
 export { JsonDataHandler } from './resources/jsonDataHandler';
 export { BinaryFileHandler } from './resources/binaryFileHandler';
+export { ComputedResource, aggregateResource, computedResource, optional } from './resources/combinators';
+export type { LoadableResource, ResourceView } from './resources/combinators';

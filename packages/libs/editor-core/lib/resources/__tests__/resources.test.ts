@@ -1,10 +1,11 @@
+// @vitest-environment node
 import { effect, signal } from 'alien-signals';
 import { describe, expect, it } from 'vitest';
 
-import type { ReadonlySignal } from '@/fs/interfaces';
-import type { Content } from '@/fs/types';
-import { aggregateResource, computedResource, optional, type LoadableResource } from '@/project/resources';
-import { waitUntil } from '@/utils/base/signal';
+import type { ReadonlySignal } from '../interfaces';
+import type { Content } from '../types';
+import { aggregateResource, computedResource, optional, type LoadableResource } from '../combinators';
+import { waitUntil } from '../waitUntil';
 
 class TestResource<T> implements LoadableResource<T> {
   readonly content: ReadonlySignal<Content<T>>;
