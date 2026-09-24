@@ -147,7 +147,23 @@ Plans:
   4. Hook results are `ReadonlySignal<Content<T>>` (five-state reactive), never snapshots or effect-faked reactivity.
   5. `@motajs/editor` imports keep working throughout the transition via tracked re-export shims.
 
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+**Wave 1**
+
+- [ ] 04-01-PLAN.md — Tracer: move architecture proven on the resource leaves + de-singleton the persistence chain, create `src/appInstances.ts`, add the four core dependencies (RES-01, RES-05, RES-06)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 04-02-PLAN.md — The injected `FileHandler`/`FileHandlerManager` chain, the data/binary handler layer and the resource combinators move into `lib/resources/` with a flat `FsPort` and a core test double (RES-01, RES-03, RES-05, RES-06)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 04-03-PLAN.md — The edit layer moves into `lib/edit/` with the `UndoSystem` seam replacing the viewport coupling, plus the `./react` hook (RES-04, RES-05, RES-06)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 04-04-PLAN.md — `ResourceRegistry` (RES-02) and the machine gates: retargeted singleton rule, two-polarity shim verifier, truthful subpath record, full-suite gate (RES-02, RES-01, RES-03, RES-04, RES-05, RES-06)
 
 ### Phase 5: Engine Adapter Skeleton & Resource Descriptors
 

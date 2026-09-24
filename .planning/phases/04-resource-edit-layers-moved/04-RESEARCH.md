@@ -1,5 +1,7 @@
 # Phase 4: Resource + Edit Layers Moved - Research
 
+> **File-name note (2026-09-23).** The user-mandated convention is **lowerCamelCase file names; PascalCase only for `.tsx` React components**. This research was written before that convention and still shows the pre-convention PascalCase core paths (e.g. `lib/resources/FileHandler.ts`). The authoritative names are in `INTERFACE-NAME.md` and the four `04-*-PLAN.md` files (e.g. `lib/resources/fileHandler.ts`); where this file and a PLAN.md disagree on a **file name**, the PLAN.md wins. Symbol names are unaffected.
+
 **Researched:** 2026-09-23
 **Domain:** In-repo verbatim module relocation + constructor-injection conversion (TypeScript 5.9 source-only shared library; ESLint flat-config + dependency-cruiser + Vitest 4 gates)
 **Confidence:** HIGH for every repo-derived structural claim (each cites a `file:line` read this session, or an executed read-only probe); MEDIUM for the `ResourceRegistry` (RES-02) shape recommendation and the `es-toolkit` dependency-version decision (both are decision-shaped, not fact-shaped).
@@ -207,8 +209,8 @@ Data/control flow for the phase's two primary use cases — *read/edit a file* a
                        ┌───────────────────────────────────────────────────────────────┐
    services/fs/fs.ts   │  const fsPort: FsPort = fs.promises          (D-05, no cast)  │
    (HTTP form POST) ──►│  const persistenceMonitor = new PersistenceMonitor()           │
-                       │  const FileHandlerManager = new FileHandlerManager({ fsPort,    │
-                       │                                                    persistenceMonitor })│
+                        │  const FileHandlerManager = new FileHandlerManagerClass({     │
+                        │              fsPort, persistenceMonitor })  (class aliased)    │
                        │  const operationHistory = new OperationHistory()               │
                        │  operationHistory.registerUndoSystem(viewportUndoSystem)       │
                        └───────────────────────────┬───────────────────────────────────┘
@@ -349,17 +351,23 @@ export class FileHandlerManager {
 Why a **single** module is mandatory (not one instance per shim): `persistenceMonitor` must be the *same object* seen by (a) `FileHandlerManager`'s injected `FileHandler`s, (b) `PersistenceNotification.tsx` / `AppTopBar.tsx` / `draftGuard.ts`, (c) `DataResource.persistStatus()` `[VERIFIED: packages/apps/editor/src/project/data/DataResource.ts:124-131]`, and (d) tests. Two instances would silently break `persistenceMonitor.whenQuiescent(...)` in ~10 test files.
 
 ```ts
-// packages/apps/editor/src/<app-instance module — name to confirm>  (candidate shape, deleted in Phase 11)
+// packages/apps/editor/src/appInstances.ts  (candidate shape, deleted in Phase 11)
 // SHIM(phase4)
-import { FileHandlerManager, OperationHistory, PersistenceMonitor, type FsPort } from '@motajs/editor-core';
+import {
+  FileHandlerManager as FileHandlerManagerClass,
+  OperationHistory,
+  PersistenceMonitor,
+  type FsPort,
+} from '@motajs/editor-core';
 import { fs } from '@/services/fs';
 import { captureEditorViewport, restoreEditorViewport, type EditorViewport } from '@/project/history/viewport';
 
 /** FsPromiseApi is structurally a superset of FsPort — no cast (D-05). */
-const fsPort: FsPort = fs.promises;
+export const fsPort: FsPort = fs.promises;
 
 export const persistenceMonitor = new PersistenceMonitor();
-export const FileHandlerManager = new FileHandlerManager({ fs: fsPort, persistenceMonitor });
+// The core class is imported aliased (same-scope import + export-const of one name is TS2440).
+export const FileHandlerManager = new FileHandlerManagerClass({ fs: fsPort, persistenceMonitor });
 export const operationHistory = new OperationHistory();
 
 operationHistory.registerUndoSystem<EditorViewport | null>({
@@ -412,11 +420,11 @@ export type { Content, FileContent } from '@motajs/editor-core';
 // packages/apps/editor/src/fs/PersistenceMonitor.ts  (SHIM(phase4))
 // SHIM(phase4)
 export { PersistenceMonitor } from '@motajs/editor-core';
-export { persistenceMonitor } from '@/<app-instance module>';
+export { persistenceMonitor } from '@/appInstances';
 
 // packages/apps/editor/src/fs/FileHandlerManager.ts  (SHIM(phase4))
 // SHIM(phase4)
-export { FileHandlerManager } from '@/<app-instance module>';   // the INSTANCE wins the name (D-07)
+export { FileHandlerManager } from '@/appInstances';   // the INSTANCE wins the name (D-07)
 ```
 
 ---
@@ -496,7 +504,7 @@ projectModel deps: ["./blocklyModels","./passability","./statusBarModel","./tabl
 
 ### Pitfall 8: `export *` on the singleton shims creates a class/instance name collision
 
-**What goes wrong:** `src/fs/FileHandlerManager.ts` doing `export * from '@motajs/editor-core'` re-exports the core **class** `FileHandlerManager`, then `export { FileHandlerManager } from '<app-instance module>'` exports the **instance** with the same name. ESM gives the explicit export precedence, but the intent is unreadable and some tool configurations report a duplicate-export diagnostic.
+**What goes wrong:** `src/fs/FileHandlerManager.ts` doing `export * from '@motajs/editor-core'` re-exports the core **class** `FileHandlerManager`, then `export { FileHandlerManager } from '@/appInstances'` exports the **instance** with the same name. ESM gives the explicit export precedence, but the intent is unreadable and some tool configurations report a duplicate-export diagnostic.
 **Why it happens:** D-10 phrases shims as `export * from core`.
 **How to avoid:** use explicit named re-exports for every shim (Pattern 4). The `FileHandlerManager` shim exports the instance only — editor code has no need for the class.
 **Warning signs:** a shim containing both `export *` and an explicit same-name export.
@@ -988,7 +996,7 @@ With the store on the instance (D-11), the hook must receive the instance. Recom
 
 | Path | Kind | Purpose |
 |---|---|---|
-| `src/<app-instance module>` (name TBD) | new | constructs + exports `persistenceMonitor`, `FileHandlerManager`, `operationHistory`; registers the viewport `UndoSystem`; the **only** `new` site (D-07) |
+| `src/appInstances.ts` | new | constructs + exports `persistenceMonitor`, `FileHandlerManager`, `operationHistory`; registers the viewport `UndoSystem`; the **only** `new` site (D-07) |
 | `src/project/history/viewportOperations.ts` | new | `RestoreViewportOperation`, `NavigateFloorOperation`, `navigateFloorOperation` relocated (D-02) |
 | `src/project/history/useOperationHistory.ts` (or fold into `index.ts`) | new | zero-arg editor wrapper over core's hook |
 | `src/project/history/index.ts` | changed | re-export core edit names + `navigateFloorOperation` + `operationHistory` (instance) + `useOperationHistory` |
@@ -1164,7 +1172,7 @@ export async function restoreEditorViewport(viewport: EditorViewport | null): Pr
 `[VERIFIED: packages/apps/editor/src/project/history/viewport.ts:38, 47-53]`
 
 ```ts
-// packages/apps/editor/src/<app-instance module> — the registration that replaces :17-18 / :97-176
+// packages/apps/editor/src/appInstances.ts — the registration that replaces :17-18 / :97-176
 operationHistory.registerUndoSystem<EditorViewport | null>({
   id: 'viewport',
   capture: () => captureEditorViewport(),                       // sync, captured at execute() invocation
@@ -1209,26 +1217,28 @@ operationHistory.registerUndoSystem<EditorViewport | null>({
 **If this table were empty:** all claims would be verified or cited. It is not empty — items A1–A11 are the confirmation checkpoints for discuss-phase/planning.
 
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Does the plan move `action.ts` + `fieldPath.ts` wholesale (recommended) or narrow the D-04 scope?**
+> **All five questions below are resolved.** Each is confirmed in `INTERFACE-NAME.md` §"Resolved decisions that shaped naming" (Q1–Q5, CONFIRMED 2026-09-23) and implemented by the four `04-*-PLAN.md` files. Retained here for provenance.
+
+1. **Does the plan move `action.ts` + `fieldPath.ts` wholesale (recommended) or narrow the D-04 scope?** — **RESOLVED (Q1/A): move both wholesale; `es-toolkit` becomes a core dependency.**
    - What we know: `applyActionsWithInverse` `[VERIFIED: packages/apps/editor/src/utils/action.ts:117-135]` cannot function without `parseFieldPath`/`buildFieldPath`/`getByFieldPath`/`setByFieldPath`/`deleteByFieldPath` `[VERIFIED: packages/apps/editor/src/utils/fieldPath.ts:21-177]`, and core may not import editor.
    - What's unclear: whether the user considers these "字段动作原语" (D-04's words) or wants a narrower copy.
    - Recommendation: move both files to `lib/edit/`, shim both old paths (13 + 29 import sites respectively), and add `es-toolkit` to core. Record in `INTERFACE-NAME.md`.
 
-2. **What is the app-instance module's file name and export list?** (Discretion per CONTEXT; must be confirmed before landing.)
+2. **What is the app-instance module's file name and export list?** (Discretion per CONTEXT; must be confirmed before landing.) — **RESOLVED (Q3): `packages/apps/editor/src/appInstances.ts`, exporting `persistenceMonitor`, `FileHandlerManager`, `operationHistory`.**
    - What we know: it must be the single `new` site for the three instances, and export the three legacy names.
    - Recommendation: `packages/apps/editor/src/appInstances.ts` exporting `persistenceMonitor`, `FileHandlerManager`, `operationHistory`; the depcruise `from.pathNot` and the shim verifier's "one `new` site" rule both key off this path, so the name is a small contract.
 
-3. **What is the exact `ResourceRegistry` shape, and does the user accept a Phase-4 delivery with no production consumer?**
+3. **What is the exact `ResourceRegistry` shape, and does the user accept a Phase-4 delivery with no production consumer?** — **RESOLVED (Q2/A): deliver the class + unit tests, unwired to `projectData`.**
    - What we know: RES-02 is required; CONTEXT flags it as unresolved; ARCHITECTURE names it in Phase 4.
    - Recommendation: the minimal class in §Q7 + unit tests; the alternative (re-map RES-02 to Phase 5) needs explicit sign-off and a `REQUIREMENTS.md` traceability edit.
 
-4. **Does `useOperationHistory` stay zero-arg by an editor wrapper (recommended) or do the two call sites change to pass the instance?**
+4. **Does `useOperationHistory` stay zero-arg by an editor wrapper (recommended) or do the two call sites change to pass the instance?** — **RESOLVED (Q4/A): core `useOperationHistory(history)` + editor zero-arg wrapper.**
    - What we know: core cannot have a module-level store, so the core hook needs the instance; `[VERIFIED: AppTopBar.tsx:22, PanelSlot.tsx:21]` both import the zero-arg name.
    - Recommendation: core `useOperationHistory(history)` + an editor zero-arg wrapper, so `@motajs/editor` imports are untouched (D-10's spirit).
 
-5. **Should the Phase-2/3 artifacts `subpathStatus.json` + `coreExports.js` both move to a new `.`-content value?**
+5. **Should the Phase-2/3 artifacts `subpathStatus.json` + `coreExports.js` both move to a new `.`-content value?** — **RESOLVED (Q5): yes — both move to `kernel+resources+edit-exports`.**
    - What we know: `[VERIFIED: scripts/verify/coreExports.js:77-81]` hard-codes `'.': 'kernel-exports'`; `[VERIFIED: subpathStatus.json:6-10]` records the same.
    - Recommendation: yes — update both in one commit to a truthful value (Phase 3's Pitfall 8 lesson). Record the value in `INTERFACE-NAME.md`.
 

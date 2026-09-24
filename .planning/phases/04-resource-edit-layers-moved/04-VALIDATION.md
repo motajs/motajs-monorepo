@@ -11,7 +11,7 @@ created: "2026-09-23"
 # Phase 4 — Validation Strategy
 
 > Per-phase validation contract for feedback sampling during execution.
-> Seeded from `04-RESEARCH.md` §Validation Architecture. Task IDs are filled by the planner.
+> Per-task rows below are filled from the four `04-*-PLAN.md` files (post file-name-convention sweep).
 
 ---
 
@@ -26,7 +26,7 @@ created: "2026-09-23"
 | **Type-check both programs** | `pnpm --filter @motajs/editor-core typecheck && pnpm --filter @motajs/editor typecheck` |
 | **Full suite command** | `pnpm lint && pnpm typecheck && pnpm test && pnpm build` (the four CI jobs' local analogues) |
 | **Gate commands** | `node scripts/verify/coreBoundaries.js`, `node scripts/verify/coreModuleState.js`, `node scripts/verify/editorShims.js` (new), `node scripts/verify/coreExports.js`, `node scripts/verify/ci-workflow.js` |
-| **Estimated runtime** | ~core suite seconds-scale; editor suite is the slower one (submodule fixture) |
+| **Estimated runtime** | core suite is seconds-scale; the editor suite is the slower one (submodule fixture) |
 
 Per-file env for pure tests: `// @vitest-environment node` docblock (Phase-3 precedent) — the pure moved tests must be explicitly opted in or they run under jsdom.
 
@@ -45,23 +45,34 @@ Per-file env for pure tests: `// @vitest-environment node` docblock (Phase-3 pre
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| TBD (planner) | — | — | RES-01 | — | `Content<T>` five-state, `FileHandler`/`DataHandler`/`BinaryFileHandler`, combinators live in `lib/resources/*` and behave identically | unit | `pnpm --filter @motajs/editor-core exec vitest run lib/resources/__tests__/FileHandler.test.ts lib/resources/__tests__/resources.test.ts` | ❌ W0 (moved) | ⬜ pending |
-| TBD (planner) | — | — | RES-01 | — | `BinaryFileHandler`/`JsonDataHandler` exported from root `.` and constructible with an `FsPort` | unit + export-surface | `pnpm --filter @motajs/editor-core exec vitest run lib/__tests__/coreApiSurface.test.ts` (extended) | ⚠ extend existing | ⬜ pending |
-| TBD (planner) | — | — | RES-02 | T-4-01 (prototype pollution) | `ResourceRegistry` registers by logical id, rejects duplicates, returns a working disposer, snapshots entries; two instances independent; `Map`-backed | unit | `pnpm --filter @motajs/editor-core exec vitest run lib/resources/__tests__/resourceRegistry.test.ts` | ❌ W0 (new) | ⬜ pending |
-| TBD (planner) | — | — | RES-03 | T-4-02 (cross-instance leakage) | `FileHandlerManager` is per-instance: two managers do not share handlers; the editor's single instance still returns one handler per path | unit | `pnpm --filter @motajs/editor-core exec vitest run lib/resources/__tests__/FileHandlerManager.test.ts` **and** `pnpm --filter @motajs/editor exec vitest run src/fs/__tests__/FileHandlerManager.test.ts` | ❌ W0 (moved) | ⬜ pending |
-| TBD (planner) | — | — | RES-04 | — | `EditorOperation`/`compositeOperation`/`operationHistory` capacity 100, inverse ops, multi-target checkpoint + rollback | unit | `pnpm --filter @motajs/editor-core exec vitest run lib/edit/__tests__/operationHistory.invariants.test.ts` | ❌ W0 (moved, split) | ⬜ pending |
-| TBD (planner) | — | — | RES-04 | — | Same invariants end to end through the shims and the real fixture | integration | `pnpm --filter @motajs/editor exec vitest run src/project/history/__tests__/operationHistory.test.ts` | ✅ exists (unchanged) | ⬜ pending |
-| TBD (planner) | — | — | RES-05 | T-4-03 (silent data loss) | memory-first ≠ saved / single write path | unit + integration | core `… vitest run lib/resources/__tests__/persistExecutor.invariants.test.ts`; editor `… vitest run src/fs/__tests__/persistNoRollback.invariants.test.ts` | ✅ exists (one moving, one staying) | ⬜ pending |
-| TBD (planner) | — | — | RES-05 | — | per-path serialization (one executing + one pending) | unit | `… vitest run lib/resources/__tests__/persistExecutor.invariants.test.ts` | ❌ W0 (moved) | ⬜ pending |
-| TBD (planner) | — | — | RES-05 | T-4-03 | not-found ≠ error | unit | `… vitest run lib/resources/__tests__/errors.test.ts` + the `project-not-found` case in `FileHandler.test.ts` | ❌ W0 (moved) | ⬜ pending |
-| TBD (planner) | — | — | RES-06 | — | `ReadonlySignal<Content<T>>` is a live signal, not a snapshot | unit | new assertion in `lib/resources/__tests__/*` (captured callable returns new state; no effect/snapshot faking) | ❌ W0 (new assertion) | ⬜ pending |
-| TBD (planner) | — | — | RES-06 | — | hook-driven reactivity survives across the package boundary | integration | `pnpm --filter @motajs/editor exec vitest run src/hooks/__tests__/*` + the `operationHistory` reactivity describe | ✅ exists | ⬜ pending |
-| TBD (planner) | — | — | RES-01/RES-04 | T-4-04 (gate bypass) | core has no module-level mutable binding; `lib/resources`/`lib/edit` reachable from `.` | static gate + two-polarity | `pnpm lint` (Block B, widened ignores) + `node scripts/verify/coreModuleState.js` | ✅ exists (needs ignore widening) | ⬜ pending |
-| TBD (planner) | — | — | RES-03 | T-4-02 | exactly one `new FileHandlerManager(` / `new PersistenceMonitor(` / `new OperationHistory(` site in `packages/apps/editor/src` | static gate + two-polarity | `node scripts/verify/editorShims.js` in the `lint` job | ❌ W0 (new) | ⬜ pending |
-| TBD (planner) | — | — | Regression | T-4-04 | every shim is forward-only and tracked; the list is exactly the expected set | static gate + two-polarity | `node scripts/verify/editorShims.js` | ❌ W0 (new) | ⬜ pending |
-| TBD (planner) | — | — | Regression | — | `@motajs/editor` behaviour unchanged; Phase 1 baseline holds | full suite | `pnpm typecheck && pnpm test && pnpm build` + `node scripts/verify/editorArtifactAssets.js` | ✅ exists | ⬜ pending |
-| TBD (planner) | — | — | Regression | — | the four-job contract was not altered | static | `node scripts/verify/ci-workflow.js` | ✅ exists | ⬜ pending |
-| TBD (planner) | — | — | Regression | — | `@/` never reappears inside core; relative edges all resolve inside core | static | `node scripts/verify/coreBoundaries.js` | ✅ exists | ⬜ pending |
+| 04-01-01 | 04-01 | 1 | — | — | four core dependencies pinned (`es-toolkit: 1.44.0`), recorded | human checkpoint | *(checkpoint:human-verify — no automated command)* | — | ⬜ pending |
+| 04-01-02 | 04-01 | 1 | RES-01 | — | one resource leaf moved end-to-end; core program green | unit | `pnpm --filter @motajs/editor-core typecheck && pnpm --filter @motajs/editor-core exec vitest run lib/resources/__tests__/errors.test.ts` | ❌ W0 | ⬜ pending |
+| 04-01-02 | 04-01 | 1 | RES-01 | — | editor shim resolves; the `@/utils/base/signal` shim still resolves `waitUntil` | unit | `pnpm --filter @motajs/editor typecheck && pnpm --filter @motajs/editor exec vitest run src/utils/__tests__/signal.test.ts src/fs/__tests__/FileHandler.test.ts src/project/__tests__/resources.test.ts` | ✅ exists | ⬜ pending |
+| 04-01-02 | 04-01 | 1 | RES-01 | T-4-04 | no module-level state; boundaries clean | static | `pnpm lint && node scripts/verify/coreBoundaries.js && node scripts/verify/coreModuleState.js` | ✅ exists | ⬜ pending |
+| 04-01-03 | 04-01 | 1 | RES-05 | T-4-03 | persistence chain de-singletonised; per-path serialization | unit | `pnpm --filter @motajs/editor-core typecheck && pnpm --filter @motajs/editor-core exec vitest run lib/resources/__tests__/persistExecutor.test.ts lib/resources/__tests__/persistExecutor.invariants.test.ts lib/resources/__tests__/persistenceMonitor.test.ts lib/resources/__tests__/persistenceMonitor.invariants.test.ts` | ❌ W0 (moved) | ⬜ pending |
+| 04-01-03 | 04-01 | 1 | RES-05 | T-4-03 | memory-first ≠ saved; one shared instance (no two `PersistenceMonitor`s) | integration | `pnpm --filter @motajs/editor typecheck && pnpm --filter @motajs/editor exec vitest run src/fs/__tests__/FileHandler.test.ts src/fs/__tests__/persistNoRollback.invariants.test.ts src/project/data/__tests__/persistStatus.integration.test.ts` | ✅ exists | ⬜ pending |
+| 04-01-03 | 04-01 | 1 | RES-03 | T-4-04 | no trailing `new PersistenceMonitor()` in core | static | `node scripts/verify/coreModuleState.js` | ✅ exists | ⬜ pending |
+| 04-02-01 | 04-02 | 2 | RES-03 | T-4-02 | injected `FileHandler`/`FileHandlerManager`; RES-06 signal liveness | unit | `pnpm --filter @motajs/editor-core typecheck && pnpm --filter @motajs/editor-core exec vitest run lib/resources/__tests__/fileHandler.test.ts lib/resources/__tests__/fileHandlerManager.test.ts lib/resources/__tests__/contentSignalLiveness.test.ts` | ❌ W0 (moved + new) | ⬜ pending |
+| 04-02-01 | 04-02 | 2 | RES-03 | T-4-02 | one shared instance; the runtime-only stale call sites are fixed | integration | `pnpm --filter @motajs/editor typecheck && pnpm --filter @motajs/editor exec vitest run test/utils/sampleProject.ts src/services/tower/__tests__/towerService.test.ts src/project/commands/__tests__/floorCommands.test.ts src/services/tableMeta/__tests__/tableMetaService.test.ts` | ✅ exists | ⬜ pending |
+| 04-02-02 | 04-02 | 2 | RES-01 | — | data/binary handlers moved; relative edges resolve inside core | unit + static | `pnpm --filter @motajs/editor-core typecheck && pnpm --filter @motajs/editor typecheck && node scripts/verify/coreBoundaries.js` | ❌ W0 (moved) | ⬜ pending |
+| 04-02-02 | 04-02 | 2 | RES-01 | — | `DataHandler` subclasses still inherit through the shim | unit | `pnpm --filter @motajs/editor exec vitest run src/project/__tests__/resources.test.ts src/project/commands/__tests__/sampleProjectCommands.test.ts` | ✅ exists | ⬜ pending |
+| 04-02-03 | 04-02 | 2 | RES-01/RES-06 | — | combinators moved; `ComputedResource` re-exported as a value | unit | `pnpm --filter @motajs/editor-core typecheck && pnpm --filter @motajs/editor-core exec vitest run lib/resources/__tests__/resources.test.ts` | ❌ W0 (moved) | ⬜ pending |
+| 04-02-03 | 04-02 | 2 | RES-01 | T-4-04 | the shim dropped no combinator or type | static | `pnpm --filter @motajs/editor typecheck && node scripts/verify/coreModuleState.js` | ✅ exists | ⬜ pending |
+| 04-03-01 | 04-03 | 3 | RES-04 | — | field-action primitives + operation contracts live in core | typecheck | `pnpm --filter @motajs/editor-core typecheck && pnpm --filter @motajs/editor typecheck` | ❌ W0 (moved) | ⬜ pending |
+| 04-03-01 | 04-03 | 3 | RES-04 | — | `patchResourceOperation` still accepts the editor's `DataResource` | unit | `pnpm --filter @motajs/editor exec vitest run src/project/commands/__tests__/sampleProjectCommands.test.ts src/utils/__tests__/fieldPath.test.ts src/services/tableMeta/__tests__/tableMetaService.test.ts` | ✅ exists | ⬜ pending |
+| 04-03-01 | 04-03 | 3 | RES-04 | T-4-04 | no `@/` or `./viewport` left in `lib/edit/` | static | `node scripts/verify/coreBoundaries.js && node scripts/verify/coreModuleState.js` | ✅ exists | ⬜ pending |
+| 04-03-02 | 04-03 | 3 | RES-04 | — | capacity 100, inverse ops, multi-target checkpoint + rollback; capture-all `UndoSystem` | unit | `pnpm --filter @motajs/editor-core typecheck && pnpm --filter @motajs/editor-core exec vitest run lib/edit/__tests__/operationHistory.invariants.test.ts` | ❌ W0 (moved, split) | ⬜ pending |
+| 04-03-02 | 04-03 | 3 | RES-04/RES-05 | — | a data operation's undo also restores the viewport (capture-all pinned) | integration | `pnpm --filter @motajs/editor typecheck && pnpm --filter @motajs/editor exec vitest run src/project/history/__tests__/operationHistory.test.ts src/project/history/__tests__/operationHistory.reactivity.invariants.test.ts src/fs/__tests__/persistNoRollback.invariants.test.ts` | ✅ exists + new split | ⬜ pending |
+| 04-03-02 | 04-03 | 3 | RES-06 | — | `useOperationHistory` on `./react`; editor zero-arg wrapper keeps the call sites | unit | `pnpm --filter @motajs/editor-core exec vitest run lib/__tests__/coreProbe.test.tsx && pnpm --filter @motajs/editor exec vitest run src/Workbench/draftGuard.test.ts` | ✅ exists | ⬜ pending |
+| 04-04-01 | 04-04 | 4 | RES-02 | T-4-01 | `ResourceRegistry` logical-id registration, duplicate rejection, working disposer, frozen snapshot, two-instance isolation; `Map`-backed | unit | `pnpm --filter @motajs/editor-core typecheck && pnpm --filter @motajs/editor-core exec vitest run lib/resources/__tests__/resourceRegistry.test.ts lib/__tests__/coreApiSurface.test.ts` | ❌ W0 (new) | ⬜ pending |
+| 04-04-01 | 04-04 | 4 | RES-02 | T-4-04 | no module-level `Map`/object literal/`let` in the new file | static | `node scripts/verify/coreModuleState.js && pnpm lint` | ✅ exists | ⬜ pending |
+| 04-04-02 | 04-04 | 4 | RES-03 | T-4-02 | every shim is forward-only and tracked; exactly one `new` site | static (two-polarity) | `node scripts/verify/editorShims.js` | ❌ W0 (new) | ⬜ pending |
+| 04-04-02 | 04-04 | 4 | Regression | — | depcruise rules green; the four-job contract intact | static | `node scripts/verify/coreBoundaries.js && node scripts/verify/ci-workflow.js` | ✅ exists | ⬜ pending |
+| 04-04-02 | 04-04 | 4 | Regression | T-4-04 | no rule severity downgraded; no unreasoned `eslint-disable` | static | `pnpm lint && node scripts/verify/lint-severities.js` | ✅ exists | ⬜ pending |
+| 04-04-03 | 04-04 | 4 | RES-01 | — | truthful subpath record; extended root `.` surface | static | `pnpm --filter @motajs/editor-core typecheck && node scripts/verify/coreExports.js` | ✅ exists | ⬜ pending |
+| 04-04-03 | 04-04 | 4 | RES-01..RES-06 | — | the root `.` exports every moved name (the union) | unit | `pnpm --filter @motajs/editor-core exec vitest run lib/__tests__/coreApiSurface.test.ts` | ✅ exists | ⬜ pending |
+| 04-04-03 | 04-04 | 4 | Regression | — | `@motajs/editor` behaviour unchanged; Phase 1 baseline holds | full suite | `pnpm lint && pnpm typecheck && pnpm test` | ✅ exists | ⬜ pending |
+| 04-04-03 | 04-04 | 4 | Regression | — | editor artifact shape/budget unchanged | build | `pnpm --filter @motajs/editor exec panda codegen && pnpm build && node scripts/verify/editorArtifactAssets.js` | ✅ exists | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -69,14 +80,14 @@ Per-file env for pure tests: `// @vitest-environment node` docblock (Phase-3 pre
 
 ## Wave 0 Requirements
 
-- [ ] `packages/libs/editor-core/lib/resources/__tests__/` — the moved pure tests (`errors`, `FileHandler`, `FileHandlerManager`, `PersistenceMonitor`, `PersistExecutor`, both `*.invariants`, `resources`) with deps-object construction and no `@test/*` imports
-- [ ] `packages/libs/editor-core/lib/resources/__tests__/<fs double>.ts` — the flat `FsPort` double with the four fault-injection knobs (D-14); plus a 2-line `wait` helper (or one shared test-helpers file)
+- [ ] `packages/libs/editor-core/lib/resources/__tests__/` — the moved pure tests (`errors`, `fileHandler`, `fileHandlerManager`, `persistenceMonitor`, `persistExecutor`, both `*.invariants`, `resources`) with deps-object construction and no `@test/*` imports
+- [ ] `packages/libs/editor-core/lib/resources/__tests__/memoryFsPort.ts` — the flat `FsPort` double with the four fault-injection knobs (D-14); plus a 2-line `wait` helper in `testHelpers.ts`
 - [ ] `packages/libs/editor-core/lib/resources/__tests__/resourceRegistry.test.ts` — RES-02
 - [ ] `packages/libs/editor-core/lib/edit/__tests__/operationHistory.invariants.test.ts` — the 9 moved pure invariants, instance-based
-- [ ] A RES-06 signal-liveness assertion (can live inside the moved `FileHandler.test.ts` or a new file)
+- [ ] `packages/libs/editor-core/lib/resources/__tests__/contentSignalLiveness.test.ts` — the RES-06 signal-liveness assertion
 - [ ] `packages/apps/editor/src/project/history/__tests__/operationHistory.reactivity.invariants.test.ts` — the split-off reactivity describe
 - [ ] `scripts/verify/editorShims.js` — the two-polarity shim + one-`new`-site verifier, wired as an extra `- run:` step in the `lint` job
-- [ ] No framework install needed — Vitest/ESLint/dependency-cruiser/catalog deps are all present. `fast-check` is **not** needed if A5 holds.
+- [ ] No framework install needed — Vitest/ESLint/dependency-cruiser/catalog deps are all present. `fast-check` is **not** needed (the three `*.property.test.ts` files stay in the editor).
 
 **Carried-forward pre-existing flake (do not "fix" here):** the `@motajs/react-monaco-editor` teardown flake makes the `pnpm -r run test` fan-out nondeterministic (~half the time). If the fan-out reds only there with all its tests passing, retry once and say so.
 
@@ -86,6 +97,7 @@ Per-file env for pure tests: `// @vitest-environment node` docblock (Phase-3 pre
 
 | Behavior | Requirement | Why Manual | Test Instructions |
 |----------|-------------|------------|-------------------|
+| Four-dependency decision (pin `es-toolkit` to `1.44.0`; add the two `@tanstack/*` catalog entries) | RES-01 | A package-manager version decision with a `SUS → too-new` rating; `04-01` Task 1 is a `checkpoint:human-verify` gate | Approve the pinned versions before the manifest edit; route any `pnpm install` through the proxy |
 | `@motajs/editor` UI/behaviour visually unchanged (four editors + shell) | Regression | Phase 1 D-08 chose human comparison against the committed screenshot baseline, not automated diff | Compare against `.planning/baseline/screenshots/` per the Phase 1 baseline procedure |
 
 ---
