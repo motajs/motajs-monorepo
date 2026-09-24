@@ -147,11 +147,11 @@ Plans:
   4. Hook results are `ReadonlySignal<Content<T>>` (five-state reactive), never snapshots or effect-faked reactivity.
   5. `@motajs/editor` imports keep working throughout the transition via tracked re-export shims.
 
-**Plans**: 4 plans
+**Plans**: 1/4 plans executed
 Plans:
 **Wave 1**
 
-- [ ] 04-01-PLAN.md — Tracer: move architecture proven on the resource leaves + de-singleton the persistence chain, create `src/appInstances.ts`, add the four core dependencies (RES-01, RES-05, RES-06)
+- [x] 04-01-PLAN.md — Tracer: move architecture proven on the resource leaves + de-singleton the persistence chain, create `src/appInstances.ts`, add the four core dependencies (RES-01, RES-05, RES-06)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -297,7 +297,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 1. Baseline & Verification Net | 10/10 | Complete    | 2026-09-21 |
 | 2. Package Boundary & Build Scaffolding | 3/3 | Complete    | 2026-09-22 |
 | 3. Kernel — Runtime, Ports, Registry, Diagnostics | 4/4 | Complete    | 2026-09-23 |
-| 4. Resource + Edit Layers Moved | 0/TBD | Not started | - |
+| 4. Resource + Edit Layers Moved | 1/4 | In Progress|  |
 | 5. Engine Adapter Skeleton & Resource Descriptors | 0/TBD | Not started | - |
 | 6. Fixed Shell + Slots | 0/TBD | Not started | - |
 | 7. Table Capability + Port | 0/TBD | Not started | - |

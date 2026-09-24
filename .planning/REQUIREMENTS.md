@@ -29,12 +29,12 @@
 
 ### Resource & Edit
 
-- [ ] **RES-01**: `src/fs/*` 与 `src/project/resources.ts` 原样迁入 `lib/resources/*`（`Content<T>` 五态、`FileHandler`/`DataHandler`/`BinaryFileHandler`、combinators）
+- [x] **RES-01**: `src/fs/*` 与 `src/project/resources.ts` 原样迁入 `lib/resources/*`（`Content<T>` 五态、`FileHandler`/`DataHandler`/`BinaryFileHandler`、combinators）
 - [ ] **RES-02**: `ResourceRegistry` 支持通用逻辑 id 注册
 - [ ] **RES-03**: `FileHandlerManager` 由模块 singleton 改为 per-instance service
 - [ ] **RES-04**: `src/project/history/*` 迁入 `lib/edit/*`（`EditorOperation`、`compositeOperation`、`operationHistory` 容量 100、多目标 checkpoint + rollback）
-- [ ] **RES-05**: 保持「内存优先 ≠ 已保存」、单一写路径、`not-found` ≠ `error`、每路径串行（一个执行中 + 一个待定）
-- [ ] **RES-06**: hook 返回 `ReadonlySignal<Content<T>>`（保持五态响应式），不得用快照或 effect 伪造响应式
+- [x] **RES-05**: 保持「内存优先 ≠ 已保存」、单一写路径、`not-found` ≠ `error`、每路径串行（一个执行中 + 一个待定）
+- [x] **RES-06**: hook 返回 `ReadonlySignal<Content<T>>`（保持五态响应式），不得用快照或 effect 伪造响应式
 
 ### Shell
 
@@ -169,12 +169,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PORT-06 | 5 | Pending |
 | PORT-07 | 5 | Pending |
 | PORT-08 | 5 | Pending |
-| RES-01 | 4 | Pending |
+| RES-01 | 4 | Complete |
 | RES-02 | 4 | Pending |
 | RES-03 | 4 | Pending |
 | RES-04 | 4 | Pending |
-| RES-05 | 4 | Pending |
-| RES-06 | 4 | Pending |
+| RES-05 | 4 | Complete |
+| RES-06 | 4 | Complete |
 | SHELL-01 | 6 | Pending |
 | SHELL-02 | 6 | Pending |
 | SHELL-03 | 6 | Pending |
