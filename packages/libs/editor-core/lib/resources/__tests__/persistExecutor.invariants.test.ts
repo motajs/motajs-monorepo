@@ -1,3 +1,4 @@
+// @vitest-environment node
 /**
  * PersistExecutor 特性化测试（冻结不变量，不冻结实现结构）
  *
@@ -10,11 +11,14 @@
  *
  * 所有期望值均以 observation-first 方式取得：先用故意错误的期望运行，
  * 从失败输出读出真实值后再固化，而不是从实现源码推导。
+ *
+ * 自 `src/fs/__tests__/persistExecutor.invariants.test.ts` 原样搬入 core：只改 import 路径
+ * （`../persistExecutor`、本地 `./testHelpers`）与文件级环境 docblock；断言逐字不变。
  */
 
 import { describe, expect, it } from 'vitest';
-import { PersistExecutor } from '../PersistExecutor';
-import { wait } from '@test/utils/testHelpers';
+import { PersistExecutor } from '../persistExecutor';
+import { wait } from './testHelpers';
 
 describe('PersistExecutor invariants', () => {
   it('retry after error re-submits the retained intent and returns to idle with the failure cleared', async () => {

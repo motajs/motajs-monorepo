@@ -1,10 +1,13 @@
+// @vitest-environment node
 /**
- * PersistExecutor 单元测试
+ * PersistExecutor 单元测试（自 `src/fs/__tests__/PersistExecutor.test.ts` 原样搬入 core）。
+ *
+ * 只改 import 路径（`../persistExecutor`、本地 `./testHelpers`）与文件级环境 docblock；断言逐字不变。
  */
 
 import { describe, it, expect } from 'vitest';
-import { PersistExecutor } from '../PersistExecutor';
-import { wait } from '@test/utils/testHelpers';
+import { PersistExecutor } from '../persistExecutor';
+import { wait } from './testHelpers';
 import { effect } from 'alien-signals';
 
 describe('PersistExecutor', () => {
@@ -294,11 +297,11 @@ describe('PersistExecutor', () => {
         throw new Error('Test error');
       });
 
-      let errorStatus: import('../PersistExecutor').ExecutorStatus | null = null;
+      const errorStatuses: import('../persistExecutor').ExecutorStatus[] = [];
       const unsubscribe = effect(() => {
         const status = executor.status();
         if (status.status === 'error') {
-          errorStatus = status;
+          errorStatuses.push(status);
         }
       });
 
@@ -308,10 +311,11 @@ describe('PersistExecutor', () => {
       unsubscribe();
 
       // 应该在执行过程中捕获到 error 状态
+      const errorStatus = errorStatuses.at(-1) ?? null;
       expect(errorStatus).not.toBeNull();
       expect(errorStatus!.status).toBe('error');
-      if (errorStatus!.status === 'error') {
-        expect(errorStatus!.error.message).toBe('Test error');
+      if (errorStatus && errorStatus.status === 'error') {
+        expect(errorStatus.error.message).toBe('Test error');
       }
 
       // 队列清空后，状态应该保持 error（因为最后一次执行失败）

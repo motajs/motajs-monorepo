@@ -31,3 +31,7 @@ export type {
 export { isFileNotFoundError } from './resources/errors';
 export { waitUntil } from './resources/waitUntil';
 export { ContentUtils } from './resources/contentUtils';
+export { PersistExecutor } from './resources/persistExecutor';
+export type { PersistenceIntent, ExecutorStatus } from './resources/persistExecutor';
+export { PersistenceMonitor } from './resources/persistenceMonitor';
+export type { PersistFailure } from './resources/persistenceMonitor';
