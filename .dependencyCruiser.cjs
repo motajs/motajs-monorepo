@@ -51,17 +51,34 @@ module.exports = {
       to: { circular: true },
     },
     {
-      name: 'core-singletons-only-imported-by-composition-root',
+      name: 'resources-edit-must-not-import-capabilities',
       comment:
-        'D-16 requireZero：core 的 6 个模块级 singleton 只允许 composition root（lib/kernel/core.ts）导入。' +
-        '当前 core 尚无 singleton，规则天然通过（空集，D-17），Phase 3 引入后自动生效。' +
+        'D-06 单向 DAG：新搬入的 lib/resources 与 lib/edit 不得依赖四个能力目录（code/table/map/asset）。' +
+        '既有的 kernel-must-not-import-capabilities 的 from 只覆盖 lib/index.ts 与 lib/kernel/*，' +
+        '不覆盖这两个新目录，故在此补齐。',
+      severity: 'error',
+      from: { path: '^packages/libs/editor-core/lib/(resources|edit)/.+' },
+      to: { path: '^packages/libs/editor-core/lib/(code|table|map|asset)/.+' },
+    },
+    {
+      name: 'singletons-only-imported-by-composition-root',
+      comment:
+        'D-16 requireZero（D-08 改指）：模块级 singleton 只允许 composition root 导入。' +
+        'core 半边：Phase 4 已把 FileHandlerManager / persistenceMonitor / operationHistory 去单例化并移入 ' +
+        'lib/resources、lib/edit——core 内部不再有任何模块级实例（由 eslint module-state 门禁加 ' +
+        'scripts/verify/editorShims.js 的「唯一 new 点」断言共同保证），故本规则的 core 半边不再是主要守卫。' +
+        'editor 半边：仍在 editor 的 3 个 singleton（projectData / projectModel / editorConfigService，' +
+        'Phase 5/11 处理）按**导入说明符**匹配——本仓实测 dependency-cruiser 不解析 `@/` 别名，' +
+        '按解析后路径写的规则是空转的（Pitfall 5）。coreBoundaries.js 目前只 cruise core，' +
+        '故 editor 半边处于「已就位、待生效」：Phase 11 组合根建立并把 editor 根加入 cruise 目标后自动生效；' +
+        '本阶段由 scripts/verify/editorShims.js 承担真正可失败的守卫。' +
         '刻意用 forbidden（而非 required + module.numberOfDependentsLessThan，后者只在 forbidden 上下文可用，Pitfall 7）。',
       severity: 'error',
-      from: { pathNot: '^packages/libs/editor-core/lib/kernel/core\\.ts$' },
+      from: { pathNot: '^packages/apps/editor/src/appInstances\\.ts$' },
       to: {
         path:
-          '^packages/libs/editor-core/lib/(kernel|services)/' +
-          '(projectData|projectModel|operationHistory|FileHandlerManager|persistenceMonitor|editorConfigService)[^/]*\\.ts$',
+          '^(?:@/project/data/projectData|@/project/model/projectModel|@/services/editorConfig' +
+          '|\\.{1,2}/.*(?:projectData|projectModel|editorConfigService))$',
       },
     },
   ],
