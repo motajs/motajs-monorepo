@@ -43,3 +43,28 @@ export { JsonDataHandler } from './resources/jsonDataHandler';
 export { BinaryFileHandler } from './resources/binaryFileHandler';
 export { ComputedResource, aggregateResource, computedResource, optional } from './resources/combinators';
 export type { LoadableResource, ResourceView } from './resources/combinators';
+
+// 编辑层（Phase 4 D-09：`lib/edit/*` 是包内目录，公开面由本根入口汇总）。
+// 根 barrel 是每个被搬模块**导出集合并集**，绝不手挑子集——editor 的 shim 只能转发根导出的名字（D-04）。
+export {
+  deleteByFieldPath,
+  buildFieldPath,
+  fieldToDataAttr,
+  getByFieldPath,
+  getParentField,
+  getParentFieldPath,
+  getShortField,
+  parseFieldPath,
+  setByFieldPath,
+} from './edit/fieldPath';
+export { applyAction, applyActions, applyActionsWithInverse } from './edit/action';
+export type { Action, ActionType } from './edit/action';
+export { compositeOperation, operationPathTarget, patchResourceOperation } from './edit/operations';
+export type {
+  AppliedOperation,
+  EditorOperation,
+  OperationMeta,
+  OperationTarget,
+  PatchableResource,
+} from './edit/operations';
+export type { UndoSystem } from './edit/undoSystem';

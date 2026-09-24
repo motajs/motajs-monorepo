@@ -2,7 +2,6 @@ export { executeCompositeCommand, executePatchCommand, type PatchCommandOptions 
 export { operationHistory, useOperationHistory } from './operationHistory';
 export {
   compositeOperation,
-  navigateFloorOperation,
   operationPathTarget,
   patchResourceOperation,
   type AppliedOperation,
@@ -10,6 +9,7 @@ export {
   type OperationMeta,
   type OperationTarget,
 } from './operations';
+export { navigateFloorOperation } from './viewportOperations';
 export { appendMaterialOperation, removeMaterialOperation, replaceMaterialOperation } from './materialOperations';
 export { deleteTextFileOperation, writeTextFileOperation, type TextFileOperationOptions } from './textFileOperations';
 export {
