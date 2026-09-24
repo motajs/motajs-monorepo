@@ -2,9 +2,9 @@
 phase: "4"
 slug: "resource-edit-layers-moved"
 # status lifecycle: draft (seeded by plan-phase) → validated (set by validate-phase §6)
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: validated
+nyquist_compliant: true
+wave_0_complete: true
 created: "2026-09-23"
 ---
 
@@ -104,11 +104,23 @@ Per-file env for pure tests: `// @vitest-environment node` docblock (Phase-3 pre
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < package-suite runtime
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < package-suite runtime
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved 2026-09-24
+
+---
+
+## Validation Audit 2026-09-24
+
+| Metric | Count |
+|--------|-------|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
+
+State A (VALIDATION.md existed). Every task in `04-01..04-04` carries an `<automated>` verify; RES-01..RES-06 are all covered by passing automated tests (`uat.classify-coverage` reports every deliverable `auto_passed`; the refreshed `04-VERIFICATION.md` is `passed`, 15/15 must-haves). No `MISSING` or `PARTIAL` requirement remained, so no auditor run was needed and no test files were generated.
