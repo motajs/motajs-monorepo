@@ -65,13 +65,13 @@ export async function loadSampleProject(): Promise<SampleProjectContext> {
       continue;
     }
     fs.setFile(filePath, content.toString('utf-8'));
-    const handler = new FileHandler(filePath, fs.createFsInterface());
+    const handler = new FileHandler(filePath, { fs, persistenceMonitor });
     await handler.load();
     injectHandler(filePath, handler);
   }
 
   async function registerPath(filePath: string): Promise<FileHandler> {
-    const handler = new FileHandler(filePath, fs.createFsInterface());
+    const handler = new FileHandler(filePath, { fs, persistenceMonitor });
     await handler.load();
     injectHandler(filePath, handler);
     return handler;

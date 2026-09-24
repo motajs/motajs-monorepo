@@ -3,6 +3,7 @@ import { FileHandler } from '@/fs/FileHandler';
 import { FileHandlerManager } from '@/fs/FileHandlerManager';
 import { MemoryFileSystem } from '@test/utils/MemoryFileSystem';
 import { serializeToJsMapFile } from '@/utils/serialize';
+import { persistenceMonitor } from '@/fs/PersistenceMonitor';
 import { floorCommands } from '../floorCommands';
 import { projectData } from '@/project/data/projectData';
 import type { FloorData } from '@/types';
@@ -55,7 +56,7 @@ describe('floorCommands', () => {
   async function setupFloor(floorId: string, data: FloorData): Promise<void> {
     const path = `project/floors/${floorId}.js`;
     memoryFs.setFile(path, serializeToJsMapFile(floorId, data));
-    const handler = new FileHandler(path, memoryFs.createFsInterface());
+    const handler = new FileHandler(path, { fs: memoryFs, persistenceMonitor });
     await handler.load();
     (FileHandlerManager as unknown as { handlers: Map<string, FileHandler> }).handlers.set(path, handler);
     projectData.clearFloorCache(floorId);

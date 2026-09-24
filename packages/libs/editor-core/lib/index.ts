@@ -35,3 +35,6 @@ export { PersistExecutor } from './resources/persistExecutor';
 export type { PersistenceIntent, ExecutorStatus } from './resources/persistExecutor';
 export { PersistenceMonitor } from './resources/persistenceMonitor';
 export type { PersistFailure } from './resources/persistenceMonitor';
+export { FileHandler } from './resources/fileHandler';
+export type { FileHandlerDependencies } from './resources/fileHandler';
+export { FileHandlerManager } from './resources/fileHandlerManager';

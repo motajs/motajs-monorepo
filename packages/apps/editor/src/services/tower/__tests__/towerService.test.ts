@@ -9,6 +9,7 @@ import { FileHandler } from '@/fs/FileHandler';
 import { MemoryFileSystem } from '@test/utils/MemoryFileSystem';
 import { serializeToJsDataFile } from '@/utils/serialize';
 import { ContentUtils } from '@/fs/ContentUtils';
+import { persistenceMonitor } from '@/fs/PersistenceMonitor';
 import type { Action } from '@/utils/action';
 
 describe('towerService', () => {
@@ -58,7 +59,7 @@ describe('towerService', () => {
     memoryFs.setFile(path, content);
 
     // 创建 FileHandler 并加载
-    const handler = new FileHandler(path, memoryFs.createFsInterface());
+    const handler = new FileHandler(path, { fs: memoryFs, persistenceMonitor });
     await handler.load();
 
     // 注入到 FileHandlerManager（通过反射）

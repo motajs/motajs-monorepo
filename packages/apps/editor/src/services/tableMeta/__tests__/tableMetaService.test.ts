@@ -35,7 +35,7 @@ describe('tableMetaService', () => {
     memoryFs.setFile(path, content);
 
     // 创建 FileHandler 并加载
-    const handler = new FileHandler(path, memoryFs.createFsInterface());
+    const handler = new FileHandler(path, { fs: memoryFs, persistenceMonitor });
     await handler.load();
 
     // 注入到 FileHandlerManager

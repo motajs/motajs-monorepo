@@ -1,21 +1,23 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- 测试需要访问管理器私有处理器映射以构造前置状态 */
+// @vitest-environment node
 /**
  * FileHandlerManager 单元测试
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { FileHandlerManager } from '../FileHandlerManager';
-import { MemoryFileSystem } from '@test/utils/MemoryFileSystem';
-import { wait } from '@test/utils/testHelpers';
-import { persistenceMonitor } from '../PersistenceMonitor';
+import { FileHandlerManager as FileHandlerManagerClass } from '../fileHandlerManager';
+import { PersistenceMonitor } from '../persistenceMonitor';
+import { MemoryFsPort } from './memoryFsPort';
 
 describe('FileHandlerManager', () => {
-  let memoryFs: MemoryFileSystem;
+  let memoryFs: MemoryFsPort;
+  let persistenceMonitor: PersistenceMonitor;
+  let FileHandlerManager: FileHandlerManagerClass;
 
   beforeEach(() => {
-    memoryFs = new MemoryFileSystem();
-    persistenceMonitor.resetForTests();
-    FileHandlerManager.clear();
+    memoryFs = new MemoryFsPort();
+    persistenceMonitor = new PersistenceMonitor();
+    FileHandlerManager = new FileHandlerManagerClass({ fs: memoryFs, persistenceMonitor });
   });
 
   afterEach(() => {
@@ -62,7 +64,7 @@ describe('FileHandlerManager', () => {
       const handler = FileHandlerManager.get('test.txt');
 
       // 手动注入 fs
-      (handler as any).fs = memoryFs.createFsInterface();
+      (handler as any).fs = memoryFs;
 
       await handler.load();
 
@@ -80,7 +82,7 @@ describe('FileHandlerManager', () => {
 
       // 创建 handler 并注入 fs
       const handler = FileHandlerManager.get('test.txt');
-      (handler as any).fs = memoryFs.createFsInterface();
+      (handler as any).fs = memoryFs;
 
       const loadedHandler = await FileHandlerManager.load('test.txt');
 
@@ -92,7 +94,7 @@ describe('FileHandlerManager', () => {
       memoryFs.setFile('test.txt', 'content');
 
       const handler = FileHandlerManager.get('test.txt');
-      (handler as any).fs = memoryFs.createFsInterface();
+      (handler as any).fs = memoryFs;
 
       await handler.load();
 
@@ -108,7 +110,7 @@ describe('FileHandlerManager', () => {
       memoryFs.setFile('test.txt', 'content');
 
       const handler = FileHandlerManager.get('test.txt');
-      (handler as any).fs = memoryFs.createFsInterface();
+      (handler as any).fs = memoryFs;
 
       let loadCount = 0;
       const originalLoad = handler.load.bind(handler);
@@ -142,7 +144,7 @@ describe('FileHandlerManager', () => {
       const paths = ['file1.txt', 'file2.txt', 'file3.txt'];
       paths.forEach((path) => {
         const handler = FileHandlerManager.get(path);
-        (handler as any).fs = memoryFs.createFsInterface();
+        (handler as any).fs = memoryFs;
       });
 
       const handlers = await FileHandlerManager.loadAll(paths);
@@ -181,7 +183,7 @@ describe('FileHandlerManager', () => {
       memoryFs.setFile('test.txt', 'old content');
 
       const handler = FileHandlerManager.get('test.txt');
-      (handler as any).fs = memoryFs.createFsInterface();
+      (handler as any).fs = memoryFs;
 
       await handler.load();
 
@@ -209,7 +211,7 @@ describe('FileHandlerManager', () => {
       memoryFs.setFile('test.txt', 'content');
 
       const handler = FileHandlerManager.get('test.txt');
-      (handler as any).fs = memoryFs.createFsInterface();
+      (handler as any).fs = memoryFs;
 
       await handler.load();
 
@@ -238,7 +240,7 @@ describe('FileHandlerManager', () => {
 
     it('文件不存在时不应该报错', async () => {
       const handler = FileHandlerManager.get('nonexistent.txt');
-      (handler as any).fs = memoryFs.createFsInterface();
+      (handler as any).fs = memoryFs;
 
       await expect(FileHandlerManager.delete('nonexistent.txt', true)).resolves.not.toThrow();
     });
@@ -248,7 +250,7 @@ describe('FileHandlerManager', () => {
       memoryFs.setWriteDelay(100);
 
       const handler = FileHandlerManager.get('test.txt');
-      (handler as any).fs = memoryFs.createFsInterface();
+      (handler as any).fs = memoryFs;
 
       await handler.load();
 

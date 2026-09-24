@@ -7,9 +7,9 @@
  * `persistenceMonitor` 转发出去，使「同一对象被 FileHandler、DataResource.persistStatus、UI/草稿守卫
  * 与测试共同观察」这一不变量成立（两个实例会静默破坏它们）。
  *
- * 后续计划会在此文件继续挂载 `FileHandlerManager` 与 `operationHistory` 实例（04-02/04-03）。
+ * 后续计划会在此文件继续挂载 `operationHistory` 实例（04-03）。
  */
-import { PersistenceMonitor, type FsPort } from '@motajs/editor-core';
+import { FileHandlerManager as FileHandlerManagerClass, PersistenceMonitor, type FsPort } from '@motajs/editor-core';
 import { fs } from '@/services/fs';
 
 /**
@@ -24,3 +24,13 @@ import { fs } from '@/services/fs';
 export const fsPort: FsPort = fs.promises;
 
 export const persistenceMonitor = new PersistenceMonitor();
+
+/**
+ * 编辑器的单一 `FileHandlerManager` 实例（D-06/D-07）。
+ *
+ * core 只导出 class；本文件是 `packages/apps/editor/src` 下**唯一**构造 `FileHandlerManager` 的站点
+ * （见下方 `export const FileHandlerManager` 一行）。导出的名字保持旧的实例名 `FileHandlerManager`（editor 代码把它当值使用），因此 core 的类
+ * 必须用模块局部别名 `FileHandlerManagerClass` 引入——同作用域的 `import { FileHandlerManager }`
+ * 与 `export const FileHandlerManager` 是 TS2440 重声明错误。
+ */
+export const FileHandlerManager = new FileHandlerManagerClass({ fs: fsPort, persistenceMonitor });
