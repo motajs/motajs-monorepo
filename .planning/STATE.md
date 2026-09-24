@@ -3,17 +3,17 @@ gsd_state_version: "1.0"
 current_phase: 4
 current_phase_name: Resource + Edit Layers Moved
 current_plan: 4
-status: executing
-stopped_at: Completed 04-03-PLAN.md
-last_updated: "2026-09-24T07:33:50.020Z"
+status: verifying
+stopped_at: Completed 04-04-PLAN.md
+last_updated: "2026-09-24T08:19:44.038Z"
 last_activity: 2026-09-24
 last_activity_desc: Phase 4 planning complete
-state_head: 21886ff892e9d78b90924b74b56f34fe41d901b7
+state_head: 78f860c140fca76ab7f3f9d021d03b3e14e8b65f
 progress:
   total_phases: 12
   completed_phases: 0
   total_plans: 21
-  completed_plans: 20
+  completed_plans: 21
   percent: 0
 ---
 
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-09-20)
 Phase: 4 (Resource + Edit Layers Moved)
 Current Plan: 4
 Total Plans in Phase: 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-09-24 — 04-01 executed
 
 Progress: [░░░░░░░░░░] 0%
@@ -65,6 +65,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 4 P01 | 30 | 3 tasks | 28 files |
 | Phase 04 P02 | 25min | 3 tasks | 23 files |
 | Phase 4 P3 | 38min | 2 tasks | 17 files |
+| Phase 04 P04 | 25 | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -90,6 +91,9 @@ Recent decisions affecting current work:
 - [Phase 4]: The UndoSystem seam captures EVERY registered system synchronously at OperationHistory.execute invocation time (capture-all), so a plain data patch still restores the viewport on undo; registration order defines reverse restore order (D-03)
 - [Phase 4]: OperationHistory is de-singletonised: the Store is an instance field exposed as OperationHistory.store and the UndoSystem registry is per-instance; src/appInstances.ts is the only new OperationHistory( site (D-06/D-07/D-11)
 - [Phase 4]: patchResourceOperation is typed against the narrow PatchableResource<T> (path/raw/mutate); the editor DataResource<T> satisfies it structurally with zero edits (D-04)
+- [Phase 4]: ResourceRegistry (RES-02) is Map-backed, form-validating and DiagnosticBus-decoupled; it ships unwired to projectData so Phase 5 shapes it against real engine descriptors.
+- [Phase 4]: editorShims.js verifies comment-stripped construction sites (exactly 3, all in src/appInstances.ts) and shim-inventory set equality; a JSDoc mention of a constructor is documentation, not a site.
+- [Phase 4]: The retargeted dependency-cruiser rule matches raw editor import specifiers because dependency-cruiser does not resolve the @/ alias; its editor half is dormant-by-target until Phase 11 and editorShims.js carries the real guard.
 
 ### Pending Todos
 
@@ -111,6 +115,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-09-24T07:33:48.329Z
-Stopped at: Completed 04-03-PLAN.md
+Last session: 2026-09-24T08:19:43.907Z
+Stopped at: Completed 04-04-PLAN.md
 Resume file: None
