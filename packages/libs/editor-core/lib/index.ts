@@ -17,3 +17,17 @@ export { createDiagnosticBus, DIAGNOSTIC_CODES } from './kernel/diagnostics';
 export type { Diagnostic, DiagnosticSeverity, DiagnosticBus, DiagnosticCode } from './kernel/diagnostics';
 export { EditorCoreStartupError } from './kernel/errors';
 export type { EngineAdapter, FsPort, HostPort, PreviewAdapter } from './ports/index';
+
+// 资源层叶子模块（Phase 4 D-09：`lib/resources/*` 是包内目录，公开面由本根入口汇总）。
+// 与上面一致，一律**具名**再导出；类型经 `export type`（消费方 editor 开着 verbatimModuleSyntax）。
+export type { Content, FileContent } from './resources/types';
+export type {
+  ReadonlySignal,
+  IContentView,
+  IContentHandler,
+  IDataHandler,
+  RecoverableResource,
+} from './resources/interfaces';
+export { isFileNotFoundError } from './resources/errors';
+export { waitUntil } from './resources/waitUntil';
+export { ContentUtils } from './resources/contentUtils';

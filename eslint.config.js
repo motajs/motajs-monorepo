@@ -139,9 +139,12 @@ const corePort02Config = {
 /**
  * Block B —— module state（KERN-06 的结构半边 / D-10 + D-22 细化）：core 生产源码不得有模块级可变绑定。
  *
- * `ignores` 恰好两项，都是有意的：
+ * `ignores` 恰好三项，都是有意的：
  *   - `lib/kernel/core.ts` —— 组合根拥有拆除栈与 `disposed` 标志，是 D-10 唯一豁免的生产文件；
- *   - `lib/__tests__/**` —— D-22 的有意识细化：测试不随产品发布，且合法地需要模块级 fixture 表。
+ *   - 全部 core 测试树（顶层 `lib/__tests__/**` 以及 Phase 4 新增的 `lib/resources/__tests__/**`、
+ *     `lib/edit/__tests__/**`，外加任意 `*.test.{ts,tsx}`）—— D-22 的有意识细化：测试不随产品发布，
+ *     且合法地需要模块级 fixture 表。Phase 4 把测试树从顶层扩到各层级的 `__tests__`，故忽略面同步放宽；
+ *     `scripts/verify/coreModuleState.js` 会采样一个**非** `lib/__tests__` 的测试文件，证明放宽后的豁免真的生效。
  *     （测试侧的纪律作为约定保留，但不受机器强制；Block A 仍然覆盖这些文件。）
  *
  * ⚠️ 两个 flat-config 块的重复**不得**被「整理」掉。flat config 对**数组型**规则不做跨块合并——
@@ -156,7 +159,11 @@ const corePort02Config = {
  */
 const coreModuleStateConfig = {
   files: ['packages/libs/editor-core/**/*.{ts,tsx}'],
-  ignores: ['packages/libs/editor-core/lib/kernel/core.ts', 'packages/libs/editor-core/lib/__tests__/**'],
+  ignores: [
+    'packages/libs/editor-core/lib/kernel/core.ts',
+    'packages/libs/editor-core/lib/**/__tests__/**',
+    'packages/libs/editor-core/lib/**/*.test.{ts,tsx}',
+  ],
   rules: {
     'no-restricted-syntax': [
       'error',

@@ -21,6 +21,12 @@ catalogs:
     '@stylistic/eslint-plugin':
       specifier: ^5.6.1
       version: 5.6.1
+    '@tanstack/react-store':
+      specifier: 0.8.0
+      version: 0.8.0
+    '@tanstack/store':
+      specifier: 0.8.0
+      version: 0.8.0
     '@types/lodash-es':
       specifier: ^4.17.12
       version: 4.17.12
@@ -58,7 +64,7 @@ catalogs:
       specifier: ^4.2.1
       version: 4.2.1
     es-toolkit:
-      specifier: ^1.43.0
+      specifier: 1.44.0
       version: 1.44.0
     eslint:
       specifier: ^9.39.2
@@ -491,6 +497,19 @@ importers:
   packages/libs/config: {}
 
   packages/libs/editor-core:
+    dependencies:
+      '@tanstack/react-store':
+        specifier: catalog:default
+        version: 0.8.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      '@tanstack/store':
+        specifier: catalog:default
+        version: 0.8.0
+      es-toolkit:
+        specifier: catalog:default
+        version: 1.44.0
+      ts-pattern:
+        specifier: catalog:default
+        version: 5.9.0
     devDependencies:
       '@douyinfe/semi-ui':
         specifier: catalog:default
@@ -8020,7 +8039,7 @@ snapshots:
       '@typescript-eslint/utils': 8.63.0(eslint@9.39.2(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3)
       '@typescript-eslint/visitor-keys': 8.63.0
       eslint: 9.39.2(supports-color@7.2.0)
-      ignore: 7.0.5
+      ignore: 7.0.6
       natural-compare: 1.4.0
       ts-api-utils: 2.5.0(typescript@5.9.3)
       typescript: 5.9.3
@@ -8189,7 +8208,7 @@ snapshots:
       '@typescript-eslint/visitor-keys': 8.63.0
       debug: 4.4.3(supports-color@7.2.0)
       minimatch: 10.2.5
-      semver: 7.7.3
+      semver: 7.8.5
       tinyglobby: 0.2.15
       ts-api-utils: 2.5.0(typescript@5.9.3)
       typescript: 5.9.3

@@ -14,8 +14,9 @@
  *   (c) PORT-02 可失败 —— 临时写入一个每条被禁构造各出现一次的 fixture：六条 `no-restricted-globals`
  *       （逐行定位）、`process.env` 的 `no-restricted-properties`、`import.meta.env` 的
  *       `no-restricted-syntax` 都必须以 error 级命中。
- *   (d) 豁免与覆盖面是真的 —— `lib/kernel/core.ts`（组合根）与 `lib/__tests__/**` 的**解析后**配置里
- *       没有 module-state 选择器，但 PORT-02 规则仍在；且 core.ts 在真实树上 0 条受限规则消息。
+ *   (d) 豁免与覆盖面是真的 —— `lib/kernel/core.ts`（组合根）、顶层 `lib/__tests__/**` 与 Phase 4 新增的
+ *       各层级测试树（如 `lib/resources/__tests__/**`）的**解析后**配置里没有 module-state 选择器，
+ *       但 PORT-02 规则仍在；且 core.ts 在真实树上 0 条受限规则消息。
  *
  * 两个 fixture 都由本脚本创建与删除，**绝不入库**；删除发生在 `finally`，随后断言文件确实不存在。
  *
@@ -252,6 +253,32 @@ function firstTestFile() {
   return entries.length > 0 ? `${CORE_LIB}/__tests__/${entries[0]}` : null;
 }
 
+/**
+ * 找 `lib/**` 下、但**不在** `lib/__tests__` 里的第一个测试文件（Phase 4 新增测试树的代表）。
+ *
+ * Phase 4 把资源/编辑层测试搬进 `lib/resources/__tests__`、`lib/edit/__tests__`，Block B 的忽略面
+ * 随之放宽。只采样 `lib/__tests__` 会让「放宽后的豁免真的生效」停留在假设上，因此这里必须再取一个
+ * 新测试树的样本（Pitfall 4：豁免必须被证明，而非假设）。
+ */
+function firstNestedTestFile() {
+  const topLevelTestsDir = path.join(REPO_ROOT, CORE_LIB, '__tests__');
+  const found = [];
+  const walk = (dir) => {
+    if (!fs.existsSync(dir)) return;
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(full);
+      } else if (/\.test\.tsx?$/.test(entry.name) && path.dirname(full) !== topLevelTestsDir) {
+        found.push(relative(full));
+      }
+    }
+  };
+  walk(path.join(REPO_ROOT, CORE_LIB));
+  found.sort();
+  return found[0] ?? null;
+}
+
 // ==================== (a) 真实树 ====================
 
 function checkRealTree() {
@@ -370,7 +397,16 @@ function checkResolvedConfigScoping() {
   if (testsFile === null) {
     check(false, `找不到 ${CORE_LIB}/__tests__/*.test.ts(x) —— 无法断言测试目录的 module-state 豁免`);
   }
-  const samples = [[CORE_COMPOSITION_ROOT, '组合根'], ...(testsFile === null ? [] : [[testsFile, '测试目录']])];
+  const nestedTestsFile = firstNestedTestFile();
+  check(
+    nestedTestsFile !== null,
+    `找不到 ${CORE_LIB}/**/__tests__/*.test.ts(x) 中非 lib/__tests__ 的样本 —— 无法证明放宽后的测试树豁免`,
+  );
+  const samples = [
+    [CORE_COMPOSITION_ROOT, '组合根'],
+    ...(testsFile === null ? [] : [[testsFile, '测试目录']]),
+    ...(nestedTestsFile === null ? [] : [[nestedTestsFile, '新增测试树']]),
+  ];
 
   for (const [file, label] of samples) {
     const resolved = resolveConfig(file);
@@ -407,7 +443,8 @@ function checkResolvedConfigScoping() {
   }
 
   console.log(
-    `coreModuleState: ${CORE_COMPOSITION_ROOT} 与 ${testsFile ?? '（未找到测试文件）'} 的解析后配置只保留 PORT-02 规则，` +
+    `coreModuleState: ${CORE_COMPOSITION_ROOT} 与 ${testsFile ?? '（未找到测试文件）'}、` +
+      `${nestedTestsFile ?? '（未找到新增测试树样本）'} 的解析后配置只保留 PORT-02 规则，` +
       'module-state 选择器被正确豁免',
   );
 }
@@ -433,7 +470,7 @@ function main() {
   console.log(
     'coreModuleState: 全部断言通过（真实树 0 条 error 级受限规则、模块级 let/export let/const 容器各被拦下、' +
       'Object.freeze 与 as const 结构性豁免、六条被禁全局逐行命中、process.env 与 import.meta.env 各被拦下、' +
-      'core.ts 与 lib/__tests__/** 的 module-state 豁免与 PORT-02 覆盖面均成立）',
+      'core.ts、lib/__tests__/** 与新增测试树的 module-state 豁免与 PORT-02 覆盖面均成立）',
   );
 }
 

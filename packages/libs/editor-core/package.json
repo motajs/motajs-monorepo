@@ -34,6 +34,12 @@
       "optional": true
     }
   },
+  "dependencies": {
+    "@tanstack/react-store": "catalog:default",
+    "@tanstack/store": "catalog:default",
+    "es-toolkit": "catalog:default",
+    "ts-pattern": "catalog:default"
+  },
   "devDependencies": {
     "@douyinfe/semi-ui": "catalog:default",
     "@motajs/config": "workspace:*",

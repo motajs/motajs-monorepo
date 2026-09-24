@@ -67,5 +67,14 @@ module.exports = {
   ],
   options: {
     doNotFollow: { path: '^node_modules' },
+    // 让 enhanced-resolve 遵守包的 `exports` 映射：dependency-cruiser 默认把 `exportsFields` 置空
+    // （为兼容 enhanced-resolve 4），于是纯 `exports` 包（无 `main`/`module`/`default` 条件）会
+    // `couldNotResolve`。Phase 4 起 core 的 `lib/resources/waitUntil.ts` 依赖 `alien-signals`，
+    // 正是这种纯 `exports` 包，而 `scripts/verify/coreBoundaries.js` 只容忍 `@styled-system/*` 的未解析边。
+    // 下面两项就是 dependency-cruiser `init-config` 模板自身推荐的取值（见其 config-template.mjs）。
+    enhancedResolveOptions: {
+      exportsFields: ['exports'],
+      conditionNames: ['import', 'require', 'node', 'default', 'types'],
+    },
   },
 };
