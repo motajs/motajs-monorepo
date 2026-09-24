@@ -2,18 +2,18 @@
 gsd_state_version: "1.0"
 current_phase: 4
 current_phase_name: Resource + Edit Layers Moved
-current_plan: 3
+current_plan: 4
 status: executing
-stopped_at: Completed 04-02-PLAN.md
-last_updated: "2026-09-24T06:53:52.386Z"
+stopped_at: Completed 04-03-PLAN.md
+last_updated: "2026-09-24T07:33:50.020Z"
 last_activity: 2026-09-24
 last_activity_desc: Phase 4 planning complete
-state_head: 472475826f55969ee446eabfa7ee143222bd6b05
+state_head: 21886ff892e9d78b90924b74b56f34fe41d901b7
 progress:
   total_phases: 12
   completed_phases: 0
   total_plans: 21
-  completed_plans: 19
+  completed_plans: 20
   percent: 0
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-20)
 ## Current Position
 
 Phase: 4 (Resource + Edit Layers Moved)
-Current Plan: 3
+Current Plan: 4
 Total Plans in Phase: 4
 Status: Ready to execute
 Last activity: 2026-09-24 — 04-01 executed
@@ -64,6 +64,7 @@ Progress: [░░░░░░░░░░] 0%
 |------|----------|-------|-------|
 | Phase 4 P01 | 30 | 3 tasks | 28 files |
 | Phase 04 P02 | 25min | 3 tasks | 23 files |
+| Phase 4 P3 | 38min | 2 tasks | 17 files |
 
 ## Accumulated Context
 
@@ -86,6 +87,9 @@ Recent decisions affecting current work:
 - [Phase 4]: Core owns DataHandler, JsonDataHandler, BinaryFileHandler and the resource combinators, exported from the root '.' barrel; Json2xDataHandler/ScriptDataHandler deliberately stay in the editor and inherit DataHandler through the shim
 - [Phase 4]: MemoryFsPort is a flat, seven-operation FsPort test double with fewer declared parameters than FsPort (arity compatibility) to avoid new no-unused-vars warnings; it deliberately does not reproduce MemoryFileSystem's nested promises/callback shape (D-14)
 - [Phase 4]: RES-06 liveness is proven by capturing the derived content callable before a mutation and re-invoking the SAME callable afterwards, for both the file layer and the DataHandler/JsonDataHandler data layer
+- [Phase 4]: The UndoSystem seam captures EVERY registered system synchronously at OperationHistory.execute invocation time (capture-all), so a plain data patch still restores the viewport on undo; registration order defines reverse restore order (D-03)
+- [Phase 4]: OperationHistory is de-singletonised: the Store is an instance field exposed as OperationHistory.store and the UndoSystem registry is per-instance; src/appInstances.ts is the only new OperationHistory( site (D-06/D-07/D-11)
+- [Phase 4]: patchResourceOperation is typed against the narrow PatchableResource<T> (path/raw/mutate); the editor DataResource<T> satisfies it structurally with zero edits (D-04)
 
 ### Pending Todos
 
@@ -107,6 +111,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-09-24T06:53:52.260Z
-Stopped at: Completed 04-02-PLAN.md
+Last session: 2026-09-24T07:33:48.329Z
+Stopped at: Completed 04-03-PLAN.md
 Resume file: None
