@@ -22,6 +22,63 @@ import {
   EditorCoreStartupError,
 } from '../index';
 import type { EngineAdapter, FsPort, HostPort, PreviewAdapter } from '../index';
+import {
+  aggregateResource,
+  applyAction,
+  applyActions,
+  applyActionsWithInverse,
+  BinaryFileHandler,
+  buildFieldPath,
+  compositeOperation,
+  ComputedResource,
+  computedResource,
+  ContentUtils,
+  DataHandler,
+  deleteByFieldPath,
+  fieldToDataAttr,
+  FileHandler,
+  FileHandlerManager,
+  getByFieldPath,
+  getParentField,
+  getParentFieldPath,
+  getShortField,
+  isFileNotFoundError,
+  JsonDataHandler,
+  OperationHistory,
+  operationPathTarget,
+  optional,
+  parseFieldPath,
+  patchResourceOperation,
+  PersistenceMonitor,
+  PersistExecutor,
+  ResourceRegistry,
+  setByFieldPath,
+  waitUntil,
+} from '../index';
+import type {
+  Action,
+  ActionType,
+  AppliedOperation,
+  Content,
+  EditorOperation,
+  ExecutorStatus,
+  FileContent,
+  FileHandlerDependencies,
+  IContentHandler,
+  IContentView,
+  IDataHandler,
+  LoadableResource,
+  OperationMeta,
+  OperationTarget,
+  PatchableResource,
+  PersistFailure,
+  PersistenceIntent,
+  ReadonlySignal,
+  RecoverableResource,
+  ResourceRegistryEntry,
+  ResourceView,
+  UndoSystem,
+} from '../index';
 
 describe('editor-core 公开面', () => {
   test('版本常量与工厂/错误类是真实导出', () => {
@@ -70,5 +127,74 @@ describe('editor-core 公开面', () => {
     expectTypeOf<FsPort>().toBeObject();
     expectTypeOf<HostPort>().toBeObject();
     expectTypeOf<PreviewAdapter>().toBeObject();
+  });
+
+  test('Phase 4 搬入的四个资源层类与三个编辑层类都从根 `.` 导出（值面）', () => {
+    const classes = [
+      FileHandlerManager,
+      FileHandler,
+      DataHandler,
+      JsonDataHandler,
+      BinaryFileHandler,
+      PersistenceMonitor,
+      PersistExecutor,
+      ResourceRegistry,
+      OperationHistory,
+      ComputedResource,
+    ];
+    for (const candidate of classes) expect(typeof candidate).toBe('function');
+  });
+
+  test('Phase 4 搬入的函数与常量对象都从根 `.` 导出（值面）', () => {
+    const functions = [
+      isFileNotFoundError,
+      waitUntil,
+      computedResource,
+      aggregateResource,
+      optional,
+      compositeOperation,
+      patchResourceOperation,
+      operationPathTarget,
+      applyAction,
+      applyActions,
+      applyActionsWithInverse,
+      parseFieldPath,
+      getShortField,
+      buildFieldPath,
+      getParentField,
+      getParentFieldPath,
+      getByFieldPath,
+      setByFieldPath,
+      deleteByFieldPath,
+      fieldToDataAttr,
+    ];
+    for (const candidate of functions) expect(typeof candidate).toBe('function');
+    expect(typeof ContentUtils).toBe('object');
+    expect(typeof ContentUtils.map).toBe('function');
+  });
+
+  test('Phase 4 搬入的类型名都从根 `.` 解析（编译期断言）', () => {
+    expectTypeOf<Content<number>>().not.toBeNever();
+    expectTypeOf<FileContent>().not.toBeNever();
+    expectTypeOf<ReadonlySignal<number>>().not.toBeNever();
+    expectTypeOf<IContentView<string>>().not.toBeNever();
+    expectTypeOf<IContentHandler<string>>().not.toBeNever();
+    expectTypeOf<IDataHandler<string>>().not.toBeNever();
+    expectTypeOf<RecoverableResource<string>>().not.toBeNever();
+    expectTypeOf<PersistenceIntent>().not.toBeNever();
+    expectTypeOf<ExecutorStatus>().not.toBeNever();
+    expectTypeOf<PersistFailure>().not.toBeNever();
+    expectTypeOf<ResourceView<string>>().not.toBeNever();
+    expectTypeOf<LoadableResource<string>>().not.toBeNever();
+    expectTypeOf<EditorOperation>().not.toBeNever();
+    expectTypeOf<OperationTarget>().not.toBeNever();
+    expectTypeOf<OperationMeta>().not.toBeNever();
+    expectTypeOf<AppliedOperation>().not.toBeNever();
+    expectTypeOf<PatchableResource<string>>().not.toBeNever();
+    expectTypeOf<Action>().not.toBeNever();
+    expectTypeOf<ActionType>().not.toBeNever();
+    expectTypeOf<UndoSystem>().not.toBeNever();
+    expectTypeOf<ResourceRegistryEntry>().not.toBeNever();
+    expectTypeOf<FileHandlerDependencies>().not.toBeNever();
   });
 });

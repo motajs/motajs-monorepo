@@ -9,7 +9,8 @@
  *      恰好七个 exports subpath、每个 exports 目标在磁盘上真实存在、且都在 subpathStatus.json 里登记；
  *      scripts 恰好是 typecheck + test，没有 build——一个指向不存在文件的 exports 是长期潜伏的隐性 bug；
  *      每个 subpath 的 `content` 取值按 `SUBPATH_CONTENT` 逐项断言：Phase 3 起 `.` 已由空 barrel 变成
- *      真实公开聚合（再导出内核与四个 port），故其值为 `kernel-exports`，不再是 Phase 2 的
+ *      真实公开聚合（再导出内核与四个 port）；Phase 4 又让它汇总 Phase 4 搬入的资源层（`lib/resources/*`）
+ *      与编辑层（`lib/edit/*`）的全部公开名，故其值为 `kernel+resources+edit-exports`，不再是 Phase 2 的
  *      `carriesProbe ? 'probe' : 'empty-barrel'` 二元判断。清单与校验器是**一对契约**：只改其一
  *      会让 `typecheck` job 因为一条已过时的记录变红，因此二者必须在同一次变更里同步演进（Pitfall 8）；
  *   2. PKG-02 声明：peerDependencies 恰好是 PKG-02 点名的九个名字且全部 catalog:default，
@@ -75,7 +76,7 @@ const PROBE_SUBPATH = './react';
  * 绝不从 subpathStatus.json 反读（那会自我指涉，把门禁变成同义反复）。
  */
 const SUBPATH_CONTENT = {
-  '.': 'kernel-exports',
+  '.': 'kernel+resources+edit-exports',
   './react': 'probe',
 };
 const DEFAULT_SUBPATH_CONTENT = 'empty-barrel';
