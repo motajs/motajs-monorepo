@@ -13,6 +13,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { FileHandler } from '../fileHandler';
+import { JsonDataHandler } from '../jsonDataHandler';
 import { PersistenceMonitor } from '../persistenceMonitor';
 import { MemoryFsPort } from './memoryFsPort';
 
@@ -52,5 +53,24 @@ describe('resource signal liveness (RES-06)', () => {
 
     // 从未调用 subscribe / effect，当前值必须已经可读
     expect(handler.content()).toEqual({ status: 'loaded', value: 'value' });
+  });
+
+  it('DataHandler/JsonDataHandler: 同一先前捕获的 content callable 在 update 后返回新五态值', async () => {
+    const fs = new MemoryFsPort();
+    fs.setFile('data.json', JSON.stringify({ value: 'old' }));
+    const fileHandler = new FileHandler('data.json', { fs, persistenceMonitor: new PersistenceMonitor() });
+    const dataHandler = new JsonDataHandler<{ value: string }>(fileHandler, 'data');
+    await fileHandler.load();
+    await dataHandler.waitForSettled();
+
+    // 变更之前捕获派生的 callable（快照实现会在此刻冻结取值）
+    const content = dataHandler.content;
+    expect(content()).toEqual({ status: 'loaded', value: { value: 'old' } });
+
+    dataHandler.update({ value: 'new' });
+
+    // 同一个先前捕获的 callable 必须返回新的五态值——computed 派生，而非快照
+    expect(content()).toEqual({ status: 'loaded', value: { value: 'new' } });
+    expect(dataHandler.getContent()).toEqual({ status: 'loaded', value: { value: 'new' } });
   });
 });
