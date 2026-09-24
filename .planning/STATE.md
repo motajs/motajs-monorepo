@@ -2,18 +2,18 @@
 gsd_state_version: "1.0"
 current_phase: 4
 current_phase_name: Resource + Edit Layers Moved
-current_plan: 2
+current_plan: 3
 status: executing
-stopped_at: Completed 04-01-PLAN.md
-last_updated: "2026-09-24T06:00:36.091Z"
+stopped_at: Completed 04-02-PLAN.md
+last_updated: "2026-09-24T06:53:52.386Z"
 last_activity: 2026-09-24
 last_activity_desc: Phase 4 planning complete
-state_head: d9ca7dab7a95ee322f3c7c26926e211a03ef9806
+state_head: 472475826f55969ee446eabfa7ee143222bd6b05
 progress:
   total_phases: 12
   completed_phases: 0
   total_plans: 21
-  completed_plans: 18
+  completed_plans: 19
   percent: 0
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-20)
 ## Current Position
 
 Phase: 4 (Resource + Edit Layers Moved)
-Current Plan: 2
+Current Plan: 3
 Total Plans in Phase: 4
 Status: Ready to execute
 Last activity: 2026-09-24 — 04-01 executed
@@ -63,6 +63,7 @@ Progress: [░░░░░░░░░░] 0%
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 4 P01 | 30 | 3 tasks | 28 files |
+| Phase 04 P02 | 25min | 3 tasks | 23 files |
 
 ## Accumulated Context
 
@@ -80,6 +81,11 @@ Recent decisions affecting current work:
 - [Phase 4]: 04-01: es-toolkit catalog entry pinned to the exact installed 1.44.0 (removes the ^1.43.0 version-float hazard); user-approved before the manifest edit.
 - [Phase 4]: 04-01: ContentUtils moved into core as Object.freeze({...}) — the module-state gate's own sanctioned remedy; a verbatim move would red pnpm lint.
 - [Phase 4]: 04-01: dependency-cruiser .dependencyCruiser.cjs gained enhancedResolveOptions {exportsFields:['exports'], conditionNames:[...]} so exports-only packages (alien-signals) resolve; the values are dependency-cruiser's own init-config template defaults. No rule weakened.
+- [Phase 4]: FileHandler takes a single FileHandlerDependencies object (fs: FsPort + persistenceMonitor) assigned in the constructor body — no parameter property (erasableSyntaxOnly would raise TS1294) and the field name fs is retained so fixture pokes keep working
+- [Phase 4]: FileHandlerManager is a per-instance class with no module-level instance; src/appInstances.ts is the only construction site, importing the core class as the module-local alias FileHandlerManagerClass so the exported instance keeps the legacy name FileHandlerManager
+- [Phase 4]: Core owns DataHandler, JsonDataHandler, BinaryFileHandler and the resource combinators, exported from the root '.' barrel; Json2xDataHandler/ScriptDataHandler deliberately stay in the editor and inherit DataHandler through the shim
+- [Phase 4]: MemoryFsPort is a flat, seven-operation FsPort test double with fewer declared parameters than FsPort (arity compatibility) to avoid new no-unused-vars warnings; it deliberately does not reproduce MemoryFileSystem's nested promises/callback shape (D-14)
+- [Phase 4]: RES-06 liveness is proven by capturing the derived content callable before a mutation and re-invoking the SAME callable afterwards, for both the file layer and the DataHandler/JsonDataHandler data layer
 
 ### Pending Todos
 
@@ -101,6 +107,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-09-24T06:00:05.519Z
-Stopped at: Completed 04-01-PLAN.md
+Last session: 2026-09-24T06:53:52.260Z
+Stopped at: Completed 04-02-PLAN.md
 Resume file: None
