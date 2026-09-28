@@ -36,6 +36,8 @@ jobs:
 
       - run: node scripts/verify/editorShims.js
 
+      - run: node scripts/verify/coreEngineNeutral.js
+
   typecheck:
     runs-on: ubuntu-latest
     permissions:
