@@ -209,9 +209,9 @@ Plans:
 - [ ] 05.1-01-PLAN.md — 底层撤销契约：`IEditorOperation` / `IUndoManager` 及历史类型（接口定义）
 - [ ] 05.1-02-PLAN.md — 包内默认实现接口：`IPatchableResource` / `IResourceView` / `ILoadableResource` / `Action`
 
-**Wave 2 — 两层目录与门禁**
+**Wave 2 — 分层门禁（不搬文件夹：底层＝现有 `lib/kernel/**` + `lib/ports/**`）**
 
-- [ ] 05.1-03-PLAN.md — 内核 + 端口搬进 `lib/core/`，机器门禁守住「底层不依赖上层、不读文件」
+- [ ] 05.1-03-PLAN.md — 加机器门禁守住「底层（kernel+ports）不依赖上层、不读文件」；内核三接口收进 `lib/kernel/types.ts`
 
 **Wave 3 — 撤销重构 + 编辑器机械跟随（同一波；wave 末全仓保持可编译/测试绿）**
 
