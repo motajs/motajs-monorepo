@@ -1,14 +1,13 @@
 # Phase 5: Engine Adapter Skeleton & Resource Descriptors — INTERFACE-NAME.md
 
-> **Status: PENDING CONFIRMATION (materialized 2026-09-28, pre-execution).**
+> **Status: CONFIRMED (2026-09-28).** All names below were confirmed by the user before any code landed.
 > Per `AGENTS.md` §Project Rules, every important name (file / interface / method / function / type /
 > package / exported symbol) is reported here **with its purpose** and confirmed **before** it is written
 > into code. Function-body locals are exempt.
 >
-> **This file is a pre-execution planning artifact.** It was authored during planning (revision), so the
-> naming gate precedes execution. The names below are **provisional** until the user approves them at the
-> per-plan briefing gate; the executor of 05-01 verifies this file (does not create it) and must not land
-> any name that is not confirmed here.
+> **This file is a pre-execution planning artifact.** It was authored during planning (revision) so the
+> naming gate precedes execution; the user confirmed all names on 2026-09-28. The executor of 05-01
+> verifies this file (does not create it) and must not land any name that is not listed here.
 >
 > Sections: a **File-name convention** note and **one section per Plan** (05-01 … 05-04). Methods are
 > written `ClassName.methodName`.
