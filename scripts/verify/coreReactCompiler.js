@@ -26,7 +26,7 @@ const REPO_ROOT = path.resolve(import.meta.dirname, '..', '..');
 const EDITOR_DIR = path.join(REPO_ROOT, 'packages', 'apps', 'editor');
 
 /** 与编辑器构建同源：root 相对路径，便于 transformRequest 直接接受。 */
-const PROBE_MODULE = '/packages/libs/editor-core/lib/react/CoreProbe.tsx';
+const PROBE_MODULE = '/packages/libs/editor-impl/lib/react/CoreProbe.tsx';
 
 /** React Compiler 的两个标记：运行时导入 + memo-cache 调用。 */
 const RUNTIME_MARKER = /react\/compiler-runtime/;

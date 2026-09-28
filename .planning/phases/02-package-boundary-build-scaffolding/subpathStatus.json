@@ -1,42 +1,59 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "phase": "02-package-boundary-build-scaffolding",
-  "note": "Phase 3 起 `.` 不再是空 barrel：它再导出内核（`lib/kernel/*`）与四个 port（`lib/ports/*`）；Phase 4 又让它汇总搬入的资源层（`lib/resources/*`，含 RES-02 的 `ResourceRegistry`）与编辑层（`lib/edit/*`）的全部公开名，故其 content 为 `kernel+resources+edit-exports`。`lib/resources`/`lib/edit` 是包内目录、不新增对外 subpath。`./react` 携带探针，是 Phase 2 的构建管线脚手架，Phase 4 起由真实 React 层替换；其余五个能力 shell（`./code`、`./table`、`./map`、`./asset`、`./shell`）仍是惰性空 barrel。",
-  "subpaths": {
-    ".": {
-      "target": "./lib/index.ts",
-      "content": "kernel+resources+edit-exports",
-      "carriesProbe": false
+  "note": "Phase 05.1-03 把默认实现整体拆入新包 `@motajs/editor-impl`，本记录随之升为 v2 的两包形态：`@motajs/editor-core` 只剩 `.`（内核 + 端口 + 撤销契约类型，content `kernel+ports+undo-exports`）；`@motajs/editor-impl` 拿到七个 subpath，其 `.` 汇总资源层与编辑层的公开名（content `resources+edit+table-exports`），`./react` 携带 React 探针，其余五个能力/表格 shell 仍是惰性空 barrel。`coreExports.js` 只读 editor-core 条目、`implExports.js` 只读 editor-impl 条目，两者都不跨读、也不从 JSON 反读期望值。",
+  "packages": {
+    "@motajs/editor-core": {
+      "dir": "packages/libs/editor-core",
+      "note": "底层：只定义接口（`lib/ports/**`）与做管理（`lib/kernel/**`）。`. ` 是唯一可导入 subpath；撤销契约类型来自 `lib/kernel/types.ts`。",
+      "subpaths": {
+        ".": {
+          "target": "./lib/index.ts",
+          "content": "kernel+ports+undo-exports",
+          "carriesProbe": false
+        }
+      }
     },
-    "./code": {
-      "target": "./lib/code/index.ts",
-      "content": "empty-barrel",
-      "carriesProbe": false
-    },
-    "./table": {
-      "target": "./lib/table/index.ts",
-      "content": "empty-barrel",
-      "carriesProbe": false
-    },
-    "./map": {
-      "target": "./lib/map/index.ts",
-      "content": "empty-barrel",
-      "carriesProbe": false
-    },
-    "./asset": {
-      "target": "./lib/asset/index.ts",
-      "content": "empty-barrel",
-      "carriesProbe": false
-    },
-    "./shell": {
-      "target": "./lib/shell/index.ts",
-      "content": "empty-barrel",
-      "carriesProbe": false
-    },
-    "./react": {
-      "target": "./lib/react/index.ts",
-      "content": "probe",
-      "carriesProbe": true
+    "@motajs/editor-impl": {
+      "dir": "packages/libs/editor-impl",
+      "note": "默认实现层：资源层（`lib/resources/**`）、编辑层（`lib/edit/**`）、表格与四种编辑能力（`code`/`map`/`asset`/`shell`）与 `react` 层。依赖底层 `@motajs/editor-core`，方向不可反转。",
+      "subpaths": {
+        ".": {
+          "target": "./lib/index.ts",
+          "content": "resources+edit+table-exports",
+          "carriesProbe": false
+        },
+        "./code": {
+          "target": "./lib/code/index.ts",
+          "content": "empty-barrel",
+          "carriesProbe": false
+        },
+        "./table": {
+          "target": "./lib/table/index.ts",
+          "content": "empty-barrel",
+          "carriesProbe": false
+        },
+        "./map": {
+          "target": "./lib/map/index.ts",
+          "content": "empty-barrel",
+          "carriesProbe": false
+        },
+        "./asset": {
+          "target": "./lib/asset/index.ts",
+          "content": "empty-barrel",
+          "carriesProbe": false
+        },
+        "./shell": {
+          "target": "./lib/shell/index.ts",
+          "content": "empty-barrel",
+          "carriesProbe": false
+        },
+        "./react": {
+          "target": "./lib/react/index.ts",
+          "content": "probe",
+          "carriesProbe": true
+        }
+      }
     }
   }
 }
