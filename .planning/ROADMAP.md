@@ -178,7 +178,17 @@ Plans:
   4. A fake non-mota "engine B" adapter drives the hook contract end to end with non-mota resources.
   5. No game identifier (tower/floor/loc/autopass/autotile/idnum/airwall/commonEvent) remains in core source, enforced by a mechanical grep/lint gate.
 
-**Plans**: TBD
+**Plans**: 4 plans (⚠ CONTEXT.md 05 revises the original PORT-04/06/07 wording — see 05-CONTEXT.md D-14; ROADMAP text intentionally unedited)
+Plans:
+**Wave 1**
+- [ ] 05-01-PLAN.md — Core adapter contract: generic `ResourceDescriptor`, `defineEngine` with aggregated validation, `resolvePreloadOrder`, widened `EngineAdapter`, barrel + surface tests, INTERFACE-NAME/COVERAGE artifacts (PORT-03, PORT-04)
+
+**Wave 2** *(blocked on 05-01)*
+- [ ] 05-02-PLAN.md — Two-polarity game-identifier gate `scripts/verify/coreEngineNeutral.js` wired into the existing `lint` job (PORT-06)
+- [ ] 05-03-PLAN.md — File-backed `FileResource` class + fake non-mota engine-B fixture driving defineEngine→registry→preload order end to end (PORT-04, PORT-08)
+
+**Wave 3** *(blocked on 05-01 + 05-03)*
+- [ ] 05-04-PLAN.md — mota adapter in `src/adapter/`: all 10 paths as descriptors, parameterized floor factory, adapter-owned handlers, migrations stay adapter-side (PORT-03, PORT-04, PORT-05, PORT-07)
 
 ### Phase 6: Fixed Shell + Slots
 
