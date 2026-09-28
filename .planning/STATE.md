@@ -3,17 +3,17 @@ gsd_state_version: "1.0"
 current_phase: 5
 current_phase_name: engine-adapter-skeleton-resource-descriptors
 current_plan: 4
-status: executing
-stopped_at: Completed 05-03-PLAN.md
-last_updated: "2026-09-28T05:24:44.593Z"
+status: verifying
+stopped_at: Completed 05-04-PLAN.md
+last_updated: "2026-09-28T05:49:56.573Z"
 last_activity: 2026-09-24
 last_activity_desc: Phase 4 complete, transitioned to Phase 5
-state_head: d2726362b0028673c7a33f584e14a9d02485a91e
+state_head: 310b8345eda0537a875c1dabc7c33e3066286b74
 progress:
   total_phases: 12
   completed_phases: 0
   total_plans: 25
-  completed_plans: 24
+  completed_plans: 25
   percent: 0
 ---
 
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-09-24)
 Phase: 5 (engine-adapter-skeleton-resource-descriptors) — IN PROGRESS
 Current Plan: 4
 Total Plans in Phase: 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-09-24 — Phase 4 complete, transitioned to Phase 5
 
 Progress: [░░░░░░░░░░] 0%
@@ -70,6 +70,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 05 P01 | 17 | 3 tasks | 5 files |
 | Phase 05 P02 | 6 | 2 tasks | 2 files |
 | Phase 5 P03 | 16min | 2 tasks | 6 files |
+| Phase 5 P04 | 10 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -109,6 +110,11 @@ Recent decisions affecting current work:
 - [Phase 5]: 05-03: FileResource delegates load/reload to FileHandlerManager so the existing load-lock/refetch guarantees are not duplicated; it holds no cache (T-05-10).
 - [Phase 5]: 05-03: engine B proves the descriptor is source-agnostic — engineB.notes is a non-file computedResource whose load performs zero FsPort reads; file-backed descriptors use core's generic JsonDataHandler (PORT-08/PORT-05 boundary).
 - [Phase 5]: 05-03: the '.' subpath content label stays kernel+resources+edit-exports (FileResource value export fits it), so coreExports.js/subpathStatus.json are deliberately untouched.
+- [Phase 5]: 05-04: The ten mota paths are nine fixed descriptors on motaEngine (defineEngine({ id: 'mota-js', ... })) plus the parameterized motaFloorDescriptor(floorId) factory; the floor family is deliberately not a static entry of motaEngine.resources (D-04/D-07)
+- [Phase 5]: 05-04: motaResources.ts DELIBERATELY duplicates the project-data path/var-name literals because D-01 forbids editing projectData; banner-documented in the module header and removed in Phase 11 (Research A6)
+- [Phase 5]: 05-04: mota.events uses the editor-owned Json2xDataHandler with var name events_c12a15a8_c380_4b28_8144_256cba95f760; mota.editorConfig is the only lazy descriptor and uses core's generic JsonDataHandler (PORT-05 boundary)
+- [Phase 5]: 05-04: motaFloorDescriptor asserts the derived mota.floor.<floorId> id with the shared isValidResourceId and throws MotaFloorIdError on a grammar violation — the registry grammar is never widened (Open Question 1 deferred to Phase 11)
+- [Phase 5]: 05-04: the adapter is dead code — no entry point imports src/adapter/, projectData.ts is byte-identical, and the editor artifact is unchanged (D-01)
 
 ### Pending Todos
 
@@ -130,6 +136,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-09-28T05:24:44.409Z
-Stopped at: Completed 05-03-PLAN.md
+Last session: 2026-09-28T05:49:56.358Z
+Stopped at: Completed 05-04-PLAN.md
 Resume file: None

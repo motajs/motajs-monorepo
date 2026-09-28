@@ -22,9 +22,9 @@
 - [x] **PORT-02**: core 无 default `Fs`、不解析 DOM/环境、不直接 fetch；由 composition root 注入
 - [x] **PORT-03**: `defineEngine({...})` 在适配器侧生成引擎描述；core 只认逻辑 id，不构造 `project/...` 路径、不检查扩展名
 - [x] **PORT-04**: 10 条硬编码路径变为 `ResourceDescriptor`（逻辑 id、opaque path key、format id、handler、preload 依赖）
-- [ ] **PORT-05**: `Json2xDataHandler` 与各领域 `*DataHandler` 移入适配器；core 仅保留通用 `JsonDataHandler`
+- [x] **PORT-05**: `Json2xDataHandler` 与各领域 `*DataHandler` 移入适配器；core 仅保留通用 `JsonDataHandler`
 - [x] **PORT-06**: 游戏词汇（tower/floor/loc/autopass/autotile/idnum/airwall/commonEvent 等）经 `LabelOverrides` 移出 core
-- [ ] **PORT-07**: 引擎格式迁移经 `MigrationHook` 移出 core
+- [x] **PORT-07**: 引擎格式迁移经 `MigrationHook` 移出 core
 - [x] **PORT-08**: 建立非 mota 的 fake「engine B」适配器，端到端驱动 hook 契约
 
 ### Resource & Edit
@@ -165,9 +165,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PORT-02 | 3 | Complete |
 | PORT-03 | 5 | Complete |
 | PORT-04 | 5 | Complete |
-| PORT-05 | 5 | Pending |
+| PORT-05 | 5 | Complete |
 | PORT-06 | 5 | Complete |
-| PORT-07 | 5 | Pending |
+| PORT-07 | 5 | Complete |
 | PORT-08 | 5 | Complete |
 | RES-01 | 4 | Complete |
 | RES-02 | 4 | Complete |
