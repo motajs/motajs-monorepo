@@ -135,7 +135,9 @@
 | `packages/libs/editor-core/lib/kernel/types.ts` | 文件（改） | 底层的唯一对外类型出口：Plan 01 的撤销契约类型 + 本计划并入的内核三接口（`CapabilityRegistrar`/`EditorCoreConfig`/`EditorCore`）。 |
 | `packages/libs/editor-core/lib/ports/engine.ts` | 文件（改） | 引擎适配器契约，**留在原地**；本计划把逻辑 id 谓词 `isValidResourceId` 连同 `LOGICAL_ID_PATTERN`/`RESERVED_IDS`/原型污染防线归它自持，并让 `editor-impl` 的 `lib/resources/resourceRegistry.ts` 反向 import（消除倒挂）。 |
 | `packages/libs/editor-core/lib/**` | 依赖规则（现有目录） | 底层 = 整个 `editor-core` 包；其中任何文件都不得 import `editor-impl`。 |
-| `editor-core-must-not-import-editor-impl` | dependency-cruiser 规则名 | `from: ^packages/libs/editor-core/lib/.+`，`to: ^packages/libs/editor-impl/lib/.+`，`severity: 'error'`；真实树 0 违规、合成违规必红（两极性）。取代旧的 `kernel-must-not-import-capabilities` 与 `bottom-layer-must-not-import-upper-layers`（它们针对「一个包内分层」，已不适用）。 |
+| `editor-core-must-not-import-editor-impl` | dependency-cruiser 规则名 | `from: ^packages/libs/editor-core/lib/.+`，`to: ^packages/libs/editor-impl/lib/.+`，`severity: 'error'`；真实树 0 违规、合成违规必红（两极性）。取代旧的 `kernel-must-not-import-capabilities`（针对「一个包内分层」，已不适用）。 |
+| `editor-impl-root-barrel-must-not-import-capabilities` | dependency-cruiser 规则名 | `from: ^packages/libs/editor-impl/lib/index\.ts$`，`to: ^packages/libs/editor-impl/lib/(code\|map\|asset\|shell\|react)/.+`，`severity: 'error'`；承接被删的 `kernel-must-not-import-capabilities` 对「根 barrel 不得 import 能力 subpath」的守卫（根 barrel 合法地再导出 `./table`，故不禁 `table`）。 |
+| `packages/libs/editor-core/lib/ports/engine.ts` 的 `ResourceDescriptor<TView>` | 接口（改语义） | 底层描述符的 `create: (deps) => TView \| Promise<TView>`：`TView` 是**视图类型**、由消费方指定，core 不假定其形状（D-03）；`ResourceDependencies.fileHandlers` 收紧为 core 自持的 `unknown` 槽位，形状由默认实现层收窄。名字不变，仅去实现化（Plan 03 落地）。 |
 | `editor-impl-must-not-import-consumers` 意图并入 `core-must-not-import-consumers` | dependency-cruiser 规则（改） | 把 `core-must-not-import-consumers` 的 `from` 扩到覆盖 `editor-impl/lib/**`：两个包都不得 import editor/宿主/引擎。 |
 | `capabilities-must-not-import-each-other` / `react-and-shell-must-not-import-capabilities` / `resources-edit-must-not-import-capabilities` | dependency-cruiser 规则（改） | `from` 由 `editor-core/lib/...` 改指 `editor-impl/lib/...`（能力目录已迁入新包）。 |
 | `bottom-layer-io-free` | 门禁断言名（`coreBoundaries.js`） | 底层（`editor-core/lib/**`）不得出现文件读写调用（`this.fs`、`.readFile(` 等），且必须有两极性证明。 |
@@ -145,7 +147,7 @@
 | `scripts/verify/implExports.js` | 文件（新门禁脚本） | 新包 `editor-impl` 的 PKG-01/PKG-02 结构自检：`private`/`type`/`sideEffects`、恰好七个 subpath（`.`/`./code`/`./table`/`./map`/`./asset`/`./shell`/`./react`）、9 peer（`catalog:default`、Semi optional）、脚本恰好 `typecheck`+`test`、subpathStatus 同步。前缀 `implExports`。 |
 | `packages/libs/editor-core/package.json` | 文件（改） | 只保留一个 subpath `.`；新增 `dependencies` 里**不**含 `editor-impl`（方向约束）。 |
 | `.planning/phases/02-package-boundary-build-scaffolding/subpathStatus.json` | 文件（改） | 拆成两份记录：`editor-core` 只剩 `.`；`editor-impl` 七个 subpath 各一条。 |
-| `packages/apps/editor/panda.config.ts` | 文件（改） | `include` 由 `../../libs/editor-core/lib/**` 改为 `../../libs/editor-impl/lib/**`（`CoreProbe.tsx` 已随 `lib/react/` 迁入新包）。 |
+| `packages/apps/editor/panda.config.ts` | 文件（改，**Plan 08**） | `include` 由 `../../libs/editor-core/lib/**` 改为 `../../libs/editor-impl/lib/**`（`CoreProbe.tsx` 已随 `lib/react/` 迁入新包）。因物理上属 `@motajs/editor`，按 D-18「编辑器改动集中在一个计划」放在 Plan 08，不在 Plan 03。 |
 | `scripts/verify/coreReactCompiler.js` 的 `PROBE_MODULE` | 常量（改） | 由 `/packages/libs/editor-core/lib/react/CoreProbe.tsx` 改为 `/packages/libs/editor-impl/lib/react/CoreProbe.tsx`。 |
 | `packages/libs/editor-core/lib/kernel/undoManager.ts` | 文件（新） | 撤销操作栈管理器的实现（**Plan 04 落地**）：串行队列 + 容量 100 + 无快照。 |
 | `.dependencyCruiser.cjs` | 文件（改） | 见上各条规则改动。 |
@@ -240,6 +242,8 @@
 | 名字 | 种类 | 它是干什么的 |
 |------|------|--------------|
 | `packages/apps/editor/package.json` | 文件（改） | 新增 `@motajs/editor-impl: "workspace:*"` 依赖（编辑器同时依赖两个包）。 |
+| `packages/apps/editor/panda.config.ts` | 文件（改） | `include` 由 `../../libs/editor-core/lib/**` 改为 `../../libs/editor-impl/lib/**`（`CoreProbe.tsx` 已迁入 impl）；从 Plan 03 移来，使 D-18「编辑器改动集中在一个计划」成立。 |
+| `packages/apps/editor/src/adapter/motaFloor.ts` 的返回类型 | 类型标注（改） | `ResourceDescriptor<FloorData>` → `ResourceDescriptor<LoadableResource<FloorData>>`：core 的 `ResourceDescriptor<TView>` 现在是**视图类型**实参（Plan 03 去实现化），唯一必须跟随的编辑器类型标注。 |
 | `packages/apps/editor/src/App.tsx` | 文件（改） | `CoreProbe` 的 import 由 `@motajs/editor-core/react` 改指 `@motajs/editor-impl/react`。 |
 | `packages/apps/editor/src/__tests__/editorCoreResolution.test.tsx` | 文件（改） | 同步 `CoreProbe` 的 import 说明符改指 `@motajs/editor-impl/react`。 |
 | `packages/apps/editor/src/fs/*.ts`（12 个 shim） | 文件（改） | 转发 `resources`/`edit` 符号的 shim 说明符由 `@motajs/editor-core` 改指 `@motajs/editor-impl`。 |
