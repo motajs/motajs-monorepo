@@ -79,18 +79,19 @@ const rootConfig = tseslint.config(
 );
 
 /**
- * Block A —— PORT-02（D-15）：core 不得直接触达平台（网络 / DOM / 环境变量）。
+ * Block A —— PORT-02（D-15）：底层与默认实现层都不得直接触达平台（网络 / DOM / 环境变量）。
  *
- * `tsconfig.lib.base.json` 开着 `DOM`/`DOM.Iterable`，所以 `window`/`document`/`fetch` 在 core 里
+ * `tsconfig.lib.base.json` 开着 `DOM`/`DOM.Iterable`，所以 `window`/`document`/`fetch` 在核心代码里
  * 类型检查完全通过——`tsc` 无法守住 PORT-02，这条作用域规则是唯一的静态强制。适配器**可以**用
- * `fetch`（HTTP 传输是它的职责），因此本块只匹配 `packages/libs/editor-core/**`。
+ * `fetch`（HTTP 传输是它的职责），因此本块只匹配底层与默认实现两个包
+ * （`packages/libs/{editor-core,editor-impl}/**`）。
  *
  * 本块**刻意不写 `ignores`**：`lib/__tests__/**` 也要覆盖——测试里出现被禁全局同样是真问题。
  * 而 `lib/kernel/core.ts`（组合根）必须继续受 PORT-02 约束，所以它**不能**被本块忽略，
  * 组合根的豁免只属于下面的 Block B。
  */
 const corePort02Config = {
-  files: ['packages/libs/editor-core/**/*.{ts,tsx}'],
+  files: ['packages/libs/{editor-core,editor-impl}/**/*.{ts,tsx}'],
   rules: {
     'no-restricted-globals': [
       'error',
@@ -140,29 +141,30 @@ const corePort02Config = {
  * Block B —— module state（KERN-06 的结构半边 / D-10 + D-22 细化）：core 生产源码不得有模块级可变绑定。
  *
  * `ignores` 恰好三项，都是有意的：
- *   - `lib/kernel/core.ts` —— 组合根拥有拆除栈与 `disposed` 标志，是 D-10 唯一豁免的生产文件；
- *   - 全部 core 测试树（顶层 `lib/__tests__/**` 以及 Phase 4 新增的 `lib/resources/__tests__/**`、
- *     `lib/edit/__tests__/**`，外加任意 `*.test.{ts,tsx}`）—— D-22 的有意识细化：测试不随产品发布，
- *     且合法地需要模块级 fixture 表。Phase 4 把测试树从顶层扩到各层级的 `__tests__`，故忽略面同步放宽；
- *     `scripts/verify/coreModuleState.js` 会采样一个**非** `lib/__tests__` 的测试文件，证明放宽后的豁免真的生效。
+ *   - `lib/kernel/core.ts` —— 组合根拥有拆除栈与 `disposed` 标志，是 D-10 唯一豁免的生产文件
+ *     （它固定在底层 editor-core；默认实现包没有组合根）；
+ *   - 两个包的全部测试树（顶层测试目录以及各层级嵌套的测试目录，外加任意
+ *     `*.test.{ts,tsx}`）—— D-22 的有意识细化：测试不随产品发布，且合法地需要模块级 fixture 表。
+ *     拆分后默认实现包（editor-impl）的测试同样豁免；
+ *     `scripts/verify/coreModuleState.js` 会采样一个**非**顶层 `lib/__tests__` 的测试文件，证明放宽后的豁免真的生效。
  *     （测试侧的纪律作为约定保留，但不受机器强制；Block A 仍然覆盖这些文件。）
  *
  * ⚠️ 两个 flat-config 块的重复**不得**被「整理」掉。flat config 对**数组型**规则不做跨块合并——
  * 后匹配的块会**整体替换**先匹配块的 options。因此：
  *   - `import.meta.env` 选择器必须同时出现在 Block A 与 Block B；
  *   - Block B 必须携带**完整**的 module-state 选择器集合。
- * 否则：除 `core.ts` 外的每个 core 文件都会同时命中两块，`import.meta.env` 选择器会被 Block B 覆盖掉；
- * `core.ts` 只命中 Block A（globals/properties/env 选择器）；`lib/__tests__/**` 也只命中 Block A。
+ * 否则：除 `core.ts` 外的每个核心文件都会同时命中两块，`import.meta.env` 选择器会被 Block B 覆盖掉；
+ * `core.ts` 只命中 Block A（globals/properties/env 选择器）；各测试树也只命中 Block A。
  *
  * `Object.freeze({...})` / `{...} as const` 结构上豁免：`>` 子组合子只匹配**直接子节点**，
  * 而这两种写法里的 `ObjectExpression`/`ArrayExpression` 的父节点是 `CallExpression`/`TSAsExpression`。
  */
 const coreModuleStateConfig = {
-  files: ['packages/libs/editor-core/**/*.{ts,tsx}'],
+  files: ['packages/libs/{editor-core,editor-impl}/**/*.{ts,tsx}'],
   ignores: [
     'packages/libs/editor-core/lib/kernel/core.ts',
-    'packages/libs/editor-core/lib/**/__tests__/**',
-    'packages/libs/editor-core/lib/**/*.test.{ts,tsx}',
+    'packages/libs/{editor-core,editor-impl}/lib/**/__tests__/**',
+    'packages/libs/{editor-core,editor-impl}/lib/**/*.test.{ts,tsx}',
   ],
   rules: {
     'no-restricted-syntax': [

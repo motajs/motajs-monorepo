@@ -39,9 +39,9 @@ import process from 'node:process';
 
 const REPO_ROOT = path.resolve(import.meta.dirname, '..', '..');
 
-/** 扫描范围根（D-12）：只扫 core 生产源码，排除测试树。 */
-const CORE_LIB = 'packages/libs/editor-core/lib';
-const CORE_LIB_ABS = path.join(REPO_ROOT, CORE_LIB);
+/** 扫描范围根（D-12）：扫描底层与默认实现两个包的生产源码（合并后仍 ≥ 下界），排除测试树。 */
+const CORE_LIBS = ['packages/libs/editor-core/lib', 'packages/libs/editor-impl/lib'];
+const CORE_LIB_ABS = CORE_LIBS.map((lib) => path.join(REPO_ROOT, lib));
 
 /** 完整术语表（PORT-06 + PORT-07 词汇半边），匹配大小写敏感。 */
 const BANNED_TERMS = [
@@ -66,8 +66,8 @@ const FLOOR_EXEMPT_PRECEDING_CHAR = '.';
  */
 const MIN_EXPECTED_SOURCES = 30;
 
-/** 两极性 fixture 的路径（脚本创建、脚本删除，绝不入库）。 */
-const PROBE_FIXTURE_PATH = `${CORE_LIB}/__engineNeutralProbe__.ts`;
+/** 两极性 fixture 的路径（脚本创建、脚本删除，绝不入库）；落在底层（editor-core）。 */
+const PROBE_FIXTURE_PATH = `${CORE_LIBS[0]}/__engineNeutralProbe__.ts`;
 const PROBE_FIXTURE_ABS = path.join(REPO_ROOT, PROBE_FIXTURE_PATH);
 
 /** (b) 的 fixture 源码：每条被禁术语各出现一次，外加 clean 用例。 */
@@ -192,6 +192,13 @@ function collectSources(dir) {
   return results;
 }
 
+/** 合并两个包的 lib 生产源码（逐包 collectSources 后拼接，保持确定性排序）。 */
+function collectAllSources() {
+  return CORE_LIB_ABS.flatMap((dir) => collectSources(dir)).sort((left, right) =>
+    left.relPath.localeCompare(right.relPath),
+  );
+}
+
 /**
  * 扫描**原始**源码（保留注释，Pitfall D）的每一条被禁术语，返回按 `relPath → line → term` 稳定排序的
  * `{ relPath, term, line }` 列表（确定性输出，失败信息可复读）。大小写敏感；`floor` 命中的前一个字符
@@ -224,9 +231,9 @@ function findViolations(sources) {
 let scannedFileCount = 0;
 
 function checkRealTree() {
-  const sources = collectSources(CORE_LIB_ABS);
+  const sources = collectAllSources();
   scannedFileCount = sources.length;
-  check(sources.length > 0, `没有扫描到任何 ${CORE_LIB}/**/*.{ts,tsx}（排除 __tests__）—— 门禁无从生效`);
+  check(sources.length > 0, `没有扫描到任何 ${CORE_LIBS.join('、')}/**/*.{ts,tsx}（排除 __tests__）—— 门禁无从生效`);
   check(
     sources.length >= MIN_EXPECTED_SOURCES,
     `真实树只扫描到 ${sources.length} 个生产文件，低于非空转下界 ${MIN_EXPECTED_SOURCES} —— 扫描范围可能被削弱`,
@@ -257,7 +264,7 @@ function checkTwoPolarity() {
   fs.writeFileSync(PROBE_FIXTURE_ABS, fixture.source, 'utf8');
   let violations = [];
   try {
-    violations = findViolations(collectSources(CORE_LIB_ABS));
+    violations = findViolations(collectAllSources());
   } finally {
     fs.rmSync(PROBE_FIXTURE_ABS, { force: true });
   }
@@ -301,9 +308,11 @@ function checkTwoPolarity() {
 // ==================== 入口 ====================
 
 function main() {
-  if (!fs.existsSync(CORE_LIB_ABS)) {
-    console.error(`coreEngineNeutral: 找不到 ${CORE_LIB} —— 无法验证门禁`);
-    process.exit(1);
+  for (const [index, abs] of CORE_LIB_ABS.entries()) {
+    if (!fs.existsSync(abs)) {
+      console.error(`coreEngineNeutral: 找不到 ${CORE_LIBS[index]} —— 无法验证门禁`);
+      process.exit(1);
+    }
   }
 
   checkRealTree();

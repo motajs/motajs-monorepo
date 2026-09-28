@@ -43,8 +43,10 @@ const RESTRICTED_RULES = new Set(['no-restricted-syntax', 'no-restricted-globals
 /** error 级严重度。只有它会让 `pnpm lint` 非零退出。 */
 const ERROR_SEVERITY = 2;
 
-const CORE_LIB = 'packages/libs/editor-core/lib';
-const CORE_COMPOSITION_ROOT = `${CORE_LIB}/kernel/core.ts`;
+/** 门禁扫描范围：底层与默认实现两个包的 lib（模块级可变绑定对两包都禁）。 */
+const CORE_LIBS = ['packages/libs/editor-core/lib', 'packages/libs/editor-impl/lib'];
+/** 组合根仍是底层（editor-core）的 `lib/kernel/core.ts`。 */
+const CORE_COMPOSITION_ROOT = `${CORE_LIBS[0]}/kernel/core.ts`;
 
 /** 被禁的六个全局：每个必须在合成 fixture 上逐行命中。 */
 const BANNED_GLOBALS = ['fetch', 'window', 'document', 'navigator', 'localStorage', 'XMLHttpRequest'];
@@ -60,9 +62,9 @@ const MODULE_STATE_SELECTORS = [
 const ENV_SELECTOR = 'MemberExpression[object.type="MetaProperty"][property.name="env"]';
 
 /** (b) 模块状态 fixture 的路径（脚本创建、脚本删除，绝不入库）。 */
-const MODULE_STATE_FIXTURE = `${CORE_LIB}/__moduleStateProbe__.ts`;
+const MODULE_STATE_FIXTURE = `${CORE_LIBS[0]}/__moduleStateProbe__.ts`;
 /** (c) PORT-02 fixture 的路径（脚本创建、脚本删除，绝不入库）。 */
-const PORT02_FIXTURE = `${CORE_LIB}/__port02Probe__.ts`;
+const PORT02_FIXTURE = `${CORE_LIBS[0]}/__port02Probe__.ts`;
 
 /** (b) 的 fixture 源码：模块级可变绑定 + 两个结构性豁免。 */
 const MODULE_STATE_LINES = [
@@ -244,13 +246,13 @@ function selectorsOf(rules) {
 
 /** 找 `lib/__tests__/**` 下的第一个测试文件（D-22 的排除对象）。 */
 function firstTestFile() {
-  const testsDir = path.join(REPO_ROOT, CORE_LIB, '__tests__');
+  const testsDir = path.join(REPO_ROOT, CORE_LIBS[0], '__tests__');
   if (!fs.existsSync(testsDir)) return null;
   const entries = fs
     .readdirSync(testsDir)
     .filter((name) => /\.test\.tsx?$/.test(name))
     .sort();
-  return entries.length > 0 ? `${CORE_LIB}/__tests__/${entries[0]}` : null;
+  return entries.length > 0 ? `${CORE_LIBS[0]}/__tests__/${entries[0]}` : null;
 }
 
 /**
@@ -261,7 +263,7 @@ function firstTestFile() {
  * 新测试树的样本（Pitfall 4：豁免必须被证明，而非假设）。
  */
 function firstNestedTestFile() {
-  const topLevelTestsDir = path.join(REPO_ROOT, CORE_LIB, '__tests__');
+  const topLevelTestsDirs = new Set(CORE_LIBS.map((lib) => path.join(REPO_ROOT, lib, '__tests__')));
   const found = [];
   const walk = (dir) => {
     if (!fs.existsSync(dir)) return;
@@ -269,12 +271,12 @@ function firstNestedTestFile() {
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) {
         walk(full);
-      } else if (/\.test\.tsx?$/.test(entry.name) && path.dirname(full) !== topLevelTestsDir) {
+      } else if (/\.test\.tsx?$/.test(entry.name) && !topLevelTestsDirs.has(path.dirname(full))) {
         found.push(relative(full));
       }
     }
   };
-  walk(path.join(REPO_ROOT, CORE_LIB));
+  for (const lib of CORE_LIBS) walk(path.join(REPO_ROOT, lib));
   found.sort();
   return found[0] ?? null;
 }
@@ -282,12 +284,12 @@ function firstNestedTestFile() {
 // ==================== (a) 真实树 ====================
 
 function checkRealTree() {
-  const run = runEslintJson([CORE_LIB]);
+  const run = runEslintJson(CORE_LIBS);
   if (run.error) {
     check(false, run.error);
     return;
   }
-  check(run.fileCount > 0, `真实树 lint 没有覆盖任何文件（目标 ${CORE_LIB}）—— 门禁无从生效`);
+  check(run.fileCount > 0, `真实树 lint 没有覆盖任何文件（目标 ${CORE_LIBS.join(' 与 ')}）—— 门禁无从生效`);
   const restricted = run.messages.filter((message) => RESTRICTED_RULES.has(message.ruleId));
   const restrictedErrors = restricted.filter((message) => message.severity === ERROR_SEVERITY);
   check(
@@ -395,12 +397,12 @@ function checkCompositionRootClean() {
 function checkResolvedConfigScoping() {
   const testsFile = firstTestFile();
   if (testsFile === null) {
-    check(false, `找不到 ${CORE_LIB}/__tests__/*.test.ts(x) —— 无法断言测试目录的 module-state 豁免`);
+    check(false, `找不到 ${CORE_LIBS[0]}/__tests__/*.test.ts(x) —— 无法断言测试目录的 module-state 豁免`);
   }
   const nestedTestsFile = firstNestedTestFile();
   check(
     nestedTestsFile !== null,
-    `找不到 ${CORE_LIB}/**/__tests__/*.test.ts(x) 中非 lib/__tests__ 的样本 —— 无法证明放宽后的测试树豁免`,
+    `找不到两个包 lib/**/__tests__/*.test.ts(x) 中非顶层 __tests__ 的样本 —— 无法证明放宽后的测试树豁免`,
   );
   const samples = [
     [CORE_COMPOSITION_ROOT, '组合根'],
