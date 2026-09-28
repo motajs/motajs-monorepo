@@ -49,6 +49,7 @@ export type { PersistFailure } from './resources/persistenceMonitor';
 export { FileHandler } from './resources/fileHandler';
 export type { FileHandlerDependencies } from './resources/fileHandler';
 export { FileHandlerManager } from './resources/fileHandlerManager';
+export { FileResource } from './resources/fileResource';
 export { DataHandler } from './resources/dataHandler';
 export { JsonDataHandler } from './resources/jsonDataHandler';
 export { BinaryFileHandler } from './resources/binaryFileHandler';
