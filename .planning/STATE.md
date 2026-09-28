@@ -2,18 +2,18 @@
 gsd_state_version: "1.0"
 current_phase: "05.1"
 current_phase_name: editor-core
-current_plan: 2
+current_plan: 3
 status: executing
-stopped_at: Completed 05.1-02-PLAN.md
-last_updated: "2026-09-28T12:07:03.002Z"
+stopped_at: Completed 05.1-03-PLAN.md
+last_updated: "2026-09-28T14:04:35.424Z"
 last_activity: 2026-09-28
 last_activity_desc: Phase 05.1 plan 01 complete (editor-core undo contract types)
-state_head: a933bfb1d0b4f27d2d8787b47a0a2453ed488b8d
+state_head: 5d078c4b710f2a98b134e9d5fce568ae5eab1c11
 progress:
   total_phases: 13
   completed_phases: 0
   total_plans: 33
-  completed_plans: 27
+  completed_plans: 28
   percent: 0
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-24)
 ## Current Position
 
 Phase: 05.1 (editor-core) — IN PROGRESS
-Current Plan: 2
+Current Plan: 3
 Total Plans in Phase: 8
 Status: Executing (plan 01 complete; plan 02 pending briefing/approval)
 Last activity: 2026-09-28 — 05.1-01 撤销契约类型落地（`lib/kernel/types.ts`）
@@ -73,6 +73,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 5 P04 | 10 | 2 tasks | 3 files |
 | Phase 05.1 P01 | 6min | 2 tasks | 1 files |
 | Phase 05.1 P02 | 6min | 2 tasks | 3 files |
+| Phase 05.1 P03 | 30min | 3 tasks | 63 files |
 
 ## Accumulated Context
 
@@ -123,6 +124,9 @@ Recent decisions affecting current work:
 - [Phase 05.1]: 05.1-02: IResourceView<T>/ILoadableResource<T> 成员集逐字取自 combinators.ts 旧 ResourceView/LoadableResource，仅作同名新声明（不同模块、互不冲突）
 - [Phase 05.1]: 05.1-02: IPatchableResource<T> 只声明 path/raw/mutate 三成员；Action/ActionType 挪落点到 lib/table/types.ts，旧声明暂留 edit/action.ts，由 05.1-05/06 收口
 - [Phase 05.1]: 05.1-02: 接口定义计划刻意不接公开面——lib/index.ts 零改动，新增名此刻不经根 barrel 导出；纯声明、零实现、零搬迁
+- [Phase 05.1]: RESERVED_IDS 随 isValidResourceId 迁入 editor-core/lib/ports/engine.ts 并导出，impl 的 resourceRegistry 反向 import，防线单一来源
+- [Phase 05.1]: editor-core-must-not-import-editor-impl 的 to.path 同时匹配解析路径与裸说明符 @motajs/editor-impl，兼容 pnpm 严格 node_modules 的 couldNotResolve
+- [Phase 05.1]: coreBoundaries.js 随 Task 2 提交（Task 2 验证命令依赖它），门禁文件的任务归属据此重排
 
 ### Pending Todos
 
@@ -148,6 +152,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-09-28T12:07:02.742Z
-Stopped at: Completed 05.1-02-PLAN.md
+Last session: 2026-09-28T14:04:35.196Z
+Stopped at: Completed 05.1-03-PLAN.md
 Resume file: None
