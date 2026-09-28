@@ -649,21 +649,24 @@ pnpm build                                        # build job; editor artifact m
 
 **If any row is left `[ASSUMED]`-shaped in a plan:** the discuss/plan step must confirm it before locking. The high-impact ones are A1, A2, A4 (public shape) and A7 (literal set).
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **How is the parameterized floor resource represented? (highest priority)**
+> All four questions below are resolved; each is tagged with its resolution and the plan that implements it.
+> No unresolved open question remains (the plans' "Assumptions & Flags" sections reference these resolutions).
+
+1. **How is the parameterized floor resource represented? (highest priority)** — RESOLVED: adapter-side factory `motaFloorDescriptor(floorId)` (05-04 Tasks 1–2); `motaEngine.resources` holds only the nine fixed descriptors.
    - What we know: D-04 forbids `path`/templates in the generic descriptor; D-07 says the adapter resolves parameters into concrete content before core. The current code keys floors by `floor:${floorId}` (`projectData.ts:114`) and builds `project/floors/${floorId}.js` (`:76-78`).
    - What's unclear: whether `motaEngine.resources` should contain (a) a single "floor family" entry in some non-generic adapter-side structure, (b) a factory `motaFloorDescriptor(floorId): ResourceDescriptor<FloorData>` exported from the adapter (static array holds only the fixed 9), or (c) something else.
    - Recommendation: **(b)** — the adapter exports a parameterized factory producing concrete descriptors; `motaEngine.resources` holds the fixed descriptors and documents the floor family in a comment. This is the only shape that keeps core template-free while making "the adapter resolves parameters" concrete. **Also flag the id-grammar risk:** a real `floorId` may not satisfy `LOGICAL_ID_PATTERN` (e.g. contains non-word chars); decide whether the parameterized factory sanitizes/encodes the id or whether the registry's grammar must widen (do not widen it silently).
-2. **Does core need a preload ordering helper?**
+2. **Does core need a preload ordering helper?** — RESOLVED: core adds the pure `resolvePreloadOrder` (05-01 Task 3), exercised end-to-end by engine B (05-03 Task 2); its real Phase-11 consumer is the composition root.
    - What we know: `preloadDependsOn` is part of the locked descriptor shape (D-04); engine B must drive "preload 顺序" end-to-end.
    - What's unclear: whether a free function is acceptable given Pitfall 6 (no consumer besides tests until Phase 11).
    - Recommendation: add one pure function (e.g. `resolveResourcePreloadOrder(resources): readonly string[]`) — it is the minimal thing that makes `preloadDependsOn` meaningful, it is pure/testable, and Phase 11's composition root is its real future consumer. If rejected, validation-only is the fallback (engine B orders manually).
-3. **Do the 5 `META_FILE_CONFIG` paths and the `commonEvents` derived resource count as descriptors this phase?**
+3. **Do the 5 `META_FILE_CONFIG` paths and the `commonEvents` derived resource count as descriptors this phase?** — RESOLVED: honor the locked count of 10; the table-meta paths and `commonEvents` are documented adapter follow-ups owned by Phase 7 / Phase 11 (05-04 Task 2).
    - What we know: CONTEXT fixes the count at **10** (projectData's 9 + editorConfig). The table-meta paths live in `src/services/tableMeta/tableMetaService.ts:47-73` and `commonEvents` is a `MappedDataResource` (`projectData.ts:200-212`).
    - What's unclear: whether they should be expressed as descriptors now (they are engine paths too) or deferred to the table capability (Phase 7) / Phase 11 cutover.
    - Recommendation: honor the locked count (10) for the *mota resources* deliverable; describe the table-meta/common-event resources as **documented adapter follow-ups** owned by Phase 7/11, not extra descriptors this phase. Record this so the gate/plan does not imply they were forgotten.
-4. **Should `defineEngine` also validate that `preloadDependsOn` only references resources whose `preload` is eager?**
+4. **Should `defineEngine` also validate that `preloadDependsOn` only references resources whose `preload` is eager?** — RESOLVED: not validated this phase (no consumer/requirement, Pitfall 6); validation stays to the Pattern 1 rules (05-01 Task 3).
    - What we know: nothing in the current behavior requires it; floors depend on tower, and tower is eager.
    - Recommendation: **no** this phase (no consumer/requirement) — Pitfall 6. Keep validation to the rules in Pattern 1.
 

@@ -7,7 +7,8 @@
 > **Project Rule gate (read before planning):** every important name below marked **(TBD)** must first be written into
 > `.planning/phases/05-engine-adapter-skeleton-resource-descriptors/INTERFACE-NAME.md` (one section per Plan, stating
 > each name's **purpose**) and confirmed by the user **before** it lands in code. Describe class methods as
-> `ClassName.methodName`. The file does not exist yet — creating/confirming it is Plan 1's first task.
+> `ClassName.methodName`. The file is materialized as a **pre-execution** planning artifact and confirmed at the
+> per-plan briefing; Plan 05-01 Task 1 verifies it (does not create it) before any source edit.
 >
 > **Additive constraint:** `packages/apps/editor/src/project/data/projectData.ts` is a **read-only reference** this
 > phase (D-01, "一行不改"). It is cited below as the *source of truth for the 10 paths*, never as a file to edit.
