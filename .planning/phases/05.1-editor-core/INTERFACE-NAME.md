@@ -89,6 +89,7 @@
 | `packages/libs/editor-core/lib/core/errors.ts` | 文件（移动） | 由 `lib/kernel/errors.ts` 移入：启动聚合错误。 |
 | `packages/libs/editor-core/lib/core/ports/{fs,host,engine,preview,index}.ts` | 目录（移动） | 由 `lib/ports/*` 整目录移入底层：宿主/引擎/预览/文件读写接口。 |
 | `bottom-layer-io-free` | 门禁断言名 | 加在 `scripts/verify/coreBoundaries.js` 里的断言：底层 `lib/core/**` 不得出现文件读写调用（如 `readFile(`/`writeFile(`、`this.fs`），且必须有两极性证明。 |
+| `kernel-must-not-import-capabilities` | dependency-cruiser 规则名（**删除**，意图并入 `bottom-layer-must-not-import-upper-layers`） | 旧规则把 `lib/index.ts` 也当作内核、禁止它 import 能力目录。05.1 之后 `lib/index.ts` 是包的**公开面**，必须能再导出表格等能力符号（Plan 05 依赖这一点），故删除该规则、并入只覆盖 `lib/core/**` 的新规则；新规则的 `to` 是旧规则 `to` 的超集，底层覆盖不降低。 |
 | `core+resources+edit-exports` | 字符串常量值（`scripts/verify/coreExports.js` 与 `subpathStatus.json` 同步改） | `.` 公开面的构成标签；内核搬进 `lib/core` 后由 `kernel+resources+edit-exports` 改名而来。两者是**一对契约**，必须同次改。 |
 
 > **归属决定（研究开放点 c）：** `ResourceRegistry` **留在 `lib/resources/`（包内默认实现层）**，不进底层。
