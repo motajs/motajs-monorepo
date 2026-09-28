@@ -2,18 +2,18 @@
 gsd_state_version: "1.0"
 current_phase: 5
 current_phase_name: engine-adapter-skeleton-resource-descriptors
-current_plan: Not started
+current_plan: 2
 status: executing
-stopped_at: Phase 5 context gathered
-last_updated: "2026-09-28T01:59:35.601Z"
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-09-28T02:54:19.065Z"
 last_activity: 2026-09-24
 last_activity_desc: Phase 4 complete, transitioned to Phase 5
-state_head: e8d5f069636c7287b15e08708505087c2808ba20
+state_head: bd23c2298f92d8303279b51158c8ad3d21443cd1
 progress:
   total_phases: 12
   completed_phases: 0
   total_plans: 25
-  completed_plans: 21
+  completed_plans: 22
   percent: 0
 ---
 
@@ -28,8 +28,8 @@ See: .planning/PROJECT.md (updated 2026-09-24)
 
 ## Current Position
 
-Phase: 5 (engine-adapter-skeleton-resource-descriptors) — READY TO EXECUTE
-Current Plan: Not started
+Phase: 5 (engine-adapter-skeleton-resource-descriptors) — IN PROGRESS
+Current Plan: 2
 Total Plans in Phase: 4
 Status: Ready to execute
 Last activity: 2026-09-24 — Phase 4 complete, transitioned to Phase 5
@@ -67,6 +67,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 04 P02 | 25min | 3 tasks | 23 files |
 | Phase 4 P3 | 38min | 2 tasks | 17 files |
 | Phase 04 P04 | 25 | 3 tasks | 9 files |
+| Phase 05 P01 | 17 | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -95,6 +96,11 @@ Recent decisions affecting current work:
 - [Phase 4]: ResourceRegistry (RES-02) is Map-backed, form-validating and DiagnosticBus-decoupled; it ships unwired to projectData so Phase 5 shapes it against real engine descriptors.
 - [Phase 4]: editorShims.js verifies comment-stripped construction sites (exactly 3, all in src/appInstances.ts) and shim-inventory set equality; a JSDoc mention of a constructor is documentation, not a site.
 - [Phase 4]: The retargeted dependency-cruiser rule matches raw editor import specifiers because dependency-cruiser does not resolve the @/ alias; its editor half is dormant-by-target until Phase 11 and editorShims.js carries the real guard.
+- [Phase 5]: 05-01: ENGINE_ADAPTER_API_VERSION = '0.1.0' kept separate from EDITOR_CORE_API_VERSION (adapter contract vs core API run on different clocks).
+- [Phase 5]: 05-01: EngineAdapter.resources is required (no production implementer; an adapter with no resources describes nothing).
+- [Phase 5]: 05-01: Engine id validated non-empty only (not the logical-id grammar) so 05-04's mota-js engine id is definable.
+- [Phase 5]: 05-01: EngineDefinitionError carries its frozen problem list via Error.cause (no unlisted member name; satisfies noUnusedLocals).
+- [Phase 5]: 05-01: isValidResourceId is the single shared logical-id predicate used by both defineEngine and ResourceRegistry.register (D-09).
 
 ### Pending Todos
 
@@ -116,6 +122,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-09-28T00:49:21.153Z
-Stopped at: Phase 5 context gathered
-Resume file: .planning/phases/05-engine-adapter-skeleton-resource-descriptors/05-CONTEXT.md
+Last session: 2026-09-28T02:54:18.868Z
+Stopped at: Completed 05-01-PLAN.md
+Resume file: None

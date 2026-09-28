@@ -20,8 +20,8 @@
 
 - [x] **PORT-01**: core 声明 `EngineAdapter`、`FsPort`、`HostPort`、`PreviewAdapter` 及各 capability port 接口
 - [x] **PORT-02**: core 无 default `Fs`、不解析 DOM/环境、不直接 fetch；由 composition root 注入
-- [ ] **PORT-03**: `defineEngine({...})` 在适配器侧生成引擎描述；core 只认逻辑 id，不构造 `project/...` 路径、不检查扩展名
-- [ ] **PORT-04**: 10 条硬编码路径变为 `ResourceDescriptor`（逻辑 id、opaque path key、format id、handler、preload 依赖）
+- [x] **PORT-03**: `defineEngine({...})` 在适配器侧生成引擎描述；core 只认逻辑 id，不构造 `project/...` 路径、不检查扩展名
+- [x] **PORT-04**: 10 条硬编码路径变为 `ResourceDescriptor`（逻辑 id、opaque path key、format id、handler、preload 依赖）
 - [ ] **PORT-05**: `Json2xDataHandler` 与各领域 `*DataHandler` 移入适配器；core 仅保留通用 `JsonDataHandler`
 - [ ] **PORT-06**: 游戏词汇（tower/floor/loc/autopass/autotile/idnum/airwall/commonEvent 等）经 `LabelOverrides` 移出 core
 - [ ] **PORT-07**: 引擎格式迁移经 `MigrationHook` 移出 core
@@ -163,8 +163,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | KERN-06 | 3 | Complete |
 | PORT-01 | 3 | Complete |
 | PORT-02 | 3 | Complete |
-| PORT-03 | 5 | Pending |
-| PORT-04 | 5 | Pending |
+| PORT-03 | 5 | Complete |
+| PORT-04 | 5 | Complete |
 | PORT-05 | 5 | Pending |
 | PORT-06 | 5 | Pending |
 | PORT-07 | 5 | Pending |
