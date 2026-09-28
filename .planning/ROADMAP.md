@@ -201,13 +201,13 @@ Plans:
 
 **Depends on:** Phase 5
 
-**Plans:** 1/8 plans executed
+**Plans:** 2/8 plans executed
 
 Plans:
 **Wave 1 — 接口定义（不写实现）**
 
 - [x] 05.1-01-PLAN.md — 底层（`editor-core`）撤销契约：`IEditorOperation` / `IUndoManager` 及历史类型（接口定义）
-- [ ] 05.1-02-PLAN.md — 默认实现层接口：`IPatchableResource` / `IResourceView` / `ILoadableResource` / `Action`
+- [x] 05.1-02-PLAN.md — 默认实现层接口：`IPatchableResource` / `IResourceView` / `ILoadableResource` / `Action`
 
 **Wave 2 — 拆包 + 撤销重构 + 编辑器机械跟随（同一波；波内临时红，波末全仓保持可编译/测试绿）**
 
@@ -340,7 +340,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 3. Kernel — Runtime, Ports, Registry, Diagnostics | 4/4 | Complete    | 2026-09-23 |
 | 4. Resource + Edit Layers Moved | 4/4 | Complete    | 2026-09-24 |
 | 5. Engine Adapter Skeleton & Resource Descriptors | 4/4 | In Progress|  |
-| 05.1. editor-core 接口与实现整改 | 1/8 | In Progress|  |
+| 05.1. editor-core 接口与实现整改 | 2/8 | In Progress|  |
 | 6. Fixed Shell + Slots | 0/TBD | Not started | - |
 | 7. Table Capability + Port | 0/TBD | Not started | - |
 | 8. Code Capability + Port | 0/TBD | Not started | - |

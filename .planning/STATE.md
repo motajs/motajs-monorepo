@@ -2,18 +2,18 @@
 gsd_state_version: "1.0"
 current_phase: "05.1"
 current_phase_name: editor-core
-current_plan: 1
+current_plan: 2
 status: executing
-stopped_at: Completed 05.1-01-PLAN.md
-last_updated: "2026-09-28T11:44:15.411Z"
+stopped_at: Completed 05.1-02-PLAN.md
+last_updated: "2026-09-28T12:07:03.002Z"
 last_activity: 2026-09-28
 last_activity_desc: Phase 05.1 plan 01 complete (editor-core undo contract types)
-state_head: 9351c3d5968abb0fd1bf8b84084607cfa129355a
+state_head: a933bfb1d0b4f27d2d8787b47a0a2453ed488b8d
 progress:
   total_phases: 13
   completed_phases: 0
   total_plans: 33
-  completed_plans: 26
+  completed_plans: 27
   percent: 0
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-24)
 ## Current Position
 
 Phase: 05.1 (editor-core) — IN PROGRESS
-Current Plan: 1
+Current Plan: 2
 Total Plans in Phase: 8
 Status: Executing (plan 01 complete; plan 02 pending briefing/approval)
 Last activity: 2026-09-28 — 05.1-01 撤销契约类型落地（`lib/kernel/types.ts`）
@@ -72,6 +72,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 5 P03 | 16min | 2 tasks | 6 files |
 | Phase 5 P04 | 10 | 2 tasks | 3 files |
 | Phase 05.1 P01 | 6min | 2 tasks | 1 files |
+| Phase 05.1 P02 | 6min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -119,6 +120,9 @@ Recent decisions affecting current work:
 - [Phase 05.1]: 05.1-01: 候选 A — 操作自带逆（IEditorOperation.apply 返回 AppliedOperation.inverse），管理器只记录先后、不实现每个操作的 undo/redo；与既有 applied.inverse 同构，行为等价最易证明。
 - [Phase 05.1]: 05.1-01: 新撤销契约彻底无快照 —— 不出现 capture/restore/snapshot/targets/OperationTarget/UndoSystem/Content/IResourceView（D-03/D-05）；OperationMeta.paths 成为历史条目路径的唯一来源。
 - [Phase 05.1]: 05.1-01: D-18 旧名别名以同文件 export type EditorOperation<T=void> = IEditorOperation<T> 声明（避免 no-circular 自环）；本计划刻意不接公开面，lib/index.ts 零改动。
+- [Phase 05.1]: 05.1-02: IResourceView<T>/ILoadableResource<T> 成员集逐字取自 combinators.ts 旧 ResourceView/LoadableResource，仅作同名新声明（不同模块、互不冲突）
+- [Phase 05.1]: 05.1-02: IPatchableResource<T> 只声明 path/raw/mutate 三成员；Action/ActionType 挪落点到 lib/table/types.ts，旧声明暂留 edit/action.ts，由 05.1-05/06 收口
+- [Phase 05.1]: 05.1-02: 接口定义计划刻意不接公开面——lib/index.ts 零改动，新增名此刻不经根 barrel 导出；纯声明、零实现、零搬迁
 
 ### Pending Todos
 
@@ -144,6 +148,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-09-28T11:44:15.175Z
-Stopped at: Completed 05.1-01-PLAN.md
+Last session: 2026-09-28T12:07:02.742Z
+Stopped at: Completed 05.1-02-PLAN.md
 Resume file: None
