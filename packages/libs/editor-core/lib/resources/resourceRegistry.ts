@@ -28,12 +28,27 @@ const LOGICAL_ID_PATTERN = /^[A-Za-z_$][A-Za-z0-9_$]*(\.[A-Za-z_$][A-Za-z0-9_$]*
 /** 保留名：即使形式上合法也拒绝，避免任何对象键语义的误用（V5）。 */
 const RESERVED_IDS = Object.freeze(['__proto__', 'constructor', 'prototype']);
 
+/**
+ * 逻辑 id 的**唯一共享判定**（布尔形式）：空、含空白、保留名、不符 `LOGICAL_ID_PATTERN` 之一即返回 `false`。
+ *
+ * `ResourceRegistry`（本文件）与 `lib/ports/engine` 的 `defineEngine` 都调用它，因此「描述符 id 语法」
+ * 与「登记 id 语法」不可能各自漂移（D-09）。这是**纯函数**：不抛错、无状态、可安全并发调用。
+ */
+export function isValidResourceId(id: string): boolean {
+  if (id.length === 0) return false;
+  if (/\s/.test(id)) return false;
+  if (RESERVED_IDS.includes(id)) return false;
+  return LOGICAL_ID_PATTERN.test(id);
+}
+
 /** 校验逻辑 id；不合法即抛出普通 `Error`（不产生机器诊断，见文件头 Pitfall 10）。 */
 function assertValidLogicalId(id: string): void {
+  // 合法判定委托给共享谓词；不合法时再按原顺序复现**逐字未变**的抛出消息。
+  if (isValidResourceId(id)) return;
   if (id.length === 0) throw new Error('Resource id 不能为空');
   if (/\s/.test(id)) throw new Error(`Resource id 不能包含空白字符：${JSON.stringify(id)}`);
   if (RESERVED_IDS.includes(id)) throw new Error(`Resource id 不允许使用保留名：${id}`);
-  if (!LOGICAL_ID_PATTERN.test(id)) throw new Error(`Resource id 形式不合法：${id}`);
+  throw new Error(`Resource id 形式不合法：${id}`);
 }
 
 /**

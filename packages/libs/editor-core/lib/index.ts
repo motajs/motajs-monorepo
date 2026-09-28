@@ -18,6 +18,16 @@ export type { Diagnostic, DiagnosticSeverity, DiagnosticBus, DiagnosticCode } fr
 export { EditorCoreStartupError } from './kernel/errors';
 export type { EngineAdapter, FsPort, HostPort, PreviewAdapter } from './ports/index';
 
+// Phase 5 适配器契约（D-03/D-04/D-05/D-09）：`./ports/engine` 是引擎无关契约的唯一落点。
+// 一律具名再导出；值面与类型面分开，`isValidResourceId` 在此与其在 `resourceRegistry.ts` 的定义共用同一谓词。
+export { defineEngine, ENGINE_ADAPTER_API_VERSION, EngineDefinitionError, isValidResourceId } from './ports/engine';
+export type {
+  EngineDescription,
+  PreloadStrategy,
+  ResourceDependencies,
+  ResourceDescriptor,
+} from './ports/engine';
+
 // 资源层叶子模块（Phase 4 D-09：`lib/resources/*` 是包内目录，公开面由本根入口汇总）。
 // 与上面一致，一律**具名**再导出；类型经 `export type`（消费方 editor 开着 verbatimModuleSyntax）。
 export type { Content, FileContent } from './resources/types';
