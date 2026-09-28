@@ -1,8 +1,8 @@
+import { Content } from './types';
+
 /**
  * 核心接口定义
  */
-
-import type { Content } from './types';
 
 /**
  * ReadonlySignal<T> - 只读 signal（函数式）
@@ -76,4 +76,37 @@ export interface RecoverableResource<T = unknown> extends IContentHandler<T> {
 
   /** 返回自身恢复句柄，便于 resource.recoverable() 形式使用 */
   recoverable(): RecoverableResource<T>;
+}
+
+/**
+ * IResourceView<T> - 可读资源视图
+ *
+ * 默认实现层对一个「只读资源」的统一视图：拿到身份、订阅内容变化、取快照与当前值。
+ * 内容由各实现自己持有，本接口只描述怎么读，不关心内容从哪来。
+ */
+export interface IResourceView<T> {
+  /** 资源身份（逻辑 id）。 */
+  readonly id: string;
+  /** 只读的响应式内容信号。 */
+  readonly content: ReadonlySignal<Content<T>>;
+  /** 同步取当前内容快照。 */
+  snapshot(): Content<T>;
+  /** 取当前已加载的值（未加载时抛错）。 */
+  value(): T;
+  /** 订阅内容变化，返回取消订阅函数。 */
+  subscribe(listener: (content: Content<T>) => void): () => void;
+}
+
+/**
+ * ILoadableResource<T> - 可加载资源
+ *
+ * 在只读视图之外补充「确保首次加载 / 重新加载 / 等待稳定」三个加载动作。
+ */
+export interface ILoadableResource<T> extends IResourceView<T> {
+  /** 确保首次加载完成；已在加载时只等待，不重复读取。 */
+  ensureLoaded(): Promise<void>;
+  /** 重新加载（含依赖）后再次确保加载完成。 */
+  reload(): Promise<void>;
+  /** 等待状态稳定到 loaded / error / not-found 之一。 */
+  waitForSettled(): Promise<void>;
 }
