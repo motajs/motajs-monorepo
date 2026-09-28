@@ -22,7 +22,10 @@
 - 改名后的**旧名一律以别名继续导出**（D-18），使 `@motajs/editor` 不改也能编译：
   - 类型别名：`export type { INew as Old } from '...'`（**不得**用普通 `export`，`isolatedModules` 会报 TS1205）。
   - 值别名：`export { NewClass as OldClass } from '...'`。
-- 全程相对路径导入（`lib/core` 内不得用 `@/` 别名；dependency-cruiser 不解析别名）。
+- 全程相对路径导入（底层 `lib/kernel`、`lib/ports` 内不得用 `@/` 别名；dependency-cruiser 不解析别名）。
+- **分层不新建文件夹**：底层（core 本身）**物理上就是现有的 `lib/kernel/` + `lib/ports/`**；包内默认实现留在
+  `lib/resources/`、`lib/edit/`、`lib/table/`、四个能力目录、`lib/react/`。分层只由一条**依赖规则**保证：
+  `lib/kernel/**` 与 `lib/ports/**` 不得 import 默认实现目录。**不新建 `lib/core/`**。
 
 ---
 
@@ -33,9 +36,10 @@
 
 | 名字 | 种类 | 它是干什么的 |
 |------|------|--------------|
-| `packages/libs/editor-core/lib/core/` | 目录（新） | 底层的家：只放「接口」与「管理」（能力登记、撤销操作栈）。它不读文件、不持有编辑内容、不认识被编辑的是什么。 |
-| `packages/libs/editor-core/lib/core/types.ts` | 文件（新） | 底层对外类型的集中出口（D-08）。后面 Plan 03 会把内核的三个接口也并进来。 |
-| `packages/libs/editor-core/lib/core/undo/types.ts` | 文件（新） | 撤销契约的集中声明处：管理器接口 + 可撤销操作接口 + 历史条目/状态类型。 |
+| `packages/libs/editor-core/lib/kernel/` | 目录（现有） | 底层的「管理」半边：内核组合根 + 能力登记契约 + 诊断 + 启动错误（**本阶段不新建、不搬**）。 |
+| `packages/libs/editor-core/lib/ports/` | 目录（现有） | 底层的「接口」半边：引擎/宿主/预览/文件读写（`fs.ts`）四个 port（**本阶段不新建、不搬**）。 |
+| `packages/libs/editor-core/lib/kernel/types.ts` | 文件（新） | 底层对外类型的集中出口（D-08）。Plan 03 会把内核的三个接口也并进来。 |
+| `packages/libs/editor-core/lib/kernel/undoTypes.ts` | 文件（新） | 撤销契约的集中声明处：管理器接口 + 可撤销操作接口 + 历史条目/状态类型。 |
 | `OperationMeta` | 接口 | 一次操作的元数据：给人看的标签 `label`、失败定位用的 `stage`，外加可选的自报影响路径 `paths`（取代旧 `targets` 里的路径，见下）。 |
 | `OperationMeta.paths` | 成员（可选） | 操作**自己上报**它这次改动了哪些路径，供历史面板显示。旧实现从快照目标 `targets` 里抄路径；删掉快照后唯一诚实的来源就是操作本身。不给就退化为空数组。 |
 | `AppliedOperation<T>` | 接口 | 一次「应用」的结果：`value`（操作的返回值）、`inverse`（能把它撤回来的逆操作）、`changed`（是否真的改了东西，没改就不入历史）。 |
@@ -52,7 +56,7 @@
 | `UndoManager` | 类 | `IUndoManager` 的实现（**Plan 04 落地**，本计划只声明接口）。 |
 | `EditorOperation` | 类型别名（过渡） | 旧名，指向 `IEditorOperation`（D-18）。`@motajs/editor` 靠它继续编译，Phase 11 删除。 |
 | `OperationHistory` | 值别名（过渡） | 旧类名，指向 `UndoManager`（D-18）。编辑器 `new OperationHistory()` 继续可用，Phase 11 删除。 |
-| `bottom-layer-must-not-import-upper-layers` | dependency-cruiser 规则名 | 待 Plan 03 落地的门禁规则：底层 `lib/core/**` 不得 import 包内默认实现（`resources`/`edit`/`table`/`code`/`map`/`asset`/`shell`/`react`）。 |
+| `bottom-layer-must-not-import-upper-layers` | dependency-cruiser 规则名 | 待 Plan 03 落地的门禁规则：底层 `lib/kernel/**` + `lib/ports/**` 不得 import 包内默认实现（`resources`/`edit`/`table`/`code`/`map`/`asset`/`shell`/`react`）。 |
 
 > **已确认的接口形状选择（候选 A，研究推荐）：** 操作自带逆（`apply()` 返回 `inverse`），而不是给每个操作类再加显式 `undo()`/`redo()`。
 > 理由：它与仓库现有的 `AppliedOperation.inverse`、以及「组合操作按已成功子操作的逆序回退」完全同构，行为等价最容易证明。
@@ -79,24 +83,23 @@
 
 ---
 
-## Plan 05.1-03 — 两层目录建立 + 依赖门禁 + 底层 IO 清零
+## Plan 05.1-03 — 底层依赖门禁 + 底层 IO 清零（不新建目录、不搬文件）
 
 | 名字 | 种类 | 它是干什么的 |
 |------|------|--------------|
-| `packages/libs/editor-core/lib/core/editorCore.ts` | 文件（移动 + 改名） | 由 `lib/kernel/core.ts` 移入并改名（避免 `core/core`）。组合根：装配诊断总线、能力登记、拆除栈，交出 `EditorCore` 实例。 |
-| `packages/libs/editor-core/lib/core/registry.ts` | 文件（移动） | 由 `lib/kernel/registry.ts` 移入：能力登记的契约类型。 |
-| `packages/libs/editor-core/lib/core/diagnostics.ts` | 文件（移动） | 由 `lib/kernel/diagnostics.ts` 移入：诊断总线。 |
-| `packages/libs/editor-core/lib/core/errors.ts` | 文件（移动） | 由 `lib/kernel/errors.ts` 移入：启动聚合错误。 |
-| `packages/libs/editor-core/lib/core/ports/{fs,host,engine,preview,index}.ts` | 目录（移动） | 由 `lib/ports/*` 整目录移入底层：宿主/引擎/预览/文件读写接口。 |
-| `bottom-layer-io-free` | 门禁断言名 | 加在 `scripts/verify/coreBoundaries.js` 里的断言：底层 `lib/core/**` 不得出现文件读写调用（如 `readFile(`/`writeFile(`、`this.fs`），且必须有两极性证明。 |
-| `kernel-must-not-import-capabilities` | dependency-cruiser 规则名（**删除**，意图并入 `bottom-layer-must-not-import-upper-layers`） | 旧规则把 `lib/index.ts` 也当作内核、禁止它 import 能力目录。05.1 之后 `lib/index.ts` 是包的**公开面**，必须能再导出表格等能力符号（Plan 05 依赖这一点），故删除该规则、并入只覆盖 `lib/core/**` 的新规则；新规则的 `to` 是旧规则 `to` 的超集，底层覆盖不降低。 |
-| `core+resources+edit-exports` | 字符串常量值（`scripts/verify/coreExports.js` 与 `subpathStatus.json` 同步改） | `.` 公开面的构成标签；内核搬进 `lib/core` 后由 `kernel+resources+edit-exports` 改名而来。两者是**一对契约**，必须同次改。 |
+| `packages/libs/editor-core/lib/kernel/core.ts` | 文件（改） | 内核组合根，**留在原地**；本计划只把三个接口收拢到 `lib/kernel/types.ts`（见下），它改为 import。 |
+| `packages/libs/editor-core/lib/kernel/types.ts` | 文件（改） | 底层的唯一对外类型出口：Plan 01 的撤销契约类型 + 本计划并入的内核三接口（`CapabilityRegistrar`/`EditorCoreConfig`/`EditorCore`）。 |
+| `packages/libs/editor-core/lib/ports/engine.ts` | 文件（改） | 引擎适配器契约，**留在原地**；本计划把逻辑 id 谓词 `isValidResourceId` 连同 `LOGICAL_ID_PATTERN`/`RESERVED_IDS`/原型污染防线归它自持，并让 `lib/resources/resourceRegistry.ts` 反向 import（消除底层依赖上层的倒挂）。 |
+| `lib/kernel/**` + `lib/ports/**` | 依赖规则（现有目录） | 底层 = 这两个**现有**目录；`lib/kernel/**` + `lib/ports/**` 不得 import 默认实现目录（`resources`/`edit`/`table`/`code`/`map`/`asset`/`shell`/`react`）。 |
+| `bottom-layer-io-free` | 门禁断言名 | 加在 `scripts/verify/coreBoundaries.js` 里的断言：底层 `lib/kernel/**` + `lib/ports/**` 不得出现文件读写调用（如 `readFile(`/`writeFile(`、`this.fs`），且必须有两极性证明。 |
+| `kernel-must-not-import-capabilities` | dependency-cruiser 规则名（**删除**，意图并入 `bottom-layer-must-not-import-upper-layers`） | 旧规则把 `lib/index.ts` 也当作内核、禁止它 import 能力目录。05.1 之后 `lib/index.ts` 是包的**公开面**，必须能再导出表格等能力符号（Plan 05 依赖这一点），故删除该规则、并入只覆盖 `lib/kernel/**` + `lib/ports/**` 的新规则；新规则的 `to` 是旧规则 `to` 的超集，底层覆盖不降低，并新增覆盖 `lib/ports/**`。 |
 
 > **归属决定（研究开放点 c）：** `ResourceRegistry` **留在 `lib/resources/`（包内默认实现层）**，不进底层。
 > 理由：它登记的是「内容视图」，而 D-03 明确底层不认识被编辑内容。底层自己的登记机制是 `EditorCore.registerCapability`。
 > 本阶段对它的唯一改动是把共享的逻辑 id 谓词 `isValidResourceId` 改为**底层持有**、`resourceRegistry.ts` 反向 import。
 > **文件 IO 决定（D-02）：** `fileHandler*`/`binaryFileHandler`/`persistExecutor`/`persistenceMonitor`/`fileResource`
-> 全部留在 `lib/resources/`；底层只保 `lib/core/ports/fs.ts` 一个纯接口文件，且**永不调用**。
+> 全部留在 `lib/resources/`；底层只保 `lib/ports/fs.ts` 一个纯接口文件，且**永不调用**。
+> **公开面标签不动：** `.` 内容标签仍是 `kernel+resources+edit-exports`（`coreExports.js` 与 `subpathStatus.json` 都不改，因为目录名没变）。
 
 ---
 
@@ -104,12 +107,12 @@
 
 | 名字 | 种类 | 它是干什么的 |
 |------|------|--------------|
-| `packages/libs/editor-core/lib/core/undo/undoManager.ts` | 文件（新） | 撤销操作栈管理器的实现：串行队列 + 容量 100 + 无快照。 |
+| `packages/libs/editor-core/lib/kernel/undoManager.ts` | 文件（新） | 撤销操作栈管理器的实现：串行队列 + 容量 100 + 无快照。 |
 | `UndoManager.constructor` | 方法 | 无参构造；per-instance 的 `Store` 与内部队列都在实例字段上，因此两个实例天然互不干扰。 |
 | `UndoManager.execute` / `UndoManager.undo` / `UndoManager.redo` / `UndoManager.clear` | 方法 | 见 Plan 01 的 `IUndoManager.*` 说明。 |
-| `packages/libs/editor-core/lib/core/undo/__tests__/undoManager.invariants.test.ts` | 文件（新，取代旧 `lib/edit/__tests__/operationHistory.invariants.test.ts`） | 纯内存不变量测试：容量 100、逆操作 undo/redo、redo 截断、无改动不入历史、组合失败按逆序回退。**删除**所有 target/snapshot 用例。 |
+| `packages/libs/editor-core/lib/__tests__/undoManager.invariants.test.ts` | 文件（新，取代旧 `lib/edit/__tests__/operationHistory.invariants.test.ts`） | 纯内存不变量测试：容量 100、逆操作 undo/redo、redo 截断、无改动不入历史、组合失败按逆序回退。**删除**所有 target/snapshot 用例。 |
 | `packages/libs/editor-core/lib/edit/undoSystem.ts` | 文件（删除） | 旧的快照委托接缝，D-05 明确移除。 |
-| `packages/libs/editor-core/lib/edit/operationHistory.ts` | 文件（删除） | 旧管理器文件；类型迁入 `lib/core/undo/types.ts`，实现迁入 `lib/core/undo/undoManager.ts`。 |
+| `packages/libs/editor-core/lib/edit/operationHistory.ts` | 文件（删除） | 旧管理器文件；类型迁入 `lib/kernel/undoTypes.ts`，实现迁入 `lib/kernel/undoManager.ts`。 |
 | `OperationTarget` / `operationPathTarget` / `dataResourceTarget` / `captureSystems` / `restoreSystems` / `systemsBefore` / `systemsAfter` | 符号（删除） | 快照式撤销的全部残骸（D-05）。 |
 
 > **兼容取舍（已定，D-18 更新后）：** 上面这组删除会击穿 `@motajs/editor` 的
@@ -161,7 +164,7 @@
 | `IPersistExecutor` | 接口（新） | `PersistExecutor` 的契约：排程某个路径的持久化意图与查询状态。 |
 | `IPersistenceMonitor` | 接口（新） | `PersistenceMonitor` 的契约：项目级持久化状态、flush、失败记录与重试。 |
 | `IResourceRegistry` | 接口（新） | `ResourceRegistry` 的契约：按逻辑 id 登记/取用/查询资源。 |
-| `packages/libs/editor-core/lib/core/types.ts` | 文件（收口） | 底层的唯一对外类型出口：内核三个接口（`CapabilityRegistrar`/`EditorCoreConfig`/`EditorCore`）+ 撤销契约类型都从这里汇总。 |
+| `packages/libs/editor-core/lib/kernel/types.ts` | 文件（收口） | 底层的唯一对外类型出口：内核三个接口（`CapabilityRegistrar`/`EditorCoreConfig`/`EditorCore`）+ 撤销契约类型都从这里汇总。 |
 | `packages/libs/editor-core/lib/resources/types.ts` | 文件（收口） | 资源层唯一对外类型出口。 |
 | `packages/libs/editor-core/lib/edit/types.ts` | 文件（收口） | 编辑层唯一对外类型出口。 |
 | `packages/libs/editor-core/lib/table/types.ts` | 文件（收口） | 表格层唯一对外类型出口。 |
