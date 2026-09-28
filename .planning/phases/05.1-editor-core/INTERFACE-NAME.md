@@ -111,12 +111,12 @@
 | `packages/libs/editor-core/lib/edit/operationHistory.ts` | 文件（删除） | 旧管理器文件；类型迁入 `lib/core/undo/types.ts`，实现迁入 `lib/core/undo/undoManager.ts`。 |
 | `OperationTarget` / `operationPathTarget` / `dataResourceTarget` / `captureSystems` / `restoreSystems` / `systemsBefore` / `systemsAfter` | 符号（删除） | 快照式撤销的全部残骸（D-05）。 |
 
-> **兼容取舍（必须在 Plan 04 简报上确认）：** 上面这组删除会击穿 `@motajs/editor` 的
+> **兼容取舍（已定，D-18 更新后）：** 上面这组删除会击穿 `@motajs/editor` 的
 > `src/project/history/*` 与 `src/appInstances.ts`（它们 import `OperationTarget`/`operationPathTarget` 并在
-> `appInstances.ts` 调 `operationHistory.registerUndoSystem(...)`）。因此本阶段的**唯一**编辑器改动集中在
-> Plan 05.1-08「机械跟随」。若用户要求编辑器**一行都不动**，则改为保留 `OperationTarget`（类型）、
-> `operationPathTarget`（no-op）与 `UndoManager.registerUndoSystem`（no-op）三个**显式弃用**的兼容导出，
-> 并把它们一并列入 Phase 11 删除清单——代价是 D-05 的「移除 `OperationTarget`/`operationPathTarget`」不再字面成立。
+> `appInstances.ts` 调 `operationHistory.registerUndoSystem(...)`）。用户已选 **A：core 彻底删除 +
+> 编辑器做最小机械跟随**——不保留任何弃用兼容导出。编辑器改动集中在 **05.1-08**（唯一触碰
+> `@motajs/editor` 的计划），它与 05.1-04 **同处 wave 3 且排在 05.1-04 之后**，二者在同一波完成，
+> wave 边界全仓保持可编译/测试绿。
 
 ---
 
@@ -174,10 +174,14 @@
 > 快照撤销不存在了，编辑器里「注册视口快照」和「操作里的快照目标」就无处安放。**纯机械**——只删
 > 失效的老接口用法、跟随改名、把编辑器那条「数据 undo 恢复视口」的测试改成记录 D-19 的新行为；
 > **不改任何功能、UI 或宿主协议。**
+>
+> **波次：** 本计划与 05.1-04 **同处 wave 3**，且必须排在 05.1-04 之后执行（先删 core 旧符号，再修
+> 编辑器）；两者在同一波完成，wave 末全仓保持可编译/测试绿。
 
 | 名字 | 种类 | 它是干什么的 |
 |------|------|--------------|
 | `packages/apps/editor/src/appInstances.ts` | 文件（改） | 删掉 `operationHistory.registerUndoSystem(...)` 整块及其不再使用的 import。 |
+| `packages/apps/editor/src/project/history/operations.ts` | 文件（改） | 转发 shim：只删 `operationPathTarget`（值）与 `OperationTarget`（类型）两条已消失的再导出，保留 `compositeOperation`/`patchResourceOperation` 与其余类型别名——整个文件必须继续是「只转发」。 |
 | `packages/apps/editor/src/project/history/index.ts` | 文件（改） | 删掉 `operationPathTarget` 与 `type OperationTarget` 两个已消失的再导出。 |
 | `packages/apps/editor/src/project/history/materialOperations.ts` | 文件（改） | 删掉 `operationPathTarget` 用法与操作的 `targets` 字段。 |
 | `packages/apps/editor/src/project/history/textFileOperations.ts` | 文件（改） | 删掉 `OperationTarget`/`textFileTarget` 与 `targets` 字段。 |
