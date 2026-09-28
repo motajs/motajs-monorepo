@@ -104,7 +104,11 @@ describe('defineEngine 契约', () => {
       defineEngine({
         id: 'engineB',
         resources: [
-          { id: 'engineB.chapter', preloadDependsOn: ['engineB.missing'], create: () => loadedView('engineB.chapter', 1) },
+          {
+            id: 'engineB.chapter',
+            preloadDependsOn: ['engineB.missing'],
+            create: () => loadedView('engineB.chapter', 1),
+          },
         ],
       }),
     ).toThrowError(/engineB\.missing/);

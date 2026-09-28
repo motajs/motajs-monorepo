@@ -17,11 +17,25 @@ import { describe, expect, expectTypeOf, test } from 'vitest';
 import {
   createDiagnosticBus,
   createEditorCore,
+  defineEngine,
   DIAGNOSTIC_CODES,
   EDITOR_CORE_API_VERSION,
+  ENGINE_ADAPTER_API_VERSION,
   EditorCoreStartupError,
+  EngineDefinitionError,
+  isValidResourceId,
+  resolvePreloadOrder,
 } from '../index';
-import type { EngineAdapter, FsPort, HostPort, PreviewAdapter } from '../index';
+import type {
+  EngineAdapter,
+  EngineDescription,
+  FsPort,
+  HostPort,
+  PreloadStrategy,
+  PreviewAdapter,
+  ResourceDependencies,
+  ResourceDescriptor,
+} from '../index';
 import {
   aggregateResource,
   applyAction,
@@ -196,5 +210,20 @@ describe('editor-core 公开面', () => {
     expectTypeOf<UndoSystem>().not.toBeNever();
     expectTypeOf<ResourceRegistryEntry>().not.toBeNever();
     expectTypeOf<FileHandlerDependencies>().not.toBeNever();
+  });
+
+  test('Phase 5 适配器契约的值都从根 `.` 导出（值面）', () => {
+    expect(typeof defineEngine).toBe('function');
+    expect(typeof isValidResourceId).toBe('function');
+    expect(typeof resolvePreloadOrder).toBe('function');
+    expect(typeof EngineDefinitionError).toBe('function');
+    expect(typeof ENGINE_ADAPTER_API_VERSION).toBe('string');
+  });
+
+  test('Phase 5 适配器契约的类型名都从根 `.` 解析（编译期断言）', () => {
+    expectTypeOf<ResourceDescriptor<unknown>>().not.toBeNever();
+    expectTypeOf<ResourceDependencies>().not.toBeNever();
+    expectTypeOf<EngineDescription>().not.toBeNever();
+    expectTypeOf<PreloadStrategy>().not.toBeNever();
   });
 });

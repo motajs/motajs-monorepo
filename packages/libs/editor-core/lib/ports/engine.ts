@@ -108,17 +108,63 @@ export class EngineDefinitionError extends Error {
 /**
  * 校验一份 `EngineDescription` 并返回冻结的 `EngineAdapter`（PORT-03）。
  *
- * 所有问题一次性收集后抛出**一个** `EngineDefinitionError`；校验通过则返回冻结适配器。
- * 本函数不做任何注册、构造或总线交互——定义期与实例期严格分离。
+ * 七条规则一次性收集后抛出**一个** `EngineDefinitionError`（聚合，而非首错即停）：
+ * 1. 引擎 `id` 非空；描述符 `id` 命中共享语法（`isValidResourceId`）；
+ * 2. 描述符 `id` 在 `resources` 内唯一；
+ * 3. `create` 是函数；
+ * 4. 每个 `preloadDependsOn` 目标都指向同组内存在的 id；
+ * 5. `preloadDependsOn` 图无环（DFS + on-stack 集，报告**每一条**闭环边）；
+ * 6. `preload` 若给出必须是 `PreloadStrategy` 字面量之一；
+ * 7. `apiVersion` 若给出必须是非空字符串。
+ *
+ * 本函数不做任何注册、构造或总线交互——定义期与实例期严格分离，且无模块级可变状态。
  */
 export function defineEngine(description: EngineDescription): EngineAdapter {
   const problems: string[] = [];
 
   if (description.id.length === 0) problems.push('引擎 id 不能为空');
+
+  const seen = new Set<string>();
   for (const descriptor of description.resources) {
     if (!isValidResourceId(descriptor.id)) problems.push(`资源描述符 id 不合法：${descriptor.id}`);
+    if (seen.has(descriptor.id)) problems.push(`资源描述符 id 重复：${descriptor.id}`);
+    seen.add(descriptor.id);
     if (typeof descriptor.create !== 'function') problems.push(`资源描述符 ${descriptor.id} 的 create 不是函数`);
+
+    const preload = descriptor.preload;
+    if (preload !== undefined && preload !== 'eager' && preload !== 'lazy' && preload !== 'on-demand') {
+      problems.push(`资源描述符 ${descriptor.id} 的 preload 非法：${String(preload)}`);
+    }
   }
+
+  if (description.apiVersion !== undefined && description.apiVersion.length === 0) {
+    problems.push('apiVersion 不能为空字符串');
+  }
+
+  for (const descriptor of description.resources) {
+    for (const target of descriptor.preloadDependsOn ?? []) {
+      if (!seen.has(target)) {
+        problems.push(`资源描述符 ${descriptor.id} 的 preloadDependsOn 引用了不存在的 id：${target}`);
+      }
+    }
+  }
+
+  // 环检测（T-05-04）：DFS 用 on-stack 集标记灰点，每条指向灰点的边都关闭一个环，全部报告。
+  const byId = new Map<string, ResourceDescriptor>();
+  for (const descriptor of description.resources) byId.set(descriptor.id, descriptor);
+  const settled = new Set<string>();
+  const onStack = new Set<string>();
+  const visit = (id: string): void => {
+    if (settled.has(id)) return;
+    onStack.add(id);
+    for (const target of byId.get(id)?.preloadDependsOn ?? []) {
+      if (onStack.has(target)) problems.push(`资源依赖环：${id} → ${target}`);
+      else if (byId.has(target)) visit(target);
+    }
+    onStack.delete(id);
+    settled.add(id);
+  };
+  for (const descriptor of description.resources) visit(descriptor.id);
 
   if (problems.length > 0) throw new EngineDefinitionError(problems);
 
@@ -127,4 +173,36 @@ export function defineEngine(description: EngineDescription): EngineAdapter {
     apiVersion: description.apiVersion ?? ENGINE_ADAPTER_API_VERSION,
     resources: Object.freeze([...description.resources]),
   });
+}
+
+/**
+ * 依 `preloadDependsOn` 求出的**纯、稳定**拓扑序（PORT-03）。
+ *
+ * 依赖总排在依赖者之前；互不依赖的资源保持声明顺序（确定性 tie-breaking：每次取声明序中最早
+ * 可放置者）。不加载任何东西、不持有状态、不抛错——`defineEngine` 已在定义期拒绝环；若仍有余项
+ * （程序化误用），按声明顺序补齐以保持全序且确定。
+ */
+export function resolvePreloadOrder(resources: readonly ResourceDescriptor[]): readonly string[] {
+  const declared: string[] = resources.map((descriptor) => descriptor.id);
+  const known = new Set<string>(declared);
+  const byId = new Map<string, ResourceDescriptor>();
+  for (const descriptor of resources) byId.set(descriptor.id, descriptor);
+
+  const placed = new Set<string>();
+  const order: string[] = [];
+  const remaining = [...declared];
+
+  while (remaining.length > 0) {
+    const readyIndex = remaining.findIndex((id) =>
+      (byId.get(id)?.preloadDependsOn ?? [])
+        .filter((target) => known.has(target))
+        .every((target) => placed.has(target)),
+    );
+    const index = readyIndex === -1 ? 0 : readyIndex;
+    const [id] = remaining.splice(index, 1);
+    order.push(id);
+    placed.add(id);
+  }
+
+  return Object.freeze(order);
 }
