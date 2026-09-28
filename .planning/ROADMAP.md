@@ -195,7 +195,7 @@ Plans:
 
 ### Phase 05.1: editor-core 接口与实现整改 (INSERTED)
 
-**Goal**: 把 `editor-core` 拆成两层——「只管接口与调度的底层」和「自己管内容的编辑功能层」——并把撤销从「存快照」改成「存操作」，同时按既定编码规范重写全包；唯一对外的行为变化是撤销一次数据改动不再连带恢复地图视口（D-19）。
+**Goal**: 把 `editor-core` 拆成**两个包**——`@motajs/editor-core` 只留「只管接口与调度的底层」，新建 `@motajs/editor-impl` 承载「自己管内容的编辑功能层」——并把撤销从「存快照」改成「存操作」，同时按既定编码规范重写两包；唯一对外的行为变化是撤销一次数据改动不再连带恢复地图视口（D-19）。
 
 **Requirements**: （无；本插入阶段的 `phase_req_ids` 为 null，验收以 `05.1-CONTEXT.md` D-01..D-19 为准）
 
@@ -206,21 +206,18 @@ Plans:
 Plans:
 **Wave 1 — 接口定义（不写实现）**
 
-- [ ] 05.1-01-PLAN.md — 底层撤销契约：`IEditorOperation` / `IUndoManager` 及历史类型（接口定义）
-- [ ] 05.1-02-PLAN.md — 包内默认实现接口：`IPatchableResource` / `IResourceView` / `ILoadableResource` / `Action`
+- [ ] 05.1-01-PLAN.md — 底层（`editor-core`）撤销契约：`IEditorOperation` / `IUndoManager` 及历史类型（接口定义）
+- [ ] 05.1-02-PLAN.md — 默认实现层接口：`IPatchableResource` / `IResourceView` / `ILoadableResource` / `Action`
 
-**Wave 2 — 分层门禁（不搬文件夹：底层＝现有 `lib/kernel/**` + `lib/ports/**`）**
+**Wave 2 — 拆包 + 撤销重构 + 编辑器机械跟随（同一波；波内临时红，波末全仓保持可编译/测试绿）**
 
-- [ ] 05.1-03-PLAN.md — 加机器门禁守住「底层（kernel+ports）不依赖上层、不读文件」；内核三接口收进 `lib/kernel/types.ts`
+- [ ] 05.1-03-PLAN.md — 建 `editor-impl` 并整包迁入默认实现；`editor-core` 收缩为底层；`core→impl` 单向门禁 + 底层不读文件；新包结构门禁 `implExports.js`
+- [ ] 05.1-04-PLAN.md — 撤销重构：删快照、`UndoManager` 重写在底层、操作契约去 target、改写不变量测试
+- [ ] 05.1-08-PLAN.md — 编辑器侧唯一且最小的机械跟随：按符号所属包改指 import 说明符 + 删视口快照注册 / `targets` / 已删符号引用，按 D-19 改写测试（**同波内排在 05.1-03/05.1-04 之后执行**）
 
-**Wave 3 — 撤销重构 + 编辑器机械跟随（同一波；wave 末全仓保持可编译/测试绿）**
+**Wave 3–5 — 实现收尾**
 
-- [ ] 05.1-04-PLAN.md — 撤销重构：删快照、管理器重写为「只管操作栈」、改写不变量测试
-- [ ] 05.1-08-PLAN.md — 编辑器侧唯一且最小的机械跟随：删视口快照注册 / `targets` / 已删符号引用，按 D-19 改写测试（**同波内排在 05.1-04 之后执行**）
-
-**Wave 4–6 — 实现收尾**
-
-- [ ] 05.1-05-PLAN.md — 表格专用代码归位：字段路径 / 动作 / patch 操作迁入 `lib/table/`
+- [ ] 05.1-05-PLAN.md — 表格专用代码归位：字段路径 / 动作 / patch 操作迁入 `editor-impl/lib/table/`
 - [ ] 05.1-06-PLAN.md — 接口加 `I` 前缀并保留旧名别名（编辑器靠别名继续编译）
 - [ ] 05.1-07-PLAN.md — 每个类 `implements`、类型集中、禁 `import type` 的可失败门禁、文件形态扫尾
 
