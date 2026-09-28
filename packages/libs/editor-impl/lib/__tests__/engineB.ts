@@ -10,7 +10,7 @@
  * 因此 `scripts/verify/coreEngineNeutral.js` 的引擎标识门禁（排除 `__tests__`）不会把它当作泄漏。
  */
 
-import type { EngineDescription, ResourceDescriptor, ResourceDependencies } from '../ports/engine';
+import type { EngineDescription, ResourceDescriptor, ResourceDependencies } from '@motajs/editor-core';
 import type { ResourceView } from '../resources/combinators';
 import { FileResource } from '../resources/fileResource';
 import type { FileHandler } from '../resources/fileHandler';
@@ -59,8 +59,8 @@ const ENGINE_B_CHAPTER_ADDRESS = 'chapter.json';
 function fileBackedDescriptor<T>(
   id: string,
   address: string,
-  options: Pick<ResourceDescriptor<T>, 'preload' | 'preloadDependsOn'> = {},
-): ResourceDescriptor<T> {
+  options: Pick<ResourceDescriptor<ResourceView<T>>, 'preload' | 'preloadDependsOn'> = {},
+): ResourceDescriptor<ResourceView<T>> {
   return {
     id,
     ...options,
@@ -75,7 +75,7 @@ function fileBackedDescriptor<T>(
  * 它从 `engineB.catalog` 派生内容（`computedResource`），自身不持有任何 IO 地址——这正是
  * 「描述符与来源无关」的机械证明（T-05-09）。
  */
-function notesDescriptor(): ResourceDescriptor<EngineBNotes> {
+function notesDescriptor(): ResourceDescriptor<ResourceView<EngineBNotes>> {
   return {
     id: 'engineB.notes',
     preload: 'lazy',

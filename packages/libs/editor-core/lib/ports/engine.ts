@@ -8,20 +8,44 @@
  *
  * 设计约束：
  * - **来源无关**（D-04）：通用描述符不含 `path` / `format` / handler 实例，也不含参数模板；
- *   内容构造只经 `create(deps)` 这一个惰性工厂缝（D-05）。文件 IO 地址只允许存在于
- *   `lib/resources/fileResource.ts` 的文件支撑类内部。
+ *   内容构造只经 `create(deps)` 这一个惰性工厂缝（D-05）。文件 IO 地址只允许存在于默认实现包里
+ *   的文件支撑类 `fileResource.ts` 内部。
+ * - **去实现化**（D-01/D-03）：本文件不认识「资源视图」的具体形状——`ResourceDescriptor<TView>`
+ *   的 `TView` 是**视图类型**、由消费方指定，core 只把它原样交出；`ResourceDependencies.fileHandlers`
+ *   是 core 自持的 `unknown` 缺口，形状由默认实现层收窄。
  * - **纯函数**（PORT-03）：`defineEngine` 同步、无副作用、不注册任何东西、不触碰诊断总线，
  *   也没有模块级可变绑定；重复或并发调用同一描述得到等价适配器。
- * - **语法不漂移**（D-09）：描述符 id 的判定复用 `ResourceRegistry` 的同一谓词
- *   `isValidResourceId`（本文件导入并再导出），因此定义期与登记期不可能各自演化。
- * - 本文件只 import 类型与 id 谓词，绝不 import 宿主 / 引擎 / 诊断总线（Pitfall 10 / PORT-02）。
+ * - **语法不漂移**（D-09）：逻辑 id 谓词 `isValidResourceId` 由本文件自持并导出，
+ *   `ResourceRegistry`（默认实现层）反向 import，因此定义期与登记期不可能各自演化。
+ * - 本文件只 import 类型与自持的 id 谓词，绝不 import 宿主 / 引擎 / 诊断总线（Pitfall 10 / PORT-02）。
  */
-import type { ResourceView } from '../resources/combinators';
-import type { FileHandlerManager } from '../resources/fileHandlerManager';
-import { isValidResourceId } from '../resources/resourceRegistry';
+/**
+ * 逻辑 id 形式：一段或多段以点分隔，每段以字母/`_`/`$` 开头，不含空白与斜杠。
+ *
+ * 谓词由底层自持：`editor-impl` 的 `ResourceRegistry` 反向跨包 import 它，因此「描述符 id 语法」
+ * 与「登记 id 语法」不可能各自漂移（D-09）。
+ */
+const LOGICAL_ID_PATTERN = /^[A-Za-z_$][A-Za-z0-9_$]*(\.[A-Za-z_$][A-Za-z0-9_$]*)*$/;
 
-// 与 `ResourceRegistry` 共用同一逻辑 id 判定（D-09）；再导出后定义方与登记方不可能漂移。
-export { isValidResourceId };
+/**
+ * 保留名：即使形式上合法也拒绝，避免任何对象键语义的误用（V5）。
+ *
+ * 它与谓词、`LOGICAL_ID_PATTERN` 一起从 `editor-impl` 的 `ResourceRegistry` 收进底层并导出，
+ * 使登记方与定义方共用**同一份**原型污染防线（T-05.1-09）；`editor-impl` 反向 import 它。
+ */
+export const RESERVED_IDS: readonly string[] = Object.freeze(['__proto__', 'constructor', 'prototype']);
+
+/**
+ * 逻辑 id 的**唯一共享判定**（布尔形式）：空、含空白、保留名、不符 `LOGICAL_ID_PATTERN` 之一即返回 `false`。
+ *
+ * 这是**纯函数**：不抛错、无状态、可安全并发调用。
+ */
+export function isValidResourceId(id: string): boolean {
+  if (id.length === 0) return false;
+  if (/\s/.test(id)) return false;
+  if (RESERVED_IDS.includes(id)) return false;
+  return LOGICAL_ID_PATTERN.test(id);
+}
 
 /**
  * 适配器契约版本。与 `EDITOR_CORE_API_VERSION` 并行：core 公开 API 与适配器契约是两份、
@@ -37,8 +61,13 @@ export const ENGINE_ADAPTER_API_VERSION = '0.1.0';
  * 「core 不假定内容来自文件」的机制证明。
  */
 export interface ResourceDependencies {
-  /** per-instance 文件层；只有文件支撑的工厂会用到它。 */
-  readonly fileHandlers: FileHandlerManager;
+  /**
+   * per-instance 文件层槽位；只有文件支撑的工厂会用到它。
+   *
+   * core 只声明这个缺口为 `unknown`——它不假定文件层的具体形状（D-02/D-03）；默认实现层
+   * 在构造处把它收窄回自己的文件层类型。
+   */
+  readonly fileHandlers: unknown;
 }
 
 /** 允许的 `preload` 字面量集合。 */
@@ -50,12 +79,15 @@ export type PreloadStrategy = 'eager' | 'lazy' | 'on-demand';
  * 每个资源只由逻辑 id + 一个惰性 `create(deps)` 工厂描述；`preload` / `preloadDependsOn`
  * 表达加载意图与依赖边。**刻意不含** `path`、`format`、handler 实例或参数模板。
  */
-export interface ResourceDescriptor<T = unknown> {
+export interface ResourceDescriptor<TView = unknown> {
   /** 逻辑 id；与 `ResourceRegistry` 共用同一语法（`isValidResourceId`）。 */
   readonly id: string;
 
-  /** 唯一的构造缝：给定依赖返回资源视图（可异步）。参数化在适配器侧解析，core 永不见模板。 */
-  readonly create: (deps: ResourceDependencies) => ResourceView<T> | Promise<ResourceView<T>>;
+  /**
+   * 唯一的构造缝：给定依赖返回**视图**（可异步）。`TView` 是视图类型、由消费方指定，
+   * core 不假定其形状（D-03）；参数化在适配器侧解析，core 永不见模板。
+   */
+  readonly create: (deps: ResourceDependencies) => TView | Promise<TView>;
 
   /** 可选加载策略；缺省语义由消费方决定（本阶段不定义默认值）。 */
   readonly preload?: PreloadStrategy;

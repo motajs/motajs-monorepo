@@ -6,7 +6,7 @@
  */
 
 import { signal, effect } from 'alien-signals';
-import type { FsPort } from '../ports/fs';
+import type { FsPort } from '@motajs/editor-core';
 import { waitUntil } from './waitUntil';
 import type { Content } from './types';
 import type { IContentView, ReadonlySignal } from './interfaces';

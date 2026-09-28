@@ -6,11 +6,11 @@
  * 的嵌套形状。四个故障注入钩子（写延迟 / 全局写错误 / 按路径写错误 / 写计数）与 editor 版本
  * 对齐，被搬入 core 的 `FileHandler` 系列测试需要它们。
  *
- * 契约（见 `../../ports/fs.ts`）：读取缺失路径必须以一个 `message` 命中 `isFileNotFoundError`
+ * 契约（见 `@motajs/editor-core` 的 `lib/ports/fs.ts`）：读取缺失路径必须以一个 `message` 命中 `isFileNotFoundError`
  * 的 `Error` 拒绝——这里用 `file-not-found: <path>`。
  */
 
-import type { FsPort } from '../../ports/fs';
+import type { FsPort } from '@motajs/editor-core';
 
 export class MemoryFsPort implements FsPort {
   private readonly files = new Map<string, string>();

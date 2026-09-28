@@ -1,10 +1,14 @@
 import { Store } from '@tanstack/store';
 
+import type { DiagnosticBus } from './diagnostics';
+import type { CapabilityRef, RegisterCapabilityOptions, RegisterCapabilityResult } from './registry';
+
 /**
  * 底层（editor-core）对外类型的唯一集中出口。
  *
- * 本文件先定义「可撤销操作」与「撤销管理器」两个契约：操作自带逆操作，管理器只记录先后、
- * 不保存快照。Plan 03 会把内核三接口（CapabilityRegistrar / EditorCoreConfig / EditorCore）也并入此处。
+ * 本文件汇总「可撤销操作」「撤销管理器」两个契约：操作自带逆操作，管理器只记录先后、不保存快照；
+ * 并从此处自持内核三接口（CapabilityRegistrar / EditorCoreConfig / EditorCore），使 `lib/kernel/core.ts`
+ * 只留组合逻辑（D-08）。
  */
 
 /**
@@ -87,3 +91,34 @@ export interface OperationHistoryState {
  * 旧名过渡别名：编辑器靠它继续编译，Phase 11 删除（D-18）。
  */
 export type EditorOperation<T = void> = IEditorOperation<T>;
+
+/**
+ * 交给 `config.install` 的**窄接口**（D-18）。
+ *
+ * 它绝不等于 `EditorCore` 实例：只允许在构造期间注册能力、登记拆除钩子。
+ */
+export interface CapabilityRegistrar {
+  register(kind: string, id: string, value: unknown, options?: RegisterCapabilityOptions): RegisterCapabilityResult;
+  addTeardown(teardown: () => void): void;
+}
+
+/** `createEditorCore` 的配置（N-02）。不提供任何暴露实例的通路（D-12）。 */
+export interface EditorCoreConfig {
+  readonly install?: (registrar: CapabilityRegistrar) => void;
+  readonly requiredCapabilities?: readonly string[];
+}
+
+/** per-instance 内核的最小公开面（D-12）。 */
+export interface EditorCore {
+  registerCapability(
+    kind: string,
+    id: string,
+    value: unknown,
+    options?: RegisterCapabilityOptions,
+  ): RegisterCapabilityResult;
+  getCapability<T = unknown>(kind: string, id: string): T | undefined;
+  getCapabilityOrThrow<T = unknown>(kind: string, id: string): T;
+  snapshotCapabilities(): readonly CapabilityRef[];
+  readonly diagnostics: DiagnosticBus;
+  dispose(): void;
+}

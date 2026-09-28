@@ -12,16 +12,10 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import {
-  computedResource,
-  defineEngine,
-  EngineDefinitionError,
-  FileHandlerManager,
-  PersistenceMonitor,
-  ResourceRegistry,
-  resolvePreloadOrder,
-} from '../index';
-import type { LoadableResource, PreloadStrategy, ResourceDependencies, ResourceDescriptor } from '../index';
+import { computedResource, FileHandlerManager, PersistenceMonitor, ResourceRegistry } from '../index';
+import type { LoadableResource } from '../index';
+import { defineEngine, EngineDefinitionError, resolvePreloadOrder } from '@motajs/editor-core';
+import type { PreloadStrategy, ResourceDependencies, ResourceDescriptor } from '@motajs/editor-core';
 import { MemoryFsPort } from '../resources/__tests__/memoryFsPort';
 
 /** 构造一份一次性内存依赖；描述符 `create` 只取用其中的 `fileHandlers`。 */
@@ -55,7 +49,7 @@ describe('defineEngine 契约', () => {
     });
 
     const descriptor = adapter.resources[0];
-    const view = await descriptor.create(createDeps());
+    const view = (await descriptor.create(createDeps())) as LoadableResource<unknown>;
     const registry = new ResourceRegistry();
     registry.register(descriptor.id, view);
 

@@ -14,6 +14,7 @@
  * - 与 `createEditorCore` 一致：登记返回**只删除自己那一条**的 disposer，快照返回冻结数组。
  * - 本阶段**刻意不接线**：`projectData` 等不使用它，引擎描述符由 Phase 5 注入（RES-02 的诚实范围）。
  */
+import { isValidResourceId, RESERVED_IDS } from '@motajs/editor-core';
 import type { ResourceView } from './combinators';
 
 /** `ResourceRegistry.snapshot()` 返回的只读条目。 */
@@ -22,26 +23,12 @@ export interface ResourceRegistryEntry {
   readonly resource: ResourceView<unknown>;
 }
 
-/** 逻辑 id 形式：一段或多段以点分隔，每段以字母/`_`/`$` 开头，不含空白与斜杠。 */
-const LOGICAL_ID_PATTERN = /^[A-Za-z_$][A-Za-z0-9_$]*(\.[A-Za-z_$][A-Za-z0-9_$]*)*$/;
-
-/** 保留名：即使形式上合法也拒绝，避免任何对象键语义的误用（V5）。 */
-const RESERVED_IDS = Object.freeze(['__proto__', 'constructor', 'prototype']);
-
 /**
- * 逻辑 id 的**唯一共享判定**（布尔形式）：空、含空白、保留名、不符 `LOGICAL_ID_PATTERN` 之一即返回 `false`。
+ * 校验逻辑 id；不合法即抛出普通 `Error`（不产生机器诊断，见文件头 Pitfall 10）。
  *
- * `ResourceRegistry`（本文件）与 `lib/ports/engine` 的 `defineEngine` 都调用它，因此「描述符 id 语法」
- * 与「登记 id 语法」不可能各自漂移（D-09）。这是**纯函数**：不抛错、无状态、可安全并发调用。
+ * 判定委托给底层（`editor-core`）自持的共享谓词 `isValidResourceId`（连同一份保留名清单
+ * `RESERVED_IDS`）：登记期与定义期不可能各自漂移（D-09）。
  */
-export function isValidResourceId(id: string): boolean {
-  if (id.length === 0) return false;
-  if (/\s/.test(id)) return false;
-  if (RESERVED_IDS.includes(id)) return false;
-  return LOGICAL_ID_PATTERN.test(id);
-}
-
-/** 校验逻辑 id；不合法即抛出普通 `Error`（不产生机器诊断，见文件头 Pitfall 10）。 */
 function assertValidLogicalId(id: string): void {
   // 合法判定委托给共享谓词；不合法时再按原顺序复现**逐字未变**的抛出消息。
   if (isValidResourceId(id)) return;

@@ -5,13 +5,13 @@
  * `LoadableResource<T>`，读取、加载锁与串行持久化全部委托给注入的 `FileHandlerManager`
  * （per-path 缓存 + in-flight 加载锁）。本类**不**自己缓存、**不**加锁、**不**重写持久化。
  *
- * 硬约束（D-06 / ports/fs.ts:16-18）：
+ * 硬约束（D-06 / `@motajs/editor-core` 的 `lib/ports/fs.ts`）：
  * - **地址不透明**：`address` 原样交给 `FileHandlerManager.get/load/reload`；本类不检查扩展名、
  *   不拼接/解码/归一化任何路径——core 不拥有路径安全面，那是宿主的职责（T-05-02）。
  * - 文件层实例经构造参数 `deps.fileHandlers` 注入，**不**取自任何模块级单例（D-10）。
  */
 
-import type { ResourceDependencies } from '../ports/engine';
+import type { ResourceDependencies } from '@motajs/editor-core';
 import type { FileHandler } from './fileHandler';
 import type { FileHandlerManager } from './fileHandlerManager';
 import type { IDataHandler } from './interfaces';
@@ -41,7 +41,8 @@ export class FileResource<T> implements LoadableResource<T> {
   ) {
     this.id = id;
     this.address = address;
-    this.manager = deps.fileHandlers;
+    // core 只把依赖缺口声明为 `unknown`（D-02/D-03）；默认实现层在此收窄回自己的文件层类型。
+    this.manager = deps.fileHandlers as FileHandlerManager;
     // per-path 缓存：同一地址复用同一 FileHandler；首次遇到时创建。
     const file = this.manager.get(address);
     this.handler = handlerFactory(file);

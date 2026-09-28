@@ -7,7 +7,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { FileHandler } from '../fileHandler';
 import { ContentUtils } from '../contentUtils';
 import { PersistenceMonitor } from '../persistenceMonitor';
-import type { FsPort } from '../../ports/fs';
+import type { FsPort } from '@motajs/editor-core';
 import { MemoryFsPort } from './memoryFsPort';
 import { wait } from './testHelpers';
 

@@ -19,16 +19,10 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import {
-  computedResource,
-  defineEngine,
-  EngineDefinitionError,
-  FileHandlerManager,
-  PersistenceMonitor,
-  ResourceRegistry,
-  resolvePreloadOrder,
-} from '../index';
-import type { EngineDescription, LoadableResource, ResourceDependencies, ResourceDescriptor } from '../index';
+import { computedResource, FileHandlerManager, PersistenceMonitor, ResourceRegistry } from '../index';
+import type { LoadableResource } from '../index';
+import { defineEngine, EngineDefinitionError, resolvePreloadOrder } from '@motajs/editor-core';
+import type { EngineDescription, ResourceDependencies, ResourceDescriptor } from '@motajs/editor-core';
 import { MemoryFsPort } from '../resources/__tests__/memoryFsPort';
 import { createEngineBDescription, engineBDescription } from './engineB';
 
@@ -71,7 +65,7 @@ describe('fake engine B 的适配器闭环', () => {
     const registry = new ResourceRegistry();
 
     for (const descriptor of engineBDescription.resources) {
-      const view = await descriptor.create(deps);
+      const view = (await descriptor.create(deps)) as LoadableResource<unknown>;
       expect(typeof view.snapshot).toBe('function');
       expect(typeof view.value).toBe('function');
       expect(typeof view.subscribe).toBe('function');

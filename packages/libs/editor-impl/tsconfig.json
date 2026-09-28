@@ -1,0 +1,10 @@
+{
+  "extends": "@motajs/config/tsconfig.lib.base.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["${configDir}/lib/*"],
+      "@styled-system/*": ["../../apps/editor/styled-system/*"]
+    }
+  },
+  "include": ["${configDir}/lib"]
+}

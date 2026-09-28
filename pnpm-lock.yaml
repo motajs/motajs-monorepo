@@ -498,6 +498,25 @@ importers:
 
   packages/libs/editor-core:
     dependencies:
+      '@tanstack/store':
+        specifier: catalog:default
+        version: 0.8.0
+    devDependencies:
+      '@motajs/config':
+        specifier: workspace:*
+        version: link:../config
+      jsdom:
+        specifier: 26.1.0
+        version: 26.1.0(supports-color@7.2.0)
+      vitest:
+        specifier: catalog:default
+        version: 4.0.18(@types/node@25.0.3)(jsdom@26.1.0(supports-color@7.2.0))(less@4.5.1)(lightningcss@1.31.1)(sass@1.97.1)(stylus@0.62.0(supports-color@7.2.0))(terser@5.44.1)
+
+  packages/libs/editor-impl:
+    dependencies:
+      '@motajs/editor-core':
+        specifier: workspace:*
+        version: link:../editor-core
       '@tanstack/react-store':
         specifier: catalog:default
         version: 0.8.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)

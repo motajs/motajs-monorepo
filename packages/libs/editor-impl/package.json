@@ -1,0 +1,60 @@
+{
+  "name": "@motajs/editor-impl",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "license": "BSD-3-Clause",
+  "exports": {
+    ".": "./lib/index.ts",
+    "./code": "./lib/code/index.ts",
+    "./table": "./lib/table/index.ts",
+    "./map": "./lib/map/index.ts",
+    "./asset": "./lib/asset/index.ts",
+    "./shell": "./lib/shell/index.ts",
+    "./react": "./lib/react/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -b",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "@douyinfe/semi-ui": "catalog:default",
+    "alien-signals": "catalog:default",
+    "antd": "catalog:default",
+    "blockly": "catalog:default",
+    "immer": "catalog:default",
+    "monaco-editor": "catalog:default",
+    "pixi.js": "catalog:default",
+    "react": "catalog:default",
+    "react-dom": "catalog:default"
+  },
+  "peerDependenciesMeta": {
+    "@douyinfe/semi-ui": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "@motajs/editor-core": "workspace:*",
+    "@tanstack/react-store": "catalog:default",
+    "@tanstack/store": "catalog:default",
+    "es-toolkit": "catalog:default",
+    "ts-pattern": "catalog:default"
+  },
+  "devDependencies": {
+    "@douyinfe/semi-ui": "catalog:default",
+    "@motajs/config": "workspace:*",
+    "@types/react": "catalog:default",
+    "@types/react-dom": "catalog:default",
+    "alien-signals": "catalog:default",
+    "antd": "catalog:default",
+    "blockly": "catalog:default",
+    "immer": "catalog:default",
+    "jsdom": "26.1.0",
+    "monaco-editor": "catalog:default",
+    "pixi.js": "catalog:default",
+    "react": "catalog:default",
+    "react-dom": "catalog:default",
+    "vitest": "catalog:default"
+  }
+}

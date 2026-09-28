@@ -11,7 +11,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import type { ResourceDependencies } from '../../ports/engine';
+import type { ResourceDependencies } from '@motajs/editor-core';
 import { FileHandler } from '../fileHandler';
 import { FileHandlerManager } from '../fileHandlerManager';
 import { JsonDataHandler } from '../jsonDataHandler';

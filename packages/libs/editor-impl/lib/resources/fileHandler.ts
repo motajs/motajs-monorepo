@@ -1,7 +1,7 @@
 /** Text file state: memory first, persistence scheduled by normalized path. */
 
 import { effect, signal } from 'alien-signals';
-import type { FsPort } from '../ports/fs';
+import type { FsPort } from '@motajs/editor-core';
 import { waitUntil } from './waitUntil';
 import type { Content } from './types';
 import type { IContentHandler, ReadonlySignal } from './interfaces';

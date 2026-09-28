@@ -17,43 +17,13 @@
 import { createDiagnosticBus, DIAGNOSTIC_CODES, type Diagnostic, type DiagnosticBus } from './diagnostics';
 import { EditorCoreStartupError } from './errors';
 import type { CapabilityRef, RegisterCapabilityOptions, RegisterCapabilityResult } from './registry';
+import type { CapabilityRegistrar, EditorCore, EditorCoreConfig } from './types';
 
 /**
  * 公开 API 版本。未冻结期按 semver 惯例视为不稳定；Phase 12 冻结接口面时升到 `1.0.0`（D-11）。
  * 是导出的常量，**不是** `EditorCore` 实例成员。
  */
 export const EDITOR_CORE_API_VERSION = '0.1.0';
-
-/**
- * 交给 `config.install` 的**窄接口**（D-18）。
- *
- * 它绝不等于 `EditorCore` 实例：只允许在构造期间注册能力、登记拆除钩子。
- */
-export interface CapabilityRegistrar {
-  register(kind: string, id: string, value: unknown, options?: RegisterCapabilityOptions): RegisterCapabilityResult;
-  addTeardown(teardown: () => void): void;
-}
-
-/** `createEditorCore` 的配置（N-02）。不提供任何暴露实例的通路（D-12）。 */
-export interface EditorCoreConfig {
-  readonly install?: (registrar: CapabilityRegistrar) => void;
-  readonly requiredCapabilities?: readonly string[];
-}
-
-/** per-instance 内核的最小公开面（D-12）。 */
-export interface EditorCore {
-  registerCapability(
-    kind: string,
-    id: string,
-    value: unknown,
-    options?: RegisterCapabilityOptions,
-  ): RegisterCapabilityResult;
-  getCapability<T = unknown>(kind: string, id: string): T | undefined;
-  getCapabilityOrThrow<T = unknown>(kind: string, id: string): T;
-  snapshotCapabilities(): readonly CapabilityRef[];
-  readonly diagnostics: DiagnosticBus;
-  dispose(): void;
-}
 
 /**
  * 种类格式（D-17）：一段或多段以点分隔的段，允许 camelCase 与连字符。
