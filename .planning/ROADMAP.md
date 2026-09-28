@@ -193,6 +193,37 @@ Plans:
 
 - [x] 05-04-PLAN.md — mota adapter in `src/adapter/`: all 10 paths as descriptors, parameterized floor factory, adapter-owned handlers, migrations stay adapter-side (PORT-03, PORT-04, PORT-05, PORT-07)
 
+### Phase 05.1: editor-core 接口与实现整改 (INSERTED)
+
+**Goal**: 把 `editor-core` 拆成两层——「只管接口与调度的底层」和「自己管内容的编辑功能层」——并把撤销从「存快照」改成「存操作」，同时按既定编码规范重写全包；唯一对外的行为变化是撤销一次数据改动不再连带恢复地图视口（D-19）。
+
+**Requirements**: （无；本插入阶段的 `phase_req_ids` 为 null，验收以 `05.1-CONTEXT.md` D-01..D-19 为准）
+
+**Depends on:** Phase 5
+
+**Plans:** 8 plans
+
+Plans:
+**Wave 1 — 接口定义（不写实现）**
+
+- [ ] 05.1-01-PLAN.md — 底层撤销契约：`IEditorOperation` / `IUndoManager` 及历史类型（接口定义）
+- [ ] 05.1-02-PLAN.md — 包内默认实现接口：`IPatchableResource` / `IResourceView` / `ILoadableResource` / `Action`
+
+**Wave 2 — 两层目录与门禁**
+
+- [ ] 05.1-03-PLAN.md — 内核 + 端口搬进 `lib/core/`，机器门禁守住「底层不依赖上层、不读文件」
+
+**Wave 3–6 — 实现**
+
+- [ ] 05.1-04-PLAN.md — 撤销重构：删快照、管理器重写为「只管操作栈」、改写不变量测试
+- [ ] 05.1-05-PLAN.md — 表格专用代码归位：字段路径 / 动作 / patch 操作迁入 `lib/table/`
+- [ ] 05.1-06-PLAN.md — 接口加 `I` 前缀并保留旧名别名（编辑器靠别名不改也能编译）
+- [ ] 05.1-07-PLAN.md — 每个类 `implements`、类型集中、禁 `import type` 的可失败门禁、文件形态扫尾
+
+**Wave 7 — 编辑器机械跟随**
+
+- [ ] 05.1-08-PLAN.md — 编辑器侧唯一且最小的机械跟随：删视口快照注册 / `targets`，按 D-19 改写测试（**范围冲突需用户批准**）
+
 ### Phase 6: Fixed Shell + Slots
 
 **Goal**: Extract the fixed workbench shell with named registry-driven slots, preserving the exact baseline layout and dogfooding the extension registration API.
@@ -312,6 +343,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 3. Kernel — Runtime, Ports, Registry, Diagnostics | 4/4 | Complete    | 2026-09-23 |
 | 4. Resource + Edit Layers Moved | 4/4 | Complete    | 2026-09-24 |
 | 5. Engine Adapter Skeleton & Resource Descriptors | 4/4 | In Progress|  |
+| 05.1. editor-core 接口与实现整改 | 0/8 | Planned | - |
 | 6. Fixed Shell + Slots | 0/TBD | Not started | - |
 | 7. Table Capability + Port | 0/TBD | Not started | - |
 | 8. Code Capability + Port | 0/TBD | Not started | - |
