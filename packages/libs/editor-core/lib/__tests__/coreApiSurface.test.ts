@@ -52,6 +52,7 @@ import {
   fieldToDataAttr,
   FileHandler,
   FileHandlerManager,
+  FileResource,
   getByFieldPath,
   getParentField,
   getParentFieldPath,
@@ -147,6 +148,7 @@ describe('editor-core 公开面', () => {
     const classes = [
       FileHandlerManager,
       FileHandler,
+      FileResource,
       DataHandler,
       JsonDataHandler,
       BinaryFileHandler,
