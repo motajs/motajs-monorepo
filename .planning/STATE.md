@@ -2,18 +2,18 @@
 gsd_state_version: "1.0"
 current_phase: "05.1"
 current_phase_name: editor-core
-current_plan: 4
+current_plan: 1
 status: executing
-stopped_at: Phase 05.1 context gathered
-last_updated: "2026-09-28T09:20:11.943Z"
-last_activity: 2026-09-24
-last_activity_desc: Phase 4 complete, transitioned to Phase 5
-state_head: a7adf9e6eb3fccb1de04a97bcd9fdb248593f166
+stopped_at: Completed 05.1-01-PLAN.md
+last_updated: "2026-09-28T11:44:15.411Z"
+last_activity: 2026-09-28
+last_activity_desc: Phase 05.1 plan 01 complete (editor-core undo contract types)
+state_head: 9351c3d5968abb0fd1bf8b84084607cfa129355a
 progress:
   total_phases: 13
   completed_phases: 0
   total_plans: 33
-  completed_plans: 25
+  completed_plans: 26
   percent: 0
 ---
 
@@ -24,15 +24,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-09-24)
 
 **Core value:** Decouple the editor kernel from engine details through an engine-agnostic `editor-core` so old and new engines share one editing layer and third parties can customise freely.
-**Current focus:** Phase 5 — Engine Adapter Skeleton & Resource Descriptors
+**Current focus:** Phase 05.1 — editor-core 接口与实现整改（插入阶段）
 
 ## Current Position
 
-Phase: 05.1 (editor-core) — READY TO EXECUTE
-Current Plan: 4
+Phase: 05.1 (editor-core) — IN PROGRESS
+Current Plan: 1
 Total Plans in Phase: 8
-Status: Ready to execute
-Last activity: 2026-09-24 — Phase 4 complete, transitioned to Phase 5
+Status: Executing (plan 01 complete; plan 02 pending briefing/approval)
+Last activity: 2026-09-28 — 05.1-01 撤销契约类型落地（`lib/kernel/types.ts`）
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -71,6 +71,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 05 P02 | 6 | 2 tasks | 2 files |
 | Phase 5 P03 | 16min | 2 tasks | 6 files |
 | Phase 5 P04 | 10 | 2 tasks | 3 files |
+| Phase 05.1 P01 | 6min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -115,6 +116,9 @@ Recent decisions affecting current work:
 - [Phase 5]: 05-04: mota.events uses the editor-owned Json2xDataHandler with var name events_c12a15a8_c380_4b28_8144_256cba95f760; mota.editorConfig is the only lazy descriptor and uses core's generic JsonDataHandler (PORT-05 boundary)
 - [Phase 5]: 05-04: motaFloorDescriptor asserts the derived mota.floor.<floorId> id with the shared isValidResourceId and throws MotaFloorIdError on a grammar violation — the registry grammar is never widened (Open Question 1 deferred to Phase 11)
 - [Phase 5]: 05-04: the adapter is dead code — no entry point imports src/adapter/, projectData.ts is byte-identical, and the editor artifact is unchanged (D-01)
+- [Phase 05.1]: 05.1-01: 候选 A — 操作自带逆（IEditorOperation.apply 返回 AppliedOperation.inverse），管理器只记录先后、不实现每个操作的 undo/redo；与既有 applied.inverse 同构，行为等价最易证明。
+- [Phase 05.1]: 05.1-01: 新撤销契约彻底无快照 —— 不出现 capture/restore/snapshot/targets/OperationTarget/UndoSystem/Content/IResourceView（D-03/D-05）；OperationMeta.paths 成为历史条目路径的唯一来源。
+- [Phase 05.1]: 05.1-01: D-18 旧名别名以同文件 export type EditorOperation<T=void> = IEditorOperation<T> 声明（避免 no-circular 自环）；本计划刻意不接公开面，lib/index.ts 零改动。
 
 ### Pending Todos
 
@@ -140,6 +144,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-09-28T07:26:45.301Z
-Stopped at: Phase 05.1 context gathered
-Resume file: .planning/phases/05.1-editor-core/05.1-CONTEXT.md
+Last session: 2026-09-28T11:44:15.175Z
+Stopped at: Completed 05.1-01-PLAN.md
+Resume file: None
