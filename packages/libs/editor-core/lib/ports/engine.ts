@@ -93,15 +93,14 @@ export interface EngineAdapter {
  *
  * 与 `EditorCoreStartupError` 同形：`super(message)` 记录摘要，冻结承载的问题列表，且**不**调用
  * `Error.captureStackTrace`（core 刻意不依赖 `@types/node`）。
+ *
+ * 承载列表经标准的 `Error.cause` 传递（冻结副本），因此不引入任何未在 `INTERFACE-NAME.md` 中
+ * 登记的新成员名，也满足 `noUnusedLocals`（无未被读取的私有字段）。
  */
 export class EngineDefinitionError extends Error {
-  private readonly problems: readonly string[];
-
   constructor(problems: readonly string[]) {
-    super(`Engine definition invalid: ${problems.join('; ')}`);
+    super(`Engine definition invalid: ${problems.join('; ')}`, { cause: Object.freeze([...problems]) });
     this.name = 'EngineDefinitionError';
-    // 复制并冻结：构造后再改动传入数组也无法改写本错误承载的问题（镜像 `EditorCoreStartupError`）。
-    this.problems = Object.freeze([...problems]);
   }
 }
 
