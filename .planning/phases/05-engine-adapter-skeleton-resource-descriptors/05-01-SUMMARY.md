@@ -23,7 +23,8 @@ affects: [05-02, 05-03, 05-04, 11]
 actuals:
   tokens: 3670
   tasks: 3
-  commits: 5
+  commits: 5        # measured: git rev-list --count 47b72b1..HEAD at SUMMARY write (5 atomic task commits)
+plan_head_before: 47b72b166b5943ff2b676e2b3bd94b276fe36246
 
 tech-stack:
   added: []
@@ -161,7 +162,7 @@ Each task was committed atomically. The two `tdd="true"` tasks produced RED → 
 2. **Task 2 (tracer, TDD): End-to-end `defineEngine` on one descriptor** - `0ebf9ab` (test, RED) → `7ca98cc` (feat, GREEN)
 3. **Task 3 (TDD): Aggregated validation + `resolvePreloadOrder` + full contract tests** - `8c9f3ae` (test, RED) → `a3a755a` (feat, GREEN) → `bd23c22` (fix, `noUnusedLocals`/`Error.cause`)
 
-**Plan metadata:** `PENDING` (docs: complete core adapter contract plan)
+**Plan metadata:** `75fb12f` (docs(05-01): complete core adapter contract plan)
 
 _Note: TDD tasks produce multiple commits (test → feat → [refactor/fix])._
 
