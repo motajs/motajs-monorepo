@@ -4,7 +4,7 @@ import { Store } from '@tanstack/store';
  * 底层（editor-core）对外类型的唯一集中出口。
  *
  * 本文件先定义「可撤销操作」与「撤销管理器」两个契约：操作自带逆操作，管理器只记录先后、
- * 不保存快照。（Plan 03 会把内核三接口也并入此处。）
+ * 不保存快照。Plan 03 会把内核三接口（CapabilityRegistrar / EditorCoreConfig / EditorCore）也并入此处。
  */
 
 /**
@@ -82,3 +82,8 @@ export interface OperationHistoryState {
   /** 是否有操作正在排队执行。 */
   busy: boolean;
 }
+
+/**
+ * 旧名过渡别名：编辑器靠它继续编译，Phase 11 删除（D-18）。
+ */
+export type EditorOperation<T = void> = IEditorOperation<T>;
