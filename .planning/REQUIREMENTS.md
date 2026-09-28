@@ -23,7 +23,7 @@
 - [x] **PORT-03**: `defineEngine({...})` 在适配器侧生成引擎描述；core 只认逻辑 id，不构造 `project/...` 路径、不检查扩展名
 - [x] **PORT-04**: 10 条硬编码路径变为 `ResourceDescriptor`（逻辑 id、opaque path key、format id、handler、preload 依赖）
 - [ ] **PORT-05**: `Json2xDataHandler` 与各领域 `*DataHandler` 移入适配器；core 仅保留通用 `JsonDataHandler`
-- [ ] **PORT-06**: 游戏词汇（tower/floor/loc/autopass/autotile/idnum/airwall/commonEvent 等）经 `LabelOverrides` 移出 core
+- [x] **PORT-06**: 游戏词汇（tower/floor/loc/autopass/autotile/idnum/airwall/commonEvent 等）经 `LabelOverrides` 移出 core
 - [ ] **PORT-07**: 引擎格式迁移经 `MigrationHook` 移出 core
 - [ ] **PORT-08**: 建立非 mota 的 fake「engine B」适配器，端到端驱动 hook 契约
 
@@ -166,7 +166,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PORT-03 | 5 | Complete |
 | PORT-04 | 5 | Complete |
 | PORT-05 | 5 | Pending |
-| PORT-06 | 5 | Pending |
+| PORT-06 | 5 | Complete |
 | PORT-07 | 5 | Pending |
 | PORT-08 | 5 | Pending |
 | RES-01 | 4 | Complete |
