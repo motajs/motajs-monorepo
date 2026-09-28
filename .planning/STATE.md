@@ -2,18 +2,18 @@
 gsd_state_version: "1.0"
 current_phase: 5
 current_phase_name: engine-adapter-skeleton-resource-descriptors
-current_plan: 3
+current_plan: 4
 status: executing
-stopped_at: Completed 05-02-PLAN.md
-last_updated: "2026-09-28T04:31:29.178Z"
+stopped_at: Completed 05-03-PLAN.md
+last_updated: "2026-09-28T05:24:44.593Z"
 last_activity: 2026-09-24
 last_activity_desc: Phase 4 complete, transitioned to Phase 5
-state_head: e54c191f4d6035cc3e16302db62c77c405c7bf01
+state_head: d2726362b0028673c7a33f584e14a9d02485a91e
 progress:
   total_phases: 12
   completed_phases: 0
   total_plans: 25
-  completed_plans: 23
+  completed_plans: 24
   percent: 0
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-24)
 ## Current Position
 
 Phase: 5 (engine-adapter-skeleton-resource-descriptors) — IN PROGRESS
-Current Plan: 3
+Current Plan: 4
 Total Plans in Phase: 4
 Status: Ready to execute
 Last activity: 2026-09-24 — Phase 4 complete, transitioned to Phase 5
@@ -69,6 +69,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 04 P04 | 25 | 3 tasks | 9 files |
 | Phase 05 P01 | 17 | 3 tasks | 5 files |
 | Phase 05 P02 | 6 | 2 tasks | 2 files |
+| Phase 5 P03 | 16min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -104,6 +105,10 @@ Recent decisions affecting current work:
 - [Phase 5]: 05-01: isValidResourceId is the single shared logical-id predicate used by both defineEngine and ResourceRegistry.register (D-09).
 - [Phase 5]: Game-identifier gate (coreEngineNeutral.js) scans RAW core source including comments, case-sensitively, with a per-match 'floor' member-access exemption (preceding char '.') — a leak in a comment reds the gate
 - [Phase 5]: The gate is wired as exactly one step in the existing lint job; the four-job CI contract (lint/typecheck/unit/build) is provably unaltered
+- [Phase 5]: 05-03: FileResource is core's ONLY class holding an opaque IO address; it inspects no extension and joins/decodes no path, and gets the file layer via deps.fileHandlers (never a module singleton) (D-06).
+- [Phase 5]: 05-03: FileResource delegates load/reload to FileHandlerManager so the existing load-lock/refetch guarantees are not duplicated; it holds no cache (T-05-10).
+- [Phase 5]: 05-03: engine B proves the descriptor is source-agnostic — engineB.notes is a non-file computedResource whose load performs zero FsPort reads; file-backed descriptors use core's generic JsonDataHandler (PORT-08/PORT-05 boundary).
+- [Phase 5]: 05-03: the '.' subpath content label stays kernel+resources+edit-exports (FileResource value export fits it), so coreExports.js/subpathStatus.json are deliberately untouched.
 
 ### Pending Todos
 
@@ -125,6 +130,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-09-28T04:31:28.992Z
-Stopped at: Completed 05-02-PLAN.md
+Last session: 2026-09-28T05:24:44.409Z
+Stopped at: Completed 05-03-PLAN.md
 Resume file: None

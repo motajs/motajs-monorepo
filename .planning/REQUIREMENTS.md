@@ -25,7 +25,7 @@
 - [ ] **PORT-05**: `Json2xDataHandler` 与各领域 `*DataHandler` 移入适配器；core 仅保留通用 `JsonDataHandler`
 - [x] **PORT-06**: 游戏词汇（tower/floor/loc/autopass/autotile/idnum/airwall/commonEvent 等）经 `LabelOverrides` 移出 core
 - [ ] **PORT-07**: 引擎格式迁移经 `MigrationHook` 移出 core
-- [ ] **PORT-08**: 建立非 mota 的 fake「engine B」适配器，端到端驱动 hook 契约
+- [x] **PORT-08**: 建立非 mota 的 fake「engine B」适配器，端到端驱动 hook 契约
 
 ### Resource & Edit
 
@@ -168,7 +168,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PORT-05 | 5 | Pending |
 | PORT-06 | 5 | Complete |
 | PORT-07 | 5 | Pending |
-| PORT-08 | 5 | Pending |
+| PORT-08 | 5 | Complete |
 | RES-01 | 4 | Complete |
 | RES-02 | 4 | Complete |
 | RES-03 | 4 | Complete |

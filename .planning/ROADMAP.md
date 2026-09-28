@@ -178,7 +178,7 @@ Plans:
   4. A fake non-mota "engine B" adapter drives the hook contract end to end with non-mota resources.
   5. No game identifier (tower/floor/loc/autopass/autotile/idnum/airwall/commonEvent) remains in core source, enforced by a mechanical grep/lint gate.
 
-**Plans**: 2/4 plans executed (⚠ CONTEXT.md 05 revises the original PORT-04/06/07 wording — see 05-CONTEXT.md D-14; ROADMAP text intentionally unedited)
+**Plans**: 3/4 plans executed (⚠ CONTEXT.md 05 revises the original PORT-04/06/07 wording — see 05-CONTEXT.md D-14; ROADMAP text intentionally unedited)
 Plans:
 **Wave 1**
 
@@ -187,7 +187,7 @@ Plans:
 **Wave 2** *(blocked on 05-01)*
 
 - [x] 05-02-PLAN.md — Two-polarity game-identifier gate `scripts/verify/coreEngineNeutral.js` wired into the existing `lint` job (PORT-06)
-- [ ] 05-03-PLAN.md — File-backed `FileResource` class + fake non-mota engine-B fixture driving defineEngine→registry→preload order end to end (PORT-04, PORT-08)
+- [x] 05-03-PLAN.md — File-backed `FileResource` class + fake non-mota engine-B fixture driving defineEngine→registry→preload order end to end (PORT-04, PORT-08)
 
 **Wave 3** *(blocked on 05-01 + 05-03)*
 
@@ -311,7 +311,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 2. Package Boundary & Build Scaffolding | 3/3 | Complete    | 2026-09-22 |
 | 3. Kernel — Runtime, Ports, Registry, Diagnostics | 4/4 | Complete    | 2026-09-23 |
 | 4. Resource + Edit Layers Moved | 4/4 | Complete    | 2026-09-24 |
-| 5. Engine Adapter Skeleton & Resource Descriptors | 2/4 | In Progress|  |
+| 5. Engine Adapter Skeleton & Resource Descriptors | 3/4 | In Progress|  |
 | 6. Fixed Shell + Slots | 0/TBD | Not started | - |
 | 7. Table Capability + Port | 0/TBD | Not started | - |
 | 8. Code Capability + Port | 0/TBD | Not started | - |
