@@ -4,13 +4,13 @@ current_phase: 5
 current_phase_name: engine-adapter-skeleton-resource-descriptors
 current_plan: 4
 status: verifying
-stopped_at: Completed 05-04-PLAN.md
-last_updated: "2026-09-28T05:49:56.573Z"
+stopped_at: Phase 05.1 context gathered
+last_updated: "2026-09-28T07:26:45.506Z"
 last_activity: 2026-09-24
 last_activity_desc: Phase 4 complete, transitioned to Phase 5
-state_head: 310b8345eda0537a875c1dabc7c33e3066286b74
+state_head: f154b7bf151c50aa939348dab9a988c67d8b9b30
 progress:
-  total_phases: 12
+  total_phases: 13
   completed_phases: 0
   total_plans: 25
   completed_plans: 25
@@ -126,6 +126,10 @@ None yet.
 - Phase 7 (Table) has an open design question: built-in primitive field types vs engine-supplied, and whether the field-editor registry is core-mechanism or fully adapter-provided.
 - Phase 5 (Adapter) must resolve RES-02's unwired `ResourceRegistry` shape against real engine descriptors — the registry shipped in Phase 4 with no production consumer by design.
 
+### Roadmap Evolution
+
+- Phase 05.1 inserted after Phase 5: editor-core 接口与实现整改：先定义接口（阶段内第一批计划），再实现 (URGENT)
+
 ## Deferred Items
 
 Items acknowledged and deferred at milestone close, most recent first:
@@ -136,6 +140,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-09-28T05:49:56.358Z
-Stopped at: Completed 05-04-PLAN.md
-Resume file: None
+Last session: 2026-09-28T07:26:45.301Z
+Stopped at: Phase 05.1 context gathered
+Resume file: .planning/phases/05.1-editor-core/05.1-CONTEXT.md
