@@ -541,7 +541,7 @@ Any command that performs a network request — `git fetch` / `git pull` / `git 
 
 ### Code style (MANDATORY) / 代码风格
 
-本项目只采用 `dev.md` 中**代码风格**部分；其项目结构/架构类规则不适用。以下为适用规则（部分细化或覆盖 `dev.md`）。
+本项目只采用 `../template/dev.md` 中**代码风格**部分；其项目结构/架构类规则不适用。以下为适用规则（部分细化或覆盖 `dev.md`）。
 
 **注释**
 - **类和接口本身不写 jsDoc**；**类型别名（type）要写** jsDoc（说明它是干什么的）。此条**取代**此前「接口本身写用途注释」的说法。
