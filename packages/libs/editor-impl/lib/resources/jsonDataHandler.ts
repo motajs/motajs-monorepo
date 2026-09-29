@@ -1,22 +1,16 @@
+import { DataHandler } from './dataHandler';
+import { IDataHandler } from './interfaces';
+import { FileHandler } from './fileHandler';
+
 /**
  * JsonDataHandler - 纯 JSON 数据处理器
  *
- * 用于处理纯 JSON 格式的数据文件
- *
- * 职责：
- * - 继承 DataHandler，实现通用的 parse 和 stringify
- * - 处理标准 JSON 文件（非 2.x 风格的 var xxx = {json}）
- */
-
-import { DataHandler } from './dataHandler';
-import type { FileHandler } from './fileHandler';
-
-/**
- * JsonDataHandler - 通用纯 JSON 数据处理器
+ * 继承 DataHandler，实现通用的 parse/stringify：处理标准 JSON 文件
+ * （非 2.x 风格的 `var xxx = {json}`）。
  *
  * @typeParam T - 数据类型
  */
-export class JsonDataHandler<T> extends DataHandler<T> {
+export class JsonDataHandler<T> extends DataHandler<T> implements IDataHandler<T> {
   /**
    * @param fileHandler - 文件处理器
    * @param resourceName - 资源名称（用于错误消息）

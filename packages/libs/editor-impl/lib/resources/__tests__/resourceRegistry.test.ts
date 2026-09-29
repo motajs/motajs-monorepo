@@ -10,10 +10,9 @@
  * fixture 纪律（D-22 的约定半边）：本文件不声明模块级 fixture 表；期望值直接写在用例内。
  */
 import { describe, expect, it } from 'vitest';
-import { IResourceView } from '../interfaces';
+import { IResourceView, ResourceRegistryEntry } from '../interfaces';
 import { ResourceRegistry } from '../resourceRegistry';
-import type { ResourceRegistryEntry } from '../resourceRegistry';
-import type { Content } from '../types';
+import { Content } from '../types';
 
 /** 一个最小的 `IResourceView` 测试替身：`content` 是稳定的 loaded 快照。 */
 function makeResource<T>(id: string, value: T): IResourceView<T> {

@@ -12,7 +12,7 @@
  */
 // 资源层叶子模块（Phase 4 D-09：`lib/resources/*` 是包内目录，公开面由本根入口汇总）。
 // 一律**具名**再导出；类型经 `export type`（消费方 editor 开着 verbatimModuleSyntax）。
-export type { Content, FileContent } from './resources/types';
+export type { Content, FileContent, ExecutorStatus, PersistFailure, PersistenceIntent } from './resources/types';
 export type {
   ReadonlySignal,
   IContentView,
@@ -21,16 +21,19 @@ export type {
   IResourceView,
   ILoadableResource,
   IRecoverableResource,
+  IFileHandlerManager,
+  IPersistExecutor,
+  IPersistenceMonitor,
+  IResourceRegistry,
+  FileHandlerDependencies,
+  ResourceRegistryEntry,
 } from './resources/interfaces';
 export { isFileNotFoundError } from './resources/errors';
 export { waitUntil } from './resources/waitUntil';
 export { ContentUtils } from './resources/contentUtils';
 export { PersistExecutor } from './resources/persistExecutor';
-export type { PersistenceIntent, ExecutorStatus } from './resources/persistExecutor';
 export { PersistenceMonitor } from './resources/persistenceMonitor';
-export type { PersistFailure } from './resources/persistenceMonitor';
 export { FileHandler } from './resources/fileHandler';
-export type { FileHandlerDependencies } from './resources/fileHandler';
 export { FileHandlerManager } from './resources/fileHandlerManager';
 export { FileResource } from './resources/fileResource';
 export { DataHandler } from './resources/dataHandler';
@@ -45,7 +48,6 @@ export type {
   IRecoverableResource as RecoverableResource,
 } from './resources/interfaces';
 export { ResourceRegistry } from './resources/resourceRegistry';
-export type { ResourceRegistryEntry } from './resources/resourceRegistry';
 
 // 编辑层（Phase 4 D-09：`lib/edit/*` 是包内目录，公开面由本根入口汇总）。
 // 根 barrel 是每个被搬模块**导出集合并集**，绝不手挑子集——editor 的 shim 只能转发根导出的名字（D-04）。

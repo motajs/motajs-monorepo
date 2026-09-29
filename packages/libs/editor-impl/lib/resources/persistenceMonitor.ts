@@ -1,25 +1,36 @@
-/** Project-scoped, path-owned persistence manager. */
-
 import { effect, signal } from 'alien-signals';
-import { PersistExecutor, type PersistenceIntent } from './persistExecutor';
-import type { ReadonlySignal } from './interfaces';
+import { PersistExecutor } from './persistExecutor';
+import { PersistFailure, PersistenceIntent } from './types';
+import { IPersistenceMonitor, ReadonlySignal } from './interfaces';
 
-export interface PersistFailure {
-  path: string;
-  error: Error;
-}
-
+/** 把反斜杠与 `./` 前缀归一化，使同一路径只拥有一个控制器。 */
 function normalizePath(path: string): string {
   return path.replace(/\\/g, '/').replace(/^\.\/+/, '');
 }
 
-export class PersistenceMonitor {
-  private readonly controllers = new Map<string, PersistExecutor>();
-  private readonly persistingSet = new Set<string>();
-  private readonly failedMap = new Map<string, Error>();
-  private _persistingFiles = signal<string[]>([]);
-  private _failedFiles = signal<PersistFailure[]>([]);
-  private _retrying = signal(false);
+/**
+ * 项目级、按路径归属的持久化管理器。
+ *
+ * 汇总各路径的持久化状态，提供 flush、失败记录与统一重试。
+ */
+export class PersistenceMonitor implements IPersistenceMonitor {
+  /** 路径 → 持久化控制器。 */
+  private readonly controllers: Map<string, PersistExecutor> = new Map();
+
+  /** 正在持久化的路径集合。 */
+  private readonly persistingSet: Set<string> = new Set();
+
+  /** 持久化失败的路径 → 错误。 */
+  private readonly failedMap: Map<string, Error> = new Map();
+
+  /** 可写的正在持久化路径信号。 */
+  private _persistingFiles: ReturnType<typeof signal<string[]>> = signal<string[]>([]);
+
+  /** 可写的失败列表信号。 */
+  private _failedFiles: ReturnType<typeof signal<PersistFailure[]>> = signal<PersistFailure[]>([]);
+
+  /** 可写的重试中信号。 */
+  private _retrying: ReturnType<typeof signal<boolean>> = signal(false);
 
   readonly persistingFiles = this._persistingFiles as ReadonlySignal<string[]>;
   readonly failedFiles = this._failedFiles as ReadonlySignal<PersistFailure[]>;

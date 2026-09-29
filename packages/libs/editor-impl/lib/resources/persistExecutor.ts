@@ -1,29 +1,31 @@
-/**
- * A single-path persistence controller.
- *
- * Editing code submits immutable intents. One intent may be executing while a
- * single, newer pending intent is retained. The controller never owns editor
- * state and persistence failures never roll editor state back.
- */
-
 import { signal } from 'alien-signals';
 import { waitUntil } from './waitUntil';
-import type { ReadonlySignal } from './interfaces';
+import { ExecutorStatus, PersistenceIntent } from './types';
+import { IPersistExecutor, ReadonlySignal } from './interfaces';
 
-export type PersistenceIntent = {
-  kind: 'write' | 'delete';
-  execute: () => Promise<void>;
-};
-
-export type ExecutorStatus =
-  { status: 'idle' } | { status: 'executing'; pending: number } | { status: 'error'; error: Error; pending: 0 };
-
-export class PersistExecutor {
+/**
+ * 单路径持久化控制器。
+ *
+ * 编辑代码提交不可变的意图；同一时刻最多一个意图在执行，另保留一个最新的待执行意图。
+ * 控制器从不持有编辑状态，持久化失败也从不回滚编辑状态。
+ */
+export class PersistExecutor implements IPersistExecutor {
+  /** 旧式测试适配器的遗留操作。 */
   private readonly legacyOperation?: () => Promise<void>;
+
+  /** 待执行的最新意图。 */
   private pendingIntent: PersistenceIntent | null = null;
+
+  /** 上一次失败的意图，供 retry 复用。 */
   private failedIntent: PersistenceIntent | null = null;
+
+  /** 是否有意图正在执行。 */
   private isExecuting = false;
+
+  /** 可写状态信号（真实来源）。 */
   private _status: ReturnType<typeof signal<ExecutorStatus>>;
+
+  /** 只读状态信号。 */
   readonly status: ReadonlySignal<ExecutorStatus>;
 
   constructor(legacyOperation?: () => Promise<void>) {

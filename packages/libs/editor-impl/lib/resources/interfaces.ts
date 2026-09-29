@@ -1,4 +1,5 @@
-import { Content } from './types';
+import { IFsPort } from '@motajs/editor-core';
+import { Content, ExecutorStatus, PersistFailure, PersistenceIntent } from './types';
 
 /**
  * 核心接口定义
@@ -109,4 +110,176 @@ export interface ILoadableResource<T> extends IResourceView<T> {
   reload(): Promise<void>;
   /** 等待状态稳定到 loaded / error / not-found 之一。 */
   waitForSettled(): Promise<void>;
+}
+
+/**
+ * FileHandlerDependencies - 文件处理器的注入协作者
+ *
+ * 文件层与文件管理器共享同一份依赖，因此两者不可能把参数写反（D-07）。
+ */
+export interface FileHandlerDependencies {
+  /** 宿主文件读写能力。 */
+  readonly fs: IFsPort;
+
+  /** 项目级持久化监视器。 */
+  readonly persistenceMonitor: IPersistenceMonitor;
+}
+
+/**
+ * IFileHandlerManager - 文件处理器管理器的契约
+ *
+ * 按路径加载、重载、清理与查询文件处理器；同一个路径始终只对应一个处理器实例。
+ */
+export interface IFileHandlerManager {
+  /** 同步获取或创建一个处理器（未加载状态）。 */
+  get(path: string): IContentHandler<string>;
+
+  /** 异步加载路径对应的处理器（带加载锁）。 */
+  load(path: string): Promise<IContentHandler<string>>;
+
+  /** 批量加载多个路径。 */
+  loadAll(paths: string[]): Promise<IContentHandler<string>[]>;
+
+  /** 该路径是否已创建处理器实例。 */
+  has(path: string): boolean;
+
+  /** 文件是否真实存在于文件系统。 */
+  exists(path: string): Promise<boolean>;
+
+  /** 该路径的处理器是否已加载数据。 */
+  isLoaded(path: string): boolean;
+
+  /** 删除文件与处理器。 */
+  delete(path: string, force?: boolean): Promise<void>;
+
+  /** 移除处理器实例（不删除文件）。 */
+  remove(path: string): void;
+
+  /** 强制重新加载。 */
+  reload(path: string): Promise<void>;
+
+  /** 清空全部处理器（测试用）。 */
+  clear(): void;
+
+  /** 当前处理器数量（调试用）。 */
+  readonly size: number;
+}
+
+/**
+ * IPersistExecutor - 单路径持久化控制器的契约
+ *
+ * 排程某个路径的持久化意图、查询执行状态，并在显式边界处等待静默。
+ */
+export interface IPersistExecutor {
+  /** 当前执行状态（只读信号）。 */
+  readonly status: ReadonlySignal<ExecutorStatus>;
+
+  /** 提交一个不可变的期望状态意图。 */
+  schedule(intent: PersistenceIntent): void;
+
+  /** 旧式测试适配入口：把遗留操作包装成一个写入意图。 */
+  exec(): void;
+
+  /** 重试上一次失败的意图。 */
+  retry(): void;
+
+  /** 等待执行队列静默。 */
+  whenQuiescent(): Promise<void>;
+
+  /** 在显式边界等待静默（旧名，改用 PersistenceMonitor.flush）。 */
+  waitForIdle(): Promise<void>;
+
+  /** 等待静默，若最终状态为错误则抛出。 */
+  flush(): Promise<void>;
+
+  /** 是否有执行中或待执行的工作。 */
+  hasPending(): boolean;
+}
+
+/**
+ * IPersistenceMonitor - 项目级持久化管理器的契约
+ *
+ * 汇总各路径的持久化状态，提供 flush、失败记录与统一重试。
+ */
+export interface IPersistenceMonitor {
+  /** 正在持久化的路径列表（只读信号）。 */
+  readonly persistingFiles: ReadonlySignal<string[]>;
+
+  /** 持久化失败的路径列表（只读信号）。 */
+  readonly failedFiles: ReadonlySignal<PersistFailure[]>;
+
+  /** 是否正在重试（只读信号）。 */
+  readonly retrying: ReadonlySignal<boolean>;
+
+  /** 旧式测试适配入口：为一个路径创建受监控的执行器。 */
+  createExecutor(path: string, operation: () => Promise<void>): IPersistExecutor;
+
+  /** 为某个路径排程一个持久化意图。 */
+  schedule(path: string, intent: PersistenceIntent): void;
+
+  /** 重试全部失败路径，返回仍未恢复的失败。 */
+  retryFailed(): Promise<PersistFailure[]>;
+
+  /** 等待指定路径（缺省为全部）静默，有失败则抛出聚合错误。 */
+  flush(paths?: readonly string[]): Promise<void>;
+
+  /** 等待指定路径（缺省为全部）静默；刻意不因失败而 reject。 */
+  whenQuiescent(paths?: readonly string[]): Promise<void>;
+
+  /** 查询某路径的持久化状态。 */
+  statusFor(path: string): 'idle' | 'persisting' | 'error';
+
+  /** 查询某路径的失败原因。 */
+  errorFor(path: string): Error | undefined;
+
+  /** 是否有尚未落盘的改动。 */
+  hasUnsavedChanges(): boolean;
+
+  /** 是否存在持久化失败。 */
+  hasPersistErrors(): boolean;
+
+  /** 正在持久化的路径数量。 */
+  getPersistingCount(): number;
+
+  /** 持久化失败的路径数量。 */
+  getFailedCount(): number;
+
+  /** 清空全部状态（测试用）。 */
+  resetForTests(): void;
+}
+
+/**
+ * ResourceRegistryEntry - 注册表快照里的一条只读条目
+ */
+export interface ResourceRegistryEntry {
+  /** 资源身份（逻辑 id）。 */
+  readonly id: string;
+
+  /** 该逻辑 id 对应的资源视图。 */
+  readonly resource: IResourceView<unknown>;
+}
+
+/**
+ * IResourceRegistry - 逻辑 id 资源注册表的契约
+ *
+ * 以逻辑 id 登记、取用与查询资源；条目只在本次登记的 disposer 被调用时移除。
+ */
+export interface IResourceRegistry {
+  /** 以逻辑 id 登记一个资源；返回只删除本次登记的 disposer。 */
+  register<T>(id: string, resource: IResourceView<T>): () => void;
+
+  /** 按逻辑 id 取用资源；未登记返回 `undefined`。 */
+  get<T>(id: string): IResourceView<T> | undefined;
+
+  /** 按逻辑 id 取用资源；未登记抛出命名该 id 的错误。 */
+  getOrThrow<T>(id: string): IResourceView<T>;
+
+  /** 该逻辑 id 是否已登记。 */
+  has(id: string): boolean;
+
+  /** 已登记的逻辑 id 列表（返回新数组）。 */
+  ids(): readonly string[];
+
+  /** 冻结的条目快照（数组与每个条目都冻结）。 */
+  snapshot(): readonly ResourceRegistryEntry[];
 }

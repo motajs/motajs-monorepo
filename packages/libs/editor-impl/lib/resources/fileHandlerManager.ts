@@ -1,3 +1,6 @@
+import { FileHandler } from './fileHandler';
+import { FileHandlerDependencies, IFileHandlerManager } from './interfaces';
+
 /**
  * FileHandlerManager - FileHandler 实例管理器
  *
@@ -10,16 +13,14 @@
  * `src/appInstances.ts`）构造；`FileHandler` 的协作者经 `this.deps` 透传，两者共享同一
  * `FileHandlerDependencies`，参数不可能写反。
  */
+export class FileHandlerManager implements IFileHandlerManager {
+  /** FileHandler 实例缓存：key = path（实例字段，非模块状态）。 */
+  private handlers: Map<string, FileHandler> = new Map();
 
-import { FileHandler, type FileHandlerDependencies } from './fileHandler';
+  /** 加载锁：key = path, value = 加载中的 Promise。 */
+  private loadingPromises: Map<string, Promise<FileHandler>> = new Map();
 
-export class FileHandlerManager {
-  // FileHandler 实例缓存：key = path（实例字段，非模块状态）
-  private handlers = new Map<string, FileHandler>();
-
-  // 加载锁：key = path, value = Promise
-  private loadingPromises = new Map<string, Promise<FileHandler>>();
-
+  /** 共享的注入协作者。 */
   private readonly deps: FileHandlerDependencies;
 
   constructor(deps: FileHandlerDependencies) {

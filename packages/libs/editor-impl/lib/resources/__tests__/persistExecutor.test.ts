@@ -7,6 +7,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { PersistExecutor } from '../persistExecutor';
+import { ExecutorStatus } from '../types';
 import { wait } from './testHelpers';
 import { effect } from 'alien-signals';
 
@@ -297,7 +298,7 @@ describe('PersistExecutor', () => {
         throw new Error('Test error');
       });
 
-      const errorStatuses: import('../persistExecutor').ExecutorStatus[] = [];
+      const errorStatuses: ExecutorStatus[] = [];
       const unsubscribe = effect(() => {
         const status = executor.status();
         if (status.status === 'error') {

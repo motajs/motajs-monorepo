@@ -1,3 +1,6 @@
+import { isValidResourceId, RESERVED_IDS } from '@motajs/editor-core';
+import { IResourceRegistry, IResourceView, ResourceRegistryEntry } from './interfaces';
+
 /**
  * 逻辑 id → 资源 的注册表（RES-02，引擎无关）。
  *
@@ -14,17 +17,9 @@
  * - 与 `createEditorCore` 一致：登记返回**只删除自己那一条**的 disposer，快照返回冻结数组。
  * - 本阶段**刻意不接线**：`projectData` 等不使用它，引擎描述符由 Phase 5 注入（RES-02 的诚实范围）。
  */
-import { isValidResourceId, RESERVED_IDS } from '@motajs/editor-core';
-import { IResourceView } from './interfaces';
-
-/** `ResourceRegistry.snapshot()` 返回的只读条目。 */
-export interface ResourceRegistryEntry {
-  readonly id: string;
-  readonly resource: IResourceView<unknown>;
-}
 
 /**
- * 校验逻辑 id；不合法即抛出普通 `Error`（不产生机器诊断，见文件头 Pitfall 10）。
+ * 校验逻辑 id；不合法即抛出普通 `Error`（不产生机器诊断，见模块说明的 Pitfall 10）。
  *
  * 判定委托给底层（`editor-core`）自持的共享谓词 `isValidResourceId`（连同一份保留名清单
  * `RESERVED_IDS`）：登记期与定义期不可能各自漂移（D-09）。
@@ -44,8 +39,9 @@ function assertValidLogicalId(id: string): void {
  * 构造后即用，无模块级实例（D-06）；`ResourceRegistry.register` 返回的 disposer 只删除自己那一条，
  * 因此「过期 disposer」不会误删后来重新登记的同名条目。
  */
-export class ResourceRegistry {
-  private readonly entries = new Map<string, ResourceRegistryEntry>();
+export class ResourceRegistry implements IResourceRegistry {
+  /** 逻辑 id → 条目（实例字段，非模块状态）。 */
+  private readonly entries: Map<string, ResourceRegistryEntry> = new Map();
 
   /** 以逻辑 id 登记一个资源；返回只删除本次登记的 disposer。重复 id 或非法 id 抛出普通 `Error`。 */
   register<T>(id: string, resource: IResourceView<T>): () => void {

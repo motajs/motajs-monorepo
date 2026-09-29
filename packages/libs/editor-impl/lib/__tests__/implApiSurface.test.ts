@@ -42,7 +42,7 @@ import {
   setByFieldPath,
   waitUntil,
 } from '../index';
-import type {
+import {
   Action,
   ActionType,
   Content,
@@ -52,9 +52,13 @@ import type {
   IContentHandler,
   IContentView,
   IDataHandler,
+  IFileHandlerManager,
   ILoadableResource,
   IPatchableResource,
+  IPersistenceMonitor,
+  IPersistExecutor,
   IRecoverableResource,
+  IResourceRegistry,
   IResourceView,
   LoadableResource,
   PatchableResource,
@@ -135,5 +139,12 @@ describe('editor-impl 默认实现层公开面', () => {
     expectTypeOf<ILoadableResource<string>>().not.toBeNever();
     expectTypeOf<IPatchableResource<string>>().not.toBeNever();
     expectTypeOf<IRecoverableResource<string>>().not.toBeNever();
+  });
+
+  test('Plan 07 新增的服务类契约从根 `.` 解析（编译期断言）', () => {
+    expectTypeOf<IFileHandlerManager>().toBeObject();
+    expectTypeOf<IPersistExecutor>().toBeObject();
+    expectTypeOf<IPersistenceMonitor>().toBeObject();
+    expectTypeOf<IResourceRegistry>().toBeObject();
   });
 });

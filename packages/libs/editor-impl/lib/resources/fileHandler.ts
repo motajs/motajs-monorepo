@@ -1,30 +1,28 @@
-/** Text file state: memory first, persistence scheduled by normalized path. */
-
 import { effect, signal } from 'alien-signals';
 import { IFsPort } from '@motajs/editor-core';
 import { waitUntil } from './waitUntil';
-import type { Content } from './types';
-import type { IContentHandler, ReadonlySignal } from './interfaces';
-import type { PersistenceMonitor } from './persistenceMonitor';
+import { Content } from './types';
+import { FileHandlerDependencies, IContentHandler, IPersistenceMonitor, ReadonlySignal } from './interfaces';
 import { isFileNotFoundError } from './errors';
 
 /**
- * `FileHandler` 的注入协作者。
+ * 文本文件状态：内存优先，按归一化路径排程持久化。
  *
- * 两个成员放在同一个对象里，`FileHandler` 与 `FileHandlerManager` 共享它，因此两者
- * 永远不可能把参数写反（D-07）。
+ * 构造参数经 `FileHandlerDependencies` 打包注入，`FileHandler` 与 `FileHandlerManager`
+ * 共享同一份依赖，因此两者不可能把参数写反（D-07）。
  */
-export interface FileHandlerDependencies {
-  readonly fs: IFsPort;
-  readonly persistenceMonitor: PersistenceMonitor;
-}
-
 export class FileHandler implements IContentHandler<string> {
+  /** 五态文本内容，真实来源；对外只以只读信号暴露。 */
   private _content = signal<Content<string>>({ status: 'idle' });
+  /** 只读内容信号。 */
   readonly content = this._content as ReadonlySignal<Content<string>>;
+  /** 宿主文件读写能力。 */
   private readonly fs: IFsPort;
-  private readonly persistenceMonitor: PersistenceMonitor;
+  /** 项目级持久化监视器。 */
+  private readonly persistenceMonitor: IPersistenceMonitor;
+  /** 本处理器绑定的路径。 */
   private readonly path: string;
+  /** 内存改动版本号，用于丢弃过期的读写结果。 */
   private mutationVersion = 0;
 
   constructor(path: string, deps: FileHandlerDependencies) {
