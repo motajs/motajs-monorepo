@@ -1,13 +1,8 @@
 import { FileHandlerManager } from '@/fs/FileHandlerManager';
-import type { AppliedOperation, EditorOperation, OperationMeta, OperationTarget } from './operations';
+import type { AppliedOperation, EditorOperation, OperationMeta } from './operations';
 
 export interface TextFileOperationOptions {
   invalidate?: () => void;
-}
-
-interface TextFileCheckpoint {
-  exists: boolean;
-  text?: string;
 }
 
 async function readText(path: string): Promise<string | undefined> {
@@ -29,24 +24,7 @@ async function deleteText(path: string, options: TextFileOperationOptions): Prom
   options.invalidate?.();
 }
 
-function textFileTarget(path: string, options: TextFileOperationOptions): OperationTarget {
-  return {
-    key: `file:${path}`,
-    path,
-    capture: async (): Promise<TextFileCheckpoint> => {
-      const text = await readText(path);
-      return text === undefined ? { exists: false } : { exists: true, text };
-    },
-    restore: async (checkpoint) => {
-      const value = checkpoint as TextFileCheckpoint;
-      if (value.exists) await writeText(path, value.text ?? '', options);
-      else if (await FileHandlerManager.exists(path)) await deleteText(path, options);
-    },
-  };
-}
-
 class WriteTextFileOperation implements EditorOperation {
-  readonly targets: readonly OperationTarget[];
   readonly meta: OperationMeta;
   private readonly path: string;
   private readonly text: string;
@@ -57,10 +35,9 @@ class WriteTextFileOperation implements EditorOperation {
     this.path = path;
     this.text = text;
     this.options = options;
-    this.targets = [textFileTarget(path, options)];
   }
 
-  async apply(): Promise<AppliedOperation> {
+  async apply(): Promise<AppliedOperation<void>> {
     const previous = await readText(this.path);
     if (previous === this.text) {
       return { value: undefined, inverse: this, changed: false };
@@ -78,7 +55,6 @@ class WriteTextFileOperation implements EditorOperation {
 }
 
 class DeleteTextFileOperation implements EditorOperation {
-  readonly targets: readonly OperationTarget[];
   readonly meta: OperationMeta;
   private readonly path: string;
   private readonly options: TextFileOperationOptions;
@@ -87,10 +63,9 @@ class DeleteTextFileOperation implements EditorOperation {
     this.meta = meta;
     this.path = path;
     this.options = options;
-    this.targets = [textFileTarget(path, options)];
   }
 
-  async apply(): Promise<AppliedOperation> {
+  async apply(): Promise<AppliedOperation<void>> {
     const previous = await readText(this.path);
     if (previous === undefined) return { value: undefined, inverse: this, changed: false };
     await deleteText(this.path, this.options);

@@ -6,16 +6,7 @@ import {
   type MaterialMutation,
   type RasterImage,
 } from '@/project/assets';
-import { operationPathTarget, type AppliedOperation, type EditorOperation, type OperationMeta } from './operations';
-
-function collectionPath(collection: MaterialCollectionResource, entry?: MaterialAssetEntry): string {
-  if (entry) return entry.path;
-  return collection.images === 'autotile' ? 'project/autotiles' : `project/materials/${collection.images}.png`;
-}
-
-function collectionTarget(collection: MaterialCollectionResource, entry?: MaterialAssetEntry) {
-  return operationPathTarget(`material:${collection.id}`, collectionPath(collection, entry));
-}
+import { type AppliedOperation, type EditorOperation, type OperationMeta } from './operations';
 
 function currentEntry(collection: MaterialCollectionResource, requested: MaterialAssetEntry): MaterialAssetEntry {
   const entry = collection.entries().find((candidate) => {
@@ -33,7 +24,6 @@ function currentEntry(collection: MaterialCollectionResource, requested: Materia
 }
 
 class AppendMaterialOperation implements EditorOperation<MaterialMutation> {
-  readonly targets;
   readonly meta: OperationMeta;
   private readonly collection: MaterialCollectionResource;
   private readonly image: RasterImage;
@@ -49,7 +39,6 @@ class AppendMaterialOperation implements EditorOperation<MaterialMutation> {
     this.collection = collection;
     this.image = image;
     this.options = options;
-    this.targets = [collectionTarget(collection)];
   }
 
   async apply(): Promise<AppliedOperation<MaterialMutation>> {
@@ -64,7 +53,6 @@ class AppendMaterialOperation implements EditorOperation<MaterialMutation> {
 }
 
 class InsertMaterialOperation implements EditorOperation<MaterialMutation> {
-  readonly targets;
   readonly meta: OperationMeta;
   private readonly collection: MaterialCollectionResource;
   private readonly entry: MaterialAssetEntry;
@@ -80,7 +68,6 @@ class InsertMaterialOperation implements EditorOperation<MaterialMutation> {
     this.collection = collection;
     this.entry = entry;
     this.image = image;
-    this.targets = [collectionTarget(collection, entry)];
   }
 
   async apply(): Promise<AppliedOperation<MaterialMutation>> {
@@ -95,7 +82,6 @@ class InsertMaterialOperation implements EditorOperation<MaterialMutation> {
 }
 
 class RemoveMaterialOperation implements EditorOperation<MaterialMutation> {
-  readonly targets;
   readonly meta: OperationMeta;
   private readonly collection: MaterialCollectionResource;
   private readonly entry: MaterialAssetEntry;
@@ -104,7 +90,6 @@ class RemoveMaterialOperation implements EditorOperation<MaterialMutation> {
     this.meta = meta;
     this.collection = collection;
     this.entry = entry;
-    this.targets = [collectionTarget(collection, entry)];
   }
 
   async apply(): Promise<AppliedOperation<MaterialMutation>> {
@@ -120,7 +105,6 @@ class RemoveMaterialOperation implements EditorOperation<MaterialMutation> {
 }
 
 class ReplaceMaterialOperation implements EditorOperation<MaterialMutation> {
-  readonly targets;
   readonly meta: OperationMeta;
   private readonly collection: MaterialCollectionResource;
   private readonly entry: MaterialAssetEntry;
@@ -136,7 +120,6 @@ class ReplaceMaterialOperation implements EditorOperation<MaterialMutation> {
     this.collection = collection;
     this.entry = entry;
     this.replacement = replacement;
-    this.targets = [collectionTarget(collection, entry)];
   }
 
   async apply(): Promise<AppliedOperation<MaterialMutation>> {

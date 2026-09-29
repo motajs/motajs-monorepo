@@ -4,7 +4,10 @@
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
     "target": "ES2022",
     "types": ["vite/client"],
-    "verbatimModuleSyntax": true,
+    // D-11：两个共享库（editor-core / editor-impl）以源码直出且禁用 `import type`（普通 import）；
+    // 编辑器把它们的源码并入本程序，故这里不能开启 verbatimModuleSyntax（否则库源码报 TS1484）。
+    // 编辑器自身的类型导入仍一律用 `import type`。
+    "verbatimModuleSyntax": false,
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],

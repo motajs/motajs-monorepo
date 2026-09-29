@@ -8,7 +8,6 @@ import type { AppliedOperation, EditorOperation, OperationMeta } from './operati
 import { captureEditorViewport, restoreEditorViewport, type EditorViewport } from './viewport';
 
 class RestoreViewportOperation implements EditorOperation {
-  readonly targets = [];
   readonly meta: OperationMeta;
   private readonly viewport: EditorViewport;
 
@@ -17,7 +16,7 @@ class RestoreViewportOperation implements EditorOperation {
     this.viewport = viewport;
   }
 
-  async apply(): Promise<AppliedOperation> {
+  async apply(): Promise<AppliedOperation<void>> {
     const current = captureEditorViewport();
     if (!current) return { value: undefined, inverse: this, changed: false };
     await restoreEditorViewport(this.viewport);
@@ -30,7 +29,6 @@ class RestoreViewportOperation implements EditorOperation {
 }
 
 class NavigateFloorOperation implements EditorOperation {
-  readonly targets = [];
   readonly meta: OperationMeta;
   private readonly floorId: string;
   private readonly onlyFromFloorId?: string;
@@ -41,7 +39,7 @@ class NavigateFloorOperation implements EditorOperation {
     this.onlyFromFloorId = onlyFromFloorId;
   }
 
-  async apply(): Promise<AppliedOperation> {
+  async apply(): Promise<AppliedOperation<void>> {
     const current = captureEditorViewport();
     if (!current || (this.onlyFromFloorId && current.floorId !== this.onlyFromFloorId)) {
       return { value: undefined, inverse: this, changed: false };

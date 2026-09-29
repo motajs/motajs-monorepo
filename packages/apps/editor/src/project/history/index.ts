@@ -3,12 +3,10 @@ export { operationHistory } from './operationHistory';
 export { useOperationHistory } from './useOperationHistory';
 export {
   compositeOperation,
-  operationPathTarget,
   patchResourceOperation,
   type AppliedOperation,
   type EditorOperation,
   type OperationMeta,
-  type OperationTarget,
 } from './operations';
 export { navigateFloorOperation } from './viewportOperations';
 export { appendMaterialOperation, removeMaterialOperation, replaceMaterialOperation } from './materialOperations';

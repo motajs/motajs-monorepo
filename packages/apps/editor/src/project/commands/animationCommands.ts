@@ -10,7 +10,6 @@ import {
   type AppliedOperation,
   type EditorOperation,
   type OperationMeta,
-  type OperationTarget,
 } from '@/project/history';
 import { commandError, commandOk, type CommandResult } from './types';
 
@@ -20,7 +19,6 @@ function animationPath(name: string): string {
 }
 
 class WriteAnimationOperation implements EditorOperation {
-  readonly targets: readonly OperationTarget[];
   readonly meta: OperationMeta;
   private readonly resource: AnimationAssetResource;
   private readonly document: AnimationDocument;
@@ -28,18 +26,8 @@ class WriteAnimationOperation implements EditorOperation {
     this.meta = meta;
     this.resource = resource;
     this.document = document;
-    this.targets = [
-      {
-        key: `asset:${resource.path}`,
-        path: resource.path,
-        capture: () => structuredClone(resource.value().document),
-        restore: async (checkpoint) => {
-          resource.setDocument(checkpoint as AnimationDocument);
-        },
-      },
-    ];
   }
-  async apply(): Promise<AppliedOperation> {
+  async apply(): Promise<AppliedOperation<void>> {
     const previous = structuredClone(this.resource.value().document);
     const nextText = JSON.stringify(this.document);
     if (JSON.stringify(previous) === nextText) return { value: undefined, inverse: this, changed: false };
