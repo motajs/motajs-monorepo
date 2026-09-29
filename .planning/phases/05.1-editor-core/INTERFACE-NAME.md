@@ -1,6 +1,6 @@
 # Phase 05.1: editor-core 接口与实现整改 — INTERFACE-NAME.md
 
-> **Status: 部分已确认。** §Plan 01、§Plan 02、§Plan 03、§Plan 04、§Plan 08 的命名，以及 4 个结构决定（新包名 `@motajs/editor-impl`；subpath 划分：`editor-core` 只留 `.`、`editor-impl` 拿能力 subpath；编辑器按符号所属包分别改指；9 个 peer 随代码迁到 `editor-impl`；`FsPort` 说明符仍归 `editor-core`）已于 **2026-09-28 经用户确认**。其余各节仍为 PROVISIONAL，待各自 plan 的简报里逐节确认。按 `AGENTS.md` §Project Rules，
+> **Status: 部分已确认。** §Plan 01、§Plan 02、§Plan 03、§Plan 04、§Plan 05、§Plan 08 的命名，以及 4 个结构决定（新包名 `@motajs/editor-impl`；subpath 划分：`editor-core` 只留 `.`、`editor-impl` 拿能力 subpath；编辑器按符号所属包分别改指；9 个 peer 随代码迁到 `editor-impl`；`FsPort` 说明符仍归 `editor-core`）已于 **2026-09-28 经用户确认**。其余各节仍为 PROVISIONAL，待各自 plan 的简报里逐节确认。按 `AGENTS.md` §Project Rules，
 > 任何**重要命名**（文件名 / 目录名 / 包名 / 接口名 / 类名 / 方法名 / 类型别名 / 导出符号名 / 新门禁脚本名 /
 > 依赖规则名 / subpath 名）都必须先写在本文件里、**并说明它是干什么的**，经用户确认后才可落盘。
 > 函数体内的 `let`/`const` 局部变量不受此限。
