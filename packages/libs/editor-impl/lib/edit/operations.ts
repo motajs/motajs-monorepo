@@ -1,75 +1,26 @@
-import type { IContentHandler } from '../resources/interfaces';
-import type { Content } from '../resources/types';
-import { applyActionsWithInverse, type Action } from './action';
-
-export interface OperationMeta {
-  label: string;
-  stage: string;
-}
-
-export interface OperationTarget {
-  readonly key: string;
-  readonly path: string;
-  capture(): unknown | Promise<unknown>;
-  restore(checkpoint: unknown): Promise<void>;
-}
-
-export interface AppliedOperation<T = void> {
-  value: T;
-  inverse: EditorOperation<unknown>;
-  changed: boolean;
-}
-
-export interface EditorOperation<T = void> {
-  readonly meta: OperationMeta;
-  readonly targets: readonly OperationTarget[];
-  apply(): Promise<AppliedOperation<T>>;
-}
+import { applyActionsWithInverse, Action } from './action';
+import { AppliedOperation, IEditorOperation, OperationMeta } from '@motajs/editor-core';
+import { IPatchableResource } from './types';
 
 /**
- * core 的 patch 操作所需的**窄**资源契约。
- *
- * 只声明 `patchResourceOperation` 真正用到的三个成员：`path`、`raw()`、`mutate()`。
- * 编辑器的数据资源在结构上满足它，因此命令层无需任何改动即可传入。
- * 刻意不接受编辑器的名义类型，避免把编辑器/引擎类型拖进 core（D-04）。
+ * 组合操作：把多个子操作按顺序执行；成功时交出一个把它们整体撤回来的组合逆操作，
+ * 失败时把已成功的子操作按**逆序**用各自的逆操作回退，并标注失败阶段。
  */
-export interface PatchableResource<T> {
-  readonly path: string;
-  raw(): IContentHandler<string>;
-  mutate(recipe: (draft: T) => void): Promise<void>;
-}
-
-function dataResourceTarget<T>(resource: PatchableResource<T>): OperationTarget {
-  const raw = resource.raw();
-  return {
-    key: `text:${resource.path}`,
-    path: resource.path,
-    capture: () => raw.getContent(),
-    restore: async (checkpoint) => {
-      const content = checkpoint as Content<string>;
-      if (content.status !== 'loaded') {
-        throw new Error(`Cannot restore ${resource.path} from ${content.status}`);
-      }
-      await Promise.resolve(raw.update(content.value));
-    },
-  };
-}
-
-class CompositeOperation implements EditorOperation<unknown[]> {
-  readonly targets: readonly OperationTarget[];
+class CompositeOperation implements IEditorOperation<unknown[]> {
+  /** 这一步的元数据。 */
   readonly meta: OperationMeta;
-  private readonly operations: readonly EditorOperation<unknown>[];
+  /** 按顺序执行的子操作。 */
+  private readonly operations: readonly IEditorOperation<unknown>[];
 
-  constructor(meta: OperationMeta, operations: readonly EditorOperation<unknown>[]) {
+  constructor(meta: OperationMeta, operations: readonly IEditorOperation<unknown>[]) {
     this.meta = meta;
     this.operations = operations;
-    this.targets = operations.flatMap((operation) => operation.targets);
   }
 
   async apply(): Promise<AppliedOperation<unknown[]>> {
     const applied: AppliedOperation<unknown>[] = [];
     const values: unknown[] = [];
-    let currentOperation: EditorOperation<unknown> | undefined;
+    let currentOperation: IEditorOperation<unknown> | undefined;
     try {
       for (const operation of this.operations) {
         currentOperation = operation;
@@ -108,20 +59,24 @@ class CompositeOperation implements EditorOperation<unknown[]> {
   }
 }
 
-class ResourcePatchOperation<T> implements EditorOperation {
-  readonly targets: readonly OperationTarget[];
+/**
+ * patch 操作：对一个可 patch 的资源应用一组表格动作，成功时交出把动作反向的逆操作。
+ */
+class ResourcePatchOperation<T> implements IEditorOperation {
+  /** 这一步的元数据。 */
   readonly meta: OperationMeta;
-  private readonly resource: PatchableResource<T>;
+  /** 被改写的资源。 */
+  private readonly resource: IPatchableResource<T>;
+  /** 这次要应用的表格动作。 */
   private readonly actions: readonly Action[];
 
-  constructor(meta: OperationMeta, resource: PatchableResource<T>, actions: readonly Action[]) {
+  constructor(meta: OperationMeta, resource: IPatchableResource<T>, actions: readonly Action[]) {
     this.meta = meta;
     this.resource = resource;
     this.actions = actions;
-    this.targets = [dataResourceTarget(resource)];
   }
 
-  async apply(): Promise<AppliedOperation> {
+  async apply(): Promise<AppliedOperation<void>> {
     let inverseActions: Action[] = [];
     await this.resource.mutate((draft) => {
       inverseActions = applyActionsWithInverse(draft as Record<string, unknown>, this.actions as Action[]);
@@ -135,26 +90,19 @@ class ResourcePatchOperation<T> implements EditorOperation {
   }
 }
 
+/** 工厂：返回一个对可 patch 资源应用一组表格动作的 `IEditorOperation`。 */
 export function patchResourceOperation<T>(
-  resource: PatchableResource<T>,
+  resource: IPatchableResource<T>,
   actions: readonly Action[],
   meta: OperationMeta,
-): EditorOperation {
+): IEditorOperation {
   return new ResourcePatchOperation(meta, resource, actions);
 }
 
+/** 工厂：把多个操作组合成一个按顺序执行的 `IEditorOperation`。 */
 export function compositeOperation(
-  operations: readonly EditorOperation<unknown>[],
+  operations: readonly IEditorOperation<unknown>[],
   meta: OperationMeta,
-): EditorOperation<unknown[]> {
+): IEditorOperation<unknown[]> {
   return new CompositeOperation(meta, operations);
-}
-
-export function operationPathTarget(key: string, path: string): OperationTarget {
-  return {
-    key,
-    path,
-    capture: () => undefined,
-    restore: async () => undefined,
-  };
 }

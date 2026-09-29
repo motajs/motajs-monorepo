@@ -56,17 +56,9 @@ export {
 } from './edit/fieldPath';
 export { applyAction, applyActions, applyActionsWithInverse } from './edit/action';
 export type { Action, ActionType } from './edit/action';
-export { compositeOperation, operationPathTarget, patchResourceOperation } from './edit/operations';
-export type {
-  AppliedOperation,
-  EditorOperation,
-  OperationMeta,
-  OperationTarget,
-  PatchableResource,
-} from './edit/operations';
-export type { UndoSystem } from './edit/undoSystem';
-export { OperationHistory } from './edit/operationHistory';
-export type { OperationHistoryEntry, OperationHistoryState } from './edit/operationHistory';
+export { compositeOperation, patchResourceOperation } from './edit/operations';
 
 // Plan 02 的默认实现层契约：可 patch 资源的最小契约（落点 `./edit/types`）。
 export type { IPatchableResource } from './edit/types';
+// D-18 旧名过渡别名：编辑器靠 `PatchableResource` 继续编译，Phase 11 删除。
+export type { IPatchableResource as PatchableResource } from './edit/types';

@@ -33,8 +33,6 @@ import {
   getShortField,
   isFileNotFoundError,
   JsonDataHandler,
-  OperationHistory,
-  operationPathTarget,
   optional,
   parseFieldPath,
   patchResourceOperation,
@@ -47,9 +45,7 @@ import {
 import type {
   Action,
   ActionType,
-  AppliedOperation,
   Content,
-  EditorOperation,
   ExecutorStatus,
   FileContent,
   FileHandlerDependencies,
@@ -60,8 +56,6 @@ import type {
   IPatchableResource,
   IResourceView,
   LoadableResource,
-  OperationMeta,
-  OperationTarget,
   PatchableResource,
   PersistFailure,
   PersistenceIntent,
@@ -69,7 +63,6 @@ import type {
   RecoverableResource,
   ResourceRegistryEntry,
   ResourceView,
-  UndoSystem,
 } from '../index';
 
 describe('editor-impl 默认实现层公开面', () => {
@@ -84,7 +77,6 @@ describe('editor-impl 默认实现层公开面', () => {
       PersistenceMonitor,
       PersistExecutor,
       ResourceRegistry,
-      OperationHistory,
       ComputedResource,
     ];
     for (const candidate of classes) expect(typeof candidate).toBe('function');
@@ -99,7 +91,6 @@ describe('editor-impl 默认实现层公开面', () => {
       optional,
       compositeOperation,
       patchResourceOperation,
-      operationPathTarget,
       applyAction,
       applyActions,
       applyActionsWithInverse,
@@ -131,14 +122,9 @@ describe('editor-impl 默认实现层公开面', () => {
     expectTypeOf<PersistFailure>().not.toBeNever();
     expectTypeOf<ResourceView<string>>().not.toBeNever();
     expectTypeOf<LoadableResource<string>>().not.toBeNever();
-    expectTypeOf<EditorOperation>().not.toBeNever();
-    expectTypeOf<OperationTarget>().not.toBeNever();
-    expectTypeOf<OperationMeta>().not.toBeNever();
-    expectTypeOf<AppliedOperation>().not.toBeNever();
     expectTypeOf<PatchableResource<string>>().not.toBeNever();
     expectTypeOf<Action>().not.toBeNever();
     expectTypeOf<ActionType>().not.toBeNever();
-    expectTypeOf<UndoSystem>().not.toBeNever();
     expectTypeOf<ResourceRegistryEntry>().not.toBeNever();
     expectTypeOf<FileHandlerDependencies>().not.toBeNever();
   });
