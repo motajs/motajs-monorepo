@@ -2,18 +2,18 @@
 gsd_state_version: "1.0"
 current_phase: "05.1"
 current_phase_name: editor-core
-current_plan: 4
+current_plan: 5
 status: executing
-stopped_at: Completed 05.1-04-PLAN.md
-last_updated: "2026-09-29T02:35:13.744Z"
+stopped_at: Completed 05.1-08-PLAN.md
+last_updated: "2026-09-29T03:07:13.645Z"
 last_activity: 2026-09-28
 last_activity_desc: Phase 05.1 plan 01 complete (editor-core undo contract types)
-state_head: 2655fedcf2de2063b1d1774eed713d1e4dcaaeaa
+state_head: 22b214108cd25eb75ce415eb1a5f775138d697ea
 progress:
   total_phases: 13
   completed_phases: 0
   total_plans: 33
-  completed_plans: 29
+  completed_plans: 30
   percent: 0
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-24)
 ## Current Position
 
 Phase: 05.1 (editor-core) — IN PROGRESS
-Current Plan: 4
+Current Plan: 5
 Total Plans in Phase: 8
 Status: Executing (plan 01 complete; plan 02 pending briefing/approval)
 Last activity: 2026-09-28 — 05.1-01 撤销契约类型落地（`lib/kernel/types.ts`）
@@ -75,6 +75,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 05.1 P02 | 6min | 2 tasks | 3 files |
 | Phase 05.1 P03 | 30min | 3 tasks | 63 files |
 | Phase 05.1 P04 | 9 | 3 tasks | 11 files |
+| Phase 05.1 P08 | 22 | 3 tasks | 32 files |
 
 ## Accumulated Context
 
@@ -131,6 +132,9 @@ Recent decisions affecting current work:
 - [Phase 05.1]: 05.1-04: UndoManager 只调操作 apply() 并把返回 inverse 记进历史；内部条目 ManagedEntry 仅在管理器内收窄，对外 Store 只暴露 OperationHistoryEntry
 - [Phase 05.1]: 05.1-04: 组合失败按已成功子操作逆序 inverse 回退并标 commandStage，在 operations.ts 逐字保留（D-13）
 - [Phase 05.1]: 05.1-04: [Rule 3] 删快照文件导致 impl barrel/hook/公开面测试悬空，Task 1 内做最小编译跟随，Task 2 补 core 值导出与别名
+- [Phase 05.1]: 05.1-08: 编辑器按符号所属包改指 import——底层（defineEngine/isValidResourceId/端口/UndoManager）留 @motajs/editor-core，实现（资源/编辑/表格/react）改指 @motajs/editor-impl；OperationHistory 值别名仅 core 导出，appInstances 按符号拆两条 import。
+- [Phase 05.1]: 05.1-08: D-19 落地——撤销数据改动不再连带恢复地图视口；operationHistory.test.ts 主用例改写为记录新行为，旧快照失败回滚用例改为「失败不入历史 + undo 空操作」。
+- [Phase 05.1]: 05.1-08: [Rule 3] D-11 让两个源码直出库禁 import type，编辑器并入其源码会报 TS1484，故编辑器 tsconfig 关闭 verbatimModuleSyntax（偏差待用户复核）；另补 5 处 AppliedOperation<void> 泛型实参与 pnpm-lock 的 workspace link。
 
 ### Pending Todos
 
@@ -156,6 +160,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-09-29T02:35:13.569Z
-Stopped at: Completed 05.1-04-PLAN.md
+Last session: 2026-09-29T03:07:13.464Z
+Stopped at: Completed 05.1-08-PLAN.md
 Resume file: None
