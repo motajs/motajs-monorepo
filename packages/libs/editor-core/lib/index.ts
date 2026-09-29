@@ -11,6 +11,11 @@
  */
 export { createEditorCore, EDITOR_CORE_API_VERSION } from './kernel/core';
 
+// 撤销操作栈管理器的实现（D-04/D-05）：只记操作先后、不保存快照。
+// 同时以**值别名** `OperationHistory` 保留旧类名，编辑器 `new OperationHistory()` 继续可用，Phase 11 删除（D-18）。
+export { UndoManager } from './kernel/undoManager';
+export { UndoManager as OperationHistory } from './kernel/undoManager';
+
 // 底层的唯一对外类型出口（D-08）：内核三接口 + 撤销契约类型都来自 `./kernel/types`。
 export type {
   AppliedOperation,

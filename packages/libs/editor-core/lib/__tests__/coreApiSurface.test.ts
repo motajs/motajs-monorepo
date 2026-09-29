@@ -11,8 +11,8 @@
  *    立刻失败。这是唯一诚实断言「类型级出口存在」的方式（运行时的 `import` 拿不到一个纯类型）。
  *
  * 默认实现面（`Content`/`FileHandler`/字段路径/…）已随内容迁入默认实现包，由该包的
- * `lib/__tests__/implApiSurface.test.ts` 断言。**底层面此刻不含 `UndoManager`**：该类到
- * Plan 04 Task 1 才创建，由 Plan 04 Task 2 再加入本文件。
+ * `lib/__tests__/implApiSurface.test.ts` 断言。**底层面现在含 `UndoManager`**（Plan 04 Task 2 接入），
+ * 并以值别名 `OperationHistory` 继续可用（D-18）。
  *
  * 环境：core 的 vitest 默认 jsdom（Phase 2 的 React 探针需要），本文件用文件级 docblock 切到 node。
  * fixture 纪律（D-22 的约定半边）：本文件不声明模块级 fixture 表；期望值直接写在用例内。
@@ -28,7 +28,9 @@ import {
   EditorCoreStartupError,
   EngineDefinitionError,
   isValidResourceId,
+  OperationHistory,
   resolvePreloadOrder,
+  UndoManager,
 } from '../index';
 import type {
   AppliedOperation,
@@ -106,6 +108,18 @@ describe('editor-core 底层面公开面', () => {
     expect(typeof resolvePreloadOrder).toBe('function');
     expect(typeof EngineDefinitionError).toBe('function');
     expect(typeof ENGINE_ADAPTER_API_VERSION).toBe('string');
+  });
+
+  test('撤销管理器与其旧名值别名都从根 `.` 导出（值面）', () => {
+    expect(typeof UndoManager).toBe('function');
+    expect(typeof OperationHistory).toBe('function');
+    expect(OperationHistory).toBe(UndoManager);
+    const manager = new UndoManager();
+    expect(typeof manager.execute).toBe('function');
+    expect(typeof manager.undo).toBe('function');
+    expect(typeof manager.redo).toBe('function');
+    expect(typeof manager.clear).toBe('function');
+    expect(typeof manager.store.subscribe).toBe('function');
   });
 
   test('内核三接口与四个 port 类型从公开面解析（编译期断言）', () => {
