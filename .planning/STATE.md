@@ -2,18 +2,18 @@
 gsd_state_version: "1.0"
 current_phase: "05.1"
 current_phase_name: editor-core
-current_plan: 6
+current_plan: 7
 status: executing
-stopped_at: Completed 05.1-05-PLAN.md
-last_updated: "2026-09-29T03:22:09.375Z"
+stopped_at: Completed 05.1-06-PLAN.md
+last_updated: "2026-09-29T03:42:16.566Z"
 last_activity: 2026-09-28
 last_activity_desc: Phase 05.1 plan 01 complete (editor-core undo contract types)
-state_head: 2506efa270537356e65fb003364035f0901fd1d0
+state_head: 5d9b7e7eb216b6f352ceef6907349d9bca3ad05b
 progress:
   total_phases: 13
   completed_phases: 0
   total_plans: 33
-  completed_plans: 31
+  completed_plans: 32
   percent: 0
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-24)
 ## Current Position
 
 Phase: 05.1 (editor-core) — IN PROGRESS
-Current Plan: 6
+Current Plan: 7
 Total Plans in Phase: 8
 Status: Executing (plan 01 complete; plan 02 pending briefing/approval)
 Last activity: 2026-09-28 — 05.1-01 撤销契约类型落地（`lib/kernel/types.ts`）
@@ -77,6 +77,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 05.1 P04 | 9 | 3 tasks | 11 files |
 | Phase 05.1 P08 | 22 | 3 tasks | 32 files |
 | Phase 05.1 P05 | 11 | 3 tasks | 5 files |
+| Phase 05.1 P06 | 16 | 3 tasks | 23 files |
 
 ## Accumulated Context
 
@@ -141,6 +142,10 @@ Recent decisions affecting current work:
 - [Phase 05.1]: 05.1-05: lib/edit/operations.ts 只留 CompositeOperation/compositeOperation，彻底去掉对 lib/table 的依赖（edit↔table 不再互相依赖）
 - [Phase 05.1]: 05.1-05: [Rule 3] Action 类型改从 ./types 引入——Task 1 已按计划删除 action.ts 的自声明，./action 不再导出 Action，计划 key_link/验收的「从 ./action 取 Action」与 Task 1 指令互斥
 - [Phase 05.1]: 05.1-05: 能力层搬迁手法——git mv 整对耦合文件 + 只改相对 import/再导出源，公开名集合逐字不变；./table 仍是空 barrel（export {}）
+- [Phase 05.1]: 05.1-06: 端口与资源视图接口加 I 前缀（D-07）；旧名一律 export type { INew as Old } 纯别名（D-18），禁止普通 export 再导出类型（isolatedModules TS1205）
+- [Phase 05.1]: 05.1-06: 被触碰的接口 import 写成普通 import（朝 D-11 收敛）；其余历史 import type 留给 05.1-07 统一清除
+- [Phase 05.1]: 05.1-06: editor-core 端口层只改接口名，engine.ts 描述符缝不动（05.1-03 已去实现化）
+- [Phase 05.1]: 05.1-06: 本计划不触碰 packages/apps/editor/**；编辑器靠两包根 barrel 的旧名别名继续编译，改动集中留给 05.1-08
 
 ### Pending Todos
 
@@ -166,6 +171,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-09-29T03:22:09.181Z
-Stopped at: Completed 05.1-05-PLAN.md
+Last session: 2026-09-29T03:42:16.401Z
+Stopped at: Completed 05.1-06-PLAN.md
 Resume file: None
