@@ -195,14 +195,41 @@ Plans:
 
 ### Phase 05.2: editor-core/impl 代码风格整改 (INSERTED)
 
-**Goal:** [Urgent work - to be planned]
-**Requirements**: TBD
+**Goal**: 把 `@motajs/editor-core` 与 `@motajs/editor-impl` 两个包（含测试）按 `AGENTS.md` §Code style 整改一遍——类型集中到 `types.ts`、接口成员默认 `readonly`、字符串枚举改数字枚举、裸函数类化、注释/空行/成员顺序对齐、桶文件一律 `export *`——纯风格整改，不改功能与行为；唯一允许触碰 `@motajs/editor` 的是数字枚举导致的字符串字面量→枚举成员机械跟随（D-14）。
+
+**Requirements**: （无；本插入阶段的 `phase_req_ids` 为 null，验收以 `05.2-CONTEXT.md` D-01..D-17 为准）
+
 **Depends on:** Phase 5
-**Plans:** 0 plans
+
+**Plans:** 9 plans
 
 Plans:
+**Wave 1 — 接口层（D-02 / D-06 / D-07 / D-10）**
 
-- [ ] TBD (run /gsd-plan-phase 05.2 to break down)
+- [ ] 05.2-01-PLAN.md — `editor-core` 接口层：导出类型集中到 `kernel/types.ts` + 新建 `ports/types.ts`、删空壳 port、接口补 `readonly`、`DiagnosticSeverity` 数字枚举
+- [ ] 05.2-02-PLAN.md — `editor-impl` 接口层：`resources/interfaces.ts` 并入 `resources/types.ts`、接口补 `readonly`、`type` 补 jsDoc
+
+**Wave 2 — 数字枚举 + 编辑器最小跟随（D-06 / D-14）**
+
+- [ ] 05.2-03-PLAN.md — `PreloadStrategy` / `ActionType` 改数字枚举，编辑器与之相关的字符串字面量机械跟随
+
+**Wave 3 — 实现层：类化（D-05 / D-17）**
+
+- [ ] 05.2-04-PLAN.md — `EditorCoreKernel` / `DiagnosticBusImpl` 类化、`ContentUtils` 静态类、去内嵌函数、`FileHandlerManager.size()` 改方法、去下划线参数
+
+**Wave 4 — 实现层：风格扫尾（D-03 / D-04 / D-09 / D-11，三计划并行）**
+
+- [ ] 05.2-05-PLAN.md — `editor-core` 注释/空行/成员顺序/显式类型/空值扫尾
+- [ ] 05.2-06-PLAN.md — `editor-impl` 资源层注释/空行/顺序/显式类型/空值扫尾
+- [ ] 05.2-07-PLAN.md — `editor-impl` 编辑/表格/React/能力层与顶层测试扫尾
+
+**Wave 5 — 桶文件（D-08 / D-15 / D-16）**
+
+- [ ] 05.2-08-PLAN.md — 桶文件一律 `export *`、补文件夹 barrel、`./table` 去空 + 门禁/状态同步
+
+**Wave 6 — 收尾**
+
+- [ ] 05.2-09-PLAN.md — 相位级全量回归 + 编辑器未越界复核
 
 ### Phase 05.1: editor-core 接口与实现整改 (INSERTED)
 
