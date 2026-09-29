@@ -1,4 +1,11 @@
 // @vitest-environment node
+import { describe, expect, it } from 'vitest';
+import { computedResource, FileHandlerManager, PersistenceMonitor, ResourceRegistry } from '../index';
+import { ILoadableResource } from '../index';
+import { defineEngine, EngineDefinitionError, resolvePreloadOrder } from '@motajs/editor-core';
+import { PreloadStrategy, ResourceDependencies, ResourceDescriptor } from '@motajs/editor-core';
+import { MemoryFsPort } from '../resources/__tests__/memoryFsPort';
+
 /**
  * 引擎适配器契约测试（PORT-03 / PORT-04，TDD）。
  *
@@ -10,13 +17,6 @@
  * fixture 纪律（D-22 的约定半边）：本文件不声明模块级 fixture 表；每个用例自建描述与依赖，
  * 期望值直接写在用例内（`createDeps()` / `loadedView()` 只构造一次性对象，不是可复用夹具表）。
  */
-import { describe, expect, it } from 'vitest';
-
-import { computedResource, FileHandlerManager, PersistenceMonitor, ResourceRegistry } from '../index';
-import { ILoadableResource } from '../index';
-import { defineEngine, EngineDefinitionError, resolvePreloadOrder } from '@motajs/editor-core';
-import { PreloadStrategy, ResourceDependencies, ResourceDescriptor } from '@motajs/editor-core';
-import { MemoryFsPort } from '../resources/__tests__/memoryFsPort';
 
 /** 构造一份一次性内存依赖；描述符 `create` 只取用其中的 `fileHandlers`。 */
 function createDeps(): ResourceDependencies {

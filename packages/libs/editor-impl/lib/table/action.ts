@@ -1,12 +1,12 @@
+import { isEqual } from 'es-toolkit';
+import { deleteByFieldPath, buildFieldPath, getByFieldPath, parseFieldPath, setByFieldPath } from './fieldPath';
+import { Action } from './types';
+
 /**
  * Action Utilities
  *
  * 数据修改操作的工具函数，用于应用 Action 到目标对象。
  */
-
-import { isEqual } from 'es-toolkit';
-import { deleteByFieldPath, buildFieldPath, getByFieldPath, parseFieldPath, setByFieldPath } from './fieldPath';
-import { Action } from './types';
 
 function cloneActionValue<T>(value: T, seen = new WeakMap<object, unknown>()): T {
   if ((typeof value !== 'object' && typeof value !== 'function') || value === null) return value;

@@ -21,10 +21,13 @@ import { ContentUtils } from './contentUtils';
  */
 
 export abstract class DataHandler<T> implements IDataHandler<T> {
-  // 数据层 signal（computed，自动追踪 FileHandler）
+  /** 数据层内容信号（computed，自动追踪 FileHandler）。 */
   readonly content: ReadonlySignal<Content<T>>;
 
+  /** 底层文本处理器。 */
   protected fileHandler: FileHandler;
+
+  /** 资源名称，仅用于错误消息。 */
   private resourceName: string;
 
   constructor(fileHandler: FileHandler, resourceName: string) {

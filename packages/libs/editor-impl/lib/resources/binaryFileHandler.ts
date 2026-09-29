@@ -12,9 +12,16 @@ import { isFileNotFoundError } from './errors';
  */
 
 export class BinaryFileHandler implements IContentView<HTMLImageElement> {
+  /** 五态内容信号（真实来源）。 */
   private _content: ReturnType<typeof signal<Content<HTMLImageElement>>>;
+
+  /** 只读内容信号。 */
   readonly content: ReadonlySignal<Content<HTMLImageElement>>;
+
+  /** 宿主文件读写能力。 */
   private fs: IFsPort;
+
+  /** 本处理器绑定的路径。 */
   private path: string;
 
   constructor(path: string, fs: IFsPort) {

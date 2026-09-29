@@ -1,14 +1,14 @@
 // @vitest-environment node
+import { describe, it, expect, beforeEach } from 'vitest';
+import { PersistenceMonitor } from '../persistenceMonitor';
+import { wait } from './testHelpers';
+import { effect } from 'alien-signals';
+
 /**
  * PersistenceMonitor 单元测试（自 `src/fs/__tests__/PersistenceMonitor.test.ts` 原样搬入 core）。
  *
  * 只改 import 路径（`../persistenceMonitor`、本地 `./testHelpers`）与文件级环境 docblock；断言逐字不变。
  */
-
-import { describe, it, expect, beforeEach } from 'vitest';
-import { PersistenceMonitor } from '../persistenceMonitor';
-import { wait } from './testHelpers';
-import { effect } from 'alien-signals';
 
 describe('PersistenceMonitor', () => {
   let monitor: PersistenceMonitor;

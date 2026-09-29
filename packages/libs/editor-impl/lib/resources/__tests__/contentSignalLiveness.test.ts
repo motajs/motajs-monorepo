@@ -1,4 +1,10 @@
 // @vitest-environment node
+import { describe, expect, it } from 'vitest';
+import { FileHandler } from '../fileHandler';
+import { JsonDataHandler } from '../jsonDataHandler';
+import { PersistenceMonitor } from '../persistenceMonitor';
+import { MemoryFsPort } from './memoryFsPort';
+
 /**
  * RES-06 —— 资源层的五态信号活性断言。
  *
@@ -10,12 +16,6 @@
  *
  * fixture 纪律（D-22 的约定半边）：本文件不声明模块级 fixture 表；数据写在用例内。
  */
-
-import { describe, expect, it } from 'vitest';
-import { FileHandler } from '../fileHandler';
-import { JsonDataHandler } from '../jsonDataHandler';
-import { PersistenceMonitor } from '../persistenceMonitor';
-import { MemoryFsPort } from './memoryFsPort';
 
 describe('resource signal liveness (RES-06)', () => {
   async function createLoadedHandler(path: string, initial: string): Promise<FileHandler> {

@@ -1,8 +1,4 @@
 // @vitest-environment node
-/**
- * FileHandler 单元测试
- */
-
 import { describe, it, expect, beforeEach } from 'vitest';
 import { FileHandler } from '../fileHandler';
 import { ContentUtils } from '../contentUtils';
@@ -10,6 +6,10 @@ import { PersistenceMonitor } from '../persistenceMonitor';
 import { IFsPort } from '@motajs/editor-core';
 import { MemoryFsPort } from './memoryFsPort';
 import { wait } from './testHelpers';
+
+/**
+ * FileHandler 单元测试
+ */
 
 describe('FileHandler', () => {
   let memoryFs: MemoryFsPort;

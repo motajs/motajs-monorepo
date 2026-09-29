@@ -1,3 +1,5 @@
+import { IFsPort } from '@motajs/editor-core';
+
 /**
  * MemoryFsPort —— core 测试用的扁平 `IFsPort` 内存替身（D-14）。
  *
@@ -9,8 +11,6 @@
  * 契约（见 `@motajs/editor-core` 的 `lib/ports/fs.ts`）：读取缺失路径必须以一个 `message` 命中 `isFileNotFoundError`
  * 的 `Error` 拒绝——这里用 `file-not-found: <path>`。
  */
-
-import { IFsPort } from '@motajs/editor-core';
 
 export class MemoryFsPort implements IFsPort {
   private readonly files = new Map<string, string>();

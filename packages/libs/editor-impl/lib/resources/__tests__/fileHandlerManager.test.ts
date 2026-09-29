@@ -1,13 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- 测试需要访问管理器私有处理器映射以构造前置状态 */
 // @vitest-environment node
-/**
- * FileHandlerManager 单元测试
- */
-
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { FileHandlerManager as FileHandlerManagerClass } from '../fileHandlerManager';
 import { PersistenceMonitor } from '../persistenceMonitor';
 import { MemoryFsPort } from './memoryFsPort';
+
+/**
+ * FileHandlerManager 单元测试
+ */
 
 describe('FileHandlerManager', () => {
   let memoryFs: MemoryFsPort;

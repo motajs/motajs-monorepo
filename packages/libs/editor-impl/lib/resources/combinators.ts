@@ -12,9 +12,16 @@ type ResourceValues<Dependencies extends readonly IResourceView<unknown>[]> = {
 };
 
 export class ComputedResource<T> implements ILoadableResource<T> {
+  /** 派生内容信号。 */
   readonly content: ReadonlySignal<Content<T>>;
+
+  /** 资源身份（逻辑 id）。 */
   readonly id: string;
+
+  /** 首次加载时要确保就绪的依赖来源（静态数组或惰性求值函数）。 */
   private readonly dependencySource: DependencySource;
+
+  /** 重新加载时要一并重载的依赖来源。 */
   private readonly reloadDependencySource: DependencySource;
 
   constructor(

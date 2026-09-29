@@ -1,8 +1,8 @@
+import { effect } from 'alien-signals';
+
 /**
  * Signal 相关工具函数
  */
-
-import { effect } from 'alien-signals';
 
 /**
  * 等待条件满足

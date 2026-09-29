@@ -1,4 +1,8 @@
 // @vitest-environment node
+import { beforeEach, describe, expect, it } from 'vitest';
+import { PersistenceMonitor } from '../persistenceMonitor';
+import { wait } from './testHelpers';
+
 /**
  * PersistenceMonitor 特性化测试（冻结不变量，不冻结实现结构）
  *
@@ -17,10 +21,6 @@
  * 自 `src/fs/__tests__/persistenceMonitor.invariants.test.ts` 原样搬入 core：只改 import 路径
  * （`../persistenceMonitor`、本地 `./testHelpers`）与文件级环境 docblock；断言逐字不变。
  */
-
-import { beforeEach, describe, expect, it } from 'vitest';
-import { PersistenceMonitor } from '../persistenceMonitor';
-import { wait } from './testHelpers';
 
 describe('PersistenceMonitor invariants', () => {
   let monitor: PersistenceMonitor;

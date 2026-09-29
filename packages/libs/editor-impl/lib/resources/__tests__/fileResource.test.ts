@@ -1,4 +1,13 @@
 // @vitest-environment node
+import { describe, expect, it } from 'vitest';
+import { ResourceDependencies } from '@motajs/editor-core';
+import { FileHandler } from '../fileHandler';
+import { FileHandlerManager } from '../fileHandlerManager';
+import { JsonDataHandler } from '../jsonDataHandler';
+import { PersistenceMonitor } from '../persistenceMonitor';
+import { FileResource } from '../fileResource';
+import { MemoryFsPort } from './memoryFsPort';
+
 /**
  * `FileResource` 单元测试（PORT-04，TDD）。
  *
@@ -9,15 +18,6 @@
  * fixture 纪律（D-22 的约定半边）：不声明模块级夹具表；每个用例自建 `MemoryFsPort` 与描述符，
  * 期望值直接写在用例内。
  */
-import { describe, expect, it } from 'vitest';
-
-import { ResourceDependencies } from '@motajs/editor-core';
-import { FileHandler } from '../fileHandler';
-import { FileHandlerManager } from '../fileHandlerManager';
-import { JsonDataHandler } from '../jsonDataHandler';
-import { PersistenceMonitor } from '../persistenceMonitor';
-import { FileResource } from '../fileResource';
-import { MemoryFsPort } from './memoryFsPort';
 
 /** 一次性构造注入的 `MemoryFsPort` 依赖；测试持有所需句柄。 */
 function createDeps(fs: MemoryFsPort): ResourceDependencies {

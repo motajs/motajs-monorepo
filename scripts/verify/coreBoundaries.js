@@ -167,15 +167,11 @@ function resolveDepcruiseBin() {
 }
 
 function runDepcruise(extraArgs) {
-  const result = spawnSync(
-    process.execPath,
-    [DEPCRUISE_BIN, '--config', CONFIG_PATH, ...extraArgs, ...CORE_LIBS],
-    {
-      cwd: REPO_ROOT,
-      encoding: 'utf8',
-      maxBuffer: 64 * 1024 * 1024,
-    },
-  );
+  const result = spawnSync(process.execPath, [DEPCRUISE_BIN, '--config', CONFIG_PATH, ...extraArgs, ...CORE_LIBS], {
+    cwd: REPO_ROOT,
+    encoding: 'utf8',
+    maxBuffer: 64 * 1024 * 1024,
+  });
   if (result.error) return { error: `无法运行 dependency-cruiser：${result.error.message}` };
   return { status: result.status, stdout: result.stdout ?? '', stderr: result.stderr ?? '' };
 }
@@ -251,7 +247,10 @@ function checkEdgesNotMasked(report) {
   if (report === null) return;
   const modules = Array.isArray(report.modules) ? report.modules : [];
   const coreModules = modules.filter((module) => isInsideAnyCoreLib(module.source ?? ''));
-  check(coreModules.length > 0, `cruise 报告里没有任何 core/impl 模块（目标 ${CORE_LIBS.join(' 与 ')}）—— 规则无从生效`);
+  check(
+    coreModules.length > 0,
+    `cruise 报告里没有任何 core/impl 模块（目标 ${CORE_LIBS.join(' 与 ')}）—— 规则无从生效`,
+  );
 
   let relativeEdges = 0;
   let tolerated = 0;
@@ -297,9 +296,7 @@ function checkEdgesNotMasked(report) {
 
 function checkDependencyDirection() {
   assertSyntheticRuleHit(DIRECTION_FIXTURE, DIRECTION_SOURCE, DIRECTION_RULE, '底层→实现 依赖方向');
-  console.log(
-    `coreBoundaries: 依赖方向两极性成立（合成 fixture 被 ${DIRECTION_RULE} 以 error 级命中；真实树 0 违规）`,
-  );
+  console.log(`coreBoundaries: 依赖方向两极性成立（合成 fixture 被 ${DIRECTION_RULE} 以 error 级命中；真实树 0 违规）`);
 }
 
 // ==================== (e) 底层 IO 清零两极性 ====================

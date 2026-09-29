@@ -1,7 +1,6 @@
 // @vitest-environment node
 import { effect, signal } from 'alien-signals';
 import { describe, expect, it } from 'vitest';
-
 import { ILoadableResource, ReadonlySignal } from '../interfaces';
 import { Content } from '../types';
 import { aggregateResource, computedResource, optional } from '../combinators';

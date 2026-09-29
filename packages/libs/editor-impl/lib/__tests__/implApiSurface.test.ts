@@ -1,14 +1,4 @@
 // @vitest-environment node
-/**
- * 默认实现层公开面测试（拆分自原 `coreApiSurface.test.ts`；T-05.1-10）。
- *
- * 断言 `@motajs/editor-impl` 的根 `.` 重新导出承接了原 `@motajs/editor-core` 根 `.` 的
- * 资源层 / 编辑层公开名（值 + 类型）。底层面（内核 + 端口 + 撤销契约）由
- * `editor-core/lib/__tests__/coreApiSurface.test.ts` 断言。
- *
- * 环境：impl 的 vitest 默认 jsdom（React 探针需要），本文件用文件级 docblock 切到 node。
- * fixture 纪律（D-22 的约定半边）：不声明模块级 fixture 表；期望值直接写在用例内。
- */
 import { describe, expect, expectTypeOf, test } from 'vitest';
 import {
   aggregateResource,
@@ -69,6 +59,17 @@ import {
   ResourceRegistryEntry,
   ResourceView,
 } from '../index';
+
+/**
+ * 默认实现层公开面测试（拆分自原 `coreApiSurface.test.ts`；T-05.1-10）。
+ *
+ * 断言 `@motajs/editor-impl` 的根 `.` 重新导出承接了原 `@motajs/editor-core` 根 `.` 的
+ * 资源层 / 编辑层公开名（值 + 类型）。底层面（内核 + 端口 + 撤销契约）由
+ * `editor-core/lib/__tests__/coreApiSurface.test.ts` 断言。
+ *
+ * 环境：impl 的 vitest 默认 jsdom（React 探针需要），本文件用文件级 docblock 切到 node。
+ * fixture 纪律（D-22 的约定半边）：不声明模块级 fixture 表；期望值直接写在用例内。
+ */
 
 describe('editor-impl 默认实现层公开面', () => {
   test('资源层与编辑层类都从根 `.` 导出（值面）', () => {

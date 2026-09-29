@@ -21,13 +21,16 @@ interface ManagedEntry extends OperationHistoryEntry {
  */
 export class UndoManager implements IUndoManager {
   /** 下一条历史记录的编号，逐条自增。 */
-  private nextId = 1;
+  private nextId: number = 1;
+
   /** 正在排队（含执行中）的任务数：从 0 变 1 置 busy，回落 0 清 busy。 */
-  private pending = 0;
+  private pending: number = 0;
+
   /** 串行队列的队尾：新任务接在它后面，保证同一时刻只有一个操作在跑。 */
   private queue: Promise<void> = Promise.resolve();
+
   /** 历史上限：只保留最近 100 条，超出的从最旧一端移除。 */
-  private readonly capacity = 100;
+  private readonly capacity: number = 100;
   /** per-instance 的状态容器（D-11）：供界面订阅历史条目、当前指针与忙碌状态。 */
   readonly store = new Store<OperationHistoryState>({ entries: [], current: 0, busy: false });
 

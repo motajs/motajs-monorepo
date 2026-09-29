@@ -1,11 +1,11 @@
+import { get, set, unset } from 'es-toolkit/compat';
+
 /**
  * Field Path Utilities
  *
  * 字段路径解析和操作工具函数。
  * 字段路径格式: "['key1']['key2']['key3']"
  */
-
-import { get, set, unset } from 'es-toolkit/compat';
 
 /**
  * 解析字段路径字符串为键数组
@@ -105,8 +105,9 @@ export function getParentField(field: string): string {
 }
 
 /**
- * getParentField 的别名
- * 获取父级字段路径（移除最后一段）
+ * getParentFieldPath - getParentField 的同义函数
+ *
+ * 获取父级字段路径（移除最后一段）。
  *
  * @param fieldPath - 字段路径字符串
  * @returns 父级字段路径，如果没有父级则返回空字符串
@@ -115,7 +116,9 @@ export function getParentField(field: string): string {
  * getParentFieldPath("['main']['floorIds']") // "['main']"
  * getParentFieldPath("['single']") // ""
  */
-export const getParentFieldPath = getParentField;
+export function getParentFieldPath(fieldPath: string): string {
+  return getParentField(fieldPath);
+}
 
 /**
  * 根据 field path 从对象中安全获取值

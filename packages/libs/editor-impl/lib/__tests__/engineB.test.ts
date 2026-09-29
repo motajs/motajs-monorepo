@@ -1,4 +1,16 @@
 // @vitest-environment node
+// @ts-expect-error core 未安装 @types/node；运行时由 vitest 的 node 环境提供内置模块
+import { readFileSync } from 'node:fs';
+// @ts-expect-error core 未安装 @types/node；运行时由 vitest 的 node 环境提供内置模块
+import { fileURLToPath } from 'node:url';
+import { describe, expect, it } from 'vitest';
+import { computedResource, FileHandlerManager, PersistenceMonitor, ResourceRegistry } from '../index';
+import { ILoadableResource } from '../index';
+import { defineEngine, EngineDefinitionError, resolvePreloadOrder } from '@motajs/editor-core';
+import { EngineDescription, ResourceDependencies, ResourceDescriptor } from '@motajs/editor-core';
+import { MemoryFsPort } from '../resources/__tests__/memoryFsPort';
+import { createEngineBDescription, engineBDescription } from './engineB';
+
 /**
  * 假引擎 B 端到端测试（PORT-08 / D-11 / D-04）。
  *
@@ -12,19 +24,6 @@
  * 源码经 `node:fs` 直接读入；core 未安装 `@types/node`，故对内置模块导入加 `@ts-expect-error`
  * （运行时由 vitest 的 node 环境解析）。
  */
-// @ts-expect-error core 未安装 @types/node；运行时由 vitest 的 node 环境提供内置模块
-import { readFileSync } from 'node:fs';
-// @ts-expect-error core 未安装 @types/node；运行时由 vitest 的 node 环境提供内置模块
-import { fileURLToPath } from 'node:url';
-
-import { describe, expect, it } from 'vitest';
-
-import { computedResource, FileHandlerManager, PersistenceMonitor, ResourceRegistry } from '../index';
-import { ILoadableResource } from '../index';
-import { defineEngine, EngineDefinitionError, resolvePreloadOrder } from '@motajs/editor-core';
-import { EngineDescription, ResourceDependencies, ResourceDescriptor } from '@motajs/editor-core';
-import { MemoryFsPort } from '../resources/__tests__/memoryFsPort';
-import { createEngineBDescription, engineBDescription } from './engineB';
 
 /** 声明顺序（夹具的既有事实，直接写在用例内而非模块级夹具表）。 */
 const DECLARED_IDS = ['engineB.catalog', 'engineB.index', 'engineB.notes', 'engineB.chapter'];

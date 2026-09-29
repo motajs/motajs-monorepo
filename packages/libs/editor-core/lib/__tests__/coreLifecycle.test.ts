@@ -1,4 +1,8 @@
 // @vitest-environment node
+import { describe, expect, test, vi } from 'vitest';
+import { createEditorCore } from '../kernel/core';
+import { DIAGNOSTIC_CODES } from '../kernel/diagnostics';
+
 /**
  * Phase 3 生命周期测试（KERN-02 / D-09 / D-21）。
  *
@@ -11,9 +15,6 @@
  *
  * 全部 fixture 使用引擎中性的 `acme.*`：core 不认识任何引擎的词汇或文件结构（RESEARCH Pitfall 15）。
  */
-import { describe, expect, test, vi } from 'vitest';
-import { createEditorCore } from '../kernel/core';
-import { DIAGNOSTIC_CODES } from '../kernel/diagnostics';
 
 describe('editor-core 生命周期契约', () => {
   test('三个拆除钩子按创建逆序释放', () => {

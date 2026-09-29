@@ -1,4 +1,9 @@
 // @vitest-environment node
+import { describe, expect, test } from 'vitest';
+import { createEditorCore } from '../kernel/core';
+import { DIAGNOSTIC_CODES } from '../kernel/diagnostics';
+import { EditorCoreStartupError } from '../kernel/errors';
+
 /**
  * Phase 3 原子构造与启动失败测试（KERN-04）。
  *
@@ -9,10 +14,6 @@
  *
  * 全部 fixture 使用引擎中性的 `acme.*`：core 不认识任何引擎的词汇或文件结构（RESEARCH Pitfall 15）。
  */
-import { describe, expect, test } from 'vitest';
-import { createEditorCore } from '../kernel/core';
-import { DIAGNOSTIC_CODES } from '../kernel/diagnostics';
-import { EditorCoreStartupError } from '../kernel/errors';
 
 /** 运行构造并返回它抛出的启动错误；若没有抛出，就让测试失败而不是静默通过。 */
 function captureStartupError(run: () => unknown): EditorCoreStartupError {

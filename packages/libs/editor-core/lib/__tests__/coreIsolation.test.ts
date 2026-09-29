@@ -1,4 +1,7 @@
 // @vitest-environment node
+import { describe, expect, test } from 'vitest';
+import { createEditorCore } from '../kernel/core';
+
 /**
  * Phase 3 tracer 测试（KERN-01 / KERN-06）。
  *
@@ -11,8 +14,6 @@
  *
  * 全部 fixture 使用引擎中性的 `acme.*`：core 不认识任何引擎的词汇或文件结构（RESEARCH Pitfall 15）。
  */
-import { describe, expect, test } from 'vitest';
-import { createEditorCore } from '../kernel/core';
 
 describe('editor-core 内核 tracer 与实例隔离', () => {
   test('create → install → 读回 → snapshot → 逆序 dispose', () => {

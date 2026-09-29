@@ -1,4 +1,7 @@
 // @vitest-environment node
+import { describe, expect, test } from 'vitest';
+import { createEditorCore } from '../kernel/core';
+
 /**
  * Phase 3 registry 契约测试（KERN-03）。
  *
@@ -9,8 +12,6 @@
  *
  * 全部 fixture 使用引擎中性的 `acme.*`（RESEARCH Pitfall 15）。
  */
-import { describe, expect, test } from 'vitest';
-import { createEditorCore } from '../kernel/core';
 
 /** 合法种类：单段与多段、camelCase 与连字符都要放行（D-17）。 */
 const VALID_KINDS = [

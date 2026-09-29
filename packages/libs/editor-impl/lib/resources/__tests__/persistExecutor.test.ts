@@ -1,15 +1,15 @@
 // @vitest-environment node
-/**
- * PersistExecutor 单元测试（自 `src/fs/__tests__/PersistExecutor.test.ts` 原样搬入 core）。
- *
- * 只改 import 路径（`../persistExecutor`、本地 `./testHelpers`）与文件级环境 docblock；断言逐字不变。
- */
-
 import { describe, it, expect } from 'vitest';
 import { PersistExecutor } from '../persistExecutor';
 import { ExecutorStatus } from '../types';
 import { wait } from './testHelpers';
 import { effect } from 'alien-signals';
+
+/**
+ * PersistExecutor 单元测试（自 `src/fs/__tests__/PersistExecutor.test.ts` 原样搬入 core）。
+ *
+ * 只改 import 路径（`../persistExecutor`、本地 `./testHelpers`）与文件级环境 docblock；断言逐字不变。
+ */
 
 describe('PersistExecutor', () => {
   describe('串行化执行', () => {

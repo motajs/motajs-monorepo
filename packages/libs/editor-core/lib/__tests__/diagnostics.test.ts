@@ -1,4 +1,7 @@
 // @vitest-environment node
+import { describe, expect, test } from 'vitest';
+import { createDiagnosticBus, DIAGNOSTIC_CODES, Diagnostic } from '../kernel/diagnostics';
+
 /**
  * Phase 3 诊断总线契约测试（KERN-05）。
  *
@@ -9,8 +12,6 @@
  *
  * 全部 fixture 使用引擎中性的 `acme.*`（RESEARCH Pitfall 15）。
  */
-import { describe, expect, test } from 'vitest';
-import { createDiagnosticBus, DIAGNOSTIC_CODES, Diagnostic } from '../kernel/diagnostics';
 
 describe('editor-core 诊断总线契约', () => {
   test('snapshot 按顺序返回全部历史，且返回的是不可变副本', () => {

@@ -1,4 +1,7 @@
 // @vitest-environment node
+import { describe, expect, it } from 'vitest';
+import { isFileNotFoundError } from '../errors';
+
 /**
  * isFileNotFoundError 特性化测试（RES-05「not-found ≠ error」）。
  *
@@ -6,8 +9,6 @@
  * docblock 切换到 node 环境（core 的 vitest 默认 jsdom）。fixture 纪律（D-22 的约定半边）：
  * 不声明模块级 fixture 表。
  */
-import { describe, expect, it } from 'vitest';
-import { isFileNotFoundError } from '../errors';
 
 describe('isFileNotFoundError', () => {
   it.each([
