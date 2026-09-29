@@ -1,7 +1,6 @@
 import { computed, effect } from 'alien-signals';
-
 import { ILoadableResource, IResourceView, ReadonlySignal } from './interfaces';
-import type { Content } from './types';
+import { Content } from './types';
 import { ContentUtils } from './contentUtils';
 import { waitUntil } from './waitUntil';
 

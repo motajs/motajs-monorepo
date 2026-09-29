@@ -1,3 +1,11 @@
+import { EngineDescription, ResourceDescriptor, ResourceDependencies } from '@motajs/editor-core';
+import { IResourceView } from '../resources/interfaces';
+import { FileResource } from '../resources/fileResource';
+import { FileHandler } from '../resources/fileHandler';
+import { JsonDataHandler } from '../resources/jsonDataHandler';
+import { computedResource } from '../resources/combinators';
+import { ContentUtils } from '../resources/contentUtils';
+
 /**
  * 假「engine B」夹具（PORT-08 / D-11，仅测试）。
  *
@@ -9,14 +17,6 @@
  * 本文件刻意放在 `lib/__tests__/`：它随每一条 core 测试一起运行，却绝不进入生产源码，
  * 因此 `scripts/verify/coreEngineNeutral.js` 的引擎标识门禁（排除 `__tests__`）不会把它当作泄漏。
  */
-
-import type { EngineDescription, ResourceDescriptor, ResourceDependencies } from '@motajs/editor-core';
-import { IResourceView } from '../resources/interfaces';
-import { FileResource } from '../resources/fileResource';
-import type { FileHandler } from '../resources/fileHandler';
-import { JsonDataHandler } from '../resources/jsonDataHandler';
-import { computedResource } from '../resources/combinators';
-import { ContentUtils } from '../resources/contentUtils';
 
 /** `engineB.catalog` 的数据形状。 */
 interface EngineBCatalog {

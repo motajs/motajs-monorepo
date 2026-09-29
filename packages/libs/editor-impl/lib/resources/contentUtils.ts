@@ -1,11 +1,11 @@
+import { match } from 'ts-pattern';
+import { Content } from './types';
+
 /**
  * ContentUtils - Content<T> 的通用辅助函数
  *
- * 提供函数式操作工具，简化 Content<T> 的使用
+ * 提供函数式操作工具，简化 Content<T> 的使用。
  */
-
-import { match } from 'ts-pattern';
-import type { Content } from './types';
 
 export const ContentUtils = Object.freeze({
   /**

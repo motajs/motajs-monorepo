@@ -1,3 +1,5 @@
+import { Diagnostic } from './diagnostics';
+
 /**
  * capability registry 的**契约类型**（引擎无关）。
  *
@@ -8,7 +10,6 @@
  * 形状参照仓内先例 `RegisterPackResult`（`packages/apps/editor/src/blockly/registry/types.ts`）：
  * 注册结果携带诊断而非抛错（D-02）。
  */
-import type { Diagnostic } from './diagnostics';
 
 /** `EditorCore.snapshotCapabilities()` 返回的只读条目（D-19）。 */
 export interface CapabilityRef {

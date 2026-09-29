@@ -1,7 +1,6 @@
 import { Store } from '@tanstack/store';
-
-import type { DiagnosticBus } from './diagnostics';
-import type { CapabilityRef, RegisterCapabilityOptions, RegisterCapabilityResult } from './registry';
+import { DiagnosticBus } from './diagnostics';
+import { CapabilityRef, RegisterCapabilityOptions, RegisterCapabilityResult } from './registry';
 
 /**
  * 底层（editor-core）对外类型的唯一集中出口。

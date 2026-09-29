@@ -1,16 +1,15 @@
-/**
- * BinaryFileHandler - 二进制文件处理器
- *
- * 用于加载图片文件，返回 HTMLImageElement
- * 只读，不支持写入
- */
-
 import { signal, effect } from 'alien-signals';
 import { IFsPort } from '@motajs/editor-core';
 import { waitUntil } from './waitUntil';
-import type { Content } from './types';
-import type { IContentView, ReadonlySignal } from './interfaces';
+import { Content } from './types';
+import { IContentView, ReadonlySignal } from './interfaces';
 import { isFileNotFoundError } from './errors';
+
+/**
+ * BinaryFileHandler - 二进制文件处理器
+ *
+ * 用于加载图片文件，返回 HTMLImageElement；只读，不支持写入。
+ */
 
 export class BinaryFileHandler implements IContentView<HTMLImageElement> {
   private _content: ReturnType<typeof signal<Content<HTMLImageElement>>>;

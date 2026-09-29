@@ -38,6 +38,8 @@ jobs:
 
       - run: node scripts/verify/coreEngineNeutral.js
 
+      - run: node scripts/verify/coreImportType.js
+
   typecheck:
     runs-on: ubuntu-latest
     permissions:

@@ -32,7 +32,7 @@ import {
   resolvePreloadOrder,
   UndoManager,
 } from '../index';
-import type {
+import {
   AppliedOperation,
   CapabilityRef,
   CapabilityRegistrar,

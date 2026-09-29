@@ -1,3 +1,5 @@
+import { DIAGNOSTIC_CODES, Diagnostic } from './diagnostics';
+
 /**
  * 内核启动失败错误（引擎无关）。
  *
@@ -8,7 +10,6 @@
  * tsconfig（`lib: ESNext, DOM, DOM.Iterable`，无 `types`）刻意不依赖 `@types/node`，
  * 该调用会让 core 自己的 `typecheck` 失败；`super(message)` 已经捕获堆栈，对浏览器侧库足够。
  */
-import { DIAGNOSTIC_CODES, type Diagnostic } from './diagnostics';
 
 /**
  * 构造无法完成时抛出的唯一错误。

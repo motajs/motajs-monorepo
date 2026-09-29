@@ -1,3 +1,8 @@
+import { createDiagnosticBus, DIAGNOSTIC_CODES, Diagnostic, DiagnosticBus } from './diagnostics';
+import { EditorCoreStartupError } from './errors';
+import { CapabilityRef, RegisterCapabilityOptions, RegisterCapabilityResult } from './registry';
+import { CapabilityRegistrar, EditorCore, EditorCoreConfig } from './types';
+
 /**
  * 内核组合根（引擎无关）。
  *
@@ -14,10 +19,6 @@
  *   `EditorCoreStartupError`（携带全部诊断），绝不交出半成品（D-07/D-08）。
  * - 本文件是 D-10 module-state 门禁唯一豁免的生产文件（它拥有拆除栈与 disposed 标志）。
  */
-import { createDiagnosticBus, DIAGNOSTIC_CODES, type Diagnostic, type DiagnosticBus } from './diagnostics';
-import { EditorCoreStartupError } from './errors';
-import type { CapabilityRef, RegisterCapabilityOptions, RegisterCapabilityResult } from './registry';
-import type { CapabilityRegistrar, EditorCore, EditorCoreConfig } from './types';
 
 /**
  * 公开 API 版本。未冻结期按 semver 惯例视为不稳定；Phase 12 冻结接口面时升到 `1.0.0`（D-11）。

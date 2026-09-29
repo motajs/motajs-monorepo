@@ -22,7 +22,7 @@ import { describe, expect, it } from 'vitest';
 import { computedResource, FileHandlerManager, PersistenceMonitor, ResourceRegistry } from '../index';
 import { ILoadableResource } from '../index';
 import { defineEngine, EngineDefinitionError, resolvePreloadOrder } from '@motajs/editor-core';
-import type { EngineDescription, ResourceDependencies, ResourceDescriptor } from '@motajs/editor-core';
+import { EngineDescription, ResourceDependencies, ResourceDescriptor } from '@motajs/editor-core';
 import { MemoryFsPort } from '../resources/__tests__/memoryFsPort';
 import { createEngineBDescription, engineBDescription } from './engineB';
 

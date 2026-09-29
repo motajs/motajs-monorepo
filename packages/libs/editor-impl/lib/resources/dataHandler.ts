@@ -1,3 +1,10 @@
+import { computed, effect } from 'alien-signals';
+import { waitUntil } from './waitUntil';
+import { FileHandler } from './fileHandler';
+import { Content } from './types';
+import { IDataHandler, ReadonlySignal } from './interfaces';
+import { ContentUtils } from './contentUtils';
+
 /**
  * DataHandler - 数据层可写处理器（抽象基类）
  *
@@ -12,13 +19,6 @@
  * - parse 错误不影响文件层
  * - 写入时自动 stringify 并更新 FileHandler
  */
-
-import { computed, effect } from 'alien-signals';
-import { waitUntil } from './waitUntil';
-import type { FileHandler } from './fileHandler';
-import type { Content } from './types';
-import type { IDataHandler, ReadonlySignal } from './interfaces';
-import { ContentUtils } from './contentUtils';
 
 export abstract class DataHandler<T> implements IDataHandler<T> {
   // 数据层 signal（computed，自动追踪 FileHandler）

@@ -1,3 +1,10 @@
+import { ResourceDependencies } from '@motajs/editor-core';
+import { FileHandler } from './fileHandler';
+import { FileHandlerManager } from './fileHandlerManager';
+import { IDataHandler, ILoadableResource, ReadonlySignal } from './interfaces';
+import { Content } from './types';
+import { ContentUtils } from './contentUtils';
+
 /**
  * `FileResource<T>` —— core 中**唯一**允许持有「不透明 IO 地址」的类（D-06）。
  *
@@ -10,13 +17,6 @@
  *   不拼接/解码/归一化任何路径——core 不拥有路径安全面，那是宿主的职责（T-05-02）。
  * - 文件层实例经构造参数 `deps.fileHandlers` 注入，**不**取自任何模块级单例（D-10）。
  */
-
-import type { ResourceDependencies } from '@motajs/editor-core';
-import type { FileHandler } from './fileHandler';
-import type { FileHandlerManager } from './fileHandlerManager';
-import { IDataHandler, ILoadableResource, ReadonlySignal } from './interfaces';
-import type { Content } from './types';
-import { ContentUtils } from './contentUtils';
 
 export class FileResource<T> implements ILoadableResource<T> {
   readonly id: string;

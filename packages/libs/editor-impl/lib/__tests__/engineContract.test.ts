@@ -15,7 +15,7 @@ import { describe, expect, it } from 'vitest';
 import { computedResource, FileHandlerManager, PersistenceMonitor, ResourceRegistry } from '../index';
 import { ILoadableResource } from '../index';
 import { defineEngine, EngineDefinitionError, resolvePreloadOrder } from '@motajs/editor-core';
-import type { PreloadStrategy, ResourceDependencies, ResourceDescriptor } from '@motajs/editor-core';
+import { PreloadStrategy, ResourceDependencies, ResourceDescriptor } from '@motajs/editor-core';
 import { MemoryFsPort } from '../resources/__tests__/memoryFsPort';
 
 /** 构造一份一次性内存依赖；描述符 `create` 只取用其中的 `fileHandlers`。 */
