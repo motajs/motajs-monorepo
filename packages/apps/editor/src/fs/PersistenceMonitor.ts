@@ -1,4 +1,4 @@
 // SHIM(phase4)
-export { PersistenceMonitor } from '@motajs/editor-core';
-export type { PersistFailure } from '@motajs/editor-core';
+export { PersistenceMonitor } from '@motajs/editor-impl';
+export type { PersistFailure } from '@motajs/editor-impl';
 export { persistenceMonitor } from '@/appInstances';

@@ -5,4 +5,4 @@ export type {
   IContentHandler,
   IDataHandler,
   RecoverableResource,
-} from '@motajs/editor-core';
+} from '@motajs/editor-impl';

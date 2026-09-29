@@ -3,7 +3,7 @@
  *
  * 两个调用点（`AppTopBar.tsx`、`PanelSlot.tsx`）继续以同样的零参名字从 `@/project/history` 导入。
  */
-import { useOperationHistory as useCoreUseOperationHistory } from '@motajs/editor-core/react';
+import { useOperationHistory as useCoreUseOperationHistory } from '@motajs/editor-impl/react';
 import type { OperationHistoryEntry } from '@motajs/editor-core';
 import { operationHistory } from '@/appInstances';
 

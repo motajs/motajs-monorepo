@@ -1,2 +1,2 @@
 // SHIM(phase4)
-export { ContentUtils } from '@motajs/editor-core';
+export { ContentUtils } from '@motajs/editor-impl';

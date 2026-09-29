@@ -9,12 +9,8 @@
  *
  * 后续计划会在此文件继续挂载 `operationHistory` 实例（04-03，已完成）。
  */
-import {
-  FileHandlerManager as FileHandlerManagerClass,
-  OperationHistory,
-  PersistenceMonitor,
-  type FsPort,
-} from '@motajs/editor-core';
+import { FileHandlerManager as FileHandlerManagerClass, PersistenceMonitor } from '@motajs/editor-impl';
+import { OperationHistory, type FsPort } from '@motajs/editor-core';
 import { fs } from '@/services/fs';
 import { captureEditorViewport, restoreEditorViewport, type EditorViewport } from '@/project/history/viewport';
 

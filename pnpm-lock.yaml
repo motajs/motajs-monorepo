@@ -257,6 +257,9 @@ importers:
       '@motajs/editor-core':
         specifier: workspace:*
         version: link:../../libs/editor-core
+      '@motajs/editor-impl':
+        specifier: workspace:*
+        version: link:../../libs/editor-impl
       '@motajs/file2x':
         specifier: workspace:*
         version: link:../../libs/file2x

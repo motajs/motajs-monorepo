@@ -18,6 +18,7 @@
     "@blockly/field-colour": "6.0.12",
     "@blockly/field-multilineinput": "6.0.8",
     "@motajs/editor-core": "workspace:*",
+    "@motajs/editor-impl": "workspace:*",
     "@motajs/file2x": "workspace:*",
     "@motajs/react-hooks": "workspace:*",
     "@motajs/react-monaco-editor": "workspace:*",

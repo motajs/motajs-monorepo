@@ -6,20 +6,20 @@
  * 这条轴只被配置、从未被验证——未来该解析器回归不会有任何测试变红。
  *
  * 本测试经编辑器自己的 Vitest 管线（`resolvePlugin` 负责 `@/`，包名经 workspace 软链解析）
- * import `@motajs/editor-core/react`，并断言拿到的 `CoreProbe` 与 core 源文件的相对说明符加载出的是
- * **同一个模块**——若包解析指向编辑器内的同名文件，恒等式会失败；若 core 不再可解析，import 直接报错。
+ * import `@motajs/editor-impl/react`，并断言拿到的 `CoreProbe` 与 impl 源文件的相对说明符加载出的是
+ * **同一个模块**——若包解析指向编辑器内的同名文件，恒等式会失败；若 impl 不再可解析，import 直接报错。
  */
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { CoreProbe } from '@motajs/editor-core/react';
-import { CoreProbe as CoreProbeFromSource } from '../../../../../packages/libs/editor-core/lib/react/index.ts';
+import { CoreProbe } from '@motajs/editor-impl/react';
+import { CoreProbe as CoreProbeFromSource } from '../../../../../packages/libs/editor-impl/lib/react/index.ts';
 
 afterEach(() => {
   cleanup();
 });
 
-describe('editor Vitest 解析 editor-core', () => {
-  it('包说明符经编辑器 Vitest 管线解析到 core 自身的源文件', () => {
+describe('editor Vitest 解析 editor-impl', () => {
+  it('包说明符经编辑器 Vitest 管线解析到 impl 自身的源文件', () => {
     expect(typeof CoreProbe).toBe('function');
     expect(CoreProbe.name).toBe('CoreProbe');
     // 同一模块经「包说明符」与「core 源文件相对说明符」两条路径加载必须得到同一身份。

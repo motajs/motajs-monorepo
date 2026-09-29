@@ -1,2 +1,2 @@
 // SHIM(phase4)
-export { JsonDataHandler } from '@motajs/editor-core';
+export { JsonDataHandler } from '@motajs/editor-impl';

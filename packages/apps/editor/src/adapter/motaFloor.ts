@@ -10,8 +10,10 @@
  * id 语法风险：真实楼层 id 可能含非 word 字符，选择「sanitize / 编码 id」还是「放宽语法」是可逆
  * 决策，被显式推迟到 Phase 11 / 用户决定，而不是在这里被默认做出（RESEARCH Open Question 1）。
  */
-import { FileResource, isValidResourceId } from '@motajs/editor-core';
+import { isValidResourceId } from '@motajs/editor-core';
 import type { ResourceDependencies, ResourceDescriptor } from '@motajs/editor-core';
+import { FileResource } from '@motajs/editor-impl';
+import type { LoadableResource } from '@motajs/editor-impl';
 import { FloorDataHandler } from '@/services/floor/FloorDataHandler';
 import type { FloorData } from '@/types';
 import { motaFloorAddress } from './motaResources';
@@ -40,7 +42,7 @@ export class MotaFloorIdError extends Error {
  * @param floorId - 真实楼层 id（用于推导逻辑 id 与拼接楼层文件地址）
  * @throws {MotaFloorIdError} 当推导出的 `mota.floor.<floorId>` 违反共享逻辑 id 语法时
  */
-export function motaFloorDescriptor(floorId: string): ResourceDescriptor<FloorData> {
+export function motaFloorDescriptor(floorId: string): ResourceDescriptor<LoadableResource<FloorData>> {
   const id = `${FLOOR_LOGICAL_ID_PREFIX}${floorId}`;
   if (!isValidResourceId(id)) throw new MotaFloorIdError(floorId);
 

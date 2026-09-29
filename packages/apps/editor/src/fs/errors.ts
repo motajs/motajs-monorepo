@@ -1,2 +1,2 @@
 // SHIM(phase4)
-export { isFileNotFoundError } from '@motajs/editor-core';
+export { isFileNotFoundError } from '@motajs/editor-impl';

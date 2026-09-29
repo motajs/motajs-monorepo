@@ -9,7 +9,7 @@ import { EventEditorProvider } from './Workbench/EventsEditor/EventEditorContext
 import { RuntimeProvider } from './runtime';
 import { ConfigProvider, theme as antdTheme } from 'antd';
 import { PersistenceNotification } from './components/PersistenceNotification';
-import { CoreProbe } from '@motajs/editor-core/react';
+import { CoreProbe } from '@motajs/editor-impl/react';
 
 const App: FC = () => {
   const { theme } = EditorStore.useStore();
@@ -44,7 +44,7 @@ const App: FC = () => {
                 {/* <script>/* */}
                 <div id="gameInject" style={{ display: 'none' }} />
                 {/*
-                  Phase 2 的边界证据：编辑器真实消费 @motajs/editor-core。
+                  Phase 2 的边界证据：编辑器真实消费 @motajs/editor-impl/react。
                   display:none 保证已提交的截图基线不受影响；真正的组合根建立后即移除。
                 */}
                 <div style={{ display: 'none' }}>

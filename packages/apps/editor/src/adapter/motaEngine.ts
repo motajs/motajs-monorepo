@@ -18,8 +18,9 @@
  *   Phase 11（组合根切换）负责。
  * - 参数化的楼层族也不作为静态条目（见 `motaFloor.ts`，D-07）。
  */
-import { defineEngine, FileResource, JsonDataHandler } from '@motajs/editor-core';
+import { defineEngine } from '@motajs/editor-core';
 import type { EngineAdapter, ResourceDependencies } from '@motajs/editor-core';
+import { FileResource, JsonDataHandler } from '@motajs/editor-impl';
 import { Json2xDataHandler } from '@/fs/Json2xDataHandler';
 import { TowerDataHandler } from '@/services/tower/TowerDataHandler';
 import type { TowerData } from '@/services/tower';
