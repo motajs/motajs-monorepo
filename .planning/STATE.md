@@ -2,18 +2,18 @@
 gsd_state_version: "1.0"
 current_phase: "05.1"
 current_phase_name: editor-core
-current_plan: 5
+current_plan: 6
 status: executing
-stopped_at: Completed 05.1-08-PLAN.md
-last_updated: "2026-09-29T03:07:13.645Z"
+stopped_at: Completed 05.1-05-PLAN.md
+last_updated: "2026-09-29T03:22:09.375Z"
 last_activity: 2026-09-28
 last_activity_desc: Phase 05.1 plan 01 complete (editor-core undo contract types)
-state_head: 22b214108cd25eb75ce415eb1a5f775138d697ea
+state_head: 2506efa270537356e65fb003364035f0901fd1d0
 progress:
   total_phases: 13
   completed_phases: 0
   total_plans: 33
-  completed_plans: 30
+  completed_plans: 31
   percent: 0
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-24)
 ## Current Position
 
 Phase: 05.1 (editor-core) — IN PROGRESS
-Current Plan: 5
+Current Plan: 6
 Total Plans in Phase: 8
 Status: Executing (plan 01 complete; plan 02 pending briefing/approval)
 Last activity: 2026-09-28 — 05.1-01 撤销契约类型落地（`lib/kernel/types.ts`）
@@ -76,6 +76,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 05.1 P03 | 30min | 3 tasks | 63 files |
 | Phase 05.1 P04 | 9 | 3 tasks | 11 files |
 | Phase 05.1 P08 | 22 | 3 tasks | 32 files |
+| Phase 05.1 P05 | 11 | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -135,6 +136,11 @@ Recent decisions affecting current work:
 - [Phase 05.1]: 05.1-08: 编辑器按符号所属包改指 import——底层（defineEngine/isValidResourceId/端口/UndoManager）留 @motajs/editor-core，实现（资源/编辑/表格/react）改指 @motajs/editor-impl；OperationHistory 值别名仅 core 导出，appInstances 按符号拆两条 import。
 - [Phase 05.1]: 05.1-08: D-19 落地——撤销数据改动不再连带恢复地图视口；operationHistory.test.ts 主用例改写为记录新行为，旧快照失败回滚用例改为「失败不入历史 + undo 空操作」。
 - [Phase 05.1]: 05.1-08: [Rule 3] D-11 让两个源码直出库禁 import type，编辑器并入其源码会报 TS1484，故编辑器 tsconfig 关闭 verbatimModuleSyntax（偏差待用户复核）；另补 5 处 AppliedOperation<void> 泛型实参与 pnpm-lock 的 workspace link。
+- [Phase 05.1]: 05.1-05: 字段路径与动作整对迁入 editor-impl/lib/table（互相 import 不能拆）；函数体逐字保留，cloneActionValue 不换 structuredClone
+- [Phase 05.1]: 05.1-05: Action/ActionType 唯一声明落点仍是 lib/table/types.ts；action.ts 只作消费者，根 barrel 类型再导出改指 ./table/types
+- [Phase 05.1]: 05.1-05: lib/edit/operations.ts 只留 CompositeOperation/compositeOperation，彻底去掉对 lib/table 的依赖（edit↔table 不再互相依赖）
+- [Phase 05.1]: 05.1-05: [Rule 3] Action 类型改从 ./types 引入——Task 1 已按计划删除 action.ts 的自声明，./action 不再导出 Action，计划 key_link/验收的「从 ./action 取 Action」与 Task 1 指令互斥
+- [Phase 05.1]: 05.1-05: 能力层搬迁手法——git mv 整对耦合文件 + 只改相对 import/再导出源，公开名集合逐字不变；./table 仍是空 barrel（export {}）
 
 ### Pending Todos
 
@@ -160,6 +166,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-09-29T03:07:13.464Z
-Stopped at: Completed 05.1-08-PLAN.md
+Last session: 2026-09-29T03:22:09.181Z
+Stopped at: Completed 05.1-05-PLAN.md
 Resume file: None
