@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 3
+open_count: 4
 waived_count: 0
 fixed_count: 1
-total_count: 4
-last_updated: 2026-09-24T10:15:17.118Z
+total_count: 5
+last_updated: 2026-09-29T07:36:58.846Z
 ---
 
 # Broken Windows Ledger
@@ -19,6 +19,7 @@ last_updated: 2026-09-24T10:15:17.118Z
 | 2 | 02 | stub | packages/libs/editor-core/lib/react/CoreProbe.tsx | 12 | CoreProbe is temporary Phase 2 scaffolding (D-03): it must be replaced or deleted by the real React layer from Phase 4 onward and must never become permanent public API | open |  | 2026-09-22T03:19:57.843Z |  |
 | 3 | 02 | stub | .dependencyCruiser.cjs | 54 | core-singletons-only-imported-by-composition-root is deliberately vacuous in Phase 2 (D-17): core has no module-level singletons yet, so the rule passes on an empty set and only starts biting once Phase 3 adds lib/kernel/core.ts and the six singletons | open |  | 2026-09-22T04:21:53.283Z |  |
 | 4 | 04 | unrun-verify | .planning/phases/04-resource-edit-layers-moved/04-04-PLAN.md |  | Manual parity check (04-VALIDATION.md Manual-Only) not run by the executor: dev-server workbench/floor/undo/persistence parity against .planning/baseline/screenshots/ | fixed |  | 2026-09-24T08:17:49.851Z | 2026-09-24T10:15:17.118Z |
+| 5 | 05.1 | deviation | packages/apps/editor/src/project/commands/animationCommands.ts | 8 | pnpm lint 仍有 1 条 prettier 报错（该文件属 @motajs/editor，plan 05.1-07 禁止触碰） | open |  | 2026-09-29T07:36:58.846Z |  |
 
 ````json
 [
@@ -69,6 +70,18 @@ last_updated: 2026-09-24T10:15:17.118Z
     "reason": "",
     "recorded_at": "2026-09-24T08:17:49.851Z",
     "resolved_at": "2026-09-24T10:15:17.118Z"
+  },
+  {
+    "id": 5,
+    "kind": "deviation",
+    "phase": "05.1",
+    "file": "packages/apps/editor/src/project/commands/animationCommands.ts",
+    "line": 8,
+    "description": "pnpm lint 仍有 1 条 prettier 报错（该文件属 @motajs/editor，plan 05.1-07 禁止触碰）",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-09-29T07:36:58.846Z",
+    "resolved_at": null
   }
 ]
 ````

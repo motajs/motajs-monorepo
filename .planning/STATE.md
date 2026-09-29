@@ -2,18 +2,18 @@
 gsd_state_version: "1.0"
 current_phase: "05.1"
 current_phase_name: editor-core
-current_plan: 7
+current_plan: 8
 status: executing
-stopped_at: Completed 05.1-06-PLAN.md
-last_updated: "2026-09-29T03:42:16.566Z"
+stopped_at: Completed 05.1-07-PLAN.md
+last_updated: "2026-09-29T07:38:19.316Z"
 last_activity: 2026-09-28
 last_activity_desc: Phase 05.1 plan 01 complete (editor-core undo contract types)
-state_head: 5d9b7e7eb216b6f352ceef6907349d9bca3ad05b
+state_head: bcfbd207ca3d1297015e94c70e20a23c8fc55852
 progress:
   total_phases: 13
   completed_phases: 0
   total_plans: 33
-  completed_plans: 32
+  completed_plans: 33
   percent: 0
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-24)
 ## Current Position
 
 Phase: 05.1 (editor-core) — IN PROGRESS
-Current Plan: 7
+Current Plan: 8
 Total Plans in Phase: 8
 Status: Executing (plan 01 complete; plan 02 pending briefing/approval)
 Last activity: 2026-09-28 — 05.1-01 撤销契约类型落地（`lib/kernel/types.ts`）
@@ -78,6 +78,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 05.1 P08 | 22 | 3 tasks | 32 files |
 | Phase 05.1 P05 | 11 | 3 tasks | 5 files |
 | Phase 05.1 P06 | 16 | 3 tasks | 23 files |
+| Phase 05.1 P07 | 129 | 3 tasks | 49 files |
 
 ## Accumulated Context
 
@@ -146,6 +147,10 @@ Recent decisions affecting current work:
 - [Phase 05.1]: 05.1-06: 被触碰的接口 import 写成普通 import（朝 D-11 收敛）；其余历史 import type 留给 05.1-07 统一清除
 - [Phase 05.1]: 05.1-06: editor-core 端口层只改接口名，engine.ts 描述符缝不动（05.1-03 已去实现化）
 - [Phase 05.1]: 05.1-06: 本计划不触碰 packages/apps/editor/**；编辑器靠两包根 barrel 的旧名别名继续编译，改动集中留给 05.1-08
+- [Phase 05.1]: 05.1-07: IFileHandlerManager 的处理器返回类型用 IContentHandler<string> 而非 FileHandler，避免 interfaces.ts ↔ fileHandler.ts 环形依赖（no-circular 门禁）
+- [Phase 05.1]: 05.1-07: FileHandlerDependencies 迁入 interfaces.ts 时把 persistenceMonitor 收窄为 IPersistenceMonitor；PersistenceIntent/ExecutorStatus/PersistFailure 入 types.ts、ResourceRegistryEntry 入 interfaces.ts
+- [Phase 05.1]: 05.1-07: D-10 例外——无 import 的纯声明/barrel 文件保留顶部模块说明，vitest/@tsconfig/@ts-expect-error/eslint-disable 工具指令保留顶部（功能必需）
+- [Phase 05.1]: 05.1-07: coreImportType 非空转下界 55（含测试 66 文件，只扫生产约 43 会红）；pnpm lint 遗留 1 条 @motajs/editor 的 prettier error（禁区，已登记 deferred/WINDOWS）
 
 ### Pending Todos
 
@@ -171,6 +176,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-09-29T03:42:16.401Z
-Stopped at: Completed 05.1-06-PLAN.md
+Last session: 2026-09-29T07:38:01.582Z
+Stopped at: Completed 05.1-07-PLAN.md
 Resume file: None

@@ -201,7 +201,7 @@ Plans:
 
 **Depends on:** Phase 5
 
-**Plans:** 7/8 plans executed
+**Plans:** 8/8 plans executed
 
 Plans:
 **Wave 1 — 接口定义（不写实现）**
@@ -219,7 +219,7 @@ Plans:
 
 - [x] 05.1-05-PLAN.md — 表格专用代码归位：字段路径 / 动作 / patch 操作迁入 `editor-impl/lib/table/`
 - [x] 05.1-06-PLAN.md — 接口加 `I` 前缀并保留旧名别名（编辑器靠别名继续编译）
-- [ ] 05.1-07-PLAN.md — 每个类 `implements`、类型集中、禁 `import type` 的可失败门禁、文件形态扫尾
+- [x] 05.1-07-PLAN.md — 每个类 `implements`、类型集中、禁 `import type` 的可失败门禁、文件形态扫尾
 
 ### Phase 6: Fixed Shell + Slots
 
@@ -340,7 +340,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 3. Kernel — Runtime, Ports, Registry, Diagnostics | 4/4 | Complete    | 2026-09-23 |
 | 4. Resource + Edit Layers Moved | 4/4 | Complete    | 2026-09-24 |
 | 5. Engine Adapter Skeleton & Resource Descriptors | 4/4 | In Progress|  |
-| 05.1. editor-core 接口与实现整改 | 7/8 | In Progress|  |
+| 05.1. editor-core 接口与实现整改 | 8/8 | In Progress|  |
 | 6. Fixed Shell + Slots | 0/TBD | Not started | - |
 | 7. Table Capability + Port | 0/TBD | Not started | - |
 | 8. Code Capability + Port | 0/TBD | Not started | - |
