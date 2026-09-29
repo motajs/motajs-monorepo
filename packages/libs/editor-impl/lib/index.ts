@@ -56,7 +56,8 @@ export {
 } from './table/fieldPath';
 export { applyAction, applyActions, applyActionsWithInverse } from './table/action';
 export type { Action, ActionType } from './table/types';
-export { compositeOperation, patchResourceOperation } from './edit/operations';
+export { compositeOperation } from './edit/operations';
+export { patchResourceOperation } from './table/patchResourceOperation';
 
 // Plan 02 的默认实现层契约：可 patch 资源的最小契约（落点 `./edit/types`）。
 export type { IPatchableResource } from './edit/types';
