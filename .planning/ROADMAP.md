@@ -201,7 +201,7 @@ Plans:
 
 **Depends on:** Phase 5
 
-**Plans:** 3/8 plans executed
+**Plans:** 4/8 plans executed
 
 Plans:
 **Wave 1 — 接口定义（不写实现）**
@@ -212,7 +212,7 @@ Plans:
 **Wave 2 — 拆包 + 撤销重构 + 编辑器机械跟随（同一波；波内临时红，波末全仓保持可编译/测试绿）**
 
 - [x] 05.1-03-PLAN.md — 建 `editor-impl` 并整包迁入默认实现；`editor-core` 收缩为底层；`core→impl` 单向门禁 + 底层不读文件；新包结构门禁 `implExports.js`
-- [ ] 05.1-04-PLAN.md — 撤销重构：删快照、`UndoManager` 重写在底层、操作契约去 target、改写不变量测试
+- [x] 05.1-04-PLAN.md — 撤销重构：删快照、`UndoManager` 重写在底层、操作契约去 target、改写不变量测试
 - [ ] 05.1-08-PLAN.md — 编辑器侧唯一且最小的机械跟随：按符号所属包改指 import 说明符 + 删视口快照注册 / `targets` / 已删符号引用，按 D-19 改写测试（**同波内排在 05.1-03/05.1-04 之后执行**）
 
 **Wave 3–5 — 实现收尾**
@@ -340,7 +340,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 3. Kernel — Runtime, Ports, Registry, Diagnostics | 4/4 | Complete    | 2026-09-23 |
 | 4. Resource + Edit Layers Moved | 4/4 | Complete    | 2026-09-24 |
 | 5. Engine Adapter Skeleton & Resource Descriptors | 4/4 | In Progress|  |
-| 05.1. editor-core 接口与实现整改 | 3/8 | In Progress|  |
+| 05.1. editor-core 接口与实现整改 | 4/8 | In Progress|  |
 | 6. Fixed Shell + Slots | 0/TBD | Not started | - |
 | 7. Table Capability + Port | 0/TBD | Not started | - |
 | 8. Code Capability + Port | 0/TBD | Not started | - |

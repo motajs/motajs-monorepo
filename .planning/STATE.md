@@ -2,18 +2,18 @@
 gsd_state_version: "1.0"
 current_phase: "05.1"
 current_phase_name: editor-core
-current_plan: 3
+current_plan: 4
 status: executing
-stopped_at: Completed 05.1-03-PLAN.md
-last_updated: "2026-09-28T14:04:35.424Z"
+stopped_at: Completed 05.1-04-PLAN.md
+last_updated: "2026-09-29T02:35:13.744Z"
 last_activity: 2026-09-28
 last_activity_desc: Phase 05.1 plan 01 complete (editor-core undo contract types)
-state_head: 5d078c4b710f2a98b134e9d5fce568ae5eab1c11
+state_head: 2655fedcf2de2063b1d1774eed713d1e4dcaaeaa
 progress:
   total_phases: 13
   completed_phases: 0
   total_plans: 33
-  completed_plans: 28
+  completed_plans: 29
   percent: 0
 ---
 
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-09-24)
 ## Current Position
 
 Phase: 05.1 (editor-core) — IN PROGRESS
-Current Plan: 3
+Current Plan: 4
 Total Plans in Phase: 8
 Status: Executing (plan 01 complete; plan 02 pending briefing/approval)
 Last activity: 2026-09-28 — 05.1-01 撤销契约类型落地（`lib/kernel/types.ts`）
@@ -74,6 +74,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 05.1 P01 | 6min | 2 tasks | 1 files |
 | Phase 05.1 P02 | 6min | 2 tasks | 3 files |
 | Phase 05.1 P03 | 30min | 3 tasks | 63 files |
+| Phase 05.1 P04 | 9 | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -127,6 +128,9 @@ Recent decisions affecting current work:
 - [Phase 05.1]: RESERVED_IDS 随 isValidResourceId 迁入 editor-core/lib/ports/engine.ts 并导出，impl 的 resourceRegistry 反向 import，防线单一来源
 - [Phase 05.1]: editor-core-must-not-import-editor-impl 的 to.path 同时匹配解析路径与裸说明符 @motajs/editor-impl，兼容 pnpm 严格 node_modules 的 couldNotResolve
 - [Phase 05.1]: coreBoundaries.js 随 Task 2 提交（Task 2 验证命令依赖它），门禁文件的任务归属据此重排
+- [Phase 05.1]: 05.1-04: UndoManager 只调操作 apply() 并把返回 inverse 记进历史；内部条目 ManagedEntry 仅在管理器内收窄，对外 Store 只暴露 OperationHistoryEntry
+- [Phase 05.1]: 05.1-04: 组合失败按已成功子操作逆序 inverse 回退并标 commandStage，在 operations.ts 逐字保留（D-13）
+- [Phase 05.1]: 05.1-04: [Rule 3] 删快照文件导致 impl barrel/hook/公开面测试悬空，Task 1 内做最小编译跟随，Task 2 补 core 值导出与别名
 
 ### Pending Todos
 
@@ -152,6 +156,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-09-28T14:04:35.196Z
-Stopped at: Completed 05.1-03-PLAN.md
+Last session: 2026-09-29T02:35:13.569Z
+Stopped at: Completed 05.1-04-PLAN.md
 Resume file: None
