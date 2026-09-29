@@ -2,12 +2,12 @@
 import { effect, signal } from 'alien-signals';
 import { describe, expect, it } from 'vitest';
 
-import type { ReadonlySignal } from '../interfaces';
+import { ILoadableResource, ReadonlySignal } from '../interfaces';
 import type { Content } from '../types';
-import { aggregateResource, computedResource, optional, type LoadableResource } from '../combinators';
+import { aggregateResource, computedResource, optional } from '../combinators';
 import { waitUntil } from '../waitUntil';
 
-class TestResource<T> implements LoadableResource<T> {
+class TestResource<T> implements ILoadableResource<T> {
   readonly content: ReadonlySignal<Content<T>>;
   readonly id: string;
   ensureCalls = 0;

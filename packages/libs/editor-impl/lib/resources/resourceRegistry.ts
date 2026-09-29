@@ -1,7 +1,7 @@
 /**
  * 逻辑 id → 资源 的注册表（RES-02，引擎无关）。
  *
- * 这是 RES-02 要求的「通用逻辑 id 注册」这一最小机制：把任意 `ResourceView<T>` 以字符串逻辑 id
+ * 这是 RES-02 要求的「通用逻辑 id 注册」这一最小机制：把任意 `IResourceView<T>` 以字符串逻辑 id
  * 登记进来，供上层（Phase 5 的引擎描述符、preview 网关、project model）按 id 取用。
  *
  * 设计约束：
@@ -15,12 +15,12 @@
  * - 本阶段**刻意不接线**：`projectData` 等不使用它，引擎描述符由 Phase 5 注入（RES-02 的诚实范围）。
  */
 import { isValidResourceId, RESERVED_IDS } from '@motajs/editor-core';
-import type { ResourceView } from './combinators';
+import { IResourceView } from './interfaces';
 
 /** `ResourceRegistry.snapshot()` 返回的只读条目。 */
 export interface ResourceRegistryEntry {
   readonly id: string;
-  readonly resource: ResourceView<unknown>;
+  readonly resource: IResourceView<unknown>;
 }
 
 /**
@@ -48,7 +48,7 @@ export class ResourceRegistry {
   private readonly entries = new Map<string, ResourceRegistryEntry>();
 
   /** 以逻辑 id 登记一个资源；返回只删除本次登记的 disposer。重复 id 或非法 id 抛出普通 `Error`。 */
-  register<T>(id: string, resource: ResourceView<T>): () => void {
+  register<T>(id: string, resource: IResourceView<T>): () => void {
     assertValidLogicalId(id);
     if (this.entries.has(id)) throw new Error(`Resource already registered: ${id}`);
 
@@ -61,16 +61,16 @@ export class ResourceRegistry {
   }
 
   /** 按逻辑 id 取用资源；未登记返回 `undefined`。 */
-  get<T>(id: string): ResourceView<T> | undefined {
+  get<T>(id: string): IResourceView<T> | undefined {
     const entry = this.entries.get(id);
-    return entry ? (entry.resource as ResourceView<T>) : undefined;
+    return entry ? (entry.resource as IResourceView<T>) : undefined;
   }
 
   /** 按逻辑 id 取用资源；未登记抛出命名该 id 的 `Error`（镜像 `Capability not registered: …`）。 */
-  getOrThrow<T>(id: string): ResourceView<T> {
+  getOrThrow<T>(id: string): IResourceView<T> {
     const entry = this.entries.get(id);
     if (!entry) throw new Error(`Resource not registered: ${id}`);
-    return entry.resource as ResourceView<T>;
+    return entry.resource as IResourceView<T>;
   }
 
   /** 该逻辑 id 是否已登记。 */

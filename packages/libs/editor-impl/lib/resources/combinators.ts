@@ -1,32 +1,18 @@
 import { computed, effect } from 'alien-signals';
 
-import type { ReadonlySignal } from './interfaces';
+import { ILoadableResource, IResourceView, ReadonlySignal } from './interfaces';
 import type { Content } from './types';
 import { ContentUtils } from './contentUtils';
 import { waitUntil } from './waitUntil';
 
-export interface ResourceView<T> {
-  readonly id: string;
-  readonly content: ReadonlySignal<Content<T>>;
-  snapshot(): Content<T>;
-  value(): T;
-  subscribe(listener: (content: Content<T>) => void): () => void;
-}
+type DependencySource = readonly ILoadableResource<unknown>[] | (() => readonly ILoadableResource<unknown>[]);
 
-export interface LoadableResource<T> extends ResourceView<T> {
-  ensureLoaded(): Promise<void>;
-  reload(): Promise<void>;
-  waitForSettled(): Promise<void>;
-}
-
-type DependencySource = readonly LoadableResource<unknown>[] | (() => readonly LoadableResource<unknown>[]);
-
-type ResourceValue<Resource> = Resource extends ResourceView<infer Value> ? Value : never;
-type ResourceValues<Dependencies extends readonly ResourceView<unknown>[]> = {
+type ResourceValue<Resource> = Resource extends IResourceView<infer Value> ? Value : never;
+type ResourceValues<Dependencies extends readonly IResourceView<unknown>[]> = {
   -readonly [Index in keyof Dependencies]: ResourceValue<Dependencies[Index]>;
 };
 
-export class ComputedResource<T> implements LoadableResource<T> {
+export class ComputedResource<T> implements ILoadableResource<T> {
   readonly content: ReadonlySignal<Content<T>>;
   readonly id: string;
   private readonly dependencySource: DependencySource;
@@ -75,18 +61,18 @@ export class ComputedResource<T> implements LoadableResource<T> {
     return effect(() => listener(this.content()));
   }
 
-  private dependencies(): readonly LoadableResource<unknown>[] {
+  private dependencies(): readonly ILoadableResource<unknown>[] {
     return typeof this.dependencySource === 'function' ? this.dependencySource() : this.dependencySource;
   }
 
-  private reloadDependencies(): readonly LoadableResource<unknown>[] {
+  private reloadDependencies(): readonly ILoadableResource<unknown>[] {
     return typeof this.reloadDependencySource === 'function'
       ? this.reloadDependencySource()
       : this.reloadDependencySource;
   }
 }
 
-function aggregateContents<const Dependencies extends readonly ResourceView<unknown>[], Result>(
+function aggregateContents<const Dependencies extends readonly IResourceView<unknown>[], Result>(
   dependencies: Dependencies,
   combine: (...values: ResourceValues<Dependencies>) => Result,
 ): Content<Result> {
@@ -116,19 +102,19 @@ export function computedResource<T>(
   dependencies: DependencySource,
   computeContent: () => Content<T>,
   reloadDependencies: DependencySource = dependencies,
-): LoadableResource<T> {
+): ILoadableResource<T> {
   return new ComputedResource(id, dependencies, computeContent, reloadDependencies);
 }
 
-export function aggregateResource<const Dependencies extends readonly LoadableResource<unknown>[], Result>(
+export function aggregateResource<const Dependencies extends readonly ILoadableResource<unknown>[], Result>(
   id: string,
   dependencies: Dependencies,
   combine: (...values: ResourceValues<Dependencies>) => Result,
-): LoadableResource<Result> {
+): ILoadableResource<Result> {
   return new ComputedResource(id, dependencies, () => aggregateContents(dependencies, combine));
 }
 
-export function optional<T>(source: LoadableResource<T>, fallback: T): LoadableResource<T> {
+export function optional<T>(source: ILoadableResource<T>, fallback: T): ILoadableResource<T> {
   return new ComputedResource(`optional:${source.id}`, [source], () => {
     const content = source.content();
     return content.status === 'not-found' ? { status: 'loaded', value: fallback } : content;

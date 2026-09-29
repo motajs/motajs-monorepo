@@ -20,7 +20,7 @@ export type {
   IDataHandler,
   IResourceView,
   ILoadableResource,
-  RecoverableResource,
+  IRecoverableResource,
 } from './resources/interfaces';
 export { isFileNotFoundError } from './resources/errors';
 export { waitUntil } from './resources/waitUntil';
@@ -37,7 +37,13 @@ export { DataHandler } from './resources/dataHandler';
 export { JsonDataHandler } from './resources/jsonDataHandler';
 export { BinaryFileHandler } from './resources/binaryFileHandler';
 export { ComputedResource, aggregateResource, computedResource, optional } from './resources/combinators';
-export type { LoadableResource, ResourceView } from './resources/combinators';
+// D-18 旧名过渡别名：资源视图新名已带 `I` 前缀（D-07），旧名以纯类型别名继续导出，
+// 使 `@motajs/editor` 无需改动即可编译；Phase 11 删除。
+export type {
+  IResourceView as ResourceView,
+  ILoadableResource as LoadableResource,
+  IRecoverableResource as RecoverableResource,
+} from './resources/interfaces';
 export { ResourceRegistry } from './resources/resourceRegistry';
 export type { ResourceRegistryEntry } from './resources/resourceRegistry';
 

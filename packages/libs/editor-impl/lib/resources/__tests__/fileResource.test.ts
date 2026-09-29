@@ -2,7 +2,7 @@
 /**
  * `FileResource` 单元测试（PORT-04，TDD）。
  *
- * 证明 core 唯一持有「不透明 IO 地址」的类只经注入的 `FsPort` 读文件：
+ * 证明 core 唯一持有「不透明 IO 地址」的类只经注入的 `IFsPort` 读文件：
  * 命中地址得 `loaded`（值由 `JsonDataHandler` 解析）、缺失地址得 `not-found`（保留 RES-05 语义）、
  * `reload` 重读使改动反映出来，且 `id` 全程不变。
  *
@@ -30,7 +30,7 @@ function jsonHandlerFactory<T>(id: string): (file: FileHandler) => JsonDataHandl
 }
 
 describe('FileResource', () => {
-  it('命中地址时经注入的 FsPort 加载为 loaded，并给出解析后的值', async () => {
+  it('命中地址时经注入的 IFsPort 加载为 loaded，并给出解析后的值', async () => {
     const fs = new MemoryFsPort();
     fs.setFile('notes.txt', '{"answer":42}');
     const resource = new FileResource<{ answer: number }>(

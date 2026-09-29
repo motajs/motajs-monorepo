@@ -4,7 +4,7 @@
  *
  * 本文件驱动完整的适配器闭环：`defineEngine` → 校验 → `ResourceRegistry` 登记 / 按 id 取回 →
  * `resolvePreloadOrder`，且全部使用**非魔塔**的 `engineB.*` id。两条关键证明：
- * - `engineB.notes` 是 `computedResource` 现场构造的**非文件**资源，加载它不产生任何 `FsPort` 读取
+ * - `engineB.notes` 是 `computedResource` 现场构造的**非文件**资源，加载它不产生任何 `IFsPort` 读取
  *   （T-05-09），因此通用描述符不假定「内容来自文件」；
  * - 多级 `preloadDependsOn` 图被 `resolvePreloadOrder` 正确拓扑排序。
  *
@@ -20,7 +20,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import { computedResource, FileHandlerManager, PersistenceMonitor, ResourceRegistry } from '../index';
-import type { LoadableResource } from '../index';
+import { ILoadableResource } from '../index';
 import { defineEngine, EngineDefinitionError, resolvePreloadOrder } from '@motajs/editor-core';
 import type { EngineDescription, ResourceDependencies, ResourceDescriptor } from '@motajs/editor-core';
 import { MemoryFsPort } from '../resources/__tests__/memoryFsPort';
@@ -35,7 +35,7 @@ function createDeps(fs: MemoryFsPort): ResourceDependencies {
 }
 
 /** 构造立即 loaded 的只读视图（非文件）；用于多问题描述的无副作用 `create`。 */
-function loadedView<T>(id: string, value: T): LoadableResource<T> {
+function loadedView<T>(id: string, value: T): ILoadableResource<T> {
   return computedResource<T>(id, [], () => ({ status: 'loaded', value }));
 }
 
@@ -46,9 +46,9 @@ function findDescriptor(id: string): ResourceDescriptor {
   return descriptor;
 }
 
-/** 按 id 建出一个可加载视图（描述符契约只承诺 `ResourceView`，这里收窄到 `LoadableResource`）。 */
-async function createLoadable(id: string, deps: ResourceDependencies): Promise<LoadableResource<unknown>> {
-  return (await findDescriptor(id).create(deps)) as LoadableResource<unknown>;
+/** 按 id 建出一个可加载视图（描述符契约只承诺 `IResourceView`，这里收窄到 `ILoadableResource`）。 */
+async function createLoadable(id: string, deps: ResourceDependencies): Promise<ILoadableResource<unknown>> {
+  return (await findDescriptor(id).create(deps)) as ILoadableResource<unknown>;
 }
 
 describe('fake engine B 的适配器闭环', () => {
@@ -65,7 +65,7 @@ describe('fake engine B 的适配器闭环', () => {
     const registry = new ResourceRegistry();
 
     for (const descriptor of engineBDescription.resources) {
-      const view = (await descriptor.create(deps)) as LoadableResource<unknown>;
+      const view = (await descriptor.create(deps)) as ILoadableResource<unknown>;
       expect(typeof view.snapshot).toBe('function');
       expect(typeof view.value).toBe('function');
       expect(typeof view.subscribe).toBe('function');
@@ -87,7 +87,7 @@ describe('fake engine B 的适配器闭环', () => {
     expect(bound.resources.map((descriptor) => descriptor.id)).toEqual(DECLARED_IDS);
 
     // 预绑定后，即便 create 收到另一份空依赖，仍读取被捕获的 manager。
-    const catalog = (await bound.resources[0].create(createDeps(new MemoryFsPort()))) as LoadableResource<unknown>;
+    const catalog = (await bound.resources[0].create(createDeps(new MemoryFsPort()))) as ILoadableResource<unknown>;
     await catalog.ensureLoaded();
     expect(catalog.snapshot()).toEqual({ status: 'loaded', value: { entries: ['alpha'] } });
   });
@@ -106,7 +106,7 @@ describe('fake engine B 的适配器闭环', () => {
     expect(index.snapshot()).toEqual({ status: 'not-found' });
   });
 
-  it('非文件视图 engineB.notes 加载时对 FsPort 零读取', async () => {
+  it('非文件视图 engineB.notes 加载时对 IFsPort 零读取', async () => {
     const fs = new MemoryFsPort();
     fs.setFile('catalog.json', '{"entries":["alpha","beta"]}');
     const readPaths: string[] = [];

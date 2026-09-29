@@ -2,7 +2,7 @@
  * `FileResource<T>` —— core 中**唯一**允许持有「不透明 IO 地址」的类（D-06）。
  *
  * 它是文件层之上的一层薄门面：把逻辑 id + 一个不透明 `address` + 处理器工厂绑定成一个
- * `LoadableResource<T>`，读取、加载锁与串行持久化全部委托给注入的 `FileHandlerManager`
+ * `ILoadableResource<T>`，读取、加载锁与串行持久化全部委托给注入的 `FileHandlerManager`
  * （per-path 缓存 + in-flight 加载锁）。本类**不**自己缓存、**不**加锁、**不**重写持久化。
  *
  * 硬约束（D-06 / `@motajs/editor-core` 的 `lib/ports/fs.ts`）：
@@ -14,13 +14,11 @@
 import type { ResourceDependencies } from '@motajs/editor-core';
 import type { FileHandler } from './fileHandler';
 import type { FileHandlerManager } from './fileHandlerManager';
-import type { IDataHandler } from './interfaces';
+import { IDataHandler, ILoadableResource, ReadonlySignal } from './interfaces';
 import type { Content } from './types';
-import type { ReadonlySignal } from './interfaces';
-import type { LoadableResource } from './combinators';
 import { ContentUtils } from './contentUtils';
 
-export class FileResource<T> implements LoadableResource<T> {
+export class FileResource<T> implements ILoadableResource<T> {
   readonly id: string;
   readonly content: ReadonlySignal<Content<T>>;
 

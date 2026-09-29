@@ -3,7 +3,7 @@
  * 引擎适配器契约测试（PORT-03 / PORT-04，TDD）。
  *
  * 本文件驱动 `defineEngine` 的**端到端闭环**：
- * 一个合法的引擎描述 → 冻结的适配器 → 描述符 `create(deps)` 产出 `ResourceView` →
+ * 一个合法的引擎描述 → 冻结的适配器 → 描述符 `create(deps)` 产出 `IResourceView` →
  * 经 `ResourceRegistry` 登记并按逻辑 id 取回同一对象；非法描述以单个 `EngineDefinitionError`
  * 一次性携带**全部**问题被拒；`resolvePreloadOrder` 给出纯、稳定的拓扑序。
  *
@@ -13,7 +13,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { computedResource, FileHandlerManager, PersistenceMonitor, ResourceRegistry } from '../index';
-import type { LoadableResource } from '../index';
+import { ILoadableResource } from '../index';
 import { defineEngine, EngineDefinitionError, resolvePreloadOrder } from '@motajs/editor-core';
 import type { PreloadStrategy, ResourceDependencies, ResourceDescriptor } from '@motajs/editor-core';
 import { MemoryFsPort } from '../resources/__tests__/memoryFsPort';
@@ -25,7 +25,7 @@ function createDeps(): ResourceDependencies {
 }
 
 /** 构造一个立即 loaded 的只读视图；不碰任何文件层，用于证明描述符来源无关。 */
-function loadedView<T>(id: string, value: T): LoadableResource<T> {
+function loadedView<T>(id: string, value: T): ILoadableResource<T> {
   return computedResource<T>(id, [], () => ({ status: 'loaded', value }));
 }
 
@@ -49,7 +49,7 @@ describe('defineEngine 契约', () => {
     });
 
     const descriptor = adapter.resources[0];
-    const view = (await descriptor.create(createDeps())) as LoadableResource<unknown>;
+    const view = (await descriptor.create(createDeps())) as ILoadableResource<unknown>;
     const registry = new ResourceRegistry();
     registry.register(descriptor.id, view);
 

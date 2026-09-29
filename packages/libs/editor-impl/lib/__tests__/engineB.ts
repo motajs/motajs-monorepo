@@ -11,7 +11,7 @@
  */
 
 import type { EngineDescription, ResourceDescriptor, ResourceDependencies } from '@motajs/editor-core';
-import type { ResourceView } from '../resources/combinators';
+import { IResourceView } from '../resources/interfaces';
 import { FileResource } from '../resources/fileResource';
 import type { FileHandler } from '../resources/fileHandler';
 import { JsonDataHandler } from '../resources/jsonDataHandler';
@@ -59,12 +59,12 @@ const ENGINE_B_CHAPTER_ADDRESS = 'chapter.json';
 function fileBackedDescriptor<T>(
   id: string,
   address: string,
-  options: Pick<ResourceDescriptor<ResourceView<T>>, 'preload' | 'preloadDependsOn'> = {},
-): ResourceDescriptor<ResourceView<T>> {
+  options: Pick<ResourceDescriptor<IResourceView<T>>, 'preload' | 'preloadDependsOn'> = {},
+): ResourceDescriptor<IResourceView<T>> {
   return {
     id,
     ...options,
-    create: (deps: ResourceDependencies): ResourceView<T> =>
+    create: (deps: ResourceDependencies): IResourceView<T> =>
       new FileResource<T>(id, address, (file) => new EngineBJsonDataHandler<T>(file, id), deps),
   };
 }
@@ -75,12 +75,12 @@ function fileBackedDescriptor<T>(
  * 它从 `engineB.catalog` 派生内容（`computedResource`），自身不持有任何 IO 地址——这正是
  * 「描述符与来源无关」的机械证明（T-05-09）。
  */
-function notesDescriptor(): ResourceDescriptor<ResourceView<EngineBNotes>> {
+function notesDescriptor(): ResourceDescriptor<IResourceView<EngineBNotes>> {
   return {
     id: 'engineB.notes',
     preload: 'lazy',
     preloadDependsOn: ['engineB.catalog'],
-    create: (deps: ResourceDependencies): ResourceView<EngineBNotes> => {
+    create: (deps: ResourceDependencies): IResourceView<EngineBNotes> => {
       const catalog = new FileResource<EngineBCatalog>(
         'engineB.catalog',
         ENGINE_B_CATALOG_ADDRESS,

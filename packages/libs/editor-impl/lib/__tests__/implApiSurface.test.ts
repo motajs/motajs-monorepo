@@ -54,6 +54,7 @@ import type {
   IDataHandler,
   ILoadableResource,
   IPatchableResource,
+  IRecoverableResource,
   IResourceView,
   LoadableResource,
   PatchableResource,
@@ -133,5 +134,6 @@ describe('editor-impl 默认实现层公开面', () => {
     expectTypeOf<IResourceView<string>>().not.toBeNever();
     expectTypeOf<ILoadableResource<string>>().not.toBeNever();
     expectTypeOf<IPatchableResource<string>>().not.toBeNever();
+    expectTypeOf<IRecoverableResource<string>>().not.toBeNever();
   });
 });
