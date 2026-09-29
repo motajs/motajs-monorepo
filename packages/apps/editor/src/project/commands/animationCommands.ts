@@ -5,12 +5,7 @@ import {
   type AnimationDocument,
   type AnimationSoundCue,
 } from '@/project/assets';
-import {
-  operationHistory,
-  type AppliedOperation,
-  type EditorOperation,
-  type OperationMeta,
-} from '@/project/history';
+import { operationHistory, type AppliedOperation, type EditorOperation, type OperationMeta } from '@/project/history';
 import { commandError, commandOk, type CommandResult } from './types';
 
 function animationPath(name: string): string {
