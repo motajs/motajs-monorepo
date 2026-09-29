@@ -1,7 +1,7 @@
 /** Text file state: memory first, persistence scheduled by normalized path. */
 
 import { effect, signal } from 'alien-signals';
-import type { FsPort } from '@motajs/editor-core';
+import { IFsPort } from '@motajs/editor-core';
 import { waitUntil } from './waitUntil';
 import type { Content } from './types';
 import type { IContentHandler, ReadonlySignal } from './interfaces';
@@ -15,14 +15,14 @@ import { isFileNotFoundError } from './errors';
  * 永远不可能把参数写反（D-07）。
  */
 export interface FileHandlerDependencies {
-  readonly fs: FsPort;
+  readonly fs: IFsPort;
   readonly persistenceMonitor: PersistenceMonitor;
 }
 
 export class FileHandler implements IContentHandler<string> {
   private _content = signal<Content<string>>({ status: 'idle' });
   readonly content = this._content as ReadonlySignal<Content<string>>;
-  private readonly fs: FsPort;
+  private readonly fs: IFsPort;
   private readonly persistenceMonitor: PersistenceMonitor;
   private readonly path: string;
   private mutationVersion = 0;

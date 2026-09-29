@@ -1,5 +1,5 @@
 /**
- * `FsPort` —— core 依赖的文件 I/O 契约（引擎无关，D-14）。
+ * `IFsPort` —— core 依赖的文件 I/O 契约（引擎无关，D-14）。
  *
  * 这是 Phase 4 资源层真正调用的**最小诚实子集**：七个操作直接继承 `@motajs/editor` 现有
  * `FsPromiseApi`（`packages/apps/editor/src/services/fs/fs.ts`）的成员名，因此 Phase 4 的迁移是
@@ -17,9 +17,9 @@
  *    路径安全属于宿主（`packages/apps/service-worker/src/server/fsApi.ts`，ARCHITECTURE §9.1）。
  *    本端口因此不引入任何路径穿越面。
  */
-export interface FsPort {
+export interface IFsPort {
   /**
-   * 以文本或 base64 读取一个文件（`FsPort.readFile`）。
+   * 以文本或 base64 读取一个文件（`IFsPort.readFile`）。
    *
    * 文件缺失时按上述契约拒绝：`Error.code` 为 `'file-not-found'` 或 `'ENOENT'`（或命中
    * `isFileNotFoundError` 识别的 `name`/`message` 形状）。
@@ -27,25 +27,25 @@ export interface FsPort {
   readFile(path: string, encoding: 'utf-8' | 'base64'): Promise<string>;
 
   /**
-   * 以二进制读取一个文件（`FsPort.readFileBinary`）。
+   * 以二进制读取一个文件（`IFsPort.readFileBinary`）。
    *
    * 文件缺失时按上述契约拒绝：`Error.code` 为 `'file-not-found'` 或 `'ENOENT'`（或命中
    * `isFileNotFoundError` 识别的 `name`/`message` 形状）。
    */
   readFileBinary(path: string): Promise<ArrayBuffer>;
 
-  /** 写入一个文件（`FsPort.writeFile`）。 */
+  /** 写入一个文件（`IFsPort.writeFile`）。 */
   writeFile(path: string, data: string, encoding: 'utf-8' | 'base64'): Promise<void>;
 
-  /** 删除一个文件（`FsPort.deleteFile`）。 */
+  /** 删除一个文件（`IFsPort.deleteFile`）。 */
   deleteFile(path: string): Promise<void>;
 
-  /** 列出目录内容（`FsPort.readdir`）。 */
+  /** 列出目录内容（`IFsPort.readdir`）。 */
   readdir(path: string): Promise<string[]>;
 
-  /** 创建目录（`FsPort.mkdir`）。 */
+  /** 创建目录（`IFsPort.mkdir`）。 */
   mkdir(path: string): Promise<void>;
 
-  /** 移动/重命名（`FsPort.moveFile`）。 */
+  /** 移动/重命名（`IFsPort.moveFile`）。 */
   moveFile(src: string, dest: string): Promise<void>;
 }

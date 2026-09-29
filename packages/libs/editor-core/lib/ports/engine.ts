@@ -1,10 +1,10 @@
 /**
- * `EngineAdapter` —— 引擎适配器契约（引擎无关，D-03/D-04/D-05/D-14）。
+ * `IEngineAdapter` —— 引擎适配器契约（引擎无关，D-03/D-04/D-05/D-14）。
  *
  * 本文件是**适配器契约的唯一落点**：通用资源描述符 `ResourceDescriptor<T>`、定义输入
  * `EngineDescription`、校验并构造适配器的 `defineEngine`、其唯一的聚合错误
  * `EngineDefinitionError`、契约版本常量 `ENGINE_ADAPTER_API_VERSION`，以及扩宽后的
- * `EngineAdapter`（显式加入 `resources`，Phase 3 D-14 预告的那一次接口演进）。
+ * `IEngineAdapter`（显式加入 `resources`，Phase 3 D-14 预告的那一次接口演进）。
  *
  * 设计约束：
  * - **来源无关**（D-04）：通用描述符不含 `path` / `format` / handler 实例，也不含参数模板；
@@ -109,7 +109,7 @@ export interface EngineDescription {
  * Phase 3 只声明 `id` + `apiVersion`；Phase 5 显式演进为**必须携带 `resources`**——没有实现者
  * 存在，且「没有资源的适配器什么也没描述」。
  */
-export interface EngineAdapter {
+export interface IEngineAdapter {
   /** 适配器的逻辑身份。 */
   readonly id: string;
 
@@ -137,7 +137,7 @@ export class EngineDefinitionError extends Error {
 }
 
 /**
- * 校验一份 `EngineDescription` 并返回冻结的 `EngineAdapter`（PORT-03）。
+ * 校验一份 `EngineDescription` 并返回冻结的 `IEngineAdapter`（PORT-03）。
  *
  * 七条规则一次性收集后抛出**一个** `EngineDefinitionError`（聚合，而非首错即停）：
  * 1. 引擎 `id` 非空；描述符 `id` 命中共享语法（`isValidResourceId`）；
@@ -150,7 +150,7 @@ export class EngineDefinitionError extends Error {
  *
  * 本函数不做任何注册、构造或总线交互——定义期与实例期严格分离，且无模块级可变状态。
  */
-export function defineEngine(description: EngineDescription): EngineAdapter {
+export function defineEngine(description: EngineDescription): IEngineAdapter {
   const problems: string[] = [];
 
   if (description.id.length === 0) problems.push('引擎 id 不能为空');

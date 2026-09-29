@@ -6,7 +6,7 @@
  */
 
 import { signal, effect } from 'alien-signals';
-import type { FsPort } from '@motajs/editor-core';
+import { IFsPort } from '@motajs/editor-core';
 import { waitUntil } from './waitUntil';
 import type { Content } from './types';
 import type { IContentView, ReadonlySignal } from './interfaces';
@@ -15,10 +15,10 @@ import { isFileNotFoundError } from './errors';
 export class BinaryFileHandler implements IContentView<HTMLImageElement> {
   private _content: ReturnType<typeof signal<Content<HTMLImageElement>>>;
   readonly content: ReadonlySignal<Content<HTMLImageElement>>;
-  private fs: FsPort;
+  private fs: IFsPort;
   private path: string;
 
-  constructor(path: string, fs: FsPort) {
+  constructor(path: string, fs: IFsPort) {
     this.path = path;
     this._content = signal<Content<HTMLImageElement>>({ status: 'idle' });
     this.content = this._content as ReadonlySignal<Content<HTMLImageElement>>;

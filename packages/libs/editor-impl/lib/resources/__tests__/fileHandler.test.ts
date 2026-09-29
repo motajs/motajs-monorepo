@@ -7,7 +7,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { FileHandler } from '../fileHandler';
 import { ContentUtils } from '../contentUtils';
 import { PersistenceMonitor } from '../persistenceMonitor';
-import type { FsPort } from '@motajs/editor-core';
+import { IFsPort } from '@motajs/editor-core';
 import { MemoryFsPort } from './memoryFsPort';
 import { wait } from './testHelpers';
 
@@ -56,7 +56,7 @@ describe('FileHandler', () => {
     });
 
     it('工程访问错误不应误报为当前文件不存在', async () => {
-      const projectErrorFs: FsPort = memoryFs;
+      const projectErrorFs: IFsPort = memoryFs;
       projectErrorFs.readFile = async () => {
         throw new Error('HTTP 404: project-not-found: Project not found [project/data.js]');
       };
@@ -262,7 +262,7 @@ describe('FileHandler', () => {
 
     it('丢弃 refetch 期间已经被内存编辑取代的磁盘结果', async () => {
       memoryFs.setFile('test.txt', 'old disk value');
-      const fs: FsPort = memoryFs;
+      const fs: IFsPort = memoryFs;
       const handler = new FileHandler('test.txt', { fs, persistenceMonitor });
       await handler.load();
 
@@ -284,7 +284,7 @@ describe('FileHandler', () => {
 
     it('丢弃 refetch 期间已经被内存删除取代的磁盘结果', async () => {
       memoryFs.setFile('test.txt', 'old disk value');
-      const fs: FsPort = memoryFs;
+      const fs: IFsPort = memoryFs;
       const handler = new FileHandler('test.txt', { fs, persistenceMonitor });
       await handler.load();
 
@@ -308,7 +308,7 @@ describe('FileHandler', () => {
   describe('ensureLoaded', () => {
     it('只执行首次读取，已加载后不重新读取', async () => {
       memoryFs.setFile('test.txt', 'content');
-      const fs: FsPort = memoryFs;
+      const fs: IFsPort = memoryFs;
       const readFile = fs.readFile.bind(fs);
       let reads = 0;
       fs.readFile = async (...args) => {
@@ -324,7 +324,7 @@ describe('FileHandler', () => {
     });
 
     it('加载进行中时只等待同一次读取', async () => {
-      const fs: FsPort = memoryFs;
+      const fs: IFsPort = memoryFs;
       let finishRead!: (value: string) => void;
       let reads = 0;
       fs.readFile = () => {
@@ -402,7 +402,7 @@ describe('FileHandler', () => {
       await handler.load();
 
       // 创建一个会失败的 fs 接口
-      const failingFs: FsPort = memoryFs;
+      const failingFs: IFsPort = memoryFs;
       failingFs.writeFile = async () => {
         throw new Error('Write failed');
       };

@@ -48,6 +48,10 @@ import type {
   FsPort,
   HostPort,
   IEditorOperation,
+  IEngineAdapter,
+  IFsPort,
+  IHostPort,
+  IPreviewAdapter,
   IUndoManager,
   OperationHistoryEntry,
   OperationHistoryState,
@@ -126,6 +130,11 @@ describe('editor-core 底层面公开面', () => {
     expectTypeOf<CapabilityRegistrar>().toBeObject();
     expectTypeOf<EditorCoreConfig>().toBeObject();
     expectTypeOf<EditorCore>().toBeObject();
+    // D-07 新名（带 `I` 前缀）与 D-18 旧名别名都必须从公开面解析。
+    expectTypeOf<IEngineAdapter>().toBeObject();
+    expectTypeOf<IFsPort>().toBeObject();
+    expectTypeOf<IHostPort>().toBeObject();
+    expectTypeOf<IPreviewAdapter>().toBeObject();
     expectTypeOf<EngineAdapter>().toBeObject();
     expectTypeOf<FsPort>().toBeObject();
     expectTypeOf<HostPort>().toBeObject();

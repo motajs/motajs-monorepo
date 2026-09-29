@@ -5,7 +5,7 @@
  * 四个 port 各自有不同消费者、在不同阶段长大（D-14），因此一文件一 port，barrel 只做汇总。
  * 只 import `lib/ports/` 内的同级文件，绝不 import `../index`（会形成环，`no-circular` 会拒绝）。
  */
-export type { EngineAdapter } from './engine';
-export type { FsPort } from './fs';
-export type { HostPort } from './host';
-export type { PreviewAdapter } from './preview';
+export type { IEngineAdapter } from './engine';
+export type { IFsPort } from './fs';
+export type { IHostPort } from './host';
+export type { IPreviewAdapter } from './preview';
