@@ -193,6 +193,17 @@ Plans:
 
 - [x] 05-04-PLAN.md — mota adapter in `src/adapter/`: all 10 paths as descriptors, parameterized floor factory, adapter-owned handlers, migrations stay adapter-side (PORT-03, PORT-04, PORT-05, PORT-07)
 
+### Phase 05.2: editor-core/impl 代码风格整改 (INSERTED)
+
+**Goal:** [Urgent work - to be planned]
+**Requirements**: TBD
+**Depends on:** Phase 5
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (run /gsd-plan-phase 05.2 to break down)
+
 ### Phase 05.1: editor-core 接口与实现整改 (INSERTED)
 
 **Goal**: 把 `editor-core` 拆成**两个包**——`@motajs/editor-core` 只留「只管接口与调度的底层」，新建 `@motajs/editor-impl` 承载「自己管内容的编辑功能层」——并把撤销从「存快照」改成「存操作」，同时按既定编码规范重写两包；唯一对外的行为变化是撤销一次数据改动不再连带恢复地图视口（D-19）。
