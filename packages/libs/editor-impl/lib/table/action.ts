@@ -6,12 +6,7 @@
 
 import { isEqual } from 'es-toolkit';
 import { deleteByFieldPath, buildFieldPath, getByFieldPath, parseFieldPath, setByFieldPath } from './fieldPath';
-
-/** 操作类型 */
-export type ActionType = 'change' | 'add' | 'delete';
-
-/** Action 元组：[操作类型, 字段路径, 值] */
-export type Action = [ActionType, string, unknown];
+import { Action } from './types';
 
 function cloneActionValue<T>(value: T, seen = new WeakMap<object, unknown>()): T {
   if ((typeof value !== 'object' && typeof value !== 'function') || value === null) return value;

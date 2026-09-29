@@ -1,4 +1,5 @@
-import { applyActionsWithInverse, Action } from './action';
+import { applyActionsWithInverse } from '../table/action';
+import { Action } from '../table/types';
 import { AppliedOperation, IEditorOperation, OperationMeta } from '@motajs/editor-core';
 import { IPatchableResource } from './types';
 

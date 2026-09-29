@@ -53,9 +53,9 @@ export {
   getShortField,
   parseFieldPath,
   setByFieldPath,
-} from './edit/fieldPath';
-export { applyAction, applyActions, applyActionsWithInverse } from './edit/action';
-export type { Action, ActionType } from './edit/action';
+} from './table/fieldPath';
+export { applyAction, applyActions, applyActionsWithInverse } from './table/action';
+export type { Action, ActionType } from './table/types';
 export { compositeOperation, patchResourceOperation } from './edit/operations';
 
 // Plan 02 的默认实现层契约：可 patch 资源的最小契约（落点 `./edit/types`）。
