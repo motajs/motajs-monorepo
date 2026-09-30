@@ -1,5 +1,5 @@
 import { EngineDescription, ResourceDescriptor, ResourceDependencies } from '@motajs/editor-core';
-import { IResourceView } from '../resources/interfaces';
+import { IResourceView } from '../resources/types';
 import { FileResource } from '../resources/fileResource';
 import { FileHandler } from '../resources/fileHandler';
 import { JsonDataHandler } from '../resources/jsonDataHandler';

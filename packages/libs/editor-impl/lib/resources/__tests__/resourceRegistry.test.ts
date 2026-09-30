@@ -1,8 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { IResourceView, ResourceRegistryEntry } from '../interfaces';
+import { Content, IResourceView, ResourceRegistryEntry } from '../types';
 import { ResourceRegistry } from '../resourceRegistry';
-import { Content } from '../types';
 
 /**
  * `ResourceRegistry`（RES-02）单元测试。
