@@ -5,18 +5,14 @@ import { DIAGNOSTIC_CODES } from '../kernel/diagnostics';
 import { EditorCoreStartupError } from '../kernel/errors';
 import { DiagnosticSeverity } from '../kernel/types';
 
-/**
- * Phase 3 原子构造与启动失败测试（KERN-04）。
- *
- * 它把 D-07/D-08 的契约钉死在行为上：必需集合是 `config.requiredCapabilities` ∪ core 内置清单、
- * 判定粒度是具体 `kind:id`；构造末尾统一核对，任一未解析即**逆序释放**已创建的部分，然后抛出
- * `EditorCoreStartupError` 并携带**全部**诊断——绝不交出半成品。只有「必需项缺失」阻断启动；
- * 其它 error 级诊断（例如一次被拒的重复注册）随实例正常返回并留在总线历史里。
- *
- * 全部 fixture 使用引擎中性的 `acme.*`：core 不认识任何引擎的词汇或文件结构（RESEARCH Pitfall 15）。
- */
+// Phase 3 原子构造与启动失败测试（KERN-04）
+// 它把 D-07/D-08 的契约钉死在行为上：必需集合是 `config.requiredCapabilities` ∪ core 内置清单、
+// 判定粒度是具体 `kind:id`；构造末尾统一核对，任一未解析即**逆序释放**已创建的部分，然后抛出
+// `EditorCoreStartupError` 并携带**全部**诊断——绝不交出半成品。只有「必需项缺失」阻断启动；
+// 其它 error 级诊断（例如一次被拒的重复注册）随实例正常返回并留在总线历史里
+// 全部 fixture 使用引擎中性的 `acme.*`：core 不认识任何引擎的词汇或文件结构（RESEARCH Pitfall 15）
 
-/** 运行构造并返回它抛出的启动错误；若没有抛出，就让测试失败而不是静默通过。 */
+// 运行构造并返回它抛出的启动错误；若没有抛出，就让测试失败而不是静默通过
 function captureStartupError(run: () => unknown): EditorCoreStartupError {
   try {
     run();
@@ -28,6 +24,7 @@ function captureStartupError(run: () => unknown): EditorCoreStartupError {
 }
 
 describe('editor-core 原子构造与启动失败', () => {
+  // 覆盖：必需注册已满足时构造成功并暴露该能力
   test('必需注册已满足时构造成功并暴露该能力', () => {
     const editor = new EditorCoreKernel({
       requiredCapabilities: ['acme.thing:alpha'],
@@ -42,6 +39,7 @@ describe('editor-core 原子构造与启动失败', () => {
     editor.dispose();
   });
 
+  // 覆盖：必需注册未解析时抛出 EditorCoreStartupError 且不返回实例
   test('必需注册未解析时抛出 EditorCoreStartupError 且不返回实例', () => {
     let returned: unknown;
     let thrown: unknown;
@@ -56,6 +54,7 @@ describe('editor-core 原子构造与启动失败', () => {
     expect(thrown).toBeInstanceOf(EditorCoreStartupError);
   });
 
+  // 覆盖：启动错误的 diagnostics 携带 capability.required-missing 与精确 target
   test('启动错误的 diagnostics 携带 capability.required-missing 与精确 target', () => {
     const thrown = captureStartupError(() => new EditorCoreKernel({ requiredCapabilities: ['acme.thing:alpha'] }));
 
@@ -69,6 +68,7 @@ describe('editor-core 原子构造与启动失败', () => {
     expect(thrown.message).toContain('acme.thing:alpha');
   });
 
+  // 覆盖：启动失败路径逆序释放已创建的部分
   test('启动失败路径逆序释放已创建的部分', () => {
     const released: string[] = [];
 
@@ -86,6 +86,7 @@ describe('editor-core 原子构造与启动失败', () => {
     expect(released).toEqual(['second', 'first']);
   });
 
+  // 覆盖：启动错误携带全部诊断（被拒的重复注册 + 必需缺失）
   test('启动错误携带全部诊断（被拒的重复注册 + 必需缺失）', () => {
     const thrown = captureStartupError(
       () =>
@@ -103,6 +104,7 @@ describe('editor-core 原子构造与启动失败', () => {
     expect(codes).toContain(DIAGNOSTIC_CODES.capabilityRequiredMissing);
   });
 
+  // 覆盖：非阻断的 error 诊断不阻断构造，且可从 snapshot 读到
   test('非阻断的 error 诊断不阻断构造，且可从 snapshot 读到', () => {
     const editor = new EditorCoreKernel({
       requiredCapabilities: ['acme.thing:alpha'],

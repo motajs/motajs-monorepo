@@ -2,18 +2,14 @@
 import { describe, expect, test } from 'vitest';
 import { EditorCoreKernel } from '../kernel/core';
 
-/**
- * Phase 3 registry 契约测试（KERN-03）。
- *
- * 它把 D-02/D-03/D-19 的每一条钉死在行为上：种类格式校验、重复注册被拒且**无副作用**、
- * `replaceable: true` 才允许替换、旧 disposer 失效、失败的替换尝试不动旧值、
- * `EditorCore.getCapability` 与 `EditorCore.getCapabilityOrThrow` 的差别、
- * `EditorCore.snapshotCapabilities` 的扁平冻结形状，以及用 `Map` 键控挡住的 `__proto__` 原型污染。
- *
- * 全部 fixture 使用引擎中性的 `acme.*`（RESEARCH Pitfall 15）。
- */
+// Phase 3 registry 契约测试（KERN-03）
+// 它把 D-02/D-03/D-19 的每一条钉死在行为上：种类格式校验、重复注册被拒且**无副作用**、
+// `replaceable: true` 才允许替换、旧 disposer 失效、失败的替换尝试不动旧值、
+// `EditorCore.getCapability` 与 `EditorCore.getCapabilityOrThrow` 的差别、
+// `EditorCore.snapshotCapabilities` 的扁平冻结形状，以及用 `Map` 键控挡住的 `__proto__` 原型污染
+// 全部 fixture 使用引擎中性的 `acme.*`（RESEARCH Pitfall 15）
 
-/** 合法种类：单段与多段、camelCase 与连字符都要放行（D-17）。 */
+// 合法种类：单段与多段、camelCase 与连字符都要放行（D-17）
 const VALID_KINDS = [
   'command',
   'keybinding',
@@ -23,10 +19,11 @@ const VALID_KINDS = [
   'acme.my-kind',
 ] as const;
 
-/** 非法种类：空串、前导数字、前导/尾随点、空段、空白与斜杠都要拒。 */
+// 非法种类：空串、前导数字、前导/尾随点、空段、空白与斜杠都要拒
 const INVALID_KINDS = ['', '1command', '.acme', 'acme.', 'acme..thing', 'acme thing', 'acme/thing'] as const;
 
 describe('editor-core capability registry 契约', () => {
+  // 覆盖：合法种类全部通过且可读回，非法种类各产生一条 capability.kind-invalid
   test('kind 格式：合法种类通过、非法种类产生 capability.kind-invalid', () => {
     const editor = new EditorCoreKernel({});
 
@@ -47,6 +44,7 @@ describe('editor-core capability registry 契约', () => {
     expect(editor.snapshotCapabilities()).toHaveLength(before);
   });
 
+  // 覆盖：重复注册被拒且无副作用，owner 指向现有占用者
   test('重复注册被拒且无副作用，owner 指向现有占用者', () => {
     const editor = new EditorCoreKernel({});
 
@@ -63,6 +61,7 @@ describe('editor-core capability registry 契约', () => {
     expect(editor.snapshotCapabilities()).toHaveLength(1);
   });
 
+  // 覆盖：replaceable: true 才提交替换，旧 disposer 随之失效
   test('replaceable: true 才提交替换，旧 disposer 随之失效', () => {
     const editor = new EditorCoreKernel({});
 
@@ -80,6 +79,7 @@ describe('editor-core capability registry 契约', () => {
     expect(editor.getCapability('acme.thing', 'alpha')).toBeUndefined();
   });
 
+  // 覆盖：失败的替换尝试保留旧值（非法 kind 与重复注册两种）
   test('失败的替换尝试保留旧值', () => {
     const editor = new EditorCoreKernel({});
 
@@ -96,6 +96,7 @@ describe('editor-core capability registry 契约', () => {
     expect(editor.getCapability('acme.other', 'beta')).toBe('keep');
   });
 
+  // 覆盖：getCapability 返回 undefined，getCapabilityOrThrow 抛错并带上 kind:id
   test('getCapability 返回 undefined，getCapabilityOrThrow 抛错并带上 kind:id', () => {
     const editor = new EditorCoreKernel({});
 
@@ -103,6 +104,7 @@ describe('editor-core capability registry 契约', () => {
     expect(() => editor.getCapabilityOrThrow('acme.thing', 'alpha')).toThrow('acme.thing:alpha');
   });
 
+  // 覆盖：snapshotCapabilities 跨两个 kind 返回扁平冻结数组（插入顺序）
   test('snapshotCapabilities 跨两个 kind 返回扁平冻结数组（插入顺序）', () => {
     const editor = new EditorCoreKernel({});
 
@@ -118,6 +120,7 @@ describe('editor-core capability registry 契约', () => {
     expect(snapshot[1]).toEqual({ kind: 'acme.a', id: 'two', value: 2, owner: undefined });
   });
 
+  // 覆盖：id 为 __proto__ / constructor 也能安全往返，且不污染 Object.prototype
   test('原型污染防护：id 为 __proto__ / constructor 也能安全往返', () => {
     const editor = new EditorCoreKernel({});
 
@@ -130,6 +133,7 @@ describe('editor-core capability registry 契约', () => {
     expect(({} as { polluted?: unknown }).polluted).toBeUndefined();
   });
 
+  // 覆盖：disposer 幂等，二次调用与 dispose 后调用都不抛错
   test('disposer 幂等：二次调用与 dispose 后调用都不抛错', () => {
     const editor = new EditorCoreKernel({});
 

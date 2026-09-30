@@ -3,18 +3,15 @@ import { describe, expect, test } from 'vitest';
 import { DiagnosticBusImpl, DIAGNOSTIC_CODES } from '../kernel/diagnostics';
 import { Diagnostic, DiagnosticSeverity } from '../kernel/types';
 
-/**
- * Phase 3 诊断总线契约测试（KERN-05）。
- *
- * 它把 D-05/D-06 的语义钉死：`DiagnosticBus.snapshot()` 读全部已发生的诊断（构造期诊断在构造返回后
- * 仍可读），`DiagnosticBus.subscribe()` 只收订阅之后的诊断且返回的 unsubscribe 立即生效；
- * 订阅者抛错被**隔离**——只追加一条 `diagnostic.subscriber-error` 历史（append-without-dispatch），
- * 不重入派发、不影响其它订阅者、也不让生产方失败；历史是追加式且在测试范围内无上限。
- *
- * 全部 fixture 使用引擎中性的 `acme.*`（RESEARCH Pitfall 15）。
- */
+// Phase 3 诊断总线契约测试（KERN-05）
+// 它把 D-05/D-06 的语义钉死：`DiagnosticBus.snapshot()` 读全部已发生的诊断（构造期诊断在构造返回后
+// 仍可读），`DiagnosticBus.subscribe()` 只收订阅之后的诊断且返回的 unsubscribe 立即生效；
+// 订阅者抛错被**隔离**——只追加一条 `diagnostic.subscriber-error` 历史（append-without-dispatch），
+// 不重入派发、不影响其它订阅者、也不让生产方失败；历史是追加式且在测试范围内无上限
+// 全部 fixture 使用引擎中性的 `acme.*`（RESEARCH Pitfall 15）
 
 describe('editor-core 诊断总线契约', () => {
+  // 覆盖：snapshot 按顺序返回全部历史，且返回的是不可变副本
   test('snapshot 按顺序返回全部历史，且返回的是不可变副本', () => {
     const bus = new DiagnosticBusImpl();
     const first: Diagnostic = { severity: DiagnosticSeverity.Error, code: 'acme.first', message: 'first' };
@@ -35,6 +32,7 @@ describe('editor-core 诊断总线契约', () => {
     expect(bus.snapshot()).toHaveLength(2);
   });
 
+  // 覆盖：subscribe 只收后续诊断，unsubscribe 后不再收到
   test('subscribe 只收后续诊断，unsubscribe 后不再收到', () => {
     const bus = new DiagnosticBusImpl();
     bus.push({ severity: DiagnosticSeverity.Info, code: 'acme.before', message: 'before' });
@@ -54,6 +52,7 @@ describe('editor-core 诊断总线契约', () => {
     expect(bus.snapshot()).toHaveLength(3);
   });
 
+  // 覆盖：抛错的订阅者被隔离，其它订阅者仍收到，且只留下一条 subscriber-error 历史
   test('抛错的订阅者被隔离：其它订阅者仍收到，且只留下一条 subscriber-error 历史', () => {
     const bus = new DiagnosticBusImpl();
     let throwingCalls = 0;
@@ -79,10 +78,11 @@ describe('editor-core 诊断总线契约', () => {
     expect(snapshot[1].severity).toBe(DiagnosticSeverity.Warning);
     expect(snapshot[1].cause).toBe(thrownValue);
 
-    // append-without-dispatch：这条内部诊断不会被再次派发，所以抛错订阅者的调用次数仍为 1。
+    // append-without-dispatch：这条内部诊断不会被再次派发，所以抛错订阅者的调用次数仍为 1
     expect(throwingCalls).toBe(1);
   });
 
+  // 覆盖：DIAGNOSTIC_CODES 暴露恰好五个稳定机器码
   test('DIAGNOSTIC_CODES 暴露恰好五个稳定机器码', () => {
     expect(Object.keys(DIAGNOSTIC_CODES).sort()).toEqual([
       'capabilityDuplicate',
@@ -98,6 +98,7 @@ describe('editor-core 诊断总线契约', () => {
     expect(DIAGNOSTIC_CODES.lifecycleTeardownFailed).toBe('lifecycle.teardown-failed');
   });
 
+  // 覆盖：历史追加式且在本测试范围内无上限
   test('历史追加式且在本测试范围内无上限', () => {
     const bus = new DiagnosticBusImpl();
     const count = 500;
@@ -106,7 +107,7 @@ describe('editor-core 诊断总线契约', () => {
       bus.push({ severity: DiagnosticSeverity.Info, code: 'acme.count', message: `#${index}` });
     }
 
-    // D-05/D-06 刻意不设上限：Phase 3 的诊断是构造期低频事件；该 DoS 风险作为已知接受项记录（T-03-10）。
+    // D-05/D-06 刻意不设上限：Phase 3 的诊断是构造期低频事件；该 DoS 风险作为已知接受项记录（T-03-10）
     expect(bus.snapshot()).toHaveLength(count);
     expect(bus.snapshot()[count - 1].message).toBe(`#${count - 1}`);
   });

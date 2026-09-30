@@ -2,13 +2,10 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { UndoManager } from '../kernel/undoManager';
 import { AppliedOperation, IEditorOperation, OperationMeta } from '../kernel/types';
 
-/**
- * UndoManager 不变量测试（纯内存，不读任何工程 fixture）。
- *
- * 逐条钉住管理器的外部可观察行为：容量 100、撤销走存下的逆操作、重做、redo 分叉截断、
- * 无改动不入历史，以及组合操作失败时按已成功子操作的逆序回退并标注失败阶段。
- * 没有任何快照 / 目标用例：管理器只存操作、不存快照（D-04/D-05）。
- */
+// UndoManager 不变量测试（纯内存，不读任何工程 fixture）
+// 逐条钉住管理器的外部可观察行为：容量 100、撤销走存下的逆操作、重做、redo 分叉截断、
+// 无改动不入历史，以及组合操作失败时按已成功子操作的逆序回退并标注失败阶段
+// 没有任何快照 / 目标用例：管理器只存操作、不存快照（D-04/D-05）
 describe('UndoManager invariants', () => {
   let value = 0;
   let manager: UndoManager;
@@ -18,7 +15,7 @@ describe('UndoManager invariants', () => {
     manager = new UndoManager();
   });
 
-  /** 纯内存计数器操作：成功时交出一个把这次增减撤回来的逆操作。 */
+  // 纯内存计数器操作：成功时交出一个把这次增减撤回来的逆操作
   const counterOperation = (delta: number): IEditorOperation<unknown> => ({
     meta: { label: 'counter', stage: 'counter' },
     apply: async () => {
@@ -27,10 +24,8 @@ describe('UndoManager invariants', () => {
     },
   });
 
-  /**
-   * 组合操作测试替身：与 editor-impl 的 CompositeOperation 同契约——失败时把已成功的子操作
-   * 按逆序用各自的逆操作回退，并给错误标上失败阶段 `commandStage`。
-   */
+  // 组合操作测试替身：与 editor-impl 的 CompositeOperation 同契约——失败时把已成功的子操作
+  // 按逆序用各自的逆操作回退，并给错误标上失败阶段 `commandStage`
   const compositeOperation = (
     operations: readonly IEditorOperation<unknown>[],
     meta: OperationMeta,
@@ -73,7 +68,7 @@ describe('UndoManager invariants', () => {
     },
   });
 
-  // 覆盖：容量 100；第 101 次 undo 是空操作，最旧一条已被移除。
+  // 覆盖：容量 100；第 101 次 undo 是空操作，最旧一条已被移除
   it('keeps at most 100 entries and makes the 101st undo a no-op', async () => {
     for (let delta = 1; delta <= 101; delta++) {
       await manager.execute(counterOperation(delta));
@@ -88,11 +83,11 @@ describe('UndoManager invariants', () => {
     }
 
     expect(observed).toHaveLength(100);
-    // 最旧的一条（首笔 +1）已被移除，它的效果永远不会被撤销：终值为 1。
+    // 最旧的一条（首笔 +1）已被移除，它的效果永远不会被撤销：终值为 1
     expect(value).toBe(1);
   });
 
-  // 覆盖：撤销调历史里存下的逆操作，重做再调原操作。
+  // 覆盖：撤销调历史里存下的逆操作，重做再调原操作
   it('applies the stored inverse on undo and re-applies it on redo', async () => {
     await manager.execute(counterOperation(5));
     expect(value).toBe(5);
@@ -107,7 +102,7 @@ describe('UndoManager invariants', () => {
     expect(value).toBe(0);
   });
 
-  // 覆盖：撤销后再提交新操作，redo 分支被截断。
+  // 覆盖：撤销后再提交新操作，redo 分支被截断
   it('truncates the redo tail when a new operation is committed after an undo', async () => {
     await manager.execute(counterOperation(1));
     await manager.undo();
@@ -117,7 +112,7 @@ describe('UndoManager invariants', () => {
     expect(value).toBe(10);
   });
 
-  // 覆盖：报告 changed=false 的操作不进入历史。
+  // 覆盖：报告 changed=false 的操作不进入历史
   it('records nothing when a commit reports no change', async () => {
     const noChange: IEditorOperation<unknown> = {
       meta: { label: 'no-change', stage: 'no-change' },
@@ -127,12 +122,12 @@ describe('UndoManager invariants', () => {
     await manager.execute(noChange);
     expect(value).toBe(0);
 
-    // 若这条无改动被记进历史，下面的 undo 会调它的逆操作（+999），value 会跳。
+    // 若这条无改动被记进历史，下面的 undo 会调它的逆操作（+999），value 会跳
     await manager.undo();
     expect(value).toBe(0);
   });
 
-  // 覆盖：组合操作失败时，已成功的子操作按逆序回退，并标出失败阶段。
+  // 覆盖：组合操作失败时，已成功的子操作按逆序回退，并标出失败阶段
   it('rolls back completed composite children in reverse order and tags the failing stage', async () => {
     let counter = 0;
     const compositeCounter = (delta: number): IEditorOperation<unknown> => ({
