@@ -1,12 +1,15 @@
 import { match } from 'ts-pattern';
 import { Content } from './types';
 
-// ContentUtils - Content<T> 的通用辅助函数。
-// 提供函数式操作工具，简化 Content<T> 的使用；由方法对象改为静态方法类，`ContentUtils.map(...)` 等调用点不变。
+// ContentUtils —— Content<T> 的通用辅助函数
+// 提供函数式操作工具，简化 Content<T> 的使用；由方法对象改为静态方法类，`ContentUtils.map(...)` 等调用点不变
 
 export class ContentUtils {
   /**
-   * map: 转换成功值（类似 Rust 的 map）
+   * map：转换已加载的值（类似 Rust 的 map）；非 loaded 状态原样透传。
+   *
+   * @param content 待转换的内容。
+   * @param fn 把 loaded 值映射为新值；抛错则转为 error 状态。
    *
    * @example
    * const length = ContentUtils.map(fileContent, content => content.length);
@@ -24,7 +27,10 @@ export class ContentUtils {
   }
 
   /**
-   * andThen: 链式转换，可能失败（类似 Rust 的 and_then）
+   * andThen：链式转换，可能失败（类似 Rust 的 and_then）；非 loaded 状态原样透传。
+   *
+   * @param content 待转换的内容。
+   * @param fn 把 loaded 值映射为新的内容；抛错则转为 error 状态。
    *
    * @example
    * const parsed = ContentUtils.andThen(fileContent, content => {
@@ -48,7 +54,10 @@ export class ContentUtils {
   }
 
   /**
-   * unwrapOr: 获取值或默认值（类似 Rust 的 unwrap_or）
+   * unwrapOr：取已加载的值，否则返回默认值（类似 Rust 的 unwrap_or）。
+   *
+   * @param content 待取值的内容。
+   * @param defaultValue 非 loaded 时使用的默认值。
    *
    * @example
    * const content = ContentUtils.unwrapOr(fileContent, '');
@@ -60,7 +69,10 @@ export class ContentUtils {
   }
 
   /**
-   * unwrapOrElse: 获取值或执行函数
+   * unwrapOrElse：取已加载的值，否则执行兜底函数（类似 Rust 的 unwrap_or_else）。
+   *
+   * @param content 待取值的内容。
+   * @param fn 非 loaded 时调用，接收原内容并返回兜底值。
    *
    * @example
    * const content = ContentUtils.unwrapOrElse(fileContent, () => 'default');
@@ -73,48 +85,74 @@ export class ContentUtils {
 
   // 类型守卫
 
+  /**
+   * 是否为 idle 状态。
+   *
+   * @param content 待判定的内容。
+   */
   static isIdle<T>(content: Content<T>): content is { status: 'idle' } {
     return content.status === 'idle';
   }
 
+  /**
+   * 是否为 loading 状态。
+   *
+   * @param content 待判定的内容。
+   */
   static isLoading<T>(content: Content<T>): content is { status: 'loading' } {
     return content.status === 'loading';
   }
 
+  /**
+   * 是否为 loaded 状态。
+   *
+   * @param content 待判定的内容。
+   */
   static isLoaded<T>(content: Content<T>): content is { status: 'loaded'; value: T } {
     return content.status === 'loaded';
   }
 
+  /**
+   * 是否为 not-found 状态。
+   *
+   * @param content 待判定的内容。
+   */
   static isNotFound<T>(content: Content<T>): content is { status: 'not-found' } {
     return content.status === 'not-found';
   }
 
+  /**
+   * 是否为 error 状态。
+   *
+   * @param content 待判定的内容。
+   */
   static isError<T>(content: Content<T>): content is { status: 'error'; error: Error } {
     return content.status === 'error';
   }
 
   /**
-   * 是否可用（已加载）
+   * 是否可用（已加载）。
+   *
+   * @param content 待判定的内容。
    */
   static isAvailable<T>(content: Content<T>): content is { status: 'loaded'; value: T } {
     return content.status === 'loaded';
   }
 
   /**
-   * 是否处于错误状态
+   * 是否处于错误状态（not-found 或 error）。
+   *
+   * @param content 待判定的内容。
    */
   static hasError<T>(content: Content<T>): content is { status: 'not-found' } | { status: 'error'; error: Error } {
     return content.status === 'not-found' || content.status === 'error';
   }
 
   /**
-   * unwrap: 获取值或抛出异常（类似 Rust 的 unwrap）
+   * unwrap：获取已加载的值，否则抛出带上下文的异常（类似 Rust 的 unwrap）。
    *
-   * 如果 content 是 loaded 状态，返回值
-   * 否则抛出带有上下文信息的异常
-   *
-   * @param content - Content 对象
-   * @param name - 资源名称（用于错误消息）
+   * @param content 待取值的内容。
+   * @param name 资源名称（用于错误消息）。
    *
    * @example
    * const data = ContentUtils.unwrap(content, "Tower data");

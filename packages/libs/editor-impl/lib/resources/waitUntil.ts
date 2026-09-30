@@ -1,14 +1,12 @@
 import { effect } from 'alien-signals';
 
-/**
- * Signal 相关工具函数
- */
+// Signal 相关工具函数
 
 /**
- * 等待条件满足
+ * 等待条件满足。
  *
- * @param predicate 判断条件（内部读取 signal），返回 true 时 Promise resolve
- * @returns Promise，在条件满足时 resolve
+ * @param predicate 判断条件（内部读取 signal），返回 true 时 Promise resolve。
+ * @returns 在条件满足时 resolve 的 Promise。
  *
  * @example
  * ```ts

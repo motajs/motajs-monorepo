@@ -2,11 +2,8 @@ interface ErrorWithCode extends Error {
   code?: string;
 }
 
-/**
- * Only classify errors that explicitly describe the requested file as missing.
- * In particular, service-worker errors such as `project-not-found` describe the
- * project handle/access state and must remain ordinary errors.
- */
+// 只把「明确描述了所请求文件缺失」的错误归类为文件缺失
+// 特别是 service-worker 的 `project-not-found` 这类错误描述的是项目句柄/访问状态，必须保持为普通错误
 export function isFileNotFoundError(error: Error): boolean {
   const { code } = error as ErrorWithCode;
   if (code) return code === 'file-not-found' || code === 'ENOENT';

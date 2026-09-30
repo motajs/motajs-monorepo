@@ -2,12 +2,9 @@ import { signal } from 'alien-signals';
 import { waitUntil } from './waitUntil';
 import { ExecutorStatus, IPersistExecutor, PersistenceIntent, ReadonlySignal } from './types';
 
-/**
- * 单路径持久化控制器。
- *
- * 编辑代码提交不可变的意图；同一时刻最多一个意图在执行，另保留一个最新的待执行意图。
- * 控制器从不持有编辑状态，持久化失败也从不回滚编辑状态。
- */
+// 单路径持久化控制器
+// 编辑代码提交不可变的意图；同一时刻最多一个意图在执行，另保留一个最新的待执行意图
+// 控制器从不持有编辑状态，持久化失败也从不回滚编辑状态
 export class PersistExecutor implements IPersistExecutor {
   /** 旧式测试适配器的遗留操作。 */
   private readonly legacyOperation?: () => Promise<void>;
@@ -33,7 +30,11 @@ export class PersistExecutor implements IPersistExecutor {
     this.status = this._status as ReadonlySignal<ExecutorStatus>;
   }
 
-  /** Submit an immutable desired-state intent for this path. */
+  /**
+   * 为当前路径提交一个不可变的期望状态意图。
+   *
+   * @param intent 要排程的持久化意图。
+   */
   schedule(intent: PersistenceIntent): void {
     this.pendingIntent = intent;
     if (this.isExecuting) {
@@ -43,7 +44,9 @@ export class PersistExecutor implements IPersistExecutor {
     void this.processQueue();
   }
 
-  /** Legacy test adapter. Production resources use schedule(). */
+  /**
+   * 旧式测试适配入口：把遗留操作包装成一个写入意图；生产资源改用 `schedule()`。
+   */
   exec(): void {
     if (!this.legacyOperation) {
       throw new Error('PersistExecutor.exec() requires a legacy operation');
@@ -51,11 +54,17 @@ export class PersistExecutor implements IPersistExecutor {
     this.schedule({ kind: 'write', execute: this.legacyOperation });
   }
 
+  /**
+   * 重试上一次失败的意图；当前状态不是 error 时不做任何事。
+   */
   retry(): void {
     if (!this.failedIntent || this._status().status !== 'error') return;
     this.schedule(this.failedIntent);
   }
 
+  /**
+   * 串行执行意图队列：同一时刻最多一个在执行，另保留一个最新的待执行意图。
+   */
   private async processQueue(): Promise<void> {
     if (this.isExecuting || !this.pendingIntent) return;
     this.isExecuting = true;
@@ -84,22 +93,34 @@ export class PersistExecutor implements IPersistExecutor {
     this._status({ status: 'idle' });
   }
 
-  /** Persistence-boundary/test API; ordinary editing code must not call it. */
+  /**
+   * 等待执行队列静默（持久化边界/测试 API；普通编辑代码不应调用）。
+   */
   async whenQuiescent(): Promise<void> {
     await waitUntil(() => this._status().status !== 'executing');
   }
 
-  /** @deprecated Use PersistenceMonitor.flush() at explicit boundaries. */
+  /**
+   * 在显式边界等待静默。
+   *
+   * @deprecated 改用 `PersistenceMonitor.flush()`。
+   */
   async waitForIdle(): Promise<void> {
     await this.whenQuiescent();
   }
 
+  /**
+   * 等待静默；若最终状态为错误则抛出该错误。
+   */
   async flush(): Promise<void> {
     await this.whenQuiescent();
     const status = this._status();
     if (status.status === 'error') throw status.error;
   }
 
+  /**
+   * 是否有执行中或待执行的工作。
+   */
   hasPending(): boolean {
     return this.isExecuting || this.pendingIntent !== null;
   }

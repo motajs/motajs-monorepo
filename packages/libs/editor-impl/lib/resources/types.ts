@@ -1,10 +1,7 @@
 import { IFsPort } from '@motajs/editor-core';
 
-/**
- * Content<T> - 统一的状态类型
- *
- * 受 Rust 的 Result<T, E> 和 Option<T> 启发，使用 Tagged Union 表示数据的所有可能状态
- */
+// Content<T> —— 统一的状态类型
+// 受 Rust 的 Result<T, E> 和 Option<T> 启发，使用 Tagged Union 表示数据的所有可能状态
 
 /** 通用的 Content 类型 - 适用于所有层 */
 export type Content<T> =
