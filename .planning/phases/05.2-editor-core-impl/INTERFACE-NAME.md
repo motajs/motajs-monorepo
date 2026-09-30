@@ -28,10 +28,11 @@
 
 ---
 
-## Plan 05.2-01 — `editor-core` 接口层整改（D-02 / D-06 / D-07 / D-10）
+## Plan 05.2-01 — `editor-core` 接口层整改（D-02 / D-06 / D-07 / D-10 / D-18）
 
 **这个计划只动底层的「接口层」——把散落的导出类型收进 `types.ts`、给接口成员补 `readonly`、
-把 `DiagnosticSeverity` 改成数字枚举；一行实现逻辑都不改。**
+把 `DiagnosticSeverity` 改成数字枚举；一行实现逻辑都不改。** 另含一处最小编辑器改动：关闭
+`packages/apps/editor/tsconfig.app.json` 的 `erasableSyntaxOnly`（D-18，见下表）。
 
 | 名字 | 种类 | 它是干什么的 |
 |------|------|--------------|
@@ -45,6 +46,7 @@
 | `packages/libs/editor-core/lib/ports/fs.ts`、`host.ts`、`preview.ts` | 文件（**删除**） | 它们的内容只剩一个 interface，已迁入 `ports/types.ts`；留着就是空壳。删后 `ports/engine.ts` 只留「逻辑/值」。 |
 | `packages/libs/editor-core/lib/ports/index.ts` | 文件（改） | 从只再导出 `./engine`/`./fs`/`./host`/`./preview` 改为再导出 `./engine` + `./types`。 |
 | `readonly`（成员态） | 修饰 | 接口成员默认只读；本计划给 `OperationMeta.{label,stage}`、`AppliedOperation.{value,inverse,changed}`、`OperationHistoryEntry.{id,label,timestamp,paths}`、`OperationHistoryState.{entries,current,busy}` 补 `readonly`。 |
+| `packages/apps/editor/tsconfig.app.json` | 配置（改；D-18） | 编辑器把两包源码并入自己的编译程序，它开着的 `erasableSyntaxOnly: true` 会禁掉两包要用的数字 `enum`；本计划把它改为 `false`（只改这一个开关、补一行注释）。**不引入新名字。** |
 
 ---
 
@@ -68,7 +70,7 @@
 
 ---
 
-## Plan 05.2-03 — 其余数字枚举 + 编辑器最小跟随（D-06 / D-14）
+## Plan 05.2-03 — 其余数字枚举 + 编辑器最小跟随（D-06 / D-14 / D-18）
 
 **这个计划把剩下的两个「改数字枚举」点（资源预加载策略、表格动作类型）落地，并把它连带的编辑器
 字符串字面量改成枚举成员——这是本阶段唯一允许触碰 `@motajs/editor` 的一类机械改动。**
@@ -81,6 +83,7 @@
 | `ActionType.CHANGE` / `ActionType.ADD` / `ActionType.DELETE` | 枚举成员 | 改值 / 新增 / 删除。取值 `0 / 1 / 2`。 |
 | 编辑器机械跟随 | 改动（`packages/apps/editor/src/**`） | 只把「给 `PreloadStrategy`/`ActionType` 位置喂字符串」的字面量改成枚举成员；不改功能、UI、宿主协议。已知站点：`adapter/motaEngine.ts`（8×`preload: 'eager'`、1×`'lazy'`）、`adapter/motaFloor.ts`（`'on-demand'`）、以及所有构造 impl `Action` 元组的位置（`project/commands/*`、`Workbench/*Panel`、`Workbench/*Workspace`、`project/migrations/airwallMigration.ts`、`project/model/floorCoordinateReferences.ts`、`components/Table/**`、相关测试）。以 `pnpm --filter @motajs/editor typecheck` 报出的 `TS2322` 为准逐个替换，不多改一处。 |
 | 编辑器侧 `EditMode` / `TableAction` | 类型/字面量（按需改） | `components/Table/types.ts` 的 `TableAction = ['change'\|'add'\|'delete', string, unknown]` 若因须赋给 impl 的 `Action` 而报错，则换成 `[ActionType, string, unknown]` 并同步其构造点；纯 UI 的 `EditMode`（分段控件）可按 typecheck 结果决定是否跟随，目标是**最小**改动。 |
+| `packages/apps/editor/src/utils/action.ts` | shim（改；属 D-14 的机械跟随） | 编辑器取 `Action`/`ActionType` 的转发 shim。`ActionType` 改成数字枚举后它是**值**，故该行由 `export type { Action, ActionType }` 改为 `export { ActionType }` + `export type { Action }`（仍只做转发，过 `editorShims.js`「只转发」检查）。**不引入新名字。** |
 
 ---
 
@@ -103,14 +106,35 @@
 
 ---
 
-## Plan 05.2-05 / 05.2-06 / 05.2-07 — 实现层风格扫尾（D-03 / D-04 / D-09）
+## Plan 05.2-05 — `editor-core` 实现层风格扫尾（D-03 / D-04 / D-09 / D-11）
 
-**这三个计划只改注释、空行/成员顺序与空值字面量，不引入任何新名字。**
+**这个计划只改底层（`editor-core/lib/**`，含测试）的注释、空行/成员顺序与空值字面量，不引入任何新名字。**
+
+| 名字 | 种类 | 它是干什么的 |
+|------|------|--------------|
+| （无新名字） | — | 只做 D-03（方法/成员/私有注释风格）、D-04（空行与成员在方法前）、D-09（`undefined`/`null`/`[]`）的机械整改。测试文件按 dev.md 要求给每个 `it`/`test` 补一行 `//` 说明。已有测试辅助函数名不变。 |
+
+---
+
+## Plan 05.2-06 — `editor-impl` 资源层实现层风格扫尾（D-03 / D-04 / D-09 / D-11）
+
+**这个计划只改资源层（`editor-impl/lib/resources/**`，含测试）的注释、空行/成员顺序与空值字面量，
+不引入任何新名字。**
+
+| 名字 | 种类 | 它是干什么的 |
+|------|------|--------------|
+| （无新名字） | — | 同 Plan 05 的机械整改，作用于资源层处理器组、工具组及其测试。资源层测试辅助函数名不变。 |
+
+---
+
+## Plan 05.2-07 — `editor-impl` 编辑/表格/React 层实现层风格扫尾（D-03 / D-04 / D-09 / D-11）
+
+**这个计划只改编辑层、表格层、React 层与四个能力目录（含测试）的注释、空行/成员顺序与空值字面量。**
 
 | 名字 | 种类 | 它是干什么的 |
 |------|------|--------------|
 | `CoreProbeProps` | interface（新；`react/CoreProbe.tsx`） | `CoreProbe` 探针组件的 props：目前就地内联的 `{ label?: string }` 抽成一个具名 interface（dev.md 类型规则：出现对象类型时单独声明 interface）。仅当用户批准时随本计划落地，否则该行不改。 |
-| （其余无新名字） | — | 只做 D-03（方法/成员/私有注释风格）、D-04（空行与成员在方法前）、D-09（`undefined`/`null`/`[]`）的机械整改。测试文件按 dev.md 要求给每个 `it`/`test` 补一行 `//` 说明。已有测试辅助函数名不变。 |
+| （其余无新名字） | — | 同 Plan 05 的机械整改，作用于 edit/table/react 与 `{code,map,asset,shell}` 及其测试；`CoreProbe.tsx` 的 PandaCSS 模板调用与 hook 逐字不动（门禁依赖）。 |
 
 ---
 
