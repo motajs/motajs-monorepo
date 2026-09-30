@@ -2,18 +2,18 @@
 gsd_state_version: "1.0"
 current_phase: "05.2"
 current_phase_name: editor-core-impl
-current_plan: 2
+current_plan: 3
 status: executing
-stopped_at: Completed 05.2-01-PLAN.md
-last_updated: "2026-09-30T06:19:57.502Z"
+stopped_at: Completed 05.2-02-PLAN.md
+last_updated: "2026-09-30T06:40:08.483Z"
 last_activity: 2026-09-28
 last_activity_desc: Phase 05.1 plan 01 complete (editor-core undo contract types)
-state_head: e8e8ed0199c405901f75feeb713d3c23c219bd3e
+state_head: 840e26531869bd9006a1f2c8eb89cc423ffa564a
 progress:
   total_phases: 14
   completed_phases: 0
   total_plans: 42
-  completed_plans: 34
+  completed_plans: 35
   percent: 0
 ---
 
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-09-24)
 ## Current Position
 
 Phase: 05.2 (editor-core-impl) — READY TO EXECUTE
-Current Plan: 2
+Current Plan: 3
 Total Plans in Phase: 9
 Status: Executing (plan 01 complete; plan 02 pending briefing/approval)
 Last activity: 2026-09-28 — 05.1-01 撤销契约类型落地（`lib/kernel/types.ts`）
@@ -82,6 +82,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 05.1 P06 | 16 | 3 tasks | 23 files |
 | Phase 05.1 P07 | 129 | 3 tasks | 49 files |
 | Phase 05.2 P01 | 13 | 3 tasks | 16 files |
+| Phase 05.2 P02 | 15min | 3 tasks | 17 files |
 
 ## Accumulated Context
 
@@ -157,6 +158,10 @@ Recent decisions affecting current work:
 - [Phase 05.2]: 05.2-01: 底层类型集中到 kernel/types.ts + 新建 ports/types.ts；DiagnosticCode 按计划留在 diagnostics.ts（与机器码值表同源，迁走会 types↔value 成环），是明文例外
 - [Phase 05.2]: 05.2-01: DiagnosticSeverity 由字符串联合改为数字枚举 Error=0/Warning=1/Info=2；动手前 grep 证明无 severity 真值判断，0 为假值不影响行为
 - [Phase 05.2]: 05.2-01: 编辑器唯一改动为 tsconfig.app.json 的 erasableSyntaxOnly true->false（D-18）；OperationMeta.paths 一并补 readonly 以满足 D-10
+- [Phase 05.2]: 05.2-02: 资源层类型合并到 resources/types.ts 并删除 interfaces.ts（D-07）；types.ts 只 import 底层 IFsPort，不 import 实现文件
+- [Phase 05.2]: 05.2-02: Task 1 一次性迁移全部生产 import（删除 interfaces.ts 与加载根 barrel 的公开面测试使然），Task 2 转测试侧 import + readonly 复核 + 全量门禁
+- [Phase 05.2]: 05.2-02: PersistenceIntent.{kind,execute}、PersistFailure.{path,error} 补 readonly；Content.status 等四处状态名保留字符串联合例外
+- [Phase 05.2]: 05.2-02: interface 头顶 jsDoc 改单行 //、type 别名保留一行 jsDoc（D-02）；// 注释按 AGENTS.md 不带句尾句号
 
 ### Pending Todos
 
@@ -183,6 +188,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-09-30T06:19:42.027Z
-Stopped at: Completed 05.2-01-PLAN.md
+Last session: 2026-09-30T06:40:08.313Z
+Stopped at: Completed 05.2-02-PLAN.md
 Resume file: None

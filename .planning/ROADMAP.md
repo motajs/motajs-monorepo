@@ -201,13 +201,13 @@ Plans:
 
 **Depends on:** Phase 5
 
-**Plans:** 1/9 plans executed
+**Plans:** 2/9 plans executed
 
 Plans:
 **Wave 1 — 接口层（D-02 / D-06 / D-07 / D-10）**
 
 - [x] 05.2-01-PLAN.md — `editor-core` 接口层：导出类型集中到 `kernel/types.ts` + 新建 `ports/types.ts`、删空壳 port、接口补 `readonly`、`DiagnosticSeverity` 数字枚举
-- [ ] 05.2-02-PLAN.md — `editor-impl` 接口层：`resources/interfaces.ts` 并入 `resources/types.ts`、接口补 `readonly`、`type` 补 jsDoc
+- [x] 05.2-02-PLAN.md — `editor-impl` 接口层：`resources/interfaces.ts` 并入 `resources/types.ts`、接口补 `readonly`、`type` 补 jsDoc
 
 **Wave 2 — 数字枚举 + 编辑器最小跟随（D-06 / D-14）**
 
