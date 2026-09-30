@@ -38,7 +38,7 @@
 |------|------|--------------|
 | `packages/libs/editor-core/lib/kernel/types.ts` | 文件（现有，扩容） | 底层对外类型的**唯一**集中出口。本计划把 `registry.ts` 的三个能力登记类型与 `diagnostics.ts` 的两个诊断类型并进来。 |
 | `DiagnosticSeverity` | 数字枚举（迁入 `kernel/types.ts`） | 诊断级别：给一条诊断标注严重程度，让测试与 CI 能按级别断言。**取代**现在的字符串联合 `'error' \| 'warning' \| 'info'`。 |
-| `DiagnosticSeverity.ERROR` / `DiagnosticSeverity.WARNING` / `DiagnosticSeverity.INFO` | 枚举成员 | 由重到轻三级。取值 `0 / 1 / 2`（计划里必须顺带 grep 证明仓库内不存在对 `severity` 的真值判断，0 为假值不影响行为）。 |
+| `DiagnosticSeverity.Error` / `DiagnosticSeverity.Warning` / `DiagnosticSeverity.Info` | 枚举成员 | 由重到轻三级。取值 `0 / 1 / 2`（计划里必须顺带 grep 证明仓库内不存在对 `severity` 的真值判断，0 为假值不影响行为）。 |
 | `Diagnostic` / `DiagnosticBus` | interface（迁入 `kernel/types.ts`） | 一条诊断 / 诊断总线。**只挪位置**，形状不变（`Diagnostic` 成员已 `readonly`）。 |
 | `CapabilityRef` / `RegisterCapabilityOptions` / `RegisterCapabilityResult` | interface（迁入 `kernel/types.ts`） | 能力登记三件套：快照条目 / 登记选项 / 登记结果。**只挪位置**。 |
 | `DIAGNOSTIC_CODES` / `DiagnosticCode` | 值表 + 派生类型（**保留**在 `kernel/diagnostics.ts`） | 稳定机器码表及由它派生的联合类型。**不迁** `types.ts`：类型与值同源，迁出会让 `types.ts` 反向 import 值文件而成环；且机器码字符串是对外契约，按 §Code style「枚举」的例外**保留字符串**（不是枚举）。 |
@@ -78,9 +78,9 @@
 | 名字 | 种类 | 它是干什么的 |
 |------|------|--------------|
 | `PreloadStrategy` | 数字枚举（迁入 `packages/libs/editor-core/lib/ports/types.ts`） | 一个资源在加载时「什么时候加载」的策略。**取代**现在的 `'eager' \| 'lazy' \| 'on-demand'` 字符串联合。 |
-| `PreloadStrategy.EAGER` / `PreloadStrategy.LAZY` / `PreloadStrategy.ON_DEMAND` | 枚举成员 | 立即加载 / 惰性加载 / 按需加载。取值 `0 / 1 / 2`。 |
+| `PreloadStrategy.Eager` / `PreloadStrategy.Lazy` / `PreloadStrategy.OnDemand` | 枚举成员 | 立即加载 / 惰性加载 / 按需加载。取值 `0 / 1 / 2`。 |
 | `ActionType` | 数字枚举（**原地** `packages/libs/editor-impl/lib/table/types.ts`） | 一条表格动作是「改值 / 新增 / 删除」里的哪一种。**取代**现在的 `'change' \| 'add' \| 'delete'` 字符串联合。 |
-| `ActionType.CHANGE` / `ActionType.ADD` / `ActionType.DELETE` | 枚举成员 | 改值 / 新增 / 删除。取值 `0 / 1 / 2`。 |
+| `ActionType.Change` / `ActionType.Add` / `ActionType.Delete` | 枚举成员 | 改值 / 新增 / 删除。取值 `0 / 1 / 2`。 |
 | 编辑器机械跟随 | 改动（`packages/apps/editor/src/**`） | 只把「给 `PreloadStrategy`/`ActionType` 位置喂字符串」的字面量改成枚举成员；不改功能、UI、宿主协议。已知站点：`adapter/motaEngine.ts`（8×`preload: 'eager'`、1×`'lazy'`）、`adapter/motaFloor.ts`（`'on-demand'`）、以及所有构造 impl `Action` 元组的位置（`project/commands/*`、`Workbench/*Panel`、`Workbench/*Workspace`、`project/migrations/airwallMigration.ts`、`project/model/floorCoordinateReferences.ts`、`components/Table/**`、相关测试）。以 `pnpm --filter @motajs/editor typecheck` 报出的 `TS2322` 为准逐个替换，不多改一处。 |
 | 编辑器侧 `EditMode` / `TableAction` | 类型/字面量（按需改） | `components/Table/types.ts` 的 `TableAction = ['change'\|'add'\|'delete', string, unknown]` 若因须赋给 impl 的 `Action` 而报错，则换成 `[ActionType, string, unknown]` 并同步其构造点；纯 UI 的 `EditMode`（分段控件）可按 typecheck 结果决定是否跟随，目标是**最小**改动。 |
 | `packages/apps/editor/src/utils/action.ts` | shim（改；属 D-14 的机械跟随） | 编辑器取 `Action`/`ActionType` 的转发 shim。`ActionType` 改成数字枚举后它是**值**，故该行由 `export type { Action, ActionType }` 改为 `export { ActionType }` + `export type { Action }`（仍只做转发，过 `editorShims.js`「只转发」检查）。**不引入新名字。** |
