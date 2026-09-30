@@ -27,7 +27,7 @@ export type {
   IResourceRegistry,
   FileHandlerDependencies,
   ResourceRegistryEntry,
-} from './resources/interfaces';
+} from './resources/types';
 export { isFileNotFoundError } from './resources/errors';
 export { waitUntil } from './resources/waitUntil';
 export { ContentUtils } from './resources/contentUtils';
@@ -46,7 +46,7 @@ export type {
   IResourceView as ResourceView,
   ILoadableResource as LoadableResource,
   IRecoverableResource as RecoverableResource,
-} from './resources/interfaces';
+} from './resources/types';
 export { ResourceRegistry } from './resources/resourceRegistry';
 
 // 编辑层（Phase 4 D-09：`lib/edit/*` 是包内目录，公开面由本根入口汇总）。

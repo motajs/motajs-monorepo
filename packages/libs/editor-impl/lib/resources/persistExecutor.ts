@@ -1,7 +1,6 @@
 import { signal } from 'alien-signals';
 import { waitUntil } from './waitUntil';
-import { ExecutorStatus, PersistenceIntent } from './types';
-import { IPersistExecutor, ReadonlySignal } from './interfaces';
+import { ExecutorStatus, IPersistExecutor, PersistenceIntent, ReadonlySignal } from './types';
 
 /**
  * 单路径持久化控制器。

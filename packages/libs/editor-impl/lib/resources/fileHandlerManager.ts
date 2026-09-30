@@ -1,5 +1,5 @@
 import { FileHandler } from './fileHandler';
-import { FileHandlerDependencies, IFileHandlerManager } from './interfaces';
+import { FileHandlerDependencies, IFileHandlerManager } from './types';
 
 /**
  * FileHandlerManager - FileHandler 实例管理器

@@ -1,8 +1,7 @@
 import { ResourceDependencies } from '@motajs/editor-core';
 import { FileHandler } from './fileHandler';
 import { FileHandlerManager } from './fileHandlerManager';
-import { IDataHandler, ILoadableResource, ReadonlySignal } from './interfaces';
-import { Content } from './types';
+import { Content, IDataHandler, ILoadableResource, ReadonlySignal } from './types';
 import { ContentUtils } from './contentUtils';
 
 /**

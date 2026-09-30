@@ -1,5 +1,5 @@
 import { DataHandler } from './dataHandler';
-import { IDataHandler } from './interfaces';
+import { IDataHandler } from './types';
 import { FileHandler } from './fileHandler';
 
 /**

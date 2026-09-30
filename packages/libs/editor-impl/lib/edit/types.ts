@@ -1,4 +1,4 @@
-import { IContentHandler } from '../resources/interfaces';
+import { IContentHandler } from '../resources/types';
 
 /**
  * 编辑层（默认实现）对外类型的集中出口（D-08）。

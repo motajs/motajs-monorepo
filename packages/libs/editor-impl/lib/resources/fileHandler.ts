@@ -2,7 +2,7 @@ import { effect, signal } from 'alien-signals';
 import { IFsPort } from '@motajs/editor-core';
 import { waitUntil } from './waitUntil';
 import { Content } from './types';
-import { FileHandlerDependencies, IContentHandler, IPersistenceMonitor, ReadonlySignal } from './interfaces';
+import { FileHandlerDependencies, IContentHandler, IPersistenceMonitor, ReadonlySignal } from './types';
 import { isFileNotFoundError } from './errors';
 
 /**

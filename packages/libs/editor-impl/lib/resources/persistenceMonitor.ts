@@ -1,7 +1,6 @@
 import { effect, signal } from 'alien-signals';
 import { PersistExecutor } from './persistExecutor';
-import { PersistFailure, PersistenceIntent } from './types';
-import { IPersistenceMonitor, ReadonlySignal } from './interfaces';
+import { IPersistenceMonitor, PersistFailure, PersistenceIntent, ReadonlySignal } from './types';
 
 /** 把反斜杠与 `./` 前缀归一化，使同一路径只拥有一个控制器。 */
 function normalizePath(path: string): string {

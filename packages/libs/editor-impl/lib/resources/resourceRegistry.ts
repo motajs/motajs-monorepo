@@ -1,5 +1,5 @@
 import { isValidResourceId, RESERVED_IDS } from '@motajs/editor-core';
-import { IResourceRegistry, IResourceView, ResourceRegistryEntry } from './interfaces';
+import { IResourceRegistry, IResourceView, ResourceRegistryEntry } from './types';
 
 /**
  * 逻辑 id → 资源 的注册表（RES-02，引擎无关）。

@@ -1,8 +1,7 @@
 import { computed, effect } from 'alien-signals';
 import { waitUntil } from './waitUntil';
 import { FileHandler } from './fileHandler';
-import { Content } from './types';
-import { IDataHandler, ReadonlySignal } from './interfaces';
+import { Content, IDataHandler, ReadonlySignal } from './types';
 import { ContentUtils } from './contentUtils';
 
 /**
