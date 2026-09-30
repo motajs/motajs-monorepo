@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, expectTypeOf, test } from 'vitest';
 import {
-  createDiagnosticBus,
+  DiagnosticBusImpl,
   EditorCoreKernel,
   defineEngine,
   DIAGNOSTIC_CODES,
@@ -69,7 +69,7 @@ describe('editor-core 底层面公开面', () => {
   test('版本常量与工厂/错误类是真实导出', () => {
     expect(EDITOR_CORE_API_VERSION).toBe('0.1.0');
     expect(typeof EditorCoreKernel).toBe('function');
-    expect(typeof createDiagnosticBus).toBe('function');
+    expect(typeof DiagnosticBusImpl).toBe('function');
     expect(typeof EditorCoreStartupError).toBe('function');
   });
 

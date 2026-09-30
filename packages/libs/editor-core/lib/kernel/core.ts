@@ -1,4 +1,4 @@
-import { createDiagnosticBus, DIAGNOSTIC_CODES } from './diagnostics';
+import { DiagnosticBusImpl, DIAGNOSTIC_CODES } from './diagnostics';
 import { EditorCoreStartupError } from './errors';
 import {
   CapabilityRef,
@@ -80,7 +80,7 @@ export class EditorCoreKernel implements EditorCore {
    * @param config 装配配置：可选的能力安装回调与必需注册清单。
    */
   constructor(config: EditorCoreConfig) {
-    this.diagnostics = createDiagnosticBus();
+    this.diagnostics = new DiagnosticBusImpl();
     this.entries = new Map<string, RegistryEntry>();
     this.teardowns = [];
     this.disposed = false;

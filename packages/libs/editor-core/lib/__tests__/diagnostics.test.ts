@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, test } from 'vitest';
-import { createDiagnosticBus, DIAGNOSTIC_CODES } from '../kernel/diagnostics';
+import { DiagnosticBusImpl, DIAGNOSTIC_CODES } from '../kernel/diagnostics';
 import { Diagnostic, DiagnosticSeverity } from '../kernel/types';
 
 /**
@@ -16,7 +16,7 @@ import { Diagnostic, DiagnosticSeverity } from '../kernel/types';
 
 describe('editor-core 诊断总线契约', () => {
   test('snapshot 按顺序返回全部历史，且返回的是不可变副本', () => {
-    const bus = createDiagnosticBus();
+    const bus = new DiagnosticBusImpl();
     const first: Diagnostic = { severity: DiagnosticSeverity.Error, code: 'acme.first', message: 'first' };
     const second: Diagnostic = { severity: DiagnosticSeverity.Info, code: 'acme.second', message: 'second' };
 
@@ -34,7 +34,7 @@ describe('editor-core 诊断总线契约', () => {
   });
 
   test('subscribe 只收后续诊断，unsubscribe 后不再收到', () => {
-    const bus = createDiagnosticBus();
+    const bus = new DiagnosticBusImpl();
     bus.push({ severity: DiagnosticSeverity.Info, code: 'acme.before', message: 'before' });
 
     const received: Diagnostic[] = [];
@@ -53,7 +53,7 @@ describe('editor-core 诊断总线契约', () => {
   });
 
   test('抛错的订阅者被隔离：其它订阅者仍收到，且只留下一条 subscriber-error 历史', () => {
-    const bus = createDiagnosticBus();
+    const bus = new DiagnosticBusImpl();
     let throwingCalls = 0;
     const received: Diagnostic[] = [];
     const thrownValue = new Error('subscriber boom');
@@ -97,7 +97,7 @@ describe('editor-core 诊断总线契约', () => {
   });
 
   test('历史追加式且在本测试范围内无上限', () => {
-    const bus = createDiagnosticBus();
+    const bus = new DiagnosticBusImpl();
     const count = 500;
 
     for (let index = 0; index < count; index += 1) {

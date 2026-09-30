@@ -69,6 +69,35 @@ export class EngineDefinitionError extends Error {
 }
 
 /**
+ * `defineEngine` 的依赖环 DFS 访问函数（原内嵌 `visit`，挪到模块级以消除函数内定义函数）。
+ *
+ * 标记当前节点为「在栈上」（灰点）后逐条边前进：指向灰点的边关闭一个环，把该边追加为一条问题；
+ * 指向已存在节点的边继续下探。回溯时把节点从栈上移除并标记为已定（settled）。
+ *
+ * @param id 当前访问的资源描述符 id。
+ * @param byId 同组描述符按 id 的索引。
+ * @param settled 已定节点集（黑点）。
+ * @param onStack 在栈节点集（灰点）。
+ * @param problems 累积问题的输出数组。
+ */
+function visitDependency(
+  id: string,
+  byId: Map<string, ResourceDescriptor>,
+  settled: Set<string>,
+  onStack: Set<string>,
+  problems: string[],
+): void {
+  if (settled.has(id)) return;
+  onStack.add(id);
+  for (const target of byId.get(id)?.preloadDependsOn ?? []) {
+    if (onStack.has(target)) problems.push(`资源依赖环：${id} → ${target}`);
+    else if (byId.has(target)) visitDependency(target, byId, settled, onStack, problems);
+  }
+  onStack.delete(id);
+  settled.add(id);
+}
+
+/**
  * 校验一份 `EngineDescription` 并返回冻结的 `IEngineAdapter`（PORT-03）。
  *
  * 七条规则一次性收集后抛出**一个** `EngineDefinitionError`（聚合，而非首错即停）：
@@ -122,17 +151,9 @@ export function defineEngine(description: EngineDescription): IEngineAdapter {
   for (const descriptor of description.resources) byId.set(descriptor.id, descriptor);
   const settled = new Set<string>();
   const onStack = new Set<string>();
-  const visit = (id: string): void => {
-    if (settled.has(id)) return;
-    onStack.add(id);
-    for (const target of byId.get(id)?.preloadDependsOn ?? []) {
-      if (onStack.has(target)) problems.push(`资源依赖环：${id} → ${target}`);
-      else if (byId.has(target)) visit(target);
-    }
-    onStack.delete(id);
-    settled.add(id);
-  };
-  for (const descriptor of description.resources) visit(descriptor.id);
+  for (const descriptor of description.resources) {
+    visitDependency(descriptor.id, byId, settled, onStack, problems);
+  }
 
   if (problems.length > 0) throw new EngineDefinitionError(problems);
 

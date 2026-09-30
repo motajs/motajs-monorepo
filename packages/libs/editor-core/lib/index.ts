@@ -36,7 +36,7 @@ export type {
 } from './kernel/types';
 // 诊断级别是数字枚举（D-06），按**值**导出，供消费者比较 `severity`。
 export { DiagnosticSeverity } from './kernel/types';
-export { createDiagnosticBus, DIAGNOSTIC_CODES } from './kernel/diagnostics';
+export { DiagnosticBusImpl, DIAGNOSTIC_CODES } from './kernel/diagnostics';
 export type { DiagnosticCode } from './kernel/diagnostics';
 export { EditorCoreStartupError } from './kernel/errors';
 
