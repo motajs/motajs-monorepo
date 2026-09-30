@@ -2,18 +2,18 @@
 gsd_state_version: "1.0"
 current_phase: "05.2"
 current_phase_name: editor-core-impl
-current_plan: 5
+current_plan: 6
 status: executing
-stopped_at: Completed 05.2-04-PLAN.md
-last_updated: "2026-09-30T07:38:03.422Z"
+stopped_at: Completed 05.2-05-PLAN.md
+last_updated: "2026-09-30T08:37:32.910Z"
 last_activity: 2026-09-28
 last_activity_desc: Phase 05.1 plan 01 complete (editor-core undo contract types)
-state_head: c28961476305e4cd02358e866d60a6d2d26817f2
+state_head: a50596c9f7bed839c4b8b34c71c0ca18870fa204
 progress:
   total_phases: 14
   completed_phases: 0
   total_plans: 42
-  completed_plans: 37
+  completed_plans: 38
   percent: 0
 ---
 
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-09-24)
 ## Current Position
 
 Phase: 05.2 (editor-core-impl) — READY TO EXECUTE
-Current Plan: 5
+Current Plan: 6
 Total Plans in Phase: 9
 Status: Executing (plan 01 complete; plan 02 pending briefing/approval)
 Last activity: 2026-09-28 — 05.1-01 撤销契约类型落地（`lib/kernel/types.ts`）
@@ -85,6 +85,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 05.2 P02 | 15min | 3 tasks | 17 files |
 | Phase 05.2 P03 | 30 | 3 tasks | 37 files |
 | Phase 05.2 P04 | 45min | 3 tasks | 18 files |
+| Phase 05.2 P05 | 35min | 3 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -171,6 +172,9 @@ Recent decisions affecting current work:
 - [Phase 05.2]: 05.2-04: 有状态工厂改类（EditorCoreKernel/DiagnosticBusImpl），窄接口回调在构造内 bind(this) 以免函数内定义函数；纯函数 defineEngine/resolvePreloadOrder/isValidResourceId/visitDependency 保留模块级裸函数
 - [Phase 05.2]: 05.2-04: ContentUtils 由 Object.freeze 方法对象改静态方法类，ContentUtils.map 等调用点（impl 与经 shim 的编辑器）一字不改；defineEngine 内嵌 visit 挪为模块级 visitDependency
 - [Phase 05.2]: 05.2-04: D-17 落地——FileHandlerManager.size() 改方法、FileHandler.delete() 去 _force、FileHandlerManager.delete() 去死参数 force；删除容错 try/catch + isFileNotFoundError 原样保留
+- [Phase 05.2]: 05.2-05: 文件/模块说明改写成 import 之后的连续 // 块（内容保真）；类头/接口头 /** */ 依 05.2-01/02 既定做法改为 //（满足「类/接口无 jsDoc」）；implements 的方法（UndoManager.execute/undo/redo/clear）不重复加 jsDoc（dev.md 第 75 条）
+- [Phase 05.2]: 05.2-05: 导出函数 isValidResourceId/defineEngine/resolvePreloadOrder 补 @param/@returns；UndoManager.store 补显式类型 Store<OperationHistoryState> 与成员空行；空值约定与成员顺序（成员先于方法）复核无越界改动
+- [Phase 05.2]: 05.2-05: [Rule 3] Task 1 顺带 prettier 修正 diagnostics.test.ts:32 既有 lint 阻断（属本计划文件），使 pnpm lint 由 1 error 转 0 error
 
 ### Pending Todos
 
@@ -197,6 +201,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-09-30T07:38:03.261Z
-Stopped at: Completed 05.2-04-PLAN.md
+Last session: 2026-09-30T08:37:32.749Z
+Stopped at: Completed 05.2-05-PLAN.md
 Resume file: None
