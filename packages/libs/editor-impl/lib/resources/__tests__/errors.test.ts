@@ -2,15 +2,13 @@
 import { describe, expect, it } from 'vitest';
 import { isFileNotFoundError } from '../errors';
 
-/**
- * isFileNotFoundError 特性化测试（RES-05「not-found ≠ error」）。
- *
- * 从 `src/fs/__tests__/errors.test.ts` 原样搬入 core：断言逐字不变，只增加文件级
- * docblock 切换到 node 环境（core 的 vitest 默认 jsdom）。fixture 纪律（D-22 的约定半边）：
- * 不声明模块级 fixture 表。
- */
+// isFileNotFoundError 特性化测试（RES-05「not-found ≠ error」）
+// 从 `src/fs/__tests__/errors.test.ts` 原样搬入 core：断言逐字不变，只增加文件级
+// 指令注释切换到 node 环境（core 的 vitest 默认 jsdom）；fixture 纪律（D-22 的约定半边）：
+// 不声明模块级 fixture 表
 
 describe('isFileNotFoundError', () => {
+  // 识别真实文件缺失
   it.each([
     'HTTP 404: file-not-found: File not found: project/floors/sample0.js',
     'error: File not found',
@@ -19,6 +17,7 @@ describe('isFileNotFoundError', () => {
     expect(isFileNotFoundError(new Error(message))).toBe(true);
   });
 
+  // 不把工程或派生资源错误当作文件缺失
   it.each([
     'HTTP 404: project-not-found: Project not found [project/data.js]',
     'HTTP 403: project-permission-denied: Project access denied',
@@ -27,6 +26,7 @@ describe('isFileNotFoundError', () => {
     expect(isFileNotFoundError(new Error(message))).toBe(false);
   });
 
+  // 优先使用结构化错误码
   it('优先使用结构化错误码', () => {
     const fileError = Object.assign(new Error('missing'), { code: 'file-not-found' });
     const projectError = Object.assign(new Error('not found'), { code: 'project-not-found' });

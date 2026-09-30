@@ -5,14 +5,12 @@ import { ExecutorStatus } from '../types';
 import { wait } from './testHelpers';
 import { effect } from 'alien-signals';
 
-/**
- * PersistExecutor 单元测试（自 `src/fs/__tests__/PersistExecutor.test.ts` 原样搬入 core）。
- *
- * 只改 import 路径（`../persistExecutor`、本地 `./testHelpers`）与文件级环境 docblock；断言逐字不变。
- */
+// PersistExecutor 单元测试（自 `src/fs/__tests__/PersistExecutor.test.ts` 原样搬入 core）
+// 只改 import 路径（`../persistExecutor`、本地 `./testHelpers`）与文件级环境指令注释；断言逐字不变
 
 describe('PersistExecutor', () => {
   describe('串行化执行', () => {
+    // 应该按顺序执行任务
     it('应该按顺序执行任务', async () => {
       const results: number[] = [];
       let counter = 0;
@@ -34,6 +32,7 @@ describe('PersistExecutor', () => {
       expect(results).toEqual([1, 2, 3]);
     });
 
+    // 应该等待前一个任务完成再执行下一个
     it('应该等待前一个任务完成再执行下一个', async () => {
       let executing = false;
       const executor = new PersistExecutor(async () => {
@@ -52,6 +51,7 @@ describe('PersistExecutor', () => {
   });
 
   describe('队列优化', () => {
+    // 应该合并待执行任务（最多保留 1 个）
     it('应该合并待执行任务（最多保留 1 个）', async () => {
       const results: number[] = [];
       let counter = 0;
@@ -74,6 +74,7 @@ describe('PersistExecutor', () => {
       expect(results).toEqual([1, 2]);
     });
 
+    // 正在执行的任务不会被取消
     it('正在执行的任务不会被取消', async () => {
       const results: number[] = [];
       let counter = 0;
@@ -99,6 +100,7 @@ describe('PersistExecutor', () => {
   });
 
   describe('waitForIdle', () => {
+    // 应该等待所有任务完成
     it('应该等待所有任务完成', async () => {
       let counter = 0;
       const executor = new PersistExecutor(async () => {
@@ -119,6 +121,7 @@ describe('PersistExecutor', () => {
       expect(counter).toBe(2);
     });
 
+    // 队列为空时应该立即返回
     it('队列为空时应该立即返回', async () => {
       const executor = new PersistExecutor(async () => {
         await wait(10);
@@ -134,6 +137,7 @@ describe('PersistExecutor', () => {
   });
 
   describe('hasPending', () => {
+    // 有任务时应该返回 true
     it('有任务时应该返回 true', async () => {
       const executor = new PersistExecutor(async () => {
         await wait(50);
@@ -150,6 +154,7 @@ describe('PersistExecutor', () => {
   });
 
   describe('期望状态意图', () => {
+    // 写入执行中收到删除时最终执行删除
     it('写入执行中收到删除时最终执行删除', async () => {
       const executor = new PersistExecutor();
       const results: string[] = [];
@@ -171,6 +176,7 @@ describe('PersistExecutor', () => {
       expect(results).toEqual(['write', 'delete']);
     });
 
+    // 尚未执行的删除可以被更新的写入覆盖
     it('尚未执行的删除可以被更新的写入覆盖', async () => {
       const executor = new PersistExecutor();
       const results: string[] = [];
@@ -200,6 +206,7 @@ describe('PersistExecutor', () => {
   });
 
   describe('错误处理', () => {
+    // 任务失败不应该影响后续任务
     it('任务失败不应该影响后续任务', async () => {
       const results: number[] = [];
       let counter = 0;
@@ -223,6 +230,7 @@ describe('PersistExecutor', () => {
       expect(results).toEqual([1]);
     });
 
+    // 多个任务失败不应该中断队列
     it('多个任务失败不应该中断队列', async () => {
       const results: number[] = [];
       let counter = 0;
@@ -253,6 +261,7 @@ describe('PersistExecutor', () => {
   });
 
   describe('状态 signal', () => {
+    // 初始状态应该是 idle
     it('初始状态应该是 idle', () => {
       const executor = new PersistExecutor(async () => {
         await wait(10);
@@ -262,6 +271,7 @@ describe('PersistExecutor', () => {
       expect(status.status).toBe('idle');
     });
 
+    // 执行时状态应该是 executing
     it('执行时状态应该是 executing', async () => {
       const executor = new PersistExecutor(async () => {
         await wait(50);
@@ -280,6 +290,7 @@ describe('PersistExecutor', () => {
       await executor.waitForIdle();
     });
 
+    // 完成后状态应该回到 idle
     it('完成后状态应该回到 idle', async () => {
       const executor = new PersistExecutor(async () => {
         await wait(10);
@@ -292,6 +303,7 @@ describe('PersistExecutor', () => {
       expect(status.status).toBe('idle');
     });
 
+    // 失败时状态应该是 error
     it('失败时状态应该是 error', async () => {
       const executor = new PersistExecutor(async () => {
         await wait(10);
@@ -327,6 +339,7 @@ describe('PersistExecutor', () => {
       }
     });
 
+    // 应该能够订阅状态变化
     it('应该能够订阅状态变化', async () => {
       const executor = new PersistExecutor(async () => {
         await wait(20);
@@ -348,6 +361,7 @@ describe('PersistExecutor', () => {
       expect(statuses.filter((s) => s === 'idle').length).toBeGreaterThanOrEqual(2);
     });
 
+    // pending 数量应该正确更新
     it('pending 数量应该正确更新', async () => {
       const executor = new PersistExecutor(async () => {
         await wait(30);
@@ -376,6 +390,7 @@ describe('PersistExecutor', () => {
   });
 
   describe('读取最新数据', () => {
+    // 应该持久化最新数据而不是入队时的数据
     it('应该持久化最新数据而不是入队时的数据', async () => {
       let latestValue = 'v1';
       const persistedValues: string[] = [];

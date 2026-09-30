@@ -3,24 +3,19 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { PersistenceMonitor } from '../persistenceMonitor';
 import { wait } from './testHelpers';
 
-/**
- * PersistenceMonitor 特性化测试（冻结不变量，不冻结实现结构）
- *
- * 只冻结 D-11 指定的不变量，不断言私有字段：
- * - 路径归一化：`./project\\data.js` 与 `project/data.js` 命中同一个 controller，按提交顺序执行
- * - 失败保留在 failed 集合，只有真正成功执行后才清除
- * - 重试进行中旧的失败仍然可见
- * - retryFailed() 只返回仍未恢复的路径
- * - flush() 在有失败路径时抛出带固定消息的 AggregateError，无失败时 resolve
- * - whenQuiescent() 在存在失败时也不 reject
- * - statusFor 优先级：error > persisting > idle
- *
- * 所有期望值均以 observation-first 方式取得：先用故意错误的期望运行，
- * 从失败输出读出真实值后再固化，而不是从实现源码推导。
- *
- * 自 `src/fs/__tests__/persistenceMonitor.invariants.test.ts` 原样搬入 core：只改 import 路径
- * （`../persistenceMonitor`、本地 `./testHelpers`）与文件级环境 docblock；断言逐字不变。
- */
+// PersistenceMonitor 特性化测试（冻结不变量，不冻结实现结构）
+// 只冻结 D-11 指定的不变量，不断言私有字段：
+// - 路径归一化：`./project\\data.js` 与 `project/data.js` 命中同一个 controller，按提交顺序执行
+// - 失败保留在 failed 集合，只有真正成功执行后才清除
+// - 重试进行中旧的失败仍然可见
+// - retryFailed() 只返回仍未恢复的路径
+// - flush() 在有失败路径时抛出带固定消息的 AggregateError，无失败时 resolve
+// - whenQuiescent() 在存在失败时也不 reject
+// - statusFor 优先级：error > persisting > idle
+// 所有期望值均以 observation-first 方式取得：先用故意错误的期望运行，
+// 从失败输出读出真实值后再固化，而不是从实现源码推导
+// 自 `src/fs/__tests__/persistenceMonitor.invariants.test.ts` 原样搬入 core：只改 import 路径
+// （`../persistenceMonitor`、本地 `./testHelpers`）与文件级环境指令注释；断言逐字不变
 
 describe('PersistenceMonitor invariants', () => {
   let monitor: PersistenceMonitor;
@@ -29,6 +24,7 @@ describe('PersistenceMonitor invariants', () => {
     monitor = new PersistenceMonitor();
   });
 
+  // 路径归一化：重建的资源路径只拥有一个控制器，且按提交顺序执行
   it('normalizes paths so a recreated resource path owns one controller in submission order', async () => {
     const values: string[] = [];
     monitor.schedule('./project\\data.js', {
@@ -53,6 +49,7 @@ describe('PersistenceMonitor invariants', () => {
     expect(values).toEqual(['old resource', 'new resource']);
   });
 
+  // 失败一直保留，直到一次真正成功的执行才清除
   it('retains a failure until a genuinely successful execution clears it', async () => {
     monitor.schedule('project/data.js', {
       kind: 'write',
@@ -78,6 +75,7 @@ describe('PersistenceMonitor invariants', () => {
     expect(monitor.statusFor('project/data.js')).toBe('idle');
   });
 
+  // 重试进行中时旧的失败仍然可见
   it('keeps an existing failure visible while its retry is in progress', async () => {
     monitor.schedule('slow.js', {
       kind: 'write',
@@ -106,6 +104,7 @@ describe('PersistenceMonitor invariants', () => {
     expect(monitor.failedFiles()).toHaveLength(0);
   });
 
+  // retryFailed() 只返回仍未恢复的路径
   it('returns only the still-failing paths from retryFailed()', async () => {
     let recoverFirst = false;
     monitor.schedule('first.js', {
@@ -129,6 +128,7 @@ describe('PersistenceMonitor invariants', () => {
     expect(monitor.failedFiles().map((failure) => failure.path)).toEqual(['second.js']);
   });
 
+  // 列出路径存在失败时 flush() 以聚合消息 reject
   it('rejects flush() with the aggregate message when a listed path has failed', async () => {
     monitor.schedule('bad.js', {
       kind: 'write',
@@ -149,12 +149,13 @@ describe('PersistenceMonitor invariants', () => {
     clean.schedule('ok.js', {
       kind: 'write',
       execute: async () => {
-        // success
+        // 成功
       },
     });
     await expect(clean.flush(['ok.js'])).resolves.toBeUndefined();
   });
 
+  // 存在失败时 whenQuiescent() 仍然 resolve
   it('resolves whenQuiescent() even while a failure is present', async () => {
     monitor.schedule('bad.js', {
       kind: 'write',
@@ -167,6 +168,7 @@ describe('PersistenceMonitor invariants', () => {
     expect(monitor.statusFor('bad.js')).toBe('error');
   });
 
+  // statusFor 优先级：error > persisting > idle
   it('prefers error over persisting over idle in statusFor', async () => {
     const clean = new PersistenceMonitor();
     expect(clean.statusFor('fresh.js')).toBe('idle');

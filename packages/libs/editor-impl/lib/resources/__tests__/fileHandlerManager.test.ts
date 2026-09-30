@@ -5,9 +5,7 @@ import { FileHandlerManager as FileHandlerManagerClass } from '../fileHandlerMan
 import { PersistenceMonitor } from '../persistenceMonitor';
 import { MemoryFsPort } from './memoryFsPort';
 
-/**
- * FileHandlerManager 单元测试
- */
+// FileHandlerManager 单元测试
 
 describe('FileHandlerManager', () => {
   let memoryFs: MemoryFsPort;
@@ -25,6 +23,7 @@ describe('FileHandlerManager', () => {
   });
 
   describe('单例模式', () => {
+    // 同一路径应该返回同一实例
     it('同一路径应该返回同一实例', () => {
       const handler1 = FileHandlerManager.get('test.txt');
       const handler2 = FileHandlerManager.get('test.txt');
@@ -32,6 +31,7 @@ describe('FileHandlerManager', () => {
       expect(handler1).toBe(handler2);
     });
 
+    // 不同路径应该返回不同实例
     it('不同路径应该返回不同实例', () => {
       const handler1 = FileHandlerManager.get('test1.txt');
       const handler2 = FileHandlerManager.get('test2.txt');
@@ -41,24 +41,28 @@ describe('FileHandlerManager', () => {
   });
 
   describe('has 方法', () => {
+    // 存在的 handler 应该返回 true
     it('存在的 handler 应该返回 true', () => {
       FileHandlerManager.get('test.txt');
 
       expect(FileHandlerManager.has('test.txt')).toBe(true);
     });
 
+    // 不存在的 handler 应该返回 false
     it('不存在的 handler 应该返回 false', () => {
       expect(FileHandlerManager.has('nonexistent.txt')).toBe(false);
     });
   });
 
   describe('isLoaded 方法', () => {
+    // 未加载的 handler 应该返回 false
     it('未加载的 handler 应该返回 false', () => {
       FileHandlerManager.get('test.txt');
 
       expect(FileHandlerManager.isLoaded('test.txt')).toBe(false);
     });
 
+    // 已加载的 handler 应该返回 true
     it('已加载的 handler 应该返回 true', async () => {
       memoryFs.setFile('test.txt', 'content');
       const handler = FileHandlerManager.get('test.txt');
@@ -71,12 +75,14 @@ describe('FileHandlerManager', () => {
       expect(FileHandlerManager.isLoaded('test.txt')).toBe(true);
     });
 
+    // 不存在的 handler 应该返回 false
     it('不存在的 handler 应该返回 false', () => {
       expect(FileHandlerManager.isLoaded('nonexistent.txt')).toBe(false);
     });
   });
 
   describe('load 方法', () => {
+    // 应该加载文件并返回 handler
     it('应该加载文件并返回 handler', async () => {
       memoryFs.setFile('test.txt', 'hello');
 
@@ -90,6 +96,7 @@ describe('FileHandlerManager', () => {
       expect(loadedHandler.getContent().status).toBe('loaded');
     });
 
+    // 已加载的文件应该直接返回
     it('已加载的文件应该直接返回', async () => {
       memoryFs.setFile('test.txt', 'content');
 
@@ -106,6 +113,7 @@ describe('FileHandlerManager', () => {
       expect(duration).toBeLessThan(20);
     });
 
+    // 并发 load 同一文件应该只加载一次
     it('并发 load 同一文件应该只加载一次', async () => {
       memoryFs.setFile('test.txt', 'content');
 
@@ -135,6 +143,7 @@ describe('FileHandlerManager', () => {
   });
 
   describe('loadAll 方法', () => {
+    // 应该批量加载多个文件
     it('应该批量加载多个文件', async () => {
       memoryFs.setFile('file1.txt', 'content1');
       memoryFs.setFile('file2.txt', 'content2');
@@ -157,6 +166,7 @@ describe('FileHandlerManager', () => {
   });
 
   describe('remove 方法', () => {
+    // 应该移除 handler 实例
     it('应该移除 handler 实例', () => {
       const handler1 = FileHandlerManager.get('test.txt');
 
@@ -171,6 +181,7 @@ describe('FileHandlerManager', () => {
       expect(handler2).not.toBe(handler1);
     });
 
+    // 移除不存在的 handler 不应该报错
     it('移除不存在的 handler 不应该报错', () => {
       expect(() => {
         FileHandlerManager.remove('nonexistent.txt');
@@ -179,6 +190,7 @@ describe('FileHandlerManager', () => {
   });
 
   describe('reload 方法', () => {
+    // 应该重新加载文件
     it('应该重新加载文件', async () => {
       memoryFs.setFile('test.txt', 'old content');
 
@@ -207,6 +219,7 @@ describe('FileHandlerManager', () => {
   });
 
   describe('delete 方法', () => {
+    // 应该把 handler 标记为已删除并异步删除文件
     it('应该把 handler 标记为已删除并异步删除文件', async () => {
       memoryFs.setFile('test.txt', 'content');
 
@@ -226,6 +239,7 @@ describe('FileHandlerManager', () => {
       expect(memoryFs.hasFile('test.txt')).toBe(false);
     });
 
+    // handler 不存在时应该直接删除文件
     it('handler 不存在时应该直接删除文件', async () => {
       memoryFs.setFile('test.txt', 'content');
 
@@ -238,6 +252,7 @@ describe('FileHandlerManager', () => {
       // await FileHandlerManager.delete("test.txt");
     });
 
+    // 文件不存在时不应该报错
     it('文件不存在时不应该报错', async () => {
       const handler = FileHandlerManager.get('nonexistent.txt');
       (handler as any).fs = memoryFs;
@@ -245,6 +260,7 @@ describe('FileHandlerManager', () => {
       await expect(FileHandlerManager.delete('nonexistent.txt')).resolves.not.toThrow();
     });
 
+    // pending 写入不会阻止 memory-first 删除
     it('pending 写入不会阻止 memory-first 删除', async () => {
       memoryFs.setFile('test.txt', 'content');
       memoryFs.setWriteDelay(100);
@@ -264,6 +280,7 @@ describe('FileHandlerManager', () => {
   });
 
   describe('clear 方法', () => {
+    // 应该清空所有 handlers
     it('应该清空所有 handlers', () => {
       FileHandlerManager.get('file1.txt');
       FileHandlerManager.get('file2.txt');
@@ -281,6 +298,7 @@ describe('FileHandlerManager', () => {
   });
 
   describe('size 方法', () => {
+    // 应该返回正确的 handler 数量
     it('应该返回正确的 handler 数量', () => {
       expect(FileHandlerManager.size()).toBe(0);
 

@@ -3,18 +3,19 @@ import { describe, expect, it } from 'vitest';
 import { Content, IResourceView, ResourceRegistryEntry } from '../types';
 import { ResourceRegistry } from '../resourceRegistry';
 
-/**
- * `ResourceRegistry`（RES-02）单元测试。
- *
- * 覆盖：按逻辑 id 登记/读取、未知 id 的 `get`/`has`/`ids` 行为、`getOrThrow` 抛错、重复 id 被拒且原条目存活、
- * disposer 只删除自己那一条（含「过期 disposer」守卫）、快照冻结且改动它不影响注册表、两个实例互不干扰
- * （T-04-02），以及非法 id（空串 / 纯空白 / 含空白 / `__proto__` / `constructor` / `prototype`）被拒
- * 且 `Object.prototype` 未被污染（T-04-01）。
- *
- * fixture 纪律（D-22 的约定半边）：本文件不声明模块级 fixture 表；期望值直接写在用例内。
- */
+// `ResourceRegistry`（RES-02）单元测试
+// 覆盖：按逻辑 id 登记/读取、未知 id 的 `get`/`has`/`ids` 行为、`getOrThrow` 抛错、重复 id 被拒且原条目存活、
+// disposer 只删除自己那一条（含「过期 disposer」守卫）、快照冻结且改动它不影响注册表、两个实例互不干扰
+// （T-04-02），以及非法 id（空串 / 纯空白 / 含空白 / `__proto__` / `constructor` / `prototype`）被拒
+// 且 `Object.prototype` 未被污染（T-04-01）
+// fixture 纪律（D-22 的约定半边）：本文件不声明模块级 fixture 表；期望值直接写在用例内
 
-/** 一个最小的 `IResourceView` 测试替身：`content` 是稳定的 loaded 快照。 */
+/**
+ * 一个最小的 `IResourceView` 测试替身：`content` 是稳定的 loaded 快照。
+ *
+ * @param id 资源身份（逻辑 id）。
+ * @param value 快照载荷。
+ */
 function makeResource<T>(id: string, value: T): IResourceView<T> {
   const content: Content<T> = { status: 'loaded', value };
   return {
@@ -27,6 +28,7 @@ function makeResource<T>(id: string, value: T): IResourceView<T> {
 }
 
 describe('ResourceRegistry', () => {
+  // 按逻辑 id 登记并读回同一个资源
   it('按逻辑 id 登记并读回同一个资源', () => {
     const registry = new ResourceRegistry();
     const resource = makeResource('mota.tower', 42);
@@ -38,6 +40,7 @@ describe('ResourceRegistry', () => {
     expect(typeof disposer).toBe('function');
   });
 
+  // 未知 id：get 返回 undefined、has 为 false、ids 为空
   it('未知 id：get 返回 undefined、has 为 false、ids 为空', () => {
     const registry = new ResourceRegistry();
     expect(registry.get('nope')).toBeUndefined();
@@ -45,11 +48,13 @@ describe('ResourceRegistry', () => {
     expect(registry.ids()).toEqual([]);
   });
 
+  // getOrThrow 对未知 id 抛出命名该 id 的错误
   it('getOrThrow 对未知 id 抛出命名该 id 的错误', () => {
     const registry = new ResourceRegistry();
     expect(() => registry.getOrThrow('missing.id')).toThrowError(/missing\.id/);
   });
 
+  // 重复 id 被拒，且原条目存活
   it('重复 id 被拒，且原条目存活', () => {
     const registry = new ResourceRegistry();
     const first = makeResource('mota.tower', 1);
@@ -61,6 +66,7 @@ describe('ResourceRegistry', () => {
     expect(registry.ids()).toEqual(['mota.tower']);
   });
 
+  // disposer 只删除自己那一条，且不误删后来者（过期 disposer 守卫）
   it('disposer 只删除自己那一条，且不误删后来者（过期 disposer 守卫）', () => {
     const registry = new ResourceRegistry();
     const first = makeResource('a', 1);
@@ -83,6 +89,7 @@ describe('ResourceRegistry', () => {
     expect(registry.ids()).toEqual(['a']);
   });
 
+  // snapshot 返回冻结数组，改动它不影响注册表
   it('snapshot 返回冻结数组，改动它不影响注册表', () => {
     const registry = new ResourceRegistry();
     registry.register('a', makeResource('a', 1));
@@ -99,6 +106,7 @@ describe('ResourceRegistry', () => {
     expect(registry.ids()).toEqual(['a']);
   });
 
+  // 两个实例互不干扰（T-04-02）
   it('两个实例互不干扰（T-04-02）', () => {
     const first = new ResourceRegistry();
     const second = new ResourceRegistry();
@@ -116,6 +124,7 @@ describe('ResourceRegistry', () => {
     expect(first.get<number>('mota.tower')).toBe(resource);
   });
 
+  // 非法 id 逐个被拒，注册表保持为空且 Object.prototype 未被污染（T-04-01）
   it('非法 id 逐个被拒，注册表保持为空且 Object.prototype 未被污染（T-04-01）', () => {
     const registry = new ResourceRegistry();
     const invalidIds = ['', '  ', 'a b', '__proto__', 'constructor', 'prototype'];
@@ -132,6 +141,7 @@ describe('ResourceRegistry', () => {
     expect(({} as Record<string, unknown>).polluted).toBeUndefined();
   });
 
+  // 接受单段与多段的点分命名空间 id
   it('接受单段与多段的点分命名空间 id', () => {
     const registry = new ResourceRegistry();
     registry.register('tower', makeResource('tower', 1));

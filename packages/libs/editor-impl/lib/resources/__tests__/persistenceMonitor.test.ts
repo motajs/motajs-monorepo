@@ -4,11 +4,8 @@ import { PersistenceMonitor } from '../persistenceMonitor';
 import { wait } from './testHelpers';
 import { effect } from 'alien-signals';
 
-/**
- * PersistenceMonitor 单元测试（自 `src/fs/__tests__/PersistenceMonitor.test.ts` 原样搬入 core）。
- *
- * 只改 import 路径（`../persistenceMonitor`、本地 `./testHelpers`）与文件级环境 docblock；断言逐字不变。
- */
+// PersistenceMonitor 单元测试（自 `src/fs/__tests__/PersistenceMonitor.test.ts` 原样搬入 core）
+// 只改 import 路径（`../persistenceMonitor`、本地 `./testHelpers`）与文件级环境指令注释；断言逐字不变
 
 describe('PersistenceMonitor', () => {
   let monitor: PersistenceMonitor;
@@ -18,6 +15,7 @@ describe('PersistenceMonitor', () => {
   });
 
   describe('createExecutor', () => {
+    // 应该创建 PersistExecutor 实例
     it('应该创建 PersistExecutor 实例', () => {
       const executor = monitor.createExecutor('test.txt', async () => {
         await wait(10);
@@ -27,6 +25,7 @@ describe('PersistenceMonitor', () => {
       expect(typeof executor.exec).toBe('function');
     });
 
+    // 创建的 executor 应该被自动监控
     it('创建的 executor 应该被自动监控', async () => {
       const executor = monitor.createExecutor('test.txt', async () => {
         await wait(50);
@@ -53,6 +52,7 @@ describe('PersistenceMonitor', () => {
   });
 
   describe('persistingFiles signal', () => {
+    // 应该追踪正在持久化的文件
     it('应该追踪正在持久化的文件', async () => {
       const executor1 = monitor.createExecutor('file1.txt', async () => {
         await wait(50);
@@ -78,6 +78,7 @@ describe('PersistenceMonitor', () => {
       expect(monitor.persistingFiles()).toEqual([]);
     });
 
+    // 应该能够订阅状态变化
     it('应该能够订阅状态变化', async () => {
       const executor = monitor.createExecutor('test.txt', async () => {
         await wait(30);
@@ -101,6 +102,7 @@ describe('PersistenceMonitor', () => {
   });
 
   describe('failedFiles signal', () => {
+    // 应该追踪持久化失败的文件
     it('应该追踪持久化失败的文件', async () => {
       const executor = monitor.createExecutor('test.txt', async () => {
         await wait(10);
@@ -116,6 +118,7 @@ describe('PersistenceMonitor', () => {
       expect(failed[0].error.message).toBe('Persist failed');
     });
 
+    // 成功持久化后应该清除失败记录
     it('成功持久化后应该清除失败记录', async () => {
       let shouldFail = true;
       const executor = monitor.createExecutor('test.txt', async () => {
@@ -141,6 +144,7 @@ describe('PersistenceMonitor', () => {
   });
 
   describe('hasUnsavedChanges', () => {
+    // 有文件正在持久化时应该返回 true
     it('有文件正在持久化时应该返回 true', async () => {
       const executor = monitor.createExecutor('test.txt', async () => {
         await wait(50);
@@ -160,6 +164,7 @@ describe('PersistenceMonitor', () => {
   });
 
   describe('hasPersistErrors', () => {
+    // 有文件持久化失败时应该返回 true
     it('有文件持久化失败时应该返回 true', async () => {
       const executor = monitor.createExecutor('test.txt', async () => {
         await wait(10);
@@ -176,6 +181,7 @@ describe('PersistenceMonitor', () => {
   });
 
   describe('多文件场景', () => {
+    // 应该正确追踪多个文件的持久化状态
     it('应该正确追踪多个文件的持久化状态', async () => {
       const executor1 = monitor.createExecutor('file1.txt', async () => {
         await wait(30);
@@ -210,6 +216,7 @@ describe('PersistenceMonitor', () => {
   });
 
   describe('队列优化场景', () => {
+    // 快速连续触发应该合并持久化
     it('快速连续触发应该合并持久化', async () => {
       let executionCount = 0;
       const executor = monitor.createExecutor('test.txt', async () => {
@@ -230,6 +237,7 @@ describe('PersistenceMonitor', () => {
   });
 
   describe('memory-first intents', () => {
+    // 归一化路径，重建的资源只保留一个控制器
     it('normalizes paths and keeps one controller for recreated resources', async () => {
       const values: string[] = [];
       monitor.schedule('./project\\data.js', {
@@ -250,6 +258,7 @@ describe('PersistenceMonitor', () => {
       expect(values).toEqual(['old resource', 'new resource']);
     });
 
+    // 重试最新的失败意图，只在成功后才清除失败
     it('retries the latest failed intent and clears the failure only after success', async () => {
       let shouldFail = true;
       let attempts = 0;
@@ -269,6 +278,7 @@ describe('PersistenceMonitor', () => {
       expect(monitor.failedFiles()).toEqual([]);
     });
 
+    // 重试时部分失败仍保留在聚合结果里
     it('keeps partial retry failures in the aggregate', async () => {
       let recoverFirst = false;
       monitor.schedule('first.js', {

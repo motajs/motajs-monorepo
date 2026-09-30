@@ -1,16 +1,12 @@
 import { IFsPort } from '@motajs/editor-core';
 
-/**
- * MemoryFsPort —— core 测试用的扁平 `IFsPort` 内存替身（D-14）。
- *
- * 与 editor 的 `@test/utils/MemoryFileSystem` **刻意不同**：只实现扁平的七个 `IFsPort` 操作，
- * 不带 `promises` 命名空间，也不带回调半边。核心资源层只消费扁平面，因此这里不复制 editor
- * 的嵌套形状。四个故障注入钩子（写延迟 / 全局写错误 / 按路径写错误 / 写计数）与 editor 版本
- * 对齐，被搬入 core 的 `FileHandler` 系列测试需要它们。
- *
- * 契约（见 `@motajs/editor-core` 的 `lib/ports/fs.ts`）：读取缺失路径必须以一个 `message` 命中 `isFileNotFoundError`
- * 的 `Error` 拒绝——这里用 `file-not-found: <path>`。
- */
+// MemoryFsPort —— core 测试用的扁平 `IFsPort` 内存替身（D-14）
+// 与 editor 的 `@test/utils/MemoryFileSystem` **刻意不同**：只实现扁平的七个 `IFsPort` 操作，
+// 不带 `promises` 命名空间，也不带回调半边。核心资源层只消费扁平面，因此这里不复制 editor
+// 的嵌套形状。四个故障注入钩子（写延迟 / 全局写错误 / 按路径写错误 / 写计数）与 editor 版本
+// 对齐，被搬入 core 的 `FileHandler` 系列测试需要它们
+// 契约（见 `@motajs/editor-core` 的 `lib/ports/fs.ts`）：读取缺失路径必须以一个 `message` 命中 `isFileNotFoundError`
+// 的 `Error` 拒绝——这里用 `file-not-found: <path>`
 
 export class MemoryFsPort implements IFsPort {
   private readonly files = new Map<string, string>();

@@ -7,9 +7,7 @@ import { IFsPort } from '@motajs/editor-core';
 import { MemoryFsPort } from './memoryFsPort';
 import { wait } from './testHelpers';
 
-/**
- * FileHandler 单元测试
- */
+// FileHandler 单元测试
 
 describe('FileHandler', () => {
   let memoryFs: MemoryFsPort;
@@ -21,18 +19,21 @@ describe('FileHandler', () => {
   });
 
   describe('基础功能', () => {
+    // 应该创建 FileHandler 实例
     it('应该创建 FileHandler 实例', () => {
       const handler = new FileHandler('test.txt', { fs: memoryFs, persistenceMonitor });
       expect(handler).toBeInstanceOf(FileHandler);
       expect(handler.getPath()).toBe('test.txt');
     });
 
+    // 初始状态应该是 idle
     it('初始状态应该是 idle', () => {
       const handler = new FileHandler('test.txt', { fs: memoryFs, persistenceMonitor });
       const content = handler.getContent();
       expect(ContentUtils.isIdle(content)).toBe(true);
     });
 
+    // 应该能够加载文件
     it('应该能够加载文件', async () => {
       memoryFs.setFile('test.txt', 'hello world');
       const handler = new FileHandler('test.txt', { fs: memoryFs, persistenceMonitor });
@@ -46,6 +47,7 @@ describe('FileHandler', () => {
       }
     });
 
+    // 文件不存在时应该返回 not-found
     it('文件不存在时应该返回 not-found', async () => {
       const handler = new FileHandler('nonexistent.txt', { fs: memoryFs, persistenceMonitor });
 
@@ -55,6 +57,7 @@ describe('FileHandler', () => {
       expect(ContentUtils.isNotFound(content)).toBe(true);
     });
 
+    // 工程访问错误不应误报为当前文件不存在
     it('工程访问错误不应误报为当前文件不存在', async () => {
       const projectErrorFs: IFsPort = memoryFs;
       projectErrorFs.readFile = async () => {
@@ -73,6 +76,7 @@ describe('FileHandler', () => {
   });
 
   describe('update 方法', () => {
+    // 应该同步更新内存
     it('应该同步更新内存', async () => {
       memoryFs.setFile('test.txt', 'old');
       const handler = new FileHandler('test.txt', { fs: memoryFs, persistenceMonitor });
@@ -88,6 +92,7 @@ describe('FileHandler', () => {
       }
     });
 
+    // 应该异步落盘
     it('应该异步落盘', async () => {
       memoryFs.setFile('test.txt', 'old');
       const handler = new FileHandler('test.txt', { fs: memoryFs, persistenceMonitor });
@@ -102,6 +107,7 @@ describe('FileHandler', () => {
       expect(memoryFs.getFile('test.txt')).toBe('new');
     });
 
+    // 应该支持同步转换函数
     it('应该支持同步转换函数', async () => {
       memoryFs.setFile('test.txt', 'hello');
       const handler = new FileHandler('test.txt', { fs: memoryFs, persistenceMonitor });
@@ -119,6 +125,7 @@ describe('FileHandler', () => {
       expect(memoryFs.getFile('test.txt')).toBe('hello world');
     });
 
+    // 应该支持异步转换函数
     it('应该支持异步转换函数', async () => {
       memoryFs.setFile('test.txt', 'hello');
       const handler = new FileHandler('test.txt', { fs: memoryFs, persistenceMonitor });
@@ -141,6 +148,7 @@ describe('FileHandler', () => {
   });
 
   describe('并发写入', () => {
+    // 应该串行化写入操作
     it('应该串行化写入操作', async () => {
       memoryFs.setWriteDelay(50); // 模拟慢速写入
       memoryFs.setFile('test.txt', '0');
@@ -158,6 +166,7 @@ describe('FileHandler', () => {
       expect(memoryFs.getFile('test.txt')).toBe('3');
     });
 
+    // 应该优化写入队列（最多保留 2 个任务）
     it('应该优化写入队列（最多保留 2 个任务）', async () => {
       memoryFs.setWriteDelay(50);
       memoryFs.setFile('test.txt', '0');
@@ -179,6 +188,7 @@ describe('FileHandler', () => {
   });
 
   describe('signal 自动通知', () => {
+    // 应该在内容变化时通知订阅者
     it('应该在内容变化时通知订阅者', async () => {
       memoryFs.setFile('test.txt', 'old');
       const handler = new FileHandler('test.txt', { fs: memoryFs, persistenceMonitor });
@@ -203,6 +213,7 @@ describe('FileHandler', () => {
       unsubscribe();
     });
 
+    // 应该在加载时通知订阅者
     it('应该在加载时通知订阅者', async () => {
       memoryFs.setFile('test.txt', 'content');
       const handler = new FileHandler('test.txt', { fs: memoryFs, persistenceMonitor });
@@ -224,6 +235,7 @@ describe('FileHandler', () => {
   });
 
   describe('refetch', () => {
+    // 应该重新加载文件
     it('应该重新加载文件', async () => {
       memoryFs.setFile('test.txt', 'old');
       const handler = new FileHandler('test.txt', { fs: memoryFs, persistenceMonitor });
@@ -242,6 +254,7 @@ describe('FileHandler', () => {
       }
     });
 
+    // refetch 时应该转换到 loading 状态
     it('refetch 时应该转换到 loading 状态', async () => {
       memoryFs.setFile('test.txt', 'content');
       const handler = new FileHandler('test.txt', { fs: memoryFs, persistenceMonitor });
@@ -260,6 +273,7 @@ describe('FileHandler', () => {
       unsubscribe();
     });
 
+    // 丢弃 refetch 期间已经被内存编辑取代的磁盘结果
     it('丢弃 refetch 期间已经被内存编辑取代的磁盘结果', async () => {
       memoryFs.setFile('test.txt', 'old disk value');
       const fs: IFsPort = memoryFs;
@@ -282,6 +296,7 @@ describe('FileHandler', () => {
       expect(memoryFs.getFile('test.txt')).toBe('new memory value');
     });
 
+    // 丢弃 refetch 期间已经被内存删除取代的磁盘结果
     it('丢弃 refetch 期间已经被内存删除取代的磁盘结果', async () => {
       memoryFs.setFile('test.txt', 'old disk value');
       const fs: IFsPort = memoryFs;
@@ -306,6 +321,7 @@ describe('FileHandler', () => {
   });
 
   describe('ensureLoaded', () => {
+    // 只执行首次读取，已加载后不重新读取
     it('只执行首次读取，已加载后不重新读取', async () => {
       memoryFs.setFile('test.txt', 'content');
       const fs: IFsPort = memoryFs;
@@ -323,6 +339,7 @@ describe('FileHandler', () => {
       expect(reads).toBe(1);
     });
 
+    // 加载进行中时只等待同一次读取
     it('加载进行中时只等待同一次读取', async () => {
       const fs: IFsPort = memoryFs;
       let finishRead!: (value: string) => void;
@@ -346,6 +363,7 @@ describe('FileHandler', () => {
   });
 
   describe('删除管理', () => {
+    // 删除立即更新内存并在后台排到旧写入之后
     it('删除立即更新内存并在后台排到旧写入之后', async () => {
       memoryFs.setFile('test.txt', 'content');
       memoryFs.setWriteDelay(50); // 模拟慢速写入
@@ -364,6 +382,7 @@ describe('FileHandler', () => {
       expect(memoryFs.hasFile('test.txt')).toBe(false);
     });
 
+    // 删除后更新会把最新写入排到删除之后
     it('删除后更新会把最新写入排到删除之后', async () => {
       memoryFs.setFile('test.txt', 'content');
       memoryFs.setWriteDelay(100); // 模拟慢速写入
@@ -381,6 +400,7 @@ describe('FileHandler', () => {
   });
 
   describe('错误处理', () => {
+    // 未加载时直接设置值应该创建文件
     it('未加载时直接设置值应该创建文件', async () => {
       const handler = new FileHandler('test.txt', { fs: memoryFs, persistenceMonitor });
 
@@ -396,6 +416,7 @@ describe('FileHandler', () => {
       expect(memoryFs.getFile('test.txt')).toBe('new');
     });
 
+    // 写入失败时不应该影响内存状态
     it('写入失败时不应该影响内存状态', async () => {
       memoryFs.setFile('test.txt', 'content');
       const handler = new FileHandler('test.txt', { fs: memoryFs, persistenceMonitor });

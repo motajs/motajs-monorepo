@@ -3,24 +3,20 @@ import { describe, expect, it } from 'vitest';
 import { PersistExecutor } from '../persistExecutor';
 import { wait } from './testHelpers';
 
-/**
- * PersistExecutor 特性化测试（冻结不变量，不冻结实现结构）
- *
- * 只冻结 D-11 指定的不变量，不录制完整状态转移快照，不断言私有字段：
- * - error -> retry -> idle（重试重新提交保留的失败意图）
- * - 并发 latest-wins（最多一个执行中 + 一个更新的待执行意图）
- * - 失败在有更新意图待执行时不暴露为 error
- * - hasPending() 在 executing / pending 时为 true，静默后为 false
- * - flush() 在终态失败时 reject，whenQuiescent() 永不 reject
- *
- * 所有期望值均以 observation-first 方式取得：先用故意错误的期望运行，
- * 从失败输出读出真实值后再固化，而不是从实现源码推导。
- *
- * 自 `src/fs/__tests__/persistExecutor.invariants.test.ts` 原样搬入 core：只改 import 路径
- * （`../persistExecutor`、本地 `./testHelpers`）与文件级环境 docblock；断言逐字不变。
- */
+// PersistExecutor 特性化测试（冻结不变量，不冻结实现结构）
+// 只冻结 D-11 指定的不变量，不录制完整状态转移快照，不断言私有字段：
+// - error -> retry -> idle（重试重新提交保留的失败意图）
+// - 并发 latest-wins（最多一个执行中 + 一个更新的待执行意图）
+// - 失败在有更新意图待执行时不暴露为 error
+// - hasPending() 在 executing / pending 时为 true，静默后为 false
+// - flush() 在终态失败时 reject，whenQuiescent() 永不 reject
+// 所有期望值均以 observation-first 方式取得：先用故意错误的期望运行，
+// 从失败输出读出真实值后再固化，而不是从实现源码推导
+// 自 `src/fs/__tests__/persistExecutor.invariants.test.ts` 原样搬入 core：只改 import 路径
+// （`../persistExecutor`、本地 `./testHelpers`）与文件级环境指令注释；断言逐字不变
 
 describe('PersistExecutor invariants', () => {
+  // 失败后 retry 重新提交保留的意图，回到 idle 并清除失败
   it('retry after error re-submits the retained intent and returns to idle with the failure cleared', async () => {
     const executor = new PersistExecutor();
     let shouldFail = true;
@@ -48,6 +44,7 @@ describe('PersistExecutor invariants', () => {
     await expect(executor.flush()).resolves.toBeUndefined();
   });
 
+  // 状态不是 error 时 retry 不重新提交
   it('does not re-submit while the status is not error', async () => {
     const executor = new PersistExecutor();
     let attempts = 0;
@@ -68,6 +65,7 @@ describe('PersistExecutor invariants', () => {
     expect(executor.status().status).toBe('error');
   });
 
+  // 只保留最新的待执行意图（latest-wins），丢弃被覆盖的那一个
   it('keeps only the newest pending intent (latest-wins) and discards the superseded one', async () => {
     const executor = new PersistExecutor();
     const results: string[] = [];
@@ -98,6 +96,7 @@ describe('PersistExecutor invariants', () => {
     expect(results).toEqual(['slow', 'newest']);
   });
 
+  // 有更新的意图待执行时，失败不暴露为 error 状态
   it('does not surface a failure as the error status while a newer intent is pending', async () => {
     const executor = new PersistExecutor();
     const results: string[] = [];
@@ -123,6 +122,7 @@ describe('PersistExecutor invariants', () => {
     expect(results).toEqual(['newer']);
   });
 
+  // executing 或 pending 时 hasPending() 为 true，静默后回到 false
   it('reports hasPending() while executing or pending and once again false once quiescent', async () => {
     const executor = new PersistExecutor();
     expect(executor.hasPending()).toBe(false);
@@ -157,6 +157,7 @@ describe('PersistExecutor invariants', () => {
     expect(failing.hasPending()).toBe(false);
   });
 
+  // flush() 以存储的失败 reject，而 whenQuiescent() resolve
   it('rejects flush() with the stored failure while whenQuiescent() resolves', async () => {
     const executor = new PersistExecutor();
 

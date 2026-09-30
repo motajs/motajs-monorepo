@@ -66,6 +66,7 @@ class TestResource<T> implements ILoadableResource<T> {
 }
 
 describe('computed resources', () => {
+  // optional 只把 not-found 转成 loaded 的兜底值
   it('optional converts only not-found into a loaded fallback', async () => {
     const source = new TestResource<Record<string, number>>('source', { status: 'not-found' }, { answer: 42 });
     const optionalSource = optional(source, {});
@@ -80,6 +81,7 @@ describe('computed resources', () => {
     expect(optionalSource.value()).toEqual({ answer: 42 });
   });
 
+  // aggregate 的 ensure 只加载 idle 叶子，不重载已加载的兄弟
   it('aggregate ensure loads only idle leaves without invalidating loaded siblings', async () => {
     const first = new TestResource('first', { status: 'loaded', value: 1 }, 1);
     const second = new TestResource('second', { status: 'loaded', value: 2 }, 2);
@@ -99,6 +101,7 @@ describe('computed resources', () => {
     unsubscribe();
   });
 
+  // aggregate 的 reload 显式重载每个依赖
   it('aggregate reload explicitly reloads every dependency', async () => {
     const first = new TestResource('first', { status: 'loaded', value: 1 }, 10);
     const second = new TestResource('second', { status: 'loaded', value: 2 }, 20);
@@ -110,6 +113,7 @@ describe('computed resources', () => {
     expect(aggregate.value()).toBe(30);
   });
 
+  // 叶子层合并并发的首次加载
   it('coalesces concurrent initial loading at the leaf', async () => {
     const source = new TestResource('source', { status: 'idle' }, 7);
     const aggregate = aggregateResource('mapped', [source] as const, (value) => value * 2);
@@ -122,6 +126,7 @@ describe('computed resources', () => {
     expect(source.initialLoads).toBe(1);
   });
 
+  // 确保父资源加载后才发现的新依赖也被加载
   it('ensures dependencies discovered after a parent loads', async () => {
     const parent = new TestResource('parent', { status: 'idle' }, ['child']);
     const child = new TestResource('child', { status: 'idle' }, 5);
