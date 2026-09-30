@@ -1,43 +1,36 @@
 import { EngineDescription, IEngineAdapter, PreloadStrategy, ResourceDescriptor } from './types';
 
-/**
- * `defineEngine` —— 引擎适配器的定义与校验（引擎无关，PORT-03）。
- *
- * 本文件只留「逻辑/值」：逻辑 id 谓词与保留名、契约版本常量、聚合错误类、定义函数与拓扑排序。
- * 描述符与适配器的**类型**集中在 `./types`（D-07），本文件反向 import 它们，因此 `types.ts`
- * 不含任何值、只被本文件单向依赖，不可能成环。
- *
- * 设计约束：
- * - **来源无关**（D-04）：通用描述符不含 `path` / `format` / handler 实例，也不含参数模板；
- *   内容构造只经 `create(deps)` 这一个惰性工厂缝（D-05）。文件 IO 地址只允许存在于默认实现包里
- *   的文件支撑类 `fileResource.ts` 内部。
- * - **纯函数**（PORT-03）：`defineEngine` 同步、无副作用、不注册任何东西、不触碰诊断总线，
- *   也没有模块级可变绑定；重复或并发调用同一描述得到等价适配器。
- * - **语法不漂移**（D-09）：逻辑 id 谓词 `isValidResourceId` 由本文件自持并导出，
- *   `ResourceRegistry`（默认实现层）反向 import，因此定义期与登记期不可能各自演化。
- * - 本文件只 import 类型与自持的 id 谓词，绝不 import 宿主 / 引擎 / 诊断总线（Pitfall 10 / PORT-02）。
- */
+// `defineEngine` —— 引擎适配器的定义与校验（引擎无关，PORT-03）
+// 本文件只留「逻辑/值」：逻辑 id 谓词与保留名、契约版本常量、聚合错误类、定义函数与拓扑排序
+// 描述符与适配器的**类型**集中在 `./types`（D-07），本文件反向 import 它们，因此 `types.ts`
+// 不含任何值、只被本文件单向依赖，不可能成环
+// 设计约束：
+// - **来源无关**（D-04）：通用描述符不含 `path` / `format` / handler 实例，也不含参数模板；
+//   内容构造只经 `create(deps)` 这一个惰性工厂缝（D-05）。文件 IO 地址只允许存在于默认实现包里
+//   的文件支撑类 `fileResource.ts` 内部
+// - **纯函数**（PORT-03）：`defineEngine` 同步、无副作用、不注册任何东西、不触碰诊断总线，
+//   也没有模块级可变绑定；重复或并发调用同一描述得到等价适配器
+// - **语法不漂移**（D-09）：逻辑 id 谓词 `isValidResourceId` 由本文件自持并导出，
+//   `ResourceRegistry`（默认实现层）反向 import，因此定义期与登记期不可能各自演化
+// - 本文件只 import 类型与自持的 id 谓词，绝不 import 宿主 / 引擎 / 诊断总线（Pitfall 10 / PORT-02）
 
-/**
- * 逻辑 id 形式：一段或多段以点分隔，每段以字母/`_`/`$` 开头，不含空白与斜杠。
- *
- * 谓词由底层自持：`editor-impl` 的 `ResourceRegistry` 反向跨包 import 它，因此「描述符 id 语法」
- * 与「登记 id 语法」不可能各自漂移（D-09）。
- */
+// 逻辑 id 形式：一段或多段以点分隔，每段以字母/`_`/`$` 开头，不含空白与斜杠
+// 谓词由底层自持：`editor-impl` 的 `ResourceRegistry` 反向跨包 import 它，因此「描述符 id 语法」
+// 与「登记 id 语法」不可能各自漂移（D-09）
 const LOGICAL_ID_PATTERN = /^[A-Za-z_$][A-Za-z0-9_$]*(\.[A-Za-z_$][A-Za-z0-9_$]*)*$/;
 
-/**
- * 保留名：即使形式上合法也拒绝，避免任何对象键语义的误用（V5）。
- *
- * 它与谓词、`LOGICAL_ID_PATTERN` 一起从 `editor-impl` 的 `ResourceRegistry` 收进底层并导出，
- * 使登记方与定义方共用**同一份**原型污染防线（T-05.1-09）；`editor-impl` 反向 import 它。
- */
+// 保留名：即使形式上合法也拒绝，避免任何对象键语义的误用（V5）
+// 它与谓词、`LOGICAL_ID_PATTERN` 一起从 `editor-impl` 的 `ResourceRegistry` 收进底层并导出，
+// 使登记方与定义方共用**同一份**原型污染防线（T-05.1-09）；`editor-impl` 反向 import 它
 export const RESERVED_IDS: readonly string[] = Object.freeze(['__proto__', 'constructor', 'prototype']);
 
 /**
  * 逻辑 id 的**唯一共享判定**（布尔形式）：空、含空白、保留名、不符 `LOGICAL_ID_PATTERN` 之一即返回 `false`。
  *
  * 这是**纯函数**：不抛错、无状态、可安全并发调用。
+ *
+ * @param id 待判定的逻辑 id。
+ * @returns 合法返回 `true`，否则返回 `false`。
  */
 export function isValidResourceId(id: string): boolean {
   if (id.length === 0) return false;
@@ -46,21 +39,15 @@ export function isValidResourceId(id: string): boolean {
   return LOGICAL_ID_PATTERN.test(id);
 }
 
-/**
- * 适配器契约版本。与 `EDITOR_CORE_API_VERSION` 并行：core 公开 API 与适配器契约是两份、
- * 走两套时钟的契约，Phase 12 冻结扩展面时不应把二者混为一谈。
- */
+// 适配器契约版本。与 `EDITOR_CORE_API_VERSION` 并行：core 公开 API 与适配器契约是两份、
+// 走两套时钟的契约，Phase 12 冻结扩展面时不应把二者混为一谈
 export const ENGINE_ADAPTER_API_VERSION = '0.1.0';
 
-/**
- * `defineEngine` 抛出的**唯一**错误，一次性携带全部定义问题（聚合而非首错即停）。
- *
- * 与 `EditorCoreStartupError` 同形：`super(message)` 记录摘要，冻结承载的问题列表，且**不**调用
- * `Error.captureStackTrace`（core 刻意不依赖 `@types/node`）。
- *
- * 承载列表经标准的 `Error.cause` 传递（冻结副本），因此不引入任何未在 `INTERFACE-NAME.md` 中
- * 登记的新成员名，也满足 `noUnusedLocals`（无未被读取的私有字段）。
- */
+// `defineEngine` 抛出的**唯一**错误，一次性携带全部定义问题（聚合而非首错即停）
+// 与 `EditorCoreStartupError` 同形：`super(message)` 记录摘要，冻结承载的问题列表，且**不**调用
+// `Error.captureStackTrace`（core 刻意不依赖 `@types/node`）
+// 承载列表经标准的 `Error.cause` 传递（冻结副本），因此不引入任何未在 `INTERFACE-NAME.md` 中
+// 登记的新成员名，也满足 `noUnusedLocals`（无未被读取的私有字段）
 export class EngineDefinitionError extends Error {
   constructor(problems: readonly string[]) {
     super(`Engine definition invalid: ${problems.join('; ')}`, { cause: Object.freeze([...problems]) });
@@ -110,6 +97,9 @@ function visitDependency(
  * 7. `apiVersion` 若给出必须是非空字符串。
  *
  * 本函数不做任何注册、构造或总线交互——定义期与实例期严格分离，且无模块级可变状态。
+ *
+ * @param description 适配器作者给出的引擎描述。
+ * @returns 校验通过的冻结适配器。
  */
 export function defineEngine(description: EngineDescription): IEngineAdapter {
   const problems: string[] = [];
@@ -146,7 +136,7 @@ export function defineEngine(description: EngineDescription): IEngineAdapter {
     }
   }
 
-  // 环检测（T-05-04）：DFS 用 on-stack 集标记灰点，每条指向灰点的边都关闭一个环，全部报告。
+  // 环检测（T-05-04）：DFS 用 on-stack 集标记灰点，每条指向灰点的边都关闭一个环，全部报告
   const byId = new Map<string, ResourceDescriptor>();
   for (const descriptor of description.resources) byId.set(descriptor.id, descriptor);
   const settled = new Set<string>();
@@ -170,6 +160,9 @@ export function defineEngine(description: EngineDescription): IEngineAdapter {
  * 依赖总排在依赖者之前；互不依赖的资源保持声明顺序（确定性 tie-breaking：每次取声明序中最早
  * 可放置者）。不加载任何东西、不持有状态、不抛错——`defineEngine` 已在定义期拒绝环；若仍有余项
  * （程序化误用），按声明顺序补齐以保持全序且确定。
+ *
+ * @param resources 同组资源描述符。
+ * @returns 依依赖求出的资源 id 顺序。
  */
 export function resolvePreloadOrder(resources: readonly ResourceDescriptor[]): readonly string[] {
   const declared: string[] = resources.map((descriptor) => descriptor.id);

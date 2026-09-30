@@ -1,24 +1,18 @@
 import { Store } from '@tanstack/store';
 import { IEditorOperation, IUndoManager, OperationHistoryEntry, OperationHistoryState } from './types';
 
-/**
- * 管理器内部的历史条目：在对外条目之外，额外记住「怎么把这一步撤回来」的那个操作。
- *
- * 对外只暴露 `OperationHistoryEntry`（编号 / 标签 / 时刻 / 路径）；操作本体留在管理器内部，
- * 撤销时调它的 `apply()`，重做时把返回的新逆操作写回同一条。
- */
+// 管理器内部的历史条目：在对外条目之外，额外记住「怎么把这一步撤回来」的那个操作
+// 对外只暴露 `OperationHistoryEntry`（编号 / 标签 / 时刻 / 路径）；操作本体留在管理器内部，
+// 撤销时调它的 `apply()`，重做时把返回的新逆操作写回同一条
 interface ManagedEntry extends OperationHistoryEntry {
   /** 这一步对应的逆操作；撤销时调它，重做时再调并写回新逆操作。 */
   readonly operation: IEditorOperation<unknown>;
 }
 
-/**
- * UndoManager —— 只记录操作先后的撤销管理器（D-04/D-05）。
- *
- * 它不认识任何被编辑的内容：执行操作时只调用操作自己的 `apply()`，把返回的逆操作记进历史；
- * 撤销 / 重做时只调用历史里那个操作的 `apply()`。全程不保存任何快照，状态全部落在实例字段上，
- * 因此两个实例天然互不干扰（D-10）。
- */
+// UndoManager —— 只记录操作先后的撤销管理器（D-04/D-05）
+// 它不认识任何被编辑的内容：执行操作时只调用操作自己的 `apply()`，把返回的逆操作记进历史；
+// 撤销 / 重做时只调用历史里那个操作的 `apply()`。全程不保存任何快照，状态全部落在实例字段上，
+// 因此两个实例天然互不干扰（D-10）
 export class UndoManager implements IUndoManager {
   /** 下一条历史记录的编号，逐条自增。 */
   private nextId: number = 1;
@@ -34,7 +28,11 @@ export class UndoManager implements IUndoManager {
   /** per-instance 的状态容器（D-11）：供界面订阅历史条目、当前指针与忙碌状态。 */
   readonly store = new Store<OperationHistoryState>({ entries: [], current: 0, busy: false });
 
-  /** 把任务排进串行队列，并维护 busy 计数（IUndoManager 的并发语义）。 */
+  /**
+   * 把任务排进串行队列，并维护 busy 计数（IUndoManager 的并发语义）。
+   *
+   * @param task 要串行执行的任务。
+   */
   private enqueue<T>(task: () => Promise<T>): Promise<T> {
     this.pending += 1;
     if (this.pending === 1) {

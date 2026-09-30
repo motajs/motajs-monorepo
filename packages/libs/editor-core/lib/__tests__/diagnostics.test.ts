@@ -29,7 +29,9 @@ describe('editor-core 诊断总线契约', () => {
     expect(bus.snapshot()).not.toBe(snapshot);
 
     const alias = snapshot as Diagnostic[];
-    expect(() => alias.push({ severity: DiagnosticSeverity.Info, code: 'acme.extra', message: 'extra' })).toThrow(TypeError);
+    expect(() => alias.push({ severity: DiagnosticSeverity.Info, code: 'acme.extra', message: 'extra' })).toThrow(
+      TypeError,
+    );
     expect(bus.snapshot()).toHaveLength(2);
   });
 
