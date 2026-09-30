@@ -4,6 +4,7 @@
  * TypeScript type definitions for the Table component system.
  * Based on the original editor_table.ts implementation.
  */
+import { ActionType } from '@/utils/action';
 
 /** Field type enumeration - defines the type of input control to render */
 export type FieldType =
@@ -122,7 +123,7 @@ export type EditMode = 'change' | 'add' | 'delete';
 export type DoubleClickMode = EditMode;
 
 /** Table Action 类型：[操作类型, 字段路径, 值] */
-export type TableAction = ['change' | 'add' | 'delete', string, unknown];
+export type TableAction = [ActionType, string, unknown];
 
 /** Props for the main Table component */
 export interface TableProps {

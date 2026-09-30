@@ -1,6 +1,7 @@
 import { projectData } from '@/project/data/projectData';
 import type { BlockInfo, MapsBlocksData } from '@/services/mapBlock';
 import type { FloorData } from '@/types';
+import { ActionType } from '@/utils/action';
 
 export const LEGACY_AIRWALL_IDNUM = 17;
 
@@ -92,6 +93,6 @@ export async function migrateLegacyAirwall(): Promise<AirwallMigrationResult> {
   const idnum = String(LEGACY_AIRWALL_IDNUM);
   const next = buildRegisteredAirwall(blocksContent.value[idnum]);
   const resource = projectData.mapBlocks();
-  await resource.patch([[blocksContent.value[idnum] ? 'change' : 'add', `['${idnum}']`, next]]);
+  await resource.patch([[blocksContent.value[idnum] ? ActionType.Change : ActionType.Add, `['${idnum}']`, next]]);
   return { status: 'migrated' };
 }

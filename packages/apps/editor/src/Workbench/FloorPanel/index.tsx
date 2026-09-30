@@ -19,6 +19,7 @@ import { projectData } from '@/project/data/projectData';
 import { buildFloorDiagnostics } from '@/project/model/floorDiagnostics';
 import { setCurrentFloorId, useCurrentFloorId } from '@/stores/editorState';
 import type { FloorData } from '@/types';
+import { ActionType } from '@/utils/action';
 import type { Action } from '@/utils/action';
 import { buildFieldPath } from '@/utils/fieldPath';
 import { notifyCommandResult, notifyError, notifySuccess } from '@/utils/notify';
@@ -107,8 +108,8 @@ const FloorSchemaTable: FC<{ floor: FloorData; floorId: string; onRename: () => 
     ) => {
       if (path.length === 0) throw new Error('不能直接替换整个楼层对象');
       const action: Action = slot.present
-        ? ['change', buildFieldPath([...path]), slot.value]
-        : ['delete', buildFieldPath([...path]), undefined];
+        ? [ActionType.Change, buildFieldPath([...path]), slot.value]
+        : [ActionType.Delete, buildFieldPath([...path]), undefined];
       const result = await floorCommands.patch(floorId, [action]);
       if (!result.ok) throw new Error(`${result.stage}: ${result.error.message}`);
       notifySuccess('保存成功！');

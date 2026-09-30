@@ -34,6 +34,7 @@ import { PanelStore } from '@/stores/PanelStore';
 import { setAppendPicTemplate } from '@/stores/appendPicState';
 import { setCurrentPrefabSelection, useCurrentPrefabSelection } from '@/stores/prefabState';
 import { getPrefabItemData, resolvePrefabTarget, type PrefabTarget } from '@/project/model/prefabModel';
+import { ActionType } from '@/utils/action';
 import type { Action } from '@/utils/action';
 import {
   parsePrefabClipboard,
@@ -413,8 +414,8 @@ const MapBlockSchemaSection: FC<{ target: PrefabTarget; onRename: () => void }> 
       const actions: Action[] = updates.map(({ path, slot }) => {
         if (path.length === 0) throw new Error('不能直接替换整个图块对象');
         return slot.present
-          ? ['change', buildFieldPath([...path]), slot.value]
-          : ['delete', buildFieldPath([...path]), undefined];
+          ? [ActionType.Change, buildFieldPath([...path]), slot.value]
+          : [ActionType.Delete, buildFieldPath([...path]), undefined];
       });
       if (actions.length === 0) return;
       const result = await prefabCommands.patch(target.info, actions);
@@ -461,8 +462,8 @@ const ItemSchemaSection: FC<{ target: PrefabTarget; onRename: () => void }> = ({
     const writeItem = async (path: readonly string[], slot: ReferenceUpdate['slot']) => {
       if (path.length === 0) throw new Error('不能直接替换整个道具对象');
       const action: Action = slot.present
-        ? ['change', buildFieldPath([...path]), slot.value]
-        : ['delete', buildFieldPath([...path]), undefined];
+        ? [ActionType.Change, buildFieldPath([...path]), slot.value]
+        : [ActionType.Delete, buildFieldPath([...path]), undefined];
       const result = await prefabCommands.patch(target.info, [action]);
       if (!result.ok) throw new Error(`${result.stage}: ${result.error.message}`);
       notifySuccess('保存成功！');
@@ -539,8 +540,8 @@ const EnemySchemaSection: FC<{ target: PrefabTarget; onRename: () => void }> = (
     const writeEnemy = async (path: readonly string[], slot: ReferenceUpdate['slot']) => {
       if (path.length === 0) throw new Error('不能直接替换整个怪物对象');
       const action: Action = slot.present
-        ? ['change', buildFieldPath([...path]), slot.value]
-        : ['delete', buildFieldPath([...path]), undefined];
+        ? [ActionType.Change, buildFieldPath([...path]), slot.value]
+        : [ActionType.Delete, buildFieldPath([...path]), undefined];
       const result = await prefabCommands.patch(target.info, [action]);
       if (!result.ok) throw new Error(`${result.stage}: ${result.error.message}`);
       notifySuccess('保存成功！');

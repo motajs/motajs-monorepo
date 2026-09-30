@@ -1,4 +1,5 @@
 import type { LocPos } from '@/stores/locState';
+import { ActionType } from '@/utils/action';
 import type { Action } from '@/utils/action';
 import { projectData } from '@/project/data/projectData';
 import { floorCommands } from './floorCommands';
@@ -33,10 +34,14 @@ class LocCommands {
       const pages = (floor.autoEvent as Record<string, Record<string, unknown>> | undefined)?.[key] ?? {};
       let pageId = 2;
       while (Object.prototype.hasOwnProperty.call(pages, String(pageId))) pageId += 1;
-      const result = await floorCommands.patch(floorId, [['add', `['autoEvent']['${key}']['${pageId}']`, null]], {
-        label: `添加自动事件页 ${floorId} (${pos.x},${pos.y})`,
-        stage: 'add-auto-event-page',
-      });
+      const result = await floorCommands.patch(
+        floorId,
+        [[ActionType.Add, `['autoEvent']['${key}']['${pageId}']`, null]],
+        {
+          label: `添加自动事件页 ${floorId} (${pos.x},${pos.y})`,
+          stage: 'add-auto-event-page',
+        },
+      );
       return result.ok ? { ...commandOk(), pageId: String(pageId) } : result;
     } catch (error) {
       return commandError('add-auto-event-page', error);

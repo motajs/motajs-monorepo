@@ -1,7 +1,7 @@
 import type { DataResource } from '@/project/data/DataResource';
 import { projectData } from '@/project/data/projectData';
 import type { LocPos } from '@/stores/locState';
-import { applyActions, type Action } from '@/utils/action';
+import { ActionType, applyActions, type Action } from '@/utils/action';
 import { floorCommands } from './floorCommands';
 import { locCommands } from './locCommands';
 import { prefabCommands } from './prefabCommands';
@@ -32,7 +32,7 @@ class TableCommands {
       const firstFloorId = preview.firstData.floorId;
       const normalizedActions = [...actions];
       if (Array.isArray(floorIds) && firstFloorId && !floorIds.includes(firstFloorId) && floorIds.length > 0) {
-        normalizedActions.push(['change', "['firstData']['floorId']", floorIds[0]]);
+        normalizedActions.push([ActionType.Change, "['firstData']['floorId']", floorIds[0]]);
       }
       return executePatchCommand(tower, normalizedActions, {
         label: '修改全塔属性',

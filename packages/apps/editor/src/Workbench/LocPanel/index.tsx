@@ -29,6 +29,7 @@ import { notifyCommandResult, notifyError, notifySuccess } from '@/utils/notify'
 import { persistenceMonitor } from '@/fs/PersistenceMonitor';
 import { buildFieldPath } from '@/utils/fieldPath';
 import { LocTable } from './LocTable';
+import { ActionType } from '@/utils/action';
 import type { Action } from '@/utils/action';
 import type { EditMode } from '@/components/Table/types';
 import type { CommentObject } from '@/components/Table';
@@ -82,8 +83,8 @@ const LocSchemaTable: FC<{ target: LocTarget }> = ({ target }) => {
       const actions: Action[] = updates.map(({ path, slot }) => {
         if (path.length !== 1) throw new Error('地图选点字段只允许写入顶层点位属性');
         return slot.present
-          ? ['change', buildFieldPath([...path]), slot.value]
-          : ['delete', buildFieldPath([...path]), undefined];
+          ? [ActionType.Change, buildFieldPath([...path]), slot.value]
+          : [ActionType.Delete, buildFieldPath([...path]), undefined];
       });
       if (actions.length === 0) return;
       const result = await locCommands.patch(target.floorId, target.pos, actions);

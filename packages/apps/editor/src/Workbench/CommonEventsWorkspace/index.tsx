@@ -1,6 +1,7 @@
 import { useResourceSuspense } from '@/hooks/suspense';
 import { tableCommands } from '@/project/commands';
 import { projectData } from '@/project/data/projectData';
+import { ActionType } from '@/utils/action';
 import { buildFieldPath } from '@/utils/fieldPath';
 import { notifyCommandResult, notifyError } from '@/utils/notify';
 import { Input, Modal } from 'antd';
@@ -72,7 +73,9 @@ export const CommonEventsWorkspace: FC = () => {
         });
       },
       onConfirm: async (value) => {
-        const result = await tableCommands.patchCommonEvents([['change', buildFieldPath([activeSelected]), value]]);
+        const result = await tableCommands.patchCommonEvents([
+          [ActionType.Change, buildFieldPath([activeSelected]), value],
+        ]);
         if (!result.ok) throw result.error;
         setDrafts((current) => {
           const next = { ...current };
@@ -95,7 +98,7 @@ export const CommonEventsWorkspace: FC = () => {
       notifyError('公共事件名称不能重复');
       return;
     }
-    const result = await tableCommands.patchCommonEvents([['add', buildFieldPath([name]), []]]);
+    const result = await tableCommands.patchCommonEvents([[ActionType.Add, buildFieldPath([name]), []]]);
     notifyCommandResult(result, '公共事件已新增');
     if (result.ok) setSelected(name);
   }, [events]);
@@ -109,8 +112,8 @@ export const CommonEventsWorkspace: FC = () => {
         return;
       }
       const result = await tableCommands.patchCommonEvents([
-        ['add', buildFieldPath([nextName]), events[name]],
-        ['delete', buildFieldPath([name]), undefined],
+        [ActionType.Add, buildFieldPath([nextName]), events[name]],
+        [ActionType.Delete, buildFieldPath([name]), undefined],
       ]);
       notifyCommandResult(result, '公共事件已重命名');
       if (result.ok) {
@@ -135,7 +138,9 @@ export const CommonEventsWorkspace: FC = () => {
         okText: '删除',
         cancelText: '取消',
         onOk: async () => {
-          const result = await tableCommands.patchCommonEvents([['delete', buildFieldPath([name]), undefined]]);
+          const result = await tableCommands.patchCommonEvents([
+            [ActionType.Delete, buildFieldPath([name]), undefined],
+          ]);
           notifyCommandResult(result, '公共事件已删除');
           if (result.ok) {
             setDrafts((current) => {

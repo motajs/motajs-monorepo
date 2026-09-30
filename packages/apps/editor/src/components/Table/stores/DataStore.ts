@@ -1,6 +1,7 @@
 import { useMemo, useCallback } from 'react';
 import { createStore } from '@motajs/react-store';
 import { noop } from '@/utils/empty';
+import { ActionType } from '@/utils/action';
 import type { CommentObject, EditMode, FieldConfig, FieldType, TableNode, TableAction } from '../types';
 import { buildTableTree } from '../utils/traversal';
 import { getByFieldPath, validateId } from '../utils';
@@ -60,7 +61,7 @@ function useDataStore(argument: DataStoreArgument): DataStoreValue {
   // 值变更回调 - 转换为 Action 格式
   const handleValueChange = useCallback(
     (field: string, value: unknown) => {
-      return onChange?.(['change', field, value]);
+      return onChange?.([ActionType.Change, field, value]);
     },
     [onChange],
   );
@@ -81,7 +82,7 @@ function useDataStore(argument: DataStoreArgument): DataStoreValue {
       }
 
       const newField = parentField + "['" + name + "']";
-      onChange?.(['add', newField, null]);
+      onChange?.([ActionType.Add, newField, null]);
       notifySuccess('添加成功，刷新后生效。');
     },
     [data, onChange],
@@ -90,7 +91,7 @@ function useDataStore(argument: DataStoreArgument): DataStoreValue {
   // 删除项回调
   const handleDeleteItem = useCallback(
     (field: string) => {
-      onChange?.(['delete', field, undefined]);
+      onChange?.([ActionType.Delete, field, undefined]);
       notifySuccess('删除成功，刷新后生效。');
     },
     [onChange],

@@ -20,6 +20,7 @@ import { projectAssets, type AssetDirectorySnapshot } from '@/project/assets';
 import { tableCommands } from '@/project/commands';
 import { projectData } from '@/project/data/projectData';
 import { buildTowerDiagnostics } from '@/project/model/towerDiagnostics';
+import { ActionType } from '@/utils/action';
 import type { Action } from '@/utils/action';
 import { buildFieldPath } from '@/utils/fieldPath';
 import { notifyCommandResult, notifyError, notifySuccess } from '@/utils/notify';
@@ -125,8 +126,8 @@ const TowerSchemaWorkspace: FC = () => {
     const updatesToActions = (updates: readonly ReferenceUpdate[]): Action[] =>
       updates.map(({ path, slot }) =>
         slot.present
-          ? ['change', buildFieldPath([...path]), slot.value]
-          : ['delete', buildFieldPath([...path]), undefined],
+          ? [ActionType.Change, buildFieldPath([...path]), slot.value]
+          : [ActionType.Delete, buildFieldPath([...path]), undefined],
       );
     const writeBatch = async (updates: readonly ReferenceUpdate[]) => {
       if (updates.some((update) => update.path.length === 0)) {

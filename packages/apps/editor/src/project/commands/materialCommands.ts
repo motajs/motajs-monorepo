@@ -27,6 +27,7 @@ import {
   replaceMaterialOperation,
   type EditorOperation,
 } from '@/project/history';
+import { ActionType } from '@/utils/action';
 import type { Action } from '@/utils/action';
 import { commandError, commandOk, type CommandResult } from './types';
 import { getMapLayerSettingsSnapshot } from '@/project/settings/mapLayerSettings';
@@ -231,14 +232,14 @@ async function createRegisterOperations(
 
     idnum = nextReservedIdnum(reservedIdnums, idnum);
     const id = `${prefix}${idnum}`;
-    iconActions.push(['add', `['${images}']['${id}']`, y]);
-    mapActions.push(['add', `['${idnum}']`, { cls: images, id }]);
+    iconActions.push([ActionType.Add, `['${images}']['${id}']`, y]);
+    mapActions.push([ActionType.Add, `['${idnum}']`, { cls: images, id }]);
     faceIds.push({ idnum, id });
 
     if (isItemImages(images)) {
-      itemActions.push(['add', `['${id}']`, cloneDeep(templates.item)]);
+      itemActions.push([ActionType.Add, `['${id}']`, cloneDeep(templates.item)]);
     } else if (isEnemyImages(images)) {
-      enemyActions.push(['add', `['${id}']`, cloneDeep(templates.enemy)]);
+      enemyActions.push([ActionType.Add, `['${id}']`, cloneDeep(templates.enemy)]);
     }
     idnum += 1;
   }
@@ -250,11 +251,11 @@ async function createRegisterOperations(
       const faceObj = { down: down.id, left: left.id, right: right.id, up: up.id };
       if (isEnemyImages(images)) {
         for (const one of lastFour) {
-          enemyActions.push(['add', `['${one.id}']['faceIds']`, faceObj]);
+          enemyActions.push([ActionType.Add, `['${one.id}']['faceIds']`, faceObj]);
         }
       } else {
         for (const one of lastFour) {
-          mapActions.push(['add', `['${one.idnum}']['faceIds']`, faceObj]);
+          mapActions.push([ActionType.Add, `['${one.idnum}']['faceIds']`, faceObj]);
         }
       }
     }
@@ -301,14 +302,18 @@ async function createAutotileRegisterOperations(filename: string): Promise<Edito
   await ensureValue(projectData.icons());
   const idnum = nextIdnum(blocks, 140);
   return [
-    patchResourceOperation(projectData.icons(), [['add', `['autotile']['${filename}']`, 0]], {
+    patchResourceOperation(projectData.icons(), [[ActionType.Add, `['autotile']['${filename}']`, 0]], {
       label: '注册自动元件',
       stage: 'material-register-autotile:icons',
     }),
-    patchResourceOperation(projectData.mapBlocks(), [['add', `['${idnum}']`, { cls: 'autotile', id: filename }]], {
-      label: '注册自动元件',
-      stage: 'material-register-autotile:maps',
-    }),
+    patchResourceOperation(
+      projectData.mapBlocks(),
+      [[ActionType.Add, `['${idnum}']`, { cls: 'autotile', id: filename }]],
+      {
+        label: '注册自动元件',
+        stage: 'material-register-autotile:maps',
+      },
+    ),
   ];
 }
 
@@ -338,11 +343,11 @@ export class MaterialCommands {
         assertUniqueId(blocks, id);
 
         const operations: EditorOperation<unknown>[] = [
-          patchResourceOperation(projectData.mapBlocks(), [['add', `['${idnum}']`, { cls: images, id }]], {
+          patchResourceOperation(projectData.mapBlocks(), [[ActionType.Add, `['${idnum}']`, { cls: images, id }]], {
             label: '注册素材',
             stage: 'material-change-id:maps',
           }),
-          patchResourceOperation(projectData.icons(), [['add', `['${images}']['${id}']`, info.y]], {
+          patchResourceOperation(projectData.icons(), [[ActionType.Add, `['${images}']['${id}']`, info.y]], {
             label: '注册素材',
             stage: 'material-change-id:icons',
           }),
@@ -350,14 +355,14 @@ export class MaterialCommands {
 
         if (isItemImages(images)) {
           operations.push(
-            patchResourceOperation(projectData.items(), [['add', `['${id}']`, cloneDeep(templates.item)]], {
+            patchResourceOperation(projectData.items(), [[ActionType.Add, `['${id}']`, cloneDeep(templates.item)]], {
               label: '注册素材',
               stage: 'material-change-id:items',
             }),
           );
         } else if (isEnemyImages(images)) {
           operations.push(
-            patchResourceOperation(projectData.enemys(), [['add', `['${id}']`, cloneDeep(templates.enemy)]], {
+            patchResourceOperation(projectData.enemys(), [[ActionType.Add, `['${id}']`, cloneDeep(templates.enemy)]], {
               label: '注册素材',
               stage: 'material-change-id:enemys',
             }),
@@ -376,7 +381,7 @@ export class MaterialCommands {
       const items = await ensureValue(projectData.items());
       const enemys = await ensureValue(projectData.enemys());
       const operations: EditorOperation<unknown>[] = [
-        patchResourceOperation(projectData.mapBlocks(), [['change', `['${info.idnum}']['id']`, id]], {
+        patchResourceOperation(projectData.mapBlocks(), [[ActionType.Change, `['${info.idnum}']['id']`, id]], {
           label: '修改素材 id',
           stage: 'material-change-id:maps',
         }),
@@ -386,8 +391,8 @@ export class MaterialCommands {
       for (const [groupName, group] of Object.entries(icons)) {
         if (!group || typeof group !== 'object' || !Object.prototype.hasOwnProperty.call(group, oldId)) continue;
         const value = (group as Record<string, unknown>)[oldId];
-        iconActions.push(['add', `['${groupName}']['${id}']`, cloneDeep(value)]);
-        iconActions.push(['delete', `['${groupName}']['${oldId}']`, undefined]);
+        iconActions.push([ActionType.Add, `['${groupName}']['${id}']`, cloneDeep(value)]);
+        iconActions.push([ActionType.Delete, `['${groupName}']['${oldId}']`, undefined]);
       }
       if (iconActions.length > 0) {
         operations.push(
@@ -403,8 +408,8 @@ export class MaterialCommands {
           patchResourceOperation(
             projectData.items(),
             [
-              ['add', `['${id}']`, cloneDeep((items as Record<string, unknown>)[oldId])],
-              ['delete', `['${oldId}']`, undefined],
+              [ActionType.Add, `['${id}']`, cloneDeep((items as Record<string, unknown>)[oldId])],
+              [ActionType.Delete, `['${oldId}']`, undefined],
             ],
             { label: '修改素材 id', stage: 'material-change-id:items' },
           ),
@@ -415,8 +420,8 @@ export class MaterialCommands {
           patchResourceOperation(
             projectData.enemys(),
             [
-              ['add', `['${id}']`, cloneDeep((enemys as Record<string, unknown>)[oldId])],
-              ['delete', `['${oldId}']`, undefined],
+              [ActionType.Add, `['${id}']`, cloneDeep((enemys as Record<string, unknown>)[oldId])],
+              [ActionType.Delete, `['${oldId}']`, undefined],
             ],
             { label: '修改素材 id', stage: 'material-change-id:enemys' },
           ),
@@ -612,15 +617,15 @@ export class MaterialCommands {
       for (const [id, row] of Object.entries(iconGroup ?? {})) {
         if (entry.slot.kind === 'file') {
           if (aliases.has(id) || id === entry.slot.name) {
-            iconActions.push(['delete', `['${entry.images}']['${id}']`, undefined]);
+            iconActions.push([ActionType.Delete, `['${entry.images}']['${id}']`, undefined]);
           }
           continue;
         }
         if (typeof row !== 'number') continue;
         if (row === entry.slot.row) {
-          iconActions.push(['delete', `['${entry.images}']['${id}']`, undefined]);
+          iconActions.push([ActionType.Delete, `['${entry.images}']['${id}']`, undefined]);
         } else if (row > entry.slot.row && row < rowCount) {
-          iconActions.push(['change', `['${entry.images}']['${id}']`, row - 1]);
+          iconActions.push([ActionType.Change, `['${entry.images}']['${id}']`, row - 1]);
         }
       }
       if (iconActions.length > 0) {
@@ -635,7 +640,7 @@ export class MaterialCommands {
       const mapActions: Action[] = [];
       for (const [idnum, block] of Object.entries(blocks)) {
         if (idnums.has(Number(idnum)) || (block.cls === entry.images && block.id && aliases.has(block.id))) {
-          mapActions.push(['delete', `['${idnum}']`, undefined]);
+          mapActions.push([ActionType.Delete, `['${idnum}']`, undefined]);
         }
       }
       if (mapActions.length > 0) {
@@ -651,7 +656,7 @@ export class MaterialCommands {
         const items = await ensureValue(projectData.items());
         const itemActions: Action[] = [...aliases]
           .filter((id) => Object.prototype.hasOwnProperty.call(items, id))
-          .map((id) => ['delete', `['${id}']`, undefined]);
+          .map((id) => [ActionType.Delete, `['${id}']`, undefined]);
         if (itemActions.length > 0) {
           operations.push(
             patchResourceOperation(projectData.items(), itemActions, {
@@ -665,7 +670,7 @@ export class MaterialCommands {
         const enemys = await ensureValue(projectData.enemys());
         const enemyActions: Action[] = [...aliases]
           .filter((id) => Object.prototype.hasOwnProperty.call(enemys, id))
-          .map((id) => ['delete', `['${id}']`, undefined]);
+          .map((id) => [ActionType.Delete, `['${id}']`, undefined]);
         if (enemyActions.length > 0) {
           operations.push(
             patchResourceOperation(projectData.enemys(), enemyActions, {

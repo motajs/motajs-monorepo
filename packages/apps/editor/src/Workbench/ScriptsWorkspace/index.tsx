@@ -4,6 +4,7 @@ import { tableCommands } from '@/project/commands';
 import { projectData } from '@/project/data/projectData';
 import { PanelStore, type ScriptWorkspaceId } from '@/stores/PanelStore';
 import { buildFieldPath } from '@/utils/fieldPath';
+import { ActionType } from '@/utils/action';
 import type { Action } from '@/utils/action';
 import { notifyCommandResult, notifyError, notifySuccess } from '@/utils/notify';
 import { Input, Modal, Popover, Segmented } from 'antd';
@@ -645,7 +646,11 @@ export const ScriptsWorkspace: FC = () => {
       }
       try {
         validateTab(tab);
-        const action: Action = [tab.diskDeleted ? 'add' : 'change', buildFieldPath(tab.path), tab.text];
+        const action: Action = [
+          tab.diskDeleted ? ActionType.Add : ActionType.Change,
+          buildFieldPath(tab.path),
+          tab.text,
+        ];
         const result =
           tab.kind === 'functions'
             ? await tableCommands.patchFunctions([action])
@@ -711,7 +716,7 @@ export const ScriptsWorkspace: FC = () => {
     const next = { ...plugins, [name]: source };
     try {
       encodeGameScript2x({ uuid: UUIDS.plugins, data: next });
-      const result = await tableCommands.patchPlugins([['add', buildFieldPath([name]), source]]);
+      const result = await tableCommands.patchPlugins([[ActionType.Add, buildFieldPath([name]), source]]);
       notifyCommandResult(result, '插件已新增');
       if (result.ok) open('plugins', { path: [name], source });
     } catch (error) {
@@ -742,8 +747,8 @@ export const ScriptsWorkspace: FC = () => {
       try {
         encodeGameScript2x({ uuid: UUIDS.plugins, data: next });
         const result = await tableCommands.patchPlugins([
-          ['add', buildFieldPath([nextName]), source],
-          ['delete', buildFieldPath([name]), undefined],
+          [ActionType.Add, buildFieldPath([nextName]), source],
+          [ActionType.Delete, buildFieldPath([name]), undefined],
         ]);
         if (!result.ok) throw result.error;
         const oldId = `plugins:${name}`;
@@ -771,7 +776,7 @@ export const ScriptsWorkspace: FC = () => {
           const next = cloneDeep(plugins);
           delete next[name];
           encodeGameScript2x({ uuid: UUIDS.plugins, data: next });
-          const result = await tableCommands.patchPlugins([['delete', buildFieldPath([name]), undefined]]);
+          const result = await tableCommands.patchPlugins([[ActionType.Delete, buildFieldPath([name]), undefined]]);
           if (!result.ok) throw result.error;
           const id = `plugins:${name}`;
           setTabs((current) => current.filter((tab) => tab.id !== id));

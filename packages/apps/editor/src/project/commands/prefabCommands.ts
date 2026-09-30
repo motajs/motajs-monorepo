@@ -1,5 +1,6 @@
 import { projectData } from '@/project/data/projectData';
 import type { PrefabInfo } from '@/services/prefab';
+import { ActionType } from '@/utils/action';
 import type { Action } from '@/utils/action';
 import { executePatchCommand } from '@/project/history';
 import { commandError, commandOk, type CommandResult } from './types';
@@ -240,7 +241,7 @@ class PrefabCommands {
       const dataKey = type === 'mapBlock' ? String(info.idnum ?? '') : (info.id ?? '');
       if (!dataKey) throw new Error('Prefab is missing identity');
       const { next } = this.previewPaste(info, clipboard, allData, mode);
-      return executePatchCommand(getPrefabResource(type), [['change', `['${dataKey}']`, next]], {
+      return executePatchCommand(getPrefabResource(type), [[ActionType.Change, `['${dataKey}']`, next]], {
         label: `粘贴${prefabTypeLabel(type)}属性 ${dataKey}`,
         stage: 'paste-prefab',
       });
@@ -270,7 +271,7 @@ class PrefabCommands {
       const dataKey = type === 'mapBlock' ? String(info.idnum ?? '') : (info.id ?? '');
       if (!dataKey) throw new Error('Prefab is missing identity');
       const { next } = this.previewReset(info, allData);
-      return executePatchCommand(getPrefabResource(type), [['change', `['${dataKey}']`, next]], {
+      return executePatchCommand(getPrefabResource(type), [[ActionType.Change, `['${dataKey}']`, next]], {
         label: `重置${prefabTypeLabel(type)}属性 ${dataKey}`,
         stage: 'reset-prefab',
       });
@@ -294,7 +295,7 @@ class PrefabCommands {
       const actions: Action[] = ids.map((id) => {
         const current = allData[id];
         if (!isRecord(current)) throw new Error(`Prefab ${id} is invalid`);
-        return ['change', `['${id}']`, resetRecord(type, current)];
+        return [ActionType.Change, `['${id}']`, resetRecord(type, current)];
       });
       return executePatchCommand(getPrefabResource(type), actions, {
         label: `批量重置${prefabTypeLabel(type)}属性`,

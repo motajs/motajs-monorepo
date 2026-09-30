@@ -4,6 +4,7 @@ import { FileHandlerManager } from '@/fs/FileHandlerManager';
 import { projectData } from '@/project/data/projectData';
 import type { FloorData } from '@/types';
 import { serializeToJsMapFile } from '@/utils/serialize';
+import { ActionType } from '@/utils/action';
 import type { Action } from '@/utils/action';
 import { isValidFloorId } from '@/utils/string';
 import {
@@ -210,8 +211,8 @@ class FloorCommands {
       return executePatchCommand(
         projectData.tower(),
         [
-          ['change', "['main']['floorIds']", options.floorIds],
-          ['change', "['main']['floorPartitions']", validation.partitions],
+          [ActionType.Change, "['main']['floorIds']", options.floorIds],
+          [ActionType.Change, "['main']['floorPartitions']", validation.partitions],
         ],
         {
           label: '调整楼层顺序与分区',
@@ -271,8 +272,8 @@ class FloorCommands {
           patchResourceOperation(
             projectData.tower(),
             [
-              ['change', "['main']['floorIds']", floorIds],
-              ['change', "['main']['floorPartitions']", floorPartitions],
+              [ActionType.Change, "['main']['floorIds']", floorIds],
+              [ActionType.Change, "['main']['floorPartitions']", floorPartitions],
             ],
             {
               label: `复制楼层 ${sourceFloorId}`,
@@ -310,8 +311,8 @@ class FloorCommands {
       const tower = projectData.tower().value();
       const layers = getMapLayerSettingsSnapshot();
       const floorIds = tower.main.floorIds.includes(floorId) ? tower.main.floorIds : [...tower.main.floorIds, floorId];
-      const towerActions: Action[] = [['change', "['main']['floorIds']", floorIds]];
-      if (!tower.firstData.floorId) towerActions.push(['change', "['firstData']['floorId']", floorId]);
+      const towerActions: Action[] = [[ActionType.Change, "['main']['floorIds']", floorIds]];
+      if (!tower.firstData.floorId) towerActions.push([ActionType.Change, "['firstData']['floorId']", floorId]);
       const floorData = createInitialFloorData(floorId, options, layers);
       return executeCompositeCommand(
         [
@@ -379,9 +380,9 @@ class FloorCommands {
         ),
       );
       const nextFloorIds = [...tower.main.floorIds, ...floors.map((floor) => floor.floorId)];
-      const towerActions: Action[] = [['change', "['main']['floorIds']", nextFloorIds]];
+      const towerActions: Action[] = [[ActionType.Change, "['main']['floorIds']", nextFloorIds]];
       if (!tower.firstData.floorId) {
-        towerActions.push(['change', "['firstData']['floorId']", floors[0].floorId]);
+        towerActions.push([ActionType.Change, "['firstData']['floorId']", floors[0].floorId]);
       }
       operations.push(
         patchResourceOperation(projectData.tower(), towerActions, {
@@ -429,11 +430,11 @@ class FloorCommands {
         endId === oldFloorId ? newFloorId : endId,
       ]);
       const towerActions: Action[] = [
-        ['change', "['main']['floorIds']", floorIds],
-        ['change', "['main']['floorPartitions']", floorPartitions],
+        [ActionType.Change, "['main']['floorIds']", floorIds],
+        [ActionType.Change, "['main']['floorPartitions']", floorPartitions],
       ];
       if (tower.firstData.floorId === oldFloorId) {
-        towerActions.push(['change', "['firstData']['floorId']", newFloorId]);
+        towerActions.push([ActionType.Change, "['firstData']['floorId']", newFloorId]);
       }
       return executeCompositeCommand(
         [
@@ -486,11 +487,11 @@ class FloorCommands {
       const floorPartitions = partitionsAfterDelete(tower.main.floorIds, organization.partitions, floorId);
       const nextFloorId = floorIds[deletedIndex] ?? floorIds[deletedIndex - 1] ?? '';
       const towerActions: Action[] = [
-        ['change', "['main']['floorIds']", floorIds],
-        ['change', "['main']['floorPartitions']", floorPartitions],
+        [ActionType.Change, "['main']['floorIds']", floorIds],
+        [ActionType.Change, "['main']['floorPartitions']", floorPartitions],
       ];
       if (tower.firstData.floorId === floorId) {
-        towerActions.push(['change', "['firstData']['floorId']", nextFloorId]);
+        towerActions.push([ActionType.Change, "['firstData']['floorId']", nextFloorId]);
       }
       const operations: EditorOperation<unknown>[] = [
         navigateFloorOperation(
@@ -571,12 +572,12 @@ class FloorCommands {
       const record = projectData.floor(floorId).value() as unknown as Record<string, unknown>;
       const layers = getMapLayerSettingsSnapshot();
       const actions: Action[] = [
-        ['change', "['width']", width],
-        ['change', "['height']", height],
+        [ActionType.Change, "['width']", width],
+        [ActionType.Change, "['height']", height],
       ];
 
       for (const { property: field } of layers) {
-        actions.push(['change', `['${field}']`, resizeMap(record[field], width, height, offsetX, offsetY)]);
+        actions.push([ActionType.Change, `['${field}']`, resizeMap(record[field], width, height, offsetX, offsetY)]);
       }
       const coordinatePlan = await buildFloorCoordinateTransformPlan(floorId, ([x, y]) => {
         const nextX = x + offsetX;

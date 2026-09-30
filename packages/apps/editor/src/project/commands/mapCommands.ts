@@ -1,4 +1,5 @@
 import { projectData } from '@/project/data/projectData';
+import { ActionType } from '@/utils/action';
 import type { Action } from '@/utils/action';
 import { cloneDeep } from 'es-toolkit';
 import { executePatchCommand } from '@/project/history';
@@ -150,7 +151,7 @@ function stairActions(layer: MapLayer, pos: MapPosition, block: PaintBlock | und
   if (!changeFloor) return [];
 
   const key = locKey(pos);
-  return [['change', `['changeFloor']['${key}']`, changeFloor]];
+  return [[ActionType.Change, `['changeFloor']['${key}']`, changeFloor]];
 }
 
 function changeFloorForStairBlock(blockId: string | undefined): Record<string, unknown> | null {
@@ -172,7 +173,7 @@ function changeFloorForStairBlock(blockId: string | undefined): Record<string, u
 
 function clearEventActions(pos: MapPosition): Action[] {
   const key = locKey(pos);
-  return MAP_EVENT_FIELDS.map((field) => ['delete', `['${field}']['${key}']`, undefined]);
+  return MAP_EVENT_FIELDS.map((field) => [ActionType.Delete, `['${field}']['${key}']`, undefined]);
 }
 
 function isInsideLayer(layerMap: unknown, pos: MapPosition): boolean {
@@ -208,7 +209,7 @@ function initializeLayerActions(floor: Record<string, unknown>, layer: MapLayer)
     Array.isArray(current) &&
     current.length === height &&
     current.every((row) => Array.isArray(row) && row.length === width);
-  return valid ? [] : [['change', buildFieldPath([layer]), normalizedLayerMatrix(floor, layer)]];
+  return valid ? [] : [[ActionType.Change, buildFieldPath([layer]), normalizedLayerMatrix(floor, layer)]];
 }
 
 function readLayerCell(floor: Record<string, unknown>, layer: MapLayer, pos: MapPosition): unknown {
@@ -264,7 +265,11 @@ export function readMapInfo(floor: Record<string, unknown>, layer: MapLayer, rec
 function writeLocEventActions(actions: Action[], pos: MapPosition, events: Record<string, unknown>): void {
   const key = locKey(pos);
   for (const field of MAP_EVENT_FIELDS) {
-    actions.push([events[field] == null ? 'delete' : 'change', `['${field}']['${key}']`, cloneDeep(events[field])]);
+    actions.push([
+      events[field] == null ? ActionType.Delete : ActionType.Change,
+      `['${field}']['${key}']`,
+      cloneDeep(events[field]),
+    ]);
   }
 }
 
@@ -321,7 +326,7 @@ class MapCommands {
       const actions: Action[] = initializeLayerActions(floor, layer);
 
       for (const pos of positions) {
-        actions.push(['change', layerPath(layer, pos), value]);
+        actions.push([ActionType.Change, layerPath(layer, pos), value]);
         actions.push(...stairActions(layer, pos, options.block));
       }
 
@@ -366,7 +371,7 @@ class MapCommands {
       const actions: Action[] = [
         ...initializeLayerActions(floor, layer),
         ...positions.map((pos): Action => [
-          'change',
+          ActionType.Change,
           layerPath(layer, pos),
           tilesetPatternIdnum(pattern, options.anchor, pos),
         ]),
@@ -392,7 +397,7 @@ class MapCommands {
         for (let x = normalized.x0; x <= normalized.x1; x += 1) {
           const pos = { x, y };
           if (!isInsideLayer(layerMap, pos)) continue;
-          actions.push(['change', layerPath(layer, pos), 0]);
+          actions.push([ActionType.Change, layerPath(layer, pos), 0]);
           if (layer === 'map' && includeEvents) actions.push(...clearEventActions(pos));
         }
       }
@@ -416,7 +421,7 @@ class MapCommands {
     const floor = projectData.floor(floorId).value() as unknown as Record<string, unknown>;
     return this.patchFloor(
       floorId,
-      [...initializeLayerActions(floor, layer), ['change', layerPath(layer, pos), 0]],
+      [...initializeLayerActions(floor, layer), [ActionType.Change, layerPath(layer, pos), 0]],
       `清除图块 ${floorId} (${pos.x},${pos.y})`,
       'clear-map-block',
     );
@@ -424,7 +429,7 @@ class MapCommands {
 
   async clearLoc(floorId: string, layer: MapLayer, pos: MapPosition): Promise<CommandResult> {
     const floor = projectData.floor(floorId).value() as unknown as Record<string, unknown>;
-    const actions: Action[] = [...initializeLayerActions(floor, layer), ['change', layerPath(layer, pos), 0]];
+    const actions: Action[] = [...initializeLayerActions(floor, layer), [ActionType.Change, layerPath(layer, pos), 0]];
     if (layer === 'map') actions.push(...clearEventActions(pos));
 
     return this.patchFloor(floorId, actions, `清除位置 ${floorId} (${pos.x},${pos.y})`, 'clear-map-loc');
@@ -453,13 +458,13 @@ class MapCommands {
           if (!one || !isInsideLayer(layerMap, { x, y })) continue;
 
           const targetPos = { x, y };
-          actions.push(['change', layerPath(targetLayer, targetPos), one.map]);
+          actions.push([ActionType.Change, layerPath(targetLayer, targetPos), one.map]);
 
           if (sourceLayer === 'map' && targetLayer === 'map') {
             const key = locKey(targetPos);
             for (const field of MAP_EVENT_FIELDS) {
               actions.push([
-                one.events[field] == null ? 'delete' : 'change',
+                one.events[field] == null ? ActionType.Delete : ActionType.Change,
                 `['${field}']['${key}']`,
                 structuredClone(one.events[field]),
               ]);
@@ -486,7 +491,7 @@ class MapCommands {
       assertMapMatrixSize(matrix, { width, height });
       return this.patchFloor(
         floorId,
-        [['change', `['${layer}']`, matrix]],
+        [[ActionType.Change, `['${layer}']`, matrix]],
         `替换地图图层 ${floorId} / ${layer}`,
         'replace-map-layer',
       );
@@ -502,10 +507,10 @@ class MapCommands {
       const { width, height } = getMatrixSize(record);
       const zero = createZeroMatrix(width, height);
       const actions: Action[] = [
-        ...layers.map(({ property }): Action => ['change', buildFieldPath([property]), cloneDeep(zero)]),
-        ['change', "['firstArrive']", []],
-        ['change', "['eachArrive']", []],
-        ...MAP_EVENT_FIELDS.map((field): Action => ['change', `['${field}']`, {}]),
+        ...layers.map(({ property }): Action => [ActionType.Change, buildFieldPath([property]), cloneDeep(zero)]),
+        [ActionType.Change, "['firstArrive']", []],
+        [ActionType.Change, "['eachArrive']", []],
+        ...MAP_EVENT_FIELDS.map((field): Action => [ActionType.Change, `['${field}']`, {}]),
       ];
       return this.patchFloor(floorId, actions, `清空楼层地图 ${floorId}`, 'clear-floor-map');
     } catch (error) {
@@ -520,8 +525,8 @@ class MapCommands {
       const value = cloneDeep(readLayerCell(record, layer, options.from));
       const actions: Action[] = [
         ...initializeLayerActions(record, layer),
-        ['change', layerPath(layer, options.from), 0],
-        ['change', layerPath(layer, options.to), value],
+        [ActionType.Change, layerPath(layer, options.from), 0],
+        [ActionType.Change, layerPath(layer, options.to), value],
       ];
       if (layer === 'map') {
         actions.push(...clearEventActions(options.from));
@@ -544,8 +549,8 @@ class MapCommands {
       const record = projectData.floor(options.floorId).value() as unknown as Record<string, unknown>;
       const actions: Action[] = [
         ...initializeLayerActions(record, layer),
-        ['change', layerPath(layer, options.from), cloneDeep(readLayerCell(record, layer, options.to))],
-        ['change', layerPath(layer, options.to), cloneDeep(readLayerCell(record, layer, options.from))],
+        [ActionType.Change, layerPath(layer, options.from), cloneDeep(readLayerCell(record, layer, options.to))],
+        [ActionType.Change, layerPath(layer, options.to), cloneDeep(readLayerCell(record, layer, options.from))],
       ];
       if (layer === 'map') {
         writeLocEventActions(actions, options.from, readLocEvents(record, options.to));
@@ -566,9 +571,9 @@ class MapCommands {
     return executePatchCommand(
       projectData.tower(),
       [
-        ['change', "['firstData']['floorId']", floorId],
-        ['change', "['firstData']['hero']['loc']['x']", pos.x],
-        ['change', "['firstData']['hero']['loc']['y']", pos.y],
+        [ActionType.Change, "['firstData']['floorId']", floorId],
+        [ActionType.Change, "['firstData']['hero']['loc']['x']", pos.x],
+        [ActionType.Change, "['firstData']['hero']['loc']['y']", pos.y],
       ],
       {
         label: `绑定出生点 ${floorId} (${pos.x},${pos.y})`,
@@ -583,7 +588,7 @@ class MapCommands {
       if (!changeFloor) throw new Error(`Unsupported stair block: ${blockId}`);
       return this.patchFloor(
         floorId,
-        [['change', `['changeFloor']['${locKey(pos)}']`, changeFloor]],
+        [[ActionType.Change, `['changeFloor']['${locKey(pos)}']`, changeFloor]],
         `绑定楼传 ${floorId} (${pos.x},${pos.y})`,
         'bind-stair',
       );
@@ -604,7 +609,7 @@ class MapCommands {
       const afterBattle = floor.afterBattle as Record<string, unknown> | undefined;
       const actions: Action[] = [
         [
-          'change',
+          ActionType.Change,
           `['autoEvent']['${doorKey}']`,
           {
             '0': {
@@ -623,7 +628,7 @@ class MapCommands {
         const enemyKey = locKey(enemyPos);
         const events = Array.isArray(afterBattle?.[enemyKey]) ? (cloneDeep(afterBattle[enemyKey]) as unknown[]) : [];
         events.push({ type: 'setValue', name: doorFlag, operator: '+=', value: '1' });
-        actions.push(['change', `['afterBattle']['${enemyKey}']`, events]);
+        actions.push([ActionType.Change, `['afterBattle']['${enemyKey}']`, events]);
       }
       return this.patchFloor(
         floorId,

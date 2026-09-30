@@ -6,6 +6,7 @@ import { projectData } from '@/project/data/projectData';
 import { projectModel, type ProjectImageEntry } from '@/project/model/projectModel';
 import type { TowerData } from '@/services/tower';
 import { useSignal } from '@/hooks/useFs';
+import { ActionType } from '@/utils/action';
 import { notifyCommandResult, notifyError, notifySuccess } from '@/utils/notify';
 import { Checkbox, Input, InputNumber, Modal } from 'antd';
 import {
@@ -461,7 +462,7 @@ const DirectoryPage: FC<{
           ? currentValue.filter((item): item is string => typeof item === 'string')
           : [];
         const next = mutate(current);
-        const result = await tableCommands.patchTower([['change', `['main']['${String(registry)}']`, next]]);
+        const result = await tableCommands.patchTower([[ActionType.Change, `['main']['${String(registry)}']`, next]]);
         if (!result.ok) throw result.error;
         notifyCommandResult(result, '资源注册已更新');
       });
@@ -637,7 +638,7 @@ const DirectoryPage: FC<{
                         if (!confirmed) return;
                         const next = definitions.filter((entry) => entry.name !== selectedDefinition.name);
                         notifyCommandResult(
-                          await tableCommands.patchTower([['change', "['main']['splitImages']", next]]),
+                          await tableCommands.patchTower([[ActionType.Change, "['main']['splitImages']", next]]),
                           '图片切分已移除',
                         );
                       },
@@ -656,7 +657,7 @@ const DirectoryPage: FC<{
           onCancel={() => setSplitEditor(undefined)}
           onSave={async (definition) => {
             const next = [...definitions.filter((entry) => entry.name !== definition.name), definition];
-            const result = await tableCommands.patchTower([['change', "['main']['splitImages']", next]]);
+            const result = await tableCommands.patchTower([[ActionType.Change, "['main']['splitImages']", next]]);
             if (!result.ok) throw result.error;
             setSplitEditor(undefined);
             notifySuccess('图片切分已保存');

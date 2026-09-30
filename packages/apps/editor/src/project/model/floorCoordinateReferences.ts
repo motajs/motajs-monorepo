@@ -2,6 +2,7 @@ import { cloneDeep } from 'es-toolkit';
 import type { DataResource } from '@/project/data/DataResource';
 import { projectData } from '@/project/data/projectData';
 import type { FloorData } from '@/types';
+import { ActionType } from '@/utils/action';
 import type { Action } from '@/utils/action';
 
 export type FloorPoint = [number, number];
@@ -193,7 +194,7 @@ export async function buildFloorCoordinateTransformPlan(
     }
     references.push(...shifted.references);
     if (field === 'changeFloor') targetChangeFloor = shifted.value;
-    else targetActions.push(['change', `['${field}']`, shifted.value]);
+    else targetActions.push([ActionType.Change, `['${field}']`, shifted.value]);
   }
 
   for (const field of OPTIONAL_POINT_FIELDS) {
@@ -210,7 +211,7 @@ export async function buildFloorCoordinateTransformPlan(
       behavior: nextPoint ? 'move' : 'clear',
     });
     if (changedPoint(point, nextPoint)) {
-      targetActions.push(['change', `['${field}']`, nextPoint]);
+      targetActions.push([ActionType.Change, `['${field}']`, nextPoint]);
     }
   }
 
@@ -222,11 +223,11 @@ export async function buildFloorCoordinateTransformPlan(
     const inspected = inspectChangeFloorRecord(record, sourceFloorId, targetFloorId, floorIds, transform);
     references.push(...inspected.references);
     if (sourceFloorId === targetFloorId) {
-      targetActions.push(['change', "['changeFloor']", inspected.value]);
+      targetActions.push([ActionType.Change, "['changeFloor']", inspected.value]);
     } else if (inspected.changed) {
       patches.push({
         resource: sourceResource as DataResource<unknown>,
-        actions: [['change', "['changeFloor']", inspected.value]],
+        actions: [[ActionType.Change, "['changeFloor']", inspected.value]],
         label: `更新指向 ${targetFloorId} 的坐标`,
         stage: `floor-coordinate-reference:${sourceFloorId}`,
       });
@@ -254,7 +255,7 @@ export async function buildFloorCoordinateTransformPlan(
             resource: towerResource as DataResource<unknown>,
             actions: [
               [
-                'change',
+                ActionType.Change,
                 "['firstData']['hero']['loc']",
                 {
                   ...(loc as Record<string, unknown>),
