@@ -201,7 +201,7 @@ Plans:
 
 **Depends on:** Phase 5
 
-**Plans:** 2/9 plans executed
+**Plans:** 3/9 plans executed
 
 Plans:
 **Wave 1 — 接口层（D-02 / D-06 / D-07 / D-10）**
@@ -211,7 +211,7 @@ Plans:
 
 **Wave 2 — 数字枚举 + 编辑器最小跟随（D-06 / D-14）**
 
-- [ ] 05.2-03-PLAN.md — `PreloadStrategy` / `ActionType` 改数字枚举，编辑器与之相关的字符串字面量机械跟随
+- [x] 05.2-03-PLAN.md — `PreloadStrategy` / `ActionType` 改数字枚举，编辑器与之相关的字符串字面量机械跟随
 
 **Wave 3 — 实现层：类化（D-05 / D-17）**
 

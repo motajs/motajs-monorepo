@@ -2,18 +2,18 @@
 gsd_state_version: "1.0"
 current_phase: "05.2"
 current_phase_name: editor-core-impl
-current_plan: 3
+current_plan: 4
 status: executing
-stopped_at: Completed 05.2-02-PLAN.md
-last_updated: "2026-09-30T06:40:08.483Z"
+stopped_at: Completed 05.2-03-PLAN.md
+last_updated: "2026-09-30T07:12:35.774Z"
 last_activity: 2026-09-28
 last_activity_desc: Phase 05.1 plan 01 complete (editor-core undo contract types)
-state_head: 840e26531869bd9006a1f2c8eb89cc423ffa564a
+state_head: 4d88a0340bf046b3f4cec7dbc0305d8c685307c7
 progress:
   total_phases: 14
   completed_phases: 0
   total_plans: 42
-  completed_plans: 35
+  completed_plans: 36
   percent: 0
 ---
 
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-09-24)
 ## Current Position
 
 Phase: 05.2 (editor-core-impl) — READY TO EXECUTE
-Current Plan: 3
+Current Plan: 4
 Total Plans in Phase: 9
 Status: Executing (plan 01 complete; plan 02 pending briefing/approval)
 Last activity: 2026-09-28 — 05.1-01 撤销契约类型落地（`lib/kernel/types.ts`）
@@ -83,6 +83,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 05.1 P07 | 129 | 3 tasks | 49 files |
 | Phase 05.2 P01 | 13 | 3 tasks | 16 files |
 | Phase 05.2 P02 | 15min | 3 tasks | 17 files |
+| Phase 05.2 P03 | 30 | 3 tasks | 37 files |
 
 ## Accumulated Context
 
@@ -162,6 +163,10 @@ Recent decisions affecting current work:
 - [Phase 05.2]: 05.2-02: Task 1 一次性迁移全部生产 import（删除 interfaces.ts 与加载根 barrel 的公开面测试使然），Task 2 转测试侧 import + readonly 复核 + 全量门禁
 - [Phase 05.2]: 05.2-02: PersistenceIntent.{kind,execute}、PersistFailure.{path,error} 补 readonly；Content.status 等四处状态名保留字符串联合例外
 - [Phase 05.2]: 05.2-02: interface 头顶 jsDoc 改单行 //、type 别名保留一行 jsDoc（D-02）；// 注释按 AGENTS.md 不带句尾句号
+- [Phase 05.2]: 05.2-03: ActionType 与 PreloadStrategy 均改数字枚举（Change=0/Add=1/Delete=2、Eager=0/Lazy=1/OnDemand=2），成员名沿用 INTERFACE-NAME.md Plan 03 已确认名
+- [Phase 05.2]: 05.2-03: 公开面值/类型分离——ActionType/PreloadStrategy 从 export type 组移到 export { X } 值导出，Action 仍 export type
+- [Phase 05.2]: 05.2-03: 编辑器机械跟随以 pnpm --filter @motajs/editor typecheck 的 TS2322 为准逐点替换；UI EditMode/菜单 key/prefabCommands 独立 kind 联合未动
+- [Phase 05.2]: 05.2-03: utils/action.ts shim 的 ActionType 由类型转发改为值转发（export { ActionType }），Action 仍类型转发，仍是只转发 shim
 
 ### Pending Todos
 
@@ -188,6 +193,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-09-30T06:40:08.313Z
-Stopped at: Completed 05.2-02-PLAN.md
+Last session: 2026-09-30T07:12:35.602Z
+Stopped at: Completed 05.2-03-PLAN.md
 Resume file: None
