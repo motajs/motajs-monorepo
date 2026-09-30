@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { FileHandlerManager } from '@/fs/FileHandlerManager';
 import { persistenceMonitor } from '@/fs/PersistenceMonitor';
 import { tableCommands } from '@/project/commands/tableCommands';
+import { ActionType } from '@/utils/action';
 import { projectData } from '@/project/data/projectData';
 import { operationHistory } from '../operationHistory';
 // Type-only import: erased at build time, so the pure describes below never evaluate
@@ -38,9 +39,11 @@ describe('operationHistory resource reactivity', () => {
     const originalTitle = floor.title;
     project.fs.setWriteDelay(80);
 
-    expect(await tableCommands.patchFloor('sample0', [['change', "['title']", 'Memory first title']])).toEqual({
-      ok: true,
-    });
+    expect(await tableCommands.patchFloor('sample0', [[ActionType.Change, "['title']", 'Memory first title']])).toEqual(
+      {
+        ok: true,
+      },
+    );
 
     // The new value is observable on the resource itself within the same microtask
     // chain: no re-read, no timer wait, no effect flush.

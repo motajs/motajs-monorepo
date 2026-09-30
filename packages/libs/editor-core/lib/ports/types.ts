@@ -59,8 +59,15 @@ export interface ResourceDependencies {
   readonly fileHandlers: unknown;
 }
 
-/** 允许的 `preload` 字面量集合；本计划只挪位置、仍保持字符串联合（数字枚举化在 Plan 03）。 */
-export type PreloadStrategy = 'eager' | 'lazy' | 'on-demand';
+// 资源的预加载策略：立即 / 惰性 / 按需（数字枚举，D-06）。
+export enum PreloadStrategy {
+  // 立即加载
+  Eager = 0,
+  // 惰性加载
+  Lazy = 1,
+  // 按需加载
+  OnDemand = 2,
+}
 
 // 通用资源描述符：每个资源只由逻辑 id + 一个惰性 create(deps) 工厂描述；
 // 刻意不含 path、format、handler 实例或参数模板。

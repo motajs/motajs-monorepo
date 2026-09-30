@@ -156,7 +156,7 @@ describe('editor-core 底层面公开面', () => {
     expectTypeOf<ResourceDescriptor<unknown>>().not.toBeNever();
     expectTypeOf<ResourceDependencies>().not.toBeNever();
     expectTypeOf<EngineDescription>().not.toBeNever();
-    expectTypeOf<PreloadStrategy>().not.toBeNever();
+    expect(typeof PreloadStrategy).toBe('object');
   });
 
   test('Plan 01 的撤销契约类型都从根 `.` 解析（编译期断言）', () => {

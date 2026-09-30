@@ -1,4 +1,4 @@
-import { EngineDescription, ResourceDescriptor, ResourceDependencies } from '@motajs/editor-core';
+import { EngineDescription, PreloadStrategy, ResourceDescriptor, ResourceDependencies } from '@motajs/editor-core';
 import { IResourceView } from '../resources/types';
 import { FileResource } from '../resources/fileResource';
 import { FileHandler } from '../resources/fileHandler';
@@ -78,7 +78,7 @@ function fileBackedDescriptor<T>(
 function notesDescriptor(): ResourceDescriptor<IResourceView<EngineBNotes>> {
   return {
     id: 'engineB.notes',
-    preload: 'lazy',
+    preload: PreloadStrategy.Lazy,
     preloadDependsOn: ['engineB.catalog'],
     create: (deps: ResourceDependencies): IResourceView<EngineBNotes> => {
       const catalog = new FileResource<EngineBCatalog>(
@@ -105,7 +105,9 @@ function notesDescriptor(): ResourceDescriptor<IResourceView<EngineBNotes>> {
 export const engineBDescription: EngineDescription = {
   id: 'engineB',
   resources: [
-    fileBackedDescriptor<EngineBCatalog>('engineB.catalog', ENGINE_B_CATALOG_ADDRESS, { preload: 'eager' }),
+    fileBackedDescriptor<EngineBCatalog>('engineB.catalog', ENGINE_B_CATALOG_ADDRESS, {
+      preload: PreloadStrategy.Eager,
+    }),
     fileBackedDescriptor<EngineBIndex>('engineB.index', ENGINE_B_INDEX_ADDRESS, {
       preloadDependsOn: ['engineB.catalog'],
     }),

@@ -47,10 +47,11 @@ export type {
   IFsPort,
   IHostPort,
   IPreviewAdapter,
-  PreloadStrategy,
   ResourceDependencies,
   ResourceDescriptor,
 } from './ports/types';
+// 预加载策略是数字枚举（D-06），按**值**导出，供适配器构造 preload。
+export { PreloadStrategy } from './ports/types';
 
 // D-18 旧名过渡别名：四个端口的新名已带 `I` 前缀（D-07），旧名以纯类型别名继续导出，
 // 使 `@motajs/editor` 无需改动即可编译；Phase 11 删除。

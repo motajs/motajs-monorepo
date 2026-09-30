@@ -18,7 +18,7 @@
  *   Phase 11（组合根切换）负责。
  * - 参数化的楼层族也不作为静态条目（见 `motaFloor.ts`，D-07）。
  */
-import { defineEngine } from '@motajs/editor-core';
+import { defineEngine, PreloadStrategy } from '@motajs/editor-core';
 import type { EngineAdapter, ResourceDependencies } from '@motajs/editor-core';
 import { FileResource, JsonDataHandler } from '@motajs/editor-impl';
 import { Json2xDataHandler } from '@/fs/Json2xDataHandler';
@@ -52,7 +52,7 @@ export const motaEngine: EngineAdapter = defineEngine({
   resources: [
     {
       id: 'mota.tower',
-      preload: 'eager',
+      preload: PreloadStrategy.Eager,
       create: (deps: ResourceDependencies) =>
         new FileResource<TowerData>(
           'mota.tower',
@@ -63,7 +63,7 @@ export const motaEngine: EngineAdapter = defineEngine({
     },
     {
       id: 'mota.items',
-      preload: 'eager',
+      preload: PreloadStrategy.Eager,
       create: (deps: ResourceDependencies) =>
         new FileResource<ItemsData>(
           'mota.items',
@@ -74,7 +74,7 @@ export const motaEngine: EngineAdapter = defineEngine({
     },
     {
       id: 'mota.enemys',
-      preload: 'eager',
+      preload: PreloadStrategy.Eager,
       create: (deps: ResourceDependencies) =>
         new FileResource<EnemysData>(
           'mota.enemys',
@@ -85,7 +85,7 @@ export const motaEngine: EngineAdapter = defineEngine({
     },
     {
       id: 'mota.maps',
-      preload: 'eager',
+      preload: PreloadStrategy.Eager,
       create: (deps: ResourceDependencies) =>
         new FileResource<MapsBlocksData>(
           'mota.maps',
@@ -96,7 +96,7 @@ export const motaEngine: EngineAdapter = defineEngine({
     },
     {
       id: 'mota.icons',
-      preload: 'eager',
+      preload: PreloadStrategy.Eager,
       create: (deps: ResourceDependencies) =>
         new FileResource<IconsData>(
           'mota.icons',
@@ -107,7 +107,7 @@ export const motaEngine: EngineAdapter = defineEngine({
     },
     {
       id: 'mota.functions',
-      preload: 'eager',
+      preload: PreloadStrategy.Eager,
       create: (deps: ResourceDependencies) =>
         new FileResource<FunctionsData>(
           'mota.functions',
@@ -118,7 +118,7 @@ export const motaEngine: EngineAdapter = defineEngine({
     },
     {
       id: 'mota.plugins',
-      preload: 'eager',
+      preload: PreloadStrategy.Eager,
       create: (deps: ResourceDependencies) =>
         new FileResource<PluginsData>(
           'mota.plugins',
@@ -129,7 +129,7 @@ export const motaEngine: EngineAdapter = defineEngine({
     },
     {
       id: 'mota.events',
-      preload: 'eager',
+      preload: PreloadStrategy.Eager,
       create: (deps: ResourceDependencies) =>
         new FileResource<EventsData>(
           'mota.events',
@@ -140,7 +140,7 @@ export const motaEngine: EngineAdapter = defineEngine({
     },
     {
       id: 'mota.editorConfig',
-      preload: 'lazy',
+      preload: PreloadStrategy.Lazy,
       create: (deps: ResourceDependencies) =>
         new FileResource<EditorConfig>(
           'mota.editorConfig',

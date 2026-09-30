@@ -18,6 +18,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { FileHandlerManager } from '@/fs/FileHandlerManager';
 import { persistenceMonitor } from '@/fs/PersistenceMonitor';
+import { ActionType } from '@/utils/action';
 import { tableCommands } from '@/project/commands/tableCommands';
 import { projectData } from '@/project/data/projectData';
 import { loadSampleProject, type SampleProjectContext } from '@test/utils/sampleProject';
@@ -45,7 +46,7 @@ describe('persistence never rolls editor state back', () => {
 
     project.fs.setWriteError(new Error('tower persist failed'));
     const result = await tableCommands.patchResource(tower, [
-      ['change', "['firstData']['title']", 'No Rollback Title'],
+      [ActionType.Change, "['firstData']['title']", 'No Rollback Title'],
     ]);
 
     // 编辑命令本身成功：失败发生在持久化边界，而不是编辑本身

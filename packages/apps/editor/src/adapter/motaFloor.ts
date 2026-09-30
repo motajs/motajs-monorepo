@@ -10,7 +10,7 @@
  * id 语法风险：真实楼层 id 可能含非 word 字符，选择「sanitize / 编码 id」还是「放宽语法」是可逆
  * 决策，被显式推迟到 Phase 11 / 用户决定，而不是在这里被默认做出（RESEARCH Open Question 1）。
  */
-import { isValidResourceId } from '@motajs/editor-core';
+import { isValidResourceId, PreloadStrategy } from '@motajs/editor-core';
 import type { ResourceDependencies, ResourceDescriptor } from '@motajs/editor-core';
 import { FileResource } from '@motajs/editor-impl';
 import type { LoadableResource } from '@motajs/editor-impl';
@@ -48,7 +48,7 @@ export function motaFloorDescriptor(floorId: string): ResourceDescriptor<Loadabl
 
   return {
     id,
-    preload: 'on-demand',
+    preload: PreloadStrategy.OnDemand,
     preloadDependsOn: ['mota.tower'],
     create: (deps: ResourceDependencies) =>
       new FileResource<FloorData>(id, motaFloorAddress(floorId), (file) => new FloorDataHandler(file, floorId), deps),

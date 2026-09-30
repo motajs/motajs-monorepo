@@ -5,6 +5,7 @@ import { persistenceMonitor } from '@/fs/PersistenceMonitor';
 import { tableCommands } from '@/project/commands/tableCommands';
 import { projectData } from '@/project/data/projectData';
 import type { DataResource } from '@/project/data/DataResource';
+import { ActionType } from '@/utils/action';
 import type { Action } from '@/utils/action';
 import { loadSampleProject, type SampleProjectContext } from '@test/utils/sampleProject';
 import { waitFor } from '@test/utils/testHelpers';
@@ -53,7 +54,7 @@ describe('ProjectData persist status integration', () => {
     await project.loadResource(tower);
     project.fs.setWriteDelay(50);
 
-    await tower.patch([['change', "['firstData']['title']", 'Persist Status Title']]);
+    await tower.patch([[ActionType.Change, "['firstData']['title']", 'Persist Status Title']]);
 
     expect(tower.value().firstData.title).toBe('Persist Status Title');
     expect(tower.persistStatus().status).toBe('persisting');
@@ -74,7 +75,7 @@ describe('ProjectData persist status integration', () => {
 
     try {
       const result = await tableCommands.patchResource(tower, [
-        ['change', "['firstData']['title']", 'Failed Persist Title'],
+        [ActionType.Change, "['firstData']['title']", 'Failed Persist Title'],
       ]);
 
       expect(result).toEqual({ ok: true });
@@ -90,7 +91,7 @@ describe('ProjectData persist status integration', () => {
       expect(failedFor(TOWER_PATH)[0]?.error.message).toBe('tower persist failed');
       expect(project.readText(TOWER_PATH)).not.toContain('Failed Persist Title');
     } finally {
-      await recoverResource(project, tower, [['change', "['firstData']['title']", 'Recovered Persist Title']]);
+      await recoverResource(project, tower, [[ActionType.Change, "['firstData']['title']", 'Recovered Persist Title']]);
     }
 
     expect(project.readText(TOWER_PATH)).toContain('Recovered Persist Title');
@@ -102,7 +103,9 @@ describe('ProjectData persist status integration', () => {
     await project.loadResource(commonEvents);
     project.fs.setWriteDelay(50);
 
-    await commonEvents.patch([['add', "['__persistStatusEvent']", [{ type: 'comment', text: 'mapped resource' }]]]);
+    await commonEvents.patch([
+      [ActionType.Add, "['__persistStatusEvent']", [{ type: 'comment', text: 'mapped resource' }]],
+    ]);
 
     expect(commonEvents.persistStatus().status).toBe('persisting');
     expect(events.persistStatus().status).toBe('persisting');
@@ -123,8 +126,8 @@ describe('ProjectData persist status integration', () => {
     await project.loadResource(floor);
     project.fs.setWriteDelay(80);
 
-    await tower.patch([['change', "['firstData']['title']", 'Concurrent Tower Persist']]);
-    await floor.patch([['change', "['title']", 'Concurrent Floor Persist']]);
+    await tower.patch([[ActionType.Change, "['firstData']['title']", 'Concurrent Tower Persist']]);
+    await floor.patch([[ActionType.Change, "['title']", 'Concurrent Floor Persist']]);
 
     await waitFor(
       () =>
@@ -150,7 +153,9 @@ describe('ProjectData persist status integration', () => {
     project.fs.setWriteErrorForPath(FLOOR_PATH, new Error('floor-only persist failed'));
 
     try {
-      const floorResult = await tableCommands.patchFloor('sample0', [['change', "['title']", 'Failed Floor Persist']]);
+      const floorResult = await tableCommands.patchFloor('sample0', [
+        [ActionType.Change, "['title']", 'Failed Floor Persist'],
+      ]);
       expect(floorResult).toEqual({ ok: true });
       expect(floor.value().title).toBe('Failed Floor Persist');
 
@@ -158,7 +163,7 @@ describe('ProjectData persist status integration', () => {
       expect(floor.persistStatus().status).toBe('error');
       expect(failedFor(FLOOR_PATH)[0]?.error.message).toBe('floor-only persist failed');
 
-      await tower.patch([['change', "['firstData']['title']", 'Tower Still Persists']]);
+      await tower.patch([[ActionType.Change, "['firstData']['title']", 'Tower Still Persists']]);
       await persistenceMonitor.whenQuiescent([tower.path]);
 
       expect(tower.persistStatus().status).toBe('idle');
@@ -166,7 +171,7 @@ describe('ProjectData persist status integration', () => {
       expect(project.readText(TOWER_PATH)).toContain('Tower Still Persists');
       expect(project.readText(FLOOR_PATH)).not.toContain('Failed Floor Persist');
     } finally {
-      await recoverResource(project, floor, [['change', "['title']", 'Recovered Floor Persist']]);
+      await recoverResource(project, floor, [[ActionType.Change, "['title']", 'Recovered Floor Persist']]);
     }
 
     expect(project.readText(FLOOR_PATH)).toContain('Recovered Floor Persist');

@@ -10,6 +10,7 @@ import { MemoryFileSystem } from '@test/utils/MemoryFileSystem';
 import { serializeToJsDataFile } from '@/utils/serialize';
 import { ContentUtils } from '@/fs/ContentUtils';
 import { persistenceMonitor } from '@/fs/PersistenceMonitor';
+import { ActionType } from '@/utils/action';
 import type { Action } from '@/utils/action';
 
 describe('towerService', () => {
@@ -159,7 +160,7 @@ describe('towerService', () => {
         main: { floorIds: ['MT1'], title: '旧标题' },
       });
 
-      const actions: Action[] = [['change', "['main']['title']", '新标题']];
+      const actions: Action[] = [[ActionType.Change, "['main']['title']", '新标题']];
 
       towerService.saveTowerData(actions);
 
@@ -174,9 +175,9 @@ describe('towerService', () => {
       });
 
       const actions: Action[] = [
-        ['change', "['main']['title']", '新标题'],
-        ['change', "['values']['hp']", 2000],
-        ['change', "['values']['atk']", 100],
+        [ActionType.Change, "['main']['title']", '新标题'],
+        [ActionType.Change, "['values']['hp']", 2000],
+        [ActionType.Change, "['values']['atk']", 100],
       ];
 
       towerService.saveTowerData(actions);
@@ -194,7 +195,7 @@ describe('towerService', () => {
       });
 
       // 修改 floorIds，移除 MT2
-      const actions: Action[] = [['change', "['main']['floorIds']", ['MT1', 'MT3']]];
+      const actions: Action[] = [[ActionType.Change, "['main']['floorIds']", ['MT1', 'MT3']]];
 
       towerService.saveTowerData(actions);
 
@@ -210,7 +211,7 @@ describe('towerService', () => {
       });
 
       // 修改其他属性
-      const actions: Action[] = [['change', "['main']['title']", '新标题']];
+      const actions: Action[] = [[ActionType.Change, "['main']['title']", '新标题']];
 
       towerService.saveTowerData(actions);
 
@@ -231,7 +232,7 @@ describe('towerService', () => {
     });
 
     it('未加载时应该抛出错误', () => {
-      const actions: Action[] = [['change', "['main']['title']", '新标题']];
+      const actions: Action[] = [[ActionType.Change, "['main']['title']", '新标题']];
 
       expect(() => towerService.saveTowerData(actions)).toThrow();
     });
@@ -243,7 +244,7 @@ describe('towerService', () => {
         main: { floorIds: ['MT1'], title: '旧标题' },
       });
 
-      const actions: Action[] = [['change', "['main']['title']", '新标题']];
+      const actions: Action[] = [[ActionType.Change, "['main']['title']", '新标题']];
 
       const preview = towerService.previewChanges(actions);
 
@@ -261,8 +262,8 @@ describe('towerService', () => {
       });
 
       const actions: Action[] = [
-        ['change', "['main']['title']", '新标题'],
-        ['change', "['values']['hp']", 2000],
+        [ActionType.Change, "['main']['title']", '新标题'],
+        [ActionType.Change, "['values']['hp']", 2000],
       ];
 
       const preview = towerService.previewChanges(actions);

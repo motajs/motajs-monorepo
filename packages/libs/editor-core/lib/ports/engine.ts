@@ -1,4 +1,4 @@
-import { EngineDescription, IEngineAdapter, ResourceDescriptor } from './types';
+import { EngineDescription, IEngineAdapter, PreloadStrategy, ResourceDescriptor } from './types';
 
 /**
  * `defineEngine` —— 引擎适配器的定义与校验（引擎无关，PORT-03）。
@@ -77,7 +77,7 @@ export class EngineDefinitionError extends Error {
  * 3. `create` 是函数；
  * 4. 每个 `preloadDependsOn` 目标都指向同组内存在的 id；
  * 5. `preloadDependsOn` 图无环（DFS + on-stack 集，报告**每一条**闭环边）；
- * 6. `preload` 若给出必须是 `PreloadStrategy` 字面量之一；
+ * 6. `preload` 若给出必须是 `PreloadStrategy` 枚举成员之一；
  * 7. `apiVersion` 若给出必须是非空字符串。
  *
  * 本函数不做任何注册、构造或总线交互——定义期与实例期严格分离，且无模块级可变状态。
@@ -95,7 +95,12 @@ export function defineEngine(description: EngineDescription): IEngineAdapter {
     if (typeof descriptor.create !== 'function') problems.push(`资源描述符 ${descriptor.id} 的 create 不是函数`);
 
     const preload = descriptor.preload;
-    if (preload !== undefined && preload !== 'eager' && preload !== 'lazy' && preload !== 'on-demand') {
+    if (
+      preload !== undefined &&
+      preload !== PreloadStrategy.Eager &&
+      preload !== PreloadStrategy.Lazy &&
+      preload !== PreloadStrategy.OnDemand
+    ) {
       problems.push(`资源描述符 ${descriptor.id} 的 preload 非法：${String(preload)}`);
     }
   }

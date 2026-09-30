@@ -11,6 +11,7 @@ import { FileHandlerManager } from '@/fs/FileHandlerManager';
 import { persistenceMonitor } from '@/fs/PersistenceMonitor';
 import { projectData } from '@/project/data/projectData';
 import { tableCommands } from '@/project/commands/tableCommands';
+import { ActionType } from '@/utils/action';
 import { operationHistory } from '../operationHistory';
 import { compositeOperation, type EditorOperation } from '../operations';
 import { registerEditorViewportProvider, type EditorViewport } from '../viewport';
@@ -64,7 +65,9 @@ describe('OperationHistory', () => {
     const floor = await project.loadResource(projectData.floor('sample0'));
     const originalTitle = floor.title;
 
-    expect(await tableCommands.patchFloor('sample0', [['change', "['title']", 'History title']])).toEqual({ ok: true });
+    expect(await tableCommands.patchFloor('sample0', [[ActionType.Change, "['title']", 'History title']])).toEqual({
+      ok: true,
+    });
     expect(projectData.floor('sample0').value().title).toBe('History title');
 
     currentViewport = viewport('sample1');
@@ -85,9 +88,11 @@ describe('OperationHistory', () => {
     const originalTitle = floor.title;
     project.fs.setWriteDelay(80);
 
-    expect(await tableCommands.patchFloor('sample0', [['change', "['title']", 'Memory first title']])).toEqual({
-      ok: true,
-    });
+    expect(await tableCommands.patchFloor('sample0', [[ActionType.Change, "['title']", 'Memory first title']])).toEqual(
+      {
+        ok: true,
+      },
+    );
 
     expect(floorResource.value().title).toBe('Memory first title');
     expect(persistenceMonitor.hasUnsavedChanges()).toBe(true);
@@ -107,7 +112,7 @@ describe('OperationHistory', () => {
     const operation: EditorOperation = {
       meta: { label: '失败操作', stage: 'failing-operation' },
       apply: async () => {
-        await floorResource.patch([['change', "['title']", 'Partial title']]);
+        await floorResource.patch([[ActionType.Change, "['title']", 'Partial title']]);
         throw new Error('intentional failure');
       },
     };

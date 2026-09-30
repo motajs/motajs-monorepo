@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } fr
 import { FileHandlerManager } from '@/fs/FileHandlerManager';
 import { persistenceMonitor } from '@/fs/PersistenceMonitor';
 import { projectData } from '@/project/data/projectData';
+import { ActionType } from '@/utils/action';
 import { projectAssets } from '@/project/assets';
 import { projectModel } from '@/project/model/projectModel';
 import { migrateLegacyAirwall } from '@/project/migrations';
@@ -51,7 +52,7 @@ describe('ProjectModel computed resources', () => {
       materialPath: 'project/materials/items.png',
     });
 
-    await projectData.mapBlocks().patch([['change', "['21']['name']", '模型层黄钥匙']]);
+    await projectData.mapBlocks().patch([[ActionType.Change, "['21']['name']", '模型层黄钥匙']]);
 
     expect(registry.value().get(21)?.name).toBe('模型层黄钥匙');
     await persistenceMonitor.whenQuiescent([projectData.mapBlocks().path]);
@@ -115,7 +116,7 @@ describe('ProjectModel computed resources', () => {
 
     expect(registry.value().get(201)?.id).toBe('greenSlime');
 
-    await projectData.mapBlocks().patch([['change', "['201']['name']", '模型层绿头怪']]);
+    await projectData.mapBlocks().patch([[ActionType.Change, "['201']['name']", '模型层绿头怪']]);
 
     expect(registry.value().get(201)?.name).toBe('模型层绿头怪');
   });
@@ -161,8 +162,8 @@ describe('ProjectModel computed resources', () => {
     ).toBe(true);
 
     await projectData.icons().patch([
-      ['add', "['items']['yellowKeyAlias']", 0],
-      ['add', "['items']['missingMaterialRow']", 999],
+      [ActionType.Add, "['items']['yellowKeyAlias']", 0],
+      [ActionType.Add, "['items']['missingMaterialRow']", 999],
     ]);
 
     expect(catalog.value().diagnostics.some((diagnostic) => diagnostic.message.includes('multiple icon aliases'))).toBe(

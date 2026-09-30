@@ -6,6 +6,7 @@ import { FileHandlerManager } from '@/fs/FileHandlerManager';
 import { persistenceMonitor } from '@/fs/PersistenceMonitor';
 import { projectData } from '@/project/data/projectData';
 import { projectAssets } from '@/project/assets';
+import { ActionType } from '@/utils/action';
 import { operationHistory } from '@/project/history';
 import { fs as browserFs } from '@/services/fs';
 import { floorCommands } from '@/project/commands/floorCommands';
@@ -147,7 +148,7 @@ describe('ProjectData + Commands with real sample project', () => {
     expect(functions.events).toBeDefined();
 
     const result = await tableCommands.patchFunctions([
-      ['add', "['events']['__commandTest']", "function () { return 'ok'; }"],
+      [ActionType.Add, "['events']['__commandTest']", "function () { return 'ok'; }"],
     ]);
 
     expect(result).toEqual({ ok: true });
@@ -185,7 +186,7 @@ describe('ProjectData + Commands with real sample project', () => {
     });
 
     const result = await tableCommands.patchCommonEvents([
-      ['add', "['__commandEvent']", [{ type: 'comment', text: 'created by commands test' }]],
+      [ActionType.Add, "['__commandEvent']", [{ type: 'comment', text: 'created by commands test' }]],
     ]);
 
     expect(result).toEqual({ ok: true });
@@ -200,7 +201,7 @@ describe('ProjectData + Commands with real sample project', () => {
     await project.loadResource(projectData.plugins());
 
     const result = await tableCommands.patchPlugins([
-      ['add', "['__commandPlugin']", 'function () { this.__commandPlugin = true; }'],
+      [ActionType.Add, "['__commandPlugin']", 'function () { this.__commandPlugin = true; }'],
     ]);
 
     expect(result).toEqual({ ok: true });
@@ -215,7 +216,7 @@ describe('ProjectData + Commands with real sample project', () => {
   it('patches a real floor field and persists after reload', async () => {
     await project.loadResource(projectData.floor('sample0'));
 
-    const result = await tableCommands.patchFloor('sample0', [['change', "['title']", 'Commands Sample 0']]);
+    const result = await tableCommands.patchFloor('sample0', [[ActionType.Change, "['title']", 'Commands Sample 0']]);
 
     expect(result).toEqual({ ok: true });
     await persistenceMonitor.whenQuiescent([projectData.floor('sample0').path]);
@@ -228,10 +229,10 @@ describe('ProjectData + Commands with real sample project', () => {
     await project.loadResource(projectData.floor('sample0'));
 
     const eventResult = await locCommands.patch('sample0', { x: 4, y: 4 }, [
-      ['change', "['events']", [{ type: 'comment', text: 'loc event' }]],
+      [ActionType.Change, "['events']", [{ type: 'comment', text: 'loc event' }]],
     ]);
     const autoResult = await locCommands.patch('sample0', { x: 4, y: 4 }, [
-      ['add', "['autoEvent']['2']", { condition: 'true', data: [] }],
+      [ActionType.Add, "['autoEvent']['2']", { condition: 'true', data: [] }],
     ]);
 
     expect(eventResult).toEqual({ ok: true });
@@ -243,7 +244,9 @@ describe('ProjectData + Commands with real sample project', () => {
 
   it('adds the next autoEvent page id for a location', async () => {
     await project.loadResource(projectData.floor('sample0'));
-    await floorCommands.patch('sample0', [['add', "['autoEvent']['5,5']['2']", { condition: 'true', data: [] }]]);
+    await floorCommands.patch('sample0', [
+      [ActionType.Add, "['autoEvent']['5,5']['2']", { condition: 'true', data: [] }],
+    ]);
 
     const result = await locCommands.addAutoEventPage('sample0', { x: 5, y: 5 });
 
@@ -356,10 +359,10 @@ describe('ProjectData + Commands with real sample project', () => {
   it('resolves static changeFloor targets through mapCommands', async () => {
     await project.loadResource(projectData.floor('sample0'));
     await floorCommands.patch('sample0', [
-      ['change', "['changeFloor']['1,1']", { floorId: 'sample1', loc: [2, 3] }],
-      ['change', "['changeFloor']['2,1']", { floorId: ':next' }],
-      ['change', "['changeFloor']['3,1']", { floorId: ':before' }],
-      ['change', "['changeFloor']['4,1']", { floorId: ':now' }],
+      [ActionType.Change, "['changeFloor']['1,1']", { floorId: 'sample1', loc: [2, 3] }],
+      [ActionType.Change, "['changeFloor']['2,1']", { floorId: ':next' }],
+      [ActionType.Change, "['changeFloor']['3,1']", { floorId: ':before' }],
+      [ActionType.Change, "['changeFloor']['4,1']", { floorId: ':now' }],
     ]);
 
     const explicit = mapCommands.resolveChangeFloorTarget('sample0', { x: 1, y: 1 }, ['sample0', 'sample1']);
@@ -396,10 +399,10 @@ describe('ProjectData + Commands with real sample project', () => {
   it('clears map blocks and location events through mapCommands', async () => {
     await project.loadResource(projectData.floor('sample0'));
     await floorCommands.patch('sample0', [
-      ['change', "['map']['5']['6']", 21],
-      ['change', "['events']['6,5']", [{ type: 'comment', text: 'event' }]],
-      ['change', "['changeFloor']['6,5']", { floorId: 'sample1' }],
-      ['change', "['cannotMove']['6,5']", ['up']],
+      [ActionType.Change, "['map']['5']['6']", 21],
+      [ActionType.Change, "['events']['6,5']", [{ type: 'comment', text: 'event' }]],
+      [ActionType.Change, "['changeFloor']['6,5']", { floorId: 'sample1' }],
+      [ActionType.Change, "['cannotMove']['6,5']", ['up']],
     ]);
 
     const clearBlockResult = await mapCommands.clearBlock('sample0', 'map', { x: 6, y: 5 });
@@ -420,8 +423,8 @@ describe('ProjectData + Commands with real sample project', () => {
   it('clears a map location and its events through mapCommands', async () => {
     await project.loadResource(projectData.floor('sample0'));
     await floorCommands.patch('sample0', [
-      ['change', "['map']['5']['6']", 21],
-      ['change', "['events']['6,5']", [{ type: 'comment', text: 'event' }]],
+      [ActionType.Change, "['map']['5']['6']", 21],
+      [ActionType.Change, "['events']['6,5']", [{ type: 'comment', text: 'event' }]],
     ]);
 
     const result = await mapCommands.clearLoc('sample0', 'map', { x: 6, y: 5 });
@@ -435,9 +438,9 @@ describe('ProjectData + Commands with real sample project', () => {
   it('pastes copied map info and replaces target location events', async () => {
     await project.loadResource(projectData.floor('sample0'));
     await floorCommands.patch('sample0', [
-      ['change', "['map']['5']['6']", 0],
-      ['change', "['events']['6,5']", [{ type: 'comment', text: 'old' }]],
-      ['change', "['cannotMove']['6,5']", ['up']],
+      [ActionType.Change, "['map']['5']['6']", 0],
+      [ActionType.Change, "['events']['6,5']", [{ type: 'comment', text: 'old' }]],
+      [ActionType.Change, "['cannotMove']['6,5']", ['up']],
     ]);
 
     const result = await mapCommands.pasteInfo({
@@ -499,13 +502,13 @@ describe('ProjectData + Commands with real sample project', () => {
   it('clears all floor map layers and location event data', async () => {
     await project.loadResource(projectData.floor('sample0'));
     await floorCommands.patch('sample0', [
-      ['change', "['bgmap']", [[1]]],
-      ['change', "['fgmap']", [[2]]],
-      ['change', "['firstArrive']", [{ type: 'comment', text: 'first' }]],
-      ['change', "['eachArrive']", [{ type: 'comment', text: 'each' }]],
-      ['change', "['events']['6,5']", [{ type: 'comment', text: 'event' }]],
-      ['change', "['changeFloor']['6,5']", { floorId: 'sample1' }],
-      ['change', "['cannotMove']['6,5']", ['up']],
+      [ActionType.Change, "['bgmap']", [[1]]],
+      [ActionType.Change, "['fgmap']", [[2]]],
+      [ActionType.Change, "['firstArrive']", [{ type: 'comment', text: 'first' }]],
+      [ActionType.Change, "['eachArrive']", [{ type: 'comment', text: 'each' }]],
+      [ActionType.Change, "['events']['6,5']", [{ type: 'comment', text: 'event' }]],
+      [ActionType.Change, "['changeFloor']['6,5']", { floorId: 'sample1' }],
+      [ActionType.Change, "['cannotMove']['6,5']", ['up']],
     ]);
 
     const result = await mapCommands.clearFloorMap('sample0');
@@ -525,10 +528,10 @@ describe('ProjectData + Commands with real sample project', () => {
   it('moves and exchanges map cells with location events', async () => {
     await project.loadResource(projectData.floor('sample0'));
     await floorCommands.patch('sample0', [
-      ['change', "['map']['5']['6']", 21],
-      ['change', "['map']['5']['7']", 22],
-      ['change', "['events']['6,5']", [{ type: 'comment', text: 'from' }]],
-      ['change', "['events']['7,5']", [{ type: 'comment', text: 'to' }]],
+      [ActionType.Change, "['map']['5']['6']", 21],
+      [ActionType.Change, "['map']['5']['7']", 22],
+      [ActionType.Change, "['events']['6,5']", [{ type: 'comment', text: 'from' }]],
+      [ActionType.Change, "['events']['7,5']", [{ type: 'comment', text: 'to' }]],
     ]);
 
     const moveResult = await mapCommands.moveLoc({
@@ -567,9 +570,13 @@ describe('ProjectData + Commands with real sample project', () => {
     const itemInfo: PrefabInfo = { images: 'items', id: 'yellowKey' };
     const mapBlockInfo: PrefabInfo = { images: 'terrains', idnum: 1 };
 
-    expect(await prefabCommands.patch(enemyInfo, [['change', "['name']", '测试绿头怪']])).toEqual({ ok: true });
-    expect(await prefabCommands.patch(itemInfo, [['change', "['name']", '测试黄钥匙']])).toEqual({ ok: true });
-    expect(await prefabCommands.patch(mapBlockInfo, [['change', "['id']", 'testYellowWall']])).toEqual({ ok: true });
+    expect(await prefabCommands.patch(enemyInfo, [[ActionType.Change, "['name']", '测试绿头怪']])).toEqual({
+      ok: true,
+    });
+    expect(await prefabCommands.patch(itemInfo, [[ActionType.Change, "['name']", '测试黄钥匙']])).toEqual({ ok: true });
+    expect(await prefabCommands.patch(mapBlockInfo, [[ActionType.Change, "['id']", 'testYellowWall']])).toEqual({
+      ok: true,
+    });
 
     expect(projectData.enemys().value().greenSlime.name).toBe('测试绿头怪');
     expect(projectData.items().value().yellowKey.name).toBe('测试黄钥匙');
@@ -580,7 +587,7 @@ describe('ProjectData + Commands with real sample project', () => {
     await project.loadResource(projectData.enemys());
     await projectData.enemys().patch([
       [
-        'change',
+        ActionType.Change,
         "['greenSlime']",
         {
           id: 'greenSlime',
@@ -592,7 +599,7 @@ describe('ProjectData + Commands with real sample project', () => {
         },
       ],
       [
-        'change',
+        ActionType.Change,
         "['redSlime']",
         {
           id: 'redSlime',
@@ -659,7 +666,7 @@ describe('ProjectData + Commands with real sample project', () => {
     await project.loadResource(projectData.mapBlocks());
     await projectData.enemys().patch([
       [
-        'change',
+        ActionType.Change,
         "['greenSlime']",
         {
           id: 'greenSlime',
@@ -673,7 +680,7 @@ describe('ProjectData + Commands with real sample project', () => {
     ]);
     await projectData.items().patch([
       [
-        'change',
+        ActionType.Change,
         "['yellowKey']",
         {
           id: 'yellowKey',
@@ -721,8 +728,8 @@ describe('ProjectData + Commands with real sample project', () => {
   it('batch resets all auto registered item prefabs through prefabCommands', async () => {
     await project.loadResource(projectData.items());
     await projectData.items().patch([
-      ['change', "['I100']", { id: 'I100', cls: 'items', name: 'Auto Item', text: 'remove' }],
-      ['change', "['yellowKey']", { id: 'yellowKey', cls: 'keys', name: '黄钥匙', text: 'keep' }],
+      [ActionType.Change, "['I100']", { id: 'I100', cls: 'items', name: 'Auto Item', text: 'remove' }],
+      [ActionType.Change, "['yellowKey']", { id: 'yellowKey', cls: 'keys', name: '黄钥匙', text: 'keep' }],
     ]);
 
     const result = await prefabCommands.resetAll({ images: 'items', id: 'I100' }, projectData.items().value());
@@ -737,14 +744,18 @@ describe('ProjectData + Commands with real sample project', () => {
   });
 
   it('returns failures for invalid prefab routing inputs', async () => {
-    expect(await tableCommands.patchPrefab({ images: 'enemys' }, [['change', "['name']", 'x']])).toMatchObject({
-      ok: false,
-      stage: 'patch-prefab',
-    });
-    expect(await tableCommands.patchPrefab({ images: 'terrains' }, [['change', "['id']", 'x']])).toMatchObject({
-      ok: false,
-      stage: 'patch-prefab',
-    });
+    expect(await tableCommands.patchPrefab({ images: 'enemys' }, [[ActionType.Change, "['name']", 'x']])).toMatchObject(
+      {
+        ok: false,
+        stage: 'patch-prefab',
+      },
+    );
+    expect(await tableCommands.patchPrefab({ images: 'terrains' }, [[ActionType.Change, "['id']", 'x']])).toMatchObject(
+      {
+        ok: false,
+        stage: 'patch-prefab',
+      },
+    );
   });
 
   it('registers and renames materials through modern materialCommands', async () => {
@@ -799,7 +810,7 @@ describe('ProjectData + Commands with real sample project', () => {
     await project.loadResource(projectData.mapBlocks());
     await project.loadResource(projectData.items());
 
-    await projectData.icons().patch([['delete', "['items']['yellowKey']", undefined]]);
+    await projectData.icons().patch([[ActionType.Delete, "['items']['yellowKey']", undefined]]);
     const result = await materialCommands.register(
       { images: 'items' },
       {
@@ -1205,9 +1216,9 @@ describe('ProjectData + Commands with real sample project', () => {
   it('copies and clears a rectangular map area with events', async () => {
     await project.loadResource(projectData.floor('sample0'));
     await floorCommands.patch('sample0', [
-      ['change', "['map']['1']['1']", 21],
-      ['change', "['map']['1']['2']", 22],
-      ['change', "['events']['1,1']", [{ type: 'comment', text: 'area' }]],
+      [ActionType.Change, "['map']['1']['1']", 21],
+      [ActionType.Change, "['map']['1']['2']", 22],
+      [ActionType.Change, "['events']['1,1']", [{ type: 'comment', text: 'area' }]],
     ]);
     const floor = projectData.floor('sample0').value() as unknown as Record<string, unknown>;
     const copied = readMapInfo(floor, 'map', { x0: 2, y0: 1, x1: 1, y1: 1 });

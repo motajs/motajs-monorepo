@@ -10,7 +10,7 @@
 
 import { describe, expect, it } from 'vitest';
 import * as fc from 'fast-check';
-import { applyAction, applyActions, applyActionsWithInverse, type Action } from '@/utils/action';
+import { ActionType, applyAction, applyActions, applyActionsWithInverse, type Action } from '@/utils/action';
 import { buildFieldPath, getByFieldPath } from '@/utils/fieldPath';
 
 /**
@@ -52,7 +52,7 @@ describe('applyAction 属性测试', () => {
           const fieldPath = buildFieldPath(keys);
           const obj: Record<string, unknown> = {};
 
-          const action: Action = ['change', fieldPath, value];
+          const action: Action = [ActionType.Change, fieldPath, value];
           applyAction(obj, action);
 
           // 验证值被正确设置
@@ -69,7 +69,7 @@ describe('applyAction 属性测试', () => {
           const fieldPath = buildFieldPath(keys);
           const obj: Record<string, unknown> = {};
 
-          const action: Action = ['add', fieldPath, value];
+          const action: Action = [ActionType.Add, fieldPath, value];
           applyAction(obj, action);
 
           // 验证值被正确添加
@@ -87,11 +87,11 @@ describe('applyAction 属性测试', () => {
           const obj: Record<string, unknown> = {};
 
           // 先设置旧值
-          applyAction(obj, ['add', fieldPath, oldValue]);
+          applyAction(obj, [ActionType.Add, fieldPath, oldValue]);
           expect(getByFieldPath(obj, fieldPath)).toEqual(oldValue);
 
           // 用新值覆盖
-          applyAction(obj, ['change', fieldPath, newValue]);
+          applyAction(obj, [ActionType.Change, fieldPath, newValue]);
           expect(getByFieldPath(obj, fieldPath)).toEqual(newValue);
         }),
         { numRuns: 100 },
@@ -107,11 +107,11 @@ describe('applyAction 属性测试', () => {
           const obj: Record<string, unknown> = {};
 
           // 先添加值
-          applyAction(obj, ['add', fieldPath, value]);
+          applyAction(obj, [ActionType.Add, fieldPath, value]);
           expect(getByFieldPath(obj, fieldPath)).toEqual(value);
 
           // 删除值
-          applyAction(obj, ['delete', fieldPath, undefined]);
+          applyAction(obj, [ActionType.Delete, fieldPath, undefined]);
 
           // 验证值已被删除
           const result = getByFieldPath(obj, fieldPath);
@@ -128,11 +128,11 @@ describe('applyAction 属性测试', () => {
           const obj: Record<string, unknown> = {};
 
           // 先添加值
-          applyAction(obj, ['add', fieldPath, value]);
+          applyAction(obj, [ActionType.Add, fieldPath, value]);
           expect(getByFieldPath(obj, fieldPath)).toEqual(value);
 
           // 使用 change 操作但值为 undefined，应删除字段
-          applyAction(obj, ['change', fieldPath, undefined]);
+          applyAction(obj, [ActionType.Change, fieldPath, undefined]);
 
           // 验证值已被删除
           const result = getByFieldPath(obj, fieldPath);
@@ -151,8 +151,8 @@ describe('applyAction 属性测试', () => {
           const obj: Record<string, unknown> = {};
 
           const actions: Action[] = [
-            ['add', fieldPath, value1],
-            ['change', fieldPath, value2],
+            [ActionType.Add, fieldPath, value1],
+            [ActionType.Change, fieldPath, value2],
           ];
 
           applyActions(obj, actions);
@@ -169,11 +169,11 @@ describe('applyAction 属性测试', () => {
         fc.property(keysArb, jsonValueArb, jsonValueArb, (keys, oldValue, newValue) => {
           const fieldPath = buildFieldPath(keys);
           const obj: Record<string, unknown> = {};
-          applyAction(obj, ['add', fieldPath, oldValue]);
+          applyAction(obj, [ActionType.Add, fieldPath, oldValue]);
 
           const inverse = applyActionsWithInverse(obj, [
-            ['change', fieldPath, newValue],
-            ['add', "['__inverseTemporary']", { value: 1 }],
+            [ActionType.Change, fieldPath, newValue],
+            [ActionType.Add, "['__inverseTemporary']", { value: 1 }],
           ]);
           applyActions(obj, inverse);
 
@@ -187,8 +187,8 @@ describe('applyAction 属性测试', () => {
     it('撤销深层新增时应移除操作创建的空父对象', () => {
       const obj: Record<string, unknown> = {};
       const inverse = applyActionsWithInverse(obj, [
-        ['add', "['autoEvent']['4,4']['2']", { condition: 'true' }],
-        ['add', "['autoEvent']['4,4']['3']", { condition: 'false' }],
+        [ActionType.Add, "['autoEvent']['4,4']['2']", { condition: 'true' }],
+        [ActionType.Add, "['autoEvent']['4,4']['3']", { condition: 'false' }],
       ]);
 
       applyActions(obj, inverse);
@@ -198,7 +198,7 @@ describe('applyAction 属性测试', () => {
     it('inverse 应保留 JSON 对象自身的 __proto__ 字段', () => {
       const original = JSON.parse('{"__proto__":null}') as Record<string, unknown>;
       const obj: Record<string, unknown> = { value: original };
-      const inverse = applyActionsWithInverse(obj, [['change', "['value']", { changed: true }]]);
+      const inverse = applyActionsWithInverse(obj, [[ActionType.Change, "['value']", { changed: true }]]);
 
       applyActions(obj, inverse);
       expect(obj.value).toEqual(original);
