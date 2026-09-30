@@ -17,11 +17,7 @@ export type Content<T> =
 /** 文件层内容类型（文本内容） */
 export type FileContent = Content<string>;
 
-/**
- * PersistenceIntent - 一次持久化意图
- *
- * 编辑代码提交不可变的期望状态：要么写、要么删，并带上真正执行的函数。
- */
+// 一次持久化意图：编辑代码提交不可变的期望状态，要么写、要么删，并带上真正执行的函数
 export interface PersistenceIntent {
   /** 意图种类：写入或删除。 */
   readonly kind: 'write' | 'delete';
@@ -30,17 +26,11 @@ export interface PersistenceIntent {
   readonly execute: () => Promise<void>;
 }
 
-/**
- * ExecutorStatus - 单个持久化控制器的执行状态
- *
- * idle 空闲；executing 执行中并给出待执行数量；error 终态失败并带上错误。
- */
+/** 单个持久化控制器的执行状态：idle 空闲、executing 执行中（带待执行数）、error 终态失败（带错误） */
 export type ExecutorStatus =
   { status: 'idle' } | { status: 'executing'; pending: number } | { status: 'error'; error: Error; pending: 0 };
 
-/**
- * PersistFailure - 一条路径的持久化失败记录
- */
+// 一条路径的持久化失败记录
 export interface PersistFailure {
   /** 失败的路径。 */
   readonly path: string;
@@ -49,18 +39,10 @@ export interface PersistFailure {
   readonly error: Error;
 }
 
-/**
- * ReadonlySignal<T> - 只读 signal（函数式）
- *
- * 调用函数获取当前值
- */
+/** ReadonlySignal<T> - 只读 signal（函数式），调用函数获取当前值 */
 export type ReadonlySignal<T> = () => T;
 
-/**
- * IContentView<T> - 只读内容视图
- *
- * 定义只读内容访问接口，支持多层嵌套
- */
+// 只读内容视图：定义只读内容访问接口，支持多层嵌套
 export interface IContentView<T> {
   /** 主要接口：只读 signal（推荐使用） */
   readonly content: ReadonlySignal<Content<T>>;
@@ -81,11 +63,7 @@ export interface IContentView<T> {
   getPath(): string;
 }
 
-/**
- * IContentHandler<T> - 可写内容处理器
- *
- * 扩展 IContentView，添加写入能力
- */
+// 可写内容处理器：在只读内容视图之上添加写入能力
 export interface IContentHandler<T> extends IContentView<T> {
   /** 统一的 update API（支持三种模式） */
   update(value: T): void;
@@ -99,22 +77,14 @@ export interface IContentHandler<T> extends IContentView<T> {
   waitForSettled(): Promise<void>;
 }
 
-/**
- * IDataHandler<T> - 数据层处理器（DataHandler）
- *
- * 扩展 IContentHandler，补充数据层专有能力
- */
+// 数据层处理器（DataHandler）：在内容处理器之上补充数据层专有能力
 export interface IDataHandler<T> extends IContentHandler<T> {
   /** 获取底层文件内容（用于构造错误原因） */
   getFileHandler(): { getContent(): Content<string> };
 }
 
-/**
- * IRecoverableResource - 可被 ContentBoundary 恢复的数据源
- *
- * 这是 DataHandler/FileHandler 之外的公共恢复协议。上层资源可以隐藏具体
- * handler 实现，但仍保留 retry、raw 文件修复和状态展示能力。
- */
+// 可被 ContentBoundary 恢复的数据源：DataHandler/FileHandler 之外的公共恢复协议
+// 上层资源可以隐藏具体 handler 实现，但仍保留 retry、raw 文件修复和状态展示能力
 export interface IRecoverableResource<T = unknown> extends IContentHandler<T> {
   /** 获取底层原始文件资源；解析错误时用于打开原文修复 */
   raw?(): IContentHandler<string>;
@@ -123,12 +93,8 @@ export interface IRecoverableResource<T = unknown> extends IContentHandler<T> {
   recoverable(): IRecoverableResource<T>;
 }
 
-/**
- * IResourceView<T> - 可读资源视图
- *
- * 默认实现层对一个「只读资源」的统一视图：拿到身份、订阅内容变化、取快照与当前值。
- * 内容由各实现自己持有，本接口只描述怎么读，不关心内容从哪来。
- */
+// 可读资源视图：默认实现层对一个「只读资源」的统一视图，拿到身份、订阅内容变化、取快照与当前值
+// 内容由各实现自己持有，本接口只描述怎么读，不关心内容从哪来
 export interface IResourceView<T> {
   /** 资源身份（逻辑 id）。 */
   readonly id: string;
@@ -142,11 +108,7 @@ export interface IResourceView<T> {
   subscribe(listener: (content: Content<T>) => void): () => void;
 }
 
-/**
- * ILoadableResource<T> - 可加载资源
- *
- * 在只读视图之外补充「确保首次加载 / 重新加载 / 等待稳定」三个加载动作。
- */
+// 可加载资源：在只读视图之外补充「确保首次加载 / 重新加载 / 等待稳定」三个加载动作
 export interface ILoadableResource<T> extends IResourceView<T> {
   /** 确保首次加载完成；已在加载时只等待，不重复读取。 */
   ensureLoaded(): Promise<void>;
@@ -156,11 +118,7 @@ export interface ILoadableResource<T> extends IResourceView<T> {
   waitForSettled(): Promise<void>;
 }
 
-/**
- * FileHandlerDependencies - 文件处理器的注入协作者
- *
- * 文件层与文件管理器共享同一份依赖，因此两者不可能把参数写反（D-07）。
- */
+// 文件处理器的注入协作者：文件层与文件管理器共享同一份依赖，因此两者不可能把参数写反（D-07）
 export interface FileHandlerDependencies {
   /** 宿主文件读写能力。 */
   readonly fs: IFsPort;
@@ -169,11 +127,7 @@ export interface FileHandlerDependencies {
   readonly persistenceMonitor: IPersistenceMonitor;
 }
 
-/**
- * IFileHandlerManager - 文件处理器管理器的契约
- *
- * 按路径加载、重载、清理与查询文件处理器；同一个路径始终只对应一个处理器实例。
- */
+// 文件处理器管理器的契约：按路径加载、重载、清理与查询；同一个路径始终只对应一个处理器实例
 export interface IFileHandlerManager {
   /** 同步获取或创建一个处理器（未加载状态）。 */
   get(path: string): IContentHandler<string>;
@@ -209,11 +163,7 @@ export interface IFileHandlerManager {
   readonly size: number;
 }
 
-/**
- * IPersistExecutor - 单路径持久化控制器的契约
- *
- * 排程某个路径的持久化意图、查询执行状态，并在显式边界处等待静默。
- */
+// 单路径持久化控制器的契约：排程某个路径的持久化意图、查询执行状态，并在显式边界处等待静默
 export interface IPersistExecutor {
   /** 当前执行状态（只读信号）。 */
   readonly status: ReadonlySignal<ExecutorStatus>;
@@ -240,11 +190,7 @@ export interface IPersistExecutor {
   hasPending(): boolean;
 }
 
-/**
- * IPersistenceMonitor - 项目级持久化管理器的契约
- *
- * 汇总各路径的持久化状态，提供 flush、失败记录与统一重试。
- */
+// 项目级持久化管理器的契约：汇总各路径的持久化状态，提供 flush、失败记录与统一重试
 export interface IPersistenceMonitor {
   /** 正在持久化的路径列表（只读信号）。 */
   readonly persistingFiles: ReadonlySignal<string[]>;
@@ -292,9 +238,7 @@ export interface IPersistenceMonitor {
   resetForTests(): void;
 }
 
-/**
- * ResourceRegistryEntry - 注册表快照里的一条只读条目
- */
+// 注册表快照里的一条只读条目
 export interface ResourceRegistryEntry {
   /** 资源身份（逻辑 id）。 */
   readonly id: string;
@@ -303,11 +247,7 @@ export interface ResourceRegistryEntry {
   readonly resource: IResourceView<unknown>;
 }
 
-/**
- * IResourceRegistry - 逻辑 id 资源注册表的契约
- *
- * 以逻辑 id 登记、取用与查询资源；条目只在本次登记的 disposer 被调用时移除。
- */
+// 逻辑 id 资源注册表的契约：以逻辑 id 登记、取用与查询资源；条目只在本次登记的 disposer 被调用时移除
 export interface IResourceRegistry {
   /** 以逻辑 id 登记一个资源；返回只删除本次登记的 disposer。 */
   register<T>(id: string, resource: IResourceView<T>): () => void;
