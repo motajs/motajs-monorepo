@@ -1,6 +1,6 @@
 # Phase 05.2: editor-core/impl 代码风格整改 — INTERFACE-NAME.md
 
-> **状态：待用户在各计划简报上确认。** 本文件是**执行前的规划产物**：由 planner 在写计划时一并产出，
+> **状态：部分已确认。** §Plan 01（含枚举成员 `Error/Warning/Info`、类型落点 `kernel/types.ts` + 新建 `ports/types.ts`、删除 `ports/{fs,host,preview}.ts`）已于 2026-09-29 经用户确认；其余各节待各自计划简报确认。本文件是**执行前的规划产物**：由 planner 在写计划时一并产出，
 > 不是任何执行任务创建的。按 `AGENTS.md` §Project Rules，任何**重要命名**（文件名 / 目录名 / 类型名 /
 > 类名 / 方法名 / 枚举成员名 / 导出符号名 / 门禁标签名）都必须先写在本文件里、**并说明它是干什么的**，
 > 经用户确认后才可落盘。函数体内的 `let`/`const` 局部变量不受此限。
