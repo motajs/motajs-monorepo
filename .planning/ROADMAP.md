@@ -201,7 +201,7 @@ Plans:
 
 **Depends on:** Phase 5
 
-**Plans:** 3/9 plans executed
+**Plans:** 4/9 plans executed
 
 Plans:
 **Wave 1 — 接口层（D-02 / D-06 / D-07 / D-10）**
@@ -215,7 +215,7 @@ Plans:
 
 **Wave 3 — 实现层：类化（D-05 / D-17）**
 
-- [ ] 05.2-04-PLAN.md — `EditorCoreKernel` / `DiagnosticBusImpl` 类化、`ContentUtils` 静态类、去内嵌函数、`FileHandlerManager.size()` 改方法、去下划线参数
+- [x] 05.2-04-PLAN.md — `EditorCoreKernel` / `DiagnosticBusImpl` 类化、`ContentUtils` 静态类、去内嵌函数、`FileHandlerManager.size()` 改方法、去下划线参数
 
 **Wave 4 — 实现层：风格扫尾（D-03 / D-04 / D-09 / D-11，三计划并行）**
 
