@@ -1,18 +1,18 @@
 ---
 gsd_state_version: "1.0"
-current_phase: "05.1"
-current_phase_name: editor-core
+current_phase: "05.2"
+current_phase_name: editor-core-impl
 current_plan: 8
 status: executing
 stopped_at: Completed 05.1-07-PLAN.md
-last_updated: "2026-09-29T10:42:00.191Z"
+last_updated: "2026-09-30T05:44:01.561Z"
 last_activity: 2026-09-28
 last_activity_desc: Phase 05.1 plan 01 complete (editor-core undo contract types)
-state_head: 9b677602a20023daaabc721da52cc5763e09d3a5
+state_head: 7765794d2ba8d1c3731cd2a4c06f91e3b21bb300
 progress:
   total_phases: 14
   completed_phases: 0
-  total_plans: 33
+  total_plans: 42
   completed_plans: 33
   percent: 0
 ---
@@ -30,9 +30,9 @@ See: .planning/PROJECT.md (updated 2026-09-24)
 
 ## Current Position
 
-Phase: 05.1 (editor-core) — IN PROGRESS
+Phase: 05.2 (editor-core-impl) — READY TO EXECUTE
 Current Plan: 8
-Total Plans in Phase: 8
+Total Plans in Phase: 9
 Status: Executing (plan 01 complete; plan 02 pending briefing/approval)
 Last activity: 2026-09-28 — 05.1-01 撤销契约类型落地（`lib/kernel/types.ts`）
 
