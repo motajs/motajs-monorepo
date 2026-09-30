@@ -4,19 +4,14 @@ import { FileHandlerManager } from './fileHandlerManager';
 import { Content, IDataHandler, ILoadableResource, ReadonlySignal } from './types';
 import { ContentUtils } from './contentUtils';
 
-/**
- * `FileResource<T>` —— core 中**唯一**允许持有「不透明 IO 地址」的类（D-06）。
- *
- * 它是文件层之上的一层薄门面：把逻辑 id + 一个不透明 `address` + 处理器工厂绑定成一个
- * `ILoadableResource<T>`，读取、加载锁与串行持久化全部委托给注入的 `FileHandlerManager`
- * （per-path 缓存 + in-flight 加载锁）。本类**不**自己缓存、**不**加锁、**不**重写持久化。
- *
- * 硬约束（D-06 / `@motajs/editor-core` 的 `lib/ports/fs.ts`）：
- * - **地址不透明**：`address` 原样交给 `FileHandlerManager.get/load/reload`；本类不检查扩展名、
- *   不拼接/解码/归一化任何路径——core 不拥有路径安全面，那是宿主的职责（T-05-02）。
- * - 文件层实例经构造参数 `deps.fileHandlers` 注入，**不**取自任何模块级单例（D-10）。
- */
-
+// `FileResource<T>` —— core 中**唯一**允许持有「不透明 IO 地址」的类（D-06）
+// 它是文件层之上的一层薄门面：把逻辑 id + 一个不透明 `address` + 处理器工厂绑定成一个
+// `ILoadableResource<T>`，读取、加载锁与串行持久化全部委托给注入的 `FileHandlerManager`
+// （per-path 缓存 + in-flight 加载锁）。本类**不**自己缓存、**不**加锁、**不**重写持久化
+// 硬约束（D-06 / `@motajs/editor-core` 的 `lib/ports/fs.ts`）：
+// - **地址不透明**：`address` 原样交给 `FileHandlerManager.get/load/reload`；本类不检查扩展名、
+//   不拼接/解码/归一化任何路径——core 不拥有路径安全面，那是宿主的职责（T-05-02）
+// - 文件层实例经构造参数 `deps.fileHandlers` 注入，**不**取自任何模块级单例（D-10）
 export class FileResource<T> implements ILoadableResource<T> {
   readonly id: string;
   readonly content: ReadonlySignal<Content<T>>;

@@ -4,12 +4,7 @@ import { waitUntil } from './waitUntil';
 import { Content, IContentView, ReadonlySignal } from './types';
 import { isFileNotFoundError } from './errors';
 
-/**
- * BinaryFileHandler - 二进制文件处理器
- *
- * 用于加载图片文件，返回 HTMLImageElement；只读，不支持写入。
- */
-
+// 二进制文件处理器：加载图片文件并返回 HTMLImageElement；只读，不支持写入
 export class BinaryFileHandler implements IContentView<HTMLImageElement> {
   /** 五态内容信号（真实来源）。 */
   private _content: ReturnType<typeof signal<Content<HTMLImageElement>>>;

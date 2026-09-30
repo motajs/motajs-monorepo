@@ -5,17 +5,14 @@ import { Content } from './types';
 import { FileHandlerDependencies, IContentHandler, IPersistenceMonitor, ReadonlySignal } from './types';
 import { isFileNotFoundError } from './errors';
 
-/**
- * 文本文件状态：内存优先，按归一化路径排程持久化。
- *
- * 构造参数经 `FileHandlerDependencies` 打包注入，`FileHandler` 与 `FileHandlerManager`
- * 共享同一份依赖，因此两者不可能把参数写反（D-07）。
- */
+// 文本文件状态：内存优先，按归一化路径排程持久化
+// 构造参数经 `FileHandlerDependencies` 打包注入，`FileHandler` 与 `FileHandlerManager`
+// 共享同一份依赖，因此两者不可能把参数写反（D-07）
 export class FileHandler implements IContentHandler<string> {
   /** 五态文本内容，真实来源；对外只以只读信号暴露。 */
-  private _content = signal<Content<string>>({ status: 'idle' });
+  private _content: ReturnType<typeof signal<Content<string>>> = signal<Content<string>>({ status: 'idle' });
   /** 只读内容信号。 */
-  readonly content = this._content as ReadonlySignal<Content<string>>;
+  readonly content: ReadonlySignal<Content<string>> = this._content as ReadonlySignal<Content<string>>;
   /** 宿主文件读写能力。 */
   private readonly fs: IFsPort;
   /** 项目级持久化监视器。 */
@@ -23,7 +20,7 @@ export class FileHandler implements IContentHandler<string> {
   /** 本处理器绑定的路径。 */
   private readonly path: string;
   /** 内存改动版本号，用于丢弃过期的读写结果。 */
-  private mutationVersion = 0;
+  private mutationVersion: number = 0;
 
   constructor(path: string, deps: FileHandlerDependencies) {
     this.path = path;
@@ -77,6 +74,11 @@ export class FileHandler implements IContentHandler<string> {
     this.commit(result);
   }
 
+  /**
+   * 提交一份新文本：更新内存版本与内容，并排程异步写盘。
+   *
+   * @param value 要写入并落盘的新文本。
+   */
   private commit(value: string): void {
     this.mutationVersion += 1;
     this._content({ status: 'loaded', value });
@@ -96,10 +98,16 @@ export class FileHandler implements IContentHandler<string> {
     return waitUntil(() => !['idle', 'loading'].includes(this._content().status));
   }
 
+  /**
+   * 该路径是否存在排程中的写入。
+   */
   hasPendingWrites(): boolean {
     return this.persistenceMonitor.statusFor(this.path) === 'persisting';
   }
 
+  /**
+   * 删除磁盘文件并置为 not-found；文件本就不存在时视为删除成功。
+   */
   async delete(): Promise<void> {
     this.mutationVersion += 1;
     this._content({ status: 'not-found' });
@@ -118,6 +126,9 @@ export class FileHandler implements IContentHandler<string> {
     });
   }
 
+  /**
+   * 读取磁盘内容并写入五态；读取期间被内存编辑取代时丢弃磁盘结果。
+   */
   async load(): Promise<void> {
     if (this._content().status === 'loading') {
       await waitUntil(() => this._content().status !== 'loading');
@@ -136,6 +147,9 @@ export class FileHandler implements IContentHandler<string> {
     }
   }
 
+  /**
+   * 该处理器是否已结束加载（loaded / not-found / error）。
+   */
   isLoaded(): boolean {
     return !['idle', 'loading'].includes(this._content().status);
   }

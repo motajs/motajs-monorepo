@@ -4,21 +4,16 @@ import { FileHandler } from './fileHandler';
 import { Content, IDataHandler, ReadonlySignal } from './types';
 import { ContentUtils } from './contentUtils';
 
-/**
- * DataHandler - 数据层可写处理器（抽象基类）
- *
- * 职责：
- * - 在 FileHandler（文本层）之上提供数据层抽象
- * - 使用 computed 自动处理 parse/stringify 和缓存
- * - 实现 IContentHandler<T> 接口
- * - 子类只需实现 parse 和 stringify 方法
- *
- * 设计理念：
- * - 使用 computed 自动追踪 FileHandler 的 signal
- * - parse 错误不影响文件层
- * - 写入时自动 stringify 并更新 FileHandler
- */
-
+// DataHandler —— 数据层可写处理器（抽象基类）
+// 职责：
+// - 在 FileHandler（文本层）之上提供数据层抽象
+// - 使用 computed 自动处理 parse/stringify 和缓存
+// - 实现 IContentHandler<T> 接口
+// - 子类只需实现 parse 和 stringify 方法
+// 设计理念：
+// - 使用 computed 自动追踪 FileHandler 的 signal
+// - parse 错误不影响文件层
+// - 写入时自动 stringify 并更新 FileHandler
 export abstract class DataHandler<T> implements IDataHandler<T> {
   /** 数据层内容信号（computed，自动追踪 FileHandler）。 */
   readonly content: ReadonlySignal<Content<T>>;
