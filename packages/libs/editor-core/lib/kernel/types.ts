@@ -9,9 +9,7 @@ import { Store } from '@tanstack/store';
  * `lib/kernel/core.ts` 只留组合逻辑（D-08）。
  */
 
-/**
- * 一次操作的元数据：给人看的标签、失败定位用的阶段，以及操作自报的影响路径。
- */
+// 一次操作的元数据：给人看的标签、失败定位用的阶段，以及操作自报的影响路径。
 export interface OperationMeta {
   /** 给人看的操作标签，历史面板据此显示这一步做了什么。 */
   readonly label: string;
@@ -21,9 +19,7 @@ export interface OperationMeta {
   readonly paths?: readonly string[];
 }
 
-/**
- * 一次「应用」的结果：操作返回值、能把它撤回来的逆操作，以及是否真的改了东西。
- */
+// 一次「应用」的结果：操作返回值、能把它撤回来的逆操作，以及是否真的改了东西。
 export interface AppliedOperation<T> {
   /** 操作成功后的返回值。 */
   readonly value: T;
@@ -33,9 +29,7 @@ export interface AppliedOperation<T> {
   readonly changed: boolean;
 }
 
-/**
- * 一次可撤销的编辑：只暴露元数据与执行入口，成功时自己把逆操作交出来。
- */
+// 一次可撤销的编辑：只暴露元数据与执行入口，成功时自己把逆操作交出来。
 export interface IEditorOperation<T = void> {
   /** 这次操作的元数据。 */
   readonly meta: OperationMeta;
@@ -43,9 +37,7 @@ export interface IEditorOperation<T = void> {
   apply(): Promise<AppliedOperation<T>>;
 }
 
-/**
- * 撤销操作栈管理器：只记录操作的先后，撤销时调该操作的逆、重做时再调原操作；不保存快照。
- */
+// 撤销操作栈管理器：只记录操作的先后，撤销时调该操作的逆、重做时再调原操作；不保存快照。
 export interface IUndoManager {
   /** 对外状态容器，供界面订阅历史条目、当前指针与忙碌状态。 */
   readonly store: Store<OperationHistoryState>;
@@ -59,9 +51,7 @@ export interface IUndoManager {
   clear(): void;
 }
 
-/**
- * 对外的「一条历史记录」：这一步是什么、什么时候做的、动了哪些路径。
- */
+// 对外的「一条历史记录」：这一步是什么、什么时候做的、动了哪些路径。
 export interface OperationHistoryEntry {
   /** 历史条目的自增编号。 */
   readonly id: number;
@@ -73,9 +63,7 @@ export interface OperationHistoryEntry {
   readonly paths: string[];
 }
 
-/**
- * 管理器的对外状态：历史记录、当前指针与是否忙碌。
- */
+// 管理器的对外状态：历史记录、当前指针与是否忙碌。
 export interface OperationHistoryState {
   /** 按时间先后排列的历史记录。 */
   readonly entries: readonly OperationHistoryEntry[];
@@ -90,23 +78,19 @@ export interface OperationHistoryState {
  */
 export type EditorOperation<T = void> = IEditorOperation<T>;
 
-/**
- * 交给 `config.install` 的**窄接口**（D-18）。
- *
- * 它绝不等于 `EditorCore` 实例：只允许在构造期间注册能力、登记拆除钩子。
- */
+// 交给 config.install 的窄接口（D-18）：只允许在构造期间注册能力、登记拆除钩子，绝不等于 EditorCore 实例。
 export interface CapabilityRegistrar {
   register(kind: string, id: string, value: unknown, options?: RegisterCapabilityOptions): RegisterCapabilityResult;
   addTeardown(teardown: () => void): void;
 }
 
-/** `createEditorCore` 的配置（N-02）。不提供任何暴露实例的通路（D-12）。 */
+// createEditorCore 的配置（N-02）；不提供任何暴露实例的通路（D-12）。
 export interface EditorCoreConfig {
   readonly install?: (registrar: CapabilityRegistrar) => void;
   readonly requiredCapabilities?: readonly string[];
 }
 
-/** per-instance 内核的最小公开面（D-12）。 */
+// per-instance 内核的最小公开面（D-12）。
 export interface EditorCore {
   registerCapability(
     kind: string,
@@ -121,7 +105,7 @@ export interface EditorCore {
   dispose(): void;
 }
 
-/** `EditorCore.snapshotCapabilities()` 返回的只读条目（D-19）。 */
+// EditorCore.snapshotCapabilities() 返回的只读条目（D-19）。
 export interface CapabilityRef {
   readonly kind: string;
   readonly id: string;
@@ -129,13 +113,13 @@ export interface CapabilityRef {
   readonly owner?: string;
 }
 
-/** `EditorCore.registerCapability` 的第 4 参数（D-03）。 */
+// EditorCore.registerCapability 的第 4 参数（D-03）。
 export interface RegisterCapabilityOptions {
   readonly owner?: string;
   readonly replaceable?: boolean;
 }
 
-/** `EditorCore.registerCapability` 的返回契约（D-02）。 */
+// EditorCore.registerCapability 的返回契约（D-02）：以结果携带诊断而非抛错。
 export interface RegisterCapabilityResult {
   readonly disposer: () => void;
   readonly diagnostics: readonly Diagnostic[];
@@ -151,12 +135,7 @@ export enum DiagnosticSeverity {
   Info = 2,
 }
 
-/**
- * 一条诊断。
- *
- * `code` 是稳定机器码（见 `DIAGNOSTIC_CODES`）；`message` 是中文人读说明；
- * `owner`/`target` 用于定位归属与目标 `kind:id`；`cause` 保留原始 `Error`/抛出值。
- */
+// 一条诊断：code 是稳定机器码（见 DIAGNOSTIC_CODES），message 是中文人读说明。
 export interface Diagnostic {
   readonly severity: DiagnosticSeverity;
   readonly code: string;
@@ -166,7 +145,7 @@ export interface Diagnostic {
   readonly cause?: unknown;
 }
 
-/** 诊断总线：生产者 `push`，消费者 `snapshot` / `subscribe`。 */
+// 诊断总线：生产者 push，消费者 snapshot / subscribe。
 export interface DiagnosticBus {
   push(diagnostic: Diagnostic): void;
   snapshot(): readonly Diagnostic[];
