@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, test } from 'vitest';
-import { createEditorCore } from '../kernel/core';
+import { EditorCoreKernel } from '../kernel/core';
 import { DIAGNOSTIC_CODES } from '../kernel/diagnostics';
 import { EditorCoreStartupError } from '../kernel/errors';
 import { DiagnosticSeverity } from '../kernel/types';
@@ -29,7 +29,7 @@ function captureStartupError(run: () => unknown): EditorCoreStartupError {
 
 describe('editor-core 原子构造与启动失败', () => {
   test('必需注册已满足时构造成功并暴露该能力', () => {
-    const editor = createEditorCore({
+    const editor = new EditorCoreKernel({
       requiredCapabilities: ['acme.thing:alpha'],
       install: (registrar) => {
         registrar.register('acme.thing', 'alpha', { ready: true }, { owner: 'acme-installer' });
@@ -47,7 +47,7 @@ describe('editor-core 原子构造与启动失败', () => {
     let thrown: unknown;
 
     try {
-      returned = createEditorCore({ requiredCapabilities: ['acme.thing:alpha'] });
+      returned = new EditorCoreKernel({ requiredCapabilities: ['acme.thing:alpha'] });
     } catch (error) {
       thrown = error;
     }
@@ -57,7 +57,7 @@ describe('editor-core 原子构造与启动失败', () => {
   });
 
   test('启动错误的 diagnostics 携带 capability.required-missing 与精确 target', () => {
-    const thrown = captureStartupError(() => createEditorCore({ requiredCapabilities: ['acme.thing:alpha'] }));
+    const thrown = captureStartupError(() => new EditorCoreKernel({ requiredCapabilities: ['acme.thing:alpha'] }));
 
     const missing = thrown.diagnostics.filter(
       (diagnostic) => diagnostic.code === DIAGNOSTIC_CODES.capabilityRequiredMissing,
@@ -73,7 +73,7 @@ describe('editor-core 原子构造与启动失败', () => {
     const released: string[] = [];
 
     captureStartupError(() =>
-      createEditorCore({
+      new EditorCoreKernel({
         requiredCapabilities: ['acme.thing:alpha'],
         install: (registrar) => {
           registrar.addTeardown(() => released.push('first'));
@@ -87,7 +87,7 @@ describe('editor-core 原子构造与启动失败', () => {
 
   test('启动错误携带全部诊断（被拒的重复注册 + 必需缺失）', () => {
     const thrown = captureStartupError(() =>
-      createEditorCore({
+      new EditorCoreKernel({
         requiredCapabilities: ['acme.other:beta'],
         install: (registrar) => {
           registrar.register('acme.thing', 'alpha', 1);
@@ -102,7 +102,7 @@ describe('editor-core 原子构造与启动失败', () => {
   });
 
   test('非阻断的 error 诊断不阻断构造，且可从 snapshot 读到', () => {
-    const editor = createEditorCore({
+    const editor = new EditorCoreKernel({
       requiredCapabilities: ['acme.thing:alpha'],
       install: (registrar) => {
         registrar.register('acme.thing', 'alpha', 1);

@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, test } from 'vitest';
-import { createEditorCore } from '../kernel/core';
+import { EditorCoreKernel } from '../kernel/core';
 
 /**
  * Phase 3 registry 契约测试（KERN-03）。
@@ -28,7 +28,7 @@ const INVALID_KINDS = ['', '1command', '.acme', 'acme.', 'acme..thing', 'acme th
 
 describe('editor-core capability registry 契约', () => {
   test('kind 格式：合法种类通过、非法种类产生 capability.kind-invalid', () => {
-    const editor = createEditorCore({});
+    const editor = new EditorCoreKernel({});
 
     for (const [index, kind] of VALID_KINDS.entries()) {
       const result = editor.registerCapability(kind, `id-${index}`, kind);
@@ -48,7 +48,7 @@ describe('editor-core capability registry 契约', () => {
   });
 
   test('重复注册被拒且无副作用，owner 指向现有占用者', () => {
-    const editor = createEditorCore({});
+    const editor = new EditorCoreKernel({});
 
     editor.registerCapability('acme.thing', 'alpha', 1, { owner: 'first' });
     const duplicate = editor.registerCapability('acme.thing', 'alpha', 2, { owner: 'second' });
@@ -64,7 +64,7 @@ describe('editor-core capability registry 契约', () => {
   });
 
   test('replaceable: true 才提交替换，旧 disposer 随之失效', () => {
-    const editor = createEditorCore({});
+    const editor = new EditorCoreKernel({});
 
     const first = editor.registerCapability('acme.thing', 'alpha', 1, { replaceable: true });
     expect(first.diagnostics).toHaveLength(0);
@@ -81,7 +81,7 @@ describe('editor-core capability registry 契约', () => {
   });
 
   test('失败的替换尝试保留旧值', () => {
-    const editor = createEditorCore({});
+    const editor = new EditorCoreKernel({});
 
     editor.registerCapability('acme.thing', 'alpha', 1, { replaceable: true });
     const failed = editor.registerCapability('9bad.kind', 'alpha', 2);
@@ -97,14 +97,14 @@ describe('editor-core capability registry 契约', () => {
   });
 
   test('getCapability 返回 undefined，getCapabilityOrThrow 抛错并带上 kind:id', () => {
-    const editor = createEditorCore({});
+    const editor = new EditorCoreKernel({});
 
     expect(editor.getCapability('acme.thing', 'alpha')).toBeUndefined();
     expect(() => editor.getCapabilityOrThrow('acme.thing', 'alpha')).toThrow('acme.thing:alpha');
   });
 
   test('snapshotCapabilities 跨两个 kind 返回扁平冻结数组（插入顺序）', () => {
-    const editor = createEditorCore({});
+    const editor = new EditorCoreKernel({});
 
     editor.registerCapability('acme.a', 'one', 1, { owner: 'first' });
     editor.registerCapability('acme.a', 'two', 2);
@@ -119,7 +119,7 @@ describe('editor-core capability registry 契约', () => {
   });
 
   test('原型污染防护：id 为 __proto__ / constructor 也能安全往返', () => {
-    const editor = createEditorCore({});
+    const editor = new EditorCoreKernel({});
 
     editor.registerCapability('acme.pollution', '__proto__', { polluted: true });
     editor.registerCapability('acme.pollution', 'constructor', 'safe');
@@ -131,7 +131,7 @@ describe('editor-core capability registry 契约', () => {
   });
 
   test('disposer 幂等：二次调用与 dispose 后调用都不抛错', () => {
-    const editor = createEditorCore({});
+    const editor = new EditorCoreKernel({});
 
     const result = editor.registerCapability('acme.thing', 'alpha', 1);
     expect(() => {

@@ -1,11 +1,11 @@
 // @vitest-environment node
 import { describe, expect, test } from 'vitest';
-import { createEditorCore } from '../kernel/core';
+import { EditorCoreKernel } from '../kernel/core';
 
 /**
  * Phase 3 tracer 测试（KERN-01 / KERN-06）。
  *
- * 第一个用例把内核整条路径走一遍真实公开面：`createEditorCore` → `install` 注册一个能力并登记两个
+ * 第一个用例把内核整条路径走一遍真实公开面：`EditorCoreKernel` → `install` 注册一个能力并登记两个
  * 拆除钩子 → 实例读回 → `EditorCore.snapshotCapabilities` 的扁平冻结形状 → `EditorCore.dispose`
  * 逆序释放。它不触碰任何内部实现，因此任何一层断链都会在这里暴露，而不是留到后续 plan。
  *
@@ -19,7 +19,7 @@ describe('editor-core 内核 tracer 与实例隔离', () => {
   test('create → install → 读回 → snapshot → 逆序 dispose', () => {
     const released: string[] = [];
 
-    const editor = createEditorCore({
+    const editor = new EditorCoreKernel({
       install: (registrar) => {
         registrar.register('acme.thing', 'alpha', 1, { owner: 'acme-tracer' });
         registrar.addTeardown(() => {
@@ -52,8 +52,8 @@ describe('editor-core 内核 tracer 与实例隔离', () => {
   });
 
   test('两个实例互不干扰', () => {
-    const editorA = createEditorCore({});
-    const editorB = createEditorCore({});
+    const editorA = new EditorCoreKernel({});
+    const editorB = new EditorCoreKernel({});
 
     editorA.registerCapability('acme.thing', 'shared', 'A');
     editorB.registerCapability('acme.thing', 'shared', 'B');

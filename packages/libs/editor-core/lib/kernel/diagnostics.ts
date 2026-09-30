@@ -6,7 +6,7 @@ import { Diagnostic, DiagnosticBus, DiagnosticSeverity } from './types';
  * D-05/D-06：`Diagnostic` 是最小形状——稳定机器码 `code` 供测试与 CI 精确断言，中文 `message`
  * 供人阅读，`cause` 保留原始抛出物；刻意不含 `timestamp`/`details`（需要时再扩）。
  * `DiagnosticBus` 同步派发并保留追加式历史：`DiagnosticBus.snapshot()` 读全部已发生的诊断，
- * `DiagnosticBus.subscribe()` 只收订阅之后的诊断——这使得 `createEditorCore` 构造期间产生的
+ * `DiagnosticBus.subscribe()` 只收订阅之后的诊断——这使得 `EditorCoreKernel` 构造期间产生的
  * 诊断在构造返回后仍可读到。
  *
  * 本模块没有任何模块级可变绑定：历史数组与订阅者集合都留在 `createDiagnosticBus` 的闭包内，

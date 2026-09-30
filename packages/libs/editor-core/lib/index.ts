@@ -9,7 +9,7 @@
  * 冻结契约，具名导出让「公开面增长」这件事可见、可审（T-03-06）。本文件是叶子节点：内核与 port
  * 文件**不得** import `../index`（会形成环，`no-circular` 会拒绝）。
  */
-export { createEditorCore, EDITOR_CORE_API_VERSION } from './kernel/core';
+export { EditorCoreKernel, EDITOR_CORE_API_VERSION } from './kernel/core';
 
 // 撤销操作栈管理器的实现（D-04/D-05）：只记操作先后、不保存快照。
 // 同时以**值别名** `OperationHistory` 保留旧类名，编辑器 `new OperationHistory()` 继续可用，Phase 11 删除（D-18）。

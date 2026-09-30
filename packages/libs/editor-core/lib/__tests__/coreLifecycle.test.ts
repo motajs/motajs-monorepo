@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, test, vi } from 'vitest';
-import { createEditorCore } from '../kernel/core';
+import { EditorCoreKernel } from '../kernel/core';
 import { DIAGNOSTIC_CODES } from '../kernel/diagnostics';
 import { DiagnosticSeverity } from '../kernel/types';
 
@@ -20,7 +20,7 @@ import { DiagnosticSeverity } from '../kernel/types';
 describe('editor-core 生命周期契约', () => {
   test('三个拆除钩子按创建逆序释放', () => {
     const labels: string[] = [];
-    const editor = createEditorCore({
+    const editor = new EditorCoreKernel({
       install: (registrar) => {
         registrar.addTeardown(() => labels.push('first'));
         registrar.addTeardown(() => labels.push('second'));
@@ -39,7 +39,7 @@ describe('editor-core 生命周期契约', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     try {
-      const editor = createEditorCore({
+      const editor = new EditorCoreKernel({
         install: (registrar) => {
           registrar.addTeardown(() => labels.push('first'));
           registrar.addTeardown(() => {
@@ -69,7 +69,7 @@ describe('editor-core 生命周期契约', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     try {
-      const editor = createEditorCore({
+      const editor = new EditorCoreKernel({
         install: (registrar) => {
           registrar.addTeardown(() => labels.push('first'));
           registrar.addTeardown(() => {
@@ -100,7 +100,7 @@ describe('editor-core 生命周期契约', () => {
   });
 
   test('构造期间注册的能力在 dispose 后不可达，snapshotCapabilities 为空', () => {
-    const editor = createEditorCore({
+    const editor = new EditorCoreKernel({
       install: (registrar) => {
         registrar.register('acme.thing', 'alpha', 1);
       },
@@ -115,7 +115,7 @@ describe('editor-core 生命周期契约', () => {
   });
 
   test('构造之后注册的能力同样被 dispose 释放', () => {
-    const editor = createEditorCore({});
+    const editor = new EditorCoreKernel({});
 
     editor.registerCapability('acme.thing', 'beta', 2);
     expect(editor.getCapability('acme.thing', 'beta')).toBe(2);

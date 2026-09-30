@@ -2,7 +2,7 @@
 import { describe, expect, expectTypeOf, test } from 'vitest';
 import {
   createDiagnosticBus,
-  createEditorCore,
+  EditorCoreKernel,
   defineEngine,
   DIAGNOSTIC_CODES,
   EDITOR_CORE_API_VERSION,
@@ -68,7 +68,7 @@ import {
 describe('editor-core 底层面公开面', () => {
   test('版本常量与工厂/错误类是真实导出', () => {
     expect(EDITOR_CORE_API_VERSION).toBe('0.1.0');
-    expect(typeof createEditorCore).toBe('function');
+    expect(typeof EditorCoreKernel).toBe('function');
     expect(typeof createDiagnosticBus).toBe('function');
     expect(typeof EditorCoreStartupError).toBe('function');
   });
@@ -92,8 +92,8 @@ describe('editor-core 底层面公开面', () => {
     });
   });
 
-  test('createEditorCore({}) 暴露注册表四件套、dispose 与 diagnostics', () => {
-    const editor = createEditorCore({});
+  test('EditorCoreKernel({}) 暴露注册表四件套、dispose 与 diagnostics', () => {
+    const editor = new EditorCoreKernel({});
     try {
       expect(typeof editor.registerCapability).toBe('function');
       expect(typeof editor.getCapability).toBe('function');

@@ -84,7 +84,7 @@ export interface CapabilityRegistrar {
   addTeardown(teardown: () => void): void;
 }
 
-// createEditorCore 的配置（N-02）；不提供任何暴露实例的通路（D-12）。
+// EditorCoreKernel 的配置（N-02）；不提供任何暴露实例的通路（D-12）。
 export interface EditorCoreConfig {
   readonly install?: (registrar: CapabilityRegistrar) => void;
   readonly requiredCapabilities?: readonly string[];
