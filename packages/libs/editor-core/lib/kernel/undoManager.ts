@@ -25,8 +25,13 @@ export class UndoManager implements IUndoManager {
 
   /** 历史上限：只保留最近 100 条，超出的从最旧一端移除。 */
   private readonly capacity: number = 100;
+
   /** per-instance 的状态容器（D-11）：供界面订阅历史条目、当前指针与忙碌状态。 */
-  readonly store = new Store<OperationHistoryState>({ entries: [], current: 0, busy: false });
+  readonly store: Store<OperationHistoryState> = new Store<OperationHistoryState>({
+    entries: [],
+    current: 0,
+    busy: false,
+  });
 
   /**
    * 把任务排进串行队列，并维护 busy 计数（IUndoManager 的并发语义）。
