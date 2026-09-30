@@ -63,7 +63,9 @@ export {
   setByFieldPath,
 } from './table/fieldPath';
 export { applyAction, applyActions, applyActionsWithInverse } from './table/action';
-export type { Action, ActionType } from './table/types';
+// ActionType 是数字枚举（D-06），按**值**导出；Action 仍是类型。
+export { ActionType } from './table/types';
+export type { Action } from './table/types';
 export { compositeOperation } from './edit/operations';
 export { patchResourceOperation } from './table/patchResourceOperation';
 

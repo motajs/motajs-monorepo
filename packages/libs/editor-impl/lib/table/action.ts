@@ -1,6 +1,6 @@
 import { isEqual } from 'es-toolkit';
 import { deleteByFieldPath, buildFieldPath, getByFieldPath, parseFieldPath, setByFieldPath } from './fieldPath';
-import { Action } from './types';
+import { Action, ActionType } from './types';
 
 /**
  * Action Utilities
@@ -47,20 +47,20 @@ function cloneActionValue<T>(value: T, seen = new WeakMap<object, unknown>()): T
  *
  * @example
  * const obj = { a: 1 };
- * applyAction(obj, ['change', "['a']", 2]);
+ * applyAction(obj, [ActionType.Change, "['a']", 2]);
  * // obj = { a: 2 }
  *
- * applyAction(obj, ['add', "['b']", 3]);
+ * applyAction(obj, [ActionType.Add, "['b']", 3]);
  * // obj = { a: 2, b: 3 }
  *
- * applyAction(obj, ['delete', "['a']", undefined]);
+ * applyAction(obj, [ActionType.Delete, "['a']", undefined]);
  * // obj = { b: 3 }
  */
 export function applyAction(target: Record<string, unknown>, action: Action): void {
   const [type, path, value] = action;
 
   // 当值为 undefined 或操作类型为 delete 时，删除字段
-  if (type === 'delete' || value === undefined) {
+  if (type === ActionType.Delete || value === undefined) {
     deleteByFieldPath(target, path);
     return;
   }
@@ -78,9 +78,9 @@ export function applyAction(target: Record<string, unknown>, action: Action): vo
  * @example
  * const obj = {};
  * applyActions(obj, [
- *   ['add', "['a']", 1],
- *   ['add', "['b']['c']", 2],
- *   ['change', "['a']", 10],
+ *   [ActionType.Add, "['a']", 1],
+ *   [ActionType.Add, "['b']['c']", 2],
+ *   [ActionType.Change, "['a']", 10],
  * ]);
  * // obj = { a: 10, b: { c: 2 } }
  */
@@ -117,14 +117,16 @@ export function applyActionsWithInverse(target: Record<string, unknown>, actions
     const missingPath = firstMissingFieldPath(target, path);
     const existed = missingPath === null;
     const previous = existed ? cloneActionValue(getByFieldPath(target, path)) : undefined;
-    const deleting = type === 'delete' || value === undefined;
+    const deleting = type === ActionType.Delete || value === undefined;
 
     if ((!existed && deleting) || (existed && !deleting && isEqual(previous, value))) {
       continue;
     }
 
     applyAction(target, action);
-    inverse.unshift(existed ? ['change', path, previous] : ['delete', missingPath ?? path, undefined]);
+    inverse.unshift(
+      existed ? [ActionType.Change, path, previous] : [ActionType.Delete, missingPath ?? path, undefined],
+    );
   }
 
   return inverse;

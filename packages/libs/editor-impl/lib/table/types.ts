@@ -5,8 +5,15 @@
  * 类型落点，不接入 `./table` 的公开面（它仍是空 barrel）。
  */
 
-/** 表格动作的三种类型：改值 / 新增 / 删除。 */
-export type ActionType = 'change' | 'add' | 'delete';
+// 表格动作的三种类型：改值 / 新增 / 删除（数字枚举，D-06）。
+export enum ActionType {
+  // 改值
+  Change = 0,
+  // 新增
+  Add = 1,
+  // 删除
+  Delete = 2,
+}
 
 /** 一条表格动作：[操作类型, 字段路径字符串, 值]。 */
 export type Action = [ActionType, string, unknown];

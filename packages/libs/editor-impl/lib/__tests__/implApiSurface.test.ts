@@ -130,7 +130,7 @@ describe('editor-impl 默认实现层公开面', () => {
     expectTypeOf<LoadableResource<string>>().not.toBeNever();
     expectTypeOf<PatchableResource<string>>().not.toBeNever();
     expectTypeOf<Action>().not.toBeNever();
-    expectTypeOf<ActionType>().not.toBeNever();
+    expect(typeof ActionType).toBe('object');
     expectTypeOf<ResourceRegistryEntry>().not.toBeNever();
     expectTypeOf<FileHandlerDependencies>().not.toBeNever();
   });
