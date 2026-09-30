@@ -72,28 +72,30 @@ describe('editor-core 原子构造与启动失败', () => {
   test('启动失败路径逆序释放已创建的部分', () => {
     const released: string[] = [];
 
-    captureStartupError(() =>
-      new EditorCoreKernel({
-        requiredCapabilities: ['acme.thing:alpha'],
-        install: (registrar) => {
-          registrar.addTeardown(() => released.push('first'));
-          registrar.addTeardown(() => released.push('second'));
-        },
-      }),
+    captureStartupError(
+      () =>
+        new EditorCoreKernel({
+          requiredCapabilities: ['acme.thing:alpha'],
+          install: (registrar) => {
+            registrar.addTeardown(() => released.push('first'));
+            registrar.addTeardown(() => released.push('second'));
+          },
+        }),
     );
 
     expect(released).toEqual(['second', 'first']);
   });
 
   test('启动错误携带全部诊断（被拒的重复注册 + 必需缺失）', () => {
-    const thrown = captureStartupError(() =>
-      new EditorCoreKernel({
-        requiredCapabilities: ['acme.other:beta'],
-        install: (registrar) => {
-          registrar.register('acme.thing', 'alpha', 1);
-          registrar.register('acme.thing', 'alpha', 2);
-        },
-      }),
+    const thrown = captureStartupError(
+      () =>
+        new EditorCoreKernel({
+          requiredCapabilities: ['acme.other:beta'],
+          install: (registrar) => {
+            registrar.register('acme.thing', 'alpha', 1);
+            registrar.register('acme.thing', 'alpha', 2);
+          },
+        }),
     );
 
     const codes = thrown.diagnostics.map((diagnostic) => diagnostic.code);
