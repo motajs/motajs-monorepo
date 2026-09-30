@@ -1,6 +1,6 @@
 # Phase 05.2: editor-core/impl 代码风格整改 — INTERFACE-NAME.md
 
-> **状态：部分已确认。** §Plan 01、§Plan 02、§Plan 03（枚举成员 `ActionType.Change/Add/Delete`、`PreloadStrategy.Eager/Lazy/OnDemand`；编辑器 shim `utils/action.ts` 改成值导出 `ActionType`）已于 2026-09-29 经用户确认；其余各节待各自计划简报确认。本文件是**执行前的规划产物**：由 planner 在写计划时一并产出，
+> **状态：部分已确认。** §Plan 01、§Plan 02、§Plan 03、§Plan 04（类 `EditorCoreKernel`/`DiagnosticBusImpl`、静态方法类 `ContentUtils`；`FileHandlerManager.size()` 方法、`FileHandler.delete()` 去参）已于 2026-09-29 经用户确认；其余各节待各自计划简报确认。本文件是**执行前的规划产物**：由 planner 在写计划时一并产出，
 > 不是任何执行任务创建的。按 `AGENTS.md` §Project Rules，任何**重要命名**（文件名 / 目录名 / 类型名 /
 > 类名 / 方法名 / 枚举成员名 / 导出符号名 / 门禁标签名）都必须先写在本文件里、**并说明它是干什么的**，
 > 经用户确认后才可落盘。函数体内的 `let`/`const` 局部变量不受此限。
