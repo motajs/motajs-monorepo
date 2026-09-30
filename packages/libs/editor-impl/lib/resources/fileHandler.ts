@@ -100,8 +100,7 @@ export class FileHandler implements IContentHandler<string> {
     return this.persistenceMonitor.statusFor(this.path) === 'persisting';
   }
 
-  async delete(_force: boolean = true): Promise<void> {
-    void _force;
+  async delete(): Promise<void> {
     this.mutationVersion += 1;
     this._content({ status: 'not-found' });
     const path = this.path;

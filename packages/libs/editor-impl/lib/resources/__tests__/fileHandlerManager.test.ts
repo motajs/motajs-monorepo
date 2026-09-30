@@ -218,7 +218,7 @@ describe('FileHandlerManager', () => {
       expect(FileHandlerManager.has('test.txt')).toBe(true);
       expect(memoryFs.hasFile('test.txt')).toBe(true);
 
-      await FileHandlerManager.delete('test.txt', true);
+      await FileHandlerManager.delete('test.txt');
 
       expect(FileHandlerManager.has('test.txt')).toBe(true);
       expect(handler.getContent().status).toBe('not-found');
@@ -242,7 +242,7 @@ describe('FileHandlerManager', () => {
       const handler = FileHandlerManager.get('nonexistent.txt');
       (handler as any).fs = memoryFs;
 
-      await expect(FileHandlerManager.delete('nonexistent.txt', true)).resolves.not.toThrow();
+      await expect(FileHandlerManager.delete('nonexistent.txt')).resolves.not.toThrow();
     });
 
     it('pending 写入不会阻止 memory-first 删除', async () => {
@@ -257,7 +257,7 @@ describe('FileHandlerManager', () => {
       // 触发写入（不等待）
       handler.update('new content');
 
-      await expect(FileHandlerManager.delete('test.txt', false)).resolves.not.toThrow();
+      await expect(FileHandlerManager.delete('test.txt')).resolves.not.toThrow();
       await persistenceMonitor.flush(['test.txt']);
       expect(memoryFs.hasFile('test.txt')).toBe(false);
     });
@@ -269,32 +269,32 @@ describe('FileHandlerManager', () => {
       FileHandlerManager.get('file2.txt');
       FileHandlerManager.get('file3.txt');
 
-      expect(FileHandlerManager.size).toBe(3);
+      expect(FileHandlerManager.size()).toBe(3);
 
       FileHandlerManager.clear();
 
-      expect(FileHandlerManager.size).toBe(0);
+      expect(FileHandlerManager.size()).toBe(0);
       expect(FileHandlerManager.has('file1.txt')).toBe(false);
       expect(FileHandlerManager.has('file2.txt')).toBe(false);
       expect(FileHandlerManager.has('file3.txt')).toBe(false);
     });
   });
 
-  describe('size 属性', () => {
+  describe('size 方法', () => {
     it('应该返回正确的 handler 数量', () => {
-      expect(FileHandlerManager.size).toBe(0);
+      expect(FileHandlerManager.size()).toBe(0);
 
       FileHandlerManager.get('file1.txt');
-      expect(FileHandlerManager.size).toBe(1);
+      expect(FileHandlerManager.size()).toBe(1);
 
       FileHandlerManager.get('file2.txt');
-      expect(FileHandlerManager.size).toBe(2);
+      expect(FileHandlerManager.size()).toBe(2);
 
       FileHandlerManager.get('file1.txt'); // 重复获取
-      expect(FileHandlerManager.size).toBe(2);
+      expect(FileHandlerManager.size()).toBe(2);
 
       FileHandlerManager.remove('file1.txt');
-      expect(FileHandlerManager.size).toBe(1);
+      expect(FileHandlerManager.size()).toBe(1);
     });
   });
 });

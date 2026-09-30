@@ -133,15 +133,13 @@ export class FileHandlerManager implements IFileHandlerManager {
    * 删除文件和 FileHandler
    *
    * @param path 文件路径
-   * @param force 是否强制删除（忽略未保存的修改）
    *
    * @example
-   * await FileHandlerManager.delete('file.txt'); // 检查未保存修改
-   * await FileHandlerManager.delete('file.txt', true); // 强制删除
+   * await FileHandlerManager.delete('file.txt');
    */
-  async delete(path: string, force: boolean = false): Promise<void> {
+  async delete(path: string): Promise<void> {
     const handler = this.get(path);
-    await handler.delete(force);
+    await handler.delete();
   }
 
   /**
@@ -176,7 +174,7 @@ export class FileHandlerManager implements IFileHandlerManager {
   /**
    * 获取当前 FileHandler 数量（用于调试）
    */
-  get size(): number {
+  size(): number {
     return this.handlers.size;
   }
 }

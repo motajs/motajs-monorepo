@@ -148,7 +148,7 @@ export interface IFileHandlerManager {
   isLoaded(path: string): boolean;
 
   /** 删除文件与处理器。 */
-  delete(path: string, force?: boolean): Promise<void>;
+  delete(path: string): Promise<void>;
 
   /** 移除处理器实例（不删除文件）。 */
   remove(path: string): void;
@@ -160,7 +160,7 @@ export interface IFileHandlerManager {
   clear(): void;
 
   /** 当前处理器数量（调试用）。 */
-  readonly size: number;
+  size(): number;
 }
 
 // 单路径持久化控制器的契约：排程某个路径的持久化意图、查询执行状态，并在显式边界处等待静默
