@@ -1,4 +1,5 @@
-import { DIAGNOSTIC_CODES, Diagnostic } from './diagnostics';
+import { DIAGNOSTIC_CODES } from './diagnostics';
+import { Diagnostic } from './types';
 
 /**
  * 内核启动失败错误（引擎无关）。

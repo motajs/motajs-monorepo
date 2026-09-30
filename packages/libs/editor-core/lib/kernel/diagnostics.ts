@@ -1,3 +1,5 @@
+import { Diagnostic, DiagnosticBus, DiagnosticSeverity } from './types';
+
 /**
  * 内核诊断总线（引擎无关）。
  *
@@ -11,33 +13,6 @@
  * 因此每个实例互不干扰（KERN-06，D-10）。这与 `@motajs/editor` 的 `subscribeNotifications`
  * 相反——那里是模块级 `const listeners = new Set(...)`，是 core 结构性门禁明确禁止的形态。
  */
-
-// ==================== 类型定义 ====================
-
-/** 诊断级别：与 `severity` 字段一一对应。 */
-export type DiagnosticSeverity = 'error' | 'warning' | 'info';
-
-/**
- * 一条诊断。
- *
- * `code` 是稳定机器码（见 `DIAGNOSTIC_CODES`）；`message` 是中文人读说明；
- * `owner`/`target` 用于定位归属与目标 `kind:id`；`cause` 保留原始 `Error`/抛出值。
- */
-export interface Diagnostic {
-  readonly severity: DiagnosticSeverity;
-  readonly code: string;
-  readonly message: string;
-  readonly owner?: string;
-  readonly target?: string;
-  readonly cause?: unknown;
-}
-
-/** 诊断总线：生产者 `push`，消费者 `snapshot` / `subscribe`。 */
-export interface DiagnosticBus {
-  push(diagnostic: Diagnostic): void;
-  snapshot(): readonly Diagnostic[];
-  subscribe(listener: (diagnostic: Diagnostic) => void): () => void;
-}
 
 // ==================== 机器码表 ====================
 
@@ -76,7 +51,7 @@ export function createDiagnosticBus(): DiagnosticBus {
         // append-without-dispatch：订阅者抛错只追加一条历史，**不再派发**，因此结构上不可能递归
         // （总线不会从 catch 里重新进入自己的派发循环），且其它订阅者仍会收到原始诊断。
         history.push({
-          severity: 'warning',
+          severity: DiagnosticSeverity.Warning,
           code: DIAGNOSTIC_CODES.diagnosticSubscriberError,
           message: '诊断订阅者抛出错误，已隔离该订阅者。',
           cause: error,

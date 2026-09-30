@@ -3,6 +3,7 @@ import { describe, expect, test } from 'vitest';
 import { createEditorCore } from '../kernel/core';
 import { DIAGNOSTIC_CODES } from '../kernel/diagnostics';
 import { EditorCoreStartupError } from '../kernel/errors';
+import { DiagnosticSeverity } from '../kernel/types';
 
 /**
  * Phase 3 原子构造与启动失败测试（KERN-04）。
@@ -62,7 +63,7 @@ describe('editor-core 原子构造与启动失败', () => {
       (diagnostic) => diagnostic.code === DIAGNOSTIC_CODES.capabilityRequiredMissing,
     );
     expect(missing).toHaveLength(1);
-    expect(missing[0].severity).toBe('error');
+    expect(missing[0].severity).toBe(DiagnosticSeverity.Error);
     expect(missing[0].target).toBe('acme.thing:alpha');
     expect(thrown.name).toBe('EditorCoreStartupError');
     expect(thrown.message).toContain('acme.thing:alpha');
@@ -113,7 +114,7 @@ describe('editor-core 原子构造与启动失败', () => {
 
     const snapshot = editor.diagnostics.snapshot();
     expect(snapshot).toHaveLength(1);
-    expect(snapshot[0].severity).toBe('error');
+    expect(snapshot[0].severity).toBe(DiagnosticSeverity.Error);
     expect(snapshot[0].code).toBe(DIAGNOSTIC_CODES.capabilityDuplicate);
 
     editor.dispose();

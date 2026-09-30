@@ -2,6 +2,7 @@
 import { describe, expect, test, vi } from 'vitest';
 import { createEditorCore } from '../kernel/core';
 import { DIAGNOSTIC_CODES } from '../kernel/diagnostics';
+import { DiagnosticSeverity } from '../kernel/types';
 
 /**
  * Phase 3 生命周期测试（KERN-02 / D-09 / D-21）。
@@ -86,7 +87,7 @@ describe('editor-core 生命周期契约', () => {
 
       const added = editor.diagnostics.snapshot().slice(before);
       expect(added).toHaveLength(1);
-      expect(added[0].severity).toBe('error');
+      expect(added[0].severity).toBe(DiagnosticSeverity.Error);
       expect(added[0].code).toBe(DIAGNOSTIC_CODES.lifecycleTeardownFailed);
       expect(added[0].cause).toBe(thrownValue);
 

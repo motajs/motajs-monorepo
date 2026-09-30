@@ -16,7 +16,10 @@
     },
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "erasableSyntaxOnly": true,
+    // D-18：两个共享库（editor-core / editor-impl）改用真正的数字 `enum`（DiagnosticSeverity 等），
+    // 它们的源码并入本程序，故这里必须关闭 `erasableSyntaxOnly`（否则库里的 `enum` 报 TS1294）。
+    // 编辑器自身仍不写 `enum`（仓规），此开关只服务于被并入的库源码。
+    "erasableSyntaxOnly": false,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },

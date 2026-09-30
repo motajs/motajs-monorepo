@@ -1,7 +1,16 @@
-import { createDiagnosticBus, DIAGNOSTIC_CODES, Diagnostic, DiagnosticBus } from './diagnostics';
+import { createDiagnosticBus, DIAGNOSTIC_CODES } from './diagnostics';
 import { EditorCoreStartupError } from './errors';
-import { CapabilityRef, RegisterCapabilityOptions, RegisterCapabilityResult } from './registry';
-import { CapabilityRegistrar, EditorCore, EditorCoreConfig } from './types';
+import {
+  CapabilityRef,
+  CapabilityRegistrar,
+  Diagnostic,
+  DiagnosticBus,
+  DiagnosticSeverity,
+  EditorCore,
+  EditorCoreConfig,
+  RegisterCapabilityOptions,
+  RegisterCapabilityResult,
+} from './types';
 
 /**
  * 内核组合根（引擎无关）。
@@ -66,7 +75,7 @@ function drainTeardowns(teardowns: Array<() => void>, diagnostics: DiagnosticBus
       const normalized = error instanceof Error ? error : new Error(String(error));
       console.error('editor-core: teardown failed', normalized);
       diagnostics.push({
-        severity: 'error',
+        severity: DiagnosticSeverity.Error,
         code: DIAGNOSTIC_CODES.lifecycleTeardownFailed,
         message: `拆除钩子抛出错误（位置 ${index}），已隔离并继续拆除其余钩子。`,
         cause: error,
@@ -103,7 +112,7 @@ export function createEditorCore(config: EditorCoreConfig): EditorCore {
 
     if (!KIND_PATTERN.test(kind)) {
       const diagnostic: Diagnostic = {
-        severity: 'error',
+        severity: DiagnosticSeverity.Error,
         code: DIAGNOSTIC_CODES.capabilityKindInvalid,
         message: `能力种类名不合法：${kind}`,
         target,
@@ -115,7 +124,7 @@ export function createEditorCore(config: EditorCoreConfig): EditorCore {
     const existing = entries.get(target);
     if (existing && existing.replaceable !== true) {
       const diagnostic: Diagnostic = {
-        severity: 'error',
+        severity: DiagnosticSeverity.Error,
         code: DIAGNOSTIC_CODES.capabilityDuplicate,
         message: `能力已被占用：${target}`,
         owner: existing.owner,
@@ -186,7 +195,7 @@ export function createEditorCore(config: EditorCoreConfig): EditorCore {
     if (entries.has(ref)) continue;
     missingCount += 1;
     diagnostics.push({
-      severity: 'error',
+      severity: DiagnosticSeverity.Error,
       code: DIAGNOSTIC_CODES.capabilityRequiredMissing,
       message: `缺少必需的能力注册：${ref}`,
       target: ref,

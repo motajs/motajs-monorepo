@@ -1,13 +1,12 @@
 import { Store } from '@tanstack/store';
-import { DiagnosticBus } from './diagnostics';
-import { CapabilityRef, RegisterCapabilityOptions, RegisterCapabilityResult } from './registry';
 
 /**
  * 底层（editor-core）对外类型的唯一集中出口。
  *
- * 本文件汇总「可撤销操作」「撤销管理器」两个契约：操作自带逆操作，管理器只记录先后、不保存快照；
- * 并从此处自持内核三接口（CapabilityRegistrar / EditorCoreConfig / EditorCore），使 `lib/kernel/core.ts`
- * 只留组合逻辑（D-08）。
+ * 本文件汇总「可撤销操作」「撤销管理器」「能力登记」「诊断」四组对外契约：操作自带逆操作，
+ * 管理器只记录先后、不保存快照；能力登记以结果携带诊断而非抛错；诊断以数字级别 + 稳定机器码表达。
+ * 内核三接口（`CapabilityRegistrar` / `EditorCoreConfig` / `EditorCore`）也在此自持，使
+ * `lib/kernel/core.ts` 只留组合逻辑（D-08）。
  */
 
 /**
@@ -15,11 +14,11 @@ import { CapabilityRef, RegisterCapabilityOptions, RegisterCapabilityResult } fr
  */
 export interface OperationMeta {
   /** 给人看的操作标签，历史面板据此显示这一步做了什么。 */
-  label: string;
+  readonly label: string;
   /** 失败定位用的阶段名，出错时据此判断是哪一步没成。 */
-  stage: string;
+  readonly stage: string;
   /** 操作自报它这次改动了哪些路径；不报就退化为空数组。 */
-  paths?: readonly string[];
+  readonly paths?: readonly string[];
 }
 
 /**
@@ -27,11 +26,11 @@ export interface OperationMeta {
  */
 export interface AppliedOperation<T> {
   /** 操作成功后的返回值。 */
-  value: T;
+  readonly value: T;
   /** 能把这次改动撤回来的逆操作。 */
-  inverse: IEditorOperation<unknown>;
+  readonly inverse: IEditorOperation<unknown>;
   /** 是否真的改动了东西；没改动就不入历史。 */
-  changed: boolean;
+  readonly changed: boolean;
 }
 
 /**
@@ -65,13 +64,13 @@ export interface IUndoManager {
  */
 export interface OperationHistoryEntry {
   /** 历史条目的自增编号。 */
-  id: number;
+  readonly id: number;
   /** 给人看的操作标签。 */
-  label: string;
+  readonly label: string;
   /** 操作发生的时刻（毫秒时间戳）。 */
-  timestamp: number;
+  readonly timestamp: number;
   /** 这一步动过的路径，来自操作的元数据。 */
-  paths: string[];
+  readonly paths: string[];
 }
 
 /**
@@ -79,11 +78,11 @@ export interface OperationHistoryEntry {
  */
 export interface OperationHistoryState {
   /** 按时间先后排列的历史记录。 */
-  entries: readonly OperationHistoryEntry[];
+  readonly entries: readonly OperationHistoryEntry[];
   /** 当前指针：已生效的条目数。 */
-  current: number;
+  readonly current: number;
   /** 是否有操作正在排队执行。 */
-  busy: boolean;
+  readonly busy: boolean;
 }
 
 /**
@@ -120,4 +119,56 @@ export interface EditorCore {
   snapshotCapabilities(): readonly CapabilityRef[];
   readonly diagnostics: DiagnosticBus;
   dispose(): void;
+}
+
+/** `EditorCore.snapshotCapabilities()` 返回的只读条目（D-19）。 */
+export interface CapabilityRef {
+  readonly kind: string;
+  readonly id: string;
+  readonly value: unknown;
+  readonly owner?: string;
+}
+
+/** `EditorCore.registerCapability` 的第 4 参数（D-03）。 */
+export interface RegisterCapabilityOptions {
+  readonly owner?: string;
+  readonly replaceable?: boolean;
+}
+
+/** `EditorCore.registerCapability` 的返回契约（D-02）。 */
+export interface RegisterCapabilityResult {
+  readonly disposer: () => void;
+  readonly diagnostics: readonly Diagnostic[];
+}
+
+// 诊断级别：给一条诊断标注严重程度，让测试与 CI 能按级别精确断言（取代字符串联合，D-06）。
+export enum DiagnosticSeverity {
+  // 阻断性错误
+  Error = 0,
+  // 需关注但不阻断
+  Warning = 1,
+  // 一般信息
+  Info = 2,
+}
+
+/**
+ * 一条诊断。
+ *
+ * `code` 是稳定机器码（见 `DIAGNOSTIC_CODES`）；`message` 是中文人读说明；
+ * `owner`/`target` 用于定位归属与目标 `kind:id`；`cause` 保留原始 `Error`/抛出值。
+ */
+export interface Diagnostic {
+  readonly severity: DiagnosticSeverity;
+  readonly code: string;
+  readonly message: string;
+  readonly owner?: string;
+  readonly target?: string;
+  readonly cause?: unknown;
+}
+
+/** 诊断总线：生产者 `push`，消费者 `snapshot` / `subscribe`。 */
+export interface DiagnosticBus {
+  push(diagnostic: Diagnostic): void;
+  snapshot(): readonly Diagnostic[];
+  subscribe(listener: (diagnostic: Diagnostic) => void): () => void;
 }

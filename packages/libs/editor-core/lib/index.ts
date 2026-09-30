@@ -16,10 +16,13 @@ export { createEditorCore, EDITOR_CORE_API_VERSION } from './kernel/core';
 export { UndoManager } from './kernel/undoManager';
 export { UndoManager as OperationHistory } from './kernel/undoManager';
 
-// 底层的唯一对外类型出口（D-08）：内核三接口 + 撤销契约类型都来自 `./kernel/types`。
+// 底层的唯一对外类型出口（D-08）：内核三接口 + 能力登记 + 诊断 + 撤销契约类型都来自 `./kernel/types`。
 export type {
   AppliedOperation,
+  CapabilityRef,
   CapabilityRegistrar,
+  Diagnostic,
+  DiagnosticBus,
   EditorCore,
   EditorCoreConfig,
   EditorOperation,
@@ -28,10 +31,13 @@ export type {
   OperationHistoryEntry,
   OperationHistoryState,
   OperationMeta,
+  RegisterCapabilityOptions,
+  RegisterCapabilityResult,
 } from './kernel/types';
-export type { CapabilityRef, RegisterCapabilityOptions, RegisterCapabilityResult } from './kernel/registry';
+// 诊断级别是数字枚举（D-06），按**值**导出，供消费者比较 `severity`。
+export { DiagnosticSeverity } from './kernel/types';
 export { createDiagnosticBus, DIAGNOSTIC_CODES } from './kernel/diagnostics';
-export type { Diagnostic, DiagnosticSeverity, DiagnosticBus, DiagnosticCode } from './kernel/diagnostics';
+export type { DiagnosticCode } from './kernel/diagnostics';
 export { EditorCoreStartupError } from './kernel/errors';
 export type { IEngineAdapter, IFsPort, IHostPort, IPreviewAdapter } from './ports/index';
 

@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, expect, test } from 'vitest';
-import { createDiagnosticBus, DIAGNOSTIC_CODES, Diagnostic } from '../kernel/diagnostics';
+import { createDiagnosticBus, DIAGNOSTIC_CODES } from '../kernel/diagnostics';
+import { Diagnostic, DiagnosticSeverity } from '../kernel/types';
 
 /**
  * Phase 3 诊断总线契约测试（KERN-05）。
@@ -16,8 +17,8 @@ import { createDiagnosticBus, DIAGNOSTIC_CODES, Diagnostic } from '../kernel/dia
 describe('editor-core 诊断总线契约', () => {
   test('snapshot 按顺序返回全部历史，且返回的是不可变副本', () => {
     const bus = createDiagnosticBus();
-    const first: Diagnostic = { severity: 'error', code: 'acme.first', message: 'first' };
-    const second: Diagnostic = { severity: 'info', code: 'acme.second', message: 'second' };
+    const first: Diagnostic = { severity: DiagnosticSeverity.Error, code: 'acme.first', message: 'first' };
+    const second: Diagnostic = { severity: DiagnosticSeverity.Info, code: 'acme.second', message: 'second' };
 
     bus.push(first);
     bus.push(second);
@@ -28,13 +29,13 @@ describe('editor-core 诊断总线契约', () => {
     expect(bus.snapshot()).not.toBe(snapshot);
 
     const alias = snapshot as Diagnostic[];
-    expect(() => alias.push({ severity: 'info', code: 'acme.extra', message: 'extra' })).toThrow(TypeError);
+    expect(() => alias.push({ severity: DiagnosticSeverity.Info, code: 'acme.extra', message: 'extra' })).toThrow(TypeError);
     expect(bus.snapshot()).toHaveLength(2);
   });
 
   test('subscribe 只收后续诊断，unsubscribe 后不再收到', () => {
     const bus = createDiagnosticBus();
-    bus.push({ severity: 'info', code: 'acme.before', message: 'before' });
+    bus.push({ severity: DiagnosticSeverity.Info, code: 'acme.before', message: 'before' });
 
     const received: Diagnostic[] = [];
     const unsubscribe = bus.subscribe((diagnostic) => received.push(diagnostic));
@@ -42,11 +43,11 @@ describe('editor-core 诊断总线契约', () => {
     expect(received).toHaveLength(0);
     expect(bus.snapshot()).toHaveLength(1);
 
-    bus.push({ severity: 'info', code: 'acme.after', message: 'after' });
+    bus.push({ severity: DiagnosticSeverity.Info, code: 'acme.after', message: 'after' });
     expect(received.map((diagnostic) => diagnostic.code)).toEqual(['acme.after']);
 
     unsubscribe();
-    bus.push({ severity: 'info', code: 'acme.post', message: 'post' });
+    bus.push({ severity: DiagnosticSeverity.Info, code: 'acme.post', message: 'post' });
     expect(received.map((diagnostic) => diagnostic.code)).toEqual(['acme.after']);
     expect(bus.snapshot()).toHaveLength(3);
   });
@@ -63,7 +64,7 @@ describe('editor-core 诊断总线契约', () => {
     });
     bus.subscribe((diagnostic) => received.push(diagnostic));
 
-    const event: Diagnostic = { severity: 'error', code: 'acme.event', message: 'event' };
+    const event: Diagnostic = { severity: DiagnosticSeverity.Error, code: 'acme.event', message: 'event' };
     bus.push(event);
 
     expect(throwingCalls).toBe(1);
@@ -73,7 +74,7 @@ describe('editor-core 诊断总线契约', () => {
     expect(snapshot).toHaveLength(2);
     expect(snapshot[0]).toBe(event);
     expect(snapshot[1].code).toBe(DIAGNOSTIC_CODES.diagnosticSubscriberError);
-    expect(snapshot[1].severity).toBe('warning');
+    expect(snapshot[1].severity).toBe(DiagnosticSeverity.Warning);
     expect(snapshot[1].cause).toBe(thrownValue);
 
     // append-without-dispatch：这条内部诊断不会被再次派发，所以抛错订阅者的调用次数仍为 1。
@@ -100,7 +101,7 @@ describe('editor-core 诊断总线契约', () => {
     const count = 500;
 
     for (let index = 0; index < count; index += 1) {
-      bus.push({ severity: 'info', code: 'acme.count', message: `#${index}` });
+      bus.push({ severity: DiagnosticSeverity.Info, code: 'acme.count', message: `#${index}` });
     }
 
     // D-05/D-06 刻意不设上限：Phase 3 的诊断是构造期低频事件；该 DoS 风险作为已知接受项记录（T-03-10）。
