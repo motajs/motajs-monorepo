@@ -39,7 +39,18 @@ export { DiagnosticSeverity } from './kernel/types';
 export { createDiagnosticBus, DIAGNOSTIC_CODES } from './kernel/diagnostics';
 export type { DiagnosticCode } from './kernel/diagnostics';
 export { EditorCoreStartupError } from './kernel/errors';
-export type { IEngineAdapter, IFsPort, IHostPort, IPreviewAdapter } from './ports/index';
+
+// ports 层类型出口（D-07）：四个契约 + 资源描述符类型都来自 `./ports/types`。
+export type {
+  EngineDescription,
+  IEngineAdapter,
+  IFsPort,
+  IHostPort,
+  IPreviewAdapter,
+  PreloadStrategy,
+  ResourceDependencies,
+  ResourceDescriptor,
+} from './ports/types';
 
 // D-18 旧名过渡别名：四个端口的新名已带 `I` 前缀（D-07），旧名以纯类型别名继续导出，
 // 使 `@motajs/editor` 无需改动即可编译；Phase 11 删除。
@@ -48,9 +59,9 @@ export type {
   IFsPort as FsPort,
   IHostPort as HostPort,
   IPreviewAdapter as PreviewAdapter,
-} from './ports/index';
+} from './ports/types';
 
-// Phase 5 适配器契约（D-03/D-04/D-05/D-09）：`./ports/engine` 是引擎无关契约的唯一落点。
+// Phase 5 适配器契约（D-03/D-04/D-05/D-09）：`./ports/engine` 是引擎无关**逻辑/值**的唯一落点。
 // 一律具名再导出；值面与类型面分开，`isValidResourceId`/`RESERVED_IDS` 由底层自持并被默认实现层反向引用。
 export {
   defineEngine,
@@ -60,4 +71,3 @@ export {
   RESERVED_IDS,
   resolvePreloadOrder,
 } from './ports/engine';
-export type { EngineDescription, PreloadStrategy, ResourceDependencies, ResourceDescriptor } from './ports/engine';
