@@ -1,7 +1,7 @@
 import { useStore } from '@tanstack/react-store';
 import { IUndoManager, OperationHistoryEntry } from '@motajs/editor-core';
 
-export { CoreProbe } from './CoreProbe';
+export * from './CoreProbe';
 
 /**
  * 订阅某个撤销管理器实例（D-11）。core 只接受实例，不持有任何实例——编辑器在

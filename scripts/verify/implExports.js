@@ -72,6 +72,7 @@ const PROBE_SUBPATH = './react';
  */
 const SUBPATH_CONTENT = {
   '.': 'resources+edit+table-exports',
+  './table': 'table-exports',
   './react': 'probe',
 };
 const DEFAULT_SUBPATH_CONTENT = 'empty-barrel';

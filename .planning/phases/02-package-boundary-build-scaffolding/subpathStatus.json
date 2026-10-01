@@ -30,7 +30,7 @@
         },
         "./table": {
           "target": "./lib/table/index.ts",
-          "content": "empty-barrel",
+          "content": "table-exports",
           "carriesProbe": false
         },
         "./map": {
