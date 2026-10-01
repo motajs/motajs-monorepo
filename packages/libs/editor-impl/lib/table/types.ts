@@ -1,9 +1,9 @@
-export enum ActionType {
-  // 改值
+export const enum ActionType {
+  /** 改值 */
   Change = 0,
-  // 新增
+  /** 新增 */
   Add = 1,
-  // 删除
+  /** 删除 */
   Delete = 2,
 }
 
