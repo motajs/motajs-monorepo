@@ -233,7 +233,7 @@ Plans:
 
 **Wave 7 — 返工：接口层注释保真（D-02 / D-03 / D-06 / D-10）**
 
-- [ ] 05.2-10-PLAN.md — `editor-core` 两个 `types.ts`：删文件头/接口自身说明、方法改多行 `@param`、枚举改 `const enum`
+- [x] 05.2-10-PLAN.md — `editor-core` 两个 `types.ts`：删文件头/接口自身说明、方法改多行 `@param`、枚举改 `const enum`
 - [ ] 05.2-11-PLAN.md — `editor-impl` 三个 `types.ts`：对象联合拆具名 interface、方法改多行 `@param`、`ActionType` 改 `const enum`
 
 **Wave 8 — 返工：实现层与 barrel 注释保真（D-02 / D-03 / D-04 / D-05 / D-08）**

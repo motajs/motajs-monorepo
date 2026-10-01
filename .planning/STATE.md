@@ -4,16 +4,16 @@ current_phase: "05.2"
 current_phase_name: editor-core-impl
 current_plan: 9
 status: executing
-stopped_at: Completed 05.2-09-PLAN.md
-last_updated: "2026-10-01T07:45:39.288Z"
+stopped_at: Completed 05.2-10-PLAN.md
+last_updated: "2026-10-01T09:19:52.855Z"
 last_activity: 2026-09-28
 last_activity_desc: Phase 05.1 plan 01 complete (editor-core undo contract types)
-state_head: f5d9345fd4a07bd7b623ba2e9f50fc2f144e283e
+state_head: fbe7937bf85668f7e0860ba2bd6021b5077bd128
 progress:
   total_phases: 14
   completed_phases: 0
-  total_plans: 42
-  completed_plans: 42
+  total_plans: 48
+  completed_plans: 43
   percent: 0
 ---
 
@@ -90,6 +90,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 05.2 P07 | 18 | 3 tasks | 17 files |
 | Phase 05.2 P08 | 6min | 3 tasks | 10 files |
 | Phase 05.2 P09 | 15 | 2 tasks | 2 files |
+| Phase 05.2 P10 | 16min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -191,6 +192,10 @@ Recent decisions affecting current work:
 - [Phase 05.2]: 05.2-09: 把未入库的 GSD 运行时目录 .gsd/ 加入 .prettierignore（Rule 3 最小修复，与已排除的 .planning/ 同类），不改源码、不降级门禁，使 pnpm format:check 全绿
 - [Phase 05.2]: 05.2-09: 编辑器越界判据以 diff 内容为准——29 文件全部是 ActionType/PreloadStrategy 枚举机械跟随 + utils/action.ts 值转发 shim + tsconfig.app.json erasableSyntaxOnly（D-18），零回退，编辑器 typecheck 仍绿
 - [Phase 05.2]: 05.2-09: 残留「首行非 import」非 0 的 37 处逐条归入既有 D-10 例外（工具指令 / 无 import 纯声明文件 / barrel），不新增改动
+- [Phase 05.2]: 05.2-10: 两个 types.ts 删文件头/接口自身注释、方法多行 jsDoc+@param、方法间空行、成员单行 jsDoc；只改注释与空行
+- [Phase 05.2]: 05.2-10: DiagnosticSeverity/PreloadStrategy 改 export const enum，取值钉死 0/1/2；枚举本身无注释、成员单行 jsDoc
+- [Phase 05.2]: 05.2-10: [Rule 3] const enum 使 coreApiSurface.test.ts:163 的 typeof PreloadStrategy 触发 TS2475，改为成员取值断言（计划 <files> 外的必要编译跟随）
+- [Phase 05.2]: 05.2-10: [Rule 2] EditorCore.diagnostics 成员上移到方法前，满足 D-04 成员先于方法；形状不变
 
 ### Pending Todos
 
@@ -217,6 +222,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-01T07:45:39.053Z
-Stopped at: Completed 05.2-09-PLAN.md
+Last session: 2026-10-01T09:19:52.628Z
+Stopped at: Completed 05.2-10-PLAN.md
 Resume file: None
