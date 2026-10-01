@@ -140,7 +140,9 @@ export class FileHandler implements IContentHandler<string> {
     } catch (error) {
       if (version !== this.mutationVersion) return;
       const normalized = error instanceof Error ? error : new Error(String(error));
-      this.contentSignal(isFileNotFoundError(normalized) ? { status: 'not-found' } : { status: 'error', error: normalized });
+      this.contentSignal(
+        isFileNotFoundError(normalized) ? { status: 'not-found' } : { status: 'error', error: normalized },
+      );
     }
   }
 
