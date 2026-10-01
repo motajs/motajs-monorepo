@@ -240,7 +240,7 @@ Plans:
 
 - [x] 05.2-12-PLAN.md — `editor-core` 实现层：删文件头/类接口注释、删实现类重复接口 jsDoc、barrel 去注释
 - [x] 05.2-13-PLAN.md — `editor-impl` 资源层：同上 + 去 `_` 私有前缀 + `ContentUtils` 去类化
-- [ ] 05.2-14-PLAN.md — `editor-impl` 编辑/表格/React/能力目录 + 全部 barrel 去注释 + 顶层测试
+- [x] 05.2-14-PLAN.md — `editor-impl` 编辑/表格/React/能力目录 + 全部 barrel 去注释 + 顶层测试
 
 **Wave 9 — 返工收尾**
 
