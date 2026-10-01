@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 8
+open_count: 10
 waived_count: 0
 fixed_count: 2
-total_count: 10
-last_updated: 2026-10-01T12:51:11.429Z
+total_count: 12
+last_updated: 2026-10-01T15:10:16.989Z
 ---
 
 # Broken Windows Ledger
@@ -25,6 +25,8 @@ last_updated: 2026-10-01T12:51:11.429Z
 | 8 | 05.2 | deviation | eslint.config.js | 75 | //#region required spaced-comment marker whitelist (#region/#endregion); severity unchanged | open |  | 2026-10-01T11:26:23.330Z |  |
 | 9 | 05.2 | deviation | packages/libs/editor-impl/lib/__tests__/implApiSurface.test.ts | 112 | ContentUtils de-classed: typeof assertion changed from function to object (stale expectation, outside plan files) | open |  | 2026-10-01T12:51:09.375Z |  |
 | 10 | 05.2 | deviation | packages/libs/editor-impl/lib/resources/fileHandler.ts | 143 | contentSignal rename pushed load() catch ternary past printWidth; prettier wrapped it | open |  | 2026-10-01T12:51:11.429Z |  |
+| 11 | 05.2 | deviation | packages/libs/react-monaco-editor/lib/modelScope.test.ts |  | pnpm test full recursive run intermittently exits 1: monaco worker-close races a pending module fetch (Unhandled Rejection 'Closing rpc while fetch was pending'); 6/6 tests pass, passes isolated; package untouched by 05.2 | open |  | 2026-10-01T15:10:15.467Z |  |
+| 12 | 05.2 | deviation | packages/apps/editor/src/Workbench/CodeEditor/__tests__/ternDeclaration.test.ts | 37 | pnpm test full recursive run intermittently times out this test at 5000ms (measured 6569ms) under memory pressure; 785/785 pass isolated; editor untouched by 05.2 | open |  | 2026-10-01T15:10:16.989Z |  |
 
 ````json
 [
@@ -146,6 +148,30 @@ last_updated: 2026-10-01T12:51:11.429Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-10-01T12:51:11.429Z",
+    "resolved_at": null
+  },
+  {
+    "id": 11,
+    "kind": "deviation",
+    "phase": "05.2",
+    "file": "packages/libs/react-monaco-editor/lib/modelScope.test.ts",
+    "line": null,
+    "description": "pnpm test full recursive run intermittently exits 1: monaco worker-close races a pending module fetch (Unhandled Rejection 'Closing rpc while fetch was pending'); 6/6 tests pass, passes isolated; package untouched by 05.2",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-01T15:10:15.467Z",
+    "resolved_at": null
+  },
+  {
+    "id": 12,
+    "kind": "deviation",
+    "phase": "05.2",
+    "file": "packages/apps/editor/src/Workbench/CodeEditor/__tests__/ternDeclaration.test.ts",
+    "line": 37,
+    "description": "pnpm test full recursive run intermittently times out this test at 5000ms (measured 6569ms) under memory pressure; 785/785 pass isolated; editor untouched by 05.2",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-01T15:10:16.989Z",
     "resolved_at": null
   }
 ]

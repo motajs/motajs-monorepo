@@ -2,18 +2,18 @@
 gsd_state_version: "1.0"
 current_phase: "05.2"
 current_phase_name: editor-core-impl
-current_plan: 9
-status: executing
-stopped_at: Completed 05.2-14-PLAN.md
-last_updated: "2026-10-01T13:37:59.227Z"
-last_activity: 2026-09-28
-last_activity_desc: Phase 05.1 plan 01 complete (editor-core undo contract types)
-state_head: a38778751fd3f922dbaa2ee37bbe6680731c4794
+current_plan: 15
+status: ready_for_verification
+stopped_at: Completed 05.2-15-PLAN.md
+last_updated: "2026-10-01T15:08:48.463Z"
+last_activity: 2026-10-01
+last_activity_desc: Phase 05.2 plan 15 complete (phase-level full regression + fidelity residual audit)
+state_head: 6401eeed8634ac1a4ce8ae5e33332a37f1908fd8
 progress:
   total_phases: 14
   completed_phases: 0
   total_plans: 48
-  completed_plans: 47
+  completed_plans: 48
   percent: 0
 ---
 
@@ -26,15 +26,15 @@ Total Phases: 6
 See: .planning/PROJECT.md (updated 2026-09-24)
 
 **Core value:** Decouple the editor kernel from engine details through an engine-agnostic `editor-core` so old and new engines share one editing layer and third parties can customise freely.
-**Current focus:** Phase 05.1 — editor-core 接口与实现整改（插入阶段）
+**Current focus:** Phase 05.2 — editor-core/impl 代码风格整改（插入阶段）
 
 ## Current Position
 
-Phase: 05.2 (editor-core-impl) — READY TO EXECUTE
-Current Plan: 9
-Total Plans in Phase: 9
-Status: Executing (plan 01 complete; plan 02 pending briefing/approval)
-Last activity: 2026-09-28 — 05.1-01 撤销契约类型落地（`lib/kernel/types.ts`）
+Phase: 05.2 (editor-core-impl) — READY FOR VERIFICATION
+Current Plan: 15
+Total Plans in Phase: 15
+Status: Ready for verification (all 15 plans complete)
+Last activity: 2026-10-01 — 05.2-15 相位级全量回归 + 保真度残留核对完成
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -95,6 +95,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 05.2 P12 | 15 | 3 tasks | 16 files |
 | Phase 05.2 P13 | 21min | 3 tasks | 26 files |
 | Phase 05.2 P14 | 15 min | 3 tasks | 19 files |
+| Phase 05.2 P15 | 47min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -209,6 +210,8 @@ Recent decisions affecting current work:
 - [Phase 05.2]: 05.2-13: [Rule 1] implApiSurface.test.ts 的 typeof ContentUtils 断言由 'function' 改为 'object'（计划文件外的必要测试跟随）
 - [Phase 05.2]: 05.2-13: [Rule 1] contentSignal 改名使 fileHandler 三元表达式超 printWidth，随即 prettier 换行修正
 - [Phase 05.2]: OperationHistoryView as local named interface for useOperationHistory return (readonly members per AGENTS.md); not exported
+- [Phase 05.2]: 05.2-15: pnpm test 以最终完整递归运行 exit 0 为准（10 包/142 文件/1335 用例全绿）；此前非零退出全部定位为两处与本波无关的负载敏感用例（react-monaco-editor 的 monaco worker-close 未处理拒绝、@motajs/editor 的 ternDeclaration 5s 超时），单独运行均 exit 0
+- [Phase 05.2]: 05.2-15: 两包保真度残留 grep 全 0（导出接口/类/枚举自身注释、barrel 注释、深路径 export *、内联对象类型/联合、字符串枚举、_ 私有成员、import type、文件头说明、实现类重复接口 jsDoc）；编辑器相对 d3ef5fb 零新增改动
 
 ### Pending Todos
 
@@ -235,6 +238,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-01T13:37:58.550Z
-Stopped at: Completed 05.2-14-PLAN.md
+Last session: 2026-10-01T15:08:43.436Z
+Stopped at: Completed 05.2-15-PLAN.md
 Resume file: None
