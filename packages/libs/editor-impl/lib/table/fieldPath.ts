@@ -1,11 +1,7 @@
 import { get, set, unset } from 'es-toolkit/compat';
 
-/**
- * Field Path Utilities
- *
- * 字段路径解析和操作工具函数。
- * 字段路径格式: "['key1']['key2']['key3']"
- */
+// 字段路径解析和操作工具函数
+// 字段路径格式: "['key1']['key2']['key3']"
 
 /**
  * 解析字段路径字符串为键数组

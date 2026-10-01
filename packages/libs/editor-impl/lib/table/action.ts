@@ -2,12 +2,14 @@ import { isEqual } from 'es-toolkit';
 import { deleteByFieldPath, buildFieldPath, getByFieldPath, parseFieldPath, setByFieldPath } from './fieldPath';
 import { Action, ActionType } from './types';
 
-/**
- * Action Utilities
- *
- * 数据修改操作的工具函数，用于应用 Action 到目标对象。
- */
+// 数据修改操作的工具函数，用于应用 Action 到目标对象
 
+/**
+ * 深拷贝一个动作值：对象 / 数组 / Date / RegExp / Map / Set 递归复制，原始值直接返回。
+ *
+ * @param value 待拷贝的值。
+ * @param seen 已拷贝对象到副本的映射，用于处理循环引用。
+ */
 function cloneActionValue<T>(value: T, seen = new WeakMap<object, unknown>()): T {
   if ((typeof value !== 'object' && typeof value !== 'function') || value === null) return value;
   if (typeof value === 'function') return value;
@@ -90,6 +92,12 @@ export function applyActions(target: Record<string, unknown>, actions: Action[])
   }
 }
 
+/**
+ * 返回路径中第一处缺失的字段路径；路径全部存在时返回 null。
+ *
+ * @param target 目标对象。
+ * @param path 字段路径字符串。
+ */
 function firstMissingFieldPath(target: unknown, path: string): string | null {
   const keys = parseFieldPath(path);
   if (keys.length === 0) return path;
@@ -106,8 +114,10 @@ function firstMissingFieldPath(target: unknown, path: string): string | null {
 }
 
 /**
- * Applies actions and returns the smallest inverse action list needed to restore
- * the original value. Inverses are returned in execution order.
+ * 应用一组动作，并返回恢复原值所需的最小逆操作列表；逆操作按执行顺序排列。
+ *
+ * @param target 目标对象。
+ * @param actions 要应用的表格动作列表。
  */
 export function applyActionsWithInverse(target: Record<string, unknown>, actions: Action[]): Action[] {
   const inverse: Action[] = [];
