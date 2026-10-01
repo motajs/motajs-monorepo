@@ -1,7 +1,5 @@
 import { AppliedOperation, IEditorOperation, OperationMeta } from '@motajs/editor-core';
 
-// 组合操作：把多个子操作按顺序执行；成功时交出一个把它们整体撤回来的组合逆操作，
-// 失败时把已成功的子操作按**逆序**用各自的逆操作回退，并标注失败阶段
 class CompositeOperation implements IEditorOperation<unknown[]> {
   /** 这一步的元数据。 */
   readonly meta: OperationMeta;
@@ -13,7 +11,6 @@ class CompositeOperation implements IEditorOperation<unknown[]> {
     this.operations = operations;
   }
 
-  /** 按顺序执行全部子操作；成功给出把整体撤回的组合逆操作，失败逆序回退已成功的部分并抛出。 */
   async apply(): Promise<AppliedOperation<unknown[]>> {
     const applied: AppliedOperation<unknown>[] = [];
     const values: unknown[] = [];

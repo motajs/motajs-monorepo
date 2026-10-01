@@ -2,8 +2,6 @@ import { isEqual } from 'es-toolkit';
 import { deleteByFieldPath, buildFieldPath, getByFieldPath, parseFieldPath, setByFieldPath } from './fieldPath';
 import { Action, ActionType } from './types';
 
-// 数据修改操作的工具函数，用于应用 Action 到目标对象
-
 /**
  * 深拷贝一个动作值：对象 / 数组 / Date / RegExp / Map / Set 递归复制，原始值直接返回。
  *
