@@ -155,12 +155,14 @@ describe('editor-core 底层面公开面', () => {
     expectTypeOf<DiagnosticCode>().not.toBeNever();
   });
 
-  // 覆盖：Phase 5 适配器契约的类型名都从根 `.` 解析，PreloadStrategy 是值
+  // 覆盖：Phase 5 适配器契约的类型名都从根 `.` 解析，PreloadStrategy 成员取值仍是 0/1/2
   test('Phase 5 适配器契约的类型名都从根 `.` 解析（编译期断言）', () => {
     expectTypeOf<ResourceDescriptor<unknown>>().not.toBeNever();
     expectTypeOf<ResourceDependencies>().not.toBeNever();
     expectTypeOf<EngineDescription>().not.toBeNever();
-    expect(typeof PreloadStrategy).toBe('object');
+    expect(PreloadStrategy.Eager).toBe(0);
+    expect(PreloadStrategy.Lazy).toBe(1);
+    expect(PreloadStrategy.OnDemand).toBe(2);
   });
 
   // 覆盖：Plan 01 的撤销契约类型都从根 `.` 解析

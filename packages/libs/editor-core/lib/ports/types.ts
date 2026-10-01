@@ -77,12 +77,12 @@ export interface ResourceDependencies {
   readonly fileHandlers: unknown;
 }
 
-export enum PreloadStrategy {
-  // 立即加载
+export const enum PreloadStrategy {
+  /** 立即加载 */
   Eager = 0,
-  // 惰性加载
+  /** 惰性加载 */
   Lazy = 1,
-  // 按需加载
+  /** 按需加载 */
   OnDemand = 2,
 }
 

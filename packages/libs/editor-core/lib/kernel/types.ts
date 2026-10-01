@@ -180,12 +180,12 @@ export interface RegisterCapabilityResult {
   readonly diagnostics: readonly Diagnostic[];
 }
 
-export enum DiagnosticSeverity {
-  // 阻断性错误
+export const enum DiagnosticSeverity {
+  /** 阻断性错误 */
   Error = 0,
-  // 需关注但不阻断
+  /** 需关注但不阻断 */
   Warning = 1,
-  // 一般信息
+  /** 一般信息 */
   Info = 2,
 }
 
