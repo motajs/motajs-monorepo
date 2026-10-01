@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 4
+open_count: 5
 waived_count: 0
 fixed_count: 2
-total_count: 6
-last_updated: 2026-10-01T09:17:47.768Z
+total_count: 7
+last_updated: 2026-10-01T09:58:18.041Z
 ---
 
 # Broken Windows Ledger
@@ -21,6 +21,7 @@ last_updated: 2026-10-01T09:17:47.768Z
 | 4 | 04 | unrun-verify | .planning/phases/04-resource-edit-layers-moved/04-04-PLAN.md |  | Manual parity check (04-VALIDATION.md Manual-Only) not run by the executor: dev-server workbench/floor/undo/persistence parity against .planning/baseline/screenshots/ | fixed |  | 2026-09-24T08:17:49.851Z | 2026-09-24T10:15:17.118Z |
 | 5 | 05.1 | deviation | packages/apps/editor/src/project/commands/animationCommands.ts | 8 | pnpm lint 仍有 1 条 prettier 报错（该文件属 @motajs/editor，plan 05.1-07 禁止触碰） | open |  | 2026-09-29T07:36:58.846Z |  |
 | 6 | 05.2 | deviation | packages/libs/editor-core/lib/__tests__/coreApiSurface.test.ts | 163 | const enum 化后 ts 不允许把 PreloadStrategy 当值用(TS2475)，断言改为逐一断言成员取值 | fixed |  | 2026-10-01T09:15:53.165Z | 2026-10-01T09:17:47.768Z |
+| 7 | 05.2 | deviation | packages/libs/editor-impl/lib/__tests__/implApiSurface.test.ts | 132 | ActionType const enum -> TS2475; typeof assertion replaced with member value assertions | open |  | 2026-10-01T09:58:18.041Z |  |
 
 ````json
 [
@@ -95,6 +96,18 @@ last_updated: 2026-10-01T09:17:47.768Z
     "reason": "",
     "recorded_at": "2026-10-01T09:15:53.165Z",
     "resolved_at": "2026-10-01T09:17:47.768Z"
+  },
+  {
+    "id": 7,
+    "kind": "deviation",
+    "phase": "05.2",
+    "file": "packages/libs/editor-impl/lib/__tests__/implApiSurface.test.ts",
+    "line": 132,
+    "description": "ActionType const enum -> TS2475; typeof assertion replaced with member value assertions",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-01T09:58:18.041Z",
+    "resolved_at": null
   }
 ]
 ````
