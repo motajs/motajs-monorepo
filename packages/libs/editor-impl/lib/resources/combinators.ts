@@ -1,5 +1,5 @@
 import { computed, effect } from 'alien-signals';
-import { Content, ILoadableResource, IResourceView, ReadonlySignal } from './types';
+import { Content, ILoadableResource, IResourceView, LoadedContent, ReadonlySignal } from './types';
 import { ContentUtils } from './contentUtils';
 import { waitUntil } from './waitUntil';
 
@@ -103,7 +103,7 @@ function aggregateContents<const Dependencies extends readonly IResourceView<unk
   if (contents.some((content) => content.status === 'loading')) return { status: 'loading' };
   if (contents.some((content) => content.status === 'idle')) return { status: 'idle' };
 
-  const values = contents.map((content) => (content as { status: 'loaded'; value: unknown }).value);
+  const values = contents.map((content) => (content as LoadedContent<unknown>).value);
   try {
     return {
       status: 'loaded',

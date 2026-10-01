@@ -16,21 +16,21 @@ export class PersistExecutor implements IPersistExecutor {
   private isExecuting = false;
 
   /** 可写状态信号（真实来源）。 */
-  private _status: ReturnType<typeof signal<ExecutorStatus>>;
+  private statusSignal: ReturnType<typeof signal<ExecutorStatus>>;
 
   /** 只读状态信号。 */
   readonly status: ReadonlySignal<ExecutorStatus>;
 
   constructor(legacyOperation?: () => Promise<void>) {
     this.legacyOperation = legacyOperation;
-    this._status = signal<ExecutorStatus>({ status: 'idle' });
-    this.status = this._status as ReadonlySignal<ExecutorStatus>;
+    this.statusSignal = signal<ExecutorStatus>({ status: 'idle' });
+    this.status = this.statusSignal as ReadonlySignal<ExecutorStatus>;
   }
 
   schedule(intent: PersistenceIntent): void {
     this.pendingIntent = intent;
     if (this.isExecuting) {
-      this._status({ status: 'executing', pending: 1 });
+      this.statusSignal({ status: 'executing', pending: 1 });
       return;
     }
     void this.processQueue();
@@ -44,7 +44,7 @@ export class PersistExecutor implements IPersistExecutor {
   }
 
   retry(): void {
-    if (!this.failedIntent || this._status().status !== 'error') return;
+    if (!this.failedIntent || this.statusSignal().status !== 'error') return;
     this.schedule(this.failedIntent);
   }
 
@@ -58,7 +58,7 @@ export class PersistExecutor implements IPersistExecutor {
     while (this.pendingIntent) {
       const intent = this.pendingIntent;
       this.pendingIntent = null;
-      this._status({ status: 'executing', pending: 0 });
+      this.statusSignal({ status: 'executing', pending: 0 });
 
       try {
         await intent.execute();
@@ -69,18 +69,18 @@ export class PersistExecutor implements IPersistExecutor {
         this.failedIntent = intent;
         if (!this.pendingIntent) {
           this.isExecuting = false;
-          this._status({ status: 'error', error: normalized, pending: 0 });
+          this.statusSignal({ status: 'error', error: normalized, pending: 0 });
           return;
         }
       }
     }
 
     this.isExecuting = false;
-    this._status({ status: 'idle' });
+    this.statusSignal({ status: 'idle' });
   }
 
   async whenQuiescent(): Promise<void> {
-    await waitUntil(() => this._status().status !== 'executing');
+    await waitUntil(() => this.statusSignal().status !== 'executing');
   }
 
   async waitForIdle(): Promise<void> {
@@ -89,7 +89,7 @@ export class PersistExecutor implements IPersistExecutor {
 
   async flush(): Promise<void> {
     await this.whenQuiescent();
-    const status = this._status();
+    const status = this.statusSignal();
     if (status.status === 'error') throw status.error;
   }
 

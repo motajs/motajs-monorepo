@@ -6,7 +6,7 @@ import { isFileNotFoundError } from './errors';
 
 export class BinaryFileHandler implements IContentView<HTMLImageElement> {
   /** 五态内容信号（真实来源）。 */
-  private _content: ReturnType<typeof signal<Content<HTMLImageElement>>>;
+  private contentSignal: ReturnType<typeof signal<Content<HTMLImageElement>>>;
 
   /** 只读内容信号。 */
   readonly content: ReadonlySignal<Content<HTMLImageElement>>;
@@ -19,20 +19,20 @@ export class BinaryFileHandler implements IContentView<HTMLImageElement> {
 
   constructor(path: string, fs: IFsPort) {
     this.path = path;
-    this._content = signal<Content<HTMLImageElement>>({ status: 'idle' });
-    this.content = this._content as ReadonlySignal<Content<HTMLImageElement>>;
+    this.contentSignal = signal<Content<HTMLImageElement>>({ status: 'idle' });
+    this.content = this.contentSignal as ReadonlySignal<Content<HTMLImageElement>>;
     this.fs = fs;
   }
 
   //#region IContentView 接口
 
   getContent(): Content<HTMLImageElement> {
-    return this._content();
+    return this.contentSignal();
   }
 
   subscribe(listener: (content: Content<HTMLImageElement>) => void): () => void {
     return effect(() => {
-      listener(this._content());
+      listener(this.contentSignal());
     });
   }
 
@@ -41,7 +41,7 @@ export class BinaryFileHandler implements IContentView<HTMLImageElement> {
   }
 
   async ensureLoaded(): Promise<void> {
-    const status = this._content().status;
+    const status = this.contentSignal().status;
     if (status === 'idle') await this.load();
     else if (status === 'loading') await this.waitForSettled();
   }
@@ -55,12 +55,12 @@ export class BinaryFileHandler implements IContentView<HTMLImageElement> {
   //#region 加载方法
 
   async load(): Promise<void> {
-    if (this._content().status === 'loading') {
-      await waitUntil(() => this._content().status !== 'loading');
+    if (this.contentSignal().status === 'loading') {
+      await waitUntil(() => this.contentSignal().status !== 'loading');
       return;
     }
 
-    this._content({ status: 'loading' });
+    this.contentSignal({ status: 'loading' });
 
     try {
       const buffer = await this.fs.readFileBinary(this.path);
@@ -74,31 +74,31 @@ export class BinaryFileHandler implements IContentView<HTMLImageElement> {
         img.src = url;
       });
 
-      this._content({ status: 'loaded', value: img });
+      this.contentSignal({ status: 'loaded', value: img });
     } catch (err) {
       const error = err as Error;
 
       if (isFileNotFoundError(error)) {
-        this._content({ status: 'not-found' });
+        this.contentSignal({ status: 'not-found' });
       } else {
-        this._content({ status: 'error', error });
+        this.contentSignal({ status: 'error', error });
       }
     }
   }
 
   waitForLoaded(): Promise<void> {
-    return waitUntil(() => this._content().status === 'loaded');
+    return waitUntil(() => this.contentSignal().status === 'loaded');
   }
 
   waitForSettled(): Promise<void> {
     return waitUntil(() => {
-      const status = this._content().status;
+      const status = this.contentSignal().status;
       return status !== 'loading' && status !== 'idle';
     });
   }
 
   isLoaded(): boolean {
-    const status = this._content().status;
+    const status = this.contentSignal().status;
     return status !== 'idle' && status !== 'loading';
   }
 

@@ -1,5 +1,5 @@
 import { match } from 'ts-pattern';
-import { Content } from './types';
+import { Content, ErrorContent, IdleContent, LoadedContent, LoadingContent, NotFoundContent } from './types';
 
 // ContentUtils —— Content<T> 的通用辅助函数
 // 提供函数式操作工具，简化 Content<T> 的使用；由方法对象改为静态方法类，`ContentUtils.map(...)` 等调用点不变
@@ -90,7 +90,7 @@ export class ContentUtils {
    *
    * @param content 待判定的内容。
    */
-  static isIdle<T>(content: Content<T>): content is { status: 'idle' } {
+  static isIdle<T>(content: Content<T>): content is IdleContent {
     return content.status === 'idle';
   }
 
@@ -99,7 +99,7 @@ export class ContentUtils {
    *
    * @param content 待判定的内容。
    */
-  static isLoading<T>(content: Content<T>): content is { status: 'loading' } {
+  static isLoading<T>(content: Content<T>): content is LoadingContent {
     return content.status === 'loading';
   }
 
@@ -108,7 +108,7 @@ export class ContentUtils {
    *
    * @param content 待判定的内容。
    */
-  static isLoaded<T>(content: Content<T>): content is { status: 'loaded'; value: T } {
+  static isLoaded<T>(content: Content<T>): content is LoadedContent<T> {
     return content.status === 'loaded';
   }
 
@@ -117,7 +117,7 @@ export class ContentUtils {
    *
    * @param content 待判定的内容。
    */
-  static isNotFound<T>(content: Content<T>): content is { status: 'not-found' } {
+  static isNotFound<T>(content: Content<T>): content is NotFoundContent {
     return content.status === 'not-found';
   }
 
@@ -126,7 +126,7 @@ export class ContentUtils {
    *
    * @param content 待判定的内容。
    */
-  static isError<T>(content: Content<T>): content is { status: 'error'; error: Error } {
+  static isError<T>(content: Content<T>): content is ErrorContent {
     return content.status === 'error';
   }
 
@@ -135,7 +135,7 @@ export class ContentUtils {
    *
    * @param content 待判定的内容。
    */
-  static isAvailable<T>(content: Content<T>): content is { status: 'loaded'; value: T } {
+  static isAvailable<T>(content: Content<T>): content is LoadedContent<T> {
     return content.status === 'loaded';
   }
 
@@ -144,7 +144,7 @@ export class ContentUtils {
    *
    * @param content 待判定的内容。
    */
-  static hasError<T>(content: Content<T>): content is { status: 'not-found' } | { status: 'error'; error: Error } {
+  static hasError<T>(content: Content<T>): content is NotFoundContent | ErrorContent {
     return content.status === 'not-found' || content.status === 'error';
   }
 

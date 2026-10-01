@@ -7,9 +7,9 @@ import { isFileNotFoundError } from './errors';
 
 export class FileHandler implements IContentHandler<string> {
   /** 五态文本内容，真实来源；对外只以只读信号暴露。 */
-  private _content: ReturnType<typeof signal<Content<string>>> = signal<Content<string>>({ status: 'idle' });
+  private contentSignal: ReturnType<typeof signal<Content<string>>> = signal<Content<string>>({ status: 'idle' });
   /** 只读内容信号。 */
-  readonly content: ReadonlySignal<Content<string>> = this._content as ReadonlySignal<Content<string>>;
+  readonly content: ReadonlySignal<Content<string>> = this.contentSignal as ReadonlySignal<Content<string>>;
   /** 宿主文件读写能力。 */
   private readonly fs: IFsPort;
   /** 项目级持久化监视器。 */
@@ -26,11 +26,11 @@ export class FileHandler implements IContentHandler<string> {
   }
 
   getContent(): Content<string> {
-    return this._content();
+    return this.contentSignal();
   }
 
   subscribe(listener: (content: Content<string>) => void): () => void {
-    return effect(() => listener(this._content()));
+    return effect(() => listener(this.contentSignal()));
   }
 
   async refetch(): Promise<void> {
@@ -38,7 +38,7 @@ export class FileHandler implements IContentHandler<string> {
   }
 
   async ensureLoaded(): Promise<void> {
-    const status = this._content().status;
+    const status = this.contentSignal().status;
     if (status === 'idle') await this.load();
     else if (status === 'loading') await this.waitForSettled();
   }
@@ -56,7 +56,7 @@ export class FileHandler implements IContentHandler<string> {
       return;
     }
 
-    const current = this._content();
+    const current = this.contentSignal();
     if (current.status !== 'loaded') {
       throw new Error(`Cannot update file: current status is ${current.status}`);
     }
@@ -78,7 +78,7 @@ export class FileHandler implements IContentHandler<string> {
    */
   private commit(value: string): void {
     this.mutationVersion += 1;
-    this._content({ status: 'loaded', value });
+    this.contentSignal({ status: 'loaded', value });
     const path = this.path;
     const fs = this.fs;
     this.persistenceMonitor.schedule(path, {
@@ -88,11 +88,11 @@ export class FileHandler implements IContentHandler<string> {
   }
 
   waitForLoaded(): Promise<void> {
-    return waitUntil(() => this._content().status === 'loaded');
+    return waitUntil(() => this.contentSignal().status === 'loaded');
   }
 
   waitForSettled(): Promise<void> {
-    return waitUntil(() => !['idle', 'loading'].includes(this._content().status));
+    return waitUntil(() => !['idle', 'loading'].includes(this.contentSignal().status));
   }
 
   /**
@@ -107,7 +107,7 @@ export class FileHandler implements IContentHandler<string> {
    */
   async delete(): Promise<void> {
     this.mutationVersion += 1;
-    this._content({ status: 'not-found' });
+    this.contentSignal({ status: 'not-found' });
     const path = this.path;
     const fs = this.fs;
     this.persistenceMonitor.schedule(path, {
@@ -127,20 +127,20 @@ export class FileHandler implements IContentHandler<string> {
    * 读取磁盘内容并写入五态；读取期间被内存编辑取代时丢弃磁盘结果。
    */
   async load(): Promise<void> {
-    if (this._content().status === 'loading') {
-      await waitUntil(() => this._content().status !== 'loading');
+    if (this.contentSignal().status === 'loading') {
+      await waitUntil(() => this.contentSignal().status !== 'loading');
       return;
     }
 
     const version = this.mutationVersion;
-    this._content({ status: 'loading' });
+    this.contentSignal({ status: 'loading' });
     try {
       const content = await this.fs.readFile(this.path, 'utf-8');
-      if (version === this.mutationVersion) this._content({ status: 'loaded', value: content });
+      if (version === this.mutationVersion) this.contentSignal({ status: 'loaded', value: content });
     } catch (error) {
       if (version !== this.mutationVersion) return;
       const normalized = error instanceof Error ? error : new Error(String(error));
-      this._content(isFileNotFoundError(normalized) ? { status: 'not-found' } : { status: 'error', error: normalized });
+      this.contentSignal(isFileNotFoundError(normalized) ? { status: 'not-found' } : { status: 'error', error: normalized });
     }
   }
 
@@ -148,6 +148,6 @@ export class FileHandler implements IContentHandler<string> {
    * 该处理器是否已结束加载（loaded / not-found / error）。
    */
   isLoaded(): boolean {
-    return !['idle', 'loading'].includes(this._content().status);
+    return !['idle', 'loading'].includes(this.contentSignal().status);
   }
 }

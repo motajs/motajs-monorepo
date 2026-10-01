@@ -22,22 +22,22 @@ export class PersistenceMonitor implements IPersistenceMonitor {
   private readonly failedMap: Map<string, Error> = new Map();
 
   /** 可写的正在持久化路径信号。 */
-  private _persistingFiles: ReturnType<typeof signal<string[]>> = signal<string[]>([]);
+  private persistingFilesSignal: ReturnType<typeof signal<string[]>> = signal<string[]>([]);
 
   /** 可写的失败列表信号。 */
-  private _failedFiles: ReturnType<typeof signal<PersistFailure[]>> = signal<PersistFailure[]>([]);
+  private failedFilesSignal: ReturnType<typeof signal<PersistFailure[]>> = signal<PersistFailure[]>([]);
 
   /** 可写的重试中信号。 */
-  private _retrying: ReturnType<typeof signal<boolean>> = signal(false);
+  private retryingSignal: ReturnType<typeof signal<boolean>> = signal(false);
 
   /** 只读的正在持久化路径信号。 */
-  readonly persistingFiles = this._persistingFiles as ReadonlySignal<string[]>;
+  readonly persistingFiles = this.persistingFilesSignal as ReadonlySignal<string[]>;
 
   /** 只读的失败列表信号。 */
-  readonly failedFiles = this._failedFiles as ReadonlySignal<PersistFailure[]>;
+  readonly failedFiles = this.failedFilesSignal as ReadonlySignal<PersistFailure[]>;
 
   /** 只读的重试中信号。 */
-  readonly retrying = this._retrying as ReadonlySignal<boolean>;
+  readonly retrying = this.retryingSignal as ReadonlySignal<boolean>;
 
   /**
    * 取得（或惰性创建）某路径的持久化控制器，并把它的状态变化汇入项目级信号。
@@ -80,7 +80,7 @@ export class PersistenceMonitor implements IPersistenceMonitor {
   async retryFailed(): Promise<PersistFailure[]> {
     const paths = [...this.failedMap.keys()];
     if (paths.length === 0) return [];
-    this._retrying(true);
+    this.retryingSignal(true);
     try {
       for (const path of paths) {
         const controller = this.controllers.get(path);
@@ -89,7 +89,7 @@ export class PersistenceMonitor implements IPersistenceMonitor {
       await Promise.all(paths.map((path) => this.controllers.get(path)?.whenQuiescent()));
       return this.failedFiles();
     } finally {
-      this._retrying(false);
+      this.retryingSignal(false);
     }
   }
 
@@ -150,7 +150,7 @@ export class PersistenceMonitor implements IPersistenceMonitor {
     this.controllers.clear();
     this.persistingSet.clear();
     this.failedMap.clear();
-    this._retrying(false);
+    this.retryingSignal(false);
     this.updateSignals();
   }
 
@@ -158,7 +158,7 @@ export class PersistenceMonitor implements IPersistenceMonitor {
    * 把内部集合快照回写到只读信号。
    */
   private updateSignals(): void {
-    this._persistingFiles([...this.persistingSet]);
-    this._failedFiles([...this.failedMap].map(([path, error]) => ({ path, error })));
+    this.persistingFilesSignal([...this.persistingSet]);
+    this.failedFilesSignal([...this.failedMap].map(([path, error]) => ({ path, error })));
   }
 }
