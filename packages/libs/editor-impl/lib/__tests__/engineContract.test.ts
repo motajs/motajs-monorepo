@@ -6,14 +6,6 @@ import { defineEngine, EngineDefinitionError, resolvePreloadOrder } from '@motaj
 import { PreloadStrategy, ResourceDependencies, ResourceDescriptor } from '@motajs/editor-core';
 import { MemoryFsPort } from '../resources/__tests__/memoryFsPort';
 
-// 引擎适配器契约测试（PORT-03 / PORT-04，TDD）
-// 本文件驱动 defineEngine 的**端到端闭环**：
-// 一个合法的引擎描述 → 冻结的适配器 → 描述符 create(deps) 产出 IResourceView →
-// 经 ResourceRegistry 登记并按逻辑 id 取回同一对象；非法描述以单个 EngineDefinitionError
-// 一次性携带**全部**问题被拒；resolvePreloadOrder 给出纯、稳定的拓扑序
-// fixture 纪律（D-22 的约定半边）：本文件不声明模块级 fixture 表；每个用例自建描述与依赖，
-// 期望值直接写在用例内（createDeps() / loadedView() 只构造一次性对象，不是可复用夹具表）
-
 // 构造一份一次性内存依赖；描述符 create 只取用其中的 fileHandlers
 function createDeps(): ResourceDependencies {
   const fs = new MemoryFsPort();

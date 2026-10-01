@@ -11,16 +11,6 @@ import { EngineDescription, ResourceDependencies, ResourceDescriptor } from '@mo
 import { MemoryFsPort } from '../resources/__tests__/memoryFsPort';
 import { createEngineBDescription, engineBDescription } from './engineB';
 
-// 假引擎 B 端到端测试（PORT-08 / D-11 / D-04）
-// 本文件驱动完整的适配器闭环：defineEngine → 校验 → ResourceRegistry 登记 / 按 id 取回 →
-// resolvePreloadOrder，且全部使用**非魔塔**的 engineB.* id。两条关键证明：
-// - engineB.notes 是 computedResource 现场构造的**非文件**资源，加载它不产生任何 IFsPort 读取
-//   （T-05-09），因此通用描述符不假定「内容来自文件」
-// - 多级 preloadDependsOn 图被 resolvePreloadOrder 正确拓扑排序
-// 额外的回归守卫：夹具源码必须不含任何被禁引擎术语，防止从别处复制粘贴把引擎词汇带进夹具
-// 源码经 node:fs 直接读入；core 未安装 @types/node，故对内置模块导入加 @ts-expect-error
-// （运行时由 vitest 的 node 环境解析）
-
 // 声明顺序（夹具的既有事实，直接写在用例内而非模块级夹具表）
 const DECLARED_IDS = ['engineB.catalog', 'engineB.index', 'engineB.notes', 'engineB.chapter'];
 

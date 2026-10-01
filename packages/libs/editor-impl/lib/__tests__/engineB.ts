@@ -6,14 +6,6 @@ import { JsonDataHandler } from '../resources/jsonDataHandler';
 import { computedResource } from '../resources/combinators';
 import { ContentUtils } from '../resources/contentUtils';
 
-// 假「engine B」夹具（PORT-08 / D-11，仅测试）
-// 这是一份**非**魔塔的 `EngineDescription`：它只使用 `engineB.*` 逻辑 id，其中
-// `engineB.notes` 是**非文件**资源（用 `computedResource` 现场构造），机械地证明通用描述符
-// 不假定「内容来自文件」（D-04）。文件支撑的三个描述符用 core 的通用 `JsonDataHandler` 子类
-// `EngineBJsonDataHandler` 读取注入的 `FileHandlerManager`，证明 core 的通用处理器足够（PORT-05 边界）
-// 本文件刻意放在 `lib/__tests__/`：它随每一条 core 测试一起运行，却绝不进入生产源码，
-// 因此 `scripts/verify/coreEngineNeutral.js` 的引擎标识门禁（排除 `__tests__`）不会把它当作泄漏
-
 // engineB.catalog 的数据形状
 interface EngineBCatalog {
   readonly entries: readonly string[];
