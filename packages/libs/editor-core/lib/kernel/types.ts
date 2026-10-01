@@ -21,20 +21,40 @@ export interface AppliedOperation<T> {
 export interface IEditorOperation<T = void> {
   /** 这次操作的元数据。 */
   readonly meta: OperationMeta;
-  /** 执行这次编辑；成功时把「怎么撤回来」作为逆操作一并交出。 */
+
+  /**
+   * 执行这次编辑；成功时把「怎么撤回来」作为逆操作一并交出。
+   *
+   * @returns 操作返回值、能把它撤回来的逆操作，以及是否真的改动了东西。
+   */
   apply(): Promise<AppliedOperation<T>>;
 }
 
 export interface IUndoManager {
   /** 对外状态容器，供界面订阅历史条目、当前指针与忙碌状态。 */
   readonly store: Store<OperationHistoryState>;
-  /** 执行一个操作；成功且确有改动就记一条历史。 */
+
+  /**
+   * 执行一个操作；成功且确有改动就记一条历史。
+   *
+   * @param operation 要执行的可撤销操作。
+   * @returns 操作成功后的返回值。
+   */
   execute<T>(operation: IEditorOperation<T>): Promise<T>;
-  /** 撤销最近一条：对当前条目存的逆操作调 apply()。 */
+
+  /**
+   * 撤销最近一条：对当前条目存的逆操作调 apply()。
+   */
   undo(): Promise<void>;
-  /** 重做刚撤销的一条：再对原操作调 apply()。 */
+
+  /**
+   * 重做刚撤销的一条：再对原操作调 apply()。
+   */
   redo(): Promise<void>;
-  /** 清空全部历史，不入队、不触发任何回调。 */
+
+  /**
+   * 清空全部历史，不入队、不触发任何回调。
+   */
   clear(): void;
 }
 
@@ -62,7 +82,22 @@ export interface OperationHistoryState {
 export type EditorOperation<T = void> = IEditorOperation<T>;
 
 export interface CapabilityRegistrar {
+  /**
+   * 登记一个能力。
+   *
+   * @param kind 能力种类名。
+   * @param id 该种类内的实例 id。
+   * @param value 能力值。
+   * @param options 可选的归属者与是否可替换。
+   * @returns 登记结果：能撤销本次登记的 disposer 与本次产生的诊断。
+   */
   register(kind: string, id: string, value: unknown, options?: RegisterCapabilityOptions): RegisterCapabilityResult;
+
+  /**
+   * 登记一个拆除钩子，销毁时逆序调用。
+   *
+   * @param teardown 释放本次登记项的钩子。
+   */
   addTeardown(teardown: () => void): void;
 }
 
@@ -76,15 +111,47 @@ export interface EditorCoreConfig {
 export interface EditorCore {
   /** 诊断总线：构造期间与之后产生的诊断都留在它上面。 */
   readonly diagnostics: DiagnosticBus;
+
+  /**
+   * 登记一个能力。
+   *
+   * @param kind 能力种类名，须符合 `KIND_PATTERN`。
+   * @param id 该种类内的实例 id。
+   * @param value 能力值。
+   * @param options 可选的归属者与是否可替换。
+   * @returns 登记结果：能撤销本次登记的 disposer 与本次产生的诊断。
+   */
   registerCapability(
     kind: string,
     id: string,
     value: unknown,
     options?: RegisterCapabilityOptions,
   ): RegisterCapabilityResult;
+
+  /**
+   * 读取一个能力；未登记返回 `undefined`。
+   *
+   * @param kind 能力种类名。
+   * @param id 该种类内的实例 id。
+   */
   getCapability<T = unknown>(kind: string, id: string): T | undefined;
+
+  /**
+   * 读取一个能力；未登记抛出命名该 `kind:id` 的错误。
+   *
+   * @param kind 能力种类名。
+   * @param id 该种类内的实例 id。
+   */
   getCapabilityOrThrow<T = unknown>(kind: string, id: string): T;
+
+  /**
+   * 返回冻结的能力快照：扁平数组，每项含 kind/id/value/owner。
+   */
   snapshotCapabilities(): readonly CapabilityRef[];
+
+  /**
+   * 逆序释放全部登记项；幂等，重入为 no-op（D-09/D-21）。
+   */
   dispose(): void;
 }
 
@@ -138,7 +205,23 @@ export interface Diagnostic {
 }
 
 export interface DiagnosticBus {
+  /**
+   * 追加一条诊断并同步派发给全部订阅者。
+   *
+   * @param diagnostic 要记录并派发的诊断。
+   */
   push(diagnostic: Diagnostic): void;
+
+  /**
+   * 按顺序返回全部历史的不可变副本。
+   */
   snapshot(): readonly Diagnostic[];
+
+  /**
+   * 订阅订阅之后的诊断。
+   *
+   * @param listener 收到每条新诊断时同步调用。
+   * @returns 取消订阅函数。
+   */
   subscribe(listener: (diagnostic: Diagnostic) => void): () => void;
 }

@@ -1,23 +1,58 @@
 export interface IFsPort {
-  /** 以文本或 base64 读取一个文件；文件缺失时按上述契约拒绝。 */
+  /**
+   * 以文本或 base64 读取一个文件。
+   *
+   * @param path 文件路径，作为不透明字符串直接交给实现。
+   * @param encoding 文本用 `'utf-8'`，二进制内容用 `'base64'`。
+   * @returns 文件内容；文件缺失时必须以 Error 拒绝（code 为 `'file-not-found'` 或 `'ENOENT'`）。
+   */
   readFile(path: string, encoding: 'utf-8' | 'base64'): Promise<string>;
 
-  /** 以二进制读取一个文件；文件缺失时按上述契约拒绝。 */
+  /**
+   * 以二进制读取一个文件。
+   *
+   * @param path 文件路径，作为不透明字符串直接交给实现。
+   * @returns 文件二进制内容；文件缺失时必须以 Error 拒绝（code 为 `'file-not-found'` 或 `'ENOENT'`）。
+   */
   readFileBinary(path: string): Promise<ArrayBuffer>;
 
-  /** 写入一个文件。 */
+  /**
+   * 写入一个文件。
+   *
+   * @param path 文件路径。
+   * @param data 要写入的内容。
+   * @param encoding 文本用 `'utf-8'`，二进制内容用 `'base64'`。
+   */
   writeFile(path: string, data: string, encoding: 'utf-8' | 'base64'): Promise<void>;
 
-  /** 删除一个文件。 */
+  /**
+   * 删除一个文件。
+   *
+   * @param path 文件路径。
+   */
   deleteFile(path: string): Promise<void>;
 
-  /** 列出目录内容。 */
+  /**
+   * 列出目录内容。
+   *
+   * @param path 目录路径。
+   * @returns 目录下的条目名。
+   */
   readdir(path: string): Promise<string[]>;
 
-  /** 创建目录。 */
+  /**
+   * 创建目录。
+   *
+   * @param path 目录路径。
+   */
   mkdir(path: string): Promise<void>;
 
-  /** 移动/重命名。 */
+  /**
+   * 移动或重命名。
+   *
+   * @param src 源路径。
+   * @param dest 目标路径。
+   */
   moveFile(src: string, dest: string): Promise<void>;
 }
 
