@@ -3,18 +3,6 @@ import { describe, expect, it } from 'vitest';
 import { PersistExecutor } from '../persistExecutor';
 import { wait } from './testHelpers';
 
-// PersistExecutor 特性化测试（冻结不变量，不冻结实现结构）
-// 只冻结 D-11 指定的不变量，不录制完整状态转移快照，不断言私有字段：
-// - error -> retry -> idle（重试重新提交保留的失败意图）
-// - 并发 latest-wins（最多一个执行中 + 一个更新的待执行意图）
-// - 失败在有更新意图待执行时不暴露为 error
-// - hasPending() 在 executing / pending 时为 true，静默后为 false
-// - flush() 在终态失败时 reject，whenQuiescent() 永不 reject
-// 所有期望值均以 observation-first 方式取得：先用故意错误的期望运行，
-// 从失败输出读出真实值后再固化，而不是从实现源码推导
-// 自 `src/fs/__tests__/persistExecutor.invariants.test.ts` 原样搬入 core：只改 import 路径
-// （`../persistExecutor`、本地 `./testHelpers`）与文件级环境指令注释；断言逐字不变
-
 describe('PersistExecutor invariants', () => {
   // 失败后 retry 重新提交保留的意图，回到 idle 并清除失败
   it('retry after error re-submits the retained intent and returns to idle with the failure cleared', async () => {

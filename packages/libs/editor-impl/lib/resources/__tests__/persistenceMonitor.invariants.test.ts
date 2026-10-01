@@ -3,20 +3,6 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { PersistenceMonitor } from '../persistenceMonitor';
 import { wait } from './testHelpers';
 
-// PersistenceMonitor 特性化测试（冻结不变量，不冻结实现结构）
-// 只冻结 D-11 指定的不变量，不断言私有字段：
-// - 路径归一化：`./project\\data.js` 与 `project/data.js` 命中同一个 controller，按提交顺序执行
-// - 失败保留在 failed 集合，只有真正成功执行后才清除
-// - 重试进行中旧的失败仍然可见
-// - retryFailed() 只返回仍未恢复的路径
-// - flush() 在有失败路径时抛出带固定消息的 AggregateError，无失败时 resolve
-// - whenQuiescent() 在存在失败时也不 reject
-// - statusFor 优先级：error > persisting > idle
-// 所有期望值均以 observation-first 方式取得：先用故意错误的期望运行，
-// 从失败输出读出真实值后再固化，而不是从实现源码推导
-// 自 `src/fs/__tests__/persistenceMonitor.invariants.test.ts` 原样搬入 core：只改 import 路径
-// （`../persistenceMonitor`、本地 `./testHelpers`）与文件级环境指令注释；断言逐字不变
-
 describe('PersistenceMonitor invariants', () => {
   let monitor: PersistenceMonitor;
 

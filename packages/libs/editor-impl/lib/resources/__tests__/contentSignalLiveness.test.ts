@@ -5,14 +5,6 @@ import { JsonDataHandler } from '../jsonDataHandler';
 import { PersistenceMonitor } from '../persistenceMonitor';
 import { MemoryFsPort } from './memoryFsPort';
 
-// RES-06 —— 资源层的五态信号活性断言
-// 这些用例证明「响应式是真的」，而不是快照或被 `effect` 伪造的：
-// - 捕获 `content` callable，**变更之前**保存引用，随后 `update(...)`，再调用**同一个先前捕获的**
-//   callable，必须返回新的五态值。快照式实现会在变更后仍返回旧值而变红
-// - 无写入时连续两次读取返回同值（派生值稳定）
-// - 当前值无需任何订阅即可读取——`content` 由 `signal`/`computed` 派生，读取不依赖 `effect` 刷新
-// fixture 纪律（D-22 的约定半边）：本文件不声明模块级 fixture 表；数据写在用例内
-
 describe('resource signal liveness (RES-06)', () => {
   async function createLoadedHandler(path: string, initial: string): Promise<FileHandler> {
     const fs = new MemoryFsPort();

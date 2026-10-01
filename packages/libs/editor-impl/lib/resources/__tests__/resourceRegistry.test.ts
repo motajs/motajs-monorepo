@@ -3,13 +3,6 @@ import { describe, expect, it } from 'vitest';
 import { Content, IResourceView, ResourceRegistryEntry } from '../types';
 import { ResourceRegistry } from '../resourceRegistry';
 
-// `ResourceRegistry`（RES-02）单元测试
-// 覆盖：按逻辑 id 登记/读取、未知 id 的 `get`/`has`/`ids` 行为、`getOrThrow` 抛错、重复 id 被拒且原条目存活、
-// disposer 只删除自己那一条（含「过期 disposer」守卫）、快照冻结且改动它不影响注册表、两个实例互不干扰
-// （T-04-02），以及非法 id（空串 / 纯空白 / 含空白 / `__proto__` / `constructor` / `prototype`）被拒
-// 且 `Object.prototype` 未被污染（T-04-01）
-// fixture 纪律（D-22 的约定半边）：本文件不声明模块级 fixture 表；期望值直接写在用例内
-
 /**
  * 一个最小的 `IResourceView` 测试替身：`content` 是稳定的 loaded 快照。
  *

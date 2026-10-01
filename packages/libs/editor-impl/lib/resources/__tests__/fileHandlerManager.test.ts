@@ -5,8 +5,6 @@ import { FileHandlerManager as FileHandlerManagerClass } from '../fileHandlerMan
 import { PersistenceMonitor } from '../persistenceMonitor';
 import { MemoryFsPort } from './memoryFsPort';
 
-// FileHandlerManager 单元测试
-
 describe('FileHandlerManager', () => {
   let memoryFs: MemoryFsPort;
   let persistenceMonitor: PersistenceMonitor;

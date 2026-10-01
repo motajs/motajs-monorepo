@@ -8,13 +8,6 @@ import { PersistenceMonitor } from '../persistenceMonitor';
 import { FileResource } from '../fileResource';
 import { MemoryFsPort } from './memoryFsPort';
 
-// `FileResource` 单元测试（PORT-04，TDD）
-// 证明 core 唯一持有「不透明 IO 地址」的类只经注入的 `IFsPort` 读文件：
-// 命中地址得 `loaded`（值由 `JsonDataHandler` 解析）、缺失地址得 `not-found`（保留 RES-05 语义）、
-// `reload` 重读使改动反映出来，且 `id` 全程不变
-// fixture 纪律（D-22 的约定半边）：不声明模块级夹具表；每个用例自建 `MemoryFsPort` 与描述符，
-// 期望值直接写在用例内
-
 /**
  * 一次性构造注入的 `MemoryFsPort` 依赖；测试持有所需句柄。
  *

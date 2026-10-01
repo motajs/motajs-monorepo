@@ -4,9 +4,6 @@ import { PersistenceMonitor } from '../persistenceMonitor';
 import { wait } from './testHelpers';
 import { effect } from 'alien-signals';
 
-// PersistenceMonitor 单元测试（自 `src/fs/__tests__/PersistenceMonitor.test.ts` 原样搬入 core）
-// 只改 import 路径（`../persistenceMonitor`、本地 `./testHelpers`）与文件级环境指令注释；断言逐字不变
-
 describe('PersistenceMonitor', () => {
   let monitor: PersistenceMonitor;
 

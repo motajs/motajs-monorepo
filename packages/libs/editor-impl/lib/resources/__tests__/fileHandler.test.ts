@@ -7,8 +7,6 @@ import { IFsPort } from '@motajs/editor-core';
 import { MemoryFsPort } from './memoryFsPort';
 import { wait } from './testHelpers';
 
-// FileHandler 单元测试
-
 describe('FileHandler', () => {
   let memoryFs: MemoryFsPort;
   let persistenceMonitor: PersistenceMonitor;

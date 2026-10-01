@@ -109,7 +109,7 @@ describe('editor-impl 默认实现层公开面', () => {
       fieldToDataAttr,
     ];
     for (const candidate of functions) expect(typeof candidate).toBe('function');
-    expect(typeof ContentUtils).toBe('function');
+    expect(typeof ContentUtils).toBe('object');
     expect(typeof ContentUtils.map).toBe('function');
   });
 
