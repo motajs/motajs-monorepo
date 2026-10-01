@@ -11,8 +11,6 @@ function normalizePath(path: string): string {
   return path.replace(/\\/g, '/').replace(/^\.\/+/, '');
 }
 
-// 项目级、按路径归属的持久化管理器
-// 汇总各路径的持久化状态，提供 flush、失败记录与统一重试
 export class PersistenceMonitor implements IPersistenceMonitor {
   /** 路径 → 持久化控制器。 */
   private readonly controllers: Map<string, PersistExecutor> = new Map();
@@ -71,29 +69,14 @@ export class PersistenceMonitor implements IPersistenceMonitor {
     return controller;
   }
 
-  /**
-   * 旧式测试适配入口：为一个路径创建受监控的执行器；生产资源改用 `schedule()`。
-   *
-   * @param path 文件路径。
-   * @param operation 遗留的写入操作。
-   */
   createExecutor(path: string, operation: () => Promise<void>): PersistExecutor {
     return this.controller(path, operation);
   }
 
-  /**
-   * 为某个路径排程一个持久化意图。
-   *
-   * @param path 文件路径。
-   * @param intent 要排程的持久化意图。
-   */
   schedule(path: string, intent: PersistenceIntent): void {
     this.controller(path).schedule(intent);
   }
 
-  /**
-   * 重试全部失败路径，返回仍未恢复的失败。
-   */
   async retryFailed(): Promise<PersistFailure[]> {
     const paths = [...this.failedMap.keys()];
     if (paths.length === 0) return [];
@@ -110,11 +93,6 @@ export class PersistenceMonitor implements IPersistenceMonitor {
     }
   }
 
-  /**
-   * 等待指定路径（缺省为全部）静默；存在失败时抛出聚合错误。
-   *
-   * @param paths 要等待的路径；缺省为全部。
-   */
   async flush(paths?: readonly string[]): Promise<void> {
     const controllers = paths
       ? paths.map((path) => this.controllers.get(normalizePath(path))).filter((item): item is PersistExecutor => !!item)
@@ -134,11 +112,6 @@ export class PersistenceMonitor implements IPersistenceMonitor {
     }
   }
 
-  /**
-   * 等待指定路径（缺省为全部）静默；刻意不因失败而 reject。
-   *
-   * @param paths 要等待的路径；缺省为全部。
-   */
   async whenQuiescent(paths?: readonly string[]): Promise<void> {
     const controllers = paths
       ? paths.map((path) => this.controllers.get(normalizePath(path))).filter((item): item is PersistExecutor => !!item)
@@ -146,11 +119,6 @@ export class PersistenceMonitor implements IPersistenceMonitor {
     await Promise.all(controllers.map((controller) => controller.whenQuiescent()));
   }
 
-  /**
-   * 查询某路径的持久化状态。
-   *
-   * @param path 文件路径。
-   */
   statusFor(path: string): 'idle' | 'persisting' | 'error' {
     const normalized = normalizePath(path);
     if (this.failedMap.has(normalized)) return 'error';
@@ -158,46 +126,26 @@ export class PersistenceMonitor implements IPersistenceMonitor {
     return 'idle';
   }
 
-  /**
-   * 查询某路径的失败原因。
-   *
-   * @param path 文件路径。
-   */
   errorFor(path: string): Error | undefined {
     return this.failedMap.get(normalizePath(path));
   }
 
-  /**
-   * 是否有尚未落盘的改动。
-   */
   hasUnsavedChanges(): boolean {
     return this.persistingSet.size > 0;
   }
 
-  /**
-   * 是否存在持久化失败。
-   */
   hasPersistErrors(): boolean {
     return this.failedMap.size > 0;
   }
 
-  /**
-   * 正在持久化的路径数量。
-   */
   getPersistingCount(): number {
     return this.persistingSet.size;
   }
 
-  /**
-   * 持久化失败的路径数量。
-   */
   getFailedCount(): number {
     return this.failedMap.size;
   }
 
-  /**
-   * 清空全部状态（测试用）。
-   */
   resetForTests(): void {
     this.controllers.clear();
     this.persistingSet.clear();

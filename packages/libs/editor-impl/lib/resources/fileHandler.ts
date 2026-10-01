@@ -5,9 +5,6 @@ import { Content } from './types';
 import { FileHandlerDependencies, IContentHandler, IPersistenceMonitor, ReadonlySignal } from './types';
 import { isFileNotFoundError } from './errors';
 
-// 文本文件状态：内存优先，按归一化路径排程持久化
-// 构造参数经 `FileHandlerDependencies` 打包注入，`FileHandler` 与 `FileHandlerManager`
-// 共享同一份依赖，因此两者不可能把参数写反（D-07）
 export class FileHandler implements IContentHandler<string> {
   /** 五态文本内容，真实来源；对外只以只读信号暴露。 */
   private _content: ReturnType<typeof signal<Content<string>>> = signal<Content<string>>({ status: 'idle' });

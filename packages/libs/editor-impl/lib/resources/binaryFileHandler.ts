@@ -4,7 +4,6 @@ import { waitUntil } from './waitUntil';
 import { Content, IContentView, ReadonlySignal } from './types';
 import { isFileNotFoundError } from './errors';
 
-// 二进制文件处理器：加载图片文件并返回 HTMLImageElement；只读，不支持写入
 export class BinaryFileHandler implements IContentView<HTMLImageElement> {
   /** 五态内容信号（真实来源）。 */
   private _content: ReturnType<typeof signal<Content<HTMLImageElement>>>;
@@ -25,7 +24,7 @@ export class BinaryFileHandler implements IContentView<HTMLImageElement> {
     this.fs = fs;
   }
 
-  // ==================== IContentView 接口 ====================
+  //#region IContentView 接口
 
   getContent(): Content<HTMLImageElement> {
     return this._content();
@@ -51,7 +50,9 @@ export class BinaryFileHandler implements IContentView<HTMLImageElement> {
     return this.path;
   }
 
-  // ==================== 加载方法 ====================
+  //#endregion
+
+  //#region 加载方法
 
   async load(): Promise<void> {
     if (this._content().status === 'loading') {
@@ -85,16 +86,10 @@ export class BinaryFileHandler implements IContentView<HTMLImageElement> {
     }
   }
 
-  /**
-   * 等待图片加载完成
-   */
   waitForLoaded(): Promise<void> {
     return waitUntil(() => this._content().status === 'loaded');
   }
 
-  /**
-   * 等待状态 settled
-   */
   waitForSettled(): Promise<void> {
     return waitUntil(() => {
       const status = this._content().status;
@@ -102,11 +97,10 @@ export class BinaryFileHandler implements IContentView<HTMLImageElement> {
     });
   }
 
-  /**
-   * 检查是否已加载
-   */
   isLoaded(): boolean {
     const status = this._content().status;
     return status !== 'idle' && status !== 'loading';
   }
+
+  //#endregion
 }

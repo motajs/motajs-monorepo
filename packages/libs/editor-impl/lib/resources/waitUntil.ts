@@ -1,7 +1,5 @@
 import { effect } from 'alien-signals';
 
-// Signal 相关工具函数
-
 /**
  * 等待条件满足。
  *
