@@ -2,13 +2,6 @@
 import { describe, expect, test } from 'vitest';
 import { EditorCoreKernel } from '../kernel/core';
 
-// Phase 3 registry 契约测试（KERN-03）
-// 它把 D-02/D-03/D-19 的每一条钉死在行为上：种类格式校验、重复注册被拒且**无副作用**、
-// `replaceable: true` 才允许替换、旧 disposer 失效、失败的替换尝试不动旧值、
-// `EditorCore.getCapability` 与 `EditorCore.getCapabilityOrThrow` 的差别、
-// `EditorCore.snapshotCapabilities` 的扁平冻结形状，以及用 `Map` 键控挡住的 `__proto__` 原型污染
-// 全部 fixture 使用引擎中性的 `acme.*`（RESEARCH Pitfall 15）
-
 // 合法种类：单段与多段、camelCase 与连字符都要放行（D-17）
 const VALID_KINDS = [
   'command',

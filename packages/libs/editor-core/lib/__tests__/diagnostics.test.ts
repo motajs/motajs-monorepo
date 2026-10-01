@@ -3,13 +3,6 @@ import { describe, expect, test } from 'vitest';
 import { DiagnosticBusImpl, DIAGNOSTIC_CODES } from '../kernel/diagnostics';
 import { Diagnostic, DiagnosticSeverity } from '../kernel/types';
 
-// Phase 3 诊断总线契约测试（KERN-05）
-// 它把 D-05/D-06 的语义钉死：`DiagnosticBus.snapshot()` 读全部已发生的诊断（构造期诊断在构造返回后
-// 仍可读），`DiagnosticBus.subscribe()` 只收订阅之后的诊断且返回的 unsubscribe 立即生效；
-// 订阅者抛错被**隔离**——只追加一条 `diagnostic.subscriber-error` 历史（append-without-dispatch），
-// 不重入派发、不影响其它订阅者、也不让生产方失败；历史是追加式且在测试范围内无上限
-// 全部 fixture 使用引擎中性的 `acme.*`（RESEARCH Pitfall 15）
-
 describe('editor-core 诊断总线契约', () => {
   // 覆盖：snapshot 按顺序返回全部历史，且返回的是不可变副本
   test('snapshot 按顺序返回全部历史，且返回的是不可变副本', () => {

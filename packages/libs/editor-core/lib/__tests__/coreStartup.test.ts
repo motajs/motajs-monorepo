@@ -5,13 +5,6 @@ import { DIAGNOSTIC_CODES } from '../kernel/diagnostics';
 import { EditorCoreStartupError } from '../kernel/errors';
 import { DiagnosticSeverity } from '../kernel/types';
 
-// Phase 3 原子构造与启动失败测试（KERN-04）
-// 它把 D-07/D-08 的契约钉死在行为上：必需集合是 `config.requiredCapabilities` ∪ core 内置清单、
-// 判定粒度是具体 `kind:id`；构造末尾统一核对，任一未解析即**逆序释放**已创建的部分，然后抛出
-// `EditorCoreStartupError` 并携带**全部**诊断——绝不交出半成品。只有「必需项缺失」阻断启动；
-// 其它 error 级诊断（例如一次被拒的重复注册）随实例正常返回并留在总线历史里
-// 全部 fixture 使用引擎中性的 `acme.*`：core 不认识任何引擎的词汇或文件结构（RESEARCH Pitfall 15）
-
 // 运行构造并返回它抛出的启动错误；若没有抛出，就让测试失败而不是静默通过
 function captureStartupError(run: () => unknown): EditorCoreStartupError {
   try {

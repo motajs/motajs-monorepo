@@ -2,10 +2,6 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { UndoManager } from '../kernel/undoManager';
 import { AppliedOperation, IEditorOperation, OperationMeta } from '../kernel/types';
 
-// UndoManager 不变量测试（纯内存，不读任何工程 fixture）
-// 逐条钉住管理器的外部可观察行为：容量 100、撤销走存下的逆操作、重做、redo 分叉截断、
-// 无改动不入历史，以及组合操作失败时按已成功子操作的逆序回退并标注失败阶段
-// 没有任何快照 / 目标用例：管理器只存操作、不存快照（D-04/D-05）
 describe('UndoManager invariants', () => {
   let value = 0;
   let manager: UndoManager;
