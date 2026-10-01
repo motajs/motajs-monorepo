@@ -201,7 +201,7 @@ Plans:
 
 **Depends on:** Phase 5
 
-**Plans:** 9/9 plans executed
+**Plans:** 9/9 executed + 6 返工计划（Plan 10–15，注释/风格保真）
 
 Plans:
 **Wave 1 — 接口层（D-02 / D-06 / D-07 / D-10）**
@@ -230,6 +230,21 @@ Plans:
 **Wave 6 — 收尾**
 
 - [x] 05.2-09-PLAN.md — 相位级全量回归 + 编辑器未越界复核
+
+**Wave 7 — 返工：接口层注释保真（D-02 / D-03 / D-06 / D-10）**
+
+- [ ] 05.2-10-PLAN.md — `editor-core` 两个 `types.ts`：删文件头/接口自身说明、方法改多行 `@param`、枚举改 `const enum`
+- [ ] 05.2-11-PLAN.md — `editor-impl` 三个 `types.ts`：对象联合拆具名 interface、方法改多行 `@param`、`ActionType` 改 `const enum`
+
+**Wave 8 — 返工：实现层与 barrel 注释保真（D-02 / D-03 / D-04 / D-05 / D-08）**
+
+- [ ] 05.2-12-PLAN.md — `editor-core` 实现层：删文件头/类接口注释、删实现类重复接口 jsDoc、barrel 去注释
+- [ ] 05.2-13-PLAN.md — `editor-impl` 资源层：同上 + 去 `_` 私有前缀 + `ContentUtils` 去类化
+- [ ] 05.2-14-PLAN.md — `editor-impl` 编辑/表格/React/能力目录 + 全部 barrel 去注释 + 顶层测试
+
+**Wave 9 — 返工收尾**
+
+- [ ] 05.2-15-PLAN.md — 相位级全量回归 + 保真度残留清单 + 编辑器零改动复核
 
 ### Phase 05.1: editor-core 接口与实现整改 (INSERTED)
 

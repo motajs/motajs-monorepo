@@ -1,6 +1,7 @@
 # Phase 05.2: editor-core/impl 代码风格整改 — INTERFACE-NAME.md
 
-> **状态：全部已确认。** §Plan 01–§Plan 09 的命名已于 2026-09-29 经用户确认。本文件是**执行前的规划产物**：由 planner 在写计划时一并产出，
+> **状态：§Plan 01–§Plan 09 已确认；§Plan 10–§Plan 15（本轮注释/风格保真返工）为「待确认」。**
+> §Plan 01–§Plan 09 的命名已于 2026-09-29 经用户确认。本文件是**执行前的规划产物**：由 planner 在写计划时一并产出，
 > 不是任何执行任务创建的。按 `AGENTS.md` §Project Rules，任何**重要命名**（文件名 / 目录名 / 类型名 /
 > 类名 / 方法名 / 枚举成员名 / 导出符号名 / 门禁标签名）都必须先写在本文件里、**并说明它是干什么的**，
 > 经用户确认后才可落盘。函数体内的 `let`/`const` 局部变量不受此限。
@@ -162,6 +163,86 @@
 | 名字 | 种类 | 它是干什么的 |
 |------|------|--------------|
 | （无新名字） | — | 只跑全量校验：两包 typecheck/test、`pnpm typecheck`/`test`/`lint`/`format:check`、七条 `scripts/verify/*.js` + `ci-workflow.js`，并确认 `packages/apps/editor` 只有本阶段批准的枚举跟随改动。 |
+
+---
+
+## 本轮返工（Plan 05.2-10 … 05.2-15）— 待用户确认
+
+> 背景：§Plan 01–09 执行后，用户复核认为**注释/风格保真度**未对齐参考风格，故追加本波计划。
+> 只做「注释写在哪、写成什么样、类型怎么拆、私有成员怎么命名」，**不改功能、不改行为、不改编辑器**。
+
+---
+
+## Plan 05.2-10 — `editor-core` 接口层注释/枚举保真（D-02 / D-03 / D-06 / D-10）
+
+**把底层两个 `types.ts` 的文件头、接口自身说明删掉，方法改多行注释、枚举改 `const enum`；不引入新名字。**
+
+| 名字 | 种类 | 它是干什么的 |
+|------|------|--------------|
+| `DiagnosticSeverity` / `PreloadStrategy` | 枚举（**改种类**） | 由 `export enum` 改为 `export const enum`（数字取值不变）；成员 `//` 注释改为单行 `/** */`。**不新增成员名**。 |
+
+---
+
+## Plan 05.2-11 — `editor-impl` 接口层保真（D-02 / D-03 / D-06 / D-10）
+
+**把 impl 三个 `types.ts` 的文件头/接口说明删掉，把两个「对象联合」拆成具名 interface，方法改多行注释；`ActionType` 改 `const enum`。**
+
+| 名字 | 种类 | 它是干什么的 |
+|------|------|--------------|
+| `IdleContent` | interface（新；`resources/types.ts`） | 内容「空闲、尚未开始加载」这一态；`Content<T>` 联合的成员之一，取代内联对象。 |
+| `LoadingContent` | interface（新） | 内容「加载中」这一态；`Content<T>` 联合成员。 |
+| `LoadedContent<T>` | interface（新，泛型） | 内容「已加载、带值」这一态；成员 `value: T`。 |
+| `NotFoundContent` | interface（新） | 内容「文件未找到」这一态。 |
+| `ErrorContent` | interface（新） | 内容「出错、带错误对象」这一态；成员 `error: Error`。 |
+| `IdleExecutor` | interface（新） | 单路径持久化控制器「空闲」态；`ExecutorStatus` 联合成员。 |
+| `ExecutingExecutor` | interface（新） | 「执行中、带待执行数」态；成员 `pending: number`。 |
+| `ErrorExecutor` | interface（新） | 「终态失败、带错误」态；成员 `error: Error`、`pending: 0`。 |
+| `ITextContentView` | interface（新） | `IDataHandler.getFileHandler()` 的返回类型：底层文本内容的最小只读视图（一个 `getContent()`），取代内联对象。 |
+
+> 说明：`Content<T>` 与 `ExecutorStatus` 的 `status` 判别字**仍是字符串字面量**（编辑器大量字符串比较）。
+
+---
+
+## Plan 05.2-12 — `editor-core` 实现层与 barrel 保真（D-02 / D-03 / D-04 / D-08）
+
+| 名字 | 种类 | 它是干什么的 |
+|------|------|--------------|
+| （无新名字） | — | 只删文件头/类接口注释、删实现类上重复的接口方法 jsDoc、barrel 去注释、`// ====` 换 `//#region`。 |
+
+---
+
+## Plan 05.2-13 — `editor-impl` 资源层保真（D-02 / D-03 / D-04 / D-05）
+
+**去文件头/类注释、删实现类重复接口注释、去私有成员 `_` 前缀、`ContentUtils` 去类化。**
+
+| 名字 | 种类 | 它是干什么的 |
+|------|------|--------------|
+| `contentSignal` | 私有成员（**改名**；`FileHandler` 与 `BinaryFileHandler`） | 五态内容的真实来源信号（原 `_content`）；对外仍只暴露只读 `content`。 |
+| `statusSignal` | 私有成员（**改名**；`PersistExecutor`） | 可写的执行状态信号（原 `_status`）；对外仍只暴露只读 `status`。 |
+| `persistingFilesSignal` | 私有成员（**改名**；`PersistenceMonitor`） | 可写的「正在持久化路径」信号（原 `_persistingFiles`）。 |
+| `failedFilesSignal` | 私有成员（**改名**；`PersistenceMonitor`） | 可写的「失败列表」信号（原 `_failedFiles`）。 |
+| `retryingSignal` | 私有成员（**改名**；`PersistenceMonitor`） | 可写的「重试中」信号（原 `_retrying`）。 |
+| `map` / `andThen` / `unwrapOr` / `unwrapOrElse` / `isIdle` / `isLoading` / `isLoaded` / `isNotFound` / `isError` / `isAvailable` / `hasError` / `unwrap` | 模块级裸函数（**去 class 化**，`contentUtils.ts` 内**不导出**） | `Content<T>` 的 12 个纯辅助（原 `ContentUtils` 的静态方法）；**名字沿用**，只是从静态方法变成模块内裸函数。 |
+| `ContentUtils` | 聚合常量（**改种类**；仍从包根导出） | 把上述 12 个裸函数聚成一个对象，使编辑器 `SHIM(phase4)` 的 `ContentUtils.map(...)` 调用点**一字不改**（规则禁止改编辑器）。**Phase 11 与其它 D-16 别名一并删除。** |
+
+> 说明（与 `AGENTS.md` §Code style 的取舍）：规范要求「纯功能函数保持裸函数」，但编辑器 shim 钉死了 `ContentUtils`
+> 这个名字、且本阶段禁止改编辑器，故实现改为裸函数、名字以聚合常量保留；已作为**计划内偏差**记录，待用户确认。
+
+---
+
+## Plan 05.2-14 — `editor-impl` 编辑/表格/React/能力目录与全部 barrel 保真（D-02 / D-03 / D-04 / D-08）
+
+| 名字 | 种类 | 它是干什么的 |
+|------|------|--------------|
+| `OperationHistoryView` | interface（新，**本文件内不导出**；`react/index.ts`） | `useOperationHistory(history)` 的返回形状：`entries`/`current`/`busy`；取代内联返回对象类型。 |
+
+---
+
+## Plan 05.2-15 — 收尾全量回归（无新名字）
+
+| 名字 | 种类 | 它是干什么的 |
+|------|------|--------------|
+| （无新名字） | — | 只跑全量校验、七门禁 + CI 契约、保真度残留清单与编辑器零改动核对。 |
 
 ---
 
