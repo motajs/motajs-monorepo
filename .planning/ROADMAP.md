@@ -201,7 +201,7 @@ Plans:
 
 **Depends on:** Phase 5
 
-**Plans:** 6/9 plans executed
+**Plans:** 7/9 plans executed
 
 Plans:
 **Wave 1 — 接口层（D-02 / D-06 / D-07 / D-10）**
@@ -221,7 +221,7 @@ Plans:
 
 - [x] 05.2-05-PLAN.md — `editor-core` 注释/空行/成员顺序/显式类型/空值扫尾
 - [x] 05.2-06-PLAN.md — `editor-impl` 资源层注释/空行/顺序/显式类型/空值扫尾
-- [ ] 05.2-07-PLAN.md — `editor-impl` 编辑/表格/React/能力层与顶层测试扫尾
+- [x] 05.2-07-PLAN.md — `editor-impl` 编辑/表格/React/能力层与顶层测试扫尾
 
 **Wave 5 — 桶文件（D-08 / D-15 / D-16）**
 

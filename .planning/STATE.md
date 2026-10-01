@@ -2,18 +2,18 @@
 gsd_state_version: "1.0"
 current_phase: "05.2"
 current_phase_name: editor-core-impl
-current_plan: 7
+current_plan: 8
 status: executing
-stopped_at: Completed 05.2-06-PLAN.md
-last_updated: "2026-09-30T09:14:17.237Z"
+stopped_at: Completed 05.2-07-PLAN.md
+last_updated: "2026-10-01T06:06:14.941Z"
 last_activity: 2026-09-28
 last_activity_desc: Phase 05.1 plan 01 complete (editor-core undo contract types)
-state_head: b1c948874eda96d9df080ee868e65d98e5bc9d5d
+state_head: 91a58606a3253815808e82a847a9f0bad1d720a5
 progress:
   total_phases: 14
   completed_phases: 0
   total_plans: 42
-  completed_plans: 39
+  completed_plans: 40
   percent: 0
 ---
 
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-09-24)
 ## Current Position
 
 Phase: 05.2 (editor-core-impl) — READY TO EXECUTE
-Current Plan: 7
+Current Plan: 8
 Total Plans in Phase: 9
 Status: Executing (plan 01 complete; plan 02 pending briefing/approval)
 Last activity: 2026-09-28 — 05.1-01 撤销契约类型落地（`lib/kernel/types.ts`）
@@ -87,6 +87,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 05.2 P04 | 45min | 3 tasks | 18 files |
 | Phase 05.2 P05 | 35min | 3 tasks | 16 files |
 | Phase 05.2 P06 | 19 | 3 tasks | 27 files |
+| Phase 05.2 P07 | 18 | 3 tasks | 17 files |
 
 ## Accumulated Context
 
@@ -179,6 +180,9 @@ Recent decisions affecting current work:
 - [Phase 05.2]: 05.2-06: 资源层文件/模块说明改写为 import 之后的 // 块；类/接口去 jsDoc、type 保留 jsDoc；与 05.2-05 的 editor-core 形态一致
 - [Phase 05.2]: 05.2-06: FileHandlerManager 公共方法按计划 Task 1 显式要求补换行风格 jsDoc + @param；FileHandler 的 implements 方法不重复注释（dev.md 第 75 条）
 - [Phase 05.2]: 05.2-06: 资源层 111 个 it/test 逐条补 // 说明，英文标题说明翻译为中文；FileHandler.delete 的 try/catch 与两处 eslint-disable 保留，零逻辑改动（143 tests 不变）
+- [Phase 05.2]: 测试 fixture 辅助函数与模块说明一律用单行 //（沿用 05.2-05 测试半边形态），类/接口说明也用 //，名字与实现不变
+- [Phase 05.2]: CoreProbe.tsx 内联 props 抽成具名 interface CoreProbeProps（用户已确认）且不导出；css 模板调用与 useState 逐字未改
+- [Phase 05.2]: react/index.ts 的 export { CoreProbe } 本计划不动，桶文件 export * 属 05.2-08
 
 ### Pending Todos
 
@@ -205,6 +209,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-09-30T09:14:17.073Z
-Stopped at: Completed 05.2-06-PLAN.md
+Last session: 2026-10-01T06:06:14.720Z
+Stopped at: Completed 05.2-07-PLAN.md
 Resume file: None
