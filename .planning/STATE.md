@@ -4,16 +4,16 @@ current_phase: "05.2"
 current_phase_name: editor-core-impl
 current_plan: 9
 status: executing
-stopped_at: Completed 05.2-12-PLAN.md
-last_updated: "2026-10-01T11:25:30.572Z"
+stopped_at: Completed 05.2-13-PLAN.md
+last_updated: "2026-10-01T12:49:05.733Z"
 last_activity: 2026-09-28
 last_activity_desc: Phase 05.1 plan 01 complete (editor-core undo contract types)
-state_head: 198a9971d89402f214cef8861be4e6f5688818c5
+state_head: daafbcddb882a0a79229cb0b83e9bf5daa12ddb1
 progress:
   total_phases: 14
   completed_phases: 0
   total_plans: 48
-  completed_plans: 45
+  completed_plans: 46
   percent: 0
 ---
 
@@ -93,6 +93,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 05.2 P10 | 16min | 3 tasks | 3 files |
 | Phase 05.2 P11 | 10 | 3 tasks | 4 files |
 | Phase 05.2 P12 | 15 | 3 tasks | 16 files |
+| Phase 05.2 P13 | 21min | 3 tasks | 26 files |
 
 ## Accumulated Context
 
@@ -203,6 +204,9 @@ Recent decisions affecting current work:
 - [Phase 05.2]: 05.2-11: ActionType 改 export const enum 取值钉死 0/1/2；[Rule 3] const enum 令 implApiSurface.test.ts:132 的 typeof ActionType 触发 TS2475，改为成员取值断言（计划文件外的必要编译跟随）
 - [Phase 05.2]: 05.2-12: 只删/搬注释与改分区标记，标识符/类型/逻辑/导出面一字未动；模块级常量与裸函数 jsDoc 按计划保留
 - [Phase 05.2]: 05.2-12: [Rule 3] //#region 触发 @stylistic/spaced-comment，eslint.config.js 增加 #region/#endregion markers 白名单（severity 仍 error）
+- [Phase 05.2]: 05.2-13: ContentUtils 去类化后仍以聚合常量导出（12 个模块私有裸函数 + 可调用对象），编辑器 SHIM(phase4) 一字不改；该过渡名待 Phase 11 与其它 D-16 别名一并删除 (D-20)
+- [Phase 05.2]: 05.2-13: [Rule 1] implApiSurface.test.ts 的 typeof ContentUtils 断言由 'function' 改为 'object'（计划文件外的必要测试跟随）
+- [Phase 05.2]: 05.2-13: [Rule 1] contentSignal 改名使 fileHandler 三元表达式超 printWidth，随即 prettier 换行修正
 
 ### Pending Todos
 
@@ -229,6 +233,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-01T11:25:15.507Z
-Stopped at: Completed 05.2-12-PLAN.md
+Last session: 2026-10-01T12:49:05.152Z
+Stopped at: Completed 05.2-13-PLAN.md
 Resume file: None
