@@ -1,19 +1,5 @@
 import { EngineDescription, IEngineAdapter, PreloadStrategy, ResourceDescriptor } from './types';
 
-// `defineEngine` —— 引擎适配器的定义与校验（引擎无关，PORT-03）
-// 本文件只留「逻辑/值」：逻辑 id 谓词与保留名、契约版本常量、聚合错误类、定义函数与拓扑排序
-// 描述符与适配器的**类型**集中在 `./types`（D-07），本文件反向 import 它们，因此 `types.ts`
-// 不含任何值、只被本文件单向依赖，不可能成环
-// 设计约束：
-// - **来源无关**（D-04）：通用描述符不含 `path` / `format` / handler 实例，也不含参数模板；
-//   内容构造只经 `create(deps)` 这一个惰性工厂缝（D-05）。文件 IO 地址只允许存在于默认实现包里
-//   的文件支撑类 `fileResource.ts` 内部
-// - **纯函数**（PORT-03）：`defineEngine` 同步、无副作用、不注册任何东西、不触碰诊断总线，
-//   也没有模块级可变绑定；重复或并发调用同一描述得到等价适配器
-// - **语法不漂移**（D-09）：逻辑 id 谓词 `isValidResourceId` 由本文件自持并导出，
-//   `ResourceRegistry`（默认实现层）反向 import，因此定义期与登记期不可能各自演化
-// - 本文件只 import 类型与自持的 id 谓词，绝不 import 宿主 / 引擎 / 诊断总线（Pitfall 10 / PORT-02）
-
 // 逻辑 id 形式：一段或多段以点分隔，每段以字母/`_`/`$` 开头，不含空白与斜杠
 // 谓词由底层自持：`editor-impl` 的 `ResourceRegistry` 反向跨包 import 它，因此「描述符 id 语法」
 // 与「登记 id 语法」不可能各自漂移（D-09）
@@ -43,11 +29,6 @@ export function isValidResourceId(id: string): boolean {
 // 走两套时钟的契约，Phase 12 冻结扩展面时不应把二者混为一谈
 export const ENGINE_ADAPTER_API_VERSION = '0.1.0';
 
-// `defineEngine` 抛出的**唯一**错误，一次性携带全部定义问题（聚合而非首错即停）
-// 与 `EditorCoreStartupError` 同形：`super(message)` 记录摘要，冻结承载的问题列表，且**不**调用
-// `Error.captureStackTrace`（core 刻意不依赖 `@types/node`）
-// 承载列表经标准的 `Error.cause` 传递（冻结副本），因此不引入任何未在 `INTERFACE-NAME.md` 中
-// 登记的新成员名，也满足 `noUnusedLocals`（无未被读取的私有字段）
 export class EngineDefinitionError extends Error {
   constructor(problems: readonly string[]) {
     super(`Engine definition invalid: ${problems.join('; ')}`, { cause: Object.freeze([...problems]) });

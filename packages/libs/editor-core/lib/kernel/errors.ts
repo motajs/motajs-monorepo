@@ -1,16 +1,8 @@
 import { DIAGNOSTIC_CODES } from './diagnostics';
 import { Diagnostic } from './types';
 
-// 内核启动失败错误（引擎无关）
-// D-08：只有当必需注册未解析时 `EditorCoreKernel` 构造才抛错，且必须携带**全部**诊断，
-// 使调用方与测试能区分「启动失败」与「代码 bug」。专用类名为此而设
-// 注意：不调用 `Error.captureStackTrace`。它是 V8/`@types/node` 专有 API，而 core 的
-// tsconfig（`lib: ESNext, DOM, DOM.Iterable`，无 `types`）刻意不依赖 `@types/node`，
-// 该调用会让 core 自己的 `typecheck` 失败；`super(message)` 已经捕获堆栈，对浏览器侧库足够
-
-// 构造无法完成时抛出的唯一错误
-// `diagnostics` 是构造末尾 `DiagnosticBus.snapshot()` 的全量快照
 export class EditorCoreStartupError extends Error {
+  /** 构造末尾 `DiagnosticBus.snapshot()` 的全量诊断快照，已复制并冻结。 */
   public readonly diagnostics: readonly Diagnostic[];
 
   constructor(diagnostics: readonly Diagnostic[]) {

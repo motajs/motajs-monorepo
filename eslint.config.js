@@ -72,6 +72,9 @@ const rootConfig = tseslint.config(
       '@stylistic/multiline-ternary': ['error', 'always-multiline', { ignoreJSX: true }],
       '@stylistic/jsx-one-expression-per-line': ['error', { allow: 'single-line' }],
       '@stylistic/padded-blocks': ['off'],
+      // AGENTS.md §Code style 允许长文件用 #region/#endregion 分段；把这两个标记加入白名单，
+      // 使 `//#region 中文` / `//#endregion` 不以 spaced-comment 报错（严重度仍是 error）。
+      '@stylistic/spaced-comment': ['error', 'always', { markers: ['#region', '#endregion'] }],
 
       'no-constant-condition': ['error', { checkLoops: 'none' }],
     },
