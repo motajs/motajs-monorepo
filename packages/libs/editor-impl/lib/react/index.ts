@@ -9,6 +9,8 @@ export { CoreProbe } from './CoreProbe';
  *
  * 选择器刻意每次返回**新对象**，不做 shallow 比较、不手动记忆化：现有渲染次数就是针对
  * 「每次分配新对象」标定的，编辑器开着 React Compiler，自行处理记忆化。
+ *
+ * @param history 要订阅的撤销管理器实例。
  */
 export function useOperationHistory(history: IUndoManager): {
   entries: OperationHistoryEntry[];
