@@ -10,6 +10,9 @@ test-results
 packages/external
 .planning
 
+# GSD 运行时状态（编排器派发产物，未入库）：绝不改写
+.gsd
+
 # 由 pnpm 维护，不做格式改写
 pnpm-lock.yaml
 
