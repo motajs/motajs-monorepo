@@ -201,7 +201,7 @@ Plans:
 
 **Depends on:** Phase 5
 
-**Plans:** 7/9 plans executed
+**Plans:** 8/9 plans executed
 
 Plans:
 **Wave 1 — 接口层（D-02 / D-06 / D-07 / D-10）**
@@ -225,7 +225,7 @@ Plans:
 
 **Wave 5 — 桶文件（D-08 / D-15 / D-16）**
 
-- [ ] 05.2-08-PLAN.md — 桶文件一律 `export *`、补文件夹 barrel、`./table` 去空 + 门禁/状态同步
+- [x] 05.2-08-PLAN.md — 桶文件一律 `export *`、补文件夹 barrel、`./table` 去空 + 门禁/状态同步
 
 **Wave 6 — 收尾**
 
