@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 6
+open_count: 8
 waived_count: 0
 fixed_count: 2
-total_count: 8
-last_updated: 2026-10-01T11:26:23.330Z
+total_count: 10
+last_updated: 2026-10-01T12:51:11.429Z
 ---
 
 # Broken Windows Ledger
@@ -23,6 +23,8 @@ last_updated: 2026-10-01T11:26:23.330Z
 | 6 | 05.2 | deviation | packages/libs/editor-core/lib/__tests__/coreApiSurface.test.ts | 163 | const enum 化后 ts 不允许把 PreloadStrategy 当值用(TS2475)，断言改为逐一断言成员取值 | fixed |  | 2026-10-01T09:15:53.165Z | 2026-10-01T09:17:47.768Z |
 | 7 | 05.2 | deviation | packages/libs/editor-impl/lib/__tests__/implApiSurface.test.ts | 132 | ActionType const enum -> TS2475; typeof assertion replaced with member value assertions | open |  | 2026-10-01T09:58:18.041Z |  |
 | 8 | 05.2 | deviation | eslint.config.js | 75 | //#region required spaced-comment marker whitelist (#region/#endregion); severity unchanged | open |  | 2026-10-01T11:26:23.330Z |  |
+| 9 | 05.2 | deviation | packages/libs/editor-impl/lib/__tests__/implApiSurface.test.ts | 112 | ContentUtils de-classed: typeof assertion changed from function to object (stale expectation, outside plan files) | open |  | 2026-10-01T12:51:09.375Z |  |
+| 10 | 05.2 | deviation | packages/libs/editor-impl/lib/resources/fileHandler.ts | 143 | contentSignal rename pushed load() catch ternary past printWidth; prettier wrapped it | open |  | 2026-10-01T12:51:11.429Z |  |
 
 ````json
 [
@@ -120,6 +122,30 @@ last_updated: 2026-10-01T11:26:23.330Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-10-01T11:26:23.330Z",
+    "resolved_at": null
+  },
+  {
+    "id": 9,
+    "kind": "deviation",
+    "phase": "05.2",
+    "file": "packages/libs/editor-impl/lib/__tests__/implApiSurface.test.ts",
+    "line": 112,
+    "description": "ContentUtils de-classed: typeof assertion changed from function to object (stale expectation, outside plan files)",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-01T12:51:09.375Z",
+    "resolved_at": null
+  },
+  {
+    "id": 10,
+    "kind": "deviation",
+    "phase": "05.2",
+    "file": "packages/libs/editor-impl/lib/resources/fileHandler.ts",
+    "line": 143,
+    "description": "contentSignal rename pushed load() catch ternary past printWidth; prettier wrapped it",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-01T12:51:11.429Z",
     "resolved_at": null
   }
 ]
