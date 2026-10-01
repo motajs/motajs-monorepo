@@ -201,7 +201,7 @@ Plans:
 
 **Depends on:** Phase 5
 
-**Plans:** 8/9 plans executed
+**Plans:** 9/9 plans executed
 
 Plans:
 **Wave 1 — 接口层（D-02 / D-06 / D-07 / D-10）**
@@ -229,7 +229,7 @@ Plans:
 
 **Wave 6 — 收尾**
 
-- [ ] 05.2-09-PLAN.md — 相位级全量回归 + 编辑器未越界复核
+- [x] 05.2-09-PLAN.md — 相位级全量回归 + 编辑器未越界复核
 
 ### Phase 05.1: editor-core 接口与实现整改 (INSERTED)
 
