@@ -6,30 +6,27 @@ import { defineEngine, EngineDefinitionError, resolvePreloadOrder } from '@motaj
 import { PreloadStrategy, ResourceDependencies, ResourceDescriptor } from '@motajs/editor-core';
 import { MemoryFsPort } from '../resources/__tests__/memoryFsPort';
 
-/**
- * 引擎适配器契约测试（PORT-03 / PORT-04，TDD）。
- *
- * 本文件驱动 `defineEngine` 的**端到端闭环**：
- * 一个合法的引擎描述 → 冻结的适配器 → 描述符 `create(deps)` 产出 `IResourceView` →
- * 经 `ResourceRegistry` 登记并按逻辑 id 取回同一对象；非法描述以单个 `EngineDefinitionError`
- * 一次性携带**全部**问题被拒；`resolvePreloadOrder` 给出纯、稳定的拓扑序。
- *
- * fixture 纪律（D-22 的约定半边）：本文件不声明模块级 fixture 表；每个用例自建描述与依赖，
- * 期望值直接写在用例内（`createDeps()` / `loadedView()` 只构造一次性对象，不是可复用夹具表）。
- */
+// 引擎适配器契约测试（PORT-03 / PORT-04，TDD）
+// 本文件驱动 defineEngine 的**端到端闭环**：
+// 一个合法的引擎描述 → 冻结的适配器 → 描述符 create(deps) 产出 IResourceView →
+// 经 ResourceRegistry 登记并按逻辑 id 取回同一对象；非法描述以单个 EngineDefinitionError
+// 一次性携带**全部**问题被拒；resolvePreloadOrder 给出纯、稳定的拓扑序
+// fixture 纪律（D-22 的约定半边）：本文件不声明模块级 fixture 表；每个用例自建描述与依赖，
+// 期望值直接写在用例内（createDeps() / loadedView() 只构造一次性对象，不是可复用夹具表）
 
-/** 构造一份一次性内存依赖；描述符 `create` 只取用其中的 `fileHandlers`。 */
+// 构造一份一次性内存依赖；描述符 create 只取用其中的 fileHandlers
 function createDeps(): ResourceDependencies {
   const fs = new MemoryFsPort();
   return { fileHandlers: new FileHandlerManager({ fs, persistenceMonitor: new PersistenceMonitor() }) };
 }
 
-/** 构造一个立即 loaded 的只读视图；不碰任何文件层，用于证明描述符来源无关。 */
+// 构造一个立即 loaded 的只读视图；不碰任何文件层，用于证明描述符来源无关
 function loadedView<T>(id: string, value: T): ILoadableResource<T> {
   return computedResource<T>(id, [], () => ({ status: 'loaded', value }));
 }
 
 describe('defineEngine 契约', () => {
+  // 把一份描述构造成冻结的适配器，资源按声明顺序排列
   it('把一份描述构造成冻结的适配器，资源按声明顺序排列', () => {
     const adapter = defineEngine({
       id: 'engineB',
@@ -42,6 +39,7 @@ describe('defineEngine 契约', () => {
     expect(Object.isFrozen(adapter.resources)).toBe(true);
   });
 
+  // create(deps) 产出的视图经 ResourceRegistry 登记后按 id 取回同一对象
   it('create(deps) 产出的视图经 ResourceRegistry 登记后按 id 取回同一对象', async () => {
     const adapter = defineEngine({
       id: 'engineB',
@@ -56,6 +54,7 @@ describe('defineEngine 契约', () => {
     expect(registry.get('engineB.notes')).toBe(view);
   });
 
+  // 非法描述符 id 抛出 EngineDefinitionError 并点名该 id
   it('非法描述符 id 抛出 EngineDefinitionError 并点名该 id', () => {
     let thrown: unknown;
     try {
@@ -71,6 +70,7 @@ describe('defineEngine 契约', () => {
     expect((thrown as Error).message).toContain('bad id');
   });
 
+  // 两处问题（重复 id + 非函数 create）只抛一次且同时携带
   it('两处问题（重复 id + 非函数 create）只抛一次且同时携带', () => {
     const notAFunction = 42 as unknown as ResourceDescriptor['create'];
     let thrown: unknown;
@@ -93,6 +93,7 @@ describe('defineEngine 契约', () => {
     expect(message).toContain('create');
   });
 
+  // 悬空的 preloadDependsOn 抛出并点名该目标 id
   it('悬空的 preloadDependsOn 抛出并点名该目标 id', () => {
     expect(() =>
       defineEngine({
@@ -108,6 +109,7 @@ describe('defineEngine 契约', () => {
     ).toThrowError(/engineB\.missing/);
   });
 
+  // 依赖环抛出并点名闭环涉及的每一个 id
   it('依赖环抛出并点名闭环涉及的每一个 id', () => {
     let thrown: unknown;
     try {
@@ -128,6 +130,7 @@ describe('defineEngine 契约', () => {
     expect(message).toContain('engineB.b');
   });
 
+  // 非法的 preload 字面量抛出
   it('非法的 preload 字面量抛出', () => {
     expect(() =>
       defineEngine({
@@ -143,6 +146,7 @@ describe('defineEngine 契约', () => {
     ).toThrowError(EngineDefinitionError);
   });
 
+  // 空的 apiVersion 字符串抛出
   it('空的 apiVersion 字符串抛出', () => {
     expect(() =>
       defineEngine({
@@ -155,6 +159,7 @@ describe('defineEngine 契约', () => {
 });
 
 describe('resolvePreloadOrder', () => {
+  // 把依赖排在依赖者之前，且跨调用稳定
   it('把依赖排在依赖者之前，且跨调用稳定', () => {
     const resources: readonly ResourceDescriptor[] = [
       { id: 'chapter', preloadDependsOn: ['index'], create: () => loadedView('chapter', 1) },
@@ -169,6 +174,7 @@ describe('resolvePreloadOrder', () => {
     expect(Object.isFrozen(first)).toBe(true);
   });
 
+  // 无 preloadDependsOn 的图按声明顺序返回
   it('无 preloadDependsOn 的图按声明顺序返回', () => {
     const resources: readonly ResourceDescriptor[] = [
       { id: 'c', create: () => loadedView('c', 1) },
@@ -179,6 +185,7 @@ describe('resolvePreloadOrder', () => {
     expect(resolvePreloadOrder(resources)).toEqual(['c', 'a', 'b']);
   });
 
+  // 多级依赖按拓扑序排列（catalog → index → chapter）
   it('多级依赖按拓扑序排列（catalog → index → chapter）', () => {
     const resources: readonly ResourceDescriptor[] = [
       { id: 'chapter', preloadDependsOn: ['index'], create: () => loadedView('chapter', 1) },

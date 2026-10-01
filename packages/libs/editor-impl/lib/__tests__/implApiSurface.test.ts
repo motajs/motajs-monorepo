@@ -60,18 +60,15 @@ import {
   ResourceView,
 } from '../index';
 
-/**
- * 默认实现层公开面测试（拆分自原 `coreApiSurface.test.ts`；T-05.1-10）。
- *
- * 断言 `@motajs/editor-impl` 的根 `.` 重新导出承接了原 `@motajs/editor-core` 根 `.` 的
- * 资源层 / 编辑层公开名（值 + 类型）。底层面（内核 + 端口 + 撤销契约）由
- * `editor-core/lib/__tests__/coreApiSurface.test.ts` 断言。
- *
- * 环境：impl 的 vitest 默认 jsdom（React 探针需要），本文件用文件级 docblock 切到 node。
- * fixture 纪律（D-22 的约定半边）：不声明模块级 fixture 表；期望值直接写在用例内。
- */
+// 默认实现层公开面测试（拆分自原 coreApiSurface.test.ts；T-05.1-10）
+// 断言 @motajs/editor-impl 的根 `.` 重新导出承接了原 @motajs/editor-core 根 `.` 的
+// 资源层 / 编辑层公开名（值 + 类型）。底层面（内核 + 端口 + 撤销契约）由
+// editor-core/lib/__tests__/coreApiSurface.test.ts 断言
+// 环境：impl 的 vitest 默认 jsdom（React 探针需要），本文件用文件级指令注释切到 node
+// fixture 纪律（D-22 的约定半边）：不声明模块级 fixture 表；期望值直接写在用例内
 
 describe('editor-impl 默认实现层公开面', () => {
+  // 资源层与编辑层类都从根 `.` 导出（值面）
   test('资源层与编辑层类都从根 `.` 导出（值面）', () => {
     const classes = [
       FileHandlerManager,
@@ -88,6 +85,7 @@ describe('editor-impl 默认实现层公开面', () => {
     for (const candidate of classes) expect(typeof candidate).toBe('function');
   });
 
+  // 资源层与编辑层函数/常量对象都从根 `.` 导出（值面）
   test('资源层与编辑层函数/常量对象都从根 `.` 导出（值面）', () => {
     const functions = [
       isFileNotFoundError,
@@ -115,6 +113,7 @@ describe('editor-impl 默认实现层公开面', () => {
     expect(typeof ContentUtils.map).toBe('function');
   });
 
+  // 资源层与编辑层的类型名都从根 `.` 解析（编译期断言）
   test('资源层与编辑层的类型名都从根 `.` 解析（编译期断言）', () => {
     expectTypeOf<Content<number>>().not.toBeNever();
     expectTypeOf<FileContent>().not.toBeNever();
@@ -135,6 +134,7 @@ describe('editor-impl 默认实现层公开面', () => {
     expectTypeOf<FileHandlerDependencies>().not.toBeNever();
   });
 
+  // Plan 02 新增的默认实现层接口从根 `.` 解析（编译期断言）
   test('Plan 02 新增的默认实现层接口从根 `.` 解析（编译期断言）', () => {
     expectTypeOf<IResourceView<string>>().not.toBeNever();
     expectTypeOf<ILoadableResource<string>>().not.toBeNever();
@@ -142,6 +142,7 @@ describe('editor-impl 默认实现层公开面', () => {
     expectTypeOf<IRecoverableResource<string>>().not.toBeNever();
   });
 
+  // Plan 07 新增的服务类契约从根 `.` 解析（编译期断言）
   test('Plan 07 新增的服务类契约从根 `.` 解析（编译期断言）', () => {
     expectTypeOf<IFileHandlerManager>().toBeObject();
     expectTypeOf<IPersistExecutor>().toBeObject();
