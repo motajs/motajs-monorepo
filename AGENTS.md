@@ -615,3 +615,9 @@ Any command that performs a network request — `git fetch` / `git pull` / `git 
 **本项目对 `dev.md` 的覆盖（override）**
 - **换行用 LF**（`dev.md` 说 CRLF；本项目全仓 LF）。
 - **保留行为关键路径的 `try/catch`**（撤销回滚、持久化失败隔离、诊断订阅隔离）；其余不新增 `try/catch`（`dev.md` 说不建议写）。
+
+### Approval is by plain text, not the question tool (MANDATORY) / 批准用文字，不用提问工具
+
+- 每个 plan 执行前的简报**以纯文字呈现**（plan id / 目标 / 大致内容 / 验证方式），然后**结束本轮、等用户用文字回复**；**不要**用提问工具（`question`）去问「是否批准执行」。
+- 每次计划执行完毕后，**汇报完即结束本轮**，等用户文字回复；**不要**用提问工具追问下一步。
+- （「执行前必须简报并等待批准」「执行后必须汇报」这两条门禁本身不变，只是**改用文字**表达，不再用提问工具。）
