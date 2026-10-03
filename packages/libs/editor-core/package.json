@@ -6,14 +6,16 @@
   "sideEffects": false,
   "license": "BSD-3-Clause",
   "exports": {
-    ".": "./lib/index.ts"
+    ".": "./src/index.ts"
   },
   "scripts": {
     "typecheck": "tsc -b",
     "test": "vitest run"
   },
   "dependencies": {
-    "@tanstack/store": "catalog:default"
+    "@tanstack/store": "catalog:default",
+    "@types/react": "^19.3.0",
+    "react": "^19.3.0"
   },
   "devDependencies": {
     "@motajs/config": "workspace:*",

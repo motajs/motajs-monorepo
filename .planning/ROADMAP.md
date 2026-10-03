@@ -274,6 +274,18 @@ Plans:
 - [x] 05.1-06-PLAN.md — 接口加 `I` 前缀并保留旧名别名（编辑器靠别名继续编译）
 - [x] 05.1-07-PLAN.md — 每个类 `implements`、类型集中、禁 `import type` 的可失败门禁、文件形态扫尾
 
+### Phase 05.3: editor-core/impl 重做 (INSERTED)
+
+**Goal**: 把 `@motajs/editor-core` 与 `@motajs/editor-impl` **两个包全部推翻重做**——`editor-core` 收缩为「不预设任何需求、只提供最底层接口与管理（功能注册 / 请求数据 / 撤回管理 / 页面管理等）」的空壳，`editor-impl` 用 core 接口写出默认实现（表格 / 地图 / 代码编辑等）；核心架构与接口设计由用户主导。唯一验收标准：**最终画面与现状一致**；中间步骤不设任何要求。
+
+**Requirements**: （无；本插入阶段的 `phase_req_ids` 为 null，验收以 `05.3-CONTEXT.md` D-01..D-11 为准）
+
+**Depends on:** Phase 5
+
+**Plans:** 1/1（推翻）已执行；重做计划待架构设计
+
+**Status:** 已推翻（05.3-01 完成）；待架构设计
+
 ### Phase 6: Fixed Shell + Slots
 
 **Goal**: Extract the fixed workbench shell with named registry-driven slots, preserving the exact baseline layout and dogfooding the extension registration API.
@@ -394,6 +406,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 4. Resource + Edit Layers Moved | 4/4 | Complete    | 2026-09-24 |
 | 5. Engine Adapter Skeleton & Resource Descriptors | 4/4 | In Progress|  |
 | 05.1. editor-core 接口与实现整改 | 8/8 | In Progress|  |
+| 05.3. editor-core/impl 重做 | 1/TBD | In Progress | - |
 | 6. Fixed Shell + Slots | 0/TBD | Not started | - |
 | 7. Table Capability + Port | 0/TBD | Not started | - |
 | 8. Code Capability + Port | 0/TBD | Not started | - |
