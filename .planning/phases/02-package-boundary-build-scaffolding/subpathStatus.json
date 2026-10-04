@@ -1,55 +1,55 @@
 {
   "schemaVersion": 2,
   "phase": "02-package-boundary-build-scaffolding",
-  "note": "Phase 05.1-03 把默认实现整体拆入新包 `@motajs/editor-impl`，本记录随之升为 v2 的两包形态：`@motajs/editor-core` 只剩 `.`（内核 + 端口 + 撤销契约类型，content `kernel+ports+undo-exports`）；`@motajs/editor-impl` 拿到七个 subpath，其 `.` 汇总资源层与编辑层的公开名（content `resources+edit+table-exports`），`./react` 携带 React 探针，其余五个能力/表格 shell 仍是惰性空 barrel。`coreExports.js` 只读 editor-core 条目、`implExports.js` 只读 editor-impl 条目，两者都不跨读、也不从 JSON 反读期望值。",
+  "note": "Phase 05.1-03 把默认实现整体拆入新包 `@motajs/editor-impl`，本记录随之升为 v2 的两包形态：`@motajs/editor-core` 只剩 `.`（内核 + 端口 + 撤销契约类型，content `core-exports`）；`@motajs/editor-impl` 拿到七个 subpath，其 `.` 汇总资源层与编辑层的公开名（content `resources+edit+table-exports`），`./react` 携带 React 探针，其余五个能力/表格 shell 仍是惰性空 barrel。`coreExports.js` 只读 editor-core 条目、`implExports.js` 只读 editor-impl 条目，两者都不跨读、也不从 JSON 反读期望值。",
   "packages": {
     "@motajs/editor-core": {
       "dir": "packages/libs/editor-core",
-      "note": "底层：只定义接口（`lib/ports/**`）与做管理（`lib/kernel/**`）。`. ` 是唯一可导入 subpath；撤销契约类型来自 `lib/kernel/types.ts`。",
+      "note": "底层：只定义接口（`src/ports/**`）与做管理（`src/kernel/**`）。`. ` 是唯一可导入 subpath；撤销契约类型来自 `src/kernel/types.ts`。",
       "subpaths": {
         ".": {
-          "target": "./lib/index.ts",
-          "content": "kernel+ports+undo-exports",
+          "target": "./src/index.ts",
+          "content": "core-exports",
           "carriesProbe": false
         }
       }
     },
     "@motajs/editor-impl": {
       "dir": "packages/libs/editor-impl",
-      "note": "默认实现层：资源层（`lib/resources/**`）、编辑层（`lib/edit/**`）、表格与四种编辑能力（`code`/`map`/`asset`/`shell`）与 `react` 层。依赖底层 `@motajs/editor-core`，方向不可反转。",
+      "note": "默认实现层：资源层（`src/resources/**`）、编辑层（`src/edit/**`）、表格与四种编辑能力（`code`/`map`/`asset`/`shell`）与 `react` 层。依赖底层 `@motajs/editor-core`，方向不可反转。",
       "subpaths": {
         ".": {
-          "target": "./lib/index.ts",
+          "target": "./src/index.ts",
           "content": "resources+edit+table-exports",
           "carriesProbe": false
         },
         "./code": {
-          "target": "./lib/code/index.ts",
+          "target": "./src/code/index.ts",
           "content": "empty-barrel",
           "carriesProbe": false
         },
         "./table": {
-          "target": "./lib/table/index.ts",
+          "target": "./src/table/index.ts",
           "content": "table-exports",
           "carriesProbe": false
         },
         "./map": {
-          "target": "./lib/map/index.ts",
+          "target": "./src/map/index.ts",
           "content": "empty-barrel",
           "carriesProbe": false
         },
         "./asset": {
-          "target": "./lib/asset/index.ts",
+          "target": "./src/asset/index.ts",
           "content": "empty-barrel",
           "carriesProbe": false
         },
         "./shell": {
-          "target": "./lib/shell/index.ts",
+          "target": "./src/shell/index.ts",
           "content": "empty-barrel",
           "carriesProbe": false
         },
         "./react": {
-          "target": "./lib/react/index.ts",
+          "target": "./src/react/index.ts",
           "content": "probe",
           "carriesProbe": true
         }

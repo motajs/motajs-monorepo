@@ -10,7 +10,7 @@ export default defineConfig({
 
   // Where to look for your css declarations
   // 单一配置同时拥有 editor 与 editor-impl 源码（D-09）：include 相对 panda 进程 cwd（editor 目录）解析。
-  include: ['./src/**/*.{js,jsx,ts,tsx}', '../../libs/editor-impl/lib/**/*.{ts,tsx}'],
+  include: ['./src/**/*.{js,jsx,ts,tsx}', '../../libs/editor-impl/src/**/*.{ts,tsx}'],
 
   // Files to exclude
   exclude: [],

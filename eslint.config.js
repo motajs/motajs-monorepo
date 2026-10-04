@@ -82,15 +82,19 @@ const rootConfig = tseslint.config(
 );
 
 /**
- * Block A —— PORT-02（D-15）：底层与默认实现层都不得直接触达平台（网络 / DOM / 环境变量）。
+ * Block A —— PORT-02（D-15 / D-38）：底层与默认实现层不得直接触达平台（网络 / DOM / 环境变量）。
  *
- * `tsconfig.lib.base.json` 开着 `DOM`/`DOM.Iterable`，所以 `window`/`document`/`fetch` 在核心代码里
+ * `tsconfig.lib.base.json` 开着 `DOM`/`DOM.Iterable`，所以 `document`/`fetch` 在核心代码里
  * 类型检查完全通过——`tsc` 无法守住 PORT-02，这条作用域规则是唯一的静态强制。适配器**可以**用
  * `fetch`（HTTP 传输是它的职责），因此本块只匹配底层与默认实现两个包
  * （`packages/libs/{editor-core,editor-impl}/**`）。
  *
- * 本块**刻意不写 `ignores`**：`lib/__tests__/**` 也要覆盖——测试里出现被禁全局同样是真问题。
- * 而 `lib/kernel/core.ts`（组合根）必须继续受 PORT-02 约束，所以它**不能**被本块忽略，
+ * D-38 起 `window` **不再被禁**：core 可直接监听 `window` 的 focus / blur 触发面板的
+ * onFocus / onBlur，因此 `no-restricted-globals` 里没有 `window` 项；`document` / `navigator` /
+ * `localStorage` / `XMLHttpRequest` 与 `process.env` / `import.meta.env` 仍然全部禁止。
+ *
+ * 本块**刻意不写 `ignores`**：`src/__tests__/**` 也要覆盖——测试里出现被禁全局同样是真问题。
+ * 而 `src/core.ts`（组合根）必须继续受 PORT-02 约束，所以它**不能**被本块忽略，
  * 组合根的豁免只属于下面的 Block B。
  */
 const corePort02Config = {
@@ -99,10 +103,6 @@ const corePort02Config = {
     'no-restricted-globals': [
       'error',
       { name: 'fetch', message: 'editor-core 不得直接 fetch：HTTP 传输属于适配器，请注入 port（D-15/PORT-02）。' },
-      {
-        name: 'window',
-        message: 'editor-core 不得触碰 DOM（window）：宿主能力必须经注入的 port 取得（D-15/PORT-02）。',
-      },
       {
         name: 'document',
         message: 'editor-core 不得触碰 DOM（document）：宿主能力必须经注入的 port 取得（D-15/PORT-02）。',
@@ -144,12 +144,12 @@ const corePort02Config = {
  * Block B —— module state（KERN-06 的结构半边 / D-10 + D-22 细化）：core 生产源码不得有模块级可变绑定。
  *
  * `ignores` 恰好三项，都是有意的：
- *   - `lib/kernel/core.ts` —— 组合根拥有拆除栈与 `disposed` 标志，是 D-10 唯一豁免的生产文件
+ *   - `src/core.ts` —— 组合根拥有拆除栈与 `disposed` 标志，是 D-10 唯一豁免的生产文件
  *     （它固定在底层 editor-core；默认实现包没有组合根）；
  *   - 两个包的全部测试树（顶层测试目录以及各层级嵌套的测试目录，外加任意
  *     `*.test.{ts,tsx}`）—— D-22 的有意识细化：测试不随产品发布，且合法地需要模块级 fixture 表。
  *     拆分后默认实现包（editor-impl）的测试同样豁免；
- *     `scripts/verify/coreModuleState.js` 会采样一个**非**顶层 `lib/__tests__` 的测试文件，证明放宽后的豁免真的生效。
+ *     `scripts/verify/coreModuleState.js` 会采样一个**非**顶层 `src/__tests__` 的测试文件，证明放宽后的豁免真的生效。
  *     （测试侧的纪律作为约定保留，但不受机器强制；Block A 仍然覆盖这些文件。）
  *
  * ⚠️ 两个 flat-config 块的重复**不得**被「整理」掉。flat config 对**数组型**规则不做跨块合并——
@@ -165,9 +165,9 @@ const corePort02Config = {
 const coreModuleStateConfig = {
   files: ['packages/libs/{editor-core,editor-impl}/**/*.{ts,tsx}'],
   ignores: [
-    'packages/libs/editor-core/lib/kernel/core.ts',
-    'packages/libs/{editor-core,editor-impl}/lib/**/__tests__/**',
-    'packages/libs/{editor-core,editor-impl}/lib/**/*.test.{ts,tsx}',
+    'packages/libs/editor-core/src/core.ts',
+    'packages/libs/{editor-core,editor-impl}/src/**/__tests__/**',
+    'packages/libs/{editor-core,editor-impl}/src/**/*.test.{ts,tsx}',
   ],
   rules: {
     'no-restricted-syntax': [
