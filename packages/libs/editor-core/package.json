@@ -14,12 +14,15 @@
   },
   "dependencies": {
     "@tanstack/store": "catalog:default",
-    "@types/react": "^19.3.0",
-    "react": "^19.3.0"
+    "@types/react": "catalog:default",
+    "react": "catalog:default"
   },
   "devDependencies": {
     "@motajs/config": "workspace:*",
+    "@testing-library/react": "16.3.2",
+    "@types/react-dom": "catalog:default",
     "jsdom": "26.1.0",
+    "react-dom": "catalog:default",
     "vitest": "catalog:default"
   }
 }
