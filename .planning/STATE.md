@@ -2,18 +2,18 @@
 gsd_state_version: "1.0"
 current_phase: "05.3"
 current_phase_name: editor-core/impl 重做 (INSERTED)
-current_plan: 6
+current_plan: 7
 status: executing
-stopped_at: Completed 05.3-06-PLAN.md
-last_updated: "2026-10-04T10:51:34.879Z"
+stopped_at: Completed 05.3-07-PLAN.md
+last_updated: "2026-10-04T15:25:19.773Z"
 last_activity: 2026-10-04
 last_activity_desc: Phase 05.3 execution started
-state_head: f4b9abb446a472ceb87a3ea5fbd756b7875965af
+state_head: 3b8e0717d7fca974defa91f35b18193c4fd4286c
 progress:
   total_phases: 15
   completed_phases: 0
   total_plans: 56
-  completed_plans: 54
+  completed_plans: 55
   percent: 0
 ---
 
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-09-24)
 ## Current Position
 
 Phase: 05.3 (editor-core/impl 重做 (INSERTED)) — EXECUTING
-Current Plan: 6
+Current Plan: 7
 Total Plans in Phase: 8
 Status: Ready to execute
 Last activity: 2026-10-04 — Phase 05.3 execution started
@@ -101,6 +101,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 05.3 P04 | 3min | 2 tasks | 3 files |
 | Phase 05.3 P05 | 9min | 2 tasks | 4 files |
 | Phase 05.3 P06 | 9min | 2 tasks | 5 files |
+| Phase 05.3 P07 | 5 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -231,6 +232,9 @@ Recent decisions affecting current work:
 - [Phase 05.3]: 05.3-06: hook 组件提升到模块层 PanelRoot，RootComponent 仅 createElement(PanelRoot, ...) 且只创建一次，规避 class 字段箭头调用 hook 的 react-hooks/rules-of-hooks 误报
 - [Phase 05.3]: 05.3-06: undo/redo 单次 as 收窄为模块内 IPanelSwitchData，只调 internalSwitchTo 不产生新历史（D-32）
 - [Phase 05.3]: 05.3-06: PORT-02 window 门禁在 panelSystem.ts 报 4 条 error，按 D-38/D-43 属允许的暂红，未绕过未禁用
+- [Phase 05.3]: EditorCore.version 直接写字面量 '0.1.0'，不设 EDITOR_CORE_VERSION 常量（用户 2026-10-04）
+- [Phase 05.3]: EditorCore 三系统字段用接口引用即可；D-39 已把 dispose 加到 IUndoSystem/IResourceSystem 上
+- [Phase 05.3]: EditorCore.initialize 先 Promise.all 下发 undo/resource 再 await panel；dispose 逆序 panel→resource→undo
 
 ### Pending Todos
 
@@ -257,6 +261,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-04T10:51:34.419Z
-Stopped at: Completed 05.3-06-PLAN.md
+Last session: 2026-10-04T15:25:19.406Z
+Stopped at: Completed 05.3-07-PLAN.md
 Resume file: None
