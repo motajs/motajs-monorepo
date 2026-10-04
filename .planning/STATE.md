@@ -2,13 +2,13 @@
 gsd_state_version: "1.0"
 current_phase: "05.3"
 current_phase_name: editor-core/impl 重做 (INSERTED)
-current_plan: 3
+current_plan: 4
 status: executing
-stopped_at: Completed 05.3-03-PLAN.md
-last_updated: "2026-10-04T09:25:00.849Z"
+stopped_at: Completed 05.3-04-PLAN.md
+last_updated: "2026-10-04T09:42:00.000Z"
 last_activity: 2026-10-04
 last_activity_desc: Phase 05.3 execution started
-state_head: 07b0d96a9aff1111b03dc1be318a1888258e7683
+state_head: 1f5ff2326803e453930fe4f2569f8c7eec5d182c
 progress:
   total_phases: 15
   completed_phases: 0
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-09-24)
 ## Current Position
 
 Phase: 05.3 (editor-core/impl 重做 (INSERTED)) — EXECUTING
-Current Plan: 3
+Current Plan: 4
 Total Plans in Phase: 8
 Status: Ready to execute
 Last activity: 2026-10-04 — Phase 05.3 execution started
@@ -98,6 +98,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 05.2 P15 | 47min | 2 tasks | 1 files |
 | Phase 05.3 P02 | 12min | 2 tasks | 5 files |
 | Phase 05.3 P03 | 9 | 3 tasks | 3 files |
+| Phase 05.3 P04 | 3min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -217,6 +218,8 @@ Recent decisions affecting current work:
 - [Phase 05.3]: editor-core 的 react/@types/react 改用 catalog:default，解析到工作区最新 react 19.3.0（D-41），不为对齐旧编辑器而降级
 - [Phase 05.3]: editor-core 的 react-dom/@types/react-dom 固定为精确 19.3.0，与 react 严格同版本，避免 React 运行时 Incompatible React versions 报错
 - [Phase 05.3]: 不提升工作区 catalog 的 react-dom（会连带影响所有 catalog:default 消费者）；编辑器 19.2.3 精确锁保持不变
+- [Phase 05.3]: 05.3-04: UndoSystem 状态全部放实例字段（undoStack / redoStack），不用模块级容器，契合 coreModuleState 门禁
+- [Phase 05.3]: 05.3-04: maxUndoStep 为实现类可变字段 = 0，由 initialize 注入，借此满足接口的 readonly 声明
 
 ### Pending Todos
 
@@ -243,6 +246,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-04T09:24:47.794Z
-Stopped at: Completed 05.3-03-PLAN.md
+Last session: 2026-10-04T09:42:00.000Z
+Stopped at: Completed 05.3-04-PLAN.md
 Resume file: None
