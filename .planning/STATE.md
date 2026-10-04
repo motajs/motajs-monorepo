@@ -2,18 +2,18 @@
 gsd_state_version: "1.0"
 current_phase: "05.3"
 current_phase_name: editor-core/impl 重做 (INSERTED)
-current_plan: 4
+current_plan: 5
 status: executing
-stopped_at: Completed 05.3-04-PLAN.md
-last_updated: "2026-10-04T09:42:00.000Z"
+stopped_at: Completed 05.3-05-PLAN.md
+last_updated: "2026-10-04T10:26:34.333Z"
 last_activity: 2026-10-04
 last_activity_desc: Phase 05.3 execution started
-state_head: 1f5ff2326803e453930fe4f2569f8c7eec5d182c
+state_head: 6dd608b8261117e217e081eb5d5eebbdff49661e
 progress:
   total_phases: 15
   completed_phases: 0
   total_plans: 56
-  completed_plans: 51
+  completed_plans: 53
   percent: 0
 ---
 
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-09-24)
 ## Current Position
 
 Phase: 05.3 (editor-core/impl 重做 (INSERTED)) — EXECUTING
-Current Plan: 4
+Current Plan: 5
 Total Plans in Phase: 8
 Status: Ready to execute
 Last activity: 2026-10-04 — Phase 05.3 execution started
@@ -99,6 +99,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 05.3 P02 | 12min | 2 tasks | 5 files |
 | Phase 05.3 P03 | 9 | 3 tasks | 3 files |
 | Phase 05.3 P04 | 3min | 2 tasks | 3 files |
+| Phase 05.3 P05 | 9min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -220,6 +221,10 @@ Recent decisions affecting current work:
 - [Phase 05.3]: 不提升工作区 catalog 的 react-dom（会连带影响所有 catalog:default 消费者）；编辑器 19.2.3 精确锁保持不变
 - [Phase 05.3]: 05.3-04: UndoSystem 状态全部放实例字段（undoStack / redoStack），不用模块级容器，契合 coreModuleState 门禁
 - [Phase 05.3]: 05.3-04: maxUndoStep 为实现类可变字段 = 0，由 initialize 注入，借此满足接口的 readonly 声明
+- [Phase 05.3]: Resource 只依赖窄接缝 IResourceStore，不 import ResourceSystem，避免 resource↔resourceSystem 成环（D-37）
+- [Phase 05.3]: 资源列表/内容缓存用双层 Map，不把外部 id 拼成字符串键，避免原型污染（T-05.3-05-01）
+- [Phase 05.3]: write 只写后端并同步缓存、不触发钩子（D-23）；updateResource 才作废缓存并广播 onUpdateResource(id)（D-37）
+- [Phase 05.3]: resource/index.ts 只追加 ./resource 与 ./resourceSystem，不导出 ./access/./store，读写口与窄接缝不进包根（D-35）
 
 ### Pending Todos
 
@@ -246,6 +251,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-04T09:42:00.000Z
-Stopped at: Completed 05.3-04-PLAN.md
+Last session: 2026-10-04T10:26:34.100Z
+Stopped at: Completed 05.3-05-PLAN.md
 Resume file: None
