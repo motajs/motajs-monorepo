@@ -140,3 +140,8 @@ export interface IPanelSystem extends IUndoable {
    */
   dispose(): Promise<void>;
 }
+
+export const enum PanelUndoType {
+  /** 面板切换 */
+  Switch,
+}
