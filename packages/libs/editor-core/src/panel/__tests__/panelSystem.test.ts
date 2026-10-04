@@ -217,3 +217,167 @@ describe('PanelSystem 最小闭环', () => {
     expect(screen.queryByText('panel-a')).toBeNull();
   });
 });
+
+describe('PanelSystem 切换撤回', () => {
+  // switchTo 记录一条撤回；undo 回到上一面板且不产生新记录，redo 再切回
+  it('switchTo 记录撤回，undo/redo 只切换不再记录', async () => {
+    const system = await createSystem(100);
+    const a = new FakePanel('panel-a');
+    const b = new FakePanel('panel-b');
+    await system.panelSystem.registerPanel(async () => a);
+    await system.panelSystem.registerPanel(async () => b);
+
+    await system.panelSystem.switchTo(a);
+    await system.panelSystem.switchTo(b);
+
+    await system.undoSystem.undo();
+
+    expect(system.panelSystem.currentPanel).toBe(a);
+    expect(a.switchInCount).toBe(2);
+    expect(b.switchInCount).toBe(1);
+
+    await system.undoSystem.redo();
+
+    expect(system.panelSystem.currentPanel).toBe(b);
+    expect(b.switchInCount).toBe(2);
+  });
+
+  // 切换到当前面板为 no-op，不新增撤回也不触发切换回调
+  it('切换到当前面板为 no-op', async () => {
+    const system = await createSystem(100);
+    const a = new FakePanel('panel-a');
+    await system.panelSystem.registerPanel(async () => a);
+
+    await system.panelSystem.switchTo(a);
+    await system.panelSystem.switchTo(a);
+
+    expect(a.switchInCount).toBe(1);
+    expect(a.switchOutCount).toBe(0);
+
+    await system.undoSystem.undo();
+
+    expect(system.panelSystem.currentPanel).toBeNull();
+  });
+});
+
+describe('PanelSystem 注册表', () => {
+  // 同 id 注册两次抛错，保证注册表键唯一
+  it('重复 id 注册抛错', async () => {
+    const system = await createSystem();
+    await system.panelSystem.registerPanel(async () => new FakePanel('dup'));
+
+    await expect(system.panelSystem.registerPanel(async () => new FakePanel('dup'))).rejects.toThrow();
+  });
+
+  // getPanel 命中返回面板，未命中返回 null
+  it('getPanel 命中返回面板，未命中返回 null', async () => {
+    const system = await createSystem();
+    const a = new FakePanel('panel-a');
+    await system.panelSystem.registerPanel(async () => a);
+
+    expect(system.panelSystem.getPanel('panel-a')).toBe(a);
+    expect(system.panelSystem.getPanel('missing')).toBeNull();
+  });
+});
+
+describe('PanelSystem 资源桥接', () => {
+  // updateResource 经 EditorPanelHooks 重新申请资源并通知面板最新内容
+  it('updateResource 通知面板最新内容', async () => {
+    const system = await createSystem();
+    const id = Object.freeze({ type: 1, id: 'alpha' });
+    system.injection.seed(id, 'v1');
+    const a = new FakePanel('panel-a');
+    await system.panelSystem.registerPanel(async () => a);
+
+    await system.resourceSystem.updateResource(id);
+
+    expect(a.updateResourceCount).toBe(1);
+    expect(a.lastUpdateId).toBe(id);
+    expect(a.lastUpdateData).toBe('v1');
+
+    system.injection.content.get(id.type)?.set(id.id, 'v2');
+    await system.resourceSystem.updateResource(id);
+
+    expect(a.updateResourceCount).toBe(2);
+    expect(a.lastUpdateData).toBe('v2');
+  });
+
+  // updateResourceList 经 EditorPanelHooks 重新申请列表并通知面板
+  it('updateResourceList 通知面板最新列表', async () => {
+    const system = await createSystem();
+    const id = Object.freeze({ type: 2, id: 'beta' });
+    system.injection.seed(id, 'v1');
+    const a = new FakePanel('panel-a');
+    await system.panelSystem.registerPanel(async () => a);
+
+    await system.resourceSystem.updateResourceList(id.type);
+
+    expect(a.updateResourceListCount).toBe(1);
+    expect(a.lastUpdateType).toBe(id.type);
+    expect(a.lastUpdateList).toEqual([id]);
+  });
+});
+
+describe('PanelSystem 窗口焦点', () => {
+  // window focus/blur 事件触发当前面板的 onFocus/onBlur
+  it('window focus/blur 触发当前面板 onFocus/onBlur', async () => {
+    const system = await createSystem();
+    const a = new FakePanel('panel-a');
+    await system.panelSystem.registerPanel(async () => a);
+    await system.panelSystem.switchTo(a);
+
+    await act(async () => {
+      window.dispatchEvent(new Event('focus'));
+    });
+
+    await act(async () => {
+      window.dispatchEvent(new Event('blur'));
+    });
+
+    expect(a.focusCount).toBe(1);
+    expect(a.blurCount).toBe(1);
+  });
+});
+
+describe('PanelSystem 释放', () => {
+  // disposePanel 卸载钩子、释放面板并清空当前面板
+  it('disposePanel 卸载钩子、释放面板并清空当前面板', async () => {
+    const system = await createSystem();
+    const id = Object.freeze({ type: 3, id: 'gamma' });
+    system.injection.seed(id, 'v1');
+    const a = new FakePanel('panel-a');
+    await system.panelSystem.registerPanel(async () => a);
+    await system.panelSystem.switchTo(a);
+
+    await system.panelSystem.disposePanel(a);
+
+    expect(a.disposeCount).toBe(1);
+    expect(system.panelSystem.getPanel('panel-a')).toBeNull();
+    expect(system.panelSystem.currentPanel).toBeNull();
+
+    await system.resourceSystem.updateResource(id);
+
+    expect(a.updateResourceCount).toBe(0);
+  });
+
+  // dispose 移除监听并按注册逆序释放面板、卸载其钩子
+  it('dispose 按注册逆序释放面板', async () => {
+    const system = await createSystem();
+    const order: string[] = [];
+    const a = new FakePanel('panel-a', order);
+    const b = new FakePanel('panel-b', order);
+    const c = new FakePanel('panel-c', order);
+    await system.panelSystem.registerPanel(async () => a);
+    await system.panelSystem.registerPanel(async () => b);
+    await system.panelSystem.registerPanel(async () => c);
+
+    await system.panelSystem.dispose();
+
+    expect(order).toEqual(['panel-c', 'panel-b', 'panel-a']);
+    expect(system.panelSystem.currentPanel).toBeNull();
+
+    await system.resourceSystem.updateResource(Object.freeze({ type: 4, id: 'delta' }));
+
+    expect(a.updateResourceCount).toBe(0);
+  });
+});
