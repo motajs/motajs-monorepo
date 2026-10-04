@@ -1,6 +1,6 @@
 import { FC } from 'react';
-import { IUndoable, IUndoContext } from '@/undo';
-import { IResource, IResourceIdentifier } from '@/resource';
+import { IUndoable, IUndoContext } from '../undo';
+import { IResource, IResourceIdentifier } from '../resource';
 
 export interface IEditorPanelContext {
   /**

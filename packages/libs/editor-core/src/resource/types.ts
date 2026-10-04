@@ -1,4 +1,4 @@
-import { IHookable, IHookBase } from '@/hook';
+import { IHookable, IHookBase } from '../hook';
 
 export interface IResourceIdentifier {
   /** 资源类型，由外部的枚举真正进行定义 */
@@ -89,4 +89,7 @@ export interface IResourceSystem extends IHookable<IResourceSystemHooks> {
    * @param type 资源类型
    */
   updateResourceList(type: number): Promise<void>;
+
+  /** 释放此资源系统 */
+  dispose(): void;
 }

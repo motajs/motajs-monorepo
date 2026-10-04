@@ -50,4 +50,7 @@ export interface IUndoSystem {
    * 执行重做操作
    */
   redo(): Promise<void>;
+
+  /** 释放此撤回系统 */
+  dispose(): void;
 }
