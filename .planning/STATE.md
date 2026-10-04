@@ -2,18 +2,18 @@
 gsd_state_version: "1.0"
 current_phase: "05.3"
 current_phase_name: editor-core/impl 重做 (INSERTED)
-current_plan: 5
+current_plan: 6
 status: executing
-stopped_at: Completed 05.3-05-PLAN.md
-last_updated: "2026-10-04T10:26:34.333Z"
+stopped_at: Completed 05.3-06-PLAN.md
+last_updated: "2026-10-04T10:51:34.879Z"
 last_activity: 2026-10-04
 last_activity_desc: Phase 05.3 execution started
-state_head: 6dd608b8261117e217e081eb5d5eebbdff49661e
+state_head: f4b9abb446a472ceb87a3ea5fbd756b7875965af
 progress:
   total_phases: 15
   completed_phases: 0
   total_plans: 56
-  completed_plans: 53
+  completed_plans: 54
   percent: 0
 ---
 
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-09-24)
 ## Current Position
 
 Phase: 05.3 (editor-core/impl 重做 (INSERTED)) — EXECUTING
-Current Plan: 5
+Current Plan: 6
 Total Plans in Phase: 8
 Status: Ready to execute
 Last activity: 2026-10-04 — Phase 05.3 execution started
@@ -100,6 +100,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 05.3 P03 | 9 | 3 tasks | 3 files |
 | Phase 05.3 P04 | 3min | 2 tasks | 3 files |
 | Phase 05.3 P05 | 9min | 2 tasks | 4 files |
+| Phase 05.3 P06 | 9min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -225,6 +226,11 @@ Recent decisions affecting current work:
 - [Phase 05.3]: 资源列表/内容缓存用双层 Map，不把外部 id 拼成字符串键，避免原型污染（T-05.3-05-01）
 - [Phase 05.3]: write 只写后端并同步缓存、不触发钩子（D-23）；updateResource 才作废缓存并广播 onUpdateResource(id)（D-37）
 - [Phase 05.3]: resource/index.ts 只追加 ./resource 与 ./resourceSystem，不导出 ./access/./store，读写口与窄接缝不进包根（D-35）
+- [Phase 05.3]: 05.3-06: PanelContext 只持有 IResourceAccess 与 IUndoSystem，四个读写方法直接转调、addUndoContext 直接转调（D-31/D-35）
+- [Phase 05.3]: 05.3-06: PanelSystem 字段按计划类型为 IResourceSystem；因 D-35 读写口分离，registerPanel 单次 as ResourceSystem 收窄到访问能力（ResourceSystem 同时实现 IResourceAccess）
+- [Phase 05.3]: 05.3-06: hook 组件提升到模块层 PanelRoot，RootComponent 仅 createElement(PanelRoot, ...) 且只创建一次，规避 class 字段箭头调用 hook 的 react-hooks/rules-of-hooks 误报
+- [Phase 05.3]: 05.3-06: undo/redo 单次 as 收窄为模块内 IPanelSwitchData，只调 internalSwitchTo 不产生新历史（D-32）
+- [Phase 05.3]: 05.3-06: PORT-02 window 门禁在 panelSystem.ts 报 4 条 error，按 D-38/D-43 属允许的暂红，未绕过未禁用
 
 ### Pending Todos
 
@@ -251,6 +257,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-04T10:26:34.100Z
-Stopped at: Completed 05.3-05-PLAN.md
+Last session: 2026-10-04T10:51:34.419Z
+Stopped at: Completed 05.3-06-PLAN.md
 Resume file: None
