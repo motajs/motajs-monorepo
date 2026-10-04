@@ -19,9 +19,20 @@ export interface IUndoable {
   redo<T>(context: IUndoContext<T>): Promise<void>;
 }
 
+export interface IUndoInjection {
+  /** 最大撤回步数 */
+  readonly maxUndoStep: number;
+}
+
 export interface IUndoSystem {
   /** 最大撤回步数 */
   readonly maxUndoStep: number;
+
+  /**
+   * 初始化并注入撤回对象
+   * @param injection 撤回注入对象
+   */
+  initialize(injection: IUndoInjection): Promise<void>;
 
   /**
    * 添加撤回操作及其上下文
