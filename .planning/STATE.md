@@ -2,18 +2,18 @@
 gsd_state_version: "1.0"
 current_phase: "05.3"
 current_phase_name: editor-core/impl 重做 (INSERTED)
-current_plan: 2
+current_plan: 3
 status: executing
-stopped_at: Completed 05.3-02-PLAN.md
-last_updated: "2026-10-04T09:01:47.926Z"
+stopped_at: Completed 05.3-03-PLAN.md
+last_updated: "2026-10-04T09:25:00.849Z"
 last_activity: 2026-10-04
 last_activity_desc: Phase 05.3 execution started
-state_head: bd9cce4493e28156ccf36b85f06e0e8199b5533e
+state_head: 07b0d96a9aff1111b03dc1be318a1888258e7683
 progress:
   total_phases: 15
   completed_phases: 0
   total_plans: 56
-  completed_plans: 50
+  completed_plans: 51
   percent: 0
 ---
 
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-09-24)
 ## Current Position
 
 Phase: 05.3 (editor-core/impl 重做 (INSERTED)) — EXECUTING
-Current Plan: 2
+Current Plan: 3
 Total Plans in Phase: 8
 Status: Ready to execute
 Last activity: 2026-10-04 — Phase 05.3 execution started
@@ -97,6 +97,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 05.2 P14 | 15 min | 3 tasks | 19 files |
 | Phase 05.2 P15 | 47min | 2 tasks | 1 files |
 | Phase 05.3 P02 | 12min | 2 tasks | 5 files |
+| Phase 05.3 P03 | 9 | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -213,6 +214,9 @@ Recent decisions affecting current work:
 - [Phase 05.2]: OperationHistoryView as local named interface for useOperationHistory return (readonly members per AGENTS.md); not exported
 - [Phase 05.2]: 05.2-15: pnpm test 以最终完整递归运行 exit 0 为准（10 包/142 文件/1335 用例全绿）；此前非零退出全部定位为两处与本波无关的负载敏感用例（react-monaco-editor 的 monaco worker-close 未处理拒绝、@motajs/editor 的 ternDeclaration 5s 超时），单独运行均 exit 0
 - [Phase 05.2]: 05.2-15: 两包保真度残留 grep 全 0（导出接口/类/枚举自身注释、barrel 注释、深路径 export *、内联对象类型/联合、字符串枚举、_ 私有成员、import type、文件头说明、实现类重复接口 jsDoc）；编辑器相对 d3ef5fb 零新增改动
+- [Phase 05.3]: editor-core 的 react/@types/react 改用 catalog:default，解析到工作区最新 react 19.3.0（D-41），不为对齐旧编辑器而降级
+- [Phase 05.3]: editor-core 的 react-dom/@types/react-dom 固定为精确 19.3.0，与 react 严格同版本，避免 React 运行时 Incompatible React versions 报错
+- [Phase 05.3]: 不提升工作区 catalog 的 react-dom（会连带影响所有 catalog:default 消费者）；编辑器 19.2.3 精确锁保持不变
 
 ### Pending Todos
 
@@ -239,6 +243,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-04T09:01:47.761Z
-Stopped at: Completed 05.3-02-PLAN.md
+Last session: 2026-10-04T09:24:47.794Z
+Stopped at: Completed 05.3-03-PLAN.md
 Resume file: None
