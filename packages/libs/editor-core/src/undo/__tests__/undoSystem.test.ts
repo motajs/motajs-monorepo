@@ -52,3 +52,70 @@ describe('UndoSystem 最小闭环', () => {
     expect(undoable.lastRedoContext).toBe(context);
   });
 });
+
+describe('UndoSystem 边界', () => {
+  // 超过 maxUndoStep 时从栈底裁剪，最早一条被丢弃，仅保留最近 maxUndoStep 条
+  test('超出 maxUndoStep 时从栈底裁剪最早记录', async () => {
+    const system = new UndoSystem();
+    await system.initialize({ maxUndoStep: 2 });
+    const first = new FakeUndoable();
+    const second = new FakeUndoable();
+    const third = new FakeUndoable();
+
+    system.addUndoContext(first, { type: 1, data: 'first' });
+    system.addUndoContext(second, { type: 1, data: 'second' });
+    system.addUndoContext(third, { type: 1, data: 'third' });
+
+    await system.undo();
+    await system.undo();
+
+    expect(third.undoCount).toBe(1);
+    expect(second.undoCount).toBe(1);
+    expect(first.undoCount).toBe(0);
+  });
+
+  // 新操作入栈后 redo 栈被清空，随后的 redo 为空操作
+  test('新操作入栈后清空 redo 栈', async () => {
+    const system = new UndoSystem();
+    await system.initialize({ maxUndoStep: 10 });
+    const first = new FakeUndoable();
+    const second = new FakeUndoable();
+
+    system.addUndoContext(first, { type: 1, data: 'first' });
+    await system.undo();
+    system.addUndoContext(second, { type: 1, data: 'second' });
+
+    await system.redo();
+
+    expect(first.redoCount).toBe(0);
+    expect(second.redoCount).toBe(0);
+  });
+
+  // 空栈 undo/redo 不抛错且不调用任何记录对象
+  test('空栈 undo/redo 为空操作', async () => {
+    const system = new UndoSystem();
+    const undoable = new FakeUndoable();
+
+    await expect(system.undo()).resolves.toBeUndefined();
+    await expect(system.redo()).resolves.toBeUndefined();
+
+    expect(undoable.undoCount).toBe(0);
+    expect(undoable.redoCount).toBe(0);
+  });
+
+  // dispose 后两栈清空，undo/redo 均为空操作
+  test('dispose 清空两栈', async () => {
+    const system = new UndoSystem();
+    await system.initialize({ maxUndoStep: 10 });
+    const undoable = new FakeUndoable();
+
+    system.addUndoContext(undoable, { type: 1, data: 'alpha' });
+    system.dispose();
+
+    await system.undo();
+    await system.redo();
+
+    expect(undoable.undoCount).toBe(0);
+    expect(undoable.redoCount).toBe(0);
+  });
+});
