@@ -2,18 +2,18 @@
 gsd_state_version: "1.0"
 current_phase: "05.3"
 current_phase_name: editor-core/impl 重做 (INSERTED)
-current_plan: 7
+current_plan: 8
 status: executing
-stopped_at: Completed 05.3-07-PLAN.md
-last_updated: "2026-10-04T15:25:19.773Z"
+stopped_at: Completed 05.3-08-PLAN.md
+last_updated: "2026-10-04T15:52:38.481Z"
 last_activity: 2026-10-04
 last_activity_desc: Phase 05.3 execution started
-state_head: 3b8e0717d7fca974defa91f35b18193c4fd4286c
+state_head: 34b610e5013e59e01900fb04e5d24304806ed6a3
 progress:
   total_phases: 15
   completed_phases: 0
   total_plans: 56
-  completed_plans: 55
+  completed_plans: 56
   percent: 0
 ---
 
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-09-24)
 ## Current Position
 
 Phase: 05.3 (editor-core/impl 重做 (INSERTED)) — EXECUTING
-Current Plan: 7
+Current Plan: 8
 Total Plans in Phase: 8
 Status: Ready to execute
 Last activity: 2026-10-04 — Phase 05.3 execution started
@@ -102,6 +102,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 05.3 P05 | 9min | 2 tasks | 4 files |
 | Phase 05.3 P06 | 9min | 2 tasks | 5 files |
 | Phase 05.3 P07 | 5 min | 2 tasks | 3 files |
+| Phase 05.3 P08 | 24 | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -235,6 +236,9 @@ Recent decisions affecting current work:
 - [Phase 05.3]: EditorCore.version 直接写字面量 '0.1.0'，不设 EDITOR_CORE_VERSION 常量（用户 2026-10-04）
 - [Phase 05.3]: EditorCore 三系统字段用接口引用即可；D-39 已把 dispose 加到 IUndoSystem/IResourceSystem 上
 - [Phase 05.3]: EditorCore.initialize 先 Promise.all 下发 undo/resource 再 await panel；dispose 逆序 panel→resource→undo
+- [Phase 05.3]: 05.3-08: subpathStatus 中 editor-core '.' 的 content 标签由 kernel+ports+undo-exports 改为 core-exports（旧值随旧架构作废，用户已确认）
+- [Phase 05.3]: 05.3-08: coreModuleState 的 BANNED_GLOBALS 与 eslint.config.js 的 corePort02Config 同步去掉 window（D-38）；fetch/document/navigator/localStorage/XMLHttpRequest/process.env/import.meta.env 全保留，两极性 fixture 仍逐条证明会被拦
+- [Phase 05.3]: 05.3-08: implExports/corePandaClass 无路径常量可迁移，保持断言不变，按 D-43 允许红；不为凑绿修改门禁（editorArtifactAssets 预期外绿已如实归因）
 
 ### Pending Todos
 
@@ -261,6 +265,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-04T15:25:19.406Z
-Stopped at: Completed 05.3-07-PLAN.md
+Last session: 2026-10-04T15:52:38.252Z
+Stopped at: Completed 05.3-08-PLAN.md
 Resume file: None
