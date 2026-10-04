@@ -12,9 +12,9 @@
  *       因此不添加 blanket not-to-unresolvable 规则（Pitfall 6）；
  *   (c) 能力互斥 —— 临时在 editor-impl 的 `code` 能力目录写入一个 import `table` 能力的 fixture，
  *       cruise 必须被 capabilities-must-not-import-each-other 拦下；
- *   (d) 依赖方向 —— 临时在 editor-core/lib 写入一个 import `@motajs/editor-impl` 的 fixture，
+ *   (d) 依赖方向 —— 临时在 editor-core/src 写入一个 import `@motajs/editor-impl` 的 fixture，
  *       cruise 必须被 editor-core-must-not-import-editor-impl 以 error 级命中（T-05.1-07）；
- *   (e) 底层 IO 清零 —— editor-core/lib 的生产源码不得出现文件读写**调用**形态（`this.fs`、
+ *   (e) 底层 IO 清零 —— editor-core/src 的生产源码不得出现文件读写**调用**形态（`this.fs`、
  *       `.readFile(` …），真实树命中 0、扫描文件数不低于非空转下界；一个含 `this.fs.readFile(` 的
  *       合成 fixture 必须被同一条断言拦下；
  *   (f) PKG-03 负极性 —— 临时写入一个错误的包内相对导入，core 自己的 `tsc -p` 必须报 TS2307，
@@ -40,8 +40,8 @@ import process from 'node:process';
 
 const REPO_ROOT = path.resolve(import.meta.dirname, '..', '..');
 
-/** cruise 目标：底层与默认实现两个包的 lib（D-14：不做全仓 cruise），配置显式传入。 */
-const CORE_LIBS = ['packages/libs/editor-core/lib', 'packages/libs/editor-impl/lib'];
+/** cruise 目标：底层与默认实现两个包的 src（D-14：不做全仓 cruise），配置显式传入。 */
+const CORE_LIBS = ['packages/libs/editor-core/src', 'packages/libs/editor-impl/src'];
 const CONFIG_PATH = '.dependencyCruiser.cjs';
 
 const CORE_PACKAGE_JSON = path.join(REPO_ROOT, 'packages', 'libs', 'editor-core', 'package.json');
@@ -62,12 +62,12 @@ const FORBIDDEN_REVERSE_DECLARATIONS = ['@motajs/editor', '@motajs/service-worke
 const MANIFEST_SECTIONS = ['dependencies', 'peerDependencies', 'devDependencies'];
 
 /** (c) 合成违规：`code` 能力 import `table` 能力，必须被规则拦下。 */
-const SYNTHETIC_FIXTURE = path.join(REPO_ROOT, 'packages/libs/editor-impl/lib/code/__boundariesProbe__.ts');
+const SYNTHETIC_FIXTURE = path.join(REPO_ROOT, 'packages/libs/editor-impl/src/code/__boundariesProbe__.ts');
 const SYNTHETIC_SOURCE = "import '../table/index';\n";
 const SYNTHETIC_RULE = 'capabilities-must-not-import-each-other';
 
 /** (d) 依赖方向：底层 import 默认实现，必须被 editor-core-must-not-import-editor-impl 拦下。 */
-const DIRECTION_FIXTURE = path.join(REPO_ROOT, 'packages/libs/editor-core/lib/__implDependencyProbe__.ts');
+const DIRECTION_FIXTURE = path.join(REPO_ROOT, 'packages/libs/editor-core/src/__implDependencyProbe__.ts');
 const DIRECTION_SOURCE = "import '@motajs/editor-impl';\n";
 const DIRECTION_RULE = 'editor-core-must-not-import-editor-impl';
 
@@ -82,7 +82,7 @@ const BOTTOM_LAYER_IO_TOKENS = [
   '.mkdir(',
   '.moveFile(',
 ];
-const BOTTOM_LAYER_LIB = 'packages/libs/editor-core/lib';
+const BOTTOM_LAYER_LIB = 'packages/libs/editor-core/src';
 const IO_FIXTURE = path.join(REPO_ROOT, BOTTOM_LAYER_LIB, '__bottomLayerIoProbe__.ts');
 const IO_FIXTURE_SOURCE = [
   '/** 合成 fixture：底层 IO 清零门禁必须命中的调用形态（coreBoundaries.js 创建与删除，绝不入库）。 */',
@@ -120,7 +120,7 @@ function relative(absolutePath) {
   return path.relative(REPO_ROOT, absolutePath).replace(/\\/g, '/');
 }
 
-/** 返回包含该路径的包 lib 前缀（形如 packages/libs/<包名>/lib），不在任何包内则返回 null。 */
+/** 返回包含该路径的包 src 前缀（形如 packages/libs/<包名>/src），不在任何包内则返回 null。 */
 function packageRootOf(candidate) {
   for (const lib of CORE_LIBS) {
     if (candidate === lib || candidate.startsWith(`${lib}/`)) return lib;
@@ -195,6 +195,9 @@ function describeViolations(report) {
 
 /** 断言某个合成 fixture 被指定规则以 error 级命中，且默认 err reporter 非零退出。 */
 function assertSyntheticRuleHit(fixturePath, fixtureSource, ruleName, label) {
+  const fixtureDir = path.dirname(fixturePath);
+  const fixtureDirExisted = fs.existsSync(fixtureDir);
+  fs.mkdirSync(fixtureDir, { recursive: true });
   fs.writeFileSync(fixturePath, fixtureSource, 'utf8');
   try {
     const cruise = cruiseAsJson();
@@ -218,6 +221,7 @@ function assertSyntheticRuleHit(fixturePath, fixtureSource, ruleName, label) {
     }
   } finally {
     fs.rmSync(fixturePath, { force: true });
+    if (!fixtureDirExisted) fs.rmdirSync(fixtureDir);
   }
   check(!fs.existsSync(fixturePath), `${label} fixture 未被删除：${relative(fixturePath)}`);
 }

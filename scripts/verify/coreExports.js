@@ -8,7 +8,7 @@
  *   1. PKG-01 结构：private/type/sideEffects 取值、**恰好一个** exports subpath`.``、
  *      该目标在磁盘上真实存在、且在 subpathStatus.json 的 v2 记录里登记；scripts 恰好是
  *      typecheck + test，没有 build。Phase 4 起 `.` 汇总了资源层与编辑层；Phase 05.1-03 拆分后
- *      默认实现整体迁出，`. ` 只汇总内核 + 端口 + 撤销契约类型（`kernel+ports+undo-exports`）；
+ *      默认实现整体迁出，`. ` 只汇总内核 + 端口 + 撤销契约类型（`core-exports`）；
  *   2. **单向依赖**：editor-core 的任一 section（dependencies/peerDependencies/devDependencies）
  *      都不得出现 `@motajs/editor-impl`——底层绝不依赖默认实现（D-01）。
  *
@@ -42,7 +42,7 @@ const EXPECTED_SUBPATHS = ['.'];
  * 每个 subpath 的 `content` 期望值表（N-26）。期望值写死在这里，绝不从 subpathStatus.json 反读。
  */
 const SUBPATH_CONTENT = {
-  '.': 'kernel+ports+undo-exports',
+  '.': 'core-exports',
 };
 const DEFAULT_SUBPATH_CONTENT = 'empty-barrel';
 
@@ -192,7 +192,7 @@ function main() {
     for (const failure of failures) console.error(`coreExports: ${failure}`);
     process.exit(1);
   }
-  console.log('coreExports: 全部断言通过（`.` 单 subpath、kernel+ports+undo-exports、无 editor-impl 依赖声明）');
+  console.log('coreExports: 全部断言通过（`.` 单 subpath、core-exports、无 editor-impl 依赖声明）');
 }
 
 main();

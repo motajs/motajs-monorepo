@@ -25,12 +25,12 @@ import prettier from 'prettier';
 // ==================== 常量 ====================
 
 const REPO_ROOT = path.resolve(import.meta.dirname, '..', '..');
-const PRETTIER_CONFIG_PATH = path.join(REPO_ROOT, '.prettierrc.json');
+const PRETTIER_CONFIG_PATH = path.join(REPO_ROOT, '.prettierrc');
 const PRETTIER_IGNORE_PATH = path.join(REPO_ROOT, '.prettierignore');
 const ROOT_PACKAGE_JSON_PATH = path.join(REPO_ROOT, 'package.json');
 const LOCKFILE_PATH = path.join(REPO_ROOT, 'pnpm-lock.yaml');
 
-/** `.prettierrc.json` 必须逐项等于的解析结果（单引号是唯一引号风格）。 */
+/** `.prettierrc` 必须逐项等于的解析结果（单引号是唯一引号风格）。 */
 const EXPECTED_OPTIONS = {
   singleQuote: true,
   jsxSingleQuote: false,
@@ -81,14 +81,13 @@ function escapeRegExp(value) {
 // ==================== 断言：配置文件 ====================
 
 function checkConfigFiles() {
-  check(fs.existsSync(PRETTIER_CONFIG_PATH), '缺少 .prettierrc.json —— Prettier 没有唯一的配置文件');
+  check(fs.existsSync(PRETTIER_CONFIG_PATH), '缺少 .prettierrc —— Prettier 没有唯一的配置文件');
   check(fs.existsSync(PRETTIER_IGNORE_PATH), '缺少 .prettierignore —— 生成物/第三方/规划产物随时可能被改写');
   for (const candidate of [
     'prettier.config.js',
     'prettier.config.mjs',
     'prettier.config.cjs',
     'prettier.config.ts',
-    '.prettierrc',
     '.prettierrc.js',
     '.prettierrc.cjs',
     '.prettierrc.yaml',
@@ -96,7 +95,7 @@ function checkConfigFiles() {
   ]) {
     check(
       !fs.existsSync(path.join(REPO_ROOT, candidate)),
-      `仓库根出现第二个 Prettier 配置 ${candidate} —— 必须只有 .prettierrc.json 一处配置`,
+      `仓库根出现第二个 Prettier 配置 ${candidate} —— 必须只有 .prettierrc 一处配置`,
     );
   }
 }
@@ -106,7 +105,7 @@ function checkConfigFiles() {
 async function checkResolvedConfig() {
   const resolved = await prettier.resolveConfig(path.join(REPO_ROOT, 'package.json'));
   if (!resolved) {
-    failures.push('prettier.resolveConfig() 返回 null —— 从仓库根解析不到 .prettierrc.json');
+    failures.push('prettier.resolveConfig() 返回 null —— 从仓库根解析不到 .prettierrc');
     return;
   }
   for (const [key, expected] of Object.entries(EXPECTED_OPTIONS)) {

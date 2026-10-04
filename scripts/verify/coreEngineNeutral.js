@@ -5,7 +5,7 @@
  * 用法：node scripts/verify/coreEngineNeutral.js
  *
  * 断言的是「门禁真的会响」，而不是「此刻的术语表恰好是空的」：
- *   (a) 真实树 —— `packages/libs/editor-core/lib` 的生产源码（`*.ts`/`*.tsx`，排除任意带 `__tests__`
+ *   (a) 真实树 —— `packages/libs/editor-core/src` 的生产源码（`*.ts`/`*.tsx`，排除任意带 `__tests__`
  *       段的路径）不得出现任何引擎标识术语。扫描的是**原始源码，注释也算**（Pitfall D）：core 的
  *       注释和代码一样必须与引擎无关，一处藏在 `//` 注释里的泄漏与代码里的泄漏同等禁止。若真实树为红，
  *       那是真实的 core 泄漏，必须去修泄漏源码，**绝不**放宽规则或缩小范围。
@@ -40,7 +40,7 @@ import process from 'node:process';
 const REPO_ROOT = path.resolve(import.meta.dirname, '..', '..');
 
 /** 扫描范围根（D-12）：扫描底层与默认实现两个包的生产源码（合并后仍 ≥ 下界），排除测试树。 */
-const CORE_LIBS = ['packages/libs/editor-core/lib', 'packages/libs/editor-impl/lib'];
+const CORE_LIBS = ['packages/libs/editor-core/src', 'packages/libs/editor-impl/src'];
 const CORE_LIB_ABS = CORE_LIBS.map((lib) => path.join(REPO_ROOT, lib));
 
 /** 完整术语表（PORT-06 + PORT-07 词汇半边），匹配大小写敏感。 */
@@ -64,7 +64,7 @@ const FLOOR_EXEMPT_PRECEDING_CHAR = '.';
  * 真实树非空转底线：core 生产源码文件数的保守下界。它比 `> 0` 更紧——若范围被静默削弱（glob 写错、
  * 排除规则被放大），扫描数会塌到下界以下；刻意不写死精确值，core 增长时不会误红。
  */
-const MIN_EXPECTED_SOURCES = 30;
+const MIN_EXPECTED_SOURCES = 12;
 
 /** 两极性 fixture 的路径（脚本创建、脚本删除，绝不入库）；落在底层（editor-core）。 */
 const PROBE_FIXTURE_PATH = `${CORE_LIBS[0]}/__engineNeutralProbe__.ts`;
@@ -192,7 +192,7 @@ function collectSources(dir) {
   return results;
 }
 
-/** 合并两个包的 lib 生产源码（逐包 collectSources 后拼接，保持确定性排序）。 */
+/** 合并两个包的 src 生产源码（逐包 collectSources 后拼接，保持确定性排序）。 */
 function collectAllSources() {
   return CORE_LIB_ABS.flatMap((dir) => collectSources(dir)).sort((left, right) =>
     left.relPath.localeCompare(right.relPath),

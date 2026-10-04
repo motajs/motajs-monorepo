@@ -5,22 +5,22 @@
  * 用法：node scripts/verify/coreModuleState.js
  *
  * 断言的是「门禁真的会响」，而不是「配置文件写对了」：
- *   (a) 真实树 —— `packages/libs/editor-core/lib` 上，三条 `no-restricted-*` 规则在 error 级
+ *   (a) 真实树 —— `packages/libs/editor-core/src` 上，三条 `no-restricted-*` 规则在 error 级
  *       （`severity === 2`）必须 0 条。只数 error 级是关键：把 core 作用域的新规则降级成 `warn`
  *       仍会产生 message，却让 `pnpm lint` 以 0 退出——门禁会「看起来活着」。
  *   (b) 模块状态可失败 —— 临时写入一个含模块级 `let`、`export let`、模块级 `new Map()` 的 fixture，
  *       真实 ESLint 必须在这些行给出 error 级 `no-restricted-syntax`；同一 fixture 里的
  *       `Object.freeze({...})` 与 `{...} as const` 必须**不**产生任何受限规则消息（结构性豁免）。
- *   (c) PORT-02 可失败 —— 临时写入一个每条被禁构造各出现一次的 fixture：六条 `no-restricted-globals`
+ *   (c) PORT-02 可失败 —— 临时写入一个每条被禁构造各出现一次的 fixture：五条 `no-restricted-globals`
  *       （逐行定位）、`process.env` 的 `no-restricted-properties`、`import.meta.env` 的
  *       `no-restricted-syntax` 都必须以 error 级命中。
- *   (d) 豁免与覆盖面是真的 —— `lib/kernel/core.ts`（组合根）、顶层 `lib/__tests__/**` 与 Phase 4 新增的
- *       各层级测试树（如 `lib/resources/__tests__/**`）的**解析后**配置里没有 module-state 选择器，
+ *   (d) 豁免与覆盖面是真的 —— `src/core.ts`（组合根）、顶层 `src/__tests__/**` 与 Phase 4 新增的
+ *       各层级测试树（如 `src/resources/__tests__/**`）的**解析后**配置里没有 module-state 选择器，
  *       但 PORT-02 规则仍在；且 core.ts 在真实树上 0 条受限规则消息。
  *
  * 两个 fixture 都由本脚本创建与删除，**绝不入库**；删除发生在 `finally`，随后断言文件确实不存在。
  *
- * 为什么需要 (b)/(c)/(d)：`tsconfig.lib.base.json` 开着 DOM lib，所以 `window`/`document`/`fetch`
+ * 为什么需要 (b)/(c)/(d)：`tsconfig.lib.base.json` 开着 DOM lib，所以 `document`/`fetch`
  * 在 core 里类型检查完全通过，`tsc` 守不住 PORT-02；`no-restricted-properties` 又结构上匹配不到
  * `import.meta.env`（它是 `MetaProperty`，由 03-RESEARCH.md 的实测探针证实）。因此这两条规则只能
  * 靠 ESLint，而「一个无法被证明会红的门禁」与「没有门禁」不可区分（Phase 2 的教训）。
@@ -43,13 +43,13 @@ const RESTRICTED_RULES = new Set(['no-restricted-syntax', 'no-restricted-globals
 /** error 级严重度。只有它会让 `pnpm lint` 非零退出。 */
 const ERROR_SEVERITY = 2;
 
-/** 门禁扫描范围：底层与默认实现两个包的 lib（模块级可变绑定对两包都禁）。 */
-const CORE_LIBS = ['packages/libs/editor-core/lib', 'packages/libs/editor-impl/lib'];
-/** 组合根仍是底层（editor-core）的 `lib/kernel/core.ts`。 */
-const CORE_COMPOSITION_ROOT = `${CORE_LIBS[0]}/kernel/core.ts`;
+/** 门禁扫描范围：底层与默认实现两个包的 src（模块级可变绑定对两包都禁）。 */
+const CORE_LIBS = ['packages/libs/editor-core/src', 'packages/libs/editor-impl/src'];
+/** 组合根仍是底层（editor-core）的 `src/core.ts`。 */
+const CORE_COMPOSITION_ROOT = `${CORE_LIBS[0]}/core.ts`;
 
-/** 被禁的六个全局：每个必须在合成 fixture 上逐行命中。 */
-const BANNED_GLOBALS = ['fetch', 'window', 'document', 'navigator', 'localStorage', 'XMLHttpRequest'];
+/** 被禁的五个全局：每个必须在合成 fixture 上逐行命中（D-38 起 window 不再被禁）。 */
+const BANNED_GLOBALS = ['fetch', 'document', 'navigator', 'localStorage', 'XMLHttpRequest'];
 
 /** eslint.config.js 的 Block B 携带的 module-state 选择器（逐字对应）。 */
 const MODULE_STATE_SELECTORS = [
@@ -111,20 +111,18 @@ const PORT02_LINES = [
   ' */',
   'export function port02Probe(): unknown[] {',
   "  const endpoint = fetch('/probe');",
-  '  const viewportWidth = window.innerWidth;',
   '  const documentTitle = document.title;',
   '  const userAgent = navigator.userAgent;',
   "  const stored = localStorage.getItem('probe');",
   '  const request = new XMLHttpRequest();',
   '  const processMode = process.env.PROBE_MODE;',
   '  const envMode = import.meta.env.PROBE_MODE;',
-  '  return [endpoint, viewportWidth, documentTitle, userAgent, stored, request, processMode, envMode];',
+  '  return [endpoint, documentTitle, userAgent, stored, request, processMode, envMode];',
   '}',
 ];
 
 const PORT02_MARKERS = {
   fetch: 'fetch(',
-  window: 'window.',
   document: 'document.',
   navigator: 'navigator.',
   localStorage: 'localStorage.',
@@ -244,7 +242,7 @@ function selectorsOf(rules) {
   return { severity: entry[0], selectors: entry.slice(1).map((item) => item.selector) };
 }
 
-/** 找 `lib/__tests__/**` 下的第一个测试文件（D-22 的排除对象）。 */
+/** 找 `src/__tests__/**` 下的第一个测试文件（D-22 的排除对象）。 */
 function firstTestFile() {
   const testsDir = path.join(REPO_ROOT, CORE_LIBS[0], '__tests__');
   if (!fs.existsSync(testsDir)) return null;
@@ -256,10 +254,10 @@ function firstTestFile() {
 }
 
 /**
- * 找 `lib/**` 下、但**不在** `lib/__tests__` 里的第一个测试文件（Phase 4 新增测试树的代表）。
+ * 找 `src/**` 下、但**不在** `src/__tests__` 里的第一个测试文件（Phase 4 新增测试树的代表）。
  *
- * Phase 4 把资源/编辑层测试搬进 `lib/resources/__tests__`、`lib/edit/__tests__`，Block B 的忽略面
- * 随之放宽。只采样 `lib/__tests__` 会让「放宽后的豁免真的生效」停留在假设上，因此这里必须再取一个
+ * Phase 4 把资源/编辑层测试搬进 `src/resources/__tests__`、`src/edit/__tests__`，Block B 的忽略面
+ * 随之放宽。只采样 `src/__tests__` 会让「放宽后的豁免真的生效」停留在假设上，因此这里必须再取一个
  * 新测试树的样本（Pitfall 4：豁免必须被证明，而非假设）。
  */
 function firstNestedTestFile() {
@@ -371,7 +369,7 @@ function checkPort02CanFail() {
     checkLineViolation(restricted, fixture.lineOf.processEnv, 'no-restricted-properties', 'process.env');
     checkLineViolation(restricted, fixture.lineOf.importMetaEnv, 'no-restricted-syntax', 'import.meta.env');
     console.log(
-      `coreModuleState: PORT-02 门禁可失败（六条被禁全局逐行命中，process.env 与 import.meta.env 各被 error 级拦下）`,
+      `coreModuleState: PORT-02 门禁可失败（五条被禁全局逐行命中，process.env 与 import.meta.env 各被 error 级拦下）`,
     );
   }
 
@@ -402,7 +400,7 @@ function checkResolvedConfigScoping() {
   const nestedTestsFile = firstNestedTestFile();
   check(
     nestedTestsFile !== null,
-    `找不到两个包 lib/**/__tests__/*.test.ts(x) 中非顶层 __tests__ 的样本 —— 无法证明放宽后的测试树豁免`,
+    `找不到两个包 src/**/__tests__/*.test.ts(x) 中非顶层 __tests__ 的样本 —— 无法证明放宽后的测试树豁免`,
   );
   const samples = [
     [CORE_COMPOSITION_ROOT, '组合根'],
@@ -471,8 +469,8 @@ function main() {
   }
   console.log(
     'coreModuleState: 全部断言通过（真实树 0 条 error 级受限规则、模块级 let/export let/const 容器各被拦下、' +
-      'Object.freeze 与 as const 结构性豁免、六条被禁全局逐行命中、process.env 与 import.meta.env 各被拦下、' +
-      'core.ts、lib/__tests__/** 与新增测试树的 module-state 豁免与 PORT-02 覆盖面均成立）',
+      'Object.freeze 与 as const 结构性豁免、五条被禁全局逐行命中、process.env 与 import.meta.env 各被拦下、' +
+      'core.ts、src/__tests__/** 与新增测试树的 module-state 豁免与 PORT-02 覆盖面均成立）',
   );
 }
 

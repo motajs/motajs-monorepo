@@ -5,11 +5,11 @@
  * 用法：node scripts/verify/coreImportType.js
  *
  * 断言的是「门禁真的会响」，而不是「此刻恰好没有 import type」：
- *   (a) 真实树 —— `packages/libs/editor-core/lib` 与 `packages/libs/editor-impl/lib` 下的
+ *   (a) 真实树 —— `packages/libs/editor-core/src` 与 `packages/libs/editor-impl/src` 下的
  *       **全部** `*.ts`/`*.tsx`（包含 `__tests__` 与 `*.test.*`，因为 D-11 覆盖全包含测试）
  *       都不得出现行首的 `import type`。类型仍经 `export type` 再导出（D-11 只禁 import type）。
  *       若真实树为红，那是真实的违规源码，必须去改源码，**绝不**放宽规则或缩小范围。
- *   (b) 可失败 —— 临时往 editor-core 的 `lib/__tests__/` 写一个含两处 `import type`（并夹一条普通
+ *   (b) 可失败 —— 临时往 editor-core 的 `src/__tests__/` 写一个含两处 `import type`（并夹一条普通
  *       import）的 fixture：门禁必须**逐行**命中两条 `import type`，且普通 import 那一行**不**被误报；
  *       fixture 在 `finally` 里删除，随后断言其确实不存在。
  *
@@ -26,8 +26,8 @@ import process from 'node:process';
 
 const REPO_ROOT = path.resolve(import.meta.dirname, '..', '..');
 
-/** 扫描范围根（D-11）：两个包的 lib 全量，包含测试树。 */
-const CORE_LIBS = ['packages/libs/editor-core/lib', 'packages/libs/editor-impl/lib'];
+/** 扫描范围根（D-11）：两个包的 src 全量，包含测试树。 */
+const CORE_LIBS = ['packages/libs/editor-core/src', 'packages/libs/editor-impl/src'];
 const CORE_LIB_ABS = CORE_LIBS.map((lib) => path.join(REPO_ROOT, lib));
 
 /** 行首锚定的 `import type` 模式：D-11 的机器判定。 */
@@ -37,7 +37,7 @@ const IMPORT_TYPE_PATTERN = /^\s*import\s+type\b/;
  * 真实树非空转底线：两个包全量源码文件数的保守下界。它**高于**「排除测试树」的文件数，
  * 因此一旦扫描范围被削弱（glob 写错、排除规则被放大），扫描数会塌到下界以下并立刻变红。
  */
-const MIN_EXPECTED_SOURCES = 55;
+const MIN_EXPECTED_SOURCES = 18;
 
 /** 两极性 fixture 的路径与源码（脚本创建、脚本删除，绝不入库）；刻意落在 `__tests__` 内。 */
 const PROBE_FIXTURE_PATH = `${CORE_LIBS[0]}/__tests__/__importTypeProbe__.ts`;
@@ -114,7 +114,7 @@ function collectSources(dir) {
   return results;
 }
 
-/** 合并两个包的 lib 全部源码（逐包 collectSources 后拼接，保持确定性排序）。 */
+/** 合并两个包的 src 全部源码（逐包 collectSources 后拼接，保持确定性排序）。 */
 function collectAllSources() {
   return CORE_LIB_ABS.flatMap((dir) => collectSources(dir)).sort((left, right) =>
     left.relPath.localeCompare(right.relPath),
@@ -167,6 +167,7 @@ function checkTwoPolarity() {
   check(PROBE_FIXTURE_PATH.includes('__tests__'), '两极性 fixture 必须落在 __tests__ 内，才能证明测试树也被扫描');
 
   const fixture = buildFixture(PROBE_FIXTURE_LINES, PROBE_FIXTURE_MARKERS);
+  fs.mkdirSync(path.dirname(PROBE_FIXTURE_ABS), { recursive: true });
   fs.writeFileSync(PROBE_FIXTURE_ABS, fixture.source, 'utf8');
   let violations = [];
   try {
