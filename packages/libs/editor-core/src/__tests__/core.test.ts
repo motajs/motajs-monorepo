@@ -1,10 +1,19 @@
 import { FC } from 'react';
 import { describe, expect, it } from 'vitest';
-import { EditorCore } from '../core';
-import { IEditorPanel } from '../panel';
-import { IResourceIdentifier } from '../resource';
-import { IEditorCoreInjection } from '../types';
-import { IUndoContext } from '../undo';
+import {
+  EditorCore,
+  Hookable,
+  HookController,
+  IEditorCoreInjection,
+  IEditorPanel,
+  IEditorPanelContext,
+  IResourceIdentifier,
+  IUndoContext,
+  IUndoable,
+  PanelSystem,
+  ResourceSystem,
+  UndoSystem,
+} from '../index';
 
 // 内存资源后端，同时满足撤销注入，供 EditorCore.initialize 使用
 class FakeEditorInjection implements IEditorCoreInjection {
@@ -123,6 +132,21 @@ class FakePanel implements IEditorPanel {
   }
 }
 
+// 测试用的最小撤回对象，记录 undo/redo 调用次数
+class FakeUndoable implements IUndoable {
+  undoCount = 0;
+
+  redoCount = 0;
+
+  async undo<T>(context: IUndoContext<T>): Promise<void> {
+    this.undoCount += 1;
+  }
+
+  async redo<T>(context: IUndoContext<T>): Promise<void> {
+    this.redoCount += 1;
+  }
+}
+
 describe('EditorCore 组装', () => {
   // 构造 EditorCore 后 version 为字面量 0.1.0，三个系统字段均已实例化
   it('构造后 version 与三系统字段就绪', () => {
@@ -153,5 +177,55 @@ describe('EditorCore 组装', () => {
 
     expect(panel.updateResourceListCount).toBe(1);
     expect(panel.lastUpdateList).toEqual([id]);
+  });
+});
+
+describe('EditorCore 释放', () => {
+  // dispose 逆序释放后：当前面板清空、面板被释放、资源缓存清空、撤回栈清空
+  it('dispose 后三系统状态复位', async () => {
+    const core = new EditorCore();
+    const injection = new FakeEditorInjection();
+    const id = Object.freeze({ type: 1, id: 'alpha' });
+    injection.seed(id, 'v1');
+    await core.initialize(injection);
+
+    const contexts: IEditorPanelContext[] = [];
+    const panel = new FakePanel('panel-a');
+    await core.panelSystem.registerPanel(async (context) => {
+      contexts.push(context);
+      return panel;
+    });
+    await core.panelSystem.switchTo(panel);
+
+    const undoable = new FakeUndoable();
+    core.undoSystem.addUndoContext(undoable, { type: 1, data: 'x' });
+    await contexts[0].requestResource<string>(id);
+
+    expect(injection.requestResourceListCount).toBe(1);
+
+    await core.dispose();
+
+    expect(core.panelSystem.currentPanel).toBeNull();
+    expect(panel.disposeCount).toBe(1);
+
+    await contexts[0].requestResource<string>(id);
+
+    expect(injection.requestResourceListCount).toBe(2);
+
+    await core.undoSystem.undo();
+
+    expect(undoable.undoCount).toBe(0);
+  });
+});
+
+describe('包根公开面', () => {
+  // 包根导出 EditorCore、三系统类与 Hook 基类，均可从 '.' 导入
+  it('从包根可导入 EditorCore、三系统类与 Hook 基类', () => {
+    expect(EditorCore).toBeDefined();
+    expect(UndoSystem).toBeDefined();
+    expect(ResourceSystem).toBeDefined();
+    expect(PanelSystem).toBeDefined();
+    expect(Hookable).toBeDefined();
+    expect(HookController).toBeDefined();
   });
 });
