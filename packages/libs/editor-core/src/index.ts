@@ -4,3 +4,4 @@ export * from './undo';
 export * from './resource';
 export * from './panel';
 export * from './hook';
+export * from './log';
