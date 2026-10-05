@@ -1,6 +1,7 @@
 import { act, render, screen } from '@testing-library/react';
 import { createElement, FC } from 'react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { logger } from '../../log';
 import { ResourceSystem } from '../../resource/resourceSystem';
 import { IResourceIdentifier, IResourceInjection } from '../../resource/types';
 import { IUndoContext } from '../../undo/types';
@@ -261,12 +262,17 @@ describe('PanelSystem 切换撤回', () => {
 });
 
 describe('PanelSystem 注册表', () => {
-  // 同 id 注册两次抛错，保证注册表键唯一
-  it('重复 id 注册抛错', async () => {
+  // 同 id 注册两次时记录错误并返回 null，保证注册表键唯一且不抛错
+  it('重复 id 注册记录错误并返回 null', async () => {
     const system = await createSystem();
     await system.panelSystem.registerPanel(async () => new FakePanel('dup'));
+    const errorSpy = vi.spyOn(logger, 'error');
 
-    await expect(system.panelSystem.registerPanel(async () => new FakePanel('dup'))).rejects.toThrow();
+    const result = await system.panelSystem.registerPanel(async () => new FakePanel('dup'));
+
+    expect(result).toBeNull();
+    expect(errorSpy).toHaveBeenCalledWith('panel.duplicateId', 'dup');
+    errorSpy.mockRestore();
   });
 
   // getPanel 命中返回面板，未命中返回 null

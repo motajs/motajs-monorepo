@@ -17,7 +17,8 @@ export class EditorCore implements IEditorCore {
   }
 
   async initialize(injection: IEditorCoreInjection): Promise<void> {
-    await Promise.all([this.undoSystem.initialize(injection), this.resourceSystem.initialize(injection)]);
+    const arr = [this.undoSystem.initialize(injection), this.resourceSystem.initialize(injection)];
+    await Promise.all(arr);
     await this.panelSystem.initialize(injection);
   }
 

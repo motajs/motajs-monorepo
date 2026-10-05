@@ -1,13 +1,14 @@
 import { IUndoContext, IUndoInjection, IUndoSystem, IUndoable } from './types';
 
-// 撤销历史里的一条记录，保存可撤回对象与撤回上下文
 interface UndoEntry {
+  /** 可撤回对象 */
   readonly undo: IUndoable;
+  /** 撤回上下文 */
   readonly context: IUndoContext<unknown>;
 }
 
 export class UndoSystem implements IUndoSystem {
-  maxUndoStep = 0;
+  maxUndoStep: number = 0;
 
   private readonly undoStack: UndoEntry[] = [];
 

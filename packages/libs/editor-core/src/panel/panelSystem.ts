@@ -1,23 +1,27 @@
 import { Store } from '@tanstack/store';
 import { createElement, FC, ReactElement, useSyncExternalStore } from 'react';
 import { IHookController } from '../hook';
-import { IResourceSystemAccess, IResourceSystemHooks } from '../resource';
+import { logger } from '../log';
+import { IResourceIdentifier, IResourceSystemAccess, IResourceSystemHooks } from '../resource';
 import { IUndoContext, IUndoSystem } from '../undo';
-import { EditorPanelHooks } from './editorPanelHooks';
 import { PanelContext } from './panelContext';
-import { EditorPanelCreator, IEditorPanel, IPanelSystem, PanelUndoType } from './types';
+import { EditorPanelCreator, IEditorPanel, IEditorPanelContext, IPanelSystem, PanelUndoType } from './types';
 
-// 面板切换撤回的数据形状，仅本模块内使用
 interface IPanelSwitchData {
+  /** 切换前的面板 */
   readonly from: IEditorPanel | null;
+  /** 切换前面板的切换参数 */
   readonly fromParam?: Record<string, unknown>;
+  /** 切换后的面板 */
   readonly to: IEditorPanel;
+  /** 切换后面板的切换参数 */
   readonly toParam?: Record<string, unknown>;
 }
 
-// 渲染根组件的属性，仅本模块内使用
 interface IPanelRootProps {
+  /** 订阅面板变更 */
   readonly subscribe: (listener: () => void) => () => void;
+  /** 读取当前面板 */
   readonly getSnapshot: () => IEditorPanel | null;
 }
 
@@ -41,33 +45,34 @@ export class PanelSystem implements IPanelSystem {
   /** 尚未初始化、待 initialize 时补调的面板 */
   private readonly pendingPanels: IEditorPanel[] = [];
   /** 是否已完成初始化 */
-  private initialized = false;
+  private initialized: boolean = false;
   /** 当前面板的切换参数 */
   private currentParam?: Record<string, unknown>;
   /** 面板版本号，仅用于通知订阅者重渲染 */
   private readonly panelStore = new Store<number>(0);
-
   /** 订阅面板变更，供 useSyncExternalStore 使用 */
-  private readonly subscribe = (listener: () => void): (() => void) => this.panelStore.subscribe(listener);
-
+  private readonly subscribe: (listener: () => void) => () => void;
   /** 读取当前面板，供 useSyncExternalStore 使用 */
-  private readonly getSnapshot = (): IEditorPanel | null => this.currentPanel;
-
+  private readonly getSnapshot: () => IEditorPanel | null;
   /** 缓存一次的渲染根组件，避免每次 render() 返回新组件导致反复重挂 */
-  private readonly RootComponent: FC = () =>
-    createElement(PanelRoot, { subscribe: this.subscribe, getSnapshot: this.getSnapshot });
-
-  private readonly handleFocus = (): void => {
-    void this.currentPanel?.onFocus();
-  };
-
-  private readonly handleBlur = (): void => {
-    void this.currentPanel?.onBlur();
-  };
+  private readonly RootComponent: FC;
+  /** 窗口聚焦事件处理 */
+  private readonly handleFocus: () => void;
+  /** 窗口失焦事件处理 */
+  private readonly handleBlur: () => void;
 
   constructor(undoSystem: IUndoSystem, resourceSystem: IResourceSystemAccess) {
     this.undoSystem = undoSystem;
     this.resourceSystem = resourceSystem;
+    this.subscribe = (listener) => this.panelStore.subscribe(listener);
+    this.getSnapshot = () => this.currentPanel;
+    this.RootComponent = () => createElement(PanelRoot, { subscribe: this.subscribe, getSnapshot: this.getSnapshot });
+    this.handleFocus = (): void => {
+      void this.currentPanel?.onFocus();
+    };
+    this.handleBlur = (): void => {
+      void this.currentPanel?.onBlur();
+    };
   }
 
   async initialize(): Promise<void> {
@@ -82,12 +87,13 @@ export class PanelSystem implements IPanelSystem {
     }
   }
 
-  async registerPanel(creator: EditorPanelCreator): Promise<IEditorPanel> {
+  async registerPanel(creator: EditorPanelCreator): Promise<IEditorPanel | null> {
     const context = new PanelContext(this.resourceSystem, this.undoSystem);
     const panel = await creator(context);
 
     if (this.panels.has(panel.id)) {
-      throw new Error(`面板标识符重复：${panel.id}`);
+      logger.error('panel.duplicateId', panel.id);
+      return null;
     }
 
     this.panels.set(panel.id, panel);
@@ -160,7 +166,11 @@ export class PanelSystem implements IPanelSystem {
     this.currentPanel = null;
   }
 
-  // 执行实际的面板切换：切出旧面板、更新当前面板并通知订阅者、切入新面板，不记录撤回
+  /**
+   * 执行实际的面板切换：切出旧面板、更新当前面板并通知订阅者、切入新面板，不记录撤回
+   * @param panel 要切换至的面板，null 表示切出至无面板
+   * @param param 向切换至的面板传入的参数
+   */
   private async internalSwitchTo(panel: IEditorPanel | null, param?: Record<string, unknown>): Promise<void> {
     const previous = this.currentPanel;
 
@@ -175,5 +185,29 @@ export class PanelSystem implements IPanelSystem {
     if (panel) {
       await panel.onSwitchIn(param);
     }
+  }
+}
+
+export class EditorPanelHooks implements IResourceSystemHooks {
+  /** 钩子所属的面板 */
+  private readonly panel: IEditorPanel;
+  /** 面板侧上下文，用于重新申请资源 */
+  private readonly context: IEditorPanelContext;
+
+  constructor(panel: IEditorPanel, context: IEditorPanelContext) {
+    this.panel = panel;
+    this.context = context;
+  }
+
+  async onUpdateResource(id: IResourceIdentifier): Promise<void> {
+    const resource = await this.context.requestResource(id);
+
+    if (resource) {
+      await this.panel.onUpdateResource(id, await resource.request());
+    }
+  }
+
+  async onUpdateResourceList(type: number): Promise<void> {
+    await this.panel.onUpdateResourceList(type, await this.context.requestResourceList(type));
   }
 }
