@@ -15,7 +15,7 @@
   "dependencies": {
     "@tanstack/store": "catalog:default",
     "@types/react": "catalog:default",
-    "react": "catalog:default"
+    "react": "19.3.0"
   },
   "devDependencies": {
     "@motajs/config": "workspace:*",

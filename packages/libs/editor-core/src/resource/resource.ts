@@ -10,11 +10,11 @@ export class Resource<T> implements IResource<T> {
     this.store = store;
   }
 
-  async request(): Promise<T> {
+  request(): Promise<T> {
     return this.store.readContent<T>(this.identifier);
   }
 
-  async write(data: T): Promise<void> {
-    await this.store.writeContent(this.identifier, data);
+  write(data: T): Promise<void> {
+    return this.store.writeContent(this.identifier, data);
   }
 }

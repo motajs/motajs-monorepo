@@ -13,19 +13,19 @@ export class PanelContext implements IEditorPanelContext {
     this.undoSystem = undoSystem;
   }
 
-  async requestResource<T>(id: IResourceIdentifier): Promise<IResource<T> | null> {
+  requestResource<T>(id: IResourceIdentifier): Promise<IResource<T> | null> {
     return this.resourceAccess.requestResource<T>(id);
   }
 
-  async requestResourceList(type: number): Promise<readonly IResourceIdentifier[]> {
+  requestResourceList(type: number): Promise<readonly IResourceIdentifier[]> {
     return this.resourceAccess.requestResourceList(type);
   }
 
-  async createResource<T>(id: IResourceIdentifier, content: T): Promise<IResource<T>> {
+  createResource<T>(id: IResourceIdentifier, content: T): Promise<IResource<T>> {
     return this.resourceAccess.createResource<T>(id, content);
   }
 
-  async deleteResource(id: IResourceIdentifier): Promise<void> {
+  deleteResource(id: IResourceIdentifier): Promise<void> {
     return this.resourceAccess.deleteResource(id);
   }
 

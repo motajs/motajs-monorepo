@@ -47,15 +47,12 @@ export class ResourceSystem extends Hookable<IResourceSystemHooks> implements IR
   async readContent<T>(id: IResourceIdentifier): Promise<T> {
     const byId = this.contentCache.get(id.type);
 
-    if (byId?.has(id.id)) return byId.get(id.id) as T;
+    if (byId) {
+      if (byId.has(id.id)) return byId.get(id.id) as T;
+    }
 
     const content = await this.injection.requestResource<T>(id);
-    let target = this.contentCache.get(id.type);
-
-    if (!target) {
-      target = new Map();
-      this.contentCache.set(id.type, target);
-    }
+    const target = this.contentCache.getOrInsertComputed(id.type, () => new Map());
 
     target.set(id.id, content);
     return content;
@@ -63,12 +60,7 @@ export class ResourceSystem extends Hookable<IResourceSystemHooks> implements IR
 
   async writeContent<T>(id: IResourceIdentifier, data: T): Promise<void> {
     await this.injection.writeResource(id, data);
-    let target = this.contentCache.get(id.type);
-
-    if (!target) {
-      target = new Map();
-      this.contentCache.set(id.type, target);
-    }
+    const target = this.contentCache.getOrInsertComputed(id.type, () => new Map());
 
     target.set(id.id, data);
   }
@@ -76,12 +68,7 @@ export class ResourceSystem extends Hookable<IResourceSystemHooks> implements IR
   // 仅供面板上下文内部使用
   async createResource<T>(id: IResourceIdentifier, content: T): Promise<IResource<T>> {
     await this.injection.createResource(id, content);
-    let target = this.contentCache.get(id.type);
-
-    if (!target) {
-      target = new Map();
-      this.contentCache.set(id.type, target);
-    }
+    const target = this.contentCache.getOrInsertComputed(id.type, () => new Map());
 
     target.set(id.id, content);
 
