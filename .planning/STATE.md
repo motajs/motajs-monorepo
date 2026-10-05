@@ -2,18 +2,18 @@
 gsd_state_version: "1.0"
 current_phase: "05.3"
 current_phase_name: editor-core/impl 重做 (INSERTED)
-current_plan: 9
+current_plan: 10
 status: executing
-stopped_at: Completed 05.3-09-PLAN.md
-last_updated: "2026-10-05T08:50:25.621Z"
+stopped_at: Completed 05.3-10-PLAN.md
+last_updated: "2026-10-05T09:35:20.728Z"
 last_activity: 2026-10-04
 last_activity_desc: Phase 05.3 execution started
-state_head: 8656eeafa0512511797cc68eb4e3cb3b99a39af6
+state_head: 69d9c975c730b2770fb22916a1a9b0a01b549fd2
 progress:
   total_phases: 15
   completed_phases: 0
   total_plans: 58
-  completed_plans: 57
+  completed_plans: 58
   percent: 0
 ---
 
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-09-24)
 ## Current Position
 
 Phase: 05.3 (editor-core/impl 重做 (INSERTED)) — EXECUTING
-Current Plan: 9
+Current Plan: 10
 Total Plans in Phase: 10
 Status: Ready to execute
 Last activity: 2026-10-04 — Phase 05.3 execution started
@@ -104,6 +104,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 05.3 P07 | 5 min | 2 tasks | 3 files |
 | Phase 05.3 P08 | 24 | 3 tasks | 11 files |
 | Phase 05.3 P09 | 6 min | 2 tasks | 15 files |
+| Phase 05.3 P10 | 26 min | 3 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -242,6 +243,13 @@ Recent decisions affecting current work:
 - [Phase 05.3]: 05.3-08: implExports/corePandaClass 无路径常量可迁移，保持断言不变，按 D-43 允许红；不为凑绿修改门禁（editorArtifactAssets 预期外绿已如实归因）
 - [Phase 05.3]: 05.3-09: IResourceAccess/IResourceStore 移入 resource/types.ts 并经桶导出，旧 access.ts/store.ts 删除；新增 IResourceSystemAccess 作为 ResourceSystem 唯一 implements 目标，公开 IResourceSystem 保持无读写（D-35）
 - [Phase 05.3]: 05.3-09: IUndoSystem/IResourceSystem dispose 统一 Promise<void>；ILogger 采用字符串 id + ...params 与 LogMessages 只读消息表，消息表内容与 Logger 实现留 05.3-10
+- [Phase 05.3]: 05.3-10: Map 默认值缓存一律 getOrInsertComputed(id.type, () => new Map())：空 Map 属惰性计算场景，未命中才 new（perf 约定）
+- [Phase 05.3]: 05.3-10: EditorPanelHooks 类整段移入 panelSystem.ts 末尾，editorPanelHooks.ts 与其桶导出行删除
+- [Phase 05.3]: 05.3-10: Logger 构造器接收 LogMessages，error/warn 输出 id + 解析后的消息；未知 id 回退 Unknown log id: ；模块级 export const logger: ILogger = new Logger(messages)
+- [Phase 05.3]: 05.3-10: registerPanel 重复 id 记 logger.error('panel.duplicateId', panel.id)、不注册、返回 null，不抛错（D-C）
+- [Phase 05.3]: 05.3-10: messages 消息表用 Object.freeze 包裹，满足 editor-core 模块级可变容器门禁（coreModuleState）
+- [Phase 05.3]: 05.3-10: [Rule 3] editor-core 的 react 由 catalog:default 改精确 19.3.0，避免与 react-dom 19.3.0 版本不匹配导致 React 运行时报错
+- [Phase 05.3]: 05.3-10: [Blocker] 全量 pnpm typecheck 未绿：编辑器既有红（D-43，editor-impl 空壳）+ TS6 baseUrl 硬错误 TS5101 与 @types 自动包含取消（service-worker）；需用户决定 tsconfig 迁移
 
 ### Pending Todos
 
@@ -268,6 +276,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-05T08:50:14.553Z
-Stopped at: Completed 05.3-09-PLAN.md
+Last session: 2026-10-05T09:34:57.170Z
+Stopped at: Completed 05.3-10-PLAN.md
 Resume file: None
