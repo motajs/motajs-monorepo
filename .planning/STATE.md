@@ -2,18 +2,18 @@
 gsd_state_version: "1.0"
 current_phase: "05.3"
 current_phase_name: editor-core/impl 重做 (INSERTED)
-current_plan: 10
-status: executing
-stopped_at: Completed 05.3-10-PLAN.md
-last_updated: "2026-10-05T09:35:20.728Z"
+current_plan: 11
+status: verifying
+stopped_at: Completed 05.3-11-PLAN.md
+last_updated: "2026-10-05T10:54:08.289Z"
 last_activity: 2026-10-04
 last_activity_desc: Phase 05.3 execution started
-state_head: 69d9c975c730b2770fb22916a1a9b0a01b549fd2
+state_head: 3e81e4ec819174a4cdf8a29067b5bc828abf32e4
 progress:
   total_phases: 15
   completed_phases: 0
-  total_plans: 58
-  completed_plans: 58
+  total_plans: 59
+  completed_plans: 59
   percent: 0
 ---
 
@@ -31,9 +31,9 @@ See: .planning/PROJECT.md (updated 2026-09-24)
 ## Current Position
 
 Phase: 05.3 (editor-core/impl 重做 (INSERTED)) — EXECUTING
-Current Plan: 10
-Total Plans in Phase: 10
-Status: Ready to execute
+Current Plan: 11
+Total Plans in Phase: 11
+Status: Phase complete — ready for verification
 Last activity: 2026-10-04 — Phase 05.3 execution started
 
 Progress: [░░░░░░░░░░] 0%
@@ -105,6 +105,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 05.3 P08 | 24 | 3 tasks | 11 files |
 | Phase 05.3 P09 | 6 min | 2 tasks | 15 files |
 | Phase 05.3 P10 | 26 min | 3 tasks | 16 files |
+| Phase 05.3 P11 | 12 min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -250,6 +251,9 @@ Recent decisions affecting current work:
 - [Phase 05.3]: 05.3-10: messages 消息表用 Object.freeze 包裹，满足 editor-core 模块级可变容器门禁（coreModuleState）
 - [Phase 05.3]: 05.3-10: [Rule 3] editor-core 的 react 由 catalog:default 改精确 19.3.0，避免与 react-dom 19.3.0 版本不匹配导致 React 运行时报错
 - [Phase 05.3]: 05.3-10: [Blocker] 全量 pnpm typecheck 未绿：编辑器既有红（D-43，editor-impl 空壳）+ TS6 baseUrl 硬错误 TS5101 与 @types 自动包含取消（service-worker）；需用户决定 tsconfig 迁移
+- [Phase 05.3]: 05.3-11: 删 editor tsconfig 的 baseUrl（TS6 硬错误 TS5101），而非加 ignoreDeprecations 压制——baseUrl 在 TS7 会彻底失效
+- [Phase 05.3]: 05.3-11: service-worker 两个 tsconfig 各自显式列 types（app 仅 wicg；server node+serviceworker+wicg），不进共享 @motajs/config 基底，避免 Node/SW 全局跨包污染
+- [Phase 05.3]: 05.3-11: TS6↔TS5.9.3 编辑器错误集对比证明 TS6 未新增错误（TS6-only=0，唯一差异是 TS5.9 缺 Map.getOrInsertComputed 声明）；编辑器残余红 350 条按 D-43 记录未修
 
 ### Pending Todos
 
@@ -276,6 +280,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-05T09:34:57.170Z
-Stopped at: Completed 05.3-10-PLAN.md
+Last session: 2026-10-05T10:53:54.793Z
+Stopped at: Completed 05.3-11-PLAN.md
 Resume file: None

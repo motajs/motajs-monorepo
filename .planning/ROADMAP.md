@@ -284,6 +284,8 @@ Plans:
 
 **Plans:** 1/1（推翻）已执行；重做计划待架构设计
 
+- [x] 05.3-11-PLAN.md
+
 - [x] 05.3-09-PLAN.md
 - [x] 05.3-10-PLAN.md
 
@@ -418,7 +420,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 4. Resource + Edit Layers Moved | 4/4 | Complete    | 2026-09-24 |
 | 5. Engine Adapter Skeleton & Resource Descriptors | 4/4 | In Progress|  |
 | 05.1. editor-core 接口与实现整改 | 8/8 | In Progress|  |
-| 05.3. editor-core/impl 重做 | 10/10 | In Progress|  |
+| 05.3. editor-core/impl 重做 | 11/11 | In Progress|  |
 | 6. Fixed Shell + Slots | 0/TBD | Not started | - |
 | 7. Table Capability + Port | 0/TBD | Not started | - |
 | 8. Code Capability + Port | 0/TBD | Not started | - |
