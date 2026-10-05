@@ -8,7 +8,6 @@
     // 编辑器把它们的源码并入本程序，故这里不能开启 verbatimModuleSyntax（否则库源码报 TS1484）。
     // 编辑器自身的类型导入仍一律用 `import type`。
     "verbatimModuleSyntax": false,
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
       "@test/*": ["./test/*"],
