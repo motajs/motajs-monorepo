@@ -1,5 +1,4 @@
-import { IResourceStore } from './store';
-import { IResource, IResourceIdentifier } from './types';
+import { IResource, IResourceIdentifier, IResourceStore } from './types';
 
 export class Resource<T> implements IResource<T> {
   readonly identifier: IResourceIdentifier;

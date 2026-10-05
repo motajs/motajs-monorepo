@@ -1,13 +1,14 @@
 import { Hookable, HookController, IHookController } from '../hook';
-import { IResourceAccess } from './access';
 import { Resource } from './resource';
-import { IResourceStore } from './store';
-import { IResource, IResourceIdentifier, IResourceInjection, IResourceSystem, IResourceSystemHooks } from './types';
+import {
+  IResource,
+  IResourceIdentifier,
+  IResourceInjection,
+  IResourceSystemAccess,
+  IResourceSystemHooks,
+} from './types';
 
-export class ResourceSystem
-  extends Hookable<IResourceSystemHooks>
-  implements IResourceSystem, IResourceAccess, IResourceStore
-{
+export class ResourceSystem extends Hookable<IResourceSystemHooks> implements IResourceSystemAccess {
   private injection!: IResourceInjection;
 
   private readonly listCache: Map<number, readonly IResourceIdentifier[]> = new Map();
@@ -105,7 +106,7 @@ export class ResourceSystem
     await Promise.all(this.forEachHook((hook) => hook.onUpdateResourceList?.(type)));
   }
 
-  dispose(): void {
+  async dispose(): Promise<void> {
     this.listCache.clear();
     this.contentCache.clear();
   }

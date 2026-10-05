@@ -1,5 +1,5 @@
 import { IPanelSystem, PanelSystem } from './panel';
-import { IResourceSystem, ResourceSystem } from './resource';
+import { IResourceSystemAccess, ResourceSystem } from './resource';
 import { IEditorCore, IEditorCoreInjection } from './types';
 import { IUndoSystem, UndoSystem } from './undo';
 
@@ -7,7 +7,7 @@ export class EditorCore implements IEditorCore {
   readonly version: string = '0.1.0';
 
   readonly undoSystem: IUndoSystem;
-  readonly resourceSystem: IResourceSystem;
+  readonly resourceSystem: IResourceSystemAccess;
   readonly panelSystem: IPanelSystem;
 
   constructor() {
@@ -23,7 +23,7 @@ export class EditorCore implements IEditorCore {
 
   async dispose(): Promise<void> {
     await this.panelSystem.dispose();
-    this.resourceSystem.dispose();
-    this.undoSystem.dispose();
+    await this.resourceSystem.dispose();
+    await this.undoSystem.dispose();
   }
 }

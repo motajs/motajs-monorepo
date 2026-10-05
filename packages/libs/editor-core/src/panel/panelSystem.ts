@@ -1,7 +1,7 @@
 import { Store } from '@tanstack/store';
 import { createElement, FC, ReactElement, useSyncExternalStore } from 'react';
 import { IHookController } from '../hook';
-import { IResourceSystem, IResourceSystemHooks, ResourceSystem } from '../resource';
+import { IResourceSystemAccess, IResourceSystemHooks } from '../resource';
 import { IUndoContext, IUndoSystem } from '../undo';
 import { EditorPanelHooks } from './editorPanelHooks';
 import { PanelContext } from './panelContext';
@@ -33,7 +33,7 @@ export class PanelSystem implements IPanelSystem {
   /** 撤回系统 */
   private readonly undoSystem: IUndoSystem;
   /** 资源系统 */
-  private readonly resourceSystem: IResourceSystem;
+  private readonly resourceSystem: IResourceSystemAccess;
   /** 面板注册表 */
   private readonly panels: Map<string, IEditorPanel> = new Map();
   /** 面板到其资源钩子控制器的映射 */
@@ -65,7 +65,7 @@ export class PanelSystem implements IPanelSystem {
     void this.currentPanel?.onBlur();
   };
 
-  constructor(undoSystem: IUndoSystem, resourceSystem: IResourceSystem) {
+  constructor(undoSystem: IUndoSystem, resourceSystem: IResourceSystemAccess) {
     this.undoSystem = undoSystem;
     this.resourceSystem = resourceSystem;
   }
@@ -83,8 +83,7 @@ export class PanelSystem implements IPanelSystem {
   }
 
   async registerPanel(creator: EditorPanelCreator): Promise<IEditorPanel> {
-    // 资源读写只对面板开放，注入的资源系统由 ResourceSystem 实现并同时具备面板侧读写能力
-    const context = new PanelContext(this.resourceSystem as ResourceSystem, this.undoSystem);
+    const context = new PanelContext(this.resourceSystem, this.undoSystem);
     const panel = await creator(context);
 
     if (this.panels.has(panel.id)) {

@@ -91,6 +91,7 @@ export interface IEditorPanel extends IUndoable {
   onUpdateResourceList(type: number, list: readonly IResourceIdentifier[]): Promise<void>;
 }
 
+/** 创建编辑器面板的工厂函数，接收面板上下文并返回解析出面板的 Promise */
 export type EditorPanelCreator = (context: IEditorPanelContext) => Promise<IEditorPanel>;
 
 export interface IPanelInjection {}
@@ -109,7 +110,7 @@ export interface IPanelSystem extends IUndoable {
    * 注册编辑器面板
    * @param panel 面板对象的工厂函数
    */
-  registerPanel(panel: EditorPanelCreator): Promise<IEditorPanel>;
+  registerPanel(panel: EditorPanelCreator): Promise<IEditorPanel | null>;
 
   /**
    * 释放指定编辑器面板对象

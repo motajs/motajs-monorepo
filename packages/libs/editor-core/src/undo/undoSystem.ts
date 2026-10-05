@@ -47,7 +47,7 @@ export class UndoSystem implements IUndoSystem {
     this.undoStack.push(entry);
   }
 
-  dispose(): void {
+  async dispose(): Promise<void> {
     this.undoStack.length = 0;
     this.redoStack.length = 0;
   }

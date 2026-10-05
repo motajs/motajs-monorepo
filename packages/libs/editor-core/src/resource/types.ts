@@ -23,6 +23,48 @@ export interface IResource<T> {
   write(data: T): Promise<void>;
 }
 
+export interface IResourceAccess {
+  /**
+   * 请求指定资源
+   * @param id 资源标识符
+   */
+  requestResource<T>(id: IResourceIdentifier): Promise<IResource<T> | null>;
+
+  /**
+   * 获取指定资源类型的资源列表
+   * @param type 资源类型
+   */
+  requestResourceList(type: number): Promise<readonly IResourceIdentifier[]>;
+
+  /**
+   * 创建新的资源
+   * @param id 资源标识符
+   * @param content 资源的初始内容
+   */
+  createResource<T>(id: IResourceIdentifier, content: T): Promise<IResource<T>>;
+
+  /**
+   * 删除指定资源
+   * @param id 资源标识符
+   */
+  deleteResource(id: IResourceIdentifier): Promise<void>;
+}
+
+export interface IResourceStore {
+  /**
+   * 读取指定资源的内容
+   * @param id 资源标识符
+   */
+  readContent<T>(id: IResourceIdentifier): Promise<T>;
+
+  /**
+   * 写入指定资源的内容
+   * @param id 资源标识符
+   * @param data 要写入的资源内容
+   */
+  writeContent<T>(id: IResourceIdentifier, data: T): Promise<void>;
+}
+
 export interface IResourceInjection {
   /**
    * 请求指定资源的资源内容
@@ -90,6 +132,10 @@ export interface IResourceSystem extends IHookable<IResourceSystemHooks> {
    */
   updateResourceList(type: number): Promise<void>;
 
-  /** 释放此资源系统 */
-  dispose(): void;
+  /**
+   * 释放此资源系统
+   */
+  dispose(): Promise<void>;
 }
+
+export interface IResourceSystemAccess extends IResourceSystem, IResourceAccess, IResourceStore {}

@@ -254,7 +254,7 @@ describe('ResourceSystem 写入与更新', () => {
 
     expect(injection.requestResourceListCount).toBe(1);
 
-    system.dispose();
+    await system.dispose();
 
     const resource = await system.requestResource(ID);
 

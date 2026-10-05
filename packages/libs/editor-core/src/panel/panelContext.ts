@@ -1,5 +1,4 @@
-import { IResourceAccess } from '../resource/access';
-import { IResource, IResourceIdentifier } from '../resource';
+import { IResource, IResourceAccess, IResourceIdentifier } from '../resource';
 import { IUndoContext, IUndoSystem } from '../undo';
 import { IEditorPanel, IEditorPanelContext } from './types';
 
