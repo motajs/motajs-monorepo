@@ -1,5 +1,8 @@
 {
   "extends": "@motajs/config/tsconfig.app.base.json",
+  "compilerOptions": {
+    "types": ["wicg-file-system-access"]
+  },
   "include": ["${configDir}/src"],
   "exclude": ["${configDir}/src/server"]
 }

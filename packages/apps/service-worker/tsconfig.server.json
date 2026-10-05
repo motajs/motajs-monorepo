@@ -1,5 +1,7 @@
 {
   "extends": "@motajs/config/tsconfig.app.base.json",
-  "compilerOptions": {},
+  "compilerOptions": {
+    "types": ["node", "serviceworker", "wicg-file-system-access"]
+  },
   "include": ["${configDir}/src/vite-env.d.ts", "${configDir}/src/idl", "${configDir}/src/server"]
 }
