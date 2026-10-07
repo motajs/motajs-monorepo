@@ -42,4 +42,5 @@ export class Logger implements ILogger {
   }
 }
 
+/** editor-core 按消息表输出日志的模块级单例 */
 export const logger: ILogger = new Logger(messages);

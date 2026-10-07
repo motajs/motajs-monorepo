@@ -23,7 +23,6 @@ export class ResourceSystem extends Hookable<IResourceSystemHooks> implements IR
     this.injection = injection;
   }
 
-  // 仅供面板上下文内部使用
   async requestResourceList(type: number): Promise<readonly IResourceIdentifier[]> {
     const cached = this.listCache.get(type);
 
@@ -34,7 +33,6 @@ export class ResourceSystem extends Hookable<IResourceSystemHooks> implements IR
     return list;
   }
 
-  // 仅供面板上下文内部使用
   async requestResource<T>(id: IResourceIdentifier): Promise<IResource<T> | null> {
     const list = await this.requestResourceList(id.type);
     const found = list.some((item) => item.type === id.type && item.id === id.id);
@@ -65,7 +63,6 @@ export class ResourceSystem extends Hookable<IResourceSystemHooks> implements IR
     target.set(id.id, data);
   }
 
-  // 仅供面板上下文内部使用
   async createResource<T>(id: IResourceIdentifier, content: T): Promise<IResource<T>> {
     await this.injection.createResource(id, content);
     const target = this.contentCache.getOrInsertComputed(id.type, () => new Map());
@@ -76,7 +73,6 @@ export class ResourceSystem extends Hookable<IResourceSystemHooks> implements IR
     return new Resource<T>(id, this);
   }
 
-  // 仅供面板上下文内部使用
   async deleteResource(id: IResourceIdentifier): Promise<void> {
     await this.injection.deleteResource(id);
     this.contentCache.get(id.type)?.delete(id.id);

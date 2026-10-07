@@ -25,7 +25,11 @@ interface IPanelRootProps {
   readonly getSnapshot: () => IEditorPanel | null;
 }
 
-// 订阅当前面板并渲染其组件，组件定义在模块层以保证 hooks 规则可识别
+/**
+ * 订阅当前面板并渲染其组件；组件定义在模块层以保证 hooks 规则可识别
+ * @param props 面板根组件的订阅与取快照回调
+ * @returns 当前面板的渲染结果，无当前面板时为 null
+ */
 function PanelRoot(props: IPanelRootProps): ReactElement | null {
   const current = useSyncExternalStore(props.subscribe, props.getSnapshot);
   return current ? createElement(current.render()) : null;
