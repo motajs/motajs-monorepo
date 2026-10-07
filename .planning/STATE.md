@@ -2,18 +2,18 @@
 gsd_state_version: "1.0"
 current_phase: "05.3"
 current_phase_name: editor-core/impl 重做 (INSERTED)
-current_plan: 11
+current_plan: 12
 status: verifying
-stopped_at: Completed 05.3-11-PLAN.md
-last_updated: "2026-10-05T10:54:08.289Z"
+stopped_at: Completed 05.3-12-PLAN.md
+last_updated: "2026-10-07T09:54:54.573Z"
 last_activity: 2026-10-04
 last_activity_desc: Phase 05.3 execution started
-state_head: 3e81e4ec819174a4cdf8a29067b5bc828abf32e4
+state_head: c86bd8be86e2090a9fb0e45a2054946c83e557ad
 progress:
   total_phases: 15
   completed_phases: 0
-  total_plans: 59
-  completed_plans: 59
+  total_plans: 60
+  completed_plans: 60
   percent: 0
 ---
 
@@ -31,8 +31,8 @@ See: .planning/PROJECT.md (updated 2026-09-24)
 ## Current Position
 
 Phase: 05.3 (editor-core/impl 重做 (INSERTED)) — EXECUTING
-Current Plan: 11
-Total Plans in Phase: 11
+Current Plan: 12
+Total Plans in Phase: 12
 Status: Phase complete — ready for verification
 Last activity: 2026-10-04 — Phase 05.3 execution started
 
@@ -106,6 +106,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 05.3 P09 | 6 min | 2 tasks | 15 files |
 | Phase 05.3 P10 | 26 min | 3 tasks | 16 files |
 | Phase 05.3 P11 | 12 min | 3 tasks | 3 files |
+| Phase 05.3 P12 | 13min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -254,6 +255,7 @@ Recent decisions affecting current work:
 - [Phase 05.3]: 05.3-11: 删 editor tsconfig 的 baseUrl（TS6 硬错误 TS5101），而非加 ignoreDeprecations 压制——baseUrl 在 TS7 会彻底失效
 - [Phase 05.3]: 05.3-11: service-worker 两个 tsconfig 各自显式列 types（app 仅 wicg；server node+serviceworker+wicg），不进共享 @motajs/config 基底，避免 Node/SW 全局跨包污染
 - [Phase 05.3]: 05.3-11: TS6↔TS5.9.3 编辑器错误集对比证明 TS6 未新增错误（TS6-only=0，唯一差异是 TS5.9 缺 Map.getOrInsertComputed 声明）；编辑器残余红 350 条按 D-43 记录未修
+- [Phase 05.3]: 05.3-12: 生产 src 声明注释合规化——删实现方法越界注释、messages/logger 单行 jsDoc、PanelRoot 多行 jsDoc 含 @param props；测试 Map 垫片 git mv 迁出 src/test 至 src/__tests__，vitest setupFiles 同步（行为/接口/命名零改动）
 
 ### Pending Todos
 
@@ -280,6 +282,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-05T10:53:54.793Z
-Stopped at: Completed 05.3-11-PLAN.md
+Last session: 2026-10-07T09:54:54.396Z
+Stopped at: Completed 05.3-12-PLAN.md
 Resume file: None
