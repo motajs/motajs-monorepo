@@ -3,6 +3,7 @@ import { IResource, IResourceIdentifier, IResourceStore } from './types';
 export class Resource<T> implements IResource<T> {
   readonly identifier: IResourceIdentifier;
 
+  /** 资源内容读写的窄接缝，由资源系统提供 */
   private readonly store: IResourceStore;
 
   constructor(identifier: IResourceIdentifier, store: IResourceStore) {

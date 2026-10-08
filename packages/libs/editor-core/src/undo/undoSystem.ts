@@ -10,8 +10,10 @@ interface UndoEntry {
 export class UndoSystem implements IUndoSystem {
   maxUndoStep: number = 0;
 
+  /** 撤销历史栈 */
   private readonly undoStack: UndoEntry[] = [];
 
+  /** 重做历史栈 */
   private readonly redoStack: UndoEntry[] = [];
 
   async initialize(injection: IUndoInjection): Promise<void> {

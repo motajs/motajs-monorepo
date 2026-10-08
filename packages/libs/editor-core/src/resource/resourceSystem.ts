@@ -13,8 +13,10 @@ export class ResourceSystem extends Hookable<IResourceSystemHooks> implements IR
   /** 后端资源注入对象，未初始化时为空 */
   private injection: IResourceInjection | null = null;
 
+  /** 资源类型到资源标识符列表的缓存 */
   private readonly listCache: Map<number, readonly IResourceIdentifier[]> = new Map();
 
+  /** 资源类型到（资源 id 到内容）的缓存 */
   private readonly contentCache: Map<number, Map<string, unknown>> = new Map();
 
   protected createController(hook: Partial<IResourceSystemHooks>): IHookController<IResourceSystemHooks> {
