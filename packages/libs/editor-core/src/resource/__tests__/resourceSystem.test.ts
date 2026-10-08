@@ -218,8 +218,9 @@ describe('ResourceSystem 写入与更新', () => {
 
     expect(injection.createResourceCount).toBe(1);
     expect(received).toEqual([TYPE]);
-    expect(resource.identifier).toBe(ID);
-    expect(await resource.request()).toBe('created');
+    expect(resource).not.toBeNull();
+    expect(resource?.identifier).toBe(ID);
+    expect(await resource?.request()).toBe('created');
   });
 
   // deleteResource 调用后端删除、刷新列表广播并清空内容缓存

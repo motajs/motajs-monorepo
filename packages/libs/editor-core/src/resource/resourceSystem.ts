@@ -1,4 +1,5 @@
 import { Hookable, HookController, IHookController } from '../hook';
+import { logger } from '../log';
 import { Resource } from './resource';
 import {
   IResource,
@@ -9,7 +10,8 @@ import {
 } from './types';
 
 export class ResourceSystem extends Hookable<IResourceSystemHooks> implements IResourceSystemAccess {
-  private injection!: IResourceInjection;
+  /** 后端资源注入对象，未初始化时为空 */
+  private injection: IResourceInjection | null = null;
 
   private readonly listCache: Map<number, readonly IResourceIdentifier[]> = new Map();
 
@@ -24,6 +26,11 @@ export class ResourceSystem extends Hookable<IResourceSystemHooks> implements IR
   }
 
   async requestResourceList(type: number): Promise<readonly IResourceIdentifier[]> {
+    if (!this.injection) {
+      logger.error('system.notInitialized', 'Resource');
+      return [];
+    }
+
     const cached = this.listCache.get(type);
 
     if (cached) return cached;
@@ -34,6 +41,11 @@ export class ResourceSystem extends Hookable<IResourceSystemHooks> implements IR
   }
 
   async requestResource<T>(id: IResourceIdentifier): Promise<IResource<T> | null> {
+    if (!this.injection) {
+      logger.error('system.notInitialized', 'Resource');
+      return null;
+    }
+
     const list = await this.requestResourceList(id.type);
     const found = list.some((item) => item.type === id.type && item.id === id.id);
 
@@ -42,7 +54,12 @@ export class ResourceSystem extends Hookable<IResourceSystemHooks> implements IR
     return new Resource<T>(id, this);
   }
 
-  async readContent<T>(id: IResourceIdentifier): Promise<T> {
+  async readContent<T>(id: IResourceIdentifier): Promise<T | undefined> {
+    if (!this.injection) {
+      logger.error('system.notInitialized', 'Resource');
+      return undefined;
+    }
+
     const byId = this.contentCache.get(id.type);
 
     if (byId) {
@@ -57,13 +74,23 @@ export class ResourceSystem extends Hookable<IResourceSystemHooks> implements IR
   }
 
   async writeContent<T>(id: IResourceIdentifier, data: T): Promise<void> {
+    if (!this.injection) {
+      logger.error('system.notInitialized', 'Resource');
+      return;
+    }
+
     await this.injection.writeResource(id, data);
     const target = this.contentCache.getOrInsertComputed(id.type, () => new Map());
 
     target.set(id.id, data);
   }
 
-  async createResource<T>(id: IResourceIdentifier, content: T): Promise<IResource<T>> {
+  async createResource<T>(id: IResourceIdentifier, content: T): Promise<IResource<T> | null> {
+    if (!this.injection) {
+      logger.error('system.notInitialized', 'Resource');
+      return null;
+    }
+
     await this.injection.createResource(id, content);
     const target = this.contentCache.getOrInsertComputed(id.type, () => new Map());
 
@@ -74,6 +101,11 @@ export class ResourceSystem extends Hookable<IResourceSystemHooks> implements IR
   }
 
   async deleteResource(id: IResourceIdentifier): Promise<void> {
+    if (!this.injection) {
+      logger.error('system.notInitialized', 'Resource');
+      return;
+    }
+
     await this.injection.deleteResource(id);
     this.contentCache.get(id.type)?.delete(id.id);
     await this.updateResourceList(id.type);
