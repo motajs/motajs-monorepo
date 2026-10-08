@@ -2,18 +2,18 @@
 gsd_state_version: "1.0"
 current_phase: "05.3"
 current_phase_name: editor-core/impl 重做 (INSERTED)
-current_plan: 13
+current_plan: 14
 status: executing
-stopped_at: Completed 05.3-13-PLAN.md
-last_updated: "2026-10-08T07:27:43.357Z"
+stopped_at: Completed 05.3-14-PLAN.md
+last_updated: "2026-10-08T08:24:44.624Z"
 last_activity: 2026-10-04
 last_activity_desc: Phase 05.3 execution started
-state_head: d4e3a3bbad61d497171fb5077113e04481ae16f6
+state_head: aaea1fbf79329ee547385ae809afb20da1b9099b
 progress:
   total_phases: 15
   completed_phases: 0
   total_plans: 62
-  completed_plans: 61
+  completed_plans: 62
   percent: 0
 ---
 
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-09-24)
 ## Current Position
 
 Phase: 05.3 (editor-core/impl 重做 (INSERTED)) — EXECUTING
-Current Plan: 13
+Current Plan: 14
 Total Plans in Phase: 14
 Status: Executing — plan 13 complete, plan 14 remaining
 Last activity: 2026-10-04 — Phase 05.3 execution started
@@ -108,6 +108,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 05.3 P11 | 12 min | 3 tasks | 3 files |
 | Phase 05.3 P12 | 13min | 3 tasks | 7 files |
 | Phase 05.3 P13 | 10min | 3 tasks | 5 files |
+| Phase 05.3 P14 | 5 min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -259,6 +260,9 @@ Recent decisions affecting current work:
 - [Phase 05.3]: 05.3-12: 生产 src 声明注释合规化——删实现方法越界注释、messages/logger 单行 jsDoc、PanelRoot 多行 jsDoc 含 @param props；测试 Map 垫片 git mv 迁出 src/test 至 src/__tests__，vitest setupFiles 同步（行为/接口/命名零改动）
 - [Phase 05.3]: 05.3-13: 接口先行——IResource.request / IResourceStore.readContent 返回 Promise<T | undefined>，IResourceAccess.createResource / IEditorPanelContext.createResource 返回 Promise<IResource<T> | null>；实现类声明同步加宽、方法体不变
 - [Phase 05.3]: 05.3-13: EditorPanelHooks.onUpdateResource 守卫式收窄（if (!resource) return; 后 if (data === undefined) return;），公共 IEditorPanel 接口不变，未初始化空结果不外泄
+- [Phase 05.3]: 05.3-14: injection 由定值断言改为 IResourceInjection | null（初值 null）；六个方法入口空守卫统一经 logger.error('system.notInitialized', 'Resource') 记录后返回空值（[] / null / undefined / void）
+- [Phase 05.3]: 05.3-14: log/messages.ts 新增 system.notInitialized → '$1 system is not initialized'，保留 panel.duplicateId 与 log.unknownId，表仍 Object.freeze
+- [Phase 05.3]: 05.3-14: 面板切换参数统一为对象——IPanelSwitchData.fromParam/toParam 与 currentParam 必填（初值 {}），switchTo/internalSwitchTo 实现参数默认 {}，公共接口仍 param?
 
 ### Pending Todos
 
@@ -285,6 +289,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-08T07:27:43.150Z
-Stopped at: Completed 05.3-13-PLAN.md
+Last session: 2026-10-08T08:23:20.461Z
+Stopped at: Completed 05.3-14-PLAN.md
 Resume file: None

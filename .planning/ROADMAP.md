@@ -282,10 +282,10 @@ Plans:
 
 **Depends on:** Phase 5
 
-**Plans:** 13/14 plans executed（01–12 已执行；13–14 为评审修正计划，待执行）
+**Plans:** 14/14 plans executed（01–12 已执行；13–14 为评审修正计划，待执行）
 
 - [x] 05.3-13-PLAN.md — 接口放宽（readContent / request / createResource 返回类型）+ 必要机械跟随
-- [ ] 05.3-14-PLAN.md — injection 空守卫 + 集中日志消息 + 私有成员 jsDoc + 切换参数统一
+- [x] 05.3-14-PLAN.md — injection 空守卫 + 集中日志消息 + 私有成员 jsDoc + 切换参数统一
 
 - [x] 05.3-12-PLAN.md
 
@@ -425,7 +425,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 4. Resource + Edit Layers Moved | 4/4 | Complete    | 2026-09-24 |
 | 5. Engine Adapter Skeleton & Resource Descriptors | 4/4 | In Progress|  |
 | 05.1. editor-core 接口与实现整改 | 8/8 | In Progress|  |
-| 05.3. editor-core/impl 重做 | 13/14 | In Progress|  |
+| 05.3. editor-core/impl 重做 | 14/14 | In Progress|  |
 | 6. Fixed Shell + Slots | 0/TBD | Not started | - |
 | 7. Table Capability + Port | 0/TBD | Not started | - |
 | 8. Code Capability + Port | 0/TBD | Not started | - |
