@@ -206,9 +206,13 @@ export class EditorPanelHooks implements IResourceSystemHooks {
   async onUpdateResource(id: IResourceIdentifier): Promise<void> {
     const resource = await this.context.requestResource(id);
 
-    if (resource) {
-      await this.panel.onUpdateResource(id, await resource.request());
-    }
+    if (!resource) return;
+
+    const data = await resource.request();
+
+    if (data === undefined) return;
+
+    await this.panel.onUpdateResource(id, data);
   }
 
   async onUpdateResourceList(type: number): Promise<void> {
