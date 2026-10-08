@@ -10,7 +10,7 @@ export class Resource<T> implements IResource<T> {
     this.store = store;
   }
 
-  request(): Promise<T> {
+  request(): Promise<T | undefined> {
     return this.store.readContent<T>(this.identifier);
   }
 

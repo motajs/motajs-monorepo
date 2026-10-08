@@ -21,7 +21,7 @@ export class PanelContext implements IEditorPanelContext {
     return this.resourceAccess.requestResourceList(type);
   }
 
-  createResource<T>(id: IResourceIdentifier, content: T): Promise<IResource<T>> {
+  createResource<T>(id: IResourceIdentifier, content: T): Promise<IResource<T> | null> {
     return this.resourceAccess.createResource<T>(id, content);
   }
 

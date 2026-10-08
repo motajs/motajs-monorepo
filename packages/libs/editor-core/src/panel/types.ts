@@ -20,7 +20,7 @@ export interface IEditorPanelContext {
    * @param id 资源标识符
    * @param content 资源的初始内容
    */
-  createResource<T>(id: IResourceIdentifier, content: T): Promise<IResource<T>>;
+  createResource<T>(id: IResourceIdentifier, content: T): Promise<IResource<T> | null>;
 
   /**
    * 删除指定资源

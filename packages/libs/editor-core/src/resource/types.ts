@@ -14,7 +14,7 @@ export interface IResource<T> {
   /**
    * 请求资源内容
    */
-  request(): Promise<T>;
+  request(): Promise<T | undefined>;
 
   /**
    * 写入资源内容
@@ -41,7 +41,7 @@ export interface IResourceAccess {
    * @param id 资源标识符
    * @param content 资源的初始内容
    */
-  createResource<T>(id: IResourceIdentifier, content: T): Promise<IResource<T>>;
+  createResource<T>(id: IResourceIdentifier, content: T): Promise<IResource<T> | null>;
 
   /**
    * 删除指定资源
@@ -55,7 +55,7 @@ export interface IResourceStore {
    * 读取指定资源的内容
    * @param id 资源标识符
    */
-  readContent<T>(id: IResourceIdentifier): Promise<T>;
+  readContent<T>(id: IResourceIdentifier): Promise<T | undefined>;
 
   /**
    * 写入指定资源的内容
