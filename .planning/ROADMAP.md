@@ -282,7 +282,10 @@ Plans:
 
 **Depends on:** Phase 5
 
-**Plans:** 1/1（推翻）已执行；重做计划待架构设计
+**Plans:** 14 plans（01–12 已执行；13–14 为评审修正计划，待执行）
+
+- [ ] 05.3-13-PLAN.md — 接口放宽（readContent / request / createResource 返回类型）+ 必要机械跟随
+- [ ] 05.3-14-PLAN.md — injection 空守卫 + 集中日志消息 + 私有成员 jsDoc + 切换参数统一
 
 - [x] 05.3-12-PLAN.md
 
