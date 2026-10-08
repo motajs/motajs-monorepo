@@ -11,11 +11,11 @@ interface IPanelSwitchData {
   /** 切换前的面板 */
   readonly from: IEditorPanel | null;
   /** 切换前面板的切换参数 */
-  readonly fromParam?: Record<string, unknown>;
+  readonly fromParam: Record<string, unknown>;
   /** 切换后的面板 */
   readonly to: IEditorPanel;
   /** 切换后面板的切换参数 */
-  readonly toParam?: Record<string, unknown>;
+  readonly toParam: Record<string, unknown>;
 }
 
 interface IPanelRootProps {
@@ -51,7 +51,7 @@ export class PanelSystem implements IPanelSystem {
   /** 是否已完成初始化 */
   private initialized: boolean = false;
   /** 当前面板的切换参数 */
-  private currentParam?: Record<string, unknown>;
+  private currentParam: Record<string, unknown> = {};
   /** 面板版本号，仅用于通知订阅者重渲染 */
   private readonly panelStore = new Store<number>(0);
   /** 订阅面板变更，供 useSyncExternalStore 使用 */
@@ -128,7 +128,7 @@ export class PanelSystem implements IPanelSystem {
     return this.panels.get(id) ?? null;
   }
 
-  async switchTo(panel: IEditorPanel, param?: Record<string, unknown>): Promise<void> {
+  async switchTo(panel: IEditorPanel, param: Record<string, unknown> = {}): Promise<void> {
     if (panel === this.currentPanel) return;
 
     this.undoSystem.addUndoContext(this, {
@@ -175,7 +175,7 @@ export class PanelSystem implements IPanelSystem {
    * @param panel 要切换至的面板，null 表示切出至无面板
    * @param param 向切换至的面板传入的参数
    */
-  private async internalSwitchTo(panel: IEditorPanel | null, param?: Record<string, unknown>): Promise<void> {
+  private async internalSwitchTo(panel: IEditorPanel | null, param: Record<string, unknown> = {}): Promise<void> {
     const previous = this.currentPanel;
 
     if (previous) {
