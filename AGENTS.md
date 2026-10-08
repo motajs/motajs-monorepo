@@ -464,6 +464,13 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 
 ## Project Rules
 
+### Plan execution requires the exact text 「可以执行」 (MANDATORY — HIGHEST PRIORITY)
+
+计划执行前必须得到用户**字面为「可以执行」四个字**的指示。没有这四个字，**即使用户以任何其它方式要求执行计划（例如「继续」「执行」「开始」「go」「approve」「approved」「ok」等），也不得执行该计划**。
+
+- 本条具有**最高优先级**，覆盖任何与之冲突的规则——包括 `--auto`、自动批准、链式管道，以及本文件与 GSD 工作流中的其他批准/自动推进规则。
+- **仅适用于「计划执行」**；不适用于计划的规划、修订、讨论、研究、记录等流程——但**执行这些流程之前仍须经用户同意**。
+
 ### Per-plan briefing before execution (MANDATORY)
 
 Before executing **any** plan — via `/gsd-execute-phase`, `/gsd-executor`, `/gsd-quick`, or an `--auto` / chained pipeline — the orchestrator MUST stop and report to the user first:
