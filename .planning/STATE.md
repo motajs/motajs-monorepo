@@ -2,18 +2,18 @@
 gsd_state_version: "1.0"
 current_phase: "05.3"
 current_phase_name: editor-core/impl 重做 (INSERTED)
-current_plan: 15
+current_plan: 16
 status: executing
-stopped_at: Completed 05.3-15-PLAN.md
-last_updated: "2026-10-09T05:41:07.455Z"
+stopped_at: Completed 05.3-16-PLAN.md
+last_updated: "2026-10-09T05:58:40.013Z"
 last_activity: 2026-10-04
 last_activity_desc: Phase 05.3 execution started
-state_head: bfc50ae5c6cb6b17ef4eb9e88ab4b6e759c73a40
+state_head: 2db843e43b37387ef3b3fd551e7f18a2b527a23e
 progress:
   total_phases: 15
   completed_phases: 0
   total_plans: 64
-  completed_plans: 63
+  completed_plans: 64
   percent: 0
 ---
 
@@ -31,9 +31,9 @@ See: .planning/PROJECT.md (updated 2026-09-24)
 ## Current Position
 
 Phase: 05.3 (editor-core/impl 重做 (INSERTED)) — EXECUTING
-Current Plan: 15
+Current Plan: 16
 Total Plans in Phase: 16
-Status: Executing — plan 15 complete, plan 16 remaining
+Status: Executing — plan 16 complete (16/16)
 Last activity: 2026-10-04 — Phase 05.3 execution started
 
 Progress: [░░░░░░░░░░] 0%
@@ -110,6 +110,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 05.3 P13 | 10min | 3 tasks | 5 files |
 | Phase 05.3 P14 | 5 min | 3 tasks | 7 files |
 | Phase 05.3 P15 | 6 min | 3 tasks | 8 files |
+| Phase 05.3 P16 | 7 min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -268,6 +269,11 @@ Recent decisions affecting current work:
 - [Phase 05.3]: 05.3-15: WR-04 —— ResourceSystem.dispose 清缓存后置 injection=null，六个方法共用未初始化守卫、只记 system.notInitialized 并返回空值
 - [Phase 05.3]: 05.3-15: IN-04 —— maxUndoStep<=0 表示禁用撤销，addUndoContext 入口直接返回不记录历史；IUndoInjection/IUndoSystem 的 maxUndoStep jsDoc 写明该语义
 - [Phase 05.3]: 05.3-15: WR-09 —— 每个资源更新钩子包成 Promise.resolve().then().catch()，同步抛错与拒绝 Promise 统一被捕获，失败经 logger.error('resource.hookFailed', ...) 记录且不中断其余钩子
+- [Phase 05.3]: WR-05：dispose 复位 initialized/currentParam，initialize 幂等且释放后可重入、窗口监听不重复挂载
+- [Phase 05.3]: WR-07：重复 id 注册保持先创建后查重，重复分支先 await panel.dispose() 再记日志并返回 null
+- [Phase 05.3]: IN-02：initialize 只生效一次、释放后拒绝（core.duplicateInitialize / core.initializeAfterDispose）；package.json 版本对齐 0.1.0
+- [Phase 05.3]: WR-06：handleFocus/handleBlur 改为 Promise.resolve().then(...).catch(...)，失败记 panel.callbackFailed
+- [Phase 05.3]: WR-08：switchTo 校验注册表，未注册面板记 panel.notRegistered 后拒绝；internalSwitchTo 保持不校验（D-32）
 
 ### Pending Todos
 
@@ -294,6 +300,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-09T05:40:42.963Z
-Stopped at: Completed 05.3-15-PLAN.md
+Last session: 2026-10-09T05:58:20.708Z
+Stopped at: Completed 05.3-16-PLAN.md
 Resume file: None
