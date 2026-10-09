@@ -8,6 +8,17 @@
 
 **把编辑器内核与引擎细节彻底解耦**——通过一层引擎无关的 `editor-core` 接口，让新旧引擎共用同一套编辑能力，并让第三方可以高自由度地定制编辑器，而不必反复维护多个版本。
 
+## Current Milestone: v1.0 editor-core 空壳 + editor-impl 重做
+
+**Goal:** 用「`editor-core` 只给接口、`editor-impl` 写默认实现」的简单结构把编辑器重做一遍——先做编辑器外壳，再按顺序补齐各编辑能力。
+
+**Target features:**
+- 编辑器外壳（UI 设计与实现）—— 先做
+- `editor-impl` 默认实现，顺序：表格 → 素材 → 地图 → 代码 → 事件编辑器
+- `editor-core` 通用 fs 接口（只给接口、不实现，由外部真正实现）
+
+**说明：** 旧的 Phase 1–5（除已完成的 `editor-core` 重做外）视为过时；旧的 Phase 6–12（「能力抽取」那套）作废，按本里程碑重新编排。
+
 ## Requirements
 
 ### Validated
@@ -126,4 +137,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-24 after Phase 4 completion*
+*Last updated: 2026-10-09 — milestone v1.0 started (editor-core 空壳 + editor-impl 重做)*

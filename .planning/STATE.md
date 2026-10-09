@@ -1,20 +1,16 @@
 ---
 gsd_state_version: "1.0"
-current_phase: 5
-current_phase_name: Engine Adapter Skeleton & Resource Descriptors
-current_plan: Not started
+milestone: v1.0
+milestone_name: editor-core 空壳 + editor-impl 重做
 status: planning
-stopped_at: Phase 05.3 complete, ready to plan Phase 5
-last_updated: "2026-10-09T06:31:51.531Z"
+last_updated: "2026-10-09T06:59:34.027Z"
 last_activity: 2026-10-09
-last_activity_desc: Phase 05.3 complete, transitioned to Phase 5
-state_head: f80f633839228352f56c87006e8bb509113dfe8f
 progress:
-  total_phases: 15
-  completed_phases: 1
-  total_plans: 64
-  completed_plans: 64
-  percent: 7
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 Total Phases: 6
@@ -30,13 +26,10 @@ See: .planning/PROJECT.md (updated 2026-09-24)
 
 ## Current Position
 
-Phase: 5 — Engine Adapter Skeleton & Resource Descriptors
-Current Plan: Not started
-Total Plans in Phase: 16
-Status: Ready to plan
-Last activity: 2026-10-09 — Phase 05.3 complete, transitioned to Phase 5
-
-Progress: [█░░░░░░░░░] 7%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-10-09 — Milestone v1.0 started
 
 ## Performance Metrics
 
