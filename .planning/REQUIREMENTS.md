@@ -50,10 +50,10 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SHELL-01 | — | Pending |
-| CORE-01 | — | Pending |
-| TABLE-01 | — | Pending |
-| ASSET-01 | — | Pending |
-| MAP-01 | — | Pending |
-| CODE-01 | — | Pending |
-| EVENT-01 | — | Pending |
+| SHELL-01 | Phase 1 | Pending |
+| CORE-01 | Phase 1 | Pending |
+| TABLE-01 | Phase 2 | Pending |
+| ASSET-01 | Phase 3 | Pending |
+| MAP-01 | Phase 4 | Pending |
+| CODE-01 | Phase 5 | Pending |
+| EVENT-01 | Phase 6 | Pending |

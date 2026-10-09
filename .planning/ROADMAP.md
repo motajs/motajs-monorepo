@@ -2,7 +2,7 @@
 
 ## Overview
 
-This milestone is a **packaging and boundary milestone**, not a feature milestone: extract an engine-agnostic `@motajs/editor-core` from `@motajs/editor` as a pure refactor with complete behavior parity. The journey is ordered by risk: first build and quantify the verification net (the repo currently has no PR CI, a conditionally-skipped e2e suite, and tests that cannot start without the `packages/external/mota-js` submodule), then create and enforce the package boundary, then build the per-instance kernel that replaces the six module singletons, then move the already-agnostic resource/edit layers verbatim, then push all engine-specific paths/formats/vocabulary into a mota-js adapter proven against a fake engine B. From there the four capabilities extract in ascending engine-coupling order — table (schema-only) → code (file-backed) → asset (binary + write-heavy) → map (five semantic hooks + Pixi) — each validating the capability-port pattern on a new axis. Preview resolves through the settled registries, the adapter completes the cutover and deletes every shim, and the milestone closes by freezing the extension surface and executing the parity acceptance gate. Every phase after Phase 2 must end green on the Phase 1 baseline; "behavior unchanged" is only meaningful because Phase 1 makes it measurable.
+Milestone v1.0 把编辑器按「`editor-core` 只给接口、`editor-impl` 写默认实现」的简单结构重做一遍。先用一个固定外壳（固定布局 + 命名插槽）把编辑器画面立起来，同时定下 `editor-core` 唯一的通用 fs 接口（只定义、不实现，实现由外部注入）；随后在 `editor-impl` 里按顺序补齐默认实现：表格 → 素材 → 地图 → 代码 → 事件编辑器。每一阶段都以「用户能看见并操作该能力，且画面/行为与现状一致」为验收。整体刻意保持轻量，只按用户指定的顺序切分，不增设额外的架构/流程阶段。
 
 ## Phases
 
@@ -13,426 +13,115 @@ This milestone is a **packaging and boundary milestone**, not a feature mileston
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [x] **Phase 1: Baseline & Verification Net** - Quantify the current behavior and make the test/CI safety net actually run before any code moves (completed 2026-09-21)
-- [x] **Phase 2: Package Boundary & Build Scaffolding** - Create `packages/libs/editor-core` and enforce the boundary, resolution, styling, and compiler rules (completed 2026-09-22)
-- [x] **Phase 3: Kernel — Runtime, Ports, Registry, Diagnostics** - Replace the six module singletons with a per-instance `EditorCore`, public capability registry, and declared ports (completed 2026-09-23)
-- [x] **Phase 4: Resource + Edit Layers Moved** - Relocate the engine-agnostic resource and edit layers verbatim, preserving all invariants (completed 2026-09-24)
-- [ ] **Phase 5: Engine Adapter Skeleton & Resource Descriptors** - Move paths, formats, vocabulary, and migrations into the adapter, proven with a fake engine B
-- [ ] **Phase 6: Fixed Shell + Slots** - Extract the fixed workbench shell with registry-driven named slots, visually identical to baseline
-- [ ] **Phase 7: Table Capability + Port** - Extract the schema-driven table editor with layered field-editor overrides and an injected asset-catalog port
-- [ ] **Phase 8: Code Capability + Port** - Extract Monaco code editing and the generic Blockly host, with language config injected and keybindings reconciled
-- [ ] **Phase 9: Asset Capability + Port** - Extract asset management, validating the port for binary and write-heavy operations
-- [ ] **Phase 10: Map Capability + Port** - Extract Pixi map editing and the five semantic hooks behind capability ports
-- [ ] **Phase 11: Preview Service + Adapter Cutover + Shim Deletion** - Extract preview with the v4 wire contract unchanged; complete the adapter cutover and delete all shims
-- [ ] **Phase 12: Extension Surface Freeze, Parity Verification & Protocol Freeze** - Freeze the extension surface and pass the milestone parity acceptance gate
+> 说明：本里程碑重新从 Phase 1 开始编号；上一里程碑的所有阶段已归档至 `.planning/milestones/archived-20261009-phases/`，不再延续其编号。
+
+- [ ] **Phase 1: 编辑器外壳与通用 fs 接口** - 固定布局 + 命名插槽的外壳，以及 `editor-core` 的通用 fs 接口（只定义）
+- [ ] **Phase 2: 表格编辑** - 用户可编辑 schema 驱动的表格数据
+- [ ] **Phase 3: 素材管理** - 用户可管理素材（图片 / 动画 / 材质）
+- [ ] **Phase 4: 地图编辑** - 用户可编辑地图（层 / 块 / 通行性）
+- [ ] **Phase 5: 代码编辑** - 用户可编辑代码（Monaco）
+- [ ] **Phase 6: 事件编辑器** - 用户可编辑事件脚本（Blockly）
 
 ## Phase Details
 
-### Phase 1: Baseline & Verification Net
+### Phase 1: 编辑器外壳与通用 fs 接口
 
-**Goal**: Establish a running, quantified verification baseline — the before-picture that makes "behavior unchanged" measurable — before a single file moves.
+**Goal**: 编辑器以固定外壳（固定布局 + 命名插槽）呈现，并由 `editor-core` 定义引擎无关的通用 fs 接口（只定义接口、不提供实现，由外部注入真正的实现）。
 **Depends on**: Nothing (first phase)
-**Requirements**: VERIFY-01, VERIFY-02, VERIFY-03, VERIFY-04, VERIFY-06, VERIFY-07
+**Requirements**: SHELL-01, CORE-01
 **Success Criteria** (what must be TRUE):
 
-  1. `packages/external/mota-js` submodule is initialized and the full unit-test suite can start and run per package.
-  2. A PR CI workflow runs lint + per-package typecheck + unit tests + production build, and fails on regression.
-  3. Characterization tests for `PersistExecutor`/`PersistenceMonitor` and `operationHistory` pass, locking error→retry→idle, concurrent latest-wins, no-UI-rollback-on-persist-failure, capacity 100, and multi-target checkpoint rollback.
-  4. A recorded baseline exists (per-package unit counts, e2e run, build output, bundle/artifact size vs the 20 MiB ceiling, `editor-manifest.json`, protocol constants) plus Playwright screenshot baselines for the four editors + shell.
-  5. No e2e test is silently skipped — each is either a required fixture or carries a CI-visible marker.
+  1. 用户打开编辑器可看到固定布局的外壳（顶栏、地图区、工作区、面板等命名插槽），画面与现状一致。
+  2. 后续能力可注册到对应命名插槽并出现在固定位置（注册一个占位能力即可观察到它出现在正确插槽）。
+  3. `editor-core` 导出通用 fs 接口（读 / 写 / 列目录 / 删除等操作），仓库中不存在该接口的默认实现。
+  4. `editor-impl` 只经由注入的 fs 接口访问数据，不直接 import 任何宿主或引擎代码。
 
-**Plans**: 10 plans
-Plans:
-**Wave 1**
+**Plans**: TBD
+**UI hint**: yes
 
-- [x] 01-01-PLAN.md — Repair the local environment and initialize the `mota-js` submodule (VERIFY-01)
+### Phase 2: 表格编辑
 
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [x] 01-02-PLAN.md — Record the quantified baseline: unit/e2e counts, build artifact vs 20 MiB, manifest, protocol constants, four-editor screenshots (VERIFY-01)
-
-**Wave 3** *(blocked on Wave 2 completion)*
-
-- [x] 01-03-PLAN.md — Characterization tests freezing the persistence invariants (VERIFY-03)
-- [x] 01-04-PLAN.md — Characterization tests freezing the history invariants (VERIFY-04)
-- [x] 01-05-PLAN.md — Required e2e fixture replacing the silent skip, plus the manifest protocol assertion (VERIFY-06, VERIFY-07)
-
-**Wave 4** *(blocked on Wave 3 completion)*
-
-- [x] 01-06-PLAN.md — Editor `vitest.config.ts` split, per-package `typecheck`, root fan-out scripts (VERIFY-02)
-
-**Wave 5** *(blocked on Wave 4 completion)*
-
-- [x] 01-08-PLAN.md — Adopt Prettier + `eslint-config-prettier` and normalize formatting to single quotes (VERIFY-02)
-
-**Wave 6** *(blocked on Wave 5 completion)*
-
-- [x] 01-09-PLAN.md — Make `pnpm lint` green: fix the remaining pre-existing lint errors (VERIFY-02)
-
-**Wave 7** *(blocked on Wave 6 completion)*
-
-- [x] 01-10-PLAN.md — Adopt pnpm 12.5.1 as the single project toolchain version (VERIFY-02)
-
-**Wave 8** *(blocked on Wave 7 completion)*
-
-- [x] 01-07-PLAN.md — Four-job PR CI workflow and required status checks (VERIFY-02)
-
-### Phase 2: Package Boundary & Build Scaffolding
-
-**Goal**: Create `packages/libs/editor-core` and make the boundary, module resolution, styling, and compiler coverage machine-enforced rather than assumed.
+**Goal**: 用户可编辑 schema 驱动的表格数据；默认实现落在 `editor-impl`。
 **Depends on**: Phase 1
-**Requirements**: PKG-01, PKG-02, PKG-03, PKG-04, PKG-05, VERIFY-05
+**Requirements**: TABLE-01
 **Success Criteria** (what must be TRUE):
 
-  1. `packages/libs/editor-core` exists using `lib/` (not `src/`), with `private: true`, `type: module`, `sideEffects: false`, and the full subpath export map (`.`, `./code`, `./table`, `./map`, `./asset`, `./shell`, `./react`).
-  2. React/ReactDOM and all singleton libraries (antd, Semi, alien-signals, immer, monaco-editor, pixi.js, blockly) are declared as `peerDependencies` + `catalog:default`, and exactly one copy resolves.
-  3. `tsc -b` and a Vite build resolve core's `@/` imports identically (verified, not assumed).
-  4. PandaCSS generates a known core class and React Compiler transforms core TSX (both probed; workarounds applied if not).
-  5. `dependency-cruiser` rules (forbidden edges, singleton `requireZero`, no-cycles) run in CI and fail on violation.
-
-**Plans**: 3/3 plans executed
-Plans:
-**Wave 1**
-
-- [x] 02-01-PLAN.md — Create the `editor-core` skeleton, the probe, core's own Vitest project and the editor's cross-package resolution wiring (PKG-01, PKG-03)
-
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [x] 02-02-PLAN.md — Fill the catalog gaps, declare the nine peers with Semi optional, and machine-check the package manifest, subpath status and single-copy resolution (PKG-01, PKG-02)
-
-**Wave 3** *(blocked on Wave 2 completion)*
-
-- [x] 02-03-PLAN.md — Install the pinned boundary gate, assert PandaCSS extraction and React Compiler coverage, and wire all three into the existing four CI jobs (PKG-03, PKG-04, PKG-05, VERIFY-05)
-
-**UI hint**: yes
-
-### Phase 3: Kernel — Runtime, Ports, Registry, Diagnostics
-
-**Goal**: Replace the six module singletons with a per-instance `EditorCore` graph that owns a public capability registry, declared ports, and aggregated startup diagnostics.
-**Depends on**: Phase 2
-**Requirements**: KERN-01, KERN-02, KERN-03, KERN-04, KERN-05, KERN-06, PORT-01, PORT-02
-**Success Criteria** (what must be TRUE):
-
-  1. `createEditorCore(config)` returns a per-instance `EditorCore`, and two instances coexist without interference (isolation test passes).
-  2. `dispose()` releases resources in reverse creation order.
-  3. `registerCapability(kind, id, value, {owner, replaceable})` returns diagnostics + rollback, and `createEditorCore()` aggregates all diagnostics and fails startup loudly when a required registration is unresolved.
-  4. `EDITOR_CORE_API_VERSION`, `DiagnosticBus`, and all port interfaces (`EngineAdapter`, `FsPort`, `HostPort`, `PreviewAdapter`, capability ports) exist and are exported.
-  5. Core source contains no default `Fs`, no DOM/environment parsing, and no direct `fetch` — every dependency is injected by the composition root.
-
-**Plans**: 4/4 plans complete
-Plans:
-**Wave 1**
-
-- [x] 03-01-PLAN.md — Tracer: a live per-instance `EditorCore` — factory, capability registry, per-instance diagnostic bus, reverse-order dispose (KERN-01, KERN-02, KERN-03, KERN-05, KERN-06)
-
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [x] 03-02-PLAN.md — Atomic construction: required-registration resolution, reverse-order dispose then `EditorCoreStartupError` carrying all diagnostics; idempotent, failure-isolating teardown reporting through the bus and the console (KERN-04, KERN-02)
-- [x] 03-03-PLAN.md — Declared ports (`EngineAdapter`, `FsPort`, `HostPort`, `PreviewAdapter`) and the honest public surface, with the Phase-2 subpath manifest and verifier updated together (PORT-01, KERN-05)
-
-**Wave 3** *(blocked on Wave 2 completion)*
-
-- [x] 03-04-PLAN.md — The two static gates: the core-scoped PORT-02 ESLint ban and the module-state rule, each proven able to fail, inside the existing `lint` job (KERN-06, PORT-02)
-
-### Phase 4: Resource + Edit Layers Moved
-
-**Goal**: Move the already-engine-agnostic resource and edit layers into core verbatim, with existing tests green and every behavioral invariant intact.
-**Depends on**: Phase 3
-**Requirements**: RES-01, RES-02, RES-03, RES-04, RES-05, RES-06
-**Success Criteria** (what must be TRUE):
-
-  1. `src/fs/*` and `src/project/resources.ts` are moved into `lib/resources/*`, and `src/project/history/*` into `lib/edit/*`, with the existing test suites passing unchanged.
-  2. `ResourceRegistry` supports generic logical-id registration and `FileHandlerManager` is a per-instance service (no module singleton).
-  3. The invariants hold under characterization tests: memory-first ≠ saved, single write path, `not-found` ≠ `error`, and per-path serialization (one executing + one pending).
-  4. Hook results are `ReadonlySignal<Content<T>>` (five-state reactive), never snapshots or effect-faked reactivity.
-  5. `@motajs/editor` imports keep working throughout the transition via tracked re-export shims.
-
-**Plans**: 4/4 plans executed
-Plans:
-**Wave 1**
-
-- [x] 04-01-PLAN.md — Tracer: move architecture proven on the resource leaves + de-singleton the persistence chain, create `src/appInstances.ts`, add the four core dependencies (RES-01, RES-05, RES-06)
-
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [x] 04-02-PLAN.md — The injected `FileHandler`/`FileHandlerManager` chain, the data/binary handler layer and the resource combinators move into `lib/resources/` with a flat `FsPort` and a core test double (RES-01, RES-03, RES-05, RES-06)
-
-**Wave 3** *(blocked on Wave 2 completion)*
-
-- [x] 04-03-PLAN.md — The edit layer moves into `lib/edit/` with the `UndoSystem` seam replacing the viewport coupling, plus the `./react` hook (RES-04, RES-05, RES-06)
-
-**Wave 4** *(blocked on Wave 3 completion)*
-
-- [x] 04-04-PLAN.md — `ResourceRegistry` (RES-02) and the machine gates: retargeted singleton rule, two-polarity shim verifier, truthful subpath record, full-suite gate (RES-02, RES-01, RES-03, RES-04, RES-05, RES-06)
-
-### Phase 5: Engine Adapter Skeleton & Resource Descriptors
-
-**Goal**: Push every engine-specific path, format, vocabulary word, and migration out of core into a mota-js adapter whose hook contract is proven against a fake engine B.
-**Depends on**: Phase 4
-**Requirements**: PORT-03, PORT-04, PORT-05, PORT-06, PORT-07, PORT-08
-**Success Criteria** (what must be TRUE):
-
-  1. `defineEngine({...})` produces the engine description; core recognizes only logical ids and never constructs `project/...` paths or inspects file extensions.
-  2. All 10 hardcoded paths become `ResourceDescriptor`s (logical id, opaque path key, format id, handler, preload dependencies).
-  3. `Json2xDataHandler` and the domain `*DataHandler` subclasses live in the adapter while core keeps only generic `JsonDataHandler`; `LabelOverrides` and `MigrationHook` carry game vocabulary and engine-format migrations out of core.
-  4. A fake non-mota "engine B" adapter drives the hook contract end to end with non-mota resources.
-  5. No game identifier (tower/floor/loc/autopass/autotile/idnum/airwall/commonEvent) remains in core source, enforced by a mechanical grep/lint gate.
-
-**Plans**: 4/4 plans executed (⚠ CONTEXT.md 05 revises the original PORT-04/06/07 wording — see 05-CONTEXT.md D-14; ROADMAP text intentionally unedited)
-Plans:
-**Wave 1**
-
-- [x] 05-01-PLAN.md — Core adapter contract: generic `ResourceDescriptor`, `defineEngine` with aggregated validation, `resolvePreloadOrder`, widened `EngineAdapter`, barrel + surface tests, INTERFACE-NAME/COVERAGE artifacts (PORT-03, PORT-04)
-
-**Wave 2** *(blocked on 05-01)*
-
-- [x] 05-02-PLAN.md — Two-polarity game-identifier gate `scripts/verify/coreEngineNeutral.js` wired into the existing `lint` job (PORT-06)
-- [x] 05-03-PLAN.md — File-backed `FileResource` class + fake non-mota engine-B fixture driving defineEngine→registry→preload order end to end (PORT-04, PORT-08)
-
-**Wave 3** *(blocked on 05-01 + 05-03)*
-
-- [x] 05-04-PLAN.md — mota adapter in `src/adapter/`: all 10 paths as descriptors, parameterized floor factory, adapter-owned handlers, migrations stay adapter-side (PORT-03, PORT-04, PORT-05, PORT-07)
-
-### Phase 05.2: editor-core/impl 代码风格整改 (INSERTED)
-
-**Goal**: 把 `@motajs/editor-core` 与 `@motajs/editor-impl` 两个包（含测试）按 `AGENTS.md` §Code style 整改一遍——类型集中到 `types.ts`、接口成员默认 `readonly`、字符串枚举改数字枚举、裸函数类化、注释/空行/成员顺序对齐、桶文件一律 `export *`——纯风格整改，不改功能与行为；唯一允许触碰 `@motajs/editor` 的是数字枚举导致的字符串字面量→枚举成员机械跟随（D-14）。
-
-**Requirements**: （无；本插入阶段的 `phase_req_ids` 为 null，验收以 `05.2-CONTEXT.md` D-01..D-17 为准）
-
-**Depends on:** Phase 5
-
-**Plans:** 9/9 executed + 6 返工计划（Plan 10–15，注释/风格保真）
-
-Plans:
-**Wave 1 — 接口层（D-02 / D-06 / D-07 / D-10）**
-
-- [x] 05.2-01-PLAN.md — `editor-core` 接口层：导出类型集中到 `kernel/types.ts` + 新建 `ports/types.ts`、删空壳 port、接口补 `readonly`、`DiagnosticSeverity` 数字枚举
-- [x] 05.2-02-PLAN.md — `editor-impl` 接口层：`resources/interfaces.ts` 并入 `resources/types.ts`、接口补 `readonly`、`type` 补 jsDoc
-
-**Wave 2 — 数字枚举 + 编辑器最小跟随（D-06 / D-14）**
-
-- [x] 05.2-03-PLAN.md — `PreloadStrategy` / `ActionType` 改数字枚举，编辑器与之相关的字符串字面量机械跟随
-
-**Wave 3 — 实现层：类化（D-05 / D-17）**
-
-- [x] 05.2-04-PLAN.md — `EditorCoreKernel` / `DiagnosticBusImpl` 类化、`ContentUtils` 静态类、去内嵌函数、`FileHandlerManager.size()` 改方法、去下划线参数
-
-**Wave 4 — 实现层：风格扫尾（D-03 / D-04 / D-09 / D-11，三计划并行）**
-
-- [x] 05.2-05-PLAN.md — `editor-core` 注释/空行/成员顺序/显式类型/空值扫尾
-- [x] 05.2-06-PLAN.md — `editor-impl` 资源层注释/空行/顺序/显式类型/空值扫尾
-- [x] 05.2-07-PLAN.md — `editor-impl` 编辑/表格/React/能力层与顶层测试扫尾
-
-**Wave 5 — 桶文件（D-08 / D-15 / D-16）**
-
-- [x] 05.2-08-PLAN.md — 桶文件一律 `export *`、补文件夹 barrel、`./table` 去空 + 门禁/状态同步
-
-**Wave 6 — 收尾**
-
-- [x] 05.2-09-PLAN.md — 相位级全量回归 + 编辑器未越界复核
-
-**Wave 7 — 返工：接口层注释保真（D-02 / D-03 / D-06 / D-10）**
-
-- [x] 05.2-10-PLAN.md — `editor-core` 两个 `types.ts`：删文件头/接口自身说明、方法改多行 `@param`、枚举改 `const enum`
-- [x] 05.2-11-PLAN.md — `editor-impl` 三个 `types.ts`：对象联合拆具名 interface、方法改多行 `@param`、`ActionType` 改 `const enum`
-
-**Wave 8 — 返工：实现层与 barrel 注释保真（D-02 / D-03 / D-04 / D-05 / D-08）**
-
-- [x] 05.2-12-PLAN.md — `editor-core` 实现层：删文件头/类接口注释、删实现类重复接口 jsDoc、barrel 去注释
-- [x] 05.2-13-PLAN.md — `editor-impl` 资源层：同上 + 去 `_` 私有前缀 + `ContentUtils` 去类化
-- [x] 05.2-14-PLAN.md — `editor-impl` 编辑/表格/React/能力目录 + 全部 barrel 去注释 + 顶层测试
-
-**Wave 9 — 返工收尾**
-
-- [x] 05.2-15-PLAN.md — 相位级全量回归 + 保真度残留清单 + 编辑器零改动复核
-
-### Phase 05.1: editor-core 接口与实现整改 (INSERTED)
-
-**Goal**: 把 `editor-core` 拆成**两个包**——`@motajs/editor-core` 只留「只管接口与调度的底层」，新建 `@motajs/editor-impl` 承载「自己管内容的编辑功能层」——并把撤销从「存快照」改成「存操作」，同时按既定编码规范重写两包；唯一对外的行为变化是撤销一次数据改动不再连带恢复地图视口（D-19）。
-
-**Requirements**: （无；本插入阶段的 `phase_req_ids` 为 null，验收以 `05.1-CONTEXT.md` D-01..D-19 为准）
-
-**Depends on:** Phase 5
-
-**Plans:** 8/8 plans executed
-
-Plans:
-**Wave 1 — 接口定义（不写实现）**
-
-- [x] 05.1-01-PLAN.md — 底层（`editor-core`）撤销契约：`IEditorOperation` / `IUndoManager` 及历史类型（接口定义）
-- [x] 05.1-02-PLAN.md — 默认实现层接口：`IPatchableResource` / `IResourceView` / `ILoadableResource` / `Action`
-
-**Wave 2 — 拆包 + 撤销重构 + 编辑器机械跟随（同一波；波内临时红，波末全仓保持可编译/测试绿）**
-
-- [x] 05.1-03-PLAN.md — 建 `editor-impl` 并整包迁入默认实现；`editor-core` 收缩为底层；`core→impl` 单向门禁 + 底层不读文件；新包结构门禁 `implExports.js`
-- [x] 05.1-04-PLAN.md — 撤销重构：删快照、`UndoManager` 重写在底层、操作契约去 target、改写不变量测试
-- [x] 05.1-08-PLAN.md — 编辑器侧唯一且最小的机械跟随：按符号所属包改指 import 说明符 + 删视口快照注册 / `targets` / 已删符号引用，按 D-19 改写测试（**同波内排在 05.1-03/05.1-04 之后执行**）
-
-**Wave 3–5 — 实现收尾**
-
-- [x] 05.1-05-PLAN.md — 表格专用代码归位：字段路径 / 动作 / patch 操作迁入 `editor-impl/lib/table/`
-- [x] 05.1-06-PLAN.md — 接口加 `I` 前缀并保留旧名别名（编辑器靠别名继续编译）
-- [x] 05.1-07-PLAN.md — 每个类 `implements`、类型集中、禁 `import type` 的可失败门禁、文件形态扫尾
-
-### Phase 05.3: editor-core 重做 (INSERTED)
-
-**Goal**: **推翻此前旧的 `editor-core` 实现，重做 `@motajs/editor-core`**（不是增量整改，旧实现作废）——它收缩为「不预设任何需求、只提供最底层接口与管理（功能注册 / 请求数据 / 撤回管理 / 页面管理等）」的空壳；核心架构与接口设计由用户主导。唯一验收标准：**最终画面与现状一致**；中间步骤不设任何要求。
-
-**Requirements**: （无；本插入阶段的 `phase_req_ids` 为 null，验收以 `05.3-CONTEXT.md` D-01..D-11 为准）
-
-**Depends on:** Phase 5
-
-**Plans:** 16/16 plans complete
-
-- [x] 05.3-15-PLAN.md
-- [x] 05.3-16-PLAN.md
-
-- [x] 05.3-13-PLAN.md — 接口放宽（readContent / request / createResource 返回类型）+ 必要机械跟随
-- [x] 05.3-14-PLAN.md — injection 空守卫 + 集中日志消息 + 私有成员 jsDoc + 切换参数统一
-
-- [x] 05.3-12-PLAN.md
-
-- [x] 05.3-11-PLAN.md
-
-- [x] 05.3-09-PLAN.md
-- [x] 05.3-10-PLAN.md
-
-- [x] 05.3-01-PLAN.md
-- [x] 05.3-02-PLAN.md
-- [x] 05.3-03-PLAN.md
-- [x] 05.3-04-PLAN.md
-- [x] 05.3-05-PLAN.md
-- [x] 05.3-06-PLAN.md
-- [x] 05.3-07-PLAN.md
-- [x] 05.3-08-PLAN.md
-
-**Status:** 已推翻（05.3-01 完成）；待架构设计
-
-### Phase 6: Fixed Shell + Slots
-
-**Goal**: Extract the fixed workbench shell with named registry-driven slots, preserving the exact baseline layout and dogfooding the extension registration API.
-**Depends on**: Phase 5
-**Requirements**: SHELL-01, SHELL-02, SHELL-03, SHELL-04, SHELL-05, SHELL-06
-**Success Criteria** (what must be TRUE):
-
-  1. `EditorShell`/`TopBar`/`PersistenceNotification`/error boundaries live in `lib/shell/`.
-  2. `PanelSlot`/`WorkspaceSlot`/`ToolbarSlot`/`ModalHost`/`SettingsSlot` have compile-time-fixed positions and registry-driven content.
-  3. The hardcoded panel-ID union is generalized to registry-driven ids, and draft guard becomes a core per-document dirty registry.
-  4. Layout is visually consistent with the Phase 1 screenshot baseline.
-  5. The four built-in block panels register through the same API future extensions will use (dogfooding).
+  1. 用户可打开表格视图并查看 schema 驱动的项目数据。
+  2. 用户可新增 / 修改 / 删除表格行，改动即时反映。
+  3. 表格编辑经统一命令 / 撤销路径，可撤销、可重做。
+  4. 表格数据经 Phase 1 的通用 fs 接口读写，行为与现状一致。
 
 **Plans**: TBD
 **UI hint**: yes
 
-### Phase 7: Table Capability + Port
+### Phase 3: 素材管理
 
-**Goal**: Extract the schema-driven table editor as a capability, with layered field-editor overrides and a minimal injected asset-catalog port.
-**Depends on**: Phase 6
-**Requirements**: TABLE-01, TABLE-02, TABLE-03, TABLE-04
+**Goal**: 用户可管理素材（图片 / 动画 / 材质）。
+**Depends on**: Phase 1
+**Requirements**: ASSET-01
 **Success Criteria** (what must be TRUE):
 
-  1. `lib/capabilities/table-editor/` provides schema-driven rendering, action-path editing, validation UI, meta editing, and cell/edit-cell separation.
-  2. `table.fieldEditor` + `table.schema` capability kinds exist with layered override precedence (core default → theme → form-level → `ui:field`/`ui:widget`).
-  3. The image picker works through the minimal injected asset-catalog port and no longer accesses the engine directly.
-  4. Engine schemas, meta-file mapping, and domain field types (`PassabilityField`, `FloorImagesField`, …) are supplied by the adapter and absent from core.
-  5. Table editing behavior matches the Phase 1 baseline (tests + manual check).
+  1. 用户可浏览项目素材（图片 / 动画 / 材质）。
+  2. 用户可新增 / 替换 / 删除素材并即时生效。
+  3. 素材改动写入后重新加载仍然存在（经统一持久化路径）。
+  4. 素材相关画面与行为与现状一致。
 
 **Plans**: TBD
 **UI hint**: yes
 
-### Phase 8: Code Capability + Port
+### Phase 4: 地图编辑
 
-**Goal**: Extract Monaco-based code editing and a generic Blockly host, injecting language configuration and reconciling keybindings with the core command registry.
-**Depends on**: Phase 7
-**Requirements**: CODE-01, CODE-02, CODE-03, CODE-04
+**Goal**: 用户可编辑地图（层 / 块 / 通行性）。
+**Depends on**: Phase 1
+**Requirements**: MAP-01
 **Success Criteria** (what must be TRUE):
 
-  1. `lib/capabilities/code-editor/` provides the Monaco host, an engine-id-keyed document/model registry, file tabs, save/undo binding, dirty lifecycle, diagnostics surface, completion registry, and editor-action/keybinding seams.
-  2. `code.language` capability kind exists; language config, completion/typing sources, and document endpoints are adapter-injected.
-  3. The Blockly split is implemented: generic Blockly host + schema→block compiler stay in `code-editor`, while `blockly/project/*`, domain schemas, event field bindings, and diagnostics move to the adapter.
-  4. Core command registry and Monaco's own keybinding/context-key system are explicitly reconciled with no shortcut conflicts.
-  5. Code editing behavior matches the Phase 1 baseline (tests + manual check).
-
-**Plans**: TBD
-
-### Phase 9: Asset Capability + Port
-
-**Goal**: Extract asset management, validating the capability port for binary and write-heavy operations with an adapter-injected codec.
-**Depends on**: Phase 8
-**Requirements**: ASSET-01, ASSET-02, ASSET-03
-**Success Criteria** (what must be TRUE):
-
-  1. `lib/capabilities/asset-manager/` provides directory/collection resources, append/insert/replace/remove, grid/list + type filter + search + thumbnail fallback + drag-to-assign + reference lookup, preview UI, and a `RasterCodec` port.
-  2. `asset.kind` capability kind exists; asset roots/kinds, material specs, animation format handling, and codec are adapter-injected.
-  3. Reference/diagnostics is a core service that later plugins can contribute findings to.
-  4. Asset management behavior matches the Phase 1 baseline (tests + manual check).
+  1. 用户可打开地图并查看层 / 块 / 通行性。
+  2. 用户可绘制 / 擦除块并切换层，编辑即时反映。
+  3. 用户可编辑通行性并看到生效结果。
+  4. 地图编辑经统一命令 / 撤销路径，可撤销、可重做。
 
 **Plans**: TBD
 **UI hint**: yes
 
-### Phase 10: Map Capability + Port
+### Phase 5: 代码编辑
 
-**Goal**: Extract the most engine-coupled capability — Pixi map editing plus five semantic hooks — on a fully settled registry/port/command/shell foundation.
-**Depends on**: Phase 9
-**Requirements**: MAP-01, MAP-02, MAP-03, MAP-04
+**Goal**: 用户可编辑代码（Monaco）。
+**Depends on**: Phase 1
+**Requirements**: CODE-01
 **Success Criteria** (what must be TRUE):
 
-  1. `lib/capabilities/map-editor/` provides Pixi canvas/layers, coordinate/grid utils, tool state machine, overlay host, recently-used panel, context menu, row/col marks, and floor navigation.
-  2. `map.tool` + `map.overlay` capability kinds support activate/deactivate/overlay-draw/input-interception with an explicit command commit point.
-  3. The five semantic hooks (block registry, sprite/tileset catalog, passability provider, floor list/organization, loc resolver) are adapter-injected, and tileset/passability/floor-transform semantics are absent from core.
-  4. Pixi exists only in the `./map` subpath and never in the runtime entry.
-  5. Map editing behavior matches the Phase 1 baseline (tests + manual check).
+  1. 用户可打开 Monaco 代码编辑器并编辑项目代码。
+  2. 保存后代码生效，且行为与现状一致。
+  3. 用户可在该能力内打开 / 切换对应代码文件。
 
 **Plans**: TBD
 **UI hint**: yes
 
-### Phase 11: Preview Service + Adapter Cutover + Shim Deletion
+### Phase 6: 事件编辑器
 
-**Goal**: Extract the preview service with the Runtime Protocol v4 wire contract unchanged, complete the adapter cutover, and delete every singleton and shim.
-**Depends on**: Phase 10
-**Requirements**: PREV-01, PREV-02, PREV-03
+**Goal**: 用户可编辑事件脚本（Blockly）。
+**Depends on**: Phase 1, Phase 5
+**Requirements**: EVENT-01
 **Success Criteria** (what must be TRUE):
 
-  1. `lib/services/preview/` preserves the v4 wire contract exactly (envelope, provider/context, gateway, `project/` allowlist, monotonic revisions, 300 ms debounce, surface leases, retry policy).
-  2. The engine boot hook moves into the adapter's `PreviewAdapter`, while the `runtime.html` entry stays in `@motajs/editor` and the artifact shape is unchanged.
-  3. All six singletons and every re-export shim are deleted; `@motajs/editor` depends only on core plus its adapter.
-  4. The full regression suite passes and the Phase 1 manual UAT script confirms parity.
+  1. 用户可打开 Blockly 事件编辑器。
+  2. 用户可用积木搭建 / 修改事件脚本。
+  3. 事件脚本保存后生效，并与代码视图保持一致。
 
 **Plans**: TBD
-
-### Phase 12: Extension Surface Freeze, Parity Verification & Protocol Freeze
-
-**Goal**: Freeze the extension surface once the adapter stops moving, and pass the milestone's end-to-end parity acceptance gate.
-**Depends on**: Phase 11
-**Requirements**: EXT-01, EXT-02, EXT-03, EXT-04, EXT-05, VERIFY-08
-**Success Criteria** (what must be TRUE):
-
-  1. `EditorExtension` descriptor + narrow `EditorExtensionContext` are frozen (`apiVersion` required, `requires`/`optional`, `activate()` returning `Disposable`, two-phase activate-then-resolve), and the `EditorCore` object is never passed to an extension.
-  2. A committed `api-extractor` `.api.md` report is enforced in CI, the version/deprecation policy is documented, and every extension point has an `extensionPointId@v1` plus an ADR.
-  3. No plugin loader ships (descriptor shape only) and the subpath exports are final.
-  4. The "Looks Done But Isn't" checklist passes end to end: two-core isolation, fake engine-B drive, dedupe assertion, bundle budget vs baseline, no re-export-only files, no cycles, e2e actually ran, visual parity, generated CSS contains core classes, single React instance + signal propagation smoke.
-  5. Protocol constants are consolidated to one exported value — or the pre-existing `runtimeProtocolVersion: 3` vs `RUNTIME_PROTOCOL_VERSION = 4` mismatch is explicitly documented as intentionally preserved, with a generated assertion recording it.
-
-**Plans**: TBD
+**UI hint**: yes
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Baseline & Verification Net | 10/10 | Complete    | 2026-09-21 |
-| 2. Package Boundary & Build Scaffolding | 3/3 | Complete    | 2026-09-22 |
-| 3. Kernel — Runtime, Ports, Registry, Diagnostics | 4/4 | Complete    | 2026-09-23 |
-| 4. Resource + Edit Layers Moved | 4/4 | Complete    | 2026-09-24 |
-| 5. Engine Adapter Skeleton & Resource Descriptors | 4/4 | In Progress|  |
-| 05.1. editor-core 接口与实现整改 | 8/8 | In Progress|  |
-| 05.3. editor-core 重做 | 16/16 | Complete    | 2026-10-09 |
-| 6. Fixed Shell + Slots | 0/TBD | Not started | - |
-| 7. Table Capability + Port | 0/TBD | Not started | - |
-| 8. Code Capability + Port | 0/TBD | Not started | - |
-| 9. Asset Capability + Port | 0/TBD | Not started | - |
-| 10. Map Capability + Port | 0/TBD | Not started | - |
-| 11. Preview Service + Adapter Cutover + Shim Deletion | 0/TBD | Not started | - |
-| 12. Extension Surface Freeze, Parity Verification & Protocol Freeze | 0/TBD | Not started | - |
+| 1. 编辑器外壳与通用 fs 接口 | 0/TBD | Not started | - |
+| 2. 表格编辑 | 0/TBD | Not started | - |
+| 3. 素材管理 | 0/TBD | Not started | - |
+| 4. 地图编辑 | 0/TBD | Not started | - |
+| 5. 代码编辑 | 0/TBD | Not started | - |
+| 6. 事件编辑器 | 0/TBD | Not started | - |
