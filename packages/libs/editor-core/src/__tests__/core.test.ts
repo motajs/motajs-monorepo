@@ -181,7 +181,7 @@ describe('EditorCore 组装', () => {
 });
 
 describe('EditorCore 释放', () => {
-  // dispose 逆序释放后：当前面板清空、面板被释放、资源缓存清空、撤回栈清空
+  // dispose 逆序释放后：当前面板清空、面板被释放、资源释放后访问被拒、撤回栈清空
   it('dispose 后三系统状态复位', async () => {
     const core = new EditorCore();
     const injection = new FakeEditorInjection();
@@ -208,9 +208,10 @@ describe('EditorCore 释放', () => {
     expect(core.panelSystem.currentPanel).toBeNull();
     expect(panel.disposeCount).toBe(1);
 
-    await contexts[0].requestResource<string>(id);
+    const afterDispose = await contexts[0].requestResource<string>(id);
 
-    expect(injection.requestResourceListCount).toBe(2);
+    expect(afterDispose).toBeNull();
+    expect(injection.requestResourceListCount).toBe(1);
 
     await core.undoSystem.undo();
 

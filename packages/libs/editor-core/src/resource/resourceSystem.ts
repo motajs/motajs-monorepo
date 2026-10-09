@@ -126,5 +126,6 @@ export class ResourceSystem extends Hookable<IResourceSystemHooks> implements IR
   async dispose(): Promise<void> {
     this.listCache.clear();
     this.contentCache.clear();
+    this.injection = null;
   }
 }

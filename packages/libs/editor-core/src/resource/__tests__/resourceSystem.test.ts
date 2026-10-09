@@ -244,8 +244,8 @@ describe('ResourceSystem 写入与更新', () => {
     expect(injection.content.get(TYPE)?.has(ID.id)).toBe(false);
   });
 
-  // dispose 清空两个缓存，之后 requestResource 重新请求后端列表
-  test('dispose 清空缓存后重新请求后端', async () => {
+  // dispose 释放后端引用后，requestResource 命中未初始化守卫，返回 null 且不再访问后端
+  test('dispose 后 requestResource 返回 null 且不访问后端', async () => {
     const system = new ResourceSystem();
     const injection = new FakeResourceInjection();
     injection.seed(ID, 'v1');
@@ -259,7 +259,7 @@ describe('ResourceSystem 写入与更新', () => {
 
     const resource = await system.requestResource(ID);
 
-    expect(resource).not.toBeNull();
-    expect(injection.requestResourceListCount).toBe(2);
+    expect(resource).toBeNull();
+    expect(injection.requestResourceListCount).toBe(1);
   });
 });
