@@ -1,5 +1,5 @@
 import { FC } from 'react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   EditorCore,
   Hookable,
@@ -10,6 +10,7 @@ import {
   IResourceIdentifier,
   IUndoContext,
   IUndoable,
+  logger,
   PanelSystem,
   ResourceSystem,
   UndoSystem,
@@ -177,6 +178,53 @@ describe('EditorCore 组装', () => {
 
     expect(panel.updateResourceListCount).toBe(1);
     expect(panel.lastUpdateList).toEqual([id]);
+  });
+});
+
+describe('EditorCore 初始化生命周期', () => {
+  // 连续 initialize 第二次被拒：记 warn 且不重复下发注入
+  it('重复 initialize 只生效一次并记 warn', async () => {
+    const core = new EditorCore();
+    const injection = new FakeEditorInjection();
+    const id = Object.freeze({ type: 1, id: 'alpha' });
+    injection.seed(id, 'v1');
+    await core.initialize(injection);
+    const warnSpy = vi.spyOn(logger, 'warn');
+    const second = new FakeEditorInjection();
+    second.seed(id, 'v2');
+
+    await core.initialize(second);
+
+    expect(warnSpy).toHaveBeenCalledWith('core.duplicateInitialize');
+
+    const resource = await core.resourceSystem.requestResource<string>(id);
+
+    expect(resource).not.toBeNull();
+    expect(second.requestResourceCount).toBe(0);
+    warnSpy.mockRestore();
+  });
+
+  // dispose 之后再 initialize 被拒：记 error 且资源保持未注入
+  it('dispose 后 initialize 被拒并记 error', async () => {
+    const core = new EditorCore();
+    const injection = new FakeEditorInjection();
+    const id = Object.freeze({ type: 1, id: 'alpha' });
+    injection.seed(id, 'v1');
+    await core.initialize(injection);
+    await core.dispose();
+    const errorSpy = vi.spyOn(logger, 'error');
+    const second = new FakeEditorInjection();
+    second.seed(id, 'v2');
+
+    await core.initialize(second);
+
+    expect(errorSpy).toHaveBeenCalledWith('core.initializeAfterDispose');
+
+    const resource = await core.resourceSystem.requestResource<string>(id);
+
+    expect(resource).toBeNull();
+    expect(second.requestResourceCount).toBe(0);
+    errorSpy.mockRestore();
   });
 });
 
