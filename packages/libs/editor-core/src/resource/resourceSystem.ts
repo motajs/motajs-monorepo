@@ -115,12 +115,28 @@ export class ResourceSystem extends Hookable<IResourceSystemHooks> implements IR
 
   async updateResource(id: IResourceIdentifier): Promise<void> {
     this.contentCache.get(id.type)?.delete(id.id);
-    await Promise.all(this.forEachHook((hook) => hook.onUpdateResource?.(id)));
+    await Promise.all(
+      this.forEachHook((hook) =>
+        Promise.resolve()
+          .then(() => hook.onUpdateResource?.(id))
+          .catch((error: unknown) => {
+            logger.error('resource.hookFailed', String(error));
+          }),
+      ),
+    );
   }
 
   async updateResourceList(type: number): Promise<void> {
     this.listCache.delete(type);
-    await Promise.all(this.forEachHook((hook) => hook.onUpdateResourceList?.(type)));
+    await Promise.all(
+      this.forEachHook((hook) =>
+        Promise.resolve()
+          .then(() => hook.onUpdateResourceList?.(type))
+          .catch((error: unknown) => {
+            logger.error('resource.hookFailed', String(error));
+          }),
+      ),
+    );
   }
 
   async dispose(): Promise<void> {

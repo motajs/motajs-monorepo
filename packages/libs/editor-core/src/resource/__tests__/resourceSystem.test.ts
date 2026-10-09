@@ -1,4 +1,5 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
+import { logger } from '../../log';
 import { ResourceSystem } from '../resourceSystem';
 import { IResourceIdentifier, IResourceInjection } from '../types';
 
@@ -261,5 +262,67 @@ describe('ResourceSystem 写入与更新', () => {
 
     expect(resource).toBeNull();
     expect(injection.requestResourceListCount).toBe(1);
+  });
+});
+
+describe('ResourceSystem 钩子隔离', () => {
+  // 单个钩子同步抛错时不中断广播，其余钩子仍收到通知，失败经 logger 以钩子失败 id 记录
+  test('updateResource 单个钩子同步失败不影响其余钩子', async () => {
+    const system = new ResourceSystem();
+    const injection = new FakeResourceInjection();
+    injection.seed(ID, 'v1');
+    await system.initialize(injection);
+
+    const received: IResourceIdentifier[] = [];
+
+    system.addHook({
+      onUpdateResource: () => {
+        throw new Error('hook boom');
+      },
+    });
+    system.addHook({
+      onUpdateResource: async (id) => {
+        received.push(id);
+      },
+    });
+
+    const errorSpy = vi.spyOn(logger, 'error');
+
+    await expect(system.updateResource(ID)).resolves.toBeUndefined();
+
+    expect(received).toEqual([ID]);
+    expect(errorSpy).toHaveBeenCalledWith('resource.hookFailed', expect.stringContaining('hook boom'));
+
+    errorSpy.mockRestore();
+  });
+
+  // 单个钩子返回被拒绝的 Promise 时同样被隔离，其余钩子仍收到通知，失败经 logger 记录
+  test('updateResource 单个钩子异步失败不影响其余钩子', async () => {
+    const system = new ResourceSystem();
+    const injection = new FakeResourceInjection();
+    injection.seed(ID, 'v1');
+    await system.initialize(injection);
+
+    const received: IResourceIdentifier[] = [];
+
+    system.addHook({
+      onUpdateResource: async () => {
+        throw new Error('async boom');
+      },
+    });
+    system.addHook({
+      onUpdateResource: async (id) => {
+        received.push(id);
+      },
+    });
+
+    const errorSpy = vi.spyOn(logger, 'error');
+
+    await expect(system.updateResource(ID)).resolves.toBeUndefined();
+
+    expect(received).toEqual([ID]);
+    expect(errorSpy).toHaveBeenCalledWith('resource.hookFailed', expect.stringContaining('async boom'));
+
+    errorSpy.mockRestore();
   });
 });
