@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 > 说明：本里程碑重新从 Phase 1 开始编号；上一里程碑的所有阶段已归档至 `.planning/milestones/archived-20261009-phases/`，不再延续其编号。
 
-- [ ] **Phase 1: 编辑器外壳与通用 fs 接口** - 固定布局 + 命名插槽的外壳，以及 `editor-core` 的通用 fs 接口（只定义）
+- [ ] **Phase 1: 编辑器外壳** - 浏览器式标签外壳（顶部菜单行 + 标签行、动态面板类型/实例、空白新标签页）+ `editor-core` 通用 fs 接口（只定义）
 - [ ] **Phase 2: 表格编辑** - 用户可编辑 schema 驱动的表格数据
 - [ ] **Phase 3: 素材管理** - 用户可管理素材（图片 / 动画 / 材质）
 - [ ] **Phase 4: 地图编辑** - 用户可编辑地图（层 / 块 / 通行性）
@@ -24,17 +24,18 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 ## Phase Details
 
-### Phase 1: 编辑器外壳与通用 fs 接口
+### Phase 1: 编辑器外壳
 
-**Goal**: 编辑器以固定外壳（固定布局 + 命名插槽）呈现，并由 `editor-core` 定义引擎无关的通用 fs 接口（只定义接口、不提供实现，由外部注入真正的实现）。
+**Goal**: 交付类似浏览器的编辑器外壳——顶部两行（菜单行 + 标签行）+ 内容区；支持**动态注册/注销面板类型**、**动态创建/关闭面板实例**（同类型可开多个独立实例）；加载后默认可开空白新标签页。并由 `editor-core` 定义引擎无关的**通用 fs 接口**（只定义、不实现，由外部注入真正的实现）。
 **Depends on**: Nothing (first phase)
 **Requirements**: SHELL-01, CORE-01
 **Success Criteria** (what must be TRUE):
 
-  1. 用户打开编辑器可看到固定布局的外壳（顶栏、地图区、工作区、面板等命名插槽），画面与现状一致。
-  2. 后续能力可注册到对应命名插槽并出现在固定位置（注册一个占位能力即可观察到它出现在正确插槽）。
-  3. `editor-core` 导出通用 fs 接口（读 / 写 / 列目录 / 删除等操作），仓库中不存在该接口的默认实现。
-  4. `editor-impl` 只经由注入的 fs 接口访问数据，不直接 import 任何宿主或引擎代码。
+  1. 编辑器加载后可见外壳：顶部菜单行 + 标签行（含 `+` 与一个默认空白新标签页）。
+  2. 空白新标签页列出已注册的面板类型（名称 + 图标），点击即在该标签页打开该类型的一个新实例。
+  3. 同一类型可开多个独立实例（如两个表格面板）互不冲突；关闭标签会销毁实例并自动切换。
+  4. 外部可注册/注销面板类型、注册菜单项；关闭/注销不残留实例。
+  5. `editor-core` 导出通用 fs 接口（读 / 写 / 列目录 / 建目录 / 移动 / 删除），仓库中不存在其默认实现，且 core/impl 不引用。
 
 **Plans**: TBD
 **UI hint**: yes
