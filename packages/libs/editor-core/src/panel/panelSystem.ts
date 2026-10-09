@@ -72,10 +72,18 @@ export class PanelSystem implements IPanelSystem {
     this.getSnapshot = () => this.currentPanel;
     this.RootComponent = () => createElement(PanelRoot, { subscribe: this.subscribe, getSnapshot: this.getSnapshot });
     this.handleFocus = (): void => {
-      void this.currentPanel?.onFocus();
+      Promise.resolve()
+        .then(() => this.currentPanel?.onFocus())
+        .catch((error: unknown) => {
+          logger.error('panel.callbackFailed', String(error));
+        });
     };
     this.handleBlur = (): void => {
-      void this.currentPanel?.onBlur();
+      Promise.resolve()
+        .then(() => this.currentPanel?.onBlur())
+        .catch((error: unknown) => {
+          logger.error('panel.callbackFailed', String(error));
+        });
     };
   }
 
@@ -133,6 +141,11 @@ export class PanelSystem implements IPanelSystem {
 
   async switchTo(panel: IEditorPanel, param: Record<string, unknown> = {}): Promise<void> {
     if (panel === this.currentPanel) return;
+
+    if (this.panels.get(panel.id) !== panel) {
+      logger.error('panel.notRegistered', panel.id);
+      return;
+    }
 
     this.undoSystem.addUndoContext(this, {
       type: PanelUndoType.Switch,

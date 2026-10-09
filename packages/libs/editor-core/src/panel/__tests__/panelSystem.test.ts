@@ -70,6 +70,10 @@ class FakePanel implements IEditorPanel {
   lastUpdateList: readonly IResourceIdentifier[] = [];
   lastUndoContext?: IUndoContext<unknown>;
   lastRedoContext?: IUndoContext<unknown>;
+  /** 设置后在 onFocus 时抛出该文本的错误，用于验证焦点回调兜底 */
+  focusError?: string;
+  /** 设置后在 onBlur 时抛出该文本的错误，用于验证焦点回调兜底 */
+  blurError?: string;
 
   private readonly component: FC;
   private readonly disposeLog?: string[];
@@ -95,10 +99,12 @@ class FakePanel implements IEditorPanel {
 
   async onFocus(): Promise<void> {
     this.focusCount += 1;
+    if (this.focusError) throw new Error(this.focusError);
   }
 
   async onBlur(): Promise<void> {
     this.blurCount += 1;
+    if (this.blurError) throw new Error(this.blurError);
   }
 
   async onSwitchIn(): Promise<void> {
@@ -430,5 +436,47 @@ describe('PanelSystem 释放', () => {
     });
 
     expect(b.focusCount).toBe(1);
+  });
+});
+
+describe('PanelSystem 切换校验与回调兜底', () => {
+  // 未注册面板 switchTo 被拒绝：记日志、currentPanel 不变、撤回栈不受影响
+  it('未注册面板 switchTo 被拒绝且不影响撤回栈', async () => {
+    const system = await createSystem(100);
+    const a = new FakePanel('panel-a');
+    await system.panelSystem.registerPanel(async () => a);
+    await system.panelSystem.switchTo(a);
+
+    const unregistered = new FakePanel('panel-x');
+    const errorSpy = vi.spyOn(logger, 'error');
+
+    await system.panelSystem.switchTo(unregistered);
+
+    expect(errorSpy).toHaveBeenCalledWith('panel.notRegistered', 'panel-x');
+    expect(system.panelSystem.currentPanel).toBe(a);
+
+    await system.undoSystem.undo();
+
+    expect(system.panelSystem.currentPanel).toBeNull();
+    expect(unregistered.switchInCount).toBe(0);
+    errorSpy.mockRestore();
+  });
+
+  // onFocus 失败被捕获并经集中日志记录，不产生未处理 rejection
+  it('onFocus 失败被捕获并记日志', async () => {
+    const system = await createSystem();
+    const a = new FakePanel('panel-a');
+    a.focusError = 'focus boom';
+    await system.panelSystem.registerPanel(async () => a);
+    await system.panelSystem.switchTo(a);
+    const errorSpy = vi.spyOn(logger, 'error');
+
+    await act(async () => {
+      window.dispatchEvent(new Event('focus'));
+    });
+
+    expect(errorSpy).toHaveBeenCalledWith('panel.callbackFailed', 'Error: focus boom');
+    expect(a.focusCount).toBe(1);
+    errorSpy.mockRestore();
   });
 });
