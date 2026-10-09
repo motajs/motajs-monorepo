@@ -80,6 +80,8 @@ export class PanelSystem implements IPanelSystem {
   }
 
   async initialize(): Promise<void> {
+    if (this.initialized) return;
+
     this.initialized = true;
     window.addEventListener('focus', this.handleFocus);
     window.addEventListener('blur', this.handleBlur);
@@ -96,6 +98,7 @@ export class PanelSystem implements IPanelSystem {
     const panel = await creator(context);
 
     if (this.panels.has(panel.id)) {
+      await panel.dispose();
       logger.error('panel.duplicateId', panel.id);
       return null;
     }
@@ -168,6 +171,8 @@ export class PanelSystem implements IPanelSystem {
     this.panels.clear();
     this.hooks.clear();
     this.currentPanel = null;
+    this.initialized = false;
+    this.currentParam = {};
   }
 
   /**

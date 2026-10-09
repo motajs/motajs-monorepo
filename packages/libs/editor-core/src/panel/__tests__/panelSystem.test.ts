@@ -262,16 +262,18 @@ describe('PanelSystem 切换撤回', () => {
 });
 
 describe('PanelSystem 注册表', () => {
-  // 同 id 注册两次时记录错误并返回 null，保证注册表键唯一且不抛错
-  it('重复 id 注册记录错误并返回 null', async () => {
+  // 同 id 注册两次时记录错误、返回 null，且被丢弃的重复面板先被释放
+  it('重复 id 注册记录错误、返回 null 并释放重复面板', async () => {
     const system = await createSystem();
     await system.panelSystem.registerPanel(async () => new FakePanel('dup'));
+    const duplicate = new FakePanel('dup');
     const errorSpy = vi.spyOn(logger, 'error');
 
-    const result = await system.panelSystem.registerPanel(async () => new FakePanel('dup'));
+    const result = await system.panelSystem.registerPanel(async () => duplicate);
 
     expect(result).toBeNull();
     expect(errorSpy).toHaveBeenCalledWith('panel.duplicateId', 'dup');
+    expect(duplicate.disposeCount).toBe(1);
     errorSpy.mockRestore();
   });
 
@@ -385,5 +387,48 @@ describe('PanelSystem 释放', () => {
     await system.resourceSystem.updateResource(Object.freeze({ type: 4, id: 'delta' }));
 
     expect(a.updateResourceCount).toBe(0);
+  });
+
+  // 重复 initialize 为 no-op，不重复挂窗口监听（焦点回调只触发一次）
+  it('重复 initialize 不重复挂窗口监听', async () => {
+    const system = await createSystem();
+    const a = new FakePanel('panel-a');
+    await system.panelSystem.registerPanel(async () => a);
+    await system.panelSystem.switchTo(a);
+
+    await system.panelSystem.initialize();
+
+    await act(async () => {
+      window.dispatchEvent(new Event('focus'));
+    });
+
+    expect(a.focusCount).toBe(1);
+  });
+
+  // dispose 复位 initialized 后，新面板先入待初始化列表；再次 initialize 补调并恢复窗口监听
+  it('dispose 后重新 initialize 补调面板并恢复窗口监听', async () => {
+    const system = await createSystem();
+    const a = new FakePanel('panel-a');
+    await system.panelSystem.registerPanel(async () => a);
+    await system.panelSystem.switchTo(a);
+
+    await system.panelSystem.dispose();
+
+    const b = new FakePanel('panel-b');
+    await system.panelSystem.registerPanel(async () => b);
+
+    expect(b.initializeCount).toBe(0);
+
+    await system.panelSystem.initialize();
+
+    expect(b.initializeCount).toBe(1);
+
+    await system.panelSystem.switchTo(b);
+
+    await act(async () => {
+      window.dispatchEvent(new Event('focus'));
+    });
+
+    expect(b.focusCount).toBe(1);
   });
 });
