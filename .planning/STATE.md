@@ -5,10 +5,10 @@ current_phase: 1
 current_phase_name: 编辑器外壳与通用 fs 接口
 status: planned
 stopped_at: Phase 1 context gathered
-last_updated: "2026-10-09T09:02:56.849Z"
+last_updated: "2026-10-09T09:23:36.038Z"
 last_activity: 2026-10-09
 last_activity_desc: v1.0 roadmap created (7 requirements → 6 phases)
-state_head: 3a780d5b6234c26fb5f9b46c47d997db3616c888
+state_head: 537a8b0fa6daecf8b97562235b539b8c13a320e7
 progress:
   total_phases: 6
   completed_phases: 0
@@ -81,6 +81,10 @@ None yet.
 
 - 旧 `@motajs/editor` 仍与 mota-js 文件格式深度耦合；`editor-impl` 成为默认实现后，`@motajs/editor` 需改为调用 core/impl 并自行承担引擎适配（对外行为保持不变）。
 - 各能力阶段的 schema / 端口设计尚未展开，由对应阶段的 discuss/plan 时确定，本 roadmap 不预设。
+
+### Roadmap Evolution
+
+- Phase 1 edited: renamed phase 1 to 编辑器外壳 (shell-focused)
 
 ## Deferred Items
 
