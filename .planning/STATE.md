@@ -2,18 +2,18 @@
 gsd_state_version: "1.0"
 current_phase: "05.3"
 current_phase_name: editor-core/impl 重做 (INSERTED)
-current_plan: 14
+current_plan: 15
 status: executing
-stopped_at: Completed 05.3-14-PLAN.md
-last_updated: "2026-10-08T08:24:44.624Z"
+stopped_at: Completed 05.3-15-PLAN.md
+last_updated: "2026-10-09T05:41:07.455Z"
 last_activity: 2026-10-04
 last_activity_desc: Phase 05.3 execution started
-state_head: aaea1fbf79329ee547385ae809afb20da1b9099b
+state_head: bfc50ae5c6cb6b17ef4eb9e88ab4b6e759c73a40
 progress:
   total_phases: 15
   completed_phases: 0
-  total_plans: 62
-  completed_plans: 62
+  total_plans: 64
+  completed_plans: 63
   percent: 0
 ---
 
@@ -31,9 +31,9 @@ See: .planning/PROJECT.md (updated 2026-09-24)
 ## Current Position
 
 Phase: 05.3 (editor-core/impl 重做 (INSERTED)) — EXECUTING
-Current Plan: 14
-Total Plans in Phase: 14
-Status: Executing — plan 13 complete, plan 14 remaining
+Current Plan: 15
+Total Plans in Phase: 16
+Status: Executing — plan 15 complete, plan 16 remaining
 Last activity: 2026-10-04 — Phase 05.3 execution started
 
 Progress: [░░░░░░░░░░] 0%
@@ -109,6 +109,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 05.3 P12 | 13min | 3 tasks | 7 files |
 | Phase 05.3 P13 | 10min | 3 tasks | 5 files |
 | Phase 05.3 P14 | 5 min | 3 tasks | 7 files |
+| Phase 05.3 P15 | 6 min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -263,6 +264,10 @@ Recent decisions affecting current work:
 - [Phase 05.3]: 05.3-14: injection 由定值断言改为 IResourceInjection | null（初值 null）；六个方法入口空守卫统一经 logger.error('system.notInitialized', 'Resource') 记录后返回空值（[] / null / undefined / void）
 - [Phase 05.3]: 05.3-14: log/messages.ts 新增 system.notInitialized → '$1 system is not initialized'，保留 panel.duplicateId 与 log.unknownId，表仍 Object.freeze
 - [Phase 05.3]: 05.3-14: 面板切换参数统一为对象——IPanelSwitchData.fromParam/toParam 与 currentParam 必填（初值 {}），switchTo/internalSwitchTo 实现参数默认 {}，公共接口仍 param?
+- [Phase 05.3]: 05.3-15: WR-03 —— UndoSystem.undo/redo 改为读取栈顶、await 操作成功后移除并迁移到另一栈；失败不捕获、条目留在原栈可重试
+- [Phase 05.3]: 05.3-15: WR-04 —— ResourceSystem.dispose 清缓存后置 injection=null，六个方法共用未初始化守卫、只记 system.notInitialized 并返回空值
+- [Phase 05.3]: 05.3-15: IN-04 —— maxUndoStep<=0 表示禁用撤销，addUndoContext 入口直接返回不记录历史；IUndoInjection/IUndoSystem 的 maxUndoStep jsDoc 写明该语义
+- [Phase 05.3]: 05.3-15: WR-09 —— 每个资源更新钩子包成 Promise.resolve().then().catch()，同步抛错与拒绝 Promise 统一被捕获，失败经 logger.error('resource.hookFailed', ...) 记录且不中断其余钩子
 
 ### Pending Todos
 
@@ -289,6 +294,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-08T08:23:20.461Z
-Stopped at: Completed 05.3-14-PLAN.md
+Last session: 2026-10-09T05:40:42.963Z
+Stopped at: Completed 05.3-15-PLAN.md
 Resume file: None
