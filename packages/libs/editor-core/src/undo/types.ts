@@ -20,12 +20,12 @@ export interface IUndoable {
 }
 
 export interface IUndoInjection {
-  /** 最大撤回步数 */
+  /** 最大撤回步数；0 或负数表示禁用撤销 */
   readonly maxUndoStep: number;
 }
 
 export interface IUndoSystem {
-  /** 最大撤回步数 */
+  /** 最大撤回步数；0 或负数表示禁用撤销 */
   readonly maxUndoStep: number;
 
   /**

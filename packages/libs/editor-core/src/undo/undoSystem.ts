@@ -21,9 +21,11 @@ export class UndoSystem implements IUndoSystem {
   }
 
   addUndoContext(undo: IUndoable, context: IUndoContext<unknown>): void {
+    if (this.maxUndoStep <= 0) return;
+
     this.undoStack.push({ undo, context });
 
-    if (this.maxUndoStep > 0 && this.undoStack.length > this.maxUndoStep) {
+    if (this.undoStack.length > this.maxUndoStep) {
       this.undoStack.shift();
     }
 
@@ -31,22 +33,24 @@ export class UndoSystem implements IUndoSystem {
   }
 
   async undo(): Promise<void> {
-    const entry = this.undoStack.pop();
+    const entry = this.undoStack[this.undoStack.length - 1];
 
     if (!entry) return;
 
     await entry.undo.undo(entry.context);
 
+    this.undoStack.pop();
     this.redoStack.push(entry);
   }
 
   async redo(): Promise<void> {
-    const entry = this.redoStack.pop();
+    const entry = this.redoStack[this.redoStack.length - 1];
 
     if (!entry) return;
 
     await entry.undo.redo(entry.context);
 
+    this.redoStack.pop();
     this.undoStack.push(entry);
   }
 

@@ -22,6 +22,35 @@ class FakeUndoable implements IUndoable {
   }
 }
 
+// 首次调用可失败的撤回对象，用于验证失败后历史不丢失、可重试
+class FlakyUndoable implements IUndoable {
+  undoCount = 0;
+
+  redoCount = 0;
+
+  failUndoOnce = false;
+
+  failRedoOnce = false;
+
+  async undo<T>(context: IUndoContext<T>): Promise<void> {
+    this.undoCount += 1;
+
+    if (this.failUndoOnce) {
+      this.failUndoOnce = false;
+      throw new Error('undo failed');
+    }
+  }
+
+  async redo<T>(context: IUndoContext<T>): Promise<void> {
+    this.redoCount += 1;
+
+    if (this.failRedoOnce) {
+      this.failRedoOnce = false;
+      throw new Error('redo failed');
+    }
+  }
+}
+
 describe('UndoSystem 最小闭环', () => {
   // 入栈后调用 undo，记录对象的 undo 以同一 context 被调用一次
   test('undo 以同一 context 调用记录对象的 undo', async () => {
@@ -117,5 +146,75 @@ describe('UndoSystem 边界', () => {
 
     expect(undoable.undoCount).toBe(0);
     expect(undoable.redoCount).toBe(0);
+  });
+});
+
+describe('UndoSystem 撤回失败可重试', () => {
+  // undo 首次失败时条目仍留在撤销栈，第二次成功后才迁入重做栈，随后 redo 可用
+  test('undo 首次失败不丢历史，成功后才迁入重做栈', async () => {
+    const system = new UndoSystem();
+    await system.initialize({ maxUndoStep: 10 });
+    const undoable = new FlakyUndoable();
+    undoable.failUndoOnce = true;
+    const context: IUndoContext<unknown> = { type: 1, data: 'alpha' };
+
+    system.addUndoContext(undoable, context);
+
+    await expect(system.undo()).rejects.toThrow('undo failed');
+    expect(undoable.undoCount).toBe(1);
+
+    await system.undo();
+    expect(undoable.undoCount).toBe(2);
+
+    await system.redo();
+    expect(undoable.redoCount).toBe(1);
+  });
+
+  // redo 首次失败时条目仍留在重做栈，第二次成功后才迁回撤销栈，随后 undo 可用
+  test('redo 首次失败不丢历史，成功后才迁回撤销栈', async () => {
+    const system = new UndoSystem();
+    await system.initialize({ maxUndoStep: 10 });
+    const undoable = new FlakyUndoable();
+    const context: IUndoContext<unknown> = { type: 1, data: 'beta' };
+
+    system.addUndoContext(undoable, context);
+    await system.undo();
+
+    undoable.failRedoOnce = true;
+
+    await expect(system.redo()).rejects.toThrow('redo failed');
+    expect(undoable.redoCount).toBe(1);
+
+    await system.redo();
+    expect(undoable.redoCount).toBe(2);
+
+    await system.undo();
+    expect(undoable.undoCount).toBe(2);
+  });
+});
+
+describe('UndoSystem 禁用撤销', () => {
+  // maxUndoStep 为 0 表示禁用撤销，addUndoContext 不记录历史、undo 为空操作
+  test('maxUndoStep 为 0 时禁用撤销', async () => {
+    const system = new UndoSystem();
+    await system.initialize({ maxUndoStep: 0 });
+    const undoable = new FakeUndoable();
+
+    system.addUndoContext(undoable, { type: 1, data: 'alpha' });
+    await system.undo();
+
+    expect(undoable.undoCount).toBe(0);
+  });
+
+  // maxUndoStep 为负数同样表示禁用撤销
+  test('maxUndoStep 为负数时禁用撤销', async () => {
+    const system = new UndoSystem();
+    await system.initialize({ maxUndoStep: -1 });
+    const undoable = new FakeUndoable();
+
+    system.addUndoContext(undoable, { type: 1, data: 'alpha' });
+    await system.undo();
+
+    expect(undoable.undoCount).toBe(0);
   });
 });
