@@ -94,8 +94,17 @@ export interface IEditorPanel extends IUndoable {
 /** 创建编辑器面板的工厂函数，接收面板上下文并返回解析出面板的 Promise */
 export type EditorPanelCreator = (context: IEditorPanelContext) => Promise<IEditorPanel>;
 
-/** 面板实例工厂：接收面板上下文与 core 生成的实例 id，返回解析出实例的 Promise */
-export type EditorPanelFactory = (context: IEditorPanelContext, instanceId: string) => Promise<IEditorPanel>;
+/** 面板实例工厂的入参对象：打包面板上下文与 core 生成的实例 id */
+export interface IEditorPanelFactoryParam {
+  /** 面板侧上下文，提供资源读写与撤销能力 */
+  readonly context: IEditorPanelContext;
+
+  /** core 生成的唯一实例 id，用于区分同类型的多个实例 */
+  readonly instanceId: string;
+}
+
+/** 面板实例工厂：接收入参对象并同步返回一个面板实例（无 Promise） */
+export type EditorPanelFactory = (param: IEditorPanelFactoryParam) => IEditorPanel;
 
 export interface IEditorPanelType {
   /** 面板类型的唯一标识符 */
