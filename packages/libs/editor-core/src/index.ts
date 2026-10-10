@@ -5,3 +5,5 @@ export * from './resource';
 export * from './panel';
 export * from './hook';
 export * from './log';
+export * from './shell';
+export * from './fs';
