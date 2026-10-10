@@ -1,4 +1,4 @@
-import { FC } from 'react';
+import { FC, ReactNode } from 'react';
 import { IUndoable, IUndoContext } from '../undo';
 import { IResource, IResourceIdentifier } from '../resource';
 
@@ -93,6 +93,23 @@ export interface IEditorPanel extends IUndoable {
 
 /** 创建编辑器面板的工厂函数，接收面板上下文并返回解析出面板的 Promise */
 export type EditorPanelCreator = (context: IEditorPanelContext) => Promise<IEditorPanel>;
+
+/** 面板实例工厂：接收面板上下文与 core 生成的实例 id，返回解析出实例的 Promise */
+export type EditorPanelFactory = (context: IEditorPanelContext, instanceId: string) => Promise<IEditorPanel>;
+
+export interface IEditorPanelType {
+  /** 面板类型的唯一标识符 */
+  readonly id: string;
+
+  /** 面板类型的显示名称 */
+  readonly name: string;
+
+  /** 外部提供的可渲染图标，core 不解析图标名 */
+  readonly icon: ReactNode;
+
+  /** 创建此类型面板实例的工厂 */
+  readonly create: EditorPanelFactory;
+}
 
 export interface IPanelInjection {}
 
