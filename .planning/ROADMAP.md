@@ -37,7 +37,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. 外部可注册/注销面板类型、注册菜单项；关闭/注销不残留实例。
   5. `editor-core` 导出通用 fs 接口（读 / 写 / 列目录 / 建目录 / 移动 / 删除），仓库中不存在其默认实现，且 core/impl 不引用。
 
-**Plans:** 1/4 plans executed
+**Plans:** 2/4 plans executed
 Plans:
 **Wave 1**
 
@@ -45,7 +45,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 01-02-PLAN.md — `ShellSystem` 实现 + `EditorCore` 迁移（端到端 tracer；含 D-07 单向契约确认 checkpoint）
+- [x] 01-02-PLAN.md — `ShellSystem` 实现 + `EditorCore` 迁移（端到端 tracer；含 D-07 单向契约确认 checkpoint）
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -137,7 +137,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. 编辑器外壳与通用 fs 接口 | 1/4 | In Progress|  |
+| 1. 编辑器外壳与通用 fs 接口 | 2/4 | In Progress|  |
 | 2. 表格编辑 | 0/TBD | Not started | - |
 | 3. 素材管理 | 0/TBD | Not started | - |
 | 4. 地图编辑 | 0/TBD | Not started | - |
