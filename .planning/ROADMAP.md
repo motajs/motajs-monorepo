@@ -37,7 +37,24 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. 外部可注册/注销面板类型、注册菜单项；关闭/注销不残留实例。
   5. `editor-core` 导出通用 fs 接口（读 / 写 / 列目录 / 建目录 / 移动 / 删除），仓库中不存在其默认实现，且 core/impl 不引用。
 
-**Plans**: TBD
+**Plans:** 4 plans
+Plans:
+**Wave 1**
+
+- [ ] 01-01-PLAN.md — 接口定义（面板类型 / 外壳 / 菜单 / 标签 / 通用 fs，仅类型，无实现）
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 01-02-PLAN.md — `ShellSystem` 实现 + `EditorCore` 迁移（端到端 tracer；含 D-07 单向契约确认 checkpoint）
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 01-03-PLAN.md — 外壳纯 CSS 样式 + 两处配套工程改动（`sideEffects` / `global.d.ts`）+ UI-SPEC 状态覆盖
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 01-04-PLAN.md — 通用 fs 面门禁 `coreFsSurface.js`（真实树 + 两极性 + 包根导入探针）
+
 **UI hint**: yes
 
 ### Phase 2: 表格编辑
@@ -120,7 +137,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. 编辑器外壳与通用 fs 接口 | 0/TBD | Not started | - |
+| 1. 编辑器外壳与通用 fs 接口 | 0/4 | Not started | - |
 | 2. 表格编辑 | 0/TBD | Not started | - |
 | 3. 素材管理 | 0/TBD | Not started | - |
 | 4. 地图编辑 | 0/TBD | Not started | - |

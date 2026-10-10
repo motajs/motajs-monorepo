@@ -1,10 +1,11 @@
 ---
 phase: "1"
 slug: "shell"
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: "2026-10-09"
+reviewed_at: "2026-10-09"
 ---
 
 # Phase 1 — UI Design Contract
@@ -201,25 +202,43 @@ Language: **Chinese**, consistent with the existing editor UI.
 
 ## UI Considerations
 
-Applicable state considerations resolved: **all applicable states resolved (see table); 1 backstop; 0 unresolved.**
+> Resolved UI element/state coverage for the shell (checker-approved, probe cross-checked). plan-phase lifts each `resolved (explicit)` row into `must_haves.truths` as a plain string, and each `resolved (backstop)` row as a flat `{ statement, verification: backstop }` marker. Not-applicable probes are recorded with reasons (no silent drops).
 
-| Category | Element(s) | Status | Resolution / Reason |
-|----------|------------|--------|---------------------|
-| empty | blank-tab type list (list-collection) | ✅ covered | Zero registered types renders heading 「暂无可用面板」 + body 「尚未注册任何面板类型。」 (Copywriting Contract). |
-| empty | menu row (nav) | ✅ covered | Zero menu items → the row still renders (empty, fixed 32px) so the shell shape is stable (D-06). |
-| empty | tab row (nav) | ✅ covered | Zero-tab state is unreachable: closing the last tab recreates one blank tab (D-05). Dismissed as impossible-by-construction. |
-| populated | blank-tab type list (list-collection) | ✅ covered | One row per type in registration order; icon + name, full-row button. |
-| loading | content area / panel host | ✅ covered | While a panel factory promise is pending, the content area shows a centered, muted loading line; the tab is already present and active. |
-| loading | blank-tab list / menu row | ✅ covered | These are synchronous from in-memory registries; no loading state applies. Dismissed with reason: no async source. |
-| error | content area / panel host | ✅ covered | Factory rejection renders the error copy 「面板打开失败」 + 「请关闭此标签页后重试，或联系该面板的提供方。」 inside the tab; the tab stays open and closable. |
-| partial | blank-tab type list (list-collection) | ✅ covered | Types are registered atomically (id + name + icon + factory together); a partially-registered type is rejected at registration, so the list never renders a half-row. |
-| overflow | tab row (nav) | 🧪 backstop | Many tabs exceed the row width: the tab strip clips (no wrap); the `+` control stays pinned right and always visible. Verify via a held-out state test rendering N tabs at a narrow width and asserting `+` remains reachable. |
-| overflow | blank-tab type list (list-collection) | ✅ covered | Vertical scroll within the content area; list block stays `max-width: 480px`. |
-| overflow | menu row (nav) | ✅ covered | Horizontal clip / no wrap; items keep intrinsic width. |
-| zero-one-many | blank-tab type list (list-collection) | ✅ covered | 0 → empty copy; 1 / many → identical row list, spacing unchanged (no singular/plural copy in Chinese). |
-| zero-one-many | tab row (list-collection) | ✅ covered | Renders 1..N identically; 0 unreachable (recreated). |
-| long-text | tab labels, menu titles, list names (static-content / nav) | ✅ covered | Single-line ellipsis truncation + `title` attribute for full text. |
-| long-text | `+` / `×` (interactive-control) | ✅ covered | Icon-only; no text to overflow; accessible name via `aria-label`. |
+**Applicable considerations:** 19 resolved (18 explicit, 1 backstop), 0 unresolved.
+
+### Resolved — explicit
+
+- Menu row (nav) · empty: with zero registered menu items, the row still renders as an empty fixed-32px surface so the shell shape is stable (D-06).
+- Menu row (nav) · populated: one clickable button per registered menu item, in registration order (D-12).
+- Menu row (nav) · overflow: horizontal overflow is clipped with no wrap; items keep their intrinsic width.
+- Menu row (nav) · long-text: menu titles truncate with single-line ellipsis and expose the full text via the `title` attribute.
+- Tab row (nav) · empty: the zero-tab state is unreachable — closing the last tab recreates one blank tab (D-05).
+- Tab row (nav) · populated: renders 1..N tabs identically; each tab shows the type name and a `×` close control.
+- Tab row (nav) · zero-one-many: 1..N render identically; 0 is unreachable.
+- Tab row (nav) · long-text: tab labels truncate with single-line ellipsis and expose the full text via the `title` attribute.
+- Content area / panel host · loading: while a panel factory promise is pending, the content area shows a centered, muted loading line; the tab is already present and active.
+- Content area / panel host · error: when the factory rejects, the tab shows the error copy 「面板打开失败」 + 「请关闭此标签页后重试，或联系该面板的提供方。」; the tab stays open and closable.
+- Blank-tab type list (list) · empty: zero registered types renders heading 「暂无可用面板」 + body 「尚未注册任何面板类型。」.
+- Blank-tab type list (list) · populated: one row per registered type in registration order; each row is a full-row button showing the caller icon + type name.
+- Blank-tab type list (list) · partial: types register atomically (id + name + icon + factory); a partial registration is rejected, so the list never renders a half-row.
+- Blank-tab type list (list) · overflow: many types scroll vertically within the content area; the list block stays `max-width: 480px`.
+- Blank-tab type list (list) · zero-one-many: 0 renders the empty copy; 1 and many render the identical row list with unchanged spacing.
+- Blank-tab type list (list) · long-text: type names truncate with single-line ellipsis and expose the full text via the `title` attribute.
+- `+` control · populated: an always-rendered icon-only button with `aria-label` 「新建标签页」.
+- `×` control · populated: a per-tab icon-only button with `aria-label` 「关闭「{面板名}」」; closes immediately with no confirmation per D-05.
+
+### Resolved — backstop
+
+- Tab row (nav) · overflow: { statement: "When many tabs exceed the tab-row width, the tab strip clips with no wrap and the `+` control stays pinned right and always reachable.", verification: backstop }
+
+### Not applicable (recorded reasons)
+
+- Menu row (nav) · loading / error / partial: menu items are registered synchronously from an in-memory list; atomic registration, no async source.
+- Menu row (nav) · zero-one-many: no singular/plural copy in Chinese; layout is identical at any count.
+- Tab row (nav) · loading / error / partial: tabs are derived synchronously from the in-memory tab state machine.
+- Content area / panel host · empty / partial / zero-one-many / long-text / overflow: these are properties of a panel's own content, owned by Phases 2–6, not the shell.
+- Blank-tab type list (list) · loading: the type registry is synchronous in-memory; no loading state applies.
+- `+` / `×` controls · empty / loading / error / overflow / long-text: icon-only controls have no text, no async source, and always render.
 
 ---
 
@@ -265,12 +284,12 @@ These are the RESEARCH open questions; each is resolved above with a default, bu
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
-- [ ] Dimension 7 Inventory Provenance: PASS (N/A — no design system; section intentionally omitted)
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: PASS
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS — 1 non-blocking FLAG: Label 13px / Body 14px 层级过近，建议拉开或合并
+- [x] Dimension 5 Spacing: PASS
+- [x] Dimension 6 Registry Safety: PASS
+- [x] Dimension 7 Inventory Provenance: PASS (N/A — no design system; section intentionally omitted)
 
-**Approval:** pending
+**Approval:** approved 2026-10-09
