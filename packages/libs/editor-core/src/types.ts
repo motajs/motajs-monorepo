@@ -1,8 +1,8 @@
 import { IUndoInjection, IUndoSystem } from './undo';
-import { IPanelInjection, IPanelSystem } from './panel';
 import { IResourceInjection, IResourceSystem } from './resource';
+import { IShellInjection, IShellSystem } from './shell';
 
-export interface IEditorCoreInjection extends IUndoInjection, IResourceInjection, IPanelInjection {}
+export interface IEditorCoreInjection extends IUndoInjection, IResourceInjection, IShellInjection {}
 
 export interface IEditorCore {
   /** 编辑器版本 */
@@ -10,8 +10,8 @@ export interface IEditorCore {
 
   /** 撤回系统 */
   readonly undoSystem: IUndoSystem;
-  /** 面板管理系统 */
-  readonly panelSystem: IPanelSystem;
+  /** 外壳系统 */
+  readonly shellSystem: IShellSystem;
   /** 资源系统 */
   readonly resourceSystem: IResourceSystem;
 

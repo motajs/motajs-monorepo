@@ -1,6 +1,6 @@
 import { logger } from './log';
-import { IPanelSystem, PanelSystem } from './panel';
 import { IResourceSystemAccess, ResourceSystem } from './resource';
+import { IShellSystem, ShellSystem } from './shell';
 import { IEditorCore, IEditorCoreInjection } from './types';
 import { IUndoSystem, UndoSystem } from './undo';
 
@@ -9,7 +9,7 @@ export class EditorCore implements IEditorCore {
 
   readonly undoSystem: IUndoSystem;
   readonly resourceSystem: IResourceSystemAccess;
-  readonly panelSystem: IPanelSystem;
+  readonly shellSystem: IShellSystem;
 
   /** 是否已完成初始化，保证注入只生效一次 */
   private initialized: boolean = false;
@@ -19,7 +19,7 @@ export class EditorCore implements IEditorCore {
   constructor() {
     this.undoSystem = new UndoSystem();
     this.resourceSystem = new ResourceSystem();
-    this.panelSystem = new PanelSystem(this.undoSystem, this.resourceSystem);
+    this.shellSystem = new ShellSystem(this.undoSystem, this.resourceSystem);
   }
 
   async initialize(injection: IEditorCoreInjection): Promise<void> {
@@ -37,11 +37,11 @@ export class EditorCore implements IEditorCore {
 
     const arr = [this.undoSystem.initialize(injection), this.resourceSystem.initialize(injection)];
     await Promise.all(arr);
-    await this.panelSystem.initialize(injection);
+    await this.shellSystem.initialize(injection);
   }
 
   async dispose(): Promise<void> {
-    await this.panelSystem.dispose();
+    await this.shellSystem.dispose();
     await this.resourceSystem.dispose();
     await this.undoSystem.dispose();
     this.disposed = true;

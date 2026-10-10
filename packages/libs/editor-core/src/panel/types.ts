@@ -91,9 +91,6 @@ export interface IEditorPanel extends IUndoable {
   onUpdateResourceList(type: number, list: readonly IResourceIdentifier[]): Promise<void>;
 }
 
-/** 创建编辑器面板的工厂函数，接收面板上下文并返回解析出面板的 Promise */
-export type EditorPanelCreator = (context: IEditorPanelContext) => Promise<IEditorPanel>;
-
 /** 面板实例工厂的入参对象：打包面板上下文与 core 生成的实例 id */
 export interface IEditorPanelFactoryParam {
   /** 面板侧上下文，提供资源读写与撤销能力 */
@@ -118,57 +115,4 @@ export interface IEditorPanelType {
 
   /** 创建此类型面板实例的工厂 */
   readonly create: EditorPanelFactory;
-}
-
-export interface IPanelInjection {}
-
-export interface IPanelSystem extends IUndoable {
-  /** 当前正在前台的编辑器面板 */
-  readonly currentPanel: IEditorPanel | null;
-
-  /**
-   * 初始化编辑器面板系统并注入
-   * @param injection 面板系统注入
-   */
-  initialize(injection: IPanelInjection): Promise<void>;
-
-  /**
-   * 注册编辑器面板
-   * @param panel 面板对象的工厂函数
-   */
-  registerPanel(panel: EditorPanelCreator): Promise<IEditorPanel | null>;
-
-  /**
-   * 释放指定编辑器面板对象
-   * @param panel 要释放的面板对象
-   */
-  disposePanel(panel: IEditorPanel): Promise<void>;
-
-  /**
-   * 根据面板标识符获取指定面板
-   * @param id 面板标识符
-   */
-  getPanel(id: string): IEditorPanel | null;
-
-  /**
-   * 切换至指定编辑器面板
-   * @param panel 要切换至的编辑器面板
-   * @param param 向切换至的面板传入的参数
-   */
-  switchTo(panel: IEditorPanel, param?: Record<string, unknown>): Promise<void>;
-
-  /**
-   * 获取面板系统的渲染根组件
-   */
-  render(): FC;
-
-  /**
-   * 释放此面板管理器
-   */
-  dispose(): Promise<void>;
-}
-
-export const enum PanelUndoType {
-  /** 面板切换 */
-  Switch,
 }

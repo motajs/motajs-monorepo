@@ -11,8 +11,8 @@ import {
   IUndoContext,
   IUndoable,
   logger,
-  PanelSystem,
   ResourceSystem,
+  ShellSystem,
   UndoSystem,
 } from '../index';
 
@@ -156,10 +156,10 @@ describe('EditorCore 组装', () => {
     expect(core.version).toBe('0.1.0');
     expect(core.undoSystem).toBeDefined();
     expect(core.resourceSystem).toBeDefined();
-    expect(core.panelSystem).toBeDefined();
+    expect(core.shellSystem).toBeDefined();
   });
 
-  // initialize 下发注入且不抛错，随后经面板系统注册并切换面板、经资源系统广播列表更新
+  // initialize 下发注入且不抛错，随后经外壳系统注册类型并打开面板、经资源系统广播列表更新
   it('initialize 下发注入并驱动面板与资源系统', async () => {
     const core = new EditorCore();
     const injection = new FakeEditorInjection();
@@ -169,10 +169,11 @@ describe('EditorCore 组装', () => {
     await expect(core.initialize(injection)).resolves.toBeUndefined();
 
     const panel = new FakePanel('panel-a');
-    await core.panelSystem.registerPanel(async () => panel);
-    await core.panelSystem.switchTo(panel);
+    core.shellSystem.registerPanelType({ id: 'panel-a', name: '面板 A', icon: null, create: () => panel });
+    const tabId = core.shellSystem.listTabs()[0].id;
+    await core.shellSystem.openPanelInTab(tabId, 'panel-a');
 
-    expect(core.panelSystem.currentPanel).toBe(panel);
+    expect(core.shellSystem.listTabs()[0].typeId).toBe('panel-a');
 
     await core.resourceSystem.updateResourceList(id.type);
 
@@ -239,11 +240,17 @@ describe('EditorCore 释放', () => {
 
     const contexts: IEditorPanelContext[] = [];
     const panel = new FakePanel('panel-a');
-    await core.panelSystem.registerPanel(async (context) => {
-      contexts.push(context);
-      return panel;
+    core.shellSystem.registerPanelType({
+      id: 'panel-a',
+      name: '面板 A',
+      icon: null,
+      create: (param) => {
+        contexts.push(param.context);
+        return panel;
+      },
     });
-    await core.panelSystem.switchTo(panel);
+    const tabId = core.shellSystem.listTabs()[0].id;
+    await core.shellSystem.openPanelInTab(tabId, 'panel-a');
 
     const undoable = new FakeUndoable();
     core.undoSystem.addUndoContext(undoable, { type: 1, data: 'x' });
@@ -253,7 +260,7 @@ describe('EditorCore 释放', () => {
 
     await core.dispose();
 
-    expect(core.panelSystem.currentPanel).toBeNull();
+    expect(core.shellSystem.listTabs().length).toBe(0);
     expect(panel.disposeCount).toBe(1);
 
     const afterDispose = await contexts[0].requestResource<string>(id);
@@ -273,7 +280,7 @@ describe('包根公开面', () => {
     expect(EditorCore).toBeDefined();
     expect(UndoSystem).toBeDefined();
     expect(ResourceSystem).toBeDefined();
-    expect(PanelSystem).toBeDefined();
+    expect(ShellSystem).toBeDefined();
     expect(Hookable).toBeDefined();
     expect(HookController).toBeDefined();
   });
