@@ -216,8 +216,8 @@ Language: **Chinese**, consistent with the existing editor UI.
 - Tab row (nav) · populated: renders 1..N tabs identically; each tab shows the type name and a `×` close control.
 - Tab row (nav) · zero-one-many: 1..N render identically; 0 is unreachable.
 - Tab row (nav) · long-text: tab labels truncate with single-line ellipsis and expose the full text via the `title` attribute.
-- Content area / panel host · loading: while a panel factory promise is pending, the content area shows a centered, muted loading line; the tab is already present and active.
-- Content area / panel host · error: when the factory rejects, the tab shows the error copy 「面板打开失败」 + 「请关闭此标签页后重试，或联系该面板的提供方。」; the tab stays open and closable.
+- Content area / panel host · loading: while a newly created panel instance is initializing (its `IEditorPanel.initialize()` is pending), the content area shows a centered, muted loading line; the tab is already present and active.
+- Content area / panel host · error: when instance creation throws or the instance's `IEditorPanel.initialize()` rejects, the tab shows the error copy 「面板打开失败」 + 「请关闭此标签页后重试，或联系该面板的提供方。」; the tab stays open and closable.
 - Blank-tab type list (list) · empty: zero registered types renders heading 「暂无可用面板」 + body 「尚未注册任何面板类型。」.
 - Blank-tab type list (list) · populated: one row per registered type in registration order; each row is a full-row button showing the caller icon + type name.
 - Blank-tab type list (list) · partial: types register atomically (id + name + icon + factory); a partial registration is rejected, so the list never renders a half-row.

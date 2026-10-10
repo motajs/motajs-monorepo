@@ -13,8 +13,11 @@
 - **用途**：描述一个可被注册的「面板类型」的元信息与创建实例的工厂。外部注册它，core 用它生成实例。承载 D-08（唯一 id、名称、图标）与 D-09（工厂）。
 - **成员**：`id: string`（唯一标识符）、`name: string`（显示名称）、`icon: ReactNode`（外部提供的可渲染图标，core 不解析图标名）、`create: EditorPanelFactory`（创建实例的工厂）。
 
+### `IEditorPanelFactoryParam`（interface，`packages/libs/editor-core/src/panel/types.ts`）
+- **用途**：面板实例工厂的**入参对象**——把「面板上下文」与「core 生成的唯一实例 id」打包成一个参数。成员：`context: IEditorPanelContext`（资源读写 + 撤销）、`instanceId: string`（区分同类型多个实例）。
+
 ### `EditorPanelFactory`（type 别名，`packages/libs/editor-core/src/panel/types.ts`）
-- **用途**：面板实例工厂的签名。core 创建一个实例时调用它，传入面板上下文与 core 生成的唯一实例 id，返回解析出实例的 Promise（D-09）。替代旧 `EditorPanelCreator`（旧签名只有 `context`）。
+- **用途**：面板实例工厂的签名。core 创建一个实例时调用它，传入上面的入参对象，**同步**返回一个面板实例（无 Promise）（D-09）。签名 `(param: IEditorPanelFactoryParam) => IEditorPanel`。替代旧 `EditorPanelCreator`（旧签名只有 `context`）。
 
 ### `IShellSystem`（interface，`packages/libs/editor-core/src/shell/types.ts`）
 - **用途**：浏览器式编辑器外壳的对外契约。统管「面板类型注册表、面板实例生命周期、标签状态机、菜单项注册、渲染根」；由 `EditorCore` 暴露为 `shellSystem`（D-14）。不 extends `IUndoable`（标签导航不进撤销历史）。
