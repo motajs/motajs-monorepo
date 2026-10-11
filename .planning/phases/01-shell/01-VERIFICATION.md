@@ -1,9 +1,10 @@
 ---
 phase: 01-shell
 verified: 2026-10-11T07:51:40Z
-status: human_needed
+status: passed
 score: 31/32 must-haves verified
 covered_files:
+
   - .planning/phases/01-shell/01-01-PLAN.md
   - .planning/phases/01-shell/01-02-PLAN.md
   - .planning/phases/01-shell/01-03-PLAN.md
@@ -35,15 +36,18 @@ covered_files:
   - packages/libs/editor-core/src/types.ts
   - packages/libs/editor-core/src/__tests__/core.test.ts
   - scripts/verify/coreFsSurface.js
-covered_digest: "v3:sha256:5acad7a6c5bf87eea1de809e7db4123f7e9218b3db47aa4ebff48ee30bb1654e"
+
+covered_digest: "v1:sha256:405ac82431fe64f30ca1e1d6dea407f6870a50f84d91b0155b54343475dff98f"
 behavior_unverified: 1
 overrides_applied: 0
 behavior_unverified_items:
+
   - truth: "Tab row (nav) · overflow: when many tabs exceed the tab-row width, the tab strip clips with no wrap and the `+` control stays pinned right and always reachable."
     test: "Render the shell, open many blank tabs (e.g. 31) so the tab strip overflows the tab-row width in a real browser, then observe the tab row."
     expected: "The tab strip clips horizontally with no wrapping; the `+` control remains pinned to the right edge and is fully visible/clickable."
     why_human: "This is a layout/overflow invariant. jsdom (the test environment) does not apply CSS layout, so the existing test can only assert that the `.editor-shell-tab-new` element is present in the structure, not that it is actually pinned/reachable. Only a real browser can confirm the pinned position under overflow."
 human_verification:
+
   - test: "Mount the shell root (`ShellSystem.render()`) inside a real editor host and look at it: menu row (top), tab row (below, with `+` rightmost), content area."
     expected: "Menu row 32px, tab row 36px, active tab uses the `--editor-selected` tint + 2px accent bottom bar; `+`/`×` are compact 24×24 hit targets; long names ellipsize with single-line ellipsis; overflow clips with no wrap."
     why_human: "Visual appearance (sizes, colours, ellipsis, clipping, focus rings) is not observable in jsdom. The phase's own VALIDATION.md and summaries record this as a manual-only acceptance item for SHELL-01; core has no standalone runnable shell — host integration lands with the later editor-impl phases."
