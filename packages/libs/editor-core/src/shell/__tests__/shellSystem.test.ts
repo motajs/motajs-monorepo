@@ -533,3 +533,123 @@ describe('ShellSystem 资源桥接', () => {
     expect(panels[0].lastUpdateList).toEqual([id]);
   });
 });
+
+describe('ShellSystem 外壳状态覆盖', () => {
+  // 菜单标题、面板类型名与标签名均以文本节点渲染，含尖括号的输入不生成任何元素（防标记注入）
+  it('外部文本以文本节点渲染且不生成元素', async () => {
+    const system = await createSystem();
+    const panels: FakePanel[] = [];
+
+    system.shellSystem.registerMenuItem({ id: 'm1', title: '<b>menu</b>', onClick: (): void => {} });
+    registerType(system, 'evil', '<img src=x onerror="alert(1)">', panels);
+
+    const { container } = render(createElement(system.shellSystem.render()));
+
+    expect(container.querySelector('.editor-shell-menu-item')?.textContent).toBe('<b>menu</b>');
+    expect(container.querySelector('.editor-shell-blank-name')?.textContent).toBe('<img src=x onerror="alert(1)">');
+    expect(container.querySelector('b')).toBeNull();
+    expect(container.querySelector('img')).toBeNull();
+
+    const tabId = system.shellSystem.listTabs()[0].id;
+
+    await act(async () => {
+      await system.shellSystem.openPanelInTab(tabId, 'evil');
+    });
+
+    expect(container.querySelector('.editor-shell-tab-label')?.textContent).toBe('<img src=x onerror="alert(1)">');
+    expect(container.querySelector('img')).toBeNull();
+  });
+
+  // 菜单标题、标签名与类型名的完整文本暴露在元素 title 属性上
+  it('菜单、标签与类型名的完整文本暴露在 title 上', async () => {
+    const system = await createSystem();
+    const panels: FakePanel[] = [];
+
+    system.shellSystem.registerMenuItem({ id: 'm1', title: 'File Menu', onClick: (): void => {} });
+    registerType(system, 'long', 'A Very Long Panel Name', panels);
+
+    const { container } = render(createElement(system.shellSystem.render()));
+
+    expect(container.querySelector('.editor-shell-menu-item')?.getAttribute('title')).toBe('File Menu');
+    expect(container.querySelector('.editor-shell-blank-item')?.getAttribute('title')).toBe('A Very Long Panel Name');
+
+    const tabId = system.shellSystem.listTabs()[0].id;
+
+    await act(async () => {
+      await system.shellSystem.openPanelInTab(tabId, 'long');
+    });
+
+    expect(container.querySelector('.editor-shell-tab-label')?.getAttribute('title')).toBe('A Very Long Panel Name');
+  });
+
+  // 菜单项、标签与类型名带单行省略所需的外壳类名，且标签行含 + 控件类名
+  it('菜单项、标签与类型名带单行省略类名', async () => {
+    const system = await createSystem();
+    const panels: FakePanel[] = [];
+
+    system.shellSystem.registerMenuItem({ id: 'm1', title: 'File Menu', onClick: (): void => {} });
+    registerType(system, 'long', 'A Very Long Panel Name', panels);
+
+    const { container } = render(createElement(system.shellSystem.render()));
+
+    expect(container.querySelector('.editor-shell-menu-item')).not.toBeNull();
+    expect(container.querySelector('.editor-shell-tab-label')).not.toBeNull();
+    expect(container.querySelector('.editor-shell-tab-new')).not.toBeNull();
+    expect(container.querySelector('.editor-shell-blank-name')).not.toBeNull();
+  });
+
+  // 空白标签页零类型时渲染空态标题与正文
+  it('空白标签页零类型时显示空态文案', async () => {
+    const system = await createSystem();
+
+    const { container } = render(createElement(system.shellSystem.render()));
+
+    expect(container.querySelector('.editor-shell-empty-heading')?.textContent).toBe('暂无可用面板');
+    expect(container.querySelector('.editor-shell-empty-body')?.textContent).toBe('尚未注册任何面板类型。');
+  });
+
+  // 空白标签页类型列表按注册顺序一行一个类型渲染
+  it('空白标签页类型列表按注册顺序渲染', async () => {
+    const system = await createSystem();
+    const panels: FakePanel[] = [];
+
+    registerType(system, 'alpha', '甲类型', panels);
+    registerType(system, 'beta', '乙类型', panels);
+    registerType(system, 'gamma', '丙类型', panels);
+
+    const { container } = render(createElement(system.shellSystem.render()));
+
+    const rows = Array.from(container.querySelectorAll('.editor-shell-blank-item'));
+
+    expect(rows.length).toBe(3);
+    expect(rows.map((row) => row.textContent)).toEqual(['甲类型', '乙类型', '丙类型']);
+  });
+
+  // 菜单行为空时仍渲染固定菜单行，但没有任何菜单项
+  it('菜单行为空时仍渲染空菜单行', async () => {
+    const system = await createSystem();
+
+    const { container } = render(createElement(system.shellSystem.render()));
+
+    const menu = container.querySelector('.editor-shell-menu');
+
+    expect(menu).not.toBeNull();
+    expect(menu?.querySelectorAll('.editor-shell-menu-item').length).toBe(0);
+  });
+
+  // 标签行始终含 + 控件；标签数量增长到溢出后 + 仍然存在
+  it('标签行始终含 + 控件且多标签溢出时仍存在', async () => {
+    const system = await createSystem();
+
+    const { container } = render(createElement(system.shellSystem.render()));
+
+    expect(screen.getByRole('button', { name: '新建标签页' })).not.toBeNull();
+
+    await act(async () => {
+      for (let index = 0; index < 30; index += 1) system.shellSystem.openBlankTab();
+    });
+
+    expect(container.querySelectorAll('.editor-shell-tab').length).toBe(31);
+    expect(container.querySelector('.editor-shell-tab-new')?.getAttribute('aria-label')).toBe('新建标签页');
+  });
+});
