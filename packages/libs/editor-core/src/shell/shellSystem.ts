@@ -1,3 +1,4 @@
+import './shell.css';
 import { Store } from '@tanstack/store';
 import { createElement, FC, ReactElement, useSyncExternalStore } from 'react';
 import { IHookController } from '../hook';
@@ -127,10 +128,20 @@ function resolveTabName(tab: IEditorTab, panelTypes: readonly IEditorPanelType[]
  */
 function MenuRow(props: IMenuRowProps): ReactElement {
   const buttons = props.items.map((item) =>
-    createElement('button', { key: item.id, type: 'button', title: item.title, onClick: item.onClick }, item.title),
+    createElement(
+      'button',
+      {
+        key: item.id,
+        type: 'button',
+        className: 'editor-shell-menu-item',
+        title: item.title,
+        onClick: item.onClick,
+      },
+      item.title,
+    ),
   );
 
-  return createElement('nav', { 'aria-label': '主菜单' }, buttons);
+  return createElement('nav', { className: 'editor-shell-menu', 'aria-label': '主菜单' }, buttons);
 }
 
 /**
@@ -146,11 +157,12 @@ function TabRow(props: ITabRowProps): ReactElement {
 
     return createElement(
       'span',
-      { key: tab.id },
+      { key: tab.id, className: isActive ? 'editor-shell-tab is-active' : 'editor-shell-tab' },
       createElement(
         'button',
         {
           type: 'button',
+          className: 'editor-shell-tab-label',
           title: name,
           'aria-label': name,
           'aria-current': isActive,
@@ -162,6 +174,7 @@ function TabRow(props: ITabRowProps): ReactElement {
         'button',
         {
           type: 'button',
+          className: 'editor-shell-tab-close',
           title: closeLabel,
           'aria-label': closeLabel,
           onClick: (event) => {
@@ -175,11 +188,17 @@ function TabRow(props: ITabRowProps): ReactElement {
   });
   const newTab = createElement(
     'button',
-    { type: 'button', title: '新建标签页', 'aria-label': '新建标签页', onClick: () => props.system.openBlankTab() },
+    {
+      type: 'button',
+      className: 'editor-shell-tab-new',
+      title: '新建标签页',
+      'aria-label': '新建标签页',
+      onClick: () => props.system.openBlankTab(),
+    },
     '+',
   );
 
-  return createElement('nav', { 'aria-label': '编辑器标签页' }, tabs, newTab);
+  return createElement('nav', { className: 'editor-shell-tabs', 'aria-label': '编辑器标签页' }, tabs, newTab);
 }
 
 /**
@@ -191,14 +210,14 @@ function PanelHost(props: IPanelHostProps): ReactElement {
   if (props.instance === null || props.status === ShellInstanceStatus.Error) {
     return createElement(
       'div',
-      null,
-      createElement('div', null, '面板打开失败'),
-      createElement('div', null, '请关闭此标签页后重试，或联系该面板的提供方。'),
+      { className: 'editor-shell-error' },
+      createElement('div', { className: 'editor-shell-error-title' }, '面板打开失败'),
+      createElement('div', { className: 'editor-shell-error-body' }, '请关闭此标签页后重试，或联系该面板的提供方。'),
     );
   }
 
   if (props.status === ShellInstanceStatus.Loading) {
-    return createElement('div', null, '加载中…');
+    return createElement('div', { className: 'editor-shell-loading' }, '加载中…');
   }
 
   return createElement(props.instance.render());
@@ -213,9 +232,9 @@ function BlankTabList(props: IBlankTabListProps): ReactElement {
   if (props.panelTypes.length === 0) {
     return createElement(
       'div',
-      null,
-      createElement('div', null, '暂无可用面板'),
-      createElement('div', null, '尚未注册任何面板类型。'),
+      { className: 'editor-shell-empty' },
+      createElement('div', { className: 'editor-shell-empty-heading' }, '暂无可用面板'),
+      createElement('div', { className: 'editor-shell-empty-body' }, '尚未注册任何面板类型。'),
     );
   }
 
@@ -225,17 +244,23 @@ function BlankTabList(props: IBlankTabListProps): ReactElement {
       {
         key: type.id,
         type: 'button',
+        className: 'editor-shell-blank-item',
         title: type.name,
         onClick: (): void => {
           if (props.tabId !== null) void props.system.openPanelInTab(props.tabId, type.id);
         },
       },
-      createElement('span', { 'aria-hidden': true }, type.icon ?? null),
-      createElement('span', null, type.name),
+      createElement('span', { className: 'editor-shell-blank-icon', 'aria-hidden': true }, type.icon ?? null),
+      createElement('span', { className: 'editor-shell-blank-name' }, type.name),
     ),
   );
 
-  return createElement('div', null, createElement('div', null, '选择面板类型'), rows);
+  return createElement(
+    'div',
+    { className: 'editor-shell-blank' },
+    createElement('div', { className: 'editor-shell-blank-heading' }, '选择面板类型'),
+    createElement('div', { className: 'editor-shell-blank-list' }, rows),
+  );
 }
 
 /**
@@ -245,16 +270,16 @@ function BlankTabList(props: IBlankTabListProps): ReactElement {
  */
 function ContentArea(props: IContentAreaProps): ReactElement {
   const activeTab = props.activeTab;
+  const inner =
+    activeTab === null || activeTab.typeId === null
+      ? createElement(BlankTabList, {
+          system: props.system,
+          panelTypes: props.panelTypes,
+          tabId: activeTab === null ? null : activeTab.id,
+        })
+      : createElement(PanelHost, { instance: props.activePanel, status: props.activePanelStatus });
 
-  if (activeTab === null || activeTab.typeId === null) {
-    return createElement(BlankTabList, {
-      system: props.system,
-      panelTypes: props.panelTypes,
-      tabId: activeTab === null ? null : activeTab.id,
-    });
-  }
-
-  return createElement(PanelHost, { instance: props.activePanel, status: props.activePanelStatus });
+  return createElement('div', { className: 'editor-shell-content' }, inner);
 }
 
 /**
@@ -268,7 +293,7 @@ function ShellRoot(props: IShellRootProps): ReactElement {
 
   return createElement(
     'div',
-    null,
+    { className: 'editor-shell' },
     createElement(MenuRow, { system: props.system, items: view.menuItems }),
     createElement(TabRow, {
       system: props.system,
