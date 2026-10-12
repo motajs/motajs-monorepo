@@ -75,11 +75,16 @@ Plans:
 
 **维护约定**: 本宿主是**持续演进**的——此后每个 `editor-impl` 能力阶段（Phase 2–6）完成后，**必须**把该阶段的能力接入本宿主，便于测试与目视验收（见下方 Cross-cutting Constraints）。
 
-**Plans:** 0 plans
-
+**Plans:** 2 plans
 Plans:
 
-- [ ] TBD (run /gsd-plan-phase 01.1 to break down)
+**Wave 1 — 接口 / 契约（仅类型，无实现）**
+
+- [ ] 01.1-01-PLAN.md — dev 包骨架 + 两条契约（安装函数约定 D-05、内存后端接口 D-02）
+
+**Wave 2 — 端到端实现（tracer 领衔）**
+
+- [ ] 01.1-02-PLAN.md — tracer：宿主启动 → 外壳渲染 → 演示面板读内存数据 + 冒烟测试
 
 ### Phase 2: 表格编辑
 
@@ -195,7 +200,7 @@ Phases execute in numeric order: 1 → 1.1 → 2 → 3 → 4 → 5 → 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. 编辑器外壳与通用 fs 接口 | 4/4 | In Progress|  |
-| 1.1. 编辑器开发宿主 (INSERTED) | 0/0 | Not started | - |
+| 1.1. 编辑器开发宿主 (INSERTED) | 0/2 | Not started | - |
 | 2. 表格编辑 | 0/TBD | Not started | - |
 | 3. 素材管理 | 0/TBD | Not started | - |
 | 4. 地图编辑 | 0/TBD | Not started | - |
