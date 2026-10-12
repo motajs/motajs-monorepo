@@ -72,3 +72,29 @@
 .etable-state-body {
   color: rgba(0, 0, 0, 0.45);
 }
+
+.etable-input-textarea {
+  position: relative;
+  width: 100%;
+}
+
+.etable-input-textarea > textarea {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 22px;
+  max-height: 160px;
+  overflow: auto;
+  resize: vertical;
+  field-sizing: content;
+}
+
+.etable-input-select {
+  width: 100%;
+}
+
+.etable-input-checkbox-set {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
