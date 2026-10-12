@@ -21,7 +21,7 @@
 
 ### TABLE（表格）
 
-- [ ] **TABLE-01**: 用户可编辑 schema 驱动的表格数据
+- [x] **TABLE-01**: 用户可编辑 schema 驱动的表格数据
 
 ### ASSET（素材）
 
@@ -57,7 +57,7 @@
 | SHELL-01 | Phase 1 | Complete |
 | CORE-01 | Phase 1 | Complete |
 | DEVHOST-01 | Phase 1.1 | Complete |
-| TABLE-01 | Phase 2 | Pending |
+| TABLE-01 | Phase 2 | Complete |
 | ASSET-01 | Phase 3 | Pending |
 | MAP-01 | Phase 4 | Pending |
 | CODE-01 | Phase 5 | Pending |

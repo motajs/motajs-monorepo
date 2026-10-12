@@ -1,19 +1,20 @@
 ---
 gsd_state_version: "1.0"
 milestone: v1.0
-current_phase: "01.1"
-current_phase_name: 编辑器开发宿主
-status: planning
-stopped_at: Phase 1 complete, ready to plan Phase 01.1
-last_updated: "2026-10-12T08:47:25.486Z"
+current_phase: 02
+current_phase_name: 表格编辑
+current_plan: 5
+status: executing
+stopped_at: Completed 02-04-PLAN.md (tracer); next 02-05-PLAN.md
+last_updated: "2026-10-12T14:10:54.788Z"
 last_activity: 2026-10-12
-last_activity_desc: Phase 1 complete, transitioned to Phase 01.1
-state_head: f1c72f9669a6aa385da55d35d538f0715ec39a8c
+last_activity_desc: "Completed 02-04 (table tracer): editor-impl test infra + end-to-end resource-layer read path"
+state_head: ffd3647759bcdc7f74984b5fe2ab68804b963b03
 progress:
   total_phases: 7
   completed_phases: 2
-  total_plans: 17
-  completed_plans: 7
+  total_plans: 16
+  completed_plans: 10
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -24,14 +25,15 @@ milestone_name: editor-core 空壳 + editor-impl 重做
 See: .planning/PROJECT.md (updated 2026-10-09)
 
 **Core value:** 把编辑器内核与引擎细节彻底解耦——`editor-core` 只给接口、`editor-impl` 写默认实现，让新旧引擎共用同一套编辑能力，第三方可高自由度定制。
-**Current focus:** Phase 01.1 — 编辑器开发宿主
+**Current focus:** Phase 02 — 表格编辑
 
 ## Current Position
 
-Phase: 01.1 — 编辑器开发宿主
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-10-12 — Phase 1 complete, transitioned to Phase 01.1
+Phase: 02 — 表格编辑
+Current Plan: 5
+Total Plans in Phase: 9
+Status: Ready to execute
+Last activity: 2026-10-12 — Completed 02-04（表格 tracer：工程脚手 + 端到端只读表格面板）
 
 Progress: [██████████] 100%
 
@@ -48,7 +50,7 @@ Progress: [██████████] 100%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1. 编辑器外壳与通用 fs 接口 | 0 | - | - |
-| 2. 表格编辑 | 0 | - | - |
+| 2. 表格编辑 | 3 | 9 | - |
 | 3. 素材管理 | 0 | - | - |
 | 4. 地图编辑 | 0 | - | - |
 | 5. 代码编辑 | 0 | - | - |
@@ -62,6 +64,11 @@ Progress: [██████████] 100%
 - Trend: N/A
 
 *Updated after each plan completion*
+**Per-Plan Metrics:**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 02 P04 | 44min | 3 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -74,6 +81,9 @@ Recent decisions affecting current work:
 - [Roadmap v1.0]: `editor-core` 只定义接口（含通用 fs 接口 CORE-01），`editor-impl` 写默认实现；外壳先行（SHELL-01），能力顺序 table → asset → map → code → event。
 - [Roadmap v1.0]: CORE-01（通用 fs 接口）并入 Phase 1——外壳与接口同为最底层地基，避免把「只定义接口」单列成一个空阶段。
 - [Phase 05.3]: `editor-core` 的 `window` 门禁豁免；`editor-impl` 对外 subpath 为 `.` / `./code` / `./table` / `./map` / `./asset` / `./shell` / `./react`。
+- [Phase 02]: 02-04: schema 缺失或非对象 → 空态（正文「尚未定义任何字段。」）；是对象但无 properties → 回退用数据自身键作叶子行（must_haves 真值 35 与 Task 2 action 两处要求的取舍）
+- [Phase 02]: 02-04: TablePanelStatus / ITableGridProps 落在 TableGrid.tsx（types.ts 不在 files_modified；且避免 TableGrid ↔ tablePanel 环依赖）
+- [Phase 02]: 02-04: 表格组件完全由 props 驱动、面板类型只是其一个消费者（D-01/D-18）；TablePanel.onSwitchIn 重取数据与 schema（D-15 修订 / D-31）
 
 ### Pending Todos
 
@@ -99,6 +109,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-12T02:21:22.247Z
-Stopped at: Phase 1 complete, ready to plan Phase 01.1
-Resume file: E:/github/motajs-monorepo/.planning/phases/01.1-dev-host/01.1-CONTEXT.md
+Last session: 2026-10-12T14:10:33.525Z
+Stopped at: Completed 02-04-PLAN.md (tracer); next 02-05-PLAN.md
+Resume file: None

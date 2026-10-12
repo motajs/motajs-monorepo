@@ -99,19 +99,19 @@ Plans:
   3. 表格编辑经统一命令 / 撤销路径，可撤销、可重做。
   4. 表格数据经统一层（`editor-core` 资源层）读写，行为与现状一致（与锁定决策 D-03 一致：经资源层而非通用 fs 接口，见 02-02）。
 
-**Plans:** 9 plans
+**Plans:** 3/9 plans executed
 Plans:
 
 **Wave 1 — 接口定义（仅类型，无实现）**
 
-- [ ] 02-02-PLAN.md — `editor-impl/table` 类型（标准 JSON Schema 数据模型 / 资源标识约定 / `ITablePanel` / schema 呈现规则；无函数体）
-- [ ] 02-03-PLAN.md — `editor-impl/react` 接缝类型（外部编辑器 / 通用弹窗 / 打开器 / 剪贴板；无 `IValueEvaluator`）
+- [x] 02-02-PLAN.md — `editor-impl/table` 类型（标准 JSON Schema 数据模型 / 资源标识约定 / `ITablePanel` / schema 呈现规则；无函数体）
+- [x] 02-03-PLAN.md — `editor-impl/react` 接缝类型（外部编辑器 / 通用弹窗 / 打开器 / 剪贴板；无 `IValueEvaluator`）
 
 > 注：原 02-01（`editor-core` 的 `updateResource` 接缝类型）已删除——D-15 改为「切入时刷新」（外壳切换标签时调用 `onSwitchIn` / `onSwitchOut`），见 02-05。
 
 **Wave 2 — 接缝实现 + tracer**
 
-- [ ] 02-04-PLAN.md — tracer：工程脚手 + 端到端只读表格面板（注册 → 打开 → 设目标 → 读资源 → 渲染）
+- [x] 02-04-PLAN.md — tracer：工程脚手 + 端到端只读表格面板（注册 → 打开 → 设目标 → 读资源 → 渲染）
 - [ ] 02-05-PLAN.md — `editor-core`：切换标签时调用 `onSwitchIn` / `onSwitchOut`（D-15 修订版「切入时刷新」）
 
 **Wave 3**
@@ -203,7 +203,7 @@ Phases execute in numeric order: 1 → 1.1 → 2 → 3 → 4 → 5 → 6
 |-------|----------------|--------|-----------|
 | 1. 编辑器外壳与通用 fs 接口 | 4/4 | Complete    | 2026-10-12 |
 | 1.1. 编辑器开发宿主 (INSERTED) | 3/3 | Complete    | 2026-10-12 |
-| 2. 表格编辑 | 0/TBD | Not started | - |
+| 2. 表格编辑 | 3/9 | In Progress | - |
 | 3. 素材管理 | 0/TBD | Not started | - |
 | 4. 地图编辑 | 0/TBD | Not started | - |
 | 5. 代码编辑 | 0/TBD | Not started | - |
