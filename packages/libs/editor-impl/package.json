@@ -40,6 +40,7 @@
     "@motajs/editor-core": "workspace:*",
     "@tanstack/react-store": "catalog:default",
     "@tanstack/store": "catalog:default",
+    "ajv": "catalog:default",
     "es-toolkit": "catalog:default",
     "json-schema-typed": "catalog:default",
     "ts-pattern": "catalog:default"

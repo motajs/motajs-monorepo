@@ -33,6 +33,7 @@ catalog:
   '@types/three': ^0.170.0
   '@types/wicg-file-system-access': ^2023.10.7
   '@vitejs/plugin-react': ^5.1.2
+  ajv: 8.20.0
   alien-signals: 3.1.2
   antd: 6.2.1
   blockly: 12.3.1
