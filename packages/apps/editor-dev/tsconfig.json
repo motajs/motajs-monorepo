@@ -1,0 +1,9 @@
+{
+  "extends": "@motajs/config/tsconfig.app.base.json",
+  "compilerOptions": {
+    "types": ["vite/client"],
+    "verbatimModuleSyntax": false,
+    "erasableSyntaxOnly": false
+  },
+  "include": ["src"]
+}
