@@ -1,19 +1,34 @@
 # Phase 2 — 命名提案（INTERFACE-NAME）
 
 **状态：全部为提案，待用户确认后方可落代码 / 计划 / 配置。**
+
+> ⚠ **方向修订 2026-10-12（作废 + 新增）**
+> schema 格式由「旧字段配置 / 注释对象」改为**标准 JSON Schema（完全替代）**；D-06 定为**注入式打开器**（`IShellSystem` 签名不改）；新增面板参数接口约定 `IXxxPanelParam extends Record<string, unknown>`。
+> **本节以下与「旧字段配置/注释对象」绑定的命名全部作废、待按 JSON Schema 重新提案：** Plan 02 整节（`CommentObject` / `FieldConfig` / `TableFieldKind` / `_type` 映射 / `SelectConfig` / `CheckboxSetConfig` / `TableNode` / `TableAction`）、Plan 04 的 `buildTableTree` 旧排序语义、Plan 06（`checkRange` 的 `_range`/`_select` + 按种类的五种控件）、Plan 08（旧 schema 呈现规则）、Plan 09（按旧字段种类的编辑器分发）。Plan 03 / 05 / 07 随新触发约定少量调整。
+> **已确认新增项见下方「方向修订新增命名」区块。**
 依据 `AGENTS.md` §Project Rules「重要命名先确认」与 §Code style（方法引用一律写作 `类名.方法名`；类 / 接口 / 枚举不写 jsDoc，`type` 别名要写；接口成员默认 readonly；数值枚举 + 大驼峰成员）。**每个条目说明「它是干什么的」，只给名字不算报告。**
 
 确认方式建议：逐条回复「同意 / 改成 X」。任意条目未确认前，执行阶段不得将其写成代码。
 
 **本文件覆盖的跨 Plan 共同结论（请一并确认）：**
-- 本阶段的「schema」= 旧 `components/Table` 的**字段配置/注释对象**（`CommentObject`/`FieldConfig`，带 `_type`/`_range` 等），**不是** JSON Schema（RESEARCH A2；已在 Plan 01 的 checkpoint 确认）。
+- 本阶段的「schema」= **标准 JSON Schema**（2026-10-12 修订）；**完全替代**旧 `components/Table` 的字段配置/注释对象（`CommentObject`/`FieldConfig`，带 `_type`/`_range` 等）。旧格式与旧命名**不再使用**。
 - 共享弹窗与外部编辑器接缝放 `src/react/`（已是声明 subpath，且被依赖边界规则命名）。
 - 表格资源类型号由 `editor-impl` 定义；数据表与 schema 表**共用一个**类型号，靠 `id` 区分（`table.<name>` / `table#schema.<name>`）。
-- 被注入的表达式求值器（引擎侧）类型为 `IValueEvaluator`，承载 `_range` 等求值；不落在 core/impl 的执行体内。
+- ~~被注入的表达式求值器 `IValueEvaluator`~~ **已废弃（2026-10-12，D-22）**：校验改用 ajv 声明式，不再需要表达式求值器。
+
+## 方向修订新增命名（2026-10-12，待确认）
+
+- `IXxxPanelParam`（约定）：每个可带参打开的面板，为其参数声明一个 `interface IXxxPanelParam extends Record<string, unknown>`，供实现里收窄为明确类型；由「注入式打开器」承载（内核不动）。
+- `ITablePanelParam`（interface，`extends Record<string, unknown>`）：**表格面板的打开参数类型**（D-06 注入式打开器使用），承载「新表格面板要编辑哪张表」等目标信息。它与 Plan 03 的 `ITablePanelOpenRequest` 是否合并为同一个，待确认。
+- `x-editor`（JSON Schema 扩展键，拟名）：标记字段使用哪个**外部编辑器**（`code` / `event` / `material` / `point` / `multiSelect`）。JSON Schema 允许未知关键字，作为编辑器注解合规。
+- `x-control`（JSON Schema 扩展键，拟名）：当标准关键字（`type` / `enum` / `items`）推导不出**行内控件**时（如颜色），用它显式指定控件。
+- **待重新提案的命名（JSON Schema 方向）:** 数据模型、字段描述、校验结果、控件映射、schema 呈现规则等——旧名（`CommentObject` / `FieldConfig` / `TableFieldKind` / …）作废，需在下一次 discuss 定下 JSON Schema 设计后再提。
 
 ---
 
-## Plan 01 — `02-01-PLAN.md`（`editor-core` 两条接缝的**类型**）
+## Plan 01 — `02-01-PLAN.md`（`editor-core` 两条接缝的**类型**）— 【已删除】
+
+> ⚠ **2026-10-12：** 本计划已删除（D-15 修订为「切入时刷新」，不再需要 `updateResource` 接缝）。见文末「Wave 1 rev.2 提案」中 Plan 01 的撤销说明。
 
 ### `IEditorPanelContext.updateResource(id)`（接口成员，`packages/libs/editor-core/src/panel/types.ts`）
 - **用途**：D-15 通知接缝。让「刚写完某个资源的面板」通知核心「这个资源变了」，核心据此广播，使正在看同一资源的其他面板立即重算 / 重渲染。参数是资源标识符。接口计划里先声明为可选，Plan 04/05 实现时定为必需。
@@ -37,6 +52,8 @@
 ---
 
 ## Plan 02 — `02-02-PLAN.md`（`editor-impl/table` 的**类型**）
+
+> ⚠ **整节作废（2026-10-12）。** 下表基于旧「字段配置/注释对象」；需按**标准 JSON Schema** 重新提案。
 
 ### `TableFieldKind`（数值 `const enum`，`src/table/types.ts`）
 - **用途**：值单元格该用哪种输入控件的「字段种类」。成员：`Textarea` / `Select` / `Checkbox` / `CheckboxSet` / `PopCheckboxSet` / `Event` / `Material` / `Color` / `Point` / `Disable`。
@@ -136,17 +153,15 @@
 
 ---
 
-## Plan 05 — `02-05-PLAN.md`（`editor-core` 两条接缝的**实现**）
+## Plan 05 — `02-05-PLAN.md`（`editor-core`：切换标签时调用 `onSwitchIn` / `onSwitchOut`）
 
-### `PanelContext.updateResource`（方法，`packages/libs/editor-core/src/panel/panelContext.ts`）
-- **用途**：把面板上下文的「通知资源变更」转发给资源系统现有的 `updateResource`，从而触发对面板钩子的广播（D-15）。无新对外名字。
-
-### `ShellSystem`（内部）
-- **用途**：把可选打开参数从 `openPanelInTab` / `createPanelInstance` 透传进 `createInstance` 的工厂调用（D-06）。无新对外名字。
+> ⚠ **2026-10-12 修订：** D-15 改为「切入时刷新」（`02-CONTEXT` D-31）；本 Plan 不再是「D-15 广播实现」，改为 **让外壳在活动面板变化时调用 `onSwitchIn` / `onSwitchOut`**。无新对外命名（`onSwitchIn` / `onSwitchOut` 是 Phase 1 已有钩子）。
 
 ---
 
 ## Plan 06 — `02-06-PLAN.md`（校验 + 行内输入控件）
+
+> ⚠ **本节作废（2026-10-12）。** `_range` / `_select` 校验与按旧字段种类的控件映射不再成立；需按 **JSON Schema**（`type` / `enum` / `minimum` / `maximum` / …）重新提案。
 
 ### `validateId`（函数，`src/table/model/validation.ts`）
 - **用途**：校验「新字段名」：非空、字符集（字母数字下划线）、不重名；返回带中文错误信息的结果。
@@ -183,6 +198,8 @@
 
 ## Plan 08 — `02-08-PLAN.md`（D-15 + D-06 + schema 呈现）
 
+> ⚠ **本节作废（2026-10-12）。** 旧 schema 专用呈现规则（min/max 成对）不再成立；需按 **JSON Schema** 重新提案。
+
 ### `buildSchemaPresentation(...)`（函数，`src/table/model/schemaPresentation.ts`）
 - **用途**：按内建规则集把 schema 字段排成行布局（`min`/`max` 合成一行、紧凑标量）。
 
@@ -195,6 +212,8 @@
 ---
 
 ## Plan 09 — `02-09-PLAN.md`（外部编辑器 + 通用弹窗）
+
+> ⚠ **本节作废（2026-10-12）。** 按旧字段种类（`textarea`/`event`/`material`/`point`/`popCheckboxSet`）分发外部编辑器的规则不再成立；触发约定需按 **JSON Schema** 重新设计。
 
 ### `MultiSelectModal`（组件，`src/react/components/MultiSelectModal.tsx`）
 - **用途**：通用多选弹窗（素材缩略图多选 + `popCheckboxSet` 共用，D-14）。
@@ -215,6 +234,76 @@
 无新对外命名（仅集成测试与 `02-VALIDATION.md` 记账）。
 
 ---
+
+## Wave 1 rev.2 提案（JSON Schema 方向，2026-10-12）
+
+> 按 §H 讨论结论（D-20…D-29）重写的 Wave 1 接口命名提案。**逐条回复「同意 / 改成 X」后方可写入计划。**
+
+### Plan 01（rev.2）— 【已撤销，计划已删除】
+
+> ⚠ **2026-10-12 撤销：** D-15 已修订（`02-CONTEXT` D-31）——不再需要跨面板广播，`IEditorPanelContext.updateResource` **不引入**；`02-01-PLAN.md` 已删除。改为外壳在切换标签时调用 `onSwitchIn` / `onSwitchOut`（见 Plan 05）。
+
+### Plan 02（rev.2）— `editor-impl/table` 类型（JSON Schema 方向）
+
+**资源约定**
+- `TableResourceType`（数值 `const enum`；成员 `Table`）— 表格资源的数字类型号；数据表与 schema 表共用一个号，靠 id 区分。
+- `ITablePanelTarget`（interface）— 一个表格面板要编辑的目标：`data`（`table.<name>`）与 `schema`（`table#schema.<name>`）两个资源标识。
+- （函数，Plan 04 实现）`tableDataResourceId(name)` / `tableSchemaResourceId(name)` — 生成上述两个资源标识。
+
+**JSON Schema 模型**（节点类型用**标准类型库**定型，不自造；库须支持 Draft 2020-12，如 `json-schema-typed`，最终选型写计划时定）
+- `ITableSchemaNode`（interface，递归）— 表格理解的 JSON Schema 节点：`type` / `properties` / `required` / `items` / `enum` / `minimum` / `maximum` / `exclusiveMinimum` / `exclusiveMaximum` / `pattern` / `title` / `description` / `default`，加上扩展键 `x-editor` / `x-control`，并允许未识别关键字透传。`type` **按标准库写成字符串或字符串数组**，不强行转数字枚举（**删除** `TableSchemaType`）。
+- `TableExternalEditor`（数值 `const enum`；`Code` / `Event` / `Material` / `Point` / `MultiSelect`）— `x-editor` 的取值（外部编辑器种类）。
+- `TableControlKind`（数值 `const enum`；`Text` / `Number` / `Checkbox` / `Select` / `MultiSelect` / `Color`）— 行内控件种类（标准推导 + `x-control` 兜底得到）。
+
+**行树与编辑**
+- `ITableRowNode`（interface）— 行树节点：叶子行（字段名 / 值 / 描述）或可折叠的分组行（子节点）。
+- `TableEditMode`（数值 `const enum`；`Change` / `Add` / `Delete`）— 编辑模式。
+- `TableAction`（type 别名）— 一次变更的载荷。
+
+**面板接缝**
+- `ITablePanel`（interface）— 表格面板在 `IEditorPanel` 之外额外暴露的方法集合。
+- `ITablePanel.setTable(target: ITablePanelTarget): void` — 从外部设置实例目标表（无全局「当前表格」）。
+- `ITablePanelParam`（interface，`extends Record<string, unknown>`）— 表格面板的打开参数（D-06 注入式打开器携带）。
+
+**呈现规则**
+- `ISchemaPresentationRule` / `IPairedFieldGroup`（interface）— schema 专用呈现（如 `minimum` / `maximum` 合成一行）。
+
+### Plan 03（rev.2）— `editor-impl/react` 接缝类型
+
+- `ITableEditorCapabilities`（interface）— 注入的能力包（每个能力可选）；**去掉** `valueEvaluator`。
+- `ICodeEditorOpenRequest` / `ICodeEditorOpener`、`IEventEditorOpenRequest` / `IEventEditorOpener` — 代码 / 事件外部编辑器（独立面板）。
+- `IMultiSelectItem` / `IMultiSelectOpenRequest` / `IMultiSelectOpener` — 通用多选（素材 + 多选框共用）。
+- `IPointSelectOpenRequest` / `IPointSelectOpener` — 坐标选择。
+- `ITablePanelOpener` — D-06 打开器，方法携带 `ITablePanelParam`（Plan 02 声明）。
+- `ICopyCapability`（`copyText`）— 注入的剪贴板能力。
+- `ITableCapabilitiesProviderProps`（interface）— 能力 Provider 的 props。
+
+### rev.2 成员级命名（本次新增，逐条确认）
+
+- `ITablePanelTarget`：成员 `data` / `schema`（两个资源标识）。
+- `ITableRowNode`：成员 `key` / `value` / `description` / `children?` / `config?`（叶子行或分组行）。
+- `ITablePanel.setTable(target: ITablePanelTarget): void`。
+- `ITablePanelParam`：`extends Record<string, unknown>`，无固定成员。
+- `ICodeEditorOpenRequest`：成员 `title` / `content`（通用整份内容形状，兼容 D-30）。
+- `ICodeEditorOpener.open(request): Promise<string | null>`。
+- `IEventEditorOpenRequest` / `IEventEditorOpener.open(request): Promise<string | null>`。
+- `IMultiSelectItem`：成员 `id` / `label` / `thumbnail?`。
+- `IMultiSelectOpenRequest` / `IMultiSelectResult`（成员 `ids: readonly string[]`）/ `IMultiSelectOpener.open(request): Promise<IMultiSelectResult | null>`。
+- `IPointSelectOpenRequest` / `IPointSelectResult`（成员 `x` / `y`）/ `IPointSelectOpener.open(request): Promise<IPointSelectResult | null>`。
+- `ITablePanelOpener.open(param: Record<string, unknown>): Promise<void>`（不透明记录；`ITablePanelParam` 由 src/table 声明、组合根收窄）。
+- `ICopyCapability.copyText(text: string): Promise<void>`。
+- `ITableEditorCapabilities`：成员 `codeEditor?` / `eventEditor?` / `multiSelect?` / `pointSelect?` / `tablePanel?` / `copy?`（全可选）。
+- `TableExternalEditor` 成员：`Code` / `Event` / `Material` / `Point` / `MultiSelect`。
+- `TableControlKind` 成员：`Text` / `Number` / `Checkbox` / `Select` / `MultiSelect` / `Color`。
+- `TableEditMode` 成员：`Change` / `Add` / `Delete`；`TableResourceType` 成员：`Table`。
+- 扩展键：`x-editor` / `x-control`。
+
+### 已定（2026-10-12 逐条确认）
+
+- `ITableSchemaNode.type`：**写成字符串（或字符串数组）**，不强行用数字枚举；**删除** `TableSchemaType` 自造枚举。
+- **用标准类型库**描述 JSON Schema 节点，不自造；库须支持 Draft 2020-12（如 `json-schema-typed`），最终选型写计划时定。
+- `ITablePanelParam` 与 `ITablePanelOpener`：**两个类型保持分开、暂不合并**。
+- **新增（2026-10-12，D-30）：** 工具栏「在代码编辑器中打开」按钮，随当前视图打开数据文件或 schema 文件、可编辑并写回。**代码编辑器打开请求需能承载「整份文件」**（不只单个字段）；具体形状写计划时定（可能沿用 / 扩展现有 `ICodeEditorOpenRequest`）。
 
 ## 待确认的规划假设
 
