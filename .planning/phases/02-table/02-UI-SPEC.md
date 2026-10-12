@@ -1,10 +1,11 @@
 ---
 phase: "2"
 slug: "table"
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: "2026-10-11"
+reviewed_at: "2026-10-11"
 ---
 
 # Phase 2 — UI Design Contract
@@ -328,7 +329,7 @@ Differences from the regular mode (canonical rule set — see Flagged Decision F
   - **Modal (D-12)** — `material`, `point`, and `popCheckboxSet` open a **modal** (small window).
 - `select` / `checkbox` / `checkboxSet` / `color` / `disable` types show no 编辑 button (parity `shouldShowEditButton`); `disable` additionally shows a **复制** button; `popCheckboxSet` labels the button **多选框编辑**.
 - **Modals are generic, reusable components (D-13)** — they live as shared UI (not table-private), because other features use the same dialogs.
-- **Material selection is a multi-select (D-14)** — it **merges** with the checkbox-set editor into a single generic **multi-select modal** serving `checkboxSet` / `popCheckboxSet` and `material` (assets presented as a thumbnail multi-select).
+- **Material selection is a multi-select (D-14)** — the material picker **merges** with the checkbox-set **modal** (`popCheckboxSet`) into one generic **multi-select modal** (assets presented as a thumbnail multi-select). Note: the **inline** `checkboxSet` field stays **inline** — it does **not** open this modal from the table (it has no 编辑 button); the modal is the shared component reused wherever a modal multi-select is needed.
 - A **注释** button appears only when a short comment exists; it reveals the full comment.
 - Returned values re-enter through the same validated, undoable commit path.
 
@@ -361,41 +362,58 @@ Differences from the regular mode (canonical rule set — see Flagged Decision F
 
 ## UI Considerations
 
-> Shape-rooted UI *state* coverage (empty / loading / error / populated / partial / overflow / zero-one-many / long-text). Empty-state and error-state **copy** lives in `## Copywriting Contract` above; this section covers state coverage and references those rows rather than restating the copy.
+> Resolved UI element/state coverage for the table panel (checker-approved, probe cross-checked; extended with the user's D-11…D-18 additions). plan-phase lifts each `resolved (explicit)` row into `must_haves.truths` as a plain string, and each `resolved (backstop)` row as a flat `{ statement, verification: backstop }` marker. Not-applicable probes are recorded with reasons (no silent drops).
 
-Applicable state considerations resolved: **22 covered (17 explicit, 5 backstop), 0 unresolved**.
+**Applicable considerations:** 35 resolved (28 explicit, 7 backstop), 0 unresolved.
 
-| Category | Element(s) | Status | Resolution / Reason |
-|----------|------------|--------|---------------------|
-| empty | Table grid (list-collection) | ✅ covered | Zero rows render the documented 「暂无表格数据」 empty state heading + body (schema target uses 「尚未定义任何字段。」) instead of an empty table shell. |
-| loading | Table grid (list-collection) | ✅ covered | Until the resource resolves, the table region shows 「正在加载表格…」 with a spinner and the toolbar is disabled. |
-| error | Table grid (list-collection) | ✅ covered | On resource failure the region shows 「表格加载失败」 + 「请检查该表格资源是否存在，或稍后重试。」 + a retry control; the panel stays open. |
-| populated | Table grid (list-collection) | ✅ covered | At a typical volume the grid renders the four-column fixed layout with a scrolling table region and zebra rows. |
-| partial | Table grid (list-collection) | ✅ covered | A schema whose fields are partly missing config renders the present fields with the default textarea control; a single field-level failure shows the destructive error treatment without dropping the row. |
-| overflow | Table grid (list-collection) | 🧪 backstop | When rows exceed the table-region height the region scrolls vertically while the toolbar stays pinned. |
-| zero-one-many | Table grid (list-collection) | ✅ covered | 0 rows renders the empty state; 1 and many render the identical row list with unchanged spacing (no singular/plural copy in Chinese). |
-| long-text | Table grid (list-collection) | 🧪 backstop | Field names and comments truncate with single-line ellipsis and expose the full text via the `title` attribute. |
-| loading | Toolbar (nav) | ✅ covered | While the target resource loads, the toolbar controls (edit-mode + 「编辑 Schema」) render disabled. |
-| error | Toolbar (nav) | ✅ covered | On load failure the toolbar is rendered disabled (or omitted) and the error state owns the region. |
-| overflow | Toolbar (nav) | 🧪 backstop | On a narrow panel the toolbar keeps its two groups pinned left and right and does not wrap. |
-| long-text | Toolbar (nav) | ✅ covered | The optional toolbar title truncates with single-line ellipsis and an exposed `title`. |
-| empty | Inline input (form) | ✅ covered | An unset field renders an empty textarea / unselected select / unchecked box; committing an empty value is allowed unless `_range` forbids it. |
-| error | Inline input (form) | ✅ covered | A `_range` validation failure shows the destructive error border/text and rejects the commit (parity copy). |
-| partial | Inline input (form) | ✅ covered | A field with missing config falls back to the default textarea control. |
-| long-text | Inline input (form) | 🧪 backstop | A value taller than the row renders a scrollable textarea that grows to a max height then scrolls internally. |
-| populated | Gap / fold row (list-collection) | ✅ covered | A gap row renders `---- \| ---- \| ['field'] \| [折叠/展开]` and toggles its children in and out of the DOM in place. |
-| long-text | Gap / fold row (list-collection) | ✅ covered | The `['field']` label truncates with single-line ellipsis and an exposed `title`. |
-| long-text | Schema-mode banner (static-content) | ✅ covered | The banner is a single muted line that truncates with ellipsis on a narrow panel. |
-| overflow | Schema-mode banner (static-content) | 🧪 backstop | On a very narrow panel the banner clips with no wrap rather than pushing the grid. |
-| loading | 「编辑 Schema」button (interactive-control) | ✅ covered | The button renders disabled while the schema resource is loading. |
-| error | 「编辑 Schema」button (interactive-control) | ✅ covered | When the schema resource is unavailable the button is hidden or disabled — never a no-op that silently fails. |
+### Resolved — explicit
+
+- Table grid (list-collection) · empty: zero rows render 「暂无表格数据」 + 「该表格当前没有可显示的字段，或内容为空。」 (a schema target uses 「尚未定义任何字段。」) instead of an empty table shell.
+- Table grid (list-collection) · loading: until the resource resolves the table region shows 「正在加载表格…」 with a spinner and the toolbar is disabled.
+- Table grid (list-collection) · error: on resource failure the region shows 「表格加载失败」 + 「请检查该表格资源是否存在，或稍后重试。」 + a retry control; the panel stays open.
+- Table grid (list-collection) · populated: at a typical volume the grid renders the four ~400px columns with a scrolling table region and zebra rows.
+- Table grid (list-collection) · partial: a schema whose fields are partly missing config renders the present fields with the default textarea control; a single field failure shows the destructive error treatment without dropping the row.
+- Table grid (list-collection) · zero-one-many: 0 rows renders the empty state; 1 and many render the identical row list with unchanged spacing (no singular/plural copy in Chinese).
+- Toolbar (nav) · loading: while the target resource loads, the toolbar controls render disabled.
+- Toolbar (nav) · error: on load failure the toolbar is disabled (or omitted) and the error state owns the region.
+- Toolbar (nav) · long-text: the optional toolbar title truncates with single-line ellipsis and exposes `title`.
+- Inline input (form) · empty: an unset field renders an empty textarea / unselected select / unchecked box; committing an empty value is allowed unless `_range` forbids it.
+- Inline input (form) · error: a `_range` validation failure shows the destructive error border/text and rejects the commit.
+- Inline input (form) · partial: a field with missing config falls back to the default textarea control.
+- Gap / fold row (list-collection) · populated: a gap row renders `---- | ---- | ['field'] | [折叠/展开]` and toggles its children in and out of the DOM in place.
+- Gap / fold row (list-collection) · long-text: the `['field']` label truncates with single-line ellipsis and exposes `title`.
+- Schema-mode banner (static-content) · long-text: the banner is a single muted line that truncates with ellipsis on a narrow panel.
+- 「编辑 Schema」button (interactive-control) · loading: renders disabled while the schema resource is loading.
+- 「编辑 Schema」button (interactive-control) · error: when the schema resource is unavailable the button is hidden or disabled — never a no-op that silently fails.
+- External code/event editor panel (D-11) · loading: opening the panel shows a loading state while the field's current value loads.
+- External code/event editor panel (D-11) · error: if the value fails to load or the field no longer exists, the panel shows an error state (never a blank panel).
+- External code/event editor panel (D-11) · empty: a field with no value opens the editor with empty, editable content.
+- External code/event editor panel (D-11) · partial: a field whose config is partly missing falls back to the default code editor.
+- External code/event editor panel (D-11) · populated: a field with a value opens the editor prefilled with that value.
+- External editor modal (generic multi-select / point; D-12/D-13/D-14) · empty: with no selectable items the modal shows an empty list, not a broken control.
+- External editor modal · loading: while items load the modal shows a loading indicator.
+- External editor modal · error: if items fail to load the modal shows an error state.
+- External editor modal · populated: the modal lists the selectable items (assets as thumbnails; point picker as a 2D area).
+- External editor modal · partial: items missing metadata render without their optional bits.
+- External editor modal · zero-one-many: 0 → empty list; 1 and many → identical list.
+
+### Resolved — backstop
+
+- Table grid (list-collection) · overflow: { statement: "When rows exceed the table-region height the region scrolls vertically while the toolbar stays pinned.", verification: backstop }
+- Table grid (list-collection) · long-text: { statement: "Field names and comments truncate with single-line ellipsis and expose the full text via the title attribute.", verification: backstop }
+- Toolbar (nav) · overflow: { statement: "On a narrow panel the toolbar keeps its two groups pinned left and right and does not wrap.", verification: backstop }
+- Inline input (form) · long-text: { statement: "A value taller than the row renders a scrollable textarea that grows to a max height then scrolls internally.", verification: backstop }
+- Schema-mode banner (static-content) · overflow: { statement: "On a very narrow panel the schema-mode banner clips with no wrap rather than pushing the grid.", verification: backstop }
+- External editor modal · overflow: { statement: "When the selectable items exceed the modal's height the modal's own list scrolls while its confirm/cancel footer stays pinned.", verification: backstop }
+- External editor modal · long-text: { statement: "A long item label truncates with single-line ellipsis and exposes the full text via title.", verification: backstop }
 
 ### Not applicable (recorded reasons)
 
-- **Inline input · loading**: the input renders from already-loaded data; there is no per-input async fetch.
-- **Gap row · empty / zero-one-many**: a gap node exists only because it has children, so a gap row always has ≥1 child; the empty case is unreachable by construction.
-- **Edit-mode Segmented · loading / error / empty / overflow / long-text**: it is a synchronous three-option in-memory control with fixed short labels.
-- **Header row (static) · all categories**: the header is a fixed four-label static row with no data source.
+- Inline input (form) · loading: the input renders from already-loaded data; there is no per-input async fetch.
+- Gap row · empty / zero-one-many: a gap node exists only because it has children, so a gap row always has ≥1 child; the empty case is unreachable by construction.
+- Edit-mode Segmented · loading / error / empty / overflow / long-text: it is a synchronous three-option in-memory control with fixed short labels.
+- Header row (static) · all categories: the header is a fixed four-label static row with no data source.
+- External code/event editor panel · overflow / long-text: scrolling and text handling belong to the embedded editor itself (Monaco / Blockly), not to this panel's contract; zero-one-many: not meaningful for a single field editor.
 
 ---
 
@@ -440,12 +458,12 @@ These touch user-visible behaviour or naming; each has a default here but should
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
-- [ ] Dimension 7 Inventory Provenance: PASS
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: PASS
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS — 1 non-blocking FLAG: 字号 12/13/14 相邻 1px，建议拉开或记录为「密集网格对齐」的有意取舍
+- [x] Dimension 5 Spacing: PASS
+- [x] Dimension 6 Registry Safety: PASS
+- [x] Dimension 7 Inventory Provenance: PASS
 
-**Approval:** pending
+**Approval:** approved 2026-10-11
