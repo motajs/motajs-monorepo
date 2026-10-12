@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 > 说明：本里程碑重新从 Phase 1 开始编号；上一里程碑的所有阶段已归档至 `.planning/milestones/archived-20261009-phases/`，不再延续其编号。
 
-- [ ] **Phase 1: 编辑器外壳** - 浏览器式标签外壳（顶部菜单行 + 标签行、动态面板类型/实例、空白新标签页）+ `editor-core` 通用 fs 接口（只定义）
+- [x] **Phase 1: 编辑器外壳** - 浏览器式标签外壳（顶部菜单行 + 标签行、动态面板类型/实例、空白新标签页）+ `editor-core` 通用 fs 接口（只定义） (completed 2026-10-12)
 - [ ] **Phase 2: 表格编辑** - 用户可编辑 schema 驱动的表格数据
 - [ ] **Phase 3: 素材管理** - 用户可管理素材（图片 / 动画 / 材质）
 - [ ] **Phase 4: 地图编辑** - 用户可编辑地图（层 / 块 / 通行性）
@@ -42,7 +42,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. 外部可注册/注销面板类型、注册菜单项；关闭/注销不残留实例。
   5. `editor-core` 导出通用 fs 接口（读 / 写 / 列目录 / 建目录 / 移动 / 删除），仓库中不存在其默认实现，且 core/impl 不引用。
 
-**Plans:** 4/4 plans executed
+**Plans:** 4/4 plans complete
 Plans:
 **Wave 1**
 
@@ -200,7 +200,7 @@ Phases execute in numeric order: 1 → 1.1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. 编辑器外壳与通用 fs 接口 | 4/4 | In Progress|  |
+| 1. 编辑器外壳与通用 fs 接口 | 4/4 | Complete    | 2026-10-12 |
 | 1.1. 编辑器开发宿主 (INSERTED) | 3/3 | Complete    | 2026-10-12 |
 | 2. 表格编辑 | 0/TBD | Not started | - |
 | 3. 素材管理 | 0/TBD | Not started | - |

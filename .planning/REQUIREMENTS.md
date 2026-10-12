@@ -9,11 +9,11 @@
 
 ### SHELL（编辑器外壳）
 
-- [ ] **SHELL-01**: 编辑器以固定外壳呈现（固定布局 + 命名插槽），完成后画面与现状一致（用户可看到并操作外壳）
+- [x] **SHELL-01**: 编辑器以固定外壳呈现（固定布局 + 命名插槽），完成后画面与现状一致（用户可看到并操作外壳）
 
 ### CORE（通用接口）
 
-- [ ] **CORE-01**: `editor-core` 暴露通用 fs 接口（**只定义接口、不提供实现**），由外部注入真正的实现
+- [x] **CORE-01**: `editor-core` 暴露通用 fs 接口（**只定义接口、不提供实现**），由外部注入真正的实现
 
 ### DEVHOST（开发宿主，INSERTED）
 
@@ -54,8 +54,8 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SHELL-01 | Phase 1 | Pending |
-| CORE-01 | Phase 1 | Pending |
+| SHELL-01 | Phase 1 | Complete |
+| CORE-01 | Phase 1 | Complete |
 | DEVHOST-01 | Phase 1.1 | Complete |
 | TABLE-01 | Phase 2 | Pending |
 | ASSET-01 | Phase 3 | Pending |
