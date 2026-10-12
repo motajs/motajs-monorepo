@@ -76,7 +76,7 @@ Plans:
 
 **维护约定**: 本宿主是**持续演进**的——此后每个 `editor-impl` 能力阶段（Phase 2–6）完成后，**必须**把该阶段的能力接入本宿主，便于测试与目视验收（见下方 Cross-cutting Constraints）。
 
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans executed
 Plans:
 
 **Wave 1 — 接口 / 契约（仅类型，无实现）**
@@ -85,7 +85,7 @@ Plans:
 
 **Wave 2 — 端到端实现（tracer 领衔）**
 
-- [ ] 01.1-02-PLAN.md — tracer：宿主启动 → 外壳渲染 → 顶层注册演示面板 → 读内存数据 + 冒烟测试
+- [x] 01.1-02-PLAN.md — tracer：宿主启动 → 外壳渲染 → 顶层注册演示面板 → 读内存数据 + 冒烟测试
 
 ### Phase 2: 表格编辑
 
@@ -201,7 +201,7 @@ Phases execute in numeric order: 1 → 1.1 → 2 → 3 → 4 → 5 → 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. 编辑器外壳与通用 fs 接口 | 4/4 | In Progress|  |
-| 1.1. 编辑器开发宿主 (INSERTED) | 1/2 | In Progress|  |
+| 1.1. 编辑器开发宿主 (INSERTED) | 2/2 | In Progress|  |
 | 2. 表格编辑 | 0/TBD | Not started | - |
 | 3. 素材管理 | 0/TBD | Not started | - |
 | 4. 地图编辑 | 0/TBD | Not started | - |
