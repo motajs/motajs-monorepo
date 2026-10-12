@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 10
+open_count: 11
 waived_count: 0
 fixed_count: 2
-total_count: 12
-last_updated: 2026-10-01T15:10:16.989Z
+total_count: 13
+last_updated: 2026-10-12T08:00:04.110Z
 ---
 
 # Broken Windows Ledger
@@ -27,6 +27,7 @@ last_updated: 2026-10-01T15:10:16.989Z
 | 10 | 05.2 | deviation | packages/libs/editor-impl/lib/resources/fileHandler.ts | 143 | contentSignal rename pushed load() catch ternary past printWidth; prettier wrapped it | open |  | 2026-10-01T12:51:11.429Z |  |
 | 11 | 05.2 | deviation | packages/libs/react-monaco-editor/lib/modelScope.test.ts |  | pnpm test full recursive run intermittently exits 1: monaco worker-close races a pending module fetch (Unhandled Rejection 'Closing rpc while fetch was pending'); 6/6 tests pass, passes isolated; package untouched by 05.2 | open |  | 2026-10-01T15:10:15.467Z |  |
 | 12 | 05.2 | deviation | packages/apps/editor/src/Workbench/CodeEditor/__tests__/ternDeclaration.test.ts | 37 | pnpm test full recursive run intermittently times out this test at 5000ms (measured 6569ms) under memory pressure; 785/785 pass isolated; editor untouched by 05.2 | open |  | 2026-10-01T15:10:16.989Z |  |
+| 13 | 01.1-dev-host | unrun-verify |  |  | Manual dev-host acceptance not run by executor (needs a browser): start pnpm --filter @motajs/editor-dev dev at http://127.0.0.1:1056, verify + follows the last tab and closing a non-active of three tabs keeps the active one | open |  | 2026-10-12T08:00:04.110Z |  |
 
 ````json
 [
@@ -172,6 +173,18 @@ last_updated: 2026-10-01T15:10:16.989Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-10-01T15:10:16.989Z",
+    "resolved_at": null
+  },
+  {
+    "id": 13,
+    "kind": "unrun-verify",
+    "phase": "01.1-dev-host",
+    "file": "",
+    "line": null,
+    "description": "Manual dev-host acceptance not run by executor (needs a browser): start pnpm --filter @motajs/editor-dev dev at http://127.0.0.1:1056, verify + follows the last tab and closing a non-active of three tabs keeps the active one",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-12T08:00:04.110Z",
     "resolved_at": null
   }
 ]
