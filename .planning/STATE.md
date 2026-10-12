@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: 02
 current_phase_name: 表格编辑
-current_plan: 5
+current_plan: 6
 status: executing
-stopped_at: Completed 02-04-PLAN.md (tracer); next 02-05-PLAN.md
-last_updated: "2026-10-12T14:10:54.788Z"
+stopped_at: Completed 02-05-PLAN.md (shell switch hooks); next 02-06-PLAN.md
+last_updated: "2026-10-12T15:30:46.648Z"
 last_activity: 2026-10-12
 last_activity_desc: "Completed 02-04 (table tracer): editor-impl test infra + end-to-end resource-layer read path"
-state_head: ffd3647759bcdc7f74984b5fe2ab68804b963b03
+state_head: ea25385bde0f13ceb54bc82e6548c5fbbb2a08e7
 progress:
   total_phases: 7
-  completed_phases: 2
+  completed_phases: 0
   total_plans: 16
-  completed_plans: 10
+  completed_plans: 11
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 02 — 表格编辑
-Current Plan: 5
+Current Plan: 6
 Total Plans in Phase: 9
 Status: Ready to execute
 Last activity: 2026-10-12 — Completed 02-04（表格 tracer：工程脚手 + 端到端只读表格面板）
@@ -69,6 +69,7 @@ Progress: [██████████] 100%
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 02 P04 | 44min | 3 tasks | 16 files |
+| Phase 02 P05 | 12min | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -84,6 +85,8 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-04: schema 缺失或非对象 → 空态（正文「尚未定义任何字段。」）；是对象但无 properties → 回退用数据自身键作叶子行（must_haves 真值 35 与 Task 2 action 两处要求的取舍）
 - [Phase 02]: 02-04: TablePanelStatus / ITableGridProps 落在 TableGrid.tsx（types.ts 不在 files_modified；且避免 TableGrid ↔ tablePanel 环依赖）
 - [Phase 02]: 02-04: 表格组件完全由 props 驱动、面板类型只是其一个消费者（D-01/D-18）；TablePanel.onSwitchIn 重取数据与 schema（D-15 修订 / D-31）
+- [Phase 02]: 02-05: 外壳用实例字段 lastActiveInstanceId 判定活动面板是否真正变化，凡改变活动面板的路径（activateTab/openPanelInTab/openBlankTab/closeTab 切邻）汇聚到私有 syncActiveInstance 投递 onSwitchIn/onSwitchOut
+- [Phase 02]: 02-05: 关闭/替换活动面板时先 onSwitchOut() 再 dispose()；关闭非活动标签不触发钩子；钩子抛错经既有 logger 记 shell.callbackFailed 隔离（T-02-08）
 
 ### Pending Todos
 
@@ -109,6 +112,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-12T14:10:33.525Z
-Stopped at: Completed 02-04-PLAN.md (tracer); next 02-05-PLAN.md
+Last session: 2026-10-12T15:30:46.537Z
+Stopped at: Completed 02-05-PLAN.md (shell switch hooks); next 02-06-PLAN.md
 Resume file: None

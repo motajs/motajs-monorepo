@@ -99,7 +99,7 @@ Plans:
   3. 表格编辑经统一命令 / 撤销路径，可撤销、可重做。
   4. 表格数据经统一层（`editor-core` 资源层）读写，行为与现状一致（与锁定决策 D-03 一致：经资源层而非通用 fs 接口，见 02-02）。
 
-**Plans:** 3/9 plans executed
+**Plans:** 4/9 plans executed
 Plans:
 
 **Wave 1 — 接口定义（仅类型，无实现）**
@@ -112,7 +112,7 @@ Plans:
 **Wave 2 — 接缝实现 + tracer**
 
 - [x] 02-04-PLAN.md — tracer：工程脚手 + 端到端只读表格面板（注册 → 打开 → 设目标 → 读资源 → 渲染）
-- [ ] 02-05-PLAN.md — `editor-core`：切换标签时调用 `onSwitchIn` / `onSwitchOut`（D-15 修订版「切入时刷新」）
+- [x] 02-05-PLAN.md — `editor-core`：切换标签时调用 `onSwitchIn` / `onSwitchOut`（D-15 修订版「切入时刷新」）
 
 **Wave 3**
 
@@ -203,7 +203,7 @@ Phases execute in numeric order: 1 → 1.1 → 2 → 3 → 4 → 5 → 6
 |-------|----------------|--------|-----------|
 | 1. 编辑器外壳与通用 fs 接口 | 4/4 | Complete    | 2026-10-12 |
 | 1.1. 编辑器开发宿主 (INSERTED) | 3/3 | Complete    | 2026-10-12 |
-| 2. 表格编辑 | 3/9 | In Progress | - |
+| 2. 表格编辑 | 4/9 | In Progress|  |
 | 3. 素材管理 | 0/TBD | Not started | - |
 | 4. 地图编辑 | 0/TBD | Not started | - |
 | 5. 代码编辑 | 0/TBD | Not started | - |
