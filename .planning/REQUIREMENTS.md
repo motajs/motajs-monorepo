@@ -17,7 +17,7 @@
 
 ### DEVHOST（开发宿主，INSERTED）
 
-- [ ] **DEVHOST-01**: 提供一个最小可运行的开发宿主（dev-only），可打开并操作 `editor-core` 外壳（及后续 `editor-impl` 能力），用于人工 / 目视验收与手动测试；不随产品发布
+- [x] **DEVHOST-01**: 提供一个最小可运行的开发宿主（dev-only），可打开并操作 `editor-core` 外壳（及后续 `editor-impl` 能力），用于人工 / 目视验收与手动测试；不随产品发布
 
 ### TABLE（表格）
 
@@ -56,7 +56,7 @@
 |-------------|-------|--------|
 | SHELL-01 | Phase 1 | Pending |
 | CORE-01 | Phase 1 | Pending |
-| DEVHOST-01 | Phase 1.1 | Pending |
+| DEVHOST-01 | Phase 1.1 | Complete |
 | TABLE-01 | Phase 2 | Pending |
 | ASSET-01 | Phase 3 | Pending |
 | MAP-01 | Phase 4 | Pending |
