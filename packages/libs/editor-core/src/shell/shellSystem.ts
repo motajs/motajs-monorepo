@@ -330,6 +330,8 @@ export class ShellSystem implements IShellSystem {
   private tabs: IEditorTab[] = [];
   /** 当前活动标签 id */
   private activeTabId: string | null = null;
+  /** 最近一次投递过切入通知的面板实例 id，用于判定活动面板是否真正变化 */
+  private lastActiveInstanceId: string | null = null;
   /** 面板实例 id 计数器，会话内递增、不复用 */
   private instanceCounter: number = 0;
   /** 标签 id 计数器，会话内递增、不复用 */
@@ -470,6 +472,7 @@ export class ShellSystem implements IShellSystem {
     this.tabs.push({ id: tabId, typeId: null, instanceId: null });
     this.activeTabId = tabId;
     this.notify();
+    this.syncActiveInstance();
     return tabId;
   }
 
@@ -483,7 +486,10 @@ export class ShellSystem implements IShellSystem {
 
     const current = this.tabs[index];
 
-    if (current.instanceId !== null) await this.closePanelInstance(current.instanceId);
+    if (current.instanceId !== null) {
+      if (this.activeTabId === current.id) this.leaveActiveInstance(current.instanceId);
+      await this.closePanelInstance(current.instanceId);
+    }
 
     const created = this.createInstance(typeId);
 
@@ -505,10 +511,12 @@ export class ShellSystem implements IShellSystem {
     }
 
     const tab = this.tabs[index];
-
-    if (tab.instanceId !== null) await this.closePanelInstance(tab.instanceId);
-
     const wasActive = this.activeTabId === tabId;
+
+    if (tab.instanceId !== null) {
+      if (wasActive) this.leaveActiveInstance(tab.instanceId);
+      await this.closePanelInstance(tab.instanceId);
+    }
 
     this.tabs.splice(index, 1);
 
@@ -526,6 +534,7 @@ export class ShellSystem implements IShellSystem {
 
     this.activeTabId = this.tabs[neighborIndex].id;
     this.notify();
+    this.syncActiveInstance();
   }
 
   activateTab(tabId: string): void {
@@ -538,6 +547,7 @@ export class ShellSystem implements IShellSystem {
 
     this.activeTabId = tabId;
     this.notify();
+    this.syncActiveInstance();
   }
 
   listTabs(): readonly IEditorTab[] {
@@ -556,6 +566,7 @@ export class ShellSystem implements IShellSystem {
     this.pendingInstances.length = 0;
     this.tabs = [];
     this.activeTabId = null;
+    this.lastActiveInstanceId = null;
     this.initialized = false;
     this.disposed = true;
     this.notify();
@@ -613,6 +624,7 @@ export class ShellSystem implements IShellSystem {
     }
 
     this.notify();
+    this.syncActiveInstance();
   }
 
   /**
@@ -644,6 +656,76 @@ export class ShellSystem implements IShellSystem {
       activePanel,
       activePanelStatus,
     };
+  }
+
+  /**
+   * 读取当前活动标签承载的面板实例 id
+   * @returns 活动面板实例 id；活动标签为空白、无实例或无标签时为空
+   */
+  private activeInstanceId(): string | null {
+    const activeTab = this.tabs.find((tab) => tab.id === this.activeTabId);
+
+    return activeTab === undefined ? null : activeTab.instanceId;
+  }
+
+  /**
+   * 在活动面板即将被销毁时立即中断其切入状态：清空记录并向该面板投递切出通知
+   * @param instanceId 即将销毁的面板实例 id
+   */
+  private leaveActiveInstance(instanceId: string): void {
+    this.lastActiveInstanceId = null;
+    void this.invokeSwitchOut(instanceId);
+  }
+
+  /**
+   * 将活动面板与最近一次切入通知对齐：目标变化时对离开的面板投递切出、对进入的面板投递切入
+   * 目标面板仍在初始化时不投递，待其初始化完成由 initializeInstance 再次对齐
+   */
+  private syncActiveInstance(): void {
+    const nextInstanceId = this.activeInstanceId();
+
+    if (nextInstanceId === this.lastActiveInstanceId) return;
+
+    if (nextInstanceId !== null && this.instanceStatuses.get(nextInstanceId) === ShellInstanceStatus.Loading) return;
+
+    const previousInstanceId = this.lastActiveInstanceId;
+
+    this.lastActiveInstanceId = nextInstanceId;
+
+    if (previousInstanceId !== null) void this.invokeSwitchOut(previousInstanceId);
+    if (nextInstanceId !== null) void this.invokeSwitchIn(nextInstanceId);
+  }
+
+  /**
+   * 向指定面板投递切入通知；单个面板抛错不影响外壳的标签状态机
+   * @param instanceId 目标面板实例 id
+   */
+  private async invokeSwitchIn(instanceId: string): Promise<void> {
+    const instance = this.instances.get(instanceId);
+
+    if (instance === undefined) return;
+
+    try {
+      await instance.onSwitchIn();
+    } catch {
+      logger.error('shell.callbackFailed', this.instanceTypes.get(instanceId) ?? '');
+    }
+  }
+
+  /**
+   * 向指定面板投递切出通知；单个面板抛错不影响外壳的标签状态机
+   * @param instanceId 目标面板实例 id
+   */
+  private async invokeSwitchOut(instanceId: string): Promise<void> {
+    const instance = this.instances.get(instanceId);
+
+    if (instance === undefined) return;
+
+    try {
+      await instance.onSwitchOut();
+    } catch {
+      logger.error('shell.callbackFailed', this.instanceTypes.get(instanceId) ?? '');
+    }
   }
 }
 
