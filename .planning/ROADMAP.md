@@ -22,6 +22,10 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 5: 代码编辑** - 用户可编辑代码（Monaco）
 - [ ] **Phase 6: 事件编辑器** - 用户可编辑事件脚本（Blockly）
 
+## Cross-cutting Constraints
+
+- **开发宿主须持续接入**：Phase 1.1 交付的「编辑器开发宿主」（DEVHOST-01）为开发专用、可扩展。此后每个 `editor-impl` 能力阶段（Phase 2–6）完成后，**必须**把该阶段的能力接入该宿主，使其可在浏览器里被打开与手动验收；该接入属各阶段的收尾工作之一，不得遗漏。
+
 ## Phase Details
 
 ### Phase 1: 编辑器外壳
@@ -56,6 +60,26 @@ Plans:
 - [x] 01-04-PLAN.md — 通用 fs 面门禁 `coreFsSurface.js`（真实树 + 两极性 + 包根导入探针）
 
 **UI hint**: yes
+
+### Phase 01.1: 编辑器开发宿主 (INSERTED)
+
+**Goal**: 提供一个**最小的、开发专用**的顶层整合（dev host），把 `editor-core` 的外壳（及后续 `editor-impl` 能力）真正跑起来，用于人工 / 目视验收与手动测试；**不随产品发布**。
+**Depends on**: Phase 1
+**Requirements**: DEVHOST-01
+**Success Criteria** (what must be TRUE):
+
+  1. 有一个可本地启动的 dev 入口，浏览器打开即渲染 `editor-core` 外壳（菜单行 + 标签行 + 内容区 + 默认空白标签页）。
+  2. 至少注册一个面板类型，可开实例、可操作、可关闭。
+  3. 提供一个最小数据后端（内存 fs 或本地 dev fs），使依赖数据的面板能读到内容。
+  4. 该宿主为开发专用：不进入产品产物、不引入线上运行时依赖。
+
+**维护约定**: 本宿主是**持续演进**的——此后每个 `editor-impl` 能力阶段（Phase 2–6）完成后，**必须**把该阶段的能力接入本宿主，便于测试与目视验收（见下方 Cross-cutting Constraints）。
+
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (run /gsd-plan-phase 01.1 to break down)
 
 ### Phase 2: 表格编辑
 
@@ -166,11 +190,12 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
+Phases execute in numeric order: 1 → 1.1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. 编辑器外壳与通用 fs 接口 | 4/4 | In Progress|  |
+| 1.1. 编辑器开发宿主 (INSERTED) | 0/0 | Not started | - |
 | 2. 表格编辑 | 0/TBD | Not started | - |
 | 3. 素材管理 | 0/TBD | Not started | - |
 | 4. 地图编辑 | 0/TBD | Not started | - |

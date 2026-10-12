@@ -1,17 +1,17 @@
 ---
 gsd_state_version: "1.0"
 milestone: v1.0
-current_phase: 02
-current_phase_name: 表格编辑
+current_phase: "01.1"
+current_phase_name: 编辑器开发宿主
 status: executing
 stopped_at: Phase 2 UI-SPEC approved
-last_updated: "2026-10-12T02:04:16.513Z"
+last_updated: "2026-10-12T02:12:49.951Z"
 last_activity: 2026-10-11
 last_activity_desc: Phase 01 execution resumed (wave continue)
-state_head: d5ff489e9e89d9ec9e4aab6a58e5c9ff92d8671c
+state_head: cd50294b578334a19d57b4478eba4f3b71aa76c3
 progress:
-  total_phases: 6
-  completed_phases: 1
+  total_phases: 7
+  completed_phases: 0
   total_plans: 14
   completed_plans: 4
 milestone_name: editor-core 空壳 + editor-impl 重做
@@ -24,13 +24,13 @@ milestone_name: editor-core 空壳 + editor-impl 重做
 See: .planning/PROJECT.md (updated 2026-10-09)
 
 **Core value:** 把编辑器内核与引擎细节彻底解耦——`editor-core` 只给接口、`editor-impl` 写默认实现，让新旧引擎共用同一套编辑能力，第三方可高自由度定制。
-**Current focus:** Phase 01 — 编辑器外壳
+**Current focus:** Phase 01.1 — 编辑器开发宿主
 
 ## Current Position
 
-Phase: 02 (表格编辑) — READY TO EXECUTE
-Plan: 4 of 4
-Status: Ready to execute
+Phase: 01.1 (编辑器开发宿主) — NOT PLANNED (INSERTED; runs before Phase 2)
+Plan: 0 of TBD
+Status: Ready to plan
 Last activity: 2026-10-11 — Phase 01 execution resumed (wave continue)
 
 Progress: [██████████] 100%
@@ -85,6 +85,7 @@ None yet.
 ### Roadmap Evolution
 
 - Phase 1 edited: renamed phase 1 to 编辑器外壳 (shell-focused)
+- Phase 1.1 inserted after Phase 1: 编辑器开发宿主（最小可运行整合，用于验证 editor-core/editor-impl） (URGENT)
 
 ## Deferred Items
 
