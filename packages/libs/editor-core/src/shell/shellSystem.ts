@@ -508,10 +508,17 @@ export class ShellSystem implements IShellSystem {
 
     if (tab.instanceId !== null) await this.closePanelInstance(tab.instanceId);
 
+    const wasActive = this.activeTabId === tabId;
+
     this.tabs.splice(index, 1);
 
     if (this.tabs.length === 0) {
       this.openBlankTab();
+      return;
+    }
+
+    if (!wasActive) {
+      this.notify();
       return;
     }
 

@@ -284,6 +284,110 @@ describe('ShellSystem 端到端', () => {
     expect(screen.getByText('instance-1')).not.toBeNull();
   });
 
+  // 关闭非当前标签时前台标签保持不变，只移除被关闭的标签
+  it('关闭非当前标签时前台标签保持不变', async () => {
+    const system = await createSystem();
+    const panels: FakePanel[] = [];
+    registerType(system, 'table', '表格面板', panels);
+
+    render(createElement(system.shellSystem.render()));
+
+    const firstTab = system.shellSystem.listTabs()[0].id;
+
+    await act(async () => {
+      await system.shellSystem.openPanelInTab(firstTab, 'table');
+    });
+
+    const secondTab = system.shellSystem.openBlankTab();
+
+    await act(async () => {
+      await system.shellSystem.openPanelInTab(secondTab, 'table');
+    });
+
+    const thirdTab = system.shellSystem.openBlankTab();
+
+    await act(async () => {
+      await system.shellSystem.openPanelInTab(thirdTab, 'table');
+    });
+
+    await act(async () => {
+      await system.shellSystem.closeTab(secondTab);
+    });
+
+    expect(system.shellSystem.listTabs().length).toBe(2);
+    expect(screen.getByText('instance-3')).not.toBeNull();
+    expect(screen.queryByText('instance-2')).toBeNull();
+    expect(panels[1].disposeCount).toBe(1);
+  });
+
+  // 关闭当前标签时自动切到左邻标签
+  it('关闭当前标签时自动切到左邻标签', async () => {
+    const system = await createSystem();
+    const panels: FakePanel[] = [];
+    registerType(system, 'table', '表格面板', panels);
+
+    render(createElement(system.shellSystem.render()));
+
+    const firstTab = system.shellSystem.listTabs()[0].id;
+
+    await act(async () => {
+      await system.shellSystem.openPanelInTab(firstTab, 'table');
+    });
+
+    const secondTab = system.shellSystem.openBlankTab();
+
+    await act(async () => {
+      await system.shellSystem.openPanelInTab(secondTab, 'table');
+    });
+
+    const thirdTab = system.shellSystem.openBlankTab();
+
+    await act(async () => {
+      await system.shellSystem.openPanelInTab(thirdTab, 'table');
+    });
+
+    act(() => {
+      system.shellSystem.activateTab(secondTab);
+    });
+
+    await act(async () => {
+      await system.shellSystem.closeTab(secondTab);
+    });
+
+    expect(system.shellSystem.listTabs().length).toBe(2);
+    expect(screen.getByText('instance-1')).not.toBeNull();
+  });
+
+  // 关闭最左的当前标签时切到右邻标签（空白）
+  it('关闭最左当前标签时切到右邻标签', async () => {
+    const system = await createSystem();
+    const panels: FakePanel[] = [];
+    registerType(system, 'table', '表格面板', panels);
+
+    render(createElement(system.shellSystem.render()));
+
+    const firstTab = system.shellSystem.listTabs()[0].id;
+
+    await act(async () => {
+      await system.shellSystem.openPanelInTab(firstTab, 'table');
+    });
+
+    system.shellSystem.openBlankTab();
+
+    act(() => {
+      system.shellSystem.activateTab(firstTab);
+    });
+
+    await act(async () => {
+      await system.shellSystem.closeTab(firstTab);
+    });
+
+    const tabs = system.shellSystem.listTabs();
+
+    expect(tabs.length).toBe(1);
+    expect(tabs[0].typeId).toBeNull();
+  });
+
   // 关闭最后一个标签后自动重建一个空白标签页
   it('关闭最后一个标签后重建一个空白标签页', async () => {
     const system = await createSystem();
