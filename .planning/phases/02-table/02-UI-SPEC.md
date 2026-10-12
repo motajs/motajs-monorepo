@@ -198,12 +198,15 @@ Additional user-visible strings (fixed, declared so they are not invented ad-hoc
 ## Table Panel Composition & Interaction Contract
 
 > The panel *is* the deliverable of this phase, so its structure and interaction model are part of the contract. It is delivered by `@motajs/editor-impl/table`, which exports **both** a registrable panel type (into the Phase-1 `ShellSystem`) **and** the underlying React table component (D-01).
+>
+> **Reusable component (D-18).** The table-editing component is itself reusable: external code may **embed it inline** or **open it in a modal**. The panel type is one consumer of that component, not the only shape it takes.
 
 ### Panel instance model (D-02)
 
 - Each panel instance holds its **target table internally**; there is **no global "current table"** in the editor.
 - The target is set externally through an **extra panel method** (working name `ITablePanel.setTable(...)`) that sits **outside** Phase 1's `IEditorPanel` (the exact name is confirmed in `INTERFACE-NAME.md`).
 - The panel reads **both data and schema through the `editor-core` resource layer** (D-03): a data table is resource `table.<name>`; its schema is `table#schema.<name>` (D-04).
+- **Schema-change reactivity (D-15, hard requirement):** the panel subscribes to its schema resource reactively; when the schema changes, the **column layout is recomputed and re-rendered immediately** — a schema edited in another panel instance is reflected in this panel at once. This is a required behaviour, not best-effort.
 - Consequence for the UI: the panel has **no table-picker of its own**; it renders whichever resource its target points at (or the loading / empty / error state for that resource).
 
 ### Layout (top → bottom)
@@ -233,16 +236,18 @@ Additional user-visible strings (fixed, declared so they are not invented ad-hoc
 | 「编辑 Schema」`Button` | Primary (`type="primary"`), small size, rightmost. Hidden when the panel's target is itself a schema (D-05). Opens a **new** panel instance targeting `table#schema.<name>` (D-06). |
 | Toolbar title | Optional muted text at the left showing the table resource name; uses Label role and truncates with ellipsis. |
 
-### Column model & widths (parity)
+### Column model & widths (user-updated: D-17)
 
-Four fixed-proportion columns, `table-layout: fixed`:
+Four columns, `table-layout: fixed`, each **~400px** wide (≈1600px natural table width; narrower panel → the table region scrolls horizontally). **Vertical dividers between columns** (D-16). Column proportions come from the fixed ~400px width, not percentages.
 
 | Column | Width | Content |
 |--------|-------|---------|
-| 条目 | 24% | Field name (`shortField`), single-line ellipsis, `title` = full field path |
-| 注释 | 19% | Short comment, single-line ellipsis, `title` = full comment |
-| 值 | 32% (no padding) | The inline input control (see below) |
-| 操作 | 25% | Row-action buttons, centered |
+| 条目 | ~400px | Field name (`shortField`), single-line ellipsis, `title` = full field path |
+| 注释 | ~400px | Short comment, single-line ellipsis, `title` = full comment |
+| 值 | ~400px (no padding) | The inline input control (see below) |
+| 操作 | ~400px | Row-action buttons, centered |
+
+**Dividers (D-16).** Columns are separated by vertical divider lines; each collapsible object region is separated from its neighbours by a horizontal divider above and below; every table row is separated by a **thin semi-transparent** horizontal divider (the same rule that draws the grid, at reduced opacity) for a lighter look than the legacy solid grid.
 
 ### Row types
 
@@ -314,10 +319,16 @@ Differences from the regular mode (canonical rule set — see Flagged Decision F
 
 > The exact grouped-field rule set and labels are `the agent's Discretion` and must be confirmed in `INTERFACE-NAME.md` before implementation (F2).
 
-### External editor integration (parity)
+### External editor integration (user-updated — supersedes legacy parity: D-11…D-14)
 
-- The 操作 column's **编辑** button (and a 编辑-mode double-click) opens the field-type-appropriate external editor: code editor (`textarea`), event editor (`event`), material picker (`material`), point picker (`point`), or checkbox-set modal (`popCheckboxSet`).
+> Amended after the initial verification to reflect the user's decisions D-11…D-14. Where it differs from the legacy behaviour it previously mirrored, **this section wins**.
+
+- The 操作 column's **编辑** button (and a 编辑-mode double-click) opens the field-type-appropriate external editor, in one of **two shapes**:
+  - **Separate panel (D-11)** — `textarea` (code) and `event` open a **dedicated panel** (a Phase-1 shell tab / panel instance), **not** a modal. When the user **switches away** from that panel it **auto-closes**.
+  - **Modal (D-12)** — `material`, `point`, and `popCheckboxSet` open a **modal** (small window).
 - `select` / `checkbox` / `checkboxSet` / `color` / `disable` types show no 编辑 button (parity `shouldShowEditButton`); `disable` additionally shows a **复制** button; `popCheckboxSet` labels the button **多选框编辑**.
+- **Modals are generic, reusable components (D-13)** — they live as shared UI (not table-private), because other features use the same dialogs.
+- **Material selection is a multi-select (D-14)** — it **merges** with the checkbox-set editor into a single generic **multi-select modal** serving `checkboxSet` / `popCheckboxSet` and `material` (assets presented as a thumbnail multi-select).
 - A **注释** button appears only when a short comment exists; it reveals the full comment.
 - Returned values re-enter through the same validated, undoable commit path.
 
@@ -334,7 +345,7 @@ Differences from the regular mode (canonical rule set — see Flagged Decision F
 ### Overflow & long text
 
 - **Vertical**: the table region scrolls; the toolbar stays pinned (not part of the scroll).
-- **Horizontal**: with `table-layout: fixed` and percentage widths, no horizontal scroll is expected; a value wider than its cell is clipped by the input (textareas scroll internally).
+- **Horizontal**: with fixed ~400px columns the table is ~1600px wide (D-17); on a narrower panel the table region scrolls horizontally (the toolbar stays pinned). A value wider than its cell is clipped by the input (textareas scroll internally).
 - **Long field names / comments**: single-line ellipsis + `title` attribute with the full text.
 - **Long / multi-line values**: the value cell renders a scrollable textarea; the grid row grows to fit up to a max height, then the textarea scrolls internally.
 - **Many rows**: plain vertical scroll; no virtualization is contracted in this phase.
