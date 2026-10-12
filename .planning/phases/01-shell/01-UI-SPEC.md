@@ -146,7 +146,7 @@ Language: **Chinese**, consistent with the existing editor UI.
 │ Row 1  MENU ROW        32px, surface bg, bottom border      │   ← menu items (title + onClick), external
 ├────────────────────────────────────────────────────────────┤
 │ Row 2  TAB ROW         36px, surface bg, bottom border      │
-│   [ 标签A × ][ 标签B × ] …                              [ + ] │   ← tabs + × ; + rightmost
+│   [ 标签A × ][ 标签B × ][ + ] …                               │   ← tabs + × ; + follows the last tab
 ├────────────────────────────────────────────────────────────┤
 │ CONTENT AREA           fills remaining height, --editor-bg  │
 │   active tab is blank  → blank-tab type list (or empty copy) │
@@ -164,10 +164,10 @@ Language: **Chinese**, consistent with the existing editor UI.
 |-----------|----------|
 | On load | Exactly **one blank tab** open by default (auto-created by core on initialize). |
 | Multiple blank tabs | Allowed; each is independent. |
-| New blank tab | `+` (rightmost) appends a blank tab and makes it active. |
+| New blank tab | `+` (immediately after the last tab) appends a blank tab and makes it active. |
 | Open a panel | Clicking a type in a blank tab **replaces that tab in place** with a new instance of the type (the tab is no longer blank). |
 | Multiple instances | Same type may be open in several tabs; instances are independent. |
-| Close a tab | `×` → `dispose()` the instance → remove the tab → **auto-activate an adjacent tab** (prefer the tab to the left; else the tab to the right). |
+| Close a tab | `×` → `dispose()` the instance → remove the tab → **auto-activate an adjacent tab** (prefer the tab to the left; else the tab to the right). Only when the closed tab was the active tab; otherwise the active tab is unchanged. |
 | Close last remaining tab | If no tabs remain after closing, **create one fresh blank tab** (never a zero-tab state). |
 | Tab activation | Clicking a tab makes it active. No confirmation, no animation. |
 | Navigation in undo history | **Not recorded** (resolves RESEARCH Assumption A2: tab navigation is not a document edit). |
@@ -229,7 +229,7 @@ Language: **Chinese**, consistent with the existing editor UI.
 
 ### Resolved — backstop
 
-- Tab row (nav) · overflow: { statement: "When many tabs exceed the tab-row width, the tab strip clips with no wrap and the `+` control stays pinned right and always reachable.", verification: backstop }
+- Tab row (nav) · overflow: { statement: "When many tabs exceed the tab-row width, the tab strip clips with no wrap and the `+` control renders immediately after the last tab.", verification: backstop }
 
 ### Not applicable (recorded reasons)
 
