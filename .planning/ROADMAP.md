@@ -25,6 +25,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 ## Cross-cutting Constraints
 
 - **开发宿主须持续接入**：Phase 1.1 交付的「编辑器开发宿主」（DEVHOST-01）为开发专用、可扩展。此后每个 `editor-impl` 能力阶段（Phase 2–6）完成后，**必须**把该阶段的能力接入该宿主，使其可在浏览器里被打开与手动验收；该接入属各阶段的收尾工作之一，不得遗漏。
+- **装配方向**：能力包**只导出面板类型对象**（`IEditorPanelType` 常量）及其底层组件；**由顶层（宿主 / 装配方）** import 并调用 `core.shellSystem.registerPanelType(...)` 完成注册。**能力包不自行装配到 core**（不导出 `install(core)` 之类自装配函数）。
 
 ## Phase Details
 
@@ -80,11 +81,11 @@ Plans:
 
 **Wave 1 — 接口 / 契约（仅类型，无实现）**
 
-- [ ] 01.1-01-PLAN.md — dev 包骨架 + 两条契约（安装函数约定 D-05、内存后端接口 D-02）
+- [ ] 01.1-01-PLAN.md — dev 包骨架 + 内存后端接口（D-02）；记录 D-05 接入约定（能力导出面板类型、顶层注册）
 
 **Wave 2 — 端到端实现（tracer 领衔）**
 
-- [ ] 01.1-02-PLAN.md — tracer：宿主启动 → 外壳渲染 → 演示面板读内存数据 + 冒烟测试
+- [ ] 01.1-02-PLAN.md — tracer：宿主启动 → 外壳渲染 → 顶层注册演示面板 → 读内存数据 + 冒烟测试
 
 ### Phase 2: 表格编辑
 
