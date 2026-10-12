@@ -1,0 +1,74 @@
+.etable {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  font-size: 13px;
+}
+
+.etable-header,
+.etable-row {
+  display: grid;
+  grid-template-columns: 400px 400px 400px 400px;
+  align-items: stretch;
+}
+
+.etable-header {
+  flex: 0 0 auto;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+  background: rgba(0, 0, 0, 0.02);
+  font-weight: 600;
+}
+
+.etable-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.etable-cell {
+  min-width: 0;
+  padding: 4px 8px;
+  border-right: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.etable-cell:last-child {
+  border-right: none;
+}
+
+.etable-cell-value {
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.etable-row-group {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.etable-group-children {
+  border-left: 2px solid rgba(0, 0, 0, 0.06);
+}
+
+.etable-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 24px;
+  gap: 8px;
+  text-align: center;
+}
+
+.etable-state-heading {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.etable-state-body {
+  color: rgba(0, 0, 0, 0.45);
+}
