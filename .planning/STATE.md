@@ -5,16 +5,16 @@ current_phase: 02
 current_phase_name: 表格编辑
 current_plan: 9
 status: verifying
-stopped_at: Completed 02-15-PLAN.md
-last_updated: "2026-10-13T10:52:22.262Z"
+stopped_at: Completed 02-16-PLAN.md
+last_updated: "2026-10-13T11:16:44.463Z"
 last_activity: 2026-10-12
 last_activity_desc: "Completed 02-04 (table tracer): editor-impl test infra + end-to-end resource-layer read path"
-state_head: a4ec78754671193f284ed65eb7bc4cbc52ddca7c
+state_head: 4b067bc85b91c8caa9ce64574656322324416421
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 25
-  completed_plans: 21
+  completed_plans: 22
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -79,6 +79,7 @@ Progress: [██████████] 100%
 | Phase 02-table P12 | 10min | 2 tasks | 4 files |
 | Phase 02 P14 | ~4min | 2 tasks | 2 files |
 | Phase 02 P15 | 16min | 3 tasks | 9 files |
+| Phase 02 P16 | 10min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -117,6 +118,9 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-15: 外部编辑器返回值在 TableRow.runExternalEditor 提交前统一 validateValue，非法值落行内 .etable-row-error 且不写资源（B1）；TablePanel.commitValue 面板级校验保留为防御性兜底
 - [Phase 02]: 02-15: 数字字段（TableControlKind.Number）改渲染新控件 NumberInput（包一层 antd InputNumber），不再落 TextareaInput（B2）
 - [Phase 02]: 02-15: 提示行改为常驻预留（renderNotice 恒渲染 .etable-notice + min-height），成功文案去掉「刷新后生效」为「添加成功」/「删除成功」（B3）
+- [Phase 02]: 02-16: dev 宿主把 ITablePanelOpener 实现为 createTablePanelOpener(core)（开空白标签 + 带 param 开表格面板类型），经 CapabilityProvider.capabilities.tablePanel 注入，「编辑 Schema」按钮由禁用变为可用
+- [Phase 02]: 02-16: 打开器只透传 param、不自行收窄 target——收窄由 tablePanelType.create 的 isTablePanelTarget 承担；保留 openTableDemoPanel 不动，无实例捕获、无新 API
+- [Phase 02]: 02-16: 修正 devHostTable.test.tsx 数字字段过期断言（02-15 改渲染 InputNumber 后遗留，Rule 1）
 
 ### Pending Todos
 
@@ -142,6 +146,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-13T10:51:57.249Z
-Stopped at: Completed 02-15-PLAN.md
+Last session: 2026-10-13T11:16:44.098Z
+Stopped at: Completed 02-16-PLAN.md
 Resume file: None
