@@ -41,6 +41,12 @@ export interface IEditorPanel extends IUndoable {
   readonly id: string;
 
   /**
+   * 获取此面板实例的显示标题，供外壳渲染标签时使用
+   * @returns 面板实例的显示标题；返回 undefined（或未实现）时，外壳回退到面板类型名
+   */
+  getTitle?(): string | undefined;
+
+  /**
    * 初始化此编辑器面板
    */
   initialize(): Promise<void>;
