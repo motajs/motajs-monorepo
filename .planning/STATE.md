@@ -5,16 +5,16 @@ current_phase: 02
 current_phase_name: 表格编辑
 current_plan: 9
 status: verifying
-stopped_at: Completed 02-12-PLAN.md
-last_updated: "2026-10-13T07:51:34.056Z"
+stopped_at: Completed 02-14-PLAN.md
+last_updated: "2026-10-13T10:12:13.185Z"
 last_activity: 2026-10-12
 last_activity_desc: "Completed 02-04 (table tracer): editor-impl test infra + end-to-end resource-layer read path"
-state_head: 77f9f93f2ce8a1845dd086382d7e85d3c54ae353
+state_head: 914788f43d7acf4ca14c478ce0024475ec16d3c5
 progress:
   total_phases: 7
   completed_phases: 0
-  total_plans: 19
-  completed_plans: 18
+  total_plans: 20
+  completed_plans: 20
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -77,6 +77,7 @@ Progress: [██████████] 100%
 | Phase 02 P10 | 8min | 2 tasks | 2 files |
 | Phase 02-table P11 | 6min | 2 tasks | 2 files |
 | Phase 02-table P12 | 10min | 2 tasks | 4 files |
+| Phase 02 P14 | ~4min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -111,6 +112,7 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-10: 生效门禁（coreImportType/coreEngineNeutral/coreModuleState/coreFsSurface）全绿；失效门禁如实记录（coreBoundaries 0、coreExports 1、implExports 1），不作阶段门禁；nyquist_compliant 仅在生效检查全绿时置真。
 - [Phase 02]: 02-12: 外壳 createInstance 未提供打开参数时整个省略 openParam 键（三元构造两种工厂入参）——不关心该参数的既有工厂行为一字不变
 - [Phase 02]: 02-12: tablePanelType 在构造阶段据 param.openParam.target 调用 ITablePanel.setTable（一打开即瞄准）；收窄用非导出谓词 isTablePanelTarget，畸形值落回 NoTarget，无 as 断言
+- [Phase 02]: 02-14: 表格修复轮接口（仅类型）——IEditorPanel 增加可选 getTitle?()（按实例标题，缺席回退类型名）；ITablePanel.setTable 增加可选 columnIndex（0 基，省略为 0）；ITablePanelParam 增加 columnWidth?（缺省约 400px）；ITableSchemaNode 增加 x-order?（同级字段呈现顺序）。均非破坏，实现文件零改动。
 
 ### Pending Todos
 
@@ -136,6 +138,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-13T07:51:33.955Z
-Stopped at: Completed 02-12-PLAN.md
+Last session: 2026-10-13T10:12:13.070Z
+Stopped at: Completed 02-14-PLAN.md
 Resume file: None

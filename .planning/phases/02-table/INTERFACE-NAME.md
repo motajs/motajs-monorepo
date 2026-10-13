@@ -343,6 +343,15 @@
 
 原「包一层类型、在其工厂里顺手捕获实例」的做法**作废**——改用**外壳打开参数**：开面板时带 `{ target }`，表格工厂读自己的 `ITablePanelParam` 在构建时设好目标。也**不**给内核加「按实例 id 取实例」的方法（需要某实例者，应早已持有其引用）。
 
+## Plan 14 — `02-14-PLAN.md`（表格修复轮：接口，gap_closure）
+
+> UAT 之后的修复轮接口改动（**仅类型**）。以下为新增命名，待逐条确认。
+
+- `IEditorPanel.getTitle?(): string | undefined`（可选方法，editor-core `panel/types.ts`）— 按实例的显示标题（让标签显示「表格 table.demo」）；缺席回退面板类型名。备选：`getDisplayName` / `title`。
+- `ITablePanel.setTable(target: ITablePanelTarget, columnIndex?: number): void`（第二参 0 基，省略为第 0 栏）— 设置某一栏的目标。
+- `ITablePanelParam.columnWidth?: number`（组件参数）— 每栏像素宽，缺省约 400。
+- `ITableSchemaNode` 扩展键 `x-order`（`readonly string[]`）— 同级字段的呈现顺序；新增行据此插在双击行之后。备选：`x-property-order` / `x-field-order`。
+
 ## 待确认的规划假设
 
 - A2：本阶段「schema」= 旧 `CommentObject`（已在 Plan 01 checkpoint 确认）。
