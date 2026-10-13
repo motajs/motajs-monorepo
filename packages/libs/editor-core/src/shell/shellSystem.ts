@@ -415,8 +415,8 @@ export class ShellSystem implements IShellSystem {
     return [...this.panelTypes.values()];
   }
 
-  async createPanelInstance(typeId: string): Promise<IEditorPanel | null> {
-    const created = this.createInstance(typeId);
+  async createPanelInstance(typeId: string, openParam?: Record<string, unknown>): Promise<IEditorPanel | null> {
+    const created = this.createInstance(typeId, openParam);
 
     if (created === null) return null;
 
@@ -476,7 +476,7 @@ export class ShellSystem implements IShellSystem {
     return tabId;
   }
 
-  async openPanelInTab(tabId: string, typeId: string): Promise<boolean> {
+  async openPanelInTab(tabId: string, typeId: string, openParam?: Record<string, unknown>): Promise<boolean> {
     const index = this.tabs.findIndex((tab) => tab.id === tabId);
 
     if (index === -1) {
@@ -491,7 +491,7 @@ export class ShellSystem implements IShellSystem {
       await this.closePanelInstance(current.instanceId);
     }
 
-    const created = this.createInstance(typeId);
+    const created = this.createInstance(typeId, openParam);
 
     if (created === null) return false;
 
@@ -575,9 +575,10 @@ export class ShellSystem implements IShellSystem {
   /**
    * 同步创建一个面板实例：解析类型、生成实例 id、调用工厂、登记实例并挂载资源钩子
    * @param typeId 面板类型标识符
+   * @param openParam 打开面板时顺带携带的可选参数；未提供时省略工厂入参的该键
    * @returns 创建产物，类型未注册或工厂抛错时为 null
    */
-  private createInstance(typeId: string): ICreatedPanel | null {
+  private createInstance(typeId: string, openParam?: Record<string, unknown>): ICreatedPanel | null {
     const type = this.panelTypes.get(typeId);
 
     if (type === undefined) {
@@ -591,7 +592,7 @@ export class ShellSystem implements IShellSystem {
     let instance: IEditorPanel;
 
     try {
-      instance = type.create({ context, instanceId });
+      instance = type.create(openParam === undefined ? { context, instanceId } : { context, instanceId, openParam });
     } catch {
       logger.error('shell.instanceCreateFailed', typeId);
       return null;
