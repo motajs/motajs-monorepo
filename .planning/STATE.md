@@ -5,16 +5,16 @@ current_phase: 02
 current_phase_name: 表格编辑
 current_plan: 9
 status: executing
-stopped_at: Completed 02-08-PLAN.md
-last_updated: "2026-10-13T04:54:02.945Z"
+stopped_at: Completed 02-09-PLAN.md
+last_updated: "2026-10-13T05:32:18.879Z"
 last_activity: 2026-10-12
 last_activity_desc: "Completed 02-04 (table tracer): editor-impl test infra + end-to-end resource-layer read path"
-state_head: a2eead2e874fe3bff08ff5e86a392b099cbb6247
+state_head: b2b251d3bf65b42c0bb3847c73b46eb58aaf9950
 progress:
   total_phases: 7
-  completed_phases: 0
+  completed_phases: 2
   total_plans: 16
-  completed_plans: 14
+  completed_plans: 15
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -73,6 +73,7 @@ Progress: [██████████] 100%
 | Phase 02 P06 | 16min | 3 tasks | 16 files |
 | Phase 02 P07 | 24 | 3 tasks | 13 files |
 | Phase 02 P08 | 34 | 3 tasks | 12 files |
+| Phase 02 P9 | 30min | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -100,6 +101,9 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-08: 呈现规则内建（buildSchemaPresentation + Object.freeze 常量），成对关键字在渲染期合行；绝不由被编辑的 schema 描述
 - [Phase 02]: 02-08: 面板方法 openSchemaPanel / openCurrentViewInCodeEditor 由 TableGrid 从 useTableCapabilities() 取打开器后传入——面板类不读 React Context
 - [Phase 02]: 02-08: D-30 写回为一次整份资源替换（TableUndoType.Replace），复用既有 { path:'', previousValue, nextValue } 载荷走统一撤销路径
+- [Phase 02]: 02-09: 操作列注释动作以图标 + aria-label/title 呈现，避免与表头「注释」列在同一次 getByText 断言中重复命中
+- [Phase 02]: 02-09: 外部编辑器分发落在 TableRow.tsx（模块内、不额外导出），结果经既有 onChange → TablePanel.commitValue 重入；字段级与 D-30 复用同一 ICodeEditorOpener
+- [Phase 02]: 02-09: tablePanel.ts 未改动——统一校验后可撤销提交入口 TablePanel.commitValue 已由 02-07 提供，外部结果经既有 onChange 通道重入；避免 tablePanel→TableGrid→TableRow→tablePanel 环依赖
 
 ### Pending Todos
 
@@ -125,6 +129,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-13T04:54:02.854Z
-Stopped at: Completed 02-08-PLAN.md
+Last session: 2026-10-13T05:32:18.776Z
+Stopped at: Completed 02-09-PLAN.md
 Resume file: None
