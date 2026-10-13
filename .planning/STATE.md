@@ -4,17 +4,17 @@ milestone: v1.0
 current_phase: 02
 current_phase_name: 表格编辑
 current_plan: 9
-status: executing
-stopped_at: Completed 02-09-PLAN.md
-last_updated: "2026-10-13T05:32:18.879Z"
+status: verifying
+stopped_at: Completed 02-10-PLAN.md
+last_updated: "2026-10-13T06:29:36.606Z"
 last_activity: 2026-10-12
 last_activity_desc: "Completed 02-04 (table tracer): editor-impl test infra + end-to-end resource-layer read path"
-state_head: b2b251d3bf65b42c0bb3847c73b46eb58aaf9950
+state_head: 83d5e73b04cc7ac1e6f3d7c8bf86c55a011e9700
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 16
-  completed_plans: 15
+  completed_plans: 16
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -32,7 +32,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 Phase: 02 — 表格编辑
 Current Plan: 9
 Total Plans in Phase: 9
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-10-12 — Completed 02-04（表格 tracer：工程脚手 + 端到端只读表格面板）
 
 Progress: [██████████] 100%
@@ -74,6 +74,7 @@ Progress: [██████████] 100%
 | Phase 02 P07 | 24 | 3 tasks | 13 files |
 | Phase 02 P08 | 34 | 3 tasks | 12 files |
 | Phase 02 P9 | 30min | 3 tasks | 12 files |
+| Phase 02 P10 | 8min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -104,6 +105,8 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-09: 操作列注释动作以图标 + aria-label/title 呈现，避免与表头「注释」列在同一次 getByText 断言中重复命中
 - [Phase 02]: 02-09: 外部编辑器分发落在 TableRow.tsx（模块内、不额外导出），结果经既有 onChange → TablePanel.commitValue 重入；字段级与 D-30 复用同一 ICodeEditorOpener
 - [Phase 02]: 02-09: tablePanel.ts 未改动——统一校验后可撤销提交入口 TablePanel.commitValue 已由 02-07 提供，外部结果经既有 onChange 通道重入；避免 tablePanel→TableGrid→TableRow→tablePanel 环依赖
+- [Phase 02]: 02-10: 阶段级集成测试以单个用例贯穿完整流程（打开→编辑→增删→撤销/重做→注入打开器新开 schema 面板→改 schema→切回数据面板因切入刷新而重算）；注入打开器以真实外壳开新标签承载 schema 面板。
+- [Phase 02]: 02-10: 生效门禁（coreImportType/coreEngineNeutral/coreModuleState/coreFsSurface）全绿；失效门禁如实记录（coreBoundaries 0、coreExports 1、implExports 1），不作阶段门禁；nyquist_compliant 仅在生效检查全绿时置真。
 
 ### Pending Todos
 
@@ -129,6 +132,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-13T05:32:18.776Z
-Stopped at: Completed 02-09-PLAN.md
+Last session: 2026-10-13T06:29:36.495Z
+Stopped at: Completed 02-10-PLAN.md
 Resume file: None
