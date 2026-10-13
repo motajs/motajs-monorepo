@@ -1,6 +1,7 @@
 import { IEditorPanelFactoryParam, IEditorPanelType } from '@motajs/editor-core';
 import { createElement, ReactNode } from 'react';
 import { TablePanel } from './tablePanel';
+import { ITablePanelTarget } from './types';
 
 /**
  * 生成表格面板类型的内联 SVG 图标
@@ -29,9 +30,49 @@ function createTableIcon(): ReactNode {
   );
 }
 
+/**
+ * 判断一个未知值是否为表格面板目标：非 null 对象且 `data` / `schema` 均为资源标识
+ * @param value 待判断的值，来自打开参数的不透明记录
+ * @returns 两个键均为带数值 `type` 与字符串 `id` 的对象时为 true
+ */
+function isTablePanelTarget(value: unknown): value is ITablePanelTarget {
+  if (typeof value !== 'object' || value === null) return false;
+
+  if (!('data' in value) || !('schema' in value)) return false;
+
+  const data = value.data;
+  const schema = value.schema;
+
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'type' in data &&
+    typeof data.type === 'number' &&
+    'id' in data &&
+    typeof data.id === 'string' &&
+    typeof schema === 'object' &&
+    schema !== null &&
+    'type' in schema &&
+    typeof schema.type === 'number' &&
+    'id' in schema &&
+    typeof schema.id === 'string'
+  );
+}
+
 export const tablePanelType: IEditorPanelType = Object.freeze({
   id: 'table',
   name: '表格面板',
   icon: createTableIcon(),
-  create: (param: IEditorPanelFactoryParam): TablePanel => new TablePanel(param),
+  create: (param: IEditorPanelFactoryParam): TablePanel => {
+    const panel = new TablePanel(param);
+    const openParam = param.openParam;
+
+    if (openParam !== undefined) {
+      const target = openParam.target;
+
+      if (isTablePanelTarget(target)) panel.setTable(target);
+    }
+
+    return panel;
+  },
 });
