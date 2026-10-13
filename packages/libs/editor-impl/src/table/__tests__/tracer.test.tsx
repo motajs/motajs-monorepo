@@ -19,12 +19,14 @@ afterEach(() => {
   cleanup();
 });
 
-// 读取某个字段值单元格内文本域的当前文本（字段用连字符形态，如 `nested-inner`）
+// 读取某个字段值单元格内输入控件（文本域或数字输入框）的当前文本（字段用连字符形态，如 `nested-inner`）
 function inputValue(container: HTMLElement, field: string): string | undefined {
   const cell = container.querySelector(`[data-test-id="table-input-${field}"]`);
-  const textarea = cell === null ? null : cell.querySelector('textarea');
+  const control = cell === null ? null : cell.querySelector('textarea, input');
 
-  return textarea === null ? undefined : textarea.value;
+  if (control instanceof HTMLTextAreaElement || control instanceof HTMLInputElement) return control.value;
+
+  return undefined;
 }
 
 // 组装一套已初始化的外壳 / 资源 / 撤回系统与内存后端

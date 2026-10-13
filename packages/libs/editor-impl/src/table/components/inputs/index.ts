@@ -3,3 +3,4 @@ export * from './SelectInput';
 export * from './CheckboxInput';
 export * from './CheckboxSet';
 export * from './ColorInput';
+export * from './NumberInput';

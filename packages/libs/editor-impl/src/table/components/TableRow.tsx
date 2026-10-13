@@ -8,6 +8,7 @@ import { ActionButtons } from './ActionButtons';
 import { CheckboxInput } from './inputs/CheckboxInput';
 import { CheckboxSet } from './inputs/CheckboxSet';
 import { ColorInput } from './inputs/ColorInput';
+import { NumberInput } from './inputs/NumberInput';
 import { SelectInput } from './inputs/SelectInput';
 import { TextareaInput } from './inputs/TextareaInput';
 
@@ -230,6 +231,10 @@ function renderValueControl(row: ITableRowNode, disabled: boolean, onChange: (va
 
     if (kind === TableControlKind.Color) {
       return <ColorInput value={row.value} disabled={disabled} onChange={onChange} />;
+    }
+
+    if (kind === TableControlKind.Number) {
+      return <NumberInput value={row.value} disabled={disabled} onChange={onChange} />;
     }
   }
 

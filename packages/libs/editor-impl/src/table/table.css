@@ -150,6 +150,10 @@
   width: 100%;
 }
 
+.etable-input-number {
+  width: 100%;
+}
+
 .etable-input-checkbox-set {
   display: flex;
   flex-wrap: wrap;

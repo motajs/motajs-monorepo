@@ -191,3 +191,32 @@ describe('B3 成功提示文案与常驻预留', () => {
     expect(screen.getByTestId('table-notice').textContent).toBe('');
   });
 });
+
+describe('B2 数字字段的单行数字控件', () => {
+  // 数字字段渲染 antd InputNumber 而非多行文本域，输入后提交数字值
+  it('数字字段渲染 InputNumber 并提交数字', async () => {
+    const system = await createSystem();
+
+    seed(system, 't', { level: 1 }, { type: 'object', properties: { level: { type: 'number' } } });
+    const panel = await openPanel(system);
+
+    await setTarget(panel, 't');
+    const { container } = renderWithCapabilities(system, {});
+
+    const cell = container.querySelector('[data-test-id="table-input-level"]');
+
+    expect(cell === null ? null : cell.querySelector('.ant-input-number')).not.toBeNull();
+    expect(cell === null ? null : cell.querySelector('textarea')).toBeNull();
+
+    const input = cell === null ? null : cell.querySelector('input');
+
+    if (!(input instanceof HTMLInputElement)) throw new Error('数字输入框缺失');
+
+    await act(async () => {
+      fireEvent.change(input, { target: { value: '5' } });
+      fireEvent.blur(input);
+    });
+
+    expect(await readData(system, 't')).toEqual({ level: 5 });
+  });
+});

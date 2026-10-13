@@ -94,6 +94,19 @@ async function commitText(container: HTMLElement, field: string, text: string): 
   });
 }
 
+// 在字段值数字输入框中输入数字并提交（失焦）
+async function commitNumber(container: HTMLElement, field: string, text: string): Promise<void> {
+  const cell = container.querySelector(`[data-test-id="table-input-${field}"]`);
+  const input = cell === null ? null : cell.querySelector('input');
+
+  if (!(input instanceof HTMLInputElement)) return;
+
+  await act(async () => {
+    fireEvent.change(input, { target: { value: text } });
+    fireEvent.blur(input);
+  });
+}
+
 // 连点两次某个字段行，构成一次双击
 async function doubleClickRow(field: string): Promise<void> {
   await act(async () => {
@@ -142,7 +155,7 @@ describe('表格内联编辑', () => {
 
     const { container } = render(createElement(TableGrid, singleRowGrid(row, onChange)));
 
-    await commitText(container, 'count', '3');
+    await commitNumber(container, 'count', '3');
 
     expect(screen.getByText("['count'] : 输入的值不合要求，请鼠标放置在注释上查看说明")).not.toBeNull();
     expect(onChange).not.toHaveBeenCalled();
