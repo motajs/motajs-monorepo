@@ -1,0 +1,304 @@
+import { act, cleanup, configure, fireEvent, render, screen } from '@testing-library/react';
+import { IEditorPanel, IEditorPanelFactoryParam, ResourceSystem, ShellSystem, UndoSystem } from '@motajs/editor-core';
+import { createElement } from 'react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { tableDataResourceId, tablePanelType, tableSchemaResourceId, TablePanel } from '..';
+import { ITablePanelTarget } from '../types';
+import { CapabilityProvider, ITablePanelOpener } from '../../react';
+import { FakeResourceInjection } from './fixtures';
+
+configure({ testIdAttribute: 'data-test-id' });
+
+interface TestSystem {
+  /** 外壳系统 */
+  readonly shellSystem: ShellSystem;
+  /** 资源系统 */
+  readonly resourceSystem: ResourceSystem;
+  /** 撤销系统 */
+  readonly undoSystem: UndoSystem;
+  /** 内存资源后端 */
+  readonly injection: FakeResourceInjection;
+}
+
+// 每个用例结束后卸载已挂载的组件并清理被 stub 的浏览器对话框，避免 DOM 与全局桩在用例之间累积
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
+
+// 组装一套已初始化的外壳 / 资源 / 撤销系统与内存后端
+async function createSystem(): Promise<TestSystem> {
+  const injection = new FakeResourceInjection();
+  const resourceSystem = new ResourceSystem();
+  await resourceSystem.initialize(injection);
+  const undoSystem = new UndoSystem();
+  await undoSystem.initialize({ maxUndoStep: 100 });
+  const shellSystem = new ShellSystem(undoSystem, resourceSystem);
+  await shellSystem.initialize();
+  return { shellSystem, resourceSystem, undoSystem, injection };
+}
+
+// 注册一个捕获实例的面板类型：每次外壳创建表格面板都把实例推入 created，供测试与打开器引用
+function registerTablePanel(system: TestSystem, created: TablePanel[]): void {
+  system.shellSystem.registerPanelType({
+    id: tablePanelType.id,
+    name: tablePanelType.name,
+    icon: tablePanelType.icon,
+    create: (param: IEditorPanelFactoryParam): IEditorPanel => {
+      const panel = new TablePanel(param);
+      created.push(panel);
+      return panel;
+    },
+  });
+}
+
+// 在第一个空白标签页打开表格面板并返回其实例
+async function openFirstPanel(system: TestSystem, created: TablePanel[]): Promise<TablePanel> {
+  registerTablePanel(system, created);
+
+  const tabId = system.shellSystem.listTabs()[0].id;
+
+  await act(async () => {
+    await system.shellSystem.openPanelInTab(tabId, tablePanelType.id);
+  });
+
+  return created[0];
+}
+
+// 组合根注入的表格面板打开器：新开一个标签承载目标面板并设好目标（D-06）
+function createOpener(system: TestSystem, created: TablePanel[]): ITablePanelOpener {
+  return {
+    open: async (param): Promise<void> => {
+      const target = param.target as ITablePanelTarget;
+      const tabId = system.shellSystem.openBlankTab();
+
+      await system.shellSystem.openPanelInTab(tabId, tablePanelType.id);
+      const panel = created[created.length - 1];
+
+      panel.setTable(target);
+      await panel.onSwitchIn();
+    },
+  };
+}
+
+// 预置一张表的数据与 schema
+function seed(system: TestSystem, name: string, data: unknown, schema: unknown): void {
+  system.injection.seed(tableDataResourceId(name), data);
+  system.injection.seed(tableSchemaResourceId(name), schema);
+}
+
+// 把面板目标指向给定数据表，并等待一次切入刷新完成
+async function setTarget(panel: TablePanel, name: string): Promise<void> {
+  panel.setTable({ data: tableDataResourceId(name), schema: tableSchemaResourceId(name) });
+  await panel.onSwitchIn();
+}
+
+// 读取目标表的当前数据内容
+async function readData(system: TestSystem, name: string): Promise<unknown> {
+  return system.resourceSystem.readContent(tableDataResourceId(name));
+}
+
+// 读取某个字段值单元格内文本域的当前文本
+function valueOf(container: HTMLElement, field: string): string | undefined {
+  const cell = container.querySelector(`[data-test-id="table-input-${field}"]`);
+  const textarea = cell === null ? null : cell.querySelector('textarea');
+
+  return textarea === null ? undefined : textarea.value;
+}
+
+// 在字段值文本域中输入文本并提交（失焦）
+async function commitText(container: HTMLElement, field: string, text: string): Promise<void> {
+  const cell = container.querySelector(`[data-test-id="table-input-${field}"]`);
+  const textarea = cell === null ? null : cell.querySelector('textarea');
+
+  await act(async () => {
+    fireEvent.change(textarea as HTMLTextAreaElement, { target: { value: text } });
+    fireEvent.blur(textarea as HTMLTextAreaElement);
+  });
+}
+
+// 连点两次某个字段行，构成一次双击
+async function doubleClickRow(field: string): Promise<void> {
+  await act(async () => {
+    fireEvent.click(screen.getByTestId(`table-row-${field}`));
+    fireEvent.click(screen.getByTestId(`table-row-${field}`));
+  });
+}
+
+// 用能力 Provider 包裹外壳渲染根，注入携带表格面板打开器的能力包
+function renderWithOpener(system: TestSystem, opener: ITablePanelOpener): ReturnType<typeof render> {
+  return render(
+    createElement(CapabilityProvider, {
+      capabilities: { tablePanel: opener },
+      children: createElement(system.shellSystem.render()),
+    }),
+  );
+}
+
+describe('阶段集成：完整流程与安全边界', () => {
+  // 单个用例端到端跑通「打开 → 编辑 → 添加 → 删除（各一步撤销 / 重做）→ 注入打开器新开 schema 面板 → 改 schema → 切回数据面板因切入刷新而重算」
+  it('数据表完整流程与 schema 切入刷新端到端跑通', async () => {
+    const system = await createSystem();
+    const created: TablePanel[] = [];
+    const panel = await openFirstPanel(system, created);
+    const firstTab = system.shellSystem.listTabs()[0].id;
+
+    seed(
+      system,
+      't',
+      { name: 'a', note: 'x' },
+      {
+        type: 'object',
+        properties: {
+          name: { type: 'string', description: '名字' },
+          note: { type: ['string', 'null'], description: '备注' },
+        },
+      },
+    );
+
+    await act(async () => {
+      await setTarget(panel, 't');
+    });
+
+    const { container } = renderWithOpener(system, createOpener(system, created));
+
+    // 打开后按 schema 驱动渲染行：列头齐备、姓名与备注各一行、值单元格显示 JSON 文本、注释取自 schema
+    expect(screen.getByText('条目')).not.toBeNull();
+    expect(screen.getByText('操作')).not.toBeNull();
+    expect(valueOf(container, 'name')).toBe('"a"');
+    expect(valueOf(container, 'note')).toBe('"x"');
+    expect(screen.getByText('名字')).not.toBeNull();
+
+    // 编辑一个值：写回资源并更新显示，撤销还原旧值、重做恢复新值（一次编辑恰为一步撤销）
+    await commitText(container, 'name', '"b"');
+
+    expect(await readData(system, 't')).toEqual({ name: 'b', note: 'x' });
+    expect(valueOf(container, 'name')).toBe('"b"');
+
+    await act(async () => {
+      await system.undoSystem.undo();
+    });
+
+    expect(await readData(system, 't')).toEqual({ name: 'a', note: 'x' });
+
+    await act(async () => {
+      await system.undoSystem.redo();
+    });
+
+    expect(await readData(system, 't')).toEqual({ name: 'b', note: 'x' });
+
+    // 添加一行：添加模式 + 校验通过的名字追加 null 占位；撤销移除、重做加回
+    vi.stubGlobal(
+      'prompt',
+      vi.fn(() => 'extra'),
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('添加'));
+    });
+    await doubleClickRow('name');
+
+    expect(await readData(system, 't')).toEqual({ name: 'b', note: 'x', extra: null });
+
+    await act(async () => {
+      await system.undoSystem.undo();
+    });
+
+    expect(await readData(system, 't')).toEqual({ name: 'b', note: 'x' });
+
+    await act(async () => {
+      await system.undoSystem.redo();
+    });
+
+    expect(await readData(system, 't')).toEqual({ name: 'b', note: 'x', extra: null });
+
+    // 删除一行：schema 允许 null 的字段在删除模式确认后移除；撤销恢复、重做再次删除
+    vi.stubGlobal(
+      'confirm',
+      vi.fn(() => true),
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('删除'));
+    });
+    await doubleClickRow('note');
+
+    expect(await readData(system, 't')).toEqual({ name: 'b', extra: null });
+
+    await act(async () => {
+      await system.undoSystem.undo();
+    });
+
+    expect(await readData(system, 't')).toEqual({ name: 'b', note: 'x', extra: null });
+
+    await act(async () => {
+      await system.undoSystem.redo();
+    });
+
+    expect(await readData(system, 't')).toEqual({ name: 'b', extra: null });
+
+    // 经注入打开器新开 schema 面板：active 成为 schema 视图、渲染提示条且不再显示「编辑 Schema」按钮
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('table-edit-schema'));
+    });
+
+    expect(created.length).toBe(2);
+    expect(screen.getByTestId('schema-banner')).not.toBeNull();
+    expect(screen.queryByTestId('table-edit-schema')).toBeNull();
+
+    // 在 schema 面板里改 name 的注释：整份写回 schema 资源；此刻数据面板不可见、无跨面板广播
+    await commitText(container, 'properties-name-description', '"改名"');
+
+    expect(await system.resourceSystem.readContent(tableSchemaResourceId('t'))).toEqual({
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: '改名' },
+        note: { type: ['string', 'null'], description: '备注' },
+      },
+    });
+
+    // 切回数据面板：外壳切入触发 onSwitchIn 重新请求 schema 并重算，注释更新为新值
+    await act(async () => {
+      system.shellSystem.activateTab(firstTab);
+    });
+    await act(async () => {});
+
+    expect(screen.getByText('改名')).not.toBeNull();
+    expect(screen.queryByText('名字')).toBeNull();
+  });
+
+  // 字段名、注释与值均含脚本样文本时以字面文本渲染，绝不生成元素（XSS 回归守卫）
+  it('脚本样字段名、注释与值以字面文本渲染', async () => {
+    const system = await createSystem();
+    const created: TablePanel[] = [];
+    const panel = await openFirstPanel(system, created);
+    const fieldName = '<img src=x onerror="alert(1)">';
+    const description = '<script>alert(2)</script>';
+    const payload = '<img src=x onerror="alert(3)">';
+
+    system.injection.seed(tableDataResourceId('xss'), { [fieldName]: payload });
+    system.injection.seed(tableSchemaResourceId('xss'), {
+      type: 'object',
+      properties: { [fieldName]: { type: 'string', description } },
+    });
+
+    await act(async () => {
+      await setTarget(panel, 'xss');
+    });
+
+    const { container } = render(createElement(system.shellSystem.render()));
+
+    // 字段名与注释作为文本节点渲染
+    expect(screen.getByText(fieldName)).not.toBeNull();
+    expect(screen.getByText(description)).not.toBeNull();
+
+    // 值显示为 JSON 文本而非标记
+    const textarea = container.querySelector('textarea');
+
+    expect(textarea === null ? undefined : textarea.value).toBe(JSON.stringify(payload));
+
+    // 未生成任何由脚本样文本驱动的元素
+    expect(container.querySelector('img')).toBeNull();
+    expect(container.querySelector('script')).toBeNull();
+  });
+});
