@@ -6,12 +6,7 @@ import {
   ITableEditorCapabilities,
 } from '../capabilities';
 import { TableCapabilitiesContext } from '../capabilitiesContext';
-import {
-  IMultiSelectOpenRequest,
-  IMultiSelectResult,
-  IPointSelectOpenRequest,
-  IPointSelectResult,
-} from '../types';
+import { IMultiSelectOpenRequest, IMultiSelectResult, IPointSelectOpenRequest, IPointSelectResult } from '../types';
 import { MultiSelectModal } from './MultiSelectModal';
 import { PointPickerModal } from './PointPickerModal';
 
