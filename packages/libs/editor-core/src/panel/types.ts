@@ -98,6 +98,9 @@ export interface IEditorPanelFactoryParam {
 
   /** core 生成的唯一实例 id，用于区分同类型的多个实例 */
   readonly instanceId: string;
+
+  /** 工厂收到的可选打开参数；内核只透传，不假定其形状 */
+  readonly openParam?: Record<string, unknown>;
 }
 
 /** 面板实例工厂：接收入参对象并同步返回一个面板实例（无 Promise） */
