@@ -1,6 +1,18 @@
 // 字段路径工具：表格内部用 `['a']['b']` 形式表示字段路径，先解析为段数组，再按路径读写数据。
 // 所有写操作都返回全新对象，绝不改动传入的数据——撤销路径在写盘成功前必须保持旧数据完整（T-02-18）。
 
+/** 写入时应拒绝的危险段：命中这些键会改写原型链或构造器，构成原型污染（T-02-17） */
+const UNSAFE_SEGMENTS = Object.freeze(['__proto__', 'constructor', 'prototype']);
+
+/**
+ * 判断一个路径段是否为危险键
+ * @param segment 待判断的路径段
+ * @returns 是危险键时为 true
+ */
+function isUnsafeSegment(segment: string): boolean {
+  return UNSAFE_SEGMENTS.includes(segment);
+}
+
 /**
  * 解析字段路径字符串为段数组
  * @param path 形如 `['a']['b']` 的字段路径字符串
@@ -70,6 +82,7 @@ function setAt(target: unknown, segments: readonly string[], value: unknown): Re
   const head = segments[0];
 
   if (head === undefined) return base;
+  if (isUnsafeSegment(head)) return base;
 
   const rest = segments.slice(1);
 
@@ -93,6 +106,7 @@ function deleteAt(target: unknown, segments: readonly string[]): Record<string, 
   const head = segments[0];
 
   if (head === undefined) return base;
+  if (isUnsafeSegment(head)) return base;
 
   const rest = segments.slice(1);
 

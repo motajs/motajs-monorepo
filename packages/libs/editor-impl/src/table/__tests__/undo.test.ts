@@ -164,6 +164,23 @@ describe('表格统一撤销路径', () => {
     expect(await readData(system, 't')).toEqual({ name: 'a' });
   });
 
+  // 新增名为原型污染键时拒绝写入，数据保持不变、不产生 __proto__ 自有属性
+  it('新增原型污染键时拒绝写入', async () => {
+    const system = await createSystem(100);
+    const sample = stringTable();
+
+    seed(system, 't', sample.data, sample.schema);
+    const panel = await openPanel(system);
+    await setTarget(panel, 't');
+
+    await panel.addItem('', '__proto__');
+
+    const data = await readData(system, 't');
+
+    expect(data).toEqual({ name: 'a' });
+    expect(Object.prototype.hasOwnProperty.call(data, '__proto__')).toBe(false);
+  });
+
   // maxUndoStep 为 0 时禁用撤销，但写入依然发生
   it('maxUndoStep 为 0 时不记录撤销但仍写入', async () => {
     const system = await createSystem(0);
