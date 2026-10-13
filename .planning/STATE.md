@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: 02
 current_phase_name: 表格编辑
-current_plan: 7
+current_plan: 8
 status: executing
-stopped_at: Completed 02-06-PLAN.md (validation + inline inputs); next 02-07-PLAN.md
-last_updated: "2026-10-12T16:07:18.416Z"
+stopped_at: Completed 02-07-PLAN.md
+last_updated: "2026-10-13T04:25:30.178Z"
 last_activity: 2026-10-12
 last_activity_desc: "Completed 02-04 (table tracer): editor-impl test infra + end-to-end resource-layer read path"
-state_head: 84fe253e92fc652b8b7167336b30c15541d2c83b
+state_head: 724f9b97d5a46c6c99feb5d07440229badb63b5f
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 16
-  completed_plans: 12
+  completed_plans: 13
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 02 — 表格编辑
-Current Plan: 7
+Current Plan: 8
 Total Plans in Phase: 9
 Status: Ready to execute
 Last activity: 2026-10-12 — Completed 02-04（表格 tracer：工程脚手 + 端到端只读表格面板）
@@ -71,6 +71,7 @@ Progress: [██████████] 100%
 | Phase 02 P04 | 44min | 3 tasks | 16 files |
 | Phase 02 P05 | 12min | 1 tasks | 2 files |
 | Phase 02 P06 | 16min | 3 tasks | 16 files |
+| Phase 02 P07 | 24 | 3 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -91,6 +92,9 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-06: 校验用 ajv（catalog 固定 8.20.0，--offline 安装）；validateValue 在函数内 new Ajv2020({ strict:false, allErrors:true }) 编译字段的 JSON Schema 节点，绝不对 schema 求值（D-22 / T-02-14）
 - [Phase 02]: 02-06: 行内控件由标准关键字推导、x-control 兜底（enum→Select、boolean→Checkbox、array→MultiSelect、number/integer→Number、缺省→Text），inferControlKind
 - [Phase 02]: 02-06: ColorInput 仅按源值是否四通道决定 alpha 回写；TextareaInput 空白文本提交 null；SelectInput 关闭虚拟滚动以便枚举选项稳定渲染
+- [Phase 02]: 字段路径采用 legacy 括号形式 ['a']['b']（用户确认）；buildTableTree 同步改为括号键
+- [Phase 02]: 统一撤销：每次编辑写资源后记录一条可逆 IUndoContext；写入失败不记录（T-02-18）
+- [Phase 02]: 字段路径写操作拒绝 __proto__/constructor/prototype（T-02-17 原型污染）
 
 ### Pending Todos
 
@@ -116,6 +120,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-12T16:07:18.316Z
-Stopped at: Completed 02-06-PLAN.md (validation + inline inputs); next 02-07-PLAN.md
+Last session: 2026-10-13T04:25:18.753Z
+Stopped at: Completed 02-07-PLAN.md
 Resume file: None
