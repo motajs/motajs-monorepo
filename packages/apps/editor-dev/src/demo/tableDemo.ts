@@ -1,4 +1,5 @@
 import { EditorCore } from '@motajs/editor-core';
+import { ITablePanelOpener } from '@motajs/editor-impl/react';
 import {
   ITablePanelParam,
   ITablePanelTarget,
@@ -56,4 +57,19 @@ export async function openTableDemoPanel(core: EditorCore): Promise<void> {
   const param: ITablePanelParam = { target: TABLE_DEMO_TARGET };
 
   await core.shellSystem.openPanelInTab(tabId, tablePanelType.id, param);
+}
+
+/**
+ * 创建开发宿主的表格面板打开器：开一个空白标签页，再带打开参数打开表格面板类型
+ * @param core 开发宿主的编辑器核心，经其外壳系统开标签页与面板
+ * @returns 满足表格面板打开器契约的对象，供能力 Provider 注入给表格
+ */
+export function createTablePanelOpener(core: EditorCore): ITablePanelOpener {
+  return {
+    open: async (param: Record<string, unknown>): Promise<void> => {
+      const tabId = core.shellSystem.openBlankTab();
+
+      await core.shellSystem.openPanelInTab(tabId, tablePanelType.id, param);
+    },
+  };
 }

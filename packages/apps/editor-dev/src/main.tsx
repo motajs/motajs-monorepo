@@ -6,6 +6,7 @@ import { tablePanelType } from '@motajs/editor-impl/table';
 import { MemoryBackend } from './backend/memoryBackend';
 import { DEMO_PANEL_TYPE, DEMO_RESOURCE_ID, DEMO_SAMPLE_CONTENT } from './demo/demoPanel';
 import {
+  createTablePanelOpener,
   openTableDemoPanel,
   TABLE_DEMO_DATA,
   TABLE_DEMO_MENU_ID,
@@ -33,5 +34,8 @@ core.shellSystem.registerMenuItem({
 await core.initialize(backend);
 
 createRoot(document.getElementById('root')!).render(
-  createElement(CapabilityProvider, { children: createElement(core.shellSystem.render()) }),
+  createElement(CapabilityProvider, {
+    capabilities: { tablePanel: createTablePanelOpener(core) },
+    children: createElement(core.shellSystem.render()),
+  }),
 );
