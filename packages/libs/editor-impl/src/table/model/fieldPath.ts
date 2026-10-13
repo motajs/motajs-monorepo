@@ -140,3 +140,68 @@ export function setByFieldPath(data: unknown, path: string, value: unknown): Rec
 export function deleteByFieldPath(data: unknown, path: string): Record<string, unknown> {
   return deleteAt(data, parseFieldPath(path));
 }
+
+/**
+ * 按段数组不可变地把一个值写入，并使其在目标层对象的键序中紧接 `afterKey` 之后，逐层浅拷贝经过的对象
+ * @param target 目标值
+ * @param segments 剩余段数组，最后一段为要写入的新键
+ * @param afterKey 目标层内新键应紧接其后的锚点键；不存在时新键追加到末尾
+ * @param value 要写入的值
+ * @returns 写入后的新对象；段含危险键时返回原对象的浅拷贝
+ */
+function insertAt(
+  target: unknown,
+  segments: readonly string[],
+  afterKey: string,
+  value: unknown,
+): Record<string, unknown> {
+  const head = segments[0];
+
+  if (head === undefined) return isRecord(target) ? { ...target } : {};
+  if (isUnsafeSegment(head)) return isRecord(target) ? { ...target } : {};
+
+  const rest = segments.slice(1);
+
+  if (rest.length > 0) {
+    const base = isRecord(target) ? { ...target } : {};
+
+    base[head] = insertAt(base[head], rest, afterKey, value);
+    return base;
+  }
+
+  const source = isRecord(target) ? target : {};
+  const result: Record<string, unknown> = {};
+  let inserted = false;
+
+  for (const key of Object.keys(source)) {
+    if (key === head) continue;
+
+    result[key] = source[key];
+
+    if (key === afterKey) {
+      result[head] = value;
+      inserted = true;
+    }
+  }
+
+  if (!inserted) result[head] = value;
+
+  return result;
+}
+
+/**
+ * 按字段路径不可变地写入一个值，并使其在父对象的键序中紧接 `afterKey` 之后（而非落在末尾）
+ * @param data 目标数据
+ * @param path 要写入的字段路径字符串
+ * @param afterKey 同层内新键应紧接其后的锚点键；不存在时新键追加到末尾
+ * @param value 要写入的值
+ * @returns 写入后的新对象；路径为空或含危险段时返回原数据的浅拷贝
+ */
+export function insertAfterFieldPath(
+  data: unknown,
+  path: string,
+  afterKey: string,
+  value: unknown,
+): Record<string, unknown> {
+  return insertAt(data, parseFieldPath(path), afterKey, value);
+}

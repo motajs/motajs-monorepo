@@ -65,6 +65,63 @@ function buildLeafRow(
 }
 
 /**
+ * 读取一个 schema 节点声明的同级呈现顺序，非法或缺失时返回 undefined
+ * @param node 字段的 schema 节点
+ * @returns 同级字段名列表；未声明或非字符串数组时为 undefined
+ */
+function readOrder(node: ITableSchemaNode): readonly string[] | undefined {
+  const order = node['x-order'];
+
+  if (!Array.isArray(order)) return undefined;
+
+  return order.filter((key): key is string => typeof key === 'string');
+}
+
+/**
+ * 按 `x-order` 与自然顺序合并出该层字段的展示顺序
+ *
+ * `x-order` 中列出的键按其次序排在前，其余键（schema 声明但未列出的、以及数据多出的）按自然
+ * 顺序追加；`x-order` 缺失时完全保持自然顺序（向后兼容）。
+ * @param declared 该层 schema 声明的字段表
+ * @param data 该层对应的数据
+ * @param order `x-order` 声明的顺序提示，可缺省
+ * @returns 该层字段名的展示顺序
+ */
+function orderKeys(
+  declared: Record<string, ITableSchemaNode>,
+  data: unknown,
+  order: readonly string[] | undefined,
+): string[] {
+  const natural: string[] = Object.keys(declared);
+  const dataKeys = isDataObject(data) ? Object.keys(data) : [];
+
+  for (const key of dataKeys) {
+    if (!Object.prototype.hasOwnProperty.call(declared, key)) natural.push(key);
+  }
+
+  if (order === undefined) return natural;
+
+  const seen = new Set<string>();
+  const ordered: string[] = [];
+
+  for (const key of order) {
+    if (seen.has(key) || !natural.includes(key)) continue;
+
+    ordered.push(key);
+    seen.add(key);
+  }
+
+  for (const key of natural) {
+    if (seen.has(key)) continue;
+
+    ordered.push(key);
+    seen.add(key);
+  }
+
+  return ordered;
+}
+
+/**
  * 构造一个 schema 声明字段对应的行：带 properties 的 object 为分组行，其余为叶子行
  * @param key 字段名
  * @param node 字段的 schema 节点
@@ -80,7 +137,7 @@ function buildDeclaredRow(key: string, node: ITableSchemaNode, data: unknown, pr
       key: path,
       value: undefined,
       description: node.description,
-      children: buildRows(node.properties, readField(data, key), path),
+      children: buildRows(node.properties, readField(data, key), path, readOrder(node)),
       config: node,
     };
   }
@@ -89,36 +146,34 @@ function buildDeclaredRow(key: string, node: ITableSchemaNode, data: unknown, pr
 }
 
 /**
- * 把一层的 schema 声明字段与数据组成行列表：先按 properties 递归展开，再把 schema 未声明的
- * 数据字段补成叶子行（默认兜底，D-29）
+ * 把一层的 schema 声明字段与数据组成行列表：按 `x-order`（缺省时按 properties 顺序）递归展开，
+ * 再把 schema 未声明的数据字段补成叶子行（默认兜底，D-29）
  * @param properties 该层 schema 声明的字段表，未声明时为空
  * @param data 与该层字段对应的数据
  * @param prefix 父级路径，顶层为空串
+ * @param order 该层 `x-order` 声明的顺序提示，可缺省
  * @returns 该层的行列表
  */
 function buildRows(
   properties: Record<string, ITableSchemaNode> | undefined,
   data: unknown,
   prefix: string,
+  order: readonly string[] | undefined,
 ): ITableRowNode[] {
   const declared = properties ?? {};
   const rows: ITableRowNode[] = [];
 
-  for (const key of Object.keys(declared)) rows.push(buildDeclaredRow(key, declared[key], data, prefix));
-
-  const dataKeys = isDataObject(data) ? Object.keys(data) : [];
-
-  for (const key of dataKeys) {
-    if (Object.prototype.hasOwnProperty.call(declared, key)) continue;
-
-    rows.push(buildLeafRow(joinPath(prefix, key), readField(data, key), undefined, undefined));
+  for (const key of orderKeys(declared, data, order)) {
+    if (Object.prototype.hasOwnProperty.call(declared, key))
+      rows.push(buildDeclaredRow(key, declared[key], data, prefix));
+    else rows.push(buildLeafRow(joinPath(prefix, key), readField(data, key), undefined, undefined));
   }
 
   return rows;
 }
 
 /**
- * 把标准 JSON Schema 的 properties 与数据组成行树（递归展开嵌套 object）
+ * 把标准 JSON Schema 的 properties 与数据组成行树（递归展开嵌套 object，同级按 `x-order` 排序）
  * @param schema 目标表的 JSON Schema 文档；缺失或非对象时不产生任何行
  * @param data 目标表的数据对象
  * @returns 行树节点列表，schema 缺失或非对象时为空数组
@@ -126,5 +181,5 @@ function buildRows(
 export function buildTableTree(schema: unknown, data: unknown): readonly ITableRowNode[] {
   if (!isSchemaObject(schema)) return [];
 
-  return buildRows(schema.properties, data, '');
+  return buildRows(schema.properties, data, '', readOrder(schema));
 }

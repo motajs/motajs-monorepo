@@ -21,7 +21,14 @@ import {
 } from './components/TableGrid';
 import { buildTableTree } from './model/traversal';
 import { buildSchemaTree, isSchemaResourceId } from './model/schemaPresentation';
-import { deleteByFieldPath, parseFieldPath, setByFieldPath } from './model/fieldPath';
+import {
+  deleteByFieldPath,
+  getParentFieldPath,
+  getShortField,
+  insertAfterFieldPath,
+  parseFieldPath,
+  setByFieldPath,
+} from './model/fieldPath';
 import { validateId, validateValue } from './model/validation';
 import { tableSchemaResourceId } from './resourceType';
 
@@ -49,6 +56,48 @@ interface ITableUndoData {
   readonly previousValue: unknown;
   /** 变更后的值，供重做恢复 */
   readonly nextValue: unknown;
+  /** 新增时的锚点短名，供重做时把字段插回锚点行之后；非新增操作缺省 */
+  readonly anchor?: string;
+  /** 新增前 schema 的整份内容（数据表新增会同步写 `x-order`）；非新增操作缺省 */
+  readonly previousSchema?: unknown;
+  /** 新增后 schema 的整份内容；非新增操作缺省 */
+  readonly nextSchema?: unknown;
+}
+
+/**
+ * 计算同级字段的新顺序：按既有顺序（缺失时按数据键序）排出，并把 `name` 插到 `anchor` 之后
+ * @param keys 变更前该层对象的字段名列表
+ * @param existing 该层既有 `x-order`，可缺省或非法
+ * @param anchor 新字段应紧接其后的锚点短名；不存在时追加到末尾
+ * @param name 新增字段名
+ * @returns 插入后的完整同级字段顺序
+ */
+function computeSiblingOrder(keys: readonly string[], existing: unknown, anchor: string, name: string): string[] {
+  const order = Array.isArray(existing) ? existing.filter((key): key is string => typeof key === 'string') : [];
+  const combined: string[] = [];
+  const seen = new Set<string>();
+
+  for (const key of order) {
+    if (!keys.includes(key) || seen.has(key)) continue;
+
+    combined.push(key);
+    seen.add(key);
+  }
+
+  for (const key of keys) {
+    if (seen.has(key)) continue;
+
+    combined.push(key);
+    seen.add(key);
+  }
+
+  const result = combined.filter((key) => key !== name);
+  const index = result.indexOf(anchor);
+
+  if (index === -1) result.push(name);
+  else result.splice(index + 1, 0, name);
+
+  return result;
 }
 
 /** 多栏布局中一栏的运行时状态 */
@@ -88,8 +137,8 @@ interface ITablePanelViewProps {
   readonly onRetry: (columnIndex: number) => void;
   /** 某栏的字段提交回调 */
   readonly onChange: (columnIndex: number, key: string, value: unknown) => void;
-  /** 某栏的新增子项回调 */
-  readonly onAdd: (columnIndex: number, parentPath: string, name: string) => void;
+  /** 某栏的新增子项回调（锚点行键 + 新名称） */
+  readonly onAdd: (columnIndex: number, anchorKey: string, name: string) => void;
   /** 某栏的删除子项回调 */
   readonly onDelete: (columnIndex: number, key: string) => void;
   /** 某栏的「编辑 Schema」回调 */
@@ -110,8 +159,8 @@ interface ITableColumnProps {
   readonly onRetry: (columnIndex: number) => void;
   /** 该栏的字段提交回调 */
   readonly onChange: (columnIndex: number, key: string, value: unknown) => void;
-  /** 该栏的新增子项回调 */
-  readonly onAdd: (columnIndex: number, parentPath: string, name: string) => void;
+  /** 该栏的新增子项回调（锚点行键 + 新名称） */
+  readonly onAdd: (columnIndex: number, anchorKey: string, name: string) => void;
   /** 该栏的删除子项回调 */
   readonly onDelete: (columnIndex: number, key: string) => void;
   /** 该栏的「编辑 Schema」回调 */
@@ -127,6 +176,18 @@ interface ITableColumnProps {
  */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * 按字段路径读取一个值：空路径直接返回源对象（`get` 对空路径返回 undefined，此处按语义补正）
+ * @param source 源对象
+ * @param path 字段路径字符串
+ * @returns 路径上的值；路径为空时为源对象本身
+ */
+function readAt(source: unknown, path: string): unknown {
+  const segments = parseFieldPath(path);
+
+  return segments.length === 0 ? source : get(source, segments);
 }
 
 /**
@@ -188,7 +249,7 @@ function TableColumn(props: ITableColumnProps): ReactElement {
     title: view.title,
     onRetry: (): void => props.onRetry(props.columnIndex),
     onChange: (key, value): void => props.onChange(props.columnIndex, key, value),
-    onAdd: (parentPath, name): void => props.onAdd(props.columnIndex, parentPath, name),
+    onAdd: (anchorKey, name): void => props.onAdd(props.columnIndex, anchorKey, name),
     onDelete: (key): void => props.onDelete(props.columnIndex, key),
     onOpenSchema: (opener): void => props.onOpenSchema(props.columnIndex, opener),
     onOpenInCodeEditor: (opener): void => props.onOpenInCodeEditor(props.columnIndex, opener),
@@ -285,7 +346,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
         columnWidth: this.columnWidth,
         onRetry: (columnIndex): void => void this.refresh(columnIndex),
         onChange: (columnIndex, key, value): void => void this.commitValue(key, value, columnIndex),
-        onAdd: (columnIndex, parentPath, name): void => void this.addItem(parentPath, name, columnIndex),
+        onAdd: (columnIndex, anchorKey, name): void => void this.addItem(anchorKey, name, columnIndex),
         onDelete: (columnIndex, key): void => void this.deleteItem(key, columnIndex),
         onOpenSchema: (columnIndex, opener): void => void this.openSchemaPanel(opener, columnIndex),
         onOpenInCodeEditor: (columnIndex, opener): void => void this.openCurrentViewInCodeEditor(opener, columnIndex),
@@ -424,17 +485,20 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   }
 
   /**
-   * 在某栏父路径下新增一项：先用 `validateId` 校验名称，再写入资源并记录一次可逆撤销操作
-   * @param parentPath 父级字段路径，顶层为空串
+   * 在某栏新增一项：新字段插到锚点行**之后**（不是末尾），并把新名称同步写进该层 schema 的
+   * `x-order`（数据表视图写 schema 资源，schema 视图写在自身）；先用 `validateId` 校验名称，
+   * 再写入资源并记录一次可逆撤销操作
+   * @param anchorKey 锚点行的字段路径（新字段插在其后）；无锚点时追加到末尾
    * @param name 新项名称
    * @param columnIndex 目标栏序号（0 基），省略为第 0 栏
    */
-  async addItem(parentPath: string, name: string, columnIndex: number = 0): Promise<void> {
+  async addItem(anchorKey: string, name: string, columnIndex: number = 0): Promise<void> {
     const column = this.columnAt(columnIndex);
 
     if (column.target === null) return;
 
-    const parentObject = get(column.data, parseFieldPath(parentPath));
+    const parentPath = getParentFieldPath(anchorKey);
+    const parentObject = readAt(column.data, parentPath);
     const existingKeys = isRecord(parentObject) ? Object.keys(parentObject) : [];
     const validation = validateId(name, existingKeys, false);
 
@@ -443,14 +507,47 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       return;
     }
 
+    const schemaView = this.isSchemaView(columnIndex);
+    const anchor = getShortField(anchorKey);
     const path = `${parentPath}['${name}']`;
-    const next = setByFieldPath(column.data, path, null);
+    const next = insertAfterFieldPath(column.data, path, anchor, schemaView ? {} : null);
+
+    if (!this.wasAdded(next, parentPath, name)) {
+      this.publishError(columnIndex, '名称不合法，未添加。');
+      return;
+    }
+
+    const ownerPath = schemaView ? this.schemaOwnerPath(parentPath) : this.schemaMirrorPath(parentPath);
+
+    if (schemaView) {
+      const ordered = this.withOrder(next, ownerPath, parentObject, anchor, name);
+
+      if (!(await this.persist(columnIndex, ordered))) return;
+
+      this.context.addUndoContext(this, {
+        type: TableUndoType.Add,
+        data: { columnIndex, path, previousValue: undefined, nextValue: {}, anchor },
+      });
+      this.applyData(columnIndex, ordered, '添加成功');
+      return;
+    }
+
+    const previousSchema = column.schema;
+    const nextSchema = isRecord(previousSchema)
+      ? this.withOrder(previousSchema, ownerPath, parentObject, anchor, name)
+      : undefined;
 
     if (!(await this.persist(columnIndex, next))) return;
 
+    if (nextSchema !== undefined) {
+      if (!(await this.persistSchema(columnIndex, nextSchema))) return;
+
+      column.schema = nextSchema;
+    }
+
     this.context.addUndoContext(this, {
       type: TableUndoType.Add,
-      data: { columnIndex, path, previousValue: undefined, nextValue: null },
+      data: { columnIndex, path, previousValue: undefined, nextValue: null, anchor, previousSchema, nextSchema },
     });
     this.applyData(columnIndex, next, '添加成功');
   }
@@ -690,6 +787,112 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   }
 
   /**
+   * 把某栏变更后的 schema 写入其目标的 schema 资源，并把失败隔离成该栏面板级错误提示
+   * @param columnIndex 栏序号（0 基）
+   * @param schema 变更后的 schema 内容
+   * @returns 写入成功时为 true
+   */
+  private async persistSchema(columnIndex: number, schema: unknown): Promise<boolean> {
+    const target = this.columnAt(columnIndex).target;
+
+    if (target === null) return true;
+
+    const resource = await this.context.requestResource<Record<string, unknown>>(target.schema);
+
+    if (resource === null) return true;
+
+    try {
+      if (isRecord(schema)) await resource.write(schema);
+
+      return true;
+    } catch {
+      this.publishError(columnIndex, '写入失败，请重试。');
+      return false;
+    }
+  }
+
+  /**
+   * 把某栏的 schema 内容写入其 schema 资源（撤回 / 重做路径用）
+   * @param columnIndex 栏序号（0 基）
+   * @param schema 要写回的 schema 内容
+   */
+  private async writeSchema(columnIndex: number, schema: unknown): Promise<void> {
+    const target = this.columnAt(columnIndex).target;
+
+    if (target === null) return;
+
+    const resource = await this.context.requestResource<Record<string, unknown>>(target.schema);
+
+    if (resource === null) return;
+
+    if (isRecord(schema)) await resource.write(schema);
+  }
+
+  /**
+   * 判断新增字段是否已写入目标层对象（写入被危险段防护拒绝时为 false）
+   * @param next 写入后的完整数据
+   * @param parentPath 目标层对象的字段路径
+   * @param name 新增字段名
+   * @returns 目标层对象已含有该自有字段时为 true
+   */
+  private wasAdded(next: Record<string, unknown>, parentPath: string, name: string): boolean {
+    const parent = readAt(next, parentPath);
+
+    return isRecord(parent) && Object.prototype.hasOwnProperty.call(parent, name);
+  }
+
+  /**
+   * 取数据路径在 schema 文档中的镜像路径：数据 `['a']['b']` 镜像为 `['properties']['a']['properties']['b']`
+   * @param parentPath 数据字段路径（顶层为空串）
+   * @returns schema 文档中对应的对象路径
+   */
+  private schemaMirrorPath(parentPath: string): string {
+    const mirrored: string[] = [];
+
+    for (const segment of parseFieldPath(parentPath)) {
+      mirrored.push('properties', segment);
+    }
+
+    return mirrored.map((segment) => `['${segment}']`).join('');
+  }
+
+  /**
+   * 取 schema 视图下属性父路径对应的「持有 properties 的节点」路径：去掉末尾的 `['properties']` 段
+   * @param parentPath schema 视图下的字段路径（形如 `['properties']`）
+   * @returns 持有该 properties 的节点路径
+   */
+  private schemaOwnerPath(parentPath: string): string {
+    const segments = parseFieldPath(parentPath);
+
+    if (segments[segments.length - 1] === 'properties') segments.pop();
+
+    return segments.map((segment) => `['${segment}']`).join('');
+  }
+
+  /**
+   * 把新字段名插入某节点 `x-order` 的锚点键之后，并把完整同级顺序写回文档（缺省时新建 `x-order`）
+   * @param document 承载 `x-order` 的文档（数据表视图为 schema 文档，schema 视图为其自身）
+   * @param ownerPath 持有 `x-order` 的节点路径
+   * @param parentObject 变更前该层对象（提供字段名列表）
+   * @param anchor 新字段应紧接其后的锚点短名
+   * @param name 新字段名
+   * @returns 写入 `x-order` 后的新文档
+   */
+  private withOrder(
+    document: unknown,
+    ownerPath: string,
+    parentObject: unknown,
+    anchor: string,
+    name: string,
+  ): Record<string, unknown> {
+    const keys = isRecord(parentObject) ? Object.keys(parentObject) : [];
+    const existing = get(document, [...parseFieldPath(ownerPath), 'x-order']);
+    const order = computeSiblingOrder(keys, existing, anchor, name);
+
+    return setByFieldPath(document, `${ownerPath}['x-order']`, order);
+  }
+
+  /**
    * 读取某栏某字段路径在当前数据中的值
    * @param columnIndex 栏序号（0 基）
    * @param key 字段路径
@@ -740,9 +943,11 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     }
 
     if (type === TableUndoType.Add) {
-      return isUndo
-        ? deleteByFieldPath(column.data, payload.path)
-        : setByFieldPath(column.data, payload.path, payload.nextValue);
+      if (isUndo) return deleteByFieldPath(column.data, payload.path);
+
+      return payload.anchor === undefined
+        ? setByFieldPath(column.data, payload.path, payload.nextValue)
+        : insertAfterFieldPath(column.data, payload.path, payload.anchor, payload.nextValue);
     }
 
     if (type === TableUndoType.Delete) {
@@ -781,6 +986,15 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     if (next === undefined) return;
 
     await this.writeData(columnIndex, next);
+
+    const schema = isUndo ? context.data.previousSchema : context.data.nextSchema;
+
+    if (schema !== undefined && !this.isSchemaView(columnIndex)) {
+      await this.writeSchema(columnIndex, schema);
+
+      if (isRecord(schema)) column.schema = schema;
+    }
+
     this.applyData(columnIndex, next);
   }
 
