@@ -5,16 +5,16 @@ current_phase: 02
 current_phase_name: 表格编辑
 current_plan: 9
 status: verifying
-stopped_at: Completed 02-17-PLAN.md
-last_updated: "2026-10-13T14:31:24.341Z"
+stopped_at: Completed 02-18-PLAN.md
+last_updated: "2026-10-13T16:04:59.361Z"
 last_activity: 2026-10-12
 last_activity_desc: "Completed 02-04 (table tracer): editor-impl test infra + end-to-end resource-layer read path"
-state_head: c2502897590fcc769ca2945b71a8c20f7885013b
+state_head: 2b2207a0252ed3a5c9d935a10f6d643b6ed799a3
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 25
-  completed_plans: 23
+  completed_plans: 24
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -81,6 +81,7 @@ Progress: [██████████] 100%
 | Phase 02 P15 | 16min | 3 tasks | 9 files |
 | Phase 02 P16 | 10min | 2 tasks | 3 files |
 | Phase 02 P17 | 1h 27m | 3 tasks | 8 files |
+| Phase 02 P18 | ~30min | 3 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -125,6 +126,9 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-17: resolveTabName 增第三参 getPanel，外壳经 props 接收实例解析器以读 IEditorPanel.getTitle（缺席回退类型名）；保持 editor-core 无模块级可变绑定
 - [Phase 02]: 02-17: 编辑方法以 columnIndex 作末位可选参（缺省 0），既有单栏调用与测试不变；多栏请求序号放在私有 requestTokens 数组，ITablePanelColumn 保持四成员
 - [Phase 02]: 02-17: 栏包装 .etable-column + 竖分隔线放在渲染根 TablePanelView，TableGrid 对外 props 语义不变；多栏结构为将来拖拽/缩放预留（本次不实现）
+- [Phase 02]: 02-18: B4 新字段名来源——点 + 后在插入点内联渲染 antd Input（Enter 确认 / Escape、失焦取消），确认前经 validateId 校验；不使用原生 prompt / confirm
+- [Phase 02]: 02-18: L3 x-order——数据表新增时按完整同级顺序把新名称写进该层 schema 的 x-order（缺省时新建）；行树按 x-order 排同级字段，缺失时回退对象自然键序
+- [Phase 02]: 02-18: 删除不再用 window.confirm——左侧红底圆形 − 直接在统一撤销路径上删除一行（可 Ctrl+Z 回退）；schema 禁止 null 时 − 禁用
 
 ### Pending Todos
 
@@ -150,6 +154,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-13T14:31:24.048Z
-Stopped at: Completed 02-17-PLAN.md
+Last session: 2026-10-13T16:04:59.255Z
+Stopped at: Completed 02-18-PLAN.md
 Resume file: None
