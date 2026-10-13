@@ -1,5 +1,6 @@
 export * from './TableGrid';
 export * from './TableRow';
+export * from './ActionButtons';
 export * from './GapRow';
 export * from './EditModeSegmented';
 export * from './TableToolbar';
