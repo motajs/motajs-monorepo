@@ -19,6 +19,14 @@ afterEach(() => {
   cleanup();
 });
 
+// 读取某个字段值单元格内文本域的当前文本（字段用连字符形态，如 `nested-inner`）
+function inputValue(container: HTMLElement, field: string): string | undefined {
+  const cell = container.querySelector(`[data-test-id="table-input-${field}"]`);
+  const textarea = cell === null ? null : cell.querySelector('textarea');
+
+  return textarea === null ? undefined : textarea.value;
+}
+
 // 组装一套已初始化的外壳 / 资源 / 撤回系统与内存后端
 async function createSystem(): Promise<TestSystem> {
   const injection = new FakeResourceInjection();
@@ -111,16 +119,16 @@ describe('表格面板端到端读取与渲染', () => {
     const panel = await openTablePanel(system, panels);
 
     await setTarget(panel, 'test');
-    render(createElement(system.shellSystem.render()));
+    const { container } = render(createElement(system.shellSystem.render()));
 
     expect(screen.getByText('条目')).not.toBeNull();
     expect(screen.getByText('注释')).not.toBeNull();
     expect(screen.getByText('值')).not.toBeNull();
     expect(screen.getByText('操作')).not.toBeNull();
     expect(screen.getByText("['nested']")).not.toBeNull();
-    expect(screen.getByText('hello')).not.toBeNull();
-    expect(screen.getByText('deep')).not.toBeNull();
-    expect(screen.getByText('42')).not.toBeNull();
+    expect(inputValue(container, 'name')).toBe('"hello"');
+    expect(inputValue(container, 'nested-inner')).toBe('"deep"');
+    expect(inputValue(container, 'count')).toBe('42');
     expect(screen.getByText('名字')).not.toBeNull();
     expect(screen.getByText('内部字段')).not.toBeNull();
   });
@@ -133,21 +141,21 @@ describe('表格面板端到端读取与渲染', () => {
     const panel = await openTablePanel(system, panels);
 
     await setTarget(panel, 'fold');
-    render(createElement(system.shellSystem.render()));
+    const { container } = render(createElement(system.shellSystem.render()));
 
-    expect(screen.getByText('deep')).not.toBeNull();
+    expect(container.querySelector('[data-test-id="table-row-nested-inner"]')).not.toBeNull();
 
     await act(async () => {
       fireEvent.click(screen.getByText('折叠'));
     });
 
-    expect(screen.queryByText('deep')).toBeNull();
+    expect(container.querySelector('[data-test-id="table-row-nested-inner"]')).toBeNull();
 
     await act(async () => {
       fireEvent.click(screen.getByText('展开'));
     });
 
-    expect(screen.getByText('deep')).not.toBeNull();
+    expect(container.querySelector('[data-test-id="table-row-nested-inner"]')).not.toBeNull();
   });
 
   // schema 存在但无字段时显示空态默认文案
@@ -224,7 +232,7 @@ describe('表格面板端到端读取与渲染', () => {
     await setTarget(panel, 'xss');
     const { container } = render(createElement(system.shellSystem.render()));
 
-    expect(screen.getByText(payload)).not.toBeNull();
+    expect(inputValue(container, 'evil')).toBe(JSON.stringify(payload));
     expect(container.querySelector('img')).toBeNull();
   });
 });

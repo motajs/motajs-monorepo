@@ -38,13 +38,13 @@ function readField(data: unknown, key: string): unknown {
 }
 
 /**
- * 拼接字段路径
+ * 拼接字段路径，采用 legacy 的 `['a']['b']` 括号形式（与 `parseFieldPath` 一致）
  * @param prefix 父级路径，顶层为空串
  * @param key 当前字段名
- * @returns 拼接后的字段路径
+ * @returns 拼接后的字段路径，如 `['nested']['inner']`
  */
 function joinPath(prefix: string, key: string): string {
-  return prefix === '' ? key : `${prefix}.${key}`;
+  return `${prefix}['${key}']`;
 }
 
 /**

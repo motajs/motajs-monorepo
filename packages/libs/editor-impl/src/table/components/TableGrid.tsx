@@ -1,6 +1,8 @@
 import { Button, Spin } from 'antd';
-import { createElement, ReactElement, useState } from 'react';
+import { createElement, ReactElement } from 'react';
 import { ITableRowNode, TableEditMode } from '../types';
+import { GapRow } from './GapRow';
+import { TableRow } from './TableRow';
 import '../table.css';
 
 export const enum TablePanelStatus {
@@ -21,6 +23,15 @@ export const enum TablePanelStatus {
 /** 一次字段提交的处理函数 */
 export type TableGridChangeHandler = (key: string, value: unknown) => void;
 
+/** 一次「新增子项」请求的处理函数 */
+export type TableGridAddHandler = (parentPath: string, name: string) => void;
+
+/** 一次「删除子项」请求的处理函数 */
+export type TableGridDeleteHandler = (key: string) => void;
+
+/** 一次「打开外部编辑器」请求的处理函数 */
+export type TableGridOpenHandler = (key: string) => void;
+
 export interface ITableGridProps {
   /** 当前数据加载状态 */
   readonly status: TablePanelStatus;
@@ -30,34 +41,27 @@ export interface ITableGridProps {
   readonly mode?: TableEditMode;
   /** 错误态下「重试」控件的回调 */
   readonly onRetry?: () => void;
-  /** 一次字段提交的回调；tracer 阶段只读，不会触发 */
+  /** 一次字段提交的回调 */
   readonly onChange?: TableGridChangeHandler;
+  /** 一次新增子项的回调 */
+  readonly onAdd?: TableGridAddHandler;
+  /** 一次删除子项的回调 */
+  readonly onDelete?: TableGridDeleteHandler;
+  /** 一次打开外部编辑器的回调 */
+  readonly onOpenExternalEditor?: TableGridOpenHandler;
 }
 
-interface ITableGridRowProps {
-  /** 要渲染的行节点 */
-  readonly row: ITableRowNode;
-}
-
-/**
- * 把值格式化为单元格文本：字符串原样显示，其余用 JSON 文本表示
- * @param value 字段值
- * @returns 单元格文本
- */
-function formatCellValue(value: unknown): string {
-  if (value === undefined) return '';
-  if (typeof value === 'string') return value;
-  return JSON.stringify(value);
-}
-
-/**
- * 取字段路径的短名（最后一个点号之后的部分）
- * @param key 字段路径
- * @returns 短字段名
- */
-function shortFieldName(key: string): string {
-  const index = key.lastIndexOf('.');
-  return index === -1 ? key : key.slice(index + 1);
+interface IRowRenderContext {
+  /** 当前编辑模式 */
+  readonly mode: TableEditMode;
+  /** 字段提交回调 */
+  readonly onChange: TableGridChangeHandler | undefined;
+  /** 新增子项回调 */
+  readonly onAdd: TableGridAddHandler | undefined;
+  /** 删除子项回调 */
+  readonly onDelete: TableGridDeleteHandler | undefined;
+  /** 打开外部编辑器回调 */
+  readonly onOpenExternalEditor: TableGridOpenHandler | undefined;
 }
 
 /**
@@ -73,79 +77,6 @@ function renderHeader(): ReactElement {
     createElement('div', { className: 'etable-cell etable-cell-value' }, '值'),
     createElement('div', { className: 'etable-cell etable-cell-action' }, '操作'),
   );
-}
-
-/**
- * 渲染一行叶子字段：字段名、描述与只读值
- * @param props 行 props
- * @returns 叶子行元素
- */
-function TableGridLeafRow(props: ITableGridRowProps): ReactElement {
-  const row = props.row;
-
-  return createElement(
-    'div',
-    { className: 'etable-row', 'data-test-id': `table-row-${row.key}` },
-    createElement('div', { className: 'etable-cell etable-cell-name', title: row.key }, shortFieldName(row.key)),
-    createElement(
-      'div',
-      { className: 'etable-cell etable-cell-comment', title: row.description ?? '' },
-      row.description ?? '',
-    ),
-    createElement(
-      'div',
-      { className: 'etable-cell etable-cell-value', 'data-test-id': `table-value-${row.key}` },
-      formatCellValue(row.value),
-    ),
-    createElement('div', { className: 'etable-cell etable-cell-action' }),
-  );
-}
-
-/**
- * 渲染一行可折叠分组：折叠开关切换其子行是否进入 DOM
- * @param props 行 props
- * @returns 分组行元素
- */
-function TableGridGroupRow(props: ITableGridRowProps): ReactElement {
-  const row = props.row;
-  const expandedState = useState(true);
-  const expanded = expandedState[0];
-  const setExpanded = expandedState[1];
-  const children = row.children ?? [];
-  const toggleLabel = expanded ? '折叠' : '展开';
-
-  return createElement(
-    'div',
-    { className: 'etable-group' },
-    createElement(
-      'div',
-      { className: 'etable-row etable-row-group', 'data-test-id': `table-row-${row.key}` },
-      createElement('div', { className: 'etable-cell etable-cell-name' }, '----'),
-      createElement('div', { className: 'etable-cell etable-cell-comment' }, '----'),
-      createElement('div', { className: 'etable-cell etable-cell-value' }, `['${row.key}']`),
-      createElement(
-        'div',
-        { className: 'etable-cell etable-cell-action' },
-        createElement(
-          Button,
-          { size: 'small', type: 'text', autoInsertSpace: false, onClick: (): void => setExpanded(!expanded) },
-          toggleLabel,
-        ),
-      ),
-    ),
-    expanded ? createElement('div', { className: 'etable-group-children' }, children.map(renderRow)) : null,
-  );
-}
-
-/**
- * 按节点形态把一行分派给分组行或叶子行
- * @param row 行节点
- * @returns 行元素
- */
-function renderRow(row: ITableRowNode): ReactElement {
-  return row.children === undefined
-    ? createElement(TableGridLeafRow, { key: row.key, row })
-    : createElement(TableGridGroupRow, { key: row.key, row });
 }
 
 /**
@@ -202,11 +133,44 @@ function renderState(props: ITableGridProps): ReactElement | null {
 }
 
 /**
- * 表格组件：完全由 props 驱动的四栏只读网格（分组行可折叠）
+ * 按节点形态把一组行渲染为 React 元素：叶子行走 TableRow，分组行走可折叠的 GapRow
+ * @param rows 行节点列表
+ * @param context 行渲染上下文（模式与回调）
+ * @returns 行元素列表
+ */
+function renderRows(rows: readonly ITableRowNode[], context: IRowRenderContext): ReactElement[] {
+  return rows.map((row) => {
+    if (row.children === undefined) {
+      return createElement(TableRow, {
+        key: row.key,
+        row,
+        mode: context.mode,
+        onChange: context.onChange,
+        onAdd: context.onAdd,
+        onDelete: context.onDelete,
+        onOpenExternalEditor: context.onOpenExternalEditor,
+      });
+    }
+
+    return createElement(GapRow, { key: row.key, row, children: renderRows(row.children, context) });
+  });
+}
+
+/**
+ * 表格组件：props 驱动的四栏网格，值单元格可编辑，分组行可折叠
  * @param props 表格 props
  * @returns 表格元素
  */
 export function TableGrid(props: ITableGridProps): ReactElement {
+  const mode = props.mode ?? TableEditMode.Change;
+  const context: IRowRenderContext = {
+    mode,
+    onChange: props.onChange,
+    onAdd: props.onAdd,
+    onDelete: props.onDelete,
+    onOpenExternalEditor: props.onOpenExternalEditor,
+  };
+
   if (props.status !== TablePanelStatus.Ready) {
     return createElement('div', { className: 'etable', 'data-test-id': 'data-table' }, renderState(props));
   }
@@ -215,6 +179,6 @@ export function TableGrid(props: ITableGridProps): ReactElement {
     'div',
     { className: 'etable', 'data-test-id': 'data-table' },
     renderHeader(),
-    createElement('div', { className: 'etable-body', 'data-test-id': 'data-table-grid' }, props.rows.map(renderRow)),
+    createElement('div', { className: 'etable-body', 'data-test-id': 'data-table-grid' }, renderRows(props.rows, context)),
   );
 }

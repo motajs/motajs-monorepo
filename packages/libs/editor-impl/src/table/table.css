@@ -49,6 +49,12 @@
   background: rgba(0, 0, 0, 0.02);
 }
 
+.etable-row-error {
+  padding: 2px 8px 4px;
+  color: #cf1322;
+  font-size: 12px;
+}
+
 .etable-group-children {
   border-left: 2px solid rgba(0, 0, 0, 0.06);
 }
