@@ -54,9 +54,10 @@ export interface IShellSystem {
   /**
    * 创建指定面板类型的一个实例
    * @param typeId 面板类型标识符
+   * @param openParam 打开面板时顺带携带的可选参数；内核只透传，不解释其内容
    * @returns 创建的面板实例，类型不存在或创建失败时为 null
    */
-  createPanelInstance(typeId: string): Promise<IEditorPanel | null>;
+  createPanelInstance(typeId: string, openParam?: Record<string, unknown>): Promise<IEditorPanel | null>;
 
   /**
    * 关闭指定的面板实例
@@ -93,9 +94,10 @@ export interface IShellSystem {
    * 在指定标签页中打开一个面板实例
    * @param tabId 标签标识符
    * @param typeId 面板类型标识符
+   * @param openParam 打开面板时顺带携带的可选参数；内核只透传，不解释其内容
    * @returns 是否打开成功
    */
-  openPanelInTab(tabId: string, typeId: string): Promise<boolean>;
+  openPanelInTab(tabId: string, typeId: string, openParam?: Record<string, unknown>): Promise<boolean>;
 
   /**
    * 关闭指定的标签页
