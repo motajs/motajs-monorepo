@@ -43,6 +43,8 @@ export interface ITableSchemaNode extends JSONSchema.Interface {
   readonly 'x-editor'?: TableExternalEditor;
   /** 无法从标准关键字推导行内控件时显式指定的控件（`x-control` 扩展键） */
   readonly 'x-control'?: TableControlKind;
+  /** 同级字段的呈现顺序提示（列出子属性名）；据此新增行可插在双击行之后，而不依赖对象键顺序 */
+  readonly 'x-order'?: readonly string[];
   /** 嵌套对象的字段 schema，递归为同样的节点类型 */
   readonly properties?: Record<string, ITableSchemaNode>;
   /** 数组元素的 schema，递归为同样的节点类型 */
@@ -74,13 +76,17 @@ export interface ITablePanelTarget {
 
 export interface ITablePanel {
   /**
-   * 从外部设置此面板实例要编辑的目标表
+   * 从外部设置此面板实例某一栏要编辑的目标表
    * @param target 目标表的数据资源标识与 schema 资源标识
+   * @param columnIndex 目标栏的序号（0 基）；省略时默认为第 0 栏
    */
-  setTable(target: ITablePanelTarget): void;
+  setTable(target: ITablePanelTarget, columnIndex?: number): void;
 }
 
-export interface ITablePanelParam extends Record<string, unknown> {}
+export interface ITablePanelParam extends Record<string, unknown> {
+  /** 多栏布局中每一栏的像素宽度；缺省约 400px */
+  readonly columnWidth?: number;
+}
 
 export interface IPairedFieldGroup {
   /** 成对呈现的关键字名，如 `minimum` 与 `maximum` */
