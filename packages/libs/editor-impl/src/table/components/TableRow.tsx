@@ -34,11 +34,7 @@ export interface ITableRowProps {
  * @param onChange 提交解析后的新值
  * @returns 值控件元素
  */
-function renderValueControl(
-  row: ITableRowNode,
-  disabled: boolean,
-  onChange: (value: unknown) => void,
-): ReactElement {
+function renderValueControl(row: ITableRowNode, disabled: boolean, onChange: (value: unknown) => void): ReactElement {
   const config = row.config;
 
   if (config !== undefined) {
@@ -54,7 +50,7 @@ function renderValueControl(
 
     if (kind === TableControlKind.MultiSelect) {
       const items = config.items;
-      const options = items === undefined ? [] : items.enum ?? [];
+      const options = items === undefined ? [] : (items.enum ?? []);
       const keys = options.filter(
         (option): option is string | number => typeof option === 'string' || typeof option === 'number',
       );

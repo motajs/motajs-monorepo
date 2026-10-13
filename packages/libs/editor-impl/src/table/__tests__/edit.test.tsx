@@ -159,7 +159,10 @@ describe('表格内联编辑', () => {
     await setTarget(panel, 't');
     render(createElement(system.shellSystem.render()));
 
-    vi.stubGlobal('prompt', vi.fn(() => 'extra'));
+    vi.stubGlobal(
+      'prompt',
+      vi.fn(() => 'extra'),
+    );
 
     await act(async () => {
       fireEvent.click(screen.getByText('添加'));
@@ -179,7 +182,10 @@ describe('表格删除', () => {
 
     render(createElement(TableGrid, { ...singleRowGrid(row, vi.fn()), onDelete }));
 
-    vi.stubGlobal('confirm', vi.fn(() => true));
+    vi.stubGlobal(
+      'confirm',
+      vi.fn(() => true),
+    );
 
     await act(async () => {
       fireEvent.click(screen.getByText('删除'));
