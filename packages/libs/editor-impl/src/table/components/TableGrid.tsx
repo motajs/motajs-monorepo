@@ -1,6 +1,7 @@
 import { Button, Spin } from 'antd';
-import { createElement, ReactElement } from 'react';
+import { createElement, ReactElement, useState } from 'react';
 import { ITableRowNode, TableEditMode } from '../types';
+import { EditModeSegmented } from './EditModeSegmented';
 import { GapRow } from './GapRow';
 import { TableRow } from './TableRow';
 import '../table.css';
@@ -37,8 +38,6 @@ export interface ITableGridProps {
   readonly status: TablePanelStatus;
   /** 要渲染的行树 */
   readonly rows: readonly ITableRowNode[];
-  /** 当前编辑模式，缺省为「编辑」 */
-  readonly mode?: TableEditMode;
   /** 错误态下「重试」控件的回调 */
   readonly onRetry?: () => void;
   /** 一次字段提交的回调 */
@@ -49,6 +48,10 @@ export interface ITableGridProps {
   readonly onDelete?: TableGridDeleteHandler;
   /** 一次打开外部编辑器的回调 */
   readonly onOpenExternalEditor?: TableGridOpenHandler;
+  /** 面板级成功提示，缺省时不显示 */
+  readonly message?: string;
+  /** 面板级错误提示，缺省时不显示 */
+  readonly error?: string;
 }
 
 interface IRowRenderContext {
@@ -77,6 +80,41 @@ function renderHeader(): ReactElement {
     createElement('div', { className: 'etable-cell etable-cell-value' }, '值'),
     createElement('div', { className: 'etable-cell etable-cell-action' }, '操作'),
   );
+}
+
+/**
+ * 渲染工具栏：受控的编辑模式分段控件
+ * @param mode 当前编辑模式
+ * @param onChange 模式变更回调
+ * @returns 工具栏元素
+ */
+function renderToolbar(mode: TableEditMode, onChange: (next: TableEditMode) => void): ReactElement {
+  return createElement(
+    'div',
+    { className: 'etable-toolbar' },
+    createElement(EditModeSegmented, { value: mode, onChange }),
+  );
+}
+
+/**
+ * 渲染面板级提示：错误优先于成功提示
+ * @param props 表格 props
+ * @returns 提示元素；两种提示都缺省时返回 null
+ */
+function renderNotice(props: ITableGridProps): ReactElement | null {
+  if (props.error !== undefined) {
+    return createElement(
+      'div',
+      { className: 'etable-notice etable-notice-error', 'data-test-id': 'table-notice' },
+      props.error,
+    );
+  }
+
+  if (props.message !== undefined) {
+    return createElement('div', { className: 'etable-notice', 'data-test-id': 'table-notice' }, props.message);
+  }
+
+  return null;
 }
 
 /**
@@ -157,12 +195,14 @@ function renderRows(rows: readonly ITableRowNode[], context: IRowRenderContext):
 }
 
 /**
- * 表格组件：props 驱动的四栏网格，值单元格可编辑，分组行可折叠
+ * 表格组件：props 驱动的四栏网格，工具栏切换编辑模式，值单元格可编辑，分组行可折叠
  * @param props 表格 props
  * @returns 表格元素
  */
 export function TableGrid(props: ITableGridProps): ReactElement {
-  const mode = props.mode ?? TableEditMode.Change;
+  const modeState = useState<TableEditMode>(TableEditMode.Change);
+  const mode = modeState[0];
+  const setMode = modeState[1];
   const context: IRowRenderContext = {
     mode,
     onChange: props.onChange,
@@ -170,14 +210,18 @@ export function TableGrid(props: ITableGridProps): ReactElement {
     onDelete: props.onDelete,
     onOpenExternalEditor: props.onOpenExternalEditor,
   };
+  const toolbar = renderToolbar(mode, setMode);
+  const notice = renderNotice(props);
 
   if (props.status !== TablePanelStatus.Ready) {
-    return createElement('div', { className: 'etable', 'data-test-id': 'data-table' }, renderState(props));
+    return createElement('div', { className: 'etable', 'data-test-id': 'data-table' }, toolbar, notice, renderState(props));
   }
 
   return createElement(
     'div',
     { className: 'etable', 'data-test-id': 'data-table' },
+    toolbar,
+    notice,
     renderHeader(),
     createElement('div', { className: 'etable-body', 'data-test-id': 'data-table-grid' }, renderRows(props.rows, context)),
   );
