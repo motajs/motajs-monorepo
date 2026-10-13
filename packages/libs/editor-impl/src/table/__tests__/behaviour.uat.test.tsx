@@ -152,3 +152,42 @@ describe('B1 值校验失败的可见拒绝', () => {
     expect(await readData(system, 't')).toEqual({ script: 'new' });
   });
 });
+
+describe('B3 成功提示文案与常驻预留', () => {
+  // 新增成功后提示行只显示「添加成功」，不含「刷新」
+  it('新增成功后提示为「添加成功」且不含刷新', async () => {
+    const system = await createSystem();
+
+    seed(system, 't', { name: 'hello' }, { type: 'object', properties: { name: { type: 'string' } } });
+    const panel = await openPanel(system);
+
+    await setTarget(panel, 't');
+    renderWithCapabilities(system, {});
+
+    vi.stubGlobal(
+      'prompt',
+      vi.fn(() => 'extra'),
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('添加'));
+    });
+    await doubleClickRow('name');
+
+    expect(await readData(system, 't')).toEqual({ name: 'hello', extra: null });
+    expect(screen.getByTestId('table-notice').textContent).toBe('添加成功');
+  });
+
+  // 就绪但无提示时提示行容器仍常驻占位，故出现 / 消失不改变占用的垂直空间
+  it('就绪但无提示时提示行容器常驻占位', async () => {
+    const system = await createSystem();
+
+    seed(system, 't', { name: 'hello' }, { type: 'object', properties: { name: { type: 'string' } } });
+    const panel = await openPanel(system);
+
+    await setTarget(panel, 't');
+    renderWithCapabilities(system, {});
+
+    expect(screen.getByTestId('table-notice').textContent).toBe('');
+  });
+});

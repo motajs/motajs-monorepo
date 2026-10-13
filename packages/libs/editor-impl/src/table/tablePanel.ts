@@ -322,7 +322,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       type: TableUndoType.Add,
       data: { path, previousValue: undefined, nextValue: null },
     });
-    this.applyData(next, '添加成功，刷新后生效。');
+    this.applyData(next, '添加成功');
   }
 
   /**
@@ -341,7 +341,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       type: TableUndoType.Delete,
       data: { path: key, previousValue, nextValue: undefined },
     });
-    this.applyData(next, '删除成功，刷新后生效。');
+    this.applyData(next, '删除成功');
   }
 
   /**

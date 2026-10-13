@@ -103,11 +103,11 @@ function renderHeader(): ReactElement {
 }
 
 /**
- * 渲染面板级提示：错误优先于成功提示
+ * 渲染面板级提示：错误优先于成功提示，且常驻预留空格以免出现 / 消失时顶动表头表体
  * @param props 表格 props
- * @returns 提示元素；两种提示都缺省时返回 null
+ * @returns 提示元素；两种提示都缺省时返回空的常驻容器
  */
-function renderNotice(props: ITableGridProps): ReactElement | null {
+function renderNotice(props: ITableGridProps): ReactElement {
   if (props.error !== undefined) {
     return createElement(
       'div',
@@ -116,11 +116,7 @@ function renderNotice(props: ITableGridProps): ReactElement | null {
     );
   }
 
-  if (props.message !== undefined) {
-    return createElement('div', { className: 'etable-notice', 'data-test-id': 'table-notice' }, props.message);
-  }
-
-  return null;
+  return createElement('div', { className: 'etable-notice', 'data-test-id': 'table-notice' }, props.message);
 }
 
 /**

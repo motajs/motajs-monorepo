@@ -170,7 +170,7 @@ describe('表格内联编辑', () => {
     await doubleClickRow('name');
 
     expect(await readData(system, 't')).toEqual({ name: 'hello', extra: null });
-    expect(screen.getByText('添加成功，刷新后生效。')).not.toBeNull();
+    expect(screen.getByText('添加成功')).not.toBeNull();
   });
 });
 
