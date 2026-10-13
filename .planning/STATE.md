@@ -5,16 +5,16 @@ current_phase: 02
 current_phase_name: 表格编辑
 current_plan: 9
 status: verifying
-stopped_at: Completed 02-14-PLAN.md
-last_updated: "2026-10-13T10:12:13.185Z"
+stopped_at: Completed 02-15-PLAN.md
+last_updated: "2026-10-13T10:52:22.262Z"
 last_activity: 2026-10-12
 last_activity_desc: "Completed 02-04 (table tracer): editor-impl test infra + end-to-end resource-layer read path"
-state_head: 914788f43d7acf4ca14c478ce0024475ec16d3c5
+state_head: a4ec78754671193f284ed65eb7bc4cbc52ddca7c
 progress:
   total_phases: 7
   completed_phases: 0
-  total_plans: 20
-  completed_plans: 20
+  total_plans: 25
+  completed_plans: 21
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -78,6 +78,7 @@ Progress: [██████████] 100%
 | Phase 02-table P11 | 6min | 2 tasks | 2 files |
 | Phase 02-table P12 | 10min | 2 tasks | 4 files |
 | Phase 02 P14 | ~4min | 2 tasks | 2 files |
+| Phase 02 P15 | 16min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -113,6 +114,9 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-12: 外壳 createInstance 未提供打开参数时整个省略 openParam 键（三元构造两种工厂入参）——不关心该参数的既有工厂行为一字不变
 - [Phase 02]: 02-12: tablePanelType 在构造阶段据 param.openParam.target 调用 ITablePanel.setTable（一打开即瞄准）；收窄用非导出谓词 isTablePanelTarget，畸形值落回 NoTarget，无 as 断言
 - [Phase 02]: 02-14: 表格修复轮接口（仅类型）——IEditorPanel 增加可选 getTitle?()（按实例标题，缺席回退类型名）；ITablePanel.setTable 增加可选 columnIndex（0 基，省略为 0）；ITablePanelParam 增加 columnWidth?（缺省约 400px）；ITableSchemaNode 增加 x-order?（同级字段呈现顺序）。均非破坏，实现文件零改动。
+- [Phase 02]: 02-15: 外部编辑器返回值在 TableRow.runExternalEditor 提交前统一 validateValue，非法值落行内 .etable-row-error 且不写资源（B1）；TablePanel.commitValue 面板级校验保留为防御性兜底
+- [Phase 02]: 02-15: 数字字段（TableControlKind.Number）改渲染新控件 NumberInput（包一层 antd InputNumber），不再落 TextareaInput（B2）
+- [Phase 02]: 02-15: 提示行改为常驻预留（renderNotice 恒渲染 .etable-notice + min-height），成功文案去掉「刷新后生效」为「添加成功」/「删除成功」（B3）
 
 ### Pending Todos
 
@@ -138,6 +142,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-13T10:12:13.070Z
-Stopped at: Completed 02-14-PLAN.md
+Last session: 2026-10-13T10:51:57.249Z
+Stopped at: Completed 02-15-PLAN.md
 Resume file: None
