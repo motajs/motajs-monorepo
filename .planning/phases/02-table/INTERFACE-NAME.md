@@ -305,6 +305,44 @@
 - `ITablePanelParam` 与 `ITablePanelOpener`：**两个类型保持分开、暂不合并**。
 - **新增（2026-10-12，D-30）：** 工具栏「在代码编辑器中打开」按钮，随当前视图打开数据文件或 schema 文件、可编辑并写回。**代码编辑器打开请求需能承载「整份文件」**（不只单个字段）；具体形状写计划时定（可能沿用 / 扩展现有 `ICodeEditorOpenRequest`）。
 
+## Plan 11 — `02-11-PLAN.md`（外壳打开参数：**接口**，仅类型）
+
+> 用户确认：外壳支持**可选、裸 `Record<string, unknown>`** 的打开参数；核心只透传、不假设任何外部参数类型。以下为新增命名，待确认。
+
+- `IEditorPanelFactoryParam.openParam?: Record<string, unknown>`（可选成员，`panel/types.ts`）— 工厂在构造时据此得知实例目标。
+- `IShellSystem.openPanelInTab(tabId, typeId, openParam?)` / `IShellSystem.createPanelInstance(typeId, openParam?)`（各加一个可选裸记录参数，`shell/types.ts`）— 把不透明目标透传进工厂。**不新增具名类型**。
+
+## Plan 12 — `02-12-PLAN.md`（外壳打开参数：**实现**）
+
+- `isTablePanelTarget(value: unknown): value is ITablePanelTarget`（**非导出**函数，`tablePanelType.ts`）— 安全收窄 `openParam.target`，避免 `as` 断言。
+- 新增测试文件：`shell/shellOpenParam.test.ts`（editor-core）、`table/__tests__/openParam.test.tsx`（editor-impl）。
+- 无其它新对外命名（`TablePanel` / `ITablePanel.setTable` 保留）。
+
+## Plan 13 — `02-13-PLAN.md`（dev 宿主接入，gap_closure，DEV-ONLY）
+
+- `openTableDemoPanel(core: EditorCore): Promise<void>`（函数）— 开空白标签 → 带 `{ target }` 打开表格面板。
+- 新文件：`packages/apps/editor-dev/src/demo/tableDemo.ts`、`packages/apps/editor-dev/src/__tests__/devHostTable.test.tsx`。
+- 常量：`TABLE_DEMO_NAME` / `TABLE_DEMO_DATA` / `TABLE_DEMO_SCHEMA` / `TABLE_DEMO_TARGET` / `TABLE_DEMO_MENU_ID` / `TABLE_DEMO_MENU_TITLE`。
+- 依赖键：`@motajs/editor-impl: workspace:*`、`antd: catalog:default`（`editor-dev` devDependencies）。
+- 资源 id：`table.demo` / `table#schema.demo`；面板类型 id 复用 `tablePanelType.id`（`'table'`）。
+- **已废弃**（改用打开参数）：`ITableDemoRegistry` / `TableDemoRegistry`（及其 `createPanelType` / `latest`）——原"包一层类型顺手捕获实例"的做法作废。
+
+- `packages/apps/editor-dev/src/demo/tableDemo.ts`（新文件）— 表格演示的 seed 数据 / 目标 / 注册 helper。
+- `packages/apps/editor-dev/src/__tests__/devHostTable.test.tsx`（新文件）— 开发宿主表格接入的端到端测试。
+- `TABLE_DEMO_NAME = 'demo'`（常量）— 演示表的不透明表名。
+- `TABLE_DEMO_DATA` / `TABLE_DEMO_SCHEMA`（常量）— seed 进 `table.demo` 的数据 / 标准 JSON Schema。
+- `TABLE_DEMO_TARGET`（常量）— 指向 `table.demo` 与 `table#schema.demo` 的目标标识。
+- `TABLE_DEMO_MENU_ID = 'table-demo'` / `TABLE_DEMO_MENU_TITLE = '打开表格'`（常量）— 菜单项 id 与标题。
+- `ITableDemoRegistry`（interface）/ `TableDemoRegistry`（class）— 捕获面板实例的注册器契约；`TableDemoRegistry.createPanelType` / `TableDemoRegistry.latest`。
+- `openTableDemoPanel(core, registry)`（函数）— 开空白标签 → 开表格面板 → `setTable(TABLE_DEMO_TARGET)`。
+- 依赖键：`@motajs/editor-impl: workspace:*`、`antd: catalog:default`（加进 `editor-dev` devDependencies）。
+- 资源 id：`table.demo` / `table#schema.demo`（由既有 `tableDataResourceId` / `tableSchemaResourceId` 生成，非新函数）。
+- 面板类型 id 复用既有 `tablePanelType.id`（`'table'`）；无新 `data-test-id`。
+
+### 已废弃的旧取舍（2026-10-13 作废）
+
+原「包一层类型、在其工厂里顺手捕获实例」的做法**作废**——改用**外壳打开参数**：开面板时带 `{ target }`，表格工厂读自己的 `ITablePanelParam` 在构建时设好目标。也**不**给内核加「按实例 id 取实例」的方法（需要某实例者，应早已持有其引用）。
+
 ## 待确认的规划假设
 
 - A2：本阶段「schema」= 旧 `CommentObject`（已在 Plan 01 checkpoint 确认）。
