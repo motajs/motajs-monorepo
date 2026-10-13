@@ -17,6 +17,7 @@ actuals:
   tokens: 4128
   tasks: 3
   commits: 3
+  plan_head_before: 319a52cb945f5efc6c684691b185c5ca588a6a64
 
 tech-stack:
   added: []
@@ -113,7 +114,7 @@ Each task was committed atomically:
 2. **Task 2: 成功提示去「刷新后生效」并常驻预留（B3）** - `3ef9c4f` (fix)
 3. **Task 3: 数字字段改用 antd InputNumber（B2）** - `a4ec787` (feat)
 
-**Plan metadata:** (this SUMMARY's docs commit)
+**Plan metadata:** `d35458e` (docs: complete plan)
 
 ## Files Created/Modified
 
