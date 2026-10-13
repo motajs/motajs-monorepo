@@ -1,9 +1,13 @@
-import { Button, Spin } from 'antd';
+import { Button, InputNumber, Spin } from 'antd';
 import { createElement, ReactElement, useState } from 'react';
+import { ICodeEditorOpener, ITablePanelOpener, useTableCapabilities } from '../../react';
 import { ITableRowNode, TableEditMode } from '../types';
-import { EditModeSegmented } from './EditModeSegmented';
+import { getShortField, parseFieldPath } from '../model/fieldPath';
+import { buildSchemaPresentation } from '../model/schemaPresentation';
 import { GapRow } from './GapRow';
+import { SchemaBanner } from './SchemaBanner';
 import { TableRow } from './TableRow';
+import { TableToolbar } from './TableToolbar';
 import '../table.css';
 
 export const enum TablePanelStatus {
@@ -33,6 +37,12 @@ export type TableGridDeleteHandler = (key: string) => void;
 /** 一次「打开外部编辑器」请求的处理函数 */
 export type TableGridOpenHandler = (key: string) => void;
 
+/** 一次「编辑 Schema」请求的处理函数，携带表格面板打开器 */
+export type TableGridOpenSchemaHandler = (opener: ITablePanelOpener) => void;
+
+/** 一次「在代码编辑器中打开」请求的处理函数，携带代码编辑器打开器 */
+export type TableGridOpenCodeHandler = (opener: ICodeEditorOpener) => void;
+
 export interface ITableGridProps {
   /** 当前数据加载状态 */
   readonly status: TablePanelStatus;
@@ -52,11 +62,21 @@ export interface ITableGridProps {
   readonly message?: string;
   /** 面板级错误提示，缺省时不显示 */
   readonly error?: string;
+  /** 当前目标是否为 schema（启用 schema 专用呈现模式与提示条） */
+  readonly schemaMode?: boolean;
+  /** 可选的面板标题（资源名等） */
+  readonly title?: string;
+  /** 「编辑 Schema」回调，由能力接缝的表格面板打开器驱动 */
+  readonly onOpenSchema?: TableGridOpenSchemaHandler;
+  /** 「在代码编辑器中打开」回调，由能力接缝的代码编辑器打开器驱动 */
+  readonly onOpenInCodeEditor?: TableGridOpenCodeHandler;
 }
 
 interface IRowRenderContext {
   /** 当前编辑模式 */
   readonly mode: TableEditMode;
+  /** 是否处于 schema 专用呈现模式 */
+  readonly schemaMode: boolean;
   /** 字段提交回调 */
   readonly onChange: TableGridChangeHandler | undefined;
   /** 新增子项回调 */
@@ -79,20 +99,6 @@ function renderHeader(): ReactElement {
     createElement('div', { className: 'etable-cell etable-cell-comment' }, '注释'),
     createElement('div', { className: 'etable-cell etable-cell-value' }, '值'),
     createElement('div', { className: 'etable-cell etable-cell-action' }, '操作'),
-  );
-}
-
-/**
- * 渲染工具栏：受控的编辑模式分段控件
- * @param mode 当前编辑模式
- * @param onChange 模式变更回调
- * @returns 工具栏元素
- */
-function renderToolbar(mode: TableEditMode, onChange: (next: TableEditMode) => void): ReactElement {
-  return createElement(
-    'div',
-    { className: 'etable-toolbar' },
-    createElement(EditModeSegmented, { value: mode, onChange }),
   );
 }
 
@@ -171,31 +177,115 @@ function renderState(props: ITableGridProps): ReactElement | null {
 }
 
 /**
- * 按节点形态把一组行渲染为 React 元素：叶子行走 TableRow，分组行走可折叠的 GapRow
+ * 把单个行节点渲染为 React 元素：叶子行走 TableRow，分组行走可折叠的 GapRow
+ * @param row 行节点
+ * @param context 行渲染上下文（模式与回调）
+ * @returns 行元素
+ */
+function renderRowNode(row: ITableRowNode, context: IRowRenderContext): ReactElement {
+  if (row.children === undefined) {
+    return createElement(TableRow, {
+      key: row.key,
+      row,
+      mode: context.mode,
+      onChange: context.onChange,
+      onAdd: context.onAdd,
+      onDelete: context.onDelete,
+      onOpenExternalEditor: context.onOpenExternalEditor,
+    });
+  }
+
+  return createElement(GapRow, { key: row.key, row, children: renderRows(row.children, context) });
+}
+
+/**
+ * 渲染一行成对关键字：左右两个小数字输入，标签合并显示
+ * @param left 左侧关键字行
+ * @param right 右侧关键字行
+ * @param label 左侧关键字名，作为行标识
+ * @param context 行渲染上下文
+ * @returns 成对行元素
+ */
+function renderPairedRow(
+  left: ITableRowNode,
+  right: ITableRowNode,
+  label: string,
+  context: IRowRenderContext,
+): ReactElement {
+  const disabled = context.mode === TableEditMode.Delete;
+  const leftValue = typeof left.value === 'number' ? left.value : undefined;
+  const rightValue = typeof right.value === 'number' ? right.value : undefined;
+  const dataAttr = parseFieldPath(left.key).join('-');
+
+  return createElement(
+    'div',
+    { key: label, className: 'etable-row etable-row-pair', 'data-test-id': `schema-pair-${label}` },
+    createElement('div', { className: 'etable-cell etable-cell-name' }, `${label} / ${getShortField(right.key)}`),
+    createElement('div', { className: 'etable-cell etable-cell-comment' }),
+    createElement(
+      'div',
+      { className: 'etable-cell etable-cell-value etable-pair-value', 'data-test-id': `table-input-${dataAttr}` },
+      createElement(InputNumber, {
+        size: 'small',
+        value: leftValue,
+        disabled,
+        onChange: (value): void => context.onChange?.(left.key, value),
+      }),
+      createElement(InputNumber, {
+        size: 'small',
+        value: rightValue,
+        disabled,
+        onChange: (value): void => context.onChange?.(right.key, value),
+      }),
+    ),
+    createElement('div', { className: 'etable-cell etable-cell-action' }),
+  );
+}
+
+/**
+ * 按 schema 专用呈现规则渲染一组同层关键字行：成对关键字合成一行，其余各占一行
+ * @param rows 同层关键字行
+ * @param context 行渲染上下文
+ * @returns 行元素列表
+ */
+function renderSchemaRows(rows: readonly ITableRowNode[], context: IRowRenderContext): ReactElement[] {
+  const rules = buildSchemaPresentation(rows);
+  const byKeyword = new Map(rows.map((row) => [getShortField(row.key), row]));
+  const elements: ReactElement[] = [];
+
+  for (const rule of rules) {
+    if (rule.pair !== undefined) {
+      const left = byKeyword.get(rule.pair.keywords[0]);
+      const right = byKeyword.get(rule.pair.keywords[1]);
+
+      if (left !== undefined && right !== undefined) {
+        elements.push(renderPairedRow(left, right, rule.keyword, context));
+        continue;
+      }
+    }
+
+    const row = byKeyword.get(rule.keyword);
+
+    if (row !== undefined) elements.push(renderRowNode(row, context));
+  }
+
+  return elements;
+}
+
+/**
+ * 按节点形态把一组行渲染为 React 元素：schema 模式走成对合行布局，常规模式逐行渲染
  * @param rows 行节点列表
  * @param context 行渲染上下文（模式与回调）
  * @returns 行元素列表
  */
 function renderRows(rows: readonly ITableRowNode[], context: IRowRenderContext): ReactElement[] {
-  return rows.map((row) => {
-    if (row.children === undefined) {
-      return createElement(TableRow, {
-        key: row.key,
-        row,
-        mode: context.mode,
-        onChange: context.onChange,
-        onAdd: context.onAdd,
-        onDelete: context.onDelete,
-        onOpenExternalEditor: context.onOpenExternalEditor,
-      });
-    }
+  if (context.schemaMode) return renderSchemaRows(rows, context);
 
-    return createElement(GapRow, { key: row.key, row, children: renderRows(row.children, context) });
-  });
+  return rows.map((row) => renderRowNode(row, context));
 }
 
 /**
- * 表格组件：props 驱动的四栏网格，工具栏切换编辑模式，值单元格可编辑，分组行可折叠
+ * 表格组件：props 驱动的四栏网格，工具栏切换编辑模式与打开动作，值单元格可编辑，分组行可折叠
  * @param props 表格 props
  * @returns 表格元素
  */
@@ -203,24 +293,55 @@ export function TableGrid(props: ITableGridProps): ReactElement {
   const modeState = useState<TableEditMode>(TableEditMode.Change);
   const mode = modeState[0];
   const setMode = modeState[1];
+  const capabilities = useTableCapabilities();
+  const schemaMode = props.schemaMode ?? false;
+  const loading = props.status === TablePanelStatus.Loading;
+  const failed = props.status === TablePanelStatus.Error;
   const context: IRowRenderContext = {
     mode,
+    schemaMode,
     onChange: props.onChange,
     onAdd: props.onAdd,
     onDelete: props.onDelete,
     onOpenExternalEditor: props.onOpenExternalEditor,
   };
-  const toolbar = renderToolbar(mode, setMode);
+  const toolbar = createElement(TableToolbar, {
+    mode,
+    onModeChange: setMode,
+    title: props.title,
+    showSchemaButton: !schemaMode && !failed,
+    schemaButtonEnabled: capabilities.tablePanel !== undefined && !loading,
+    onOpenSchema: (): void => {
+      const opener = capabilities.tablePanel;
+
+      if (opener !== undefined) props.onOpenSchema?.(opener);
+    },
+    codeButtonEnabled: capabilities.codeEditor !== undefined,
+    onOpenInCodeEditor: (): void => {
+      const opener = capabilities.codeEditor;
+
+      if (opener !== undefined) props.onOpenInCodeEditor?.(opener);
+    },
+  });
+  const banner = schemaMode ? createElement(SchemaBanner, {}) : null;
   const notice = renderNotice(props);
 
   if (props.status !== TablePanelStatus.Ready) {
-    return createElement('div', { className: 'etable', 'data-test-id': 'data-table' }, toolbar, notice, renderState(props));
+    return createElement(
+      'div',
+      { className: 'etable', 'data-test-id': 'data-table' },
+      toolbar,
+      banner,
+      notice,
+      renderState(props),
+    );
   }
 
   return createElement(
     'div',
     { className: 'etable', 'data-test-id': 'data-table' },
     toolbar,
+    banner,
     notice,
     renderHeader(),
     createElement('div', { className: 'etable-body', 'data-test-id': 'data-table-grid' }, renderRows(props.rows, context)),

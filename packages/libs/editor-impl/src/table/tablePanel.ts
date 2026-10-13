@@ -9,7 +9,8 @@ import {
 } from '@motajs/editor-core';
 import { get } from 'es-toolkit/compat';
 import { createElement, FC, ReactElement } from 'react';
-import { ITablePanel, ITablePanelTarget, ITableRowNode } from './types';
+import { ICodeEditorOpener, ITablePanelOpener } from '../react';
+import { ITablePanel, ITablePanelParam, ITablePanelTarget, ITableRowNode } from './types';
 import {
   ITableGridProps,
   TableGrid,
@@ -19,8 +20,10 @@ import {
   TablePanelStatus,
 } from './components/TableGrid';
 import { buildTableTree } from './model/traversal';
+import { buildSchemaTree, isSchemaResourceId } from './model/schemaPresentation';
 import { deleteByFieldPath, parseFieldPath, setByFieldPath } from './model/fieldPath';
 import { validateId, validateValue } from './model/validation';
+import { tableSchemaResourceId } from './resourceType';
 
 const enum TableUndoType {
   /** 修改既有字段的值 */
@@ -29,6 +32,8 @@ const enum TableUndoType {
   Add,
   /** 删除字段 */
   Delete,
+  /** 整份资源替换（代码编辑器写回，D-30） */
+  Replace,
 }
 
 /** 表格撤销操作的载荷：一次可逆变更的字段路径、变更前值与变更后值 */
@@ -46,10 +51,14 @@ export interface ITablePanelViewState {
   readonly status: TablePanelStatus;
   /** 当前行树 */
   readonly rows: readonly ITableRowNode[];
+  /** 当前目标是否为 schema（schema 专用呈现模式） */
+  readonly schemaMode: boolean;
   /** 面板级成功提示，缺省时不显示 */
   readonly message?: string;
   /** 面板级错误提示，缺省时不显示 */
   readonly error?: string;
+  /** 可选的面板标题（资源名等），缺省时不显示 */
+  readonly title?: string;
 }
 
 interface ITablePanelViewProps {
@@ -63,6 +72,10 @@ interface ITablePanelViewProps {
   readonly onAdd: TableGridAddHandler;
   /** 删除子项回调 */
   readonly onDelete: TableGridDeleteHandler;
+  /** 「编辑 Schema」回调，携带注入的表格面板打开器 */
+  readonly onOpenSchema: (opener: ITablePanelOpener) => void;
+  /** 「在代码编辑器中打开」回调，携带注入的代码编辑器打开器 */
+  readonly onOpenInCodeEditor: (opener: ICodeEditorOpener) => void;
 }
 
 /**
@@ -87,6 +100,24 @@ function isTableUndoData(value: unknown): value is ITableUndoData {
 }
 
 /**
+ * 把代码编辑器返回的文本解析为 JSON 对象；解析失败或不是对象时返回 null（T-02-23）
+ * @param text 编辑器返回的文本
+ * @returns 解析出的普通对象；解析失败或不是对象时为 null
+ */
+function parseJsonRecord(text: string): Record<string, unknown> | null {
+  let parsed: unknown;
+
+  // 返回文本来自外部编辑器，必须解析校验后才允许写回，解析失败即拒绝（T-02-23）
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return null;
+  }
+
+  return isRecord(parsed) ? parsed : null;
+}
+
+/**
  * 面板渲染根组件：订阅面板的视图状态并转交给可复用的表格组件
  * @param props 渲染根 props
  * @returns 表格组件元素
@@ -98,10 +129,14 @@ function TablePanelView(props: ITablePanelViewProps): ReactElement {
     rows: view.rows,
     message: view.message,
     error: view.error,
+    schemaMode: view.schemaMode,
+    title: view.title,
     onRetry: props.onRetry,
     onChange: props.onChange,
     onAdd: props.onAdd,
     onDelete: props.onDelete,
+    onOpenSchema: props.onOpenSchema,
+    onOpenInCodeEditor: props.onOpenInCodeEditor,
   };
 
   return createElement(TableGrid, gridProps);
@@ -135,7 +170,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   constructor(param: IEditorPanelFactoryParam) {
     this.id = param.instanceId;
     this.context = param.context;
-    this.viewStore = new Store<ITablePanelViewState>({ status: TablePanelStatus.NoTarget, rows: [] });
+    this.viewStore = new Store<ITablePanelViewState>({ status: TablePanelStatus.NoTarget, rows: [], schemaMode: false });
     this.component = () =>
       createElement(TablePanelView, {
         store: this.viewStore,
@@ -143,6 +178,8 @@ export class TablePanel implements IEditorPanel, ITablePanel {
         onChange: (key, value): void => void this.commitValue(key, value),
         onAdd: (parentPath, name): void => void this.addItem(parentPath, name),
         onDelete: (key): void => void this.deleteItem(key),
+        onOpenSchema: (opener): void => void this.openSchemaPanel(opener),
+        onOpenInCodeEditor: (opener): void => void this.openCurrentViewInCodeEditor(opener),
       });
   }
 
@@ -182,6 +219,52 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   }
 
   /**
+   * 经注入的表格面板打开器打开一个指向当前表 schema 的新面板（D-06）
+   * @param opener 组合根注入的表格面板打开器
+   */
+  async openSchemaPanel(opener: ITablePanelOpener): Promise<void> {
+    const name = this.currentTableName();
+
+    if (name === null) return;
+
+    const param: ITablePanelParam = {
+      target: { data: tableSchemaResourceId(name), schema: tableSchemaResourceId(name) },
+    };
+
+    await opener.open(param);
+  }
+
+  /**
+   * 在注入的代码编辑器中打开当前视图对应的资源内容，并把确认返回的整份内容写回（D-30）
+   * @param opener 组合根注入的代码编辑器打开器
+   */
+  async openCurrentViewInCodeEditor(opener: ICodeEditorOpener): Promise<void> {
+    const target = this.target;
+
+    if (target === null) return;
+
+    const content = JSON.stringify(this.data, null, 2) ?? '';
+    const result = await opener.open({ title: target.data.id, content });
+
+    if (result === null) return;
+
+    const parsed = parseJsonRecord(result);
+
+    if (parsed === null) {
+      this.publishError('内容不是合法的 JSON，未写回。');
+      return;
+    }
+
+    if (!(await this.persist(parsed))) return;
+
+    this.context.addUndoContext(this, {
+      type: TableUndoType.Replace,
+      data: { path: '', previousValue: this.data, nextValue: parsed },
+    });
+    this.applyData(parsed);
+  }
+
+  /**
    * 提交一次字段值变更：先按 schema 校验，再写入资源并记录一次可逆撤销操作
    * @param key 字段路径
    * @param value 新值
@@ -206,7 +289,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       type: TableUndoType.Change,
       data: { path: key, previousValue, nextValue: value },
     });
-    this.applyLoaded(this.schema, next);
+    this.applyData(next);
   }
 
   /**
@@ -235,7 +318,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       type: TableUndoType.Add,
       data: { path, previousValue: undefined, nextValue: null },
     });
-    this.applyLoaded(this.schema, next, '添加成功，刷新后生效。');
+    this.applyData(next, '添加成功，刷新后生效。');
   }
 
   /**
@@ -254,7 +337,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       type: TableUndoType.Delete,
       data: { path: key, previousValue, nextValue: undefined },
     });
-    this.applyLoaded(this.schema, next, '删除成功，刷新后生效。');
+    this.applyData(next, '删除成功，刷新后生效。');
   }
 
   /**
@@ -283,7 +366,16 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     message?: string,
     error?: string,
   ): void {
-    this.viewStore.setState({ status, rows, message, error });
+    const target = this.target;
+
+    this.viewStore.setState({
+      status,
+      rows,
+      schemaMode: target !== null && isSchemaResourceId(target.data.id),
+      title: target === null ? undefined : target.data.id,
+      message,
+      error,
+    });
   }
 
   /**
@@ -317,6 +409,66 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     const hasSchema = isRecord(schema);
 
     this.publish(hasSchema ? TablePanelStatus.Empty : TablePanelStatus.EmptySchema, [], message, error);
+  }
+
+  /**
+   * 依据 schema 文档计算 schema 呈现行树并写入视图状态：有关键字则就绪，否则落回空态
+   * @param schema schema 文档内容
+   * @param message 面板级成功提示
+   * @param error 面板级错误提示
+   */
+  private applySchemaLoaded(schema: unknown, message?: string, error?: string): void {
+    this.schema = null;
+    this.data = schema;
+
+    const rows = buildSchemaTree(schema);
+
+    if (rows.length > 0) {
+      this.publish(TablePanelStatus.Ready, rows, message, error);
+      return;
+    }
+
+    this.publish(TablePanelStatus.EmptySchema, [], message, error);
+  }
+
+  /**
+   * 按当前目标是否为 schema 选择呈现方式重算视图
+   * @param next 变更后的完整内容
+   * @param message 面板级成功提示
+   * @param error 面板级错误提示
+   */
+  private applyData(next: unknown, message?: string, error?: string): void {
+    if (this.isSchemaView()) {
+      this.applySchemaLoaded(next, message, error);
+      return;
+    }
+
+    this.applyLoaded(this.schema, next, message, error);
+  }
+
+  /**
+   * 判断当前目标是否为 schema 视图（schema 视图不向资源层请求 schema）
+   * @returns 目标的数据资源 id 形如 `table#schema.<name>` 时为 true
+   */
+  private isSchemaView(): boolean {
+    const target = this.target;
+
+    return target !== null && isSchemaResourceId(target.data.id);
+  }
+
+  /**
+   * 从当前目标的资源 id 推导表名
+   * @returns 表名；目标未设置或 id 不合约定时为 null
+   */
+  private currentTableName(): string | null {
+    const target = this.target;
+
+    if (target === null) return null;
+
+    const id = target.data.id;
+    const prefix = 'table.';
+
+    return id.startsWith(prefix) ? id.slice(prefix.length) : null;
   }
 
   /**
@@ -409,6 +561,12 @@ export class TablePanel implements IEditorPanel, ITablePanel {
         : deleteByFieldPath(this.data, payload.path);
     }
 
+    if (type === TableUndoType.Replace) {
+      const value = isUndo ? payload.previousValue : payload.nextValue;
+
+      return isRecord(value) ? value : undefined;
+    }
+
     return undefined;
   }
 
@@ -426,7 +584,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     if (next === undefined) return;
 
     await this.writeData(next);
-    this.applyLoaded(this.schema, next);
+    this.applyData(next);
   }
 
   /**
@@ -447,6 +605,15 @@ export class TablePanel implements IEditorPanel, ITablePanel {
 
     // 资源读取失败是行为关键路径：落回固定错误态而非抛穿，面板保持打开（D-29）
     try {
+      if (isSchemaResourceId(target.data.id)) {
+        const schema = await this.readResource(target.data);
+
+        if (token !== this.requestToken) return;
+
+        this.applySchemaLoaded(schema);
+        return;
+      }
+
       const data = await this.readResource(target.data);
       const schema = await this.readResource(target.schema);
 
