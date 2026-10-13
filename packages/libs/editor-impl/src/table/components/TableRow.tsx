@@ -280,6 +280,12 @@ export function TableRow(props: ITableRowProps): ReactElement {
 
     if (value === undefined) return;
 
+    if (!validateValue(row.config, value)) {
+      setError(`${row.key} : 输入的值不合要求，请鼠标放置在注释上查看说明`);
+      return;
+    }
+
+    setError(undefined);
     props.onChange?.(row.key, value);
   };
 
