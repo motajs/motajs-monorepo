@@ -56,9 +56,42 @@
 }
 
 .etable-toolbar {
+  display: flex;
   flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
   padding: 4px 8px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.etable-toolbar-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: rgba(0, 0, 0, 0.45);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.etable-schema-banner {
+  flex: 0 0 auto;
+  overflow: hidden;
+  padding: 4px 8px;
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.etable-pair-value {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.etable-pair-value .ant-input-number {
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 .etable-notice {
