@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: 02
 current_phase_name: 表格编辑
-current_plan: 8
+current_plan: 9
 status: executing
-stopped_at: Completed 02-07-PLAN.md
-last_updated: "2026-10-13T04:25:30.178Z"
+stopped_at: Completed 02-08-PLAN.md
+last_updated: "2026-10-13T04:54:02.945Z"
 last_activity: 2026-10-12
 last_activity_desc: "Completed 02-04 (table tracer): editor-impl test infra + end-to-end resource-layer read path"
-state_head: 724f9b97d5a46c6c99feb5d07440229badb63b5f
+state_head: a2eead2e874fe3bff08ff5e86a392b099cbb6247
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 16
-  completed_plans: 13
+  completed_plans: 14
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 02 — 表格编辑
-Current Plan: 8
+Current Plan: 9
 Total Plans in Phase: 9
 Status: Ready to execute
 Last activity: 2026-10-12 — Completed 02-04（表格 tracer：工程脚手 + 端到端只读表格面板）
@@ -72,6 +72,7 @@ Progress: [██████████] 100%
 | Phase 02 P05 | 12min | 1 tasks | 2 files |
 | Phase 02 P06 | 16min | 3 tasks | 16 files |
 | Phase 02 P07 | 24 | 3 tasks | 13 files |
+| Phase 02 P08 | 34 | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -95,6 +96,10 @@ Recent decisions affecting current work:
 - [Phase 02]: 字段路径采用 legacy 括号形式 ['a']['b']（用户确认）；buildTableTree 同步改为括号键
 - [Phase 02]: 统一撤销：每次编辑写资源后记录一条可逆 IUndoContext；写入失败不记录（T-02-18）
 - [Phase 02]: 字段路径写操作拒绝 __proto__/constructor/prototype（T-02-17 原型污染）
+- [Phase 02]: 02-08: schema 模式按资源 id 约定（table#schema.<名>）判定；schema 视图只读自身文档、不请求 schema 资源（D-05）
+- [Phase 02]: 02-08: 呈现规则内建（buildSchemaPresentation + Object.freeze 常量），成对关键字在渲染期合行；绝不由被编辑的 schema 描述
+- [Phase 02]: 02-08: 面板方法 openSchemaPanel / openCurrentViewInCodeEditor 由 TableGrid 从 useTableCapabilities() 取打开器后传入——面板类不读 React Context
+- [Phase 02]: 02-08: D-30 写回为一次整份资源替换（TableUndoType.Replace），复用既有 { path:'', previousValue, nextValue } 载荷走统一撤销路径
 
 ### Pending Todos
 
@@ -120,6 +125,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-13T04:25:18.753Z
-Stopped at: Completed 02-07-PLAN.md
+Last session: 2026-10-13T04:54:02.854Z
+Stopped at: Completed 02-08-PLAN.md
 Resume file: None
