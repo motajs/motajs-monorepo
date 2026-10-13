@@ -99,12 +99,12 @@ Plans:
   3. 表格编辑经统一命令 / 撤销路径，可撤销、可重做。
   4. 表格数据经统一层（`editor-core` 资源层）读写，行为与现状一致（与锁定决策 D-03 一致：经资源层而非通用 fs 接口，见 02-02）。
 
-**Plans:** 15/18 plans executed
+**Plans:** 16/18 plans executed
 Plans:
 
 - [x] 02-15-PLAN.md
 - [x] 02-16-PLAN.md
-- [ ] 02-17-PLAN.md
+- [x] 02-17-PLAN.md
 - [ ] 02-18-PLAN.md
 - [ ] 02-19-PLAN.md
 
@@ -215,7 +215,7 @@ Phases execute in numeric order: 1 → 1.1 → 2 → 3 → 4 → 5 → 6
 |-------|----------------|--------|-----------|
 | 1. 编辑器外壳与通用 fs 接口 | 4/4 | Complete    | 2026-10-12 |
 | 1.1. 编辑器开发宿主 (INSERTED) | 3/3 | Complete    | 2026-10-12 |
-| 2. 表格编辑 | 15/18 | In Progress|  |
+| 2. 表格编辑 | 16/18 | In Progress|  |
 | 3. 素材管理 | 0/TBD | Not started | - |
 | 4. 地图编辑 | 0/TBD | Not started | - |
 | 5. 代码编辑 | 0/TBD | Not started | - |

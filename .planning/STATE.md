@@ -5,16 +5,16 @@ current_phase: 02
 current_phase_name: 表格编辑
 current_plan: 9
 status: verifying
-stopped_at: Completed 02-16-PLAN.md
-last_updated: "2026-10-13T11:16:44.463Z"
+stopped_at: Completed 02-17-PLAN.md
+last_updated: "2026-10-13T14:31:24.341Z"
 last_activity: 2026-10-12
 last_activity_desc: "Completed 02-04 (table tracer): editor-impl test infra + end-to-end resource-layer read path"
-state_head: 4b067bc85b91c8caa9ce64574656322324416421
+state_head: c2502897590fcc769ca2945b71a8c20f7885013b
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 25
-  completed_plans: 22
+  completed_plans: 23
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -80,6 +80,7 @@ Progress: [██████████] 100%
 | Phase 02 P14 | ~4min | 2 tasks | 2 files |
 | Phase 02 P15 | 16min | 3 tasks | 9 files |
 | Phase 02 P16 | 10min | 2 tasks | 3 files |
+| Phase 02 P17 | 1h 27m | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -121,6 +122,9 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-16: dev 宿主把 ITablePanelOpener 实现为 createTablePanelOpener(core)（开空白标签 + 带 param 开表格面板类型），经 CapabilityProvider.capabilities.tablePanel 注入，「编辑 Schema」按钮由禁用变为可用
 - [Phase 02]: 02-16: 打开器只透传 param、不自行收窄 target——收窄由 tablePanelType.create 的 isTablePanelTarget 承担；保留 openTableDemoPanel 不动，无实例捕获、无新 API
 - [Phase 02]: 02-16: 修正 devHostTable.test.tsx 数字字段过期断言（02-15 改渲染 InputNumber 后遗留，Rule 1）
+- [Phase 02]: 02-17: resolveTabName 增第三参 getPanel，外壳经 props 接收实例解析器以读 IEditorPanel.getTitle（缺席回退类型名）；保持 editor-core 无模块级可变绑定
+- [Phase 02]: 02-17: 编辑方法以 columnIndex 作末位可选参（缺省 0），既有单栏调用与测试不变；多栏请求序号放在私有 requestTokens 数组，ITablePanelColumn 保持四成员
+- [Phase 02]: 02-17: 栏包装 .etable-column + 竖分隔线放在渲染根 TablePanelView，TableGrid 对外 props 语义不变；多栏结构为将来拖拽/缩放预留（本次不实现）
 
 ### Pending Todos
 
@@ -146,6 +150,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-13T11:16:44.098Z
-Stopped at: Completed 02-16-PLAN.md
+Last session: 2026-10-13T14:31:24.048Z
+Stopped at: Completed 02-17-PLAN.md
 Resume file: None
