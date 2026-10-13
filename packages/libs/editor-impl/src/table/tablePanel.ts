@@ -170,7 +170,11 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   constructor(param: IEditorPanelFactoryParam) {
     this.id = param.instanceId;
     this.context = param.context;
-    this.viewStore = new Store<ITablePanelViewState>({ status: TablePanelStatus.NoTarget, rows: [], schemaMode: false });
+    this.viewStore = new Store<ITablePanelViewState>({
+      status: TablePanelStatus.NoTarget,
+      rows: [],
+      schemaMode: false,
+    });
     this.component = () =>
       createElement(TablePanelView, {
         store: this.viewStore,
@@ -360,12 +364,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
    * @param message 面板级成功提示
    * @param error 面板级错误提示
    */
-  private publish(
-    status: TablePanelStatus,
-    rows: readonly ITableRowNode[],
-    message?: string,
-    error?: string,
-  ): void {
+  private publish(status: TablePanelStatus, rows: readonly ITableRowNode[], message?: string, error?: string): void {
     const target = this.target;
 
     this.viewStore.setState({
@@ -540,11 +539,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
    * @param isUndo 为 true 时应用逆操作，为 false 时应用正向操作
    * @returns 计算后的完整数据；类型号未知时为 undefined
    */
-  private computeState(
-    type: number,
-    payload: ITableUndoData,
-    isUndo: boolean,
-  ): Record<string, unknown> | undefined {
+  private computeState(type: number, payload: ITableUndoData, isUndo: boolean): Record<string, unknown> | undefined {
     if (type === TableUndoType.Change) {
       return setByFieldPath(this.data, payload.path, isUndo ? payload.previousValue : payload.nextValue);
     }

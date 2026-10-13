@@ -344,6 +344,10 @@ export function TableGrid(props: ITableGridProps): ReactElement {
     banner,
     notice,
     renderHeader(),
-    createElement('div', { className: 'etable-body', 'data-test-id': 'data-table-grid' }, renderRows(props.rows, context)),
+    createElement(
+      'div',
+      { className: 'etable-body', 'data-test-id': 'data-table-grid' },
+      renderRows(props.rows, context),
+    ),
   );
 }
