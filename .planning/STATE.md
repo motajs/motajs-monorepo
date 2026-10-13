@@ -5,16 +5,16 @@ current_phase: 02
 current_phase_name: 表格编辑
 current_plan: 9
 status: verifying
-stopped_at: Completed 02-10-PLAN.md
-last_updated: "2026-10-13T07:29:02.758Z"
+stopped_at: Completed 02-12-PLAN.md
+last_updated: "2026-10-13T07:51:34.056Z"
 last_activity: 2026-10-12
 last_activity_desc: "Completed 02-04 (table tracer): editor-impl test infra + end-to-end resource-layer read path"
-state_head: 66d72094efed5da74abec633fc40a66f2f91b77e
+state_head: 77f9f93f2ce8a1845dd086382d7e85d3c54ae353
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 19
-  completed_plans: 17
+  completed_plans: 18
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -76,6 +76,7 @@ Progress: [██████████] 100%
 | Phase 02 P9 | 30min | 3 tasks | 12 files |
 | Phase 02 P10 | 8min | 2 tasks | 2 files |
 | Phase 02-table P11 | 6min | 2 tasks | 2 files |
+| Phase 02-table P12 | 10min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -108,6 +109,8 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-09: tablePanel.ts 未改动——统一校验后可撤销提交入口 TablePanel.commitValue 已由 02-07 提供，外部结果经既有 onChange 通道重入；避免 tablePanel→TableGrid→TableRow→tablePanel 环依赖
 - [Phase 02]: 02-10: 阶段级集成测试以单个用例贯穿完整流程（打开→编辑→增删→撤销/重做→注入打开器新开 schema 面板→改 schema→切回数据面板因切入刷新而重算）；注入打开器以真实外壳开新标签承载 schema 面板。
 - [Phase 02]: 02-10: 生效门禁（coreImportType/coreEngineNeutral/coreModuleState/coreFsSurface）全绿；失效门禁如实记录（coreBoundaries 0、coreExports 1、implExports 1），不作阶段门禁；nyquist_compliant 仅在生效检查全绿时置真。
+- [Phase 02]: 02-12: 外壳 createInstance 未提供打开参数时整个省略 openParam 键（三元构造两种工厂入参）——不关心该参数的既有工厂行为一字不变
+- [Phase 02]: 02-12: tablePanelType 在构造阶段据 param.openParam.target 调用 ITablePanel.setTable（一打开即瞄准）；收窄用非导出谓词 isTablePanelTarget，畸形值落回 NoTarget，无 as 断言
 
 ### Pending Todos
 
@@ -133,6 +136,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-13T06:29:36.495Z
-Stopped at: Completed 02-10-PLAN.md
+Last session: 2026-10-13T07:51:33.955Z
+Stopped at: Completed 02-12-PLAN.md
 Resume file: None
