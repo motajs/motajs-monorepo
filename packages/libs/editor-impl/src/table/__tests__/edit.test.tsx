@@ -107,11 +107,31 @@ async function commitNumber(container: HTMLElement, field: string, text: string)
   });
 }
 
-// 连点两次某个字段行，构成一次双击
-async function doubleClickRow(field: string): Promise<void> {
+// 切到工具栏中的某编辑模式（按分段控件文案点击）
+async function switchMode(label: string): Promise<void> {
   await act(async () => {
-    fireEvent.click(screen.getByTestId(`table-row-${field}`));
-    fireEvent.click(screen.getByTestId(`table-row-${field}`));
+    fireEvent.click(screen.getByText(label));
+  });
+}
+
+// 点某行 gutter 的「+」，在插入点输入名称并回车确认
+async function gutterAdd(field: string, name: string): Promise<void> {
+  await act(async () => {
+    fireEvent.click(screen.getByTestId(`table-add-after-${field}`));
+  });
+
+  const input = screen.getByTestId(`table-add-input-${field}`);
+
+  await act(async () => {
+    fireEvent.change(input, { target: { value: name } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+  });
+}
+
+// 点某行 gutter 的「−」
+async function gutterDelete(field: string): Promise<void> {
+  await act(async () => {
+    fireEvent.click(screen.getByTestId(`table-delete-${field}`));
   });
 }
 
@@ -161,10 +181,13 @@ describe('表格内联编辑', () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
-  // 添加模式下确认名称后在父路径下追加子项并提示成功
-  it('添加模式下用校验通过的名字追加子项', async () => {
+  // 添加模式下点 gutter 的「+」在插入点输入名称后追加子项；全程不调用原生 prompt
+  it('添加模式下用 gutter 的名称输入追加子项', async () => {
     const system = await createSystem();
     const sample = stringTable();
+    const promptStub = vi.fn();
+
+    vi.stubGlobal('prompt', promptStub);
 
     seed(system, 't', sample.data, sample.schema);
     const panel = await openPanel(system);
@@ -172,60 +195,48 @@ describe('表格内联编辑', () => {
     await setTarget(panel, 't');
     render(createElement(system.shellSystem.render()));
 
-    vi.stubGlobal(
-      'prompt',
-      vi.fn(() => 'extra'),
-    );
-
-    await act(async () => {
-      fireEvent.click(screen.getByText('添加'));
-    });
-    await doubleClickRow('name');
+    await switchMode('添加');
+    await gutterAdd('name', 'extra');
 
     expect(await readData(system, 't')).toEqual({ name: 'hello', extra: null });
     expect(screen.getByText('添加成功')).not.toBeNull();
+    expect(promptStub).not.toHaveBeenCalled();
   });
 });
 
 describe('表格删除', () => {
-  // schema 允许 null 时，确认后删除该字段
-  it('删除模式确认后删除', async () => {
+  // schema 允许 null 时，点 gutter 的「−」直接删除该字段，且不调用原生 confirm
+  it('删除模式点 gutter 的「−」直接删除', async () => {
     const onDelete = vi.fn();
+    const confirmStub = vi.fn(() => true);
     const row: ITableRowNode = { key: "['name']", value: 'a', config: { type: ['string', 'null'] } };
+
+    vi.stubGlobal('confirm', confirmStub);
 
     render(createElement(TableGrid, { ...singleRowGrid(row, vi.fn()), onDelete }));
 
-    vi.stubGlobal(
-      'confirm',
-      vi.fn(() => true),
-    );
-
-    await act(async () => {
-      fireEvent.click(screen.getByText('删除'));
-    });
-    await doubleClickRow('name');
+    await switchMode('删除');
+    await gutterDelete('name');
 
     expect(onDelete).toHaveBeenCalledWith("['name']");
+    expect(confirmStub).not.toHaveBeenCalled();
   });
 
-  // schema 不允许 null 时拒绝删除，显示精确文案且不请求删除
-  it('schema 禁止 null 时拒绝删除', async () => {
+  // schema 不允许 null 时 gutter 的「−」禁用，点击不请求删除
+  it('schema 禁止 null 时删除按钮禁用', async () => {
     const onDelete = vi.fn();
     const row: ITableRowNode = { key: "['name']", value: 'a', config: { type: 'string' } };
 
     render(createElement(TableGrid, { ...singleRowGrid(row, vi.fn()), onDelete }));
 
-    const confirmStub = vi.fn(() => true);
+    await switchMode('删除');
 
-    vi.stubGlobal('confirm', confirmStub);
+    const button = screen.getByTestId('table-delete-name');
 
-    await act(async () => {
-      fireEvent.click(screen.getByText('删除'));
-    });
-    await doubleClickRow('name');
+    expect(button.hasAttribute('disabled')).toBe(true);
 
-    expect(screen.getByText("['name'] : 该值不允许为null，无法删除")).not.toBeNull();
-    expect(confirmStub).not.toHaveBeenCalled();
+    await gutterDelete('name');
+
     expect(onDelete).not.toHaveBeenCalled();
   });
 });

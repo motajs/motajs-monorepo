@@ -1,9 +1,9 @@
-import { ReactElement, useRef, useState } from 'react';
+import { ReactElement, ReactNode, useRef, useState } from 'react';
 import { ITableEditorCapabilities, IMultiSelectItem, useTableCapabilities } from '../../react';
 import { ITableRowNode, TableControlKind, TableEditMode, TableExternalEditor } from '../types';
 import { inferControlKind } from '../model/control';
 import { validateValue } from '../model/validation';
-import { getParentFieldPath, getShortField, parseFieldPath } from '../model/fieldPath';
+import { getShortField, parseFieldPath } from '../model/fieldPath';
 import { ActionButtons } from './ActionButtons';
 import { CheckboxInput } from './inputs/CheckboxInput';
 import { CheckboxSet } from './inputs/CheckboxSet';
@@ -20,12 +20,10 @@ export interface ITableRowProps {
   readonly row: ITableRowNode;
   /** 当前编辑模式，决定双击的分发行为 */
   readonly mode: TableEditMode;
+  /** 该行 gutter 内要渲染的增删按钮；为空时仅占位 */
+  readonly gutter?: ReactNode;
   /** 提交一个已通过校验的新值 */
   readonly onChange?: (key: string, value: unknown) => void;
-  /** 请求在父路径下新增一项 */
-  readonly onAdd?: (parentPath: string, name: string) => void;
-  /** 请求删除该项 */
-  readonly onDelete?: (key: string) => void;
   /** 自定义打开外部编辑器的回调；缺省时行内按 `x-editor` 分发到注入的能力打开器 */
   readonly onOpenExternalEditor?: (key: string) => void;
 }
@@ -242,7 +240,8 @@ function renderValueControl(row: ITableRowNode, disabled: boolean, onChange: (va
 }
 
 /**
- * 叶子行：渲染条目 / 注释 / 值 / 操作四栏，值控件按 schema 映射，提交前先校验，双击按模式分发
+ * 叶子行：最左为 gutter 占位（增 / 删按钮由上层注入），其余为条目 / 注释 / 值 / 操作四栏；
+ * 值控件按 schema 映射，提交前先校验，双击仅在「编辑」模式下分发到外部编辑器
  *
  * 操作列的「编辑」按 `x-editor` 选择外部编辑器打开器（代码 / 事件走独立面板，素材 / 多选 / 坐标
  * 走弹窗），返回值经上层一度校验后可撤销的提交路径重入；能力缺失时禁用动作并提示。复制经注入的
@@ -315,26 +314,9 @@ export function TableRow(props: ITableRowProps): ReactElement {
     setShowComment(!showComment);
   };
 
+  // 双击只在「编辑」模式下分发到外部编辑器；增 / 删已改由左侧 gutter 圆形按钮驱动，不再使用原生对话框
   const dispatchDoubleClick = (): void => {
-    if (props.mode === TableEditMode.Change) {
-      handleExternalEdit();
-      return;
-    }
-
-    if (props.mode === TableEditMode.Add) {
-      const name = prompt('请输入新项的名称');
-
-      if (name) props.onAdd?.(getParentFieldPath(row.key), name);
-
-      return;
-    }
-
-    if (!validateValue(row.config, null)) {
-      setError(`${row.key} : 该值不允许为null，无法删除`);
-      return;
-    }
-
-    if (confirm('确定要删除吗？')) props.onDelete?.(row.key);
+    if (props.mode === TableEditMode.Change) handleExternalEdit();
   };
 
   const handleRowClick = (): void => {
@@ -352,6 +334,7 @@ export function TableRow(props: ITableRowProps): ReactElement {
   return (
     <>
       <div className="etable-row" data-test-id={`table-row-${dataAttr}`} onClick={handleRowClick}>
+        <div className="etable-gutter">{props.gutter}</div>
         <div className="etable-cell etable-cell-name" title={row.key}>
           {getShortField(row.key)}
         </div>

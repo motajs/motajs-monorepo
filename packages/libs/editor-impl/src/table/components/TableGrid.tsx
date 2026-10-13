@@ -1,9 +1,10 @@
-import { Button, InputNumber, Spin } from 'antd';
+import { Button, Input, InputNumber, Spin } from 'antd';
 import { createElement, ReactElement, useState } from 'react';
 import { ICodeEditorOpener, ITablePanelOpener, useTableCapabilities } from '../../react';
 import { ITableRowNode, TableEditMode } from '../types';
-import { getShortField, parseFieldPath } from '../model/fieldPath';
+import { getParentFieldPath, getShortField, parseFieldPath } from '../model/fieldPath';
 import { buildSchemaPresentation } from '../model/schemaPresentation';
+import { validateId, validateValue } from '../model/validation';
 import { GapRow } from './GapRow';
 import { SchemaBanner } from './SchemaBanner';
 import { TableRow } from './TableRow';
@@ -28,8 +29,8 @@ export const enum TablePanelStatus {
 /** 一次字段提交的处理函数 */
 export type TableGridChangeHandler = (key: string, value: unknown) => void;
 
-/** 一次「新增子项」请求的处理函数 */
-export type TableGridAddHandler = (parentPath: string, name: string) => void;
+/** 一次「新增子项」请求的处理函数，携带锚点行的字段路径与新名称 */
+export type TableGridAddHandler = (anchorKey: string, name: string) => void;
 
 /** 一次「删除子项」请求的处理函数 */
 export type TableGridDeleteHandler = (key: string) => void;
@@ -87,14 +88,168 @@ interface IRowRenderContext {
   readonly onOpenExternalEditor: TableGridOpenHandler | undefined;
 }
 
+/** 左侧 gutter 圆形增 / 删按钮的 props */
+interface IGutterButtonProps {
+  /** 按钮种类：`TableEditMode.Add` 为新增、`TableEditMode.Delete` 为删除 */
+  readonly kind: TableEditMode;
+  /** 锚点行的字段路径（新增插在其后，删除即目标行） */
+  readonly anchorKey: string;
+  /** 新增回调 */
+  readonly onAdd?: TableGridAddHandler;
+  /** 删除回调 */
+  readonly onDelete?: TableGridDeleteHandler;
+  /** 是否禁用；删除时 schema 不允许 null 则禁用 */
+  readonly disabled?: boolean;
+  /** 禁用时的提示文案 */
+  readonly disabledHint?: string;
+}
+
 /**
- * 渲染四栏列头
+ * 左侧 gutter 的圆形按钮：新增模式下点 + 在插入点弹出名称输入，删除模式下点 − 直接删除该行
+ *
+ * 命名输入为 antd `Input`，确认时先经 `validateId` 校验字符集合规；两种操作都不触碰浏览器
+ * 原生对话框。删除每一步都可由统一撤销路径回退。
+ * @param props 按钮 props
+ * @returns 圆形按钮或名称输入元素
+ */
+function GutterButton(props: IGutterButtonProps): ReactElement {
+  const editingState = useState(false);
+  const editing = editingState[0];
+  const setEditing = editingState[1];
+  const nameState = useState('');
+  const name = nameState[0];
+  const setName = nameState[1];
+  const dataAttr = parseFieldPath(props.anchorKey).join('-');
+
+  if (props.kind === TableEditMode.Delete) {
+    const disabled = props.disabled === true;
+
+    return (
+      <button
+        type="button"
+        className="etable-gutter-button etable-gutter-delete"
+        aria-label="删除"
+        title={disabled ? props.disabledHint : undefined}
+        disabled={disabled}
+        data-test-id={`table-delete-${dataAttr}`}
+        onClick={(event): void => {
+          event.stopPropagation();
+
+          if (!disabled) props.onDelete?.(props.anchorKey);
+        }}
+      >
+        −
+      </button>
+    );
+  }
+
+  const commitName = (): void => {
+    const trimmed = name.trim();
+
+    if (trimmed.length === 0) {
+      setEditing(false);
+      return;
+    }
+
+    if (!validateId(trimmed, [], false).valid) return;
+
+    props.onAdd?.(props.anchorKey, trimmed);
+    setName('');
+    setEditing(false);
+  };
+
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        className="etable-gutter-button etable-gutter-add"
+        aria-label="添加"
+        data-test-id={`table-add-after-${dataAttr}`}
+        onClick={(event): void => {
+          event.stopPropagation();
+          setEditing(true);
+        }}
+      >
+        +
+      </button>
+    );
+  }
+
+  return createElement(Input, {
+    size: 'small',
+    autoFocus: true,
+    className: 'etable-gutter-input',
+    value: name,
+    'data-test-id': `table-add-input-${dataAttr}`,
+    onChange: (event): void => setName(event.target.value),
+    onKeyDown: (event): void => {
+      if (event.key === 'Enter') {
+        commitName();
+        return;
+      }
+
+      if (event.key === 'Escape') {
+        setName('');
+        setEditing(false);
+      }
+    },
+    onBlur: (): void => {
+      setName('');
+      setEditing(false);
+    },
+  });
+}
+
+/**
+ * 判断一行是否显示 gutter 增删按钮：常规视图每行都显示；schema 视图仅在 `properties` 的
+ * 属性行显示（其余关键字行不支持增删）
+ * @param row 行节点
+ * @param context 行渲染上下文
+ * @returns 显示 gutter 按钮时为 true
+ */
+function isGutterRow(row: ITableRowNode, context: IRowRenderContext): boolean {
+  if (!context.schemaMode) return true;
+
+  return getShortField(getParentFieldPath(row.key)) === 'properties';
+}
+
+/**
+ * 渲染一行的 gutter 内容：新增模式为 `+`，删除模式为 `−`，其余为空
+ * @param row 行节点
+ * @param context 行渲染上下文
+ * @returns gutter 内容；该行不显示按钮时返回 null
+ */
+function renderGutter(row: ITableRowNode, context: IRowRenderContext): ReactElement | null {
+  if (!isGutterRow(row, context)) return null;
+
+  if (context.mode === TableEditMode.Add) {
+    return createElement(GutterButton, { kind: TableEditMode.Add, anchorKey: row.key, onAdd: context.onAdd });
+  }
+
+  if (context.mode === TableEditMode.Delete) {
+    const allowed = validateValue(row.config, null);
+
+    return createElement(GutterButton, {
+      kind: TableEditMode.Delete,
+      anchorKey: row.key,
+      disabled: !allowed,
+      disabledHint: '该值不允许为null，无法删除',
+      onDelete: context.onDelete,
+    });
+  }
+
+  return null;
+}
+
+/**
+ * 渲染四栏列头（最左为常驻 gutter 占位）
  * @returns 列头元素
  */
 function renderHeader(): ReactElement {
   return createElement(
     'div',
     { className: 'etable-header' },
+    createElement('div', { className: 'etable-gutter' }),
     createElement('div', { className: 'etable-cell etable-cell-name' }, '条目'),
     createElement('div', { className: 'etable-cell etable-cell-comment' }, '注释'),
     createElement('div', { className: 'etable-cell etable-cell-value' }, '值'),
@@ -179,19 +334,20 @@ function renderState(props: ITableGridProps): ReactElement | null {
  * @returns 行元素
  */
 function renderRowNode(row: ITableRowNode, context: IRowRenderContext): ReactElement {
+  const gutter = renderGutter(row, context);
+
   if (row.children === undefined) {
     return createElement(TableRow, {
       key: row.key,
       row,
       mode: context.mode,
+      gutter,
       onChange: context.onChange,
-      onAdd: context.onAdd,
-      onDelete: context.onDelete,
       onOpenExternalEditor: context.onOpenExternalEditor,
     });
   }
 
-  return createElement(GapRow, { key: row.key, row, children: renderRows(row.children, context) });
+  return createElement(GapRow, { key: row.key, row, gutter, children: renderRows(row.children, context) });
 }
 
 /**
@@ -216,6 +372,7 @@ function renderPairedRow(
   return createElement(
     'div',
     { key: label, className: 'etable-row etable-row-pair', 'data-test-id': `schema-pair-${label}` },
+    createElement('div', { className: 'etable-gutter' }),
     createElement('div', { className: 'etable-cell etable-cell-name' }, `${label} / ${getShortField(right.key)}`),
     createElement('div', { className: 'etable-cell etable-cell-comment' }),
     createElement(

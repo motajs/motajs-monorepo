@@ -95,11 +95,24 @@ async function clickAction(field: string, name: string): Promise<void> {
   });
 }
 
-// 连点两次某字段行，构成一次双击
-async function doubleClickRow(field: string): Promise<void> {
+// 切到工具栏中的某编辑模式（按分段控件文案点击）
+async function switchMode(label: string): Promise<void> {
   await act(async () => {
-    fireEvent.click(screen.getByTestId(`table-row-${field}`));
-    fireEvent.click(screen.getByTestId(`table-row-${field}`));
+    fireEvent.click(screen.getByText(label));
+  });
+}
+
+// 点某行 gutter 的「+」，在插入点输入名称并回车确认
+async function gutterAdd(field: string, name: string): Promise<void> {
+  await act(async () => {
+    fireEvent.click(screen.getByTestId(`table-add-after-${field}`));
+  });
+
+  const input = screen.getByTestId(`table-add-input-${field}`);
+
+  await act(async () => {
+    fireEvent.change(input, { target: { value: name } });
+    fireEvent.keyDown(input, { key: 'Enter' });
   });
 }
 
@@ -164,15 +177,8 @@ describe('B3 成功提示文案与常驻预留', () => {
     await setTarget(panel, 't');
     renderWithCapabilities(system, {});
 
-    vi.stubGlobal(
-      'prompt',
-      vi.fn(() => 'extra'),
-    );
-
-    await act(async () => {
-      fireEvent.click(screen.getByText('添加'));
-    });
-    await doubleClickRow('name');
+    await switchMode('添加');
+    await gutterAdd('name', 'extra');
 
     expect(await readData(system, 't')).toEqual({ name: 'hello', extra: null });
     expect(screen.getByTestId('table-notice').textContent).toBe('添加成功');

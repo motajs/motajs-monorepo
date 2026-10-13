@@ -1,9 +1,11 @@
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, configure, render, screen } from '@testing-library/react';
 import { ResourceSystem, ShellSystem, UndoSystem } from '@motajs/editor-core';
 import { createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { tableDataResourceId, tablePanelType, tableSchemaResourceId } from '..';
 import { FakeResourceInjection } from './fixtures';
+
+configure({ testIdAttribute: 'data-test-id' });
 
 interface TestSystem {
   /** 外壳系统 */
@@ -78,7 +80,8 @@ describe('tablePanelType 经打开参数瞄准目标', () => {
     expect(screen.getByText('注释')).not.toBeNull();
     expect(screen.getByText('值')).not.toBeNull();
     expect(screen.getByText('操作')).not.toBeNull();
-    expect(screen.getByText("['nested']")).not.toBeNull();
+    expect(screen.getByTestId('gap-toggle-nested')).not.toBeNull();
+    expect(screen.getByText('nested')).not.toBeNull();
     expect(inputValue(container, 'name')).toBe('"hello"');
   });
 

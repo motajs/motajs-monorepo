@@ -1,9 +1,11 @@
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, configure, fireEvent, render, screen } from '@testing-library/react';
 import { IEditorPanel, IEditorPanelFactoryParam, ResourceSystem, ShellSystem, UndoSystem } from '@motajs/editor-core';
 import { createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { tableDataResourceId, tablePanelType, tableSchemaResourceId, TablePanel } from '..';
 import { FakeResourceInjection } from './fixtures';
+
+configure({ testIdAttribute: 'data-test-id' });
 
 interface TestSystem {
   /** 外壳系统 */
@@ -127,7 +129,8 @@ describe('表格面板端到端读取与渲染', () => {
     expect(screen.getByText('注释')).not.toBeNull();
     expect(screen.getByText('值')).not.toBeNull();
     expect(screen.getByText('操作')).not.toBeNull();
-    expect(screen.getByText("['nested']")).not.toBeNull();
+    expect(screen.getByTestId('gap-toggle-nested')).not.toBeNull();
+    expect(screen.getByText('nested')).not.toBeNull();
     expect(inputValue(container, 'name')).toBe('"hello"');
     expect(inputValue(container, 'nested-inner')).toBe('"deep"');
     expect(inputValue(container, 'count')).toBe('42');
@@ -148,13 +151,13 @@ describe('表格面板端到端读取与渲染', () => {
     expect(container.querySelector('[data-test-id="table-row-nested-inner"]')).not.toBeNull();
 
     await act(async () => {
-      fireEvent.click(screen.getByText('折叠'));
+      fireEvent.click(screen.getByTestId('gap-toggle-nested'));
     });
 
     expect(container.querySelector('[data-test-id="table-row-nested-inner"]')).toBeNull();
 
     await act(async () => {
-      fireEvent.click(screen.getByText('展开'));
+      fireEvent.click(screen.getByTestId('gap-toggle-nested'));
     });
 
     expect(container.querySelector('[data-test-id="table-row-nested-inner"]')).not.toBeNull();
