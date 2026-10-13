@@ -1,11 +1,24 @@
 import { act, cleanup, configure, render } from '@testing-library/react';
 import { IEditorPanel, IEditorPanelFactoryParam, ResourceSystem, ShellSystem, UndoSystem } from '@motajs/editor-core';
 import { createElement } from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { tableDataResourceId, tablePanelType, tableSchemaResourceId, TablePanel } from '..';
 import { FakeResourceInjection } from './fixtures';
 
 configure({ testIdAttribute: 'data-test-id' });
+
+// 在 jsdom 下按注入宽度驱动栏数：读取 clientWidth 时返回当前设定值
+let mockColumnsWidth = 0;
+
+Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
+  configurable: true,
+  get: (): number => mockColumnsWidth,
+});
+
+// 每个用例前把可用宽度复位为 0，使缺省渲染回退到 1 栏
+beforeEach(() => {
+  mockColumnsWidth = 0;
+});
 
 interface TestSystem {
   /** 外壳系统 */
@@ -109,5 +122,62 @@ describe('面板标题与工具栏布局（L1）', () => {
     expect(title.compareDocumentPosition(schemaButton) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
     expect(divider.compareDocumentPosition(schemaButton) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
     expect(title.compareDocumentPosition(divider) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+  });
+});
+
+describe('多栏布局（L4 结构）', () => {
+  // 可用宽度 / 每栏宽度决定栏数：800 / 400 = 2 栏
+  it('按可用宽度铺出 round(width / columnWidth) 栏', async () => {
+    const system = await createSystem();
+
+    seedSampleTable(system, 'demo');
+    const panels: TablePanel[] = [];
+    const panel = await openTablePanel(system, panels);
+
+    await setTarget(panel, 'demo');
+
+    mockColumnsWidth = 800;
+
+    const { container } = render(createElement(system.shellSystem.render()));
+
+    expect(container.querySelectorAll('.etable-column').length).toBe(2);
+  });
+
+  // 可用宽度为 0 时保底渲染 1 栏
+  it('可用宽度为 0 时保底 1 栏', async () => {
+    const system = await createSystem();
+
+    seedSampleTable(system, 'demo');
+    const panels: TablePanel[] = [];
+    const panel = await openTablePanel(system, panels);
+
+    await setTarget(panel, 'demo');
+
+    mockColumnsWidth = 0;
+
+    const { container } = render(createElement(system.shellSystem.render()));
+
+    expect(container.querySelectorAll('.etable-column').length).toBe(1);
+  });
+
+  // 缺省只有第 0 栏有目标：仅第 0 栏渲染 schema 驱动行，其余栏显示未设目标空态
+  it('缺省只有第 0 栏有目标，其余栏为空态', async () => {
+    const system = await createSystem();
+
+    seedSampleTable(system, 'demo');
+    const panels: TablePanel[] = [];
+    const panel = await openTablePanel(system, panels);
+
+    await setTarget(panel, 'demo');
+
+    mockColumnsWidth = 800;
+
+    const { container } = render(createElement(system.shellSystem.render()));
+
+    const columns = container.querySelectorAll('.etable-column');
+
+    expect(columns.length).toBe(2);
+    expect(columns[0].querySelector('[data-test-id="table-row-name"]')).not.toBeNull();
+    expect(columns[1].textContent).toContain('尚未设置目标表');
   });
 });

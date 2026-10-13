@@ -7,6 +7,24 @@
   font-size: 13px;
 }
 
+.etable-columns {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
+}
+
+.etable-column {
+  flex: 0 0 auto;
+  height: 100%;
+  min-height: 0;
+  border-left: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.etable-column:first-child {
+  border-left: none;
+}
+
 .etable-header,
 .etable-row {
   display: grid;
