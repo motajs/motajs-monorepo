@@ -352,6 +352,17 @@
 - `ITablePanelParam.columnWidth?: number`（组件参数）— 每栏像素宽，缺省约 400。
 - `ITableSchemaNode` 扩展键 `x-order`（`readonly string[]`）— 同级字段的呈现顺序；新增行据此插在双击行之后。备选：`x-property-order` / `x-field-order`。
 
+## Plan 15–19 — 表格修复轮：实现（gap_closure）
+
+> UAT 之后的实现修复，按关注点拆成 5 份计划。以下为新增命名，待逐条确认。
+
+- **02-15（单元行为）**：组件 `NumberInput`（antd `InputNumber` 包装）+ `INumberInputProps`。
+- **02-16（dev 宿主）**：函数 `createTablePanelOpener(core)`——实现并注入 `ITablePanelOpener`，让「编辑 Schema」可用。
+- **02-17（标题 + 多列）**：非导出接口 `ITablePanelColumn`；`resolveTabName` 增加第三参 `getPanel`（既有函数签名变更）——外壳读 `IEditorPanel.getTitle?.()` 作为标签名。
+- **02-18（行呈现 + ± 槽 + 行后插入）**：函数 `insertAfterFieldPath`；`TableGridAddHandler` 形状变更 `(anchorKey, name)`；`TablePanel.addItem` 签名变更 `addItem(anchorKey, name)`；可选非导出组件 `GutterButton`。
+- **02-19（全局撤销/重做快捷键）**：非导出 `const enum UndoRedoShortcut`；非导出函数 `resolveUndoRedoShortcut`；`IShellRootProps.onUndo` / `onRedo`。
+- 新测试文件：`behaviour.uat.test.tsx` / `layout.uat.test.tsx` / `interaction.uat.test.tsx` / `shellTitle.test.ts` / `shellUndoShortcut.test.ts`。
+
 ## 待确认的规划假设
 
 - A2：本阶段「schema」= 旧 `CommentObject`（已在 Plan 01 checkpoint 确认）。
