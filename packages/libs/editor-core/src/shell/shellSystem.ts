@@ -53,6 +53,8 @@ interface IShellRootProps {
   readonly subscribe: (listener: () => void) => () => void;
   /** 读取外壳视图状态快照 */
   readonly getSnapshot: () => IShellViewState;
+  /** 按实例 id 取面板实例，供标签解析按实例标题 */
+  readonly getPanel: (instanceId: string) => IEditorPanel | undefined;
 }
 
 /** 菜单行组件的 props */
@@ -73,6 +75,8 @@ interface ITabRowProps {
   readonly activeTabId: string | null;
   /** 用于解析标签显示名的面板类型 */
   readonly panelTypes: readonly IEditorPanelType[];
+  /** 按实例 id 取面板实例，供标签解析按实例标题 */
+  readonly getPanel: (instanceId: string) => IEditorPanel | undefined;
 }
 
 /** 内容区组件的 props */
@@ -108,13 +112,28 @@ interface IPanelHostProps {
 }
 
 /**
- * 解析标签的显示名：空白标签为固定文案，其余取面板类型名
+ * 解析标签的显示名：空白标签为固定文案；有实例且实例给出非空标题时用该标题，否则取面板类型名
  * @param tab 目标标签
  * @param panelTypes 已注册的面板类型
+ * @param getPanel 按实例 id 取面板实例的解析器
  * @returns 标签显示名
  */
-function resolveTabName(tab: IEditorTab, panelTypes: readonly IEditorPanelType[]): string {
+function resolveTabName(
+  tab: IEditorTab,
+  panelTypes: readonly IEditorPanelType[],
+  getPanel: (instanceId: string) => IEditorPanel | undefined,
+): string {
   if (tab.typeId === null) return '空白标签页';
+
+  if (tab.instanceId !== null) {
+    const panel = getPanel(tab.instanceId);
+
+    if (panel !== undefined) {
+      const title = panel.getTitle?.();
+
+      if (title !== undefined && title !== '') return title;
+    }
+  }
 
   const type = panelTypes.find((item) => item.id === tab.typeId);
 
@@ -151,7 +170,7 @@ function MenuRow(props: IMenuRowProps): ReactElement {
  */
 function TabRow(props: ITabRowProps): ReactElement {
   const tabs = props.tabs.map((tab) => {
-    const name = resolveTabName(tab, props.panelTypes);
+    const name = resolveTabName(tab, props.panelTypes, props.getPanel);
     const closeLabel = tab.typeId === null ? '关闭空白标签页' : `关闭「${name}」`;
     const isActive = tab.id === props.activeTabId;
 
@@ -300,6 +319,7 @@ function ShellRoot(props: IShellRootProps): ReactElement {
       tabs: view.tabs,
       activeTabId: view.activeTabId,
       panelTypes: view.panelTypes,
+      getPanel: props.getPanel,
     }),
     createElement(ContentArea, {
       system: props.system,
@@ -348,6 +368,8 @@ export class ShellSystem implements IShellSystem {
   private readonly subscribe: (listener: () => void) => () => void;
   /** 读取视图状态快照，供 useSyncExternalStore 使用 */
   private readonly getSnapshot: () => IShellViewState;
+  /** 按实例 id 取面板实例的解析器，供标签解析按实例标题 */
+  private readonly getPanel: (instanceId: string) => IEditorPanel | undefined;
   /** 撤回系统 */
   private readonly undoSystem: IUndoSystem;
   /** 资源系统 */
@@ -361,8 +383,14 @@ export class ShellSystem implements IShellSystem {
     this.snapshot = this.buildViewState();
     this.subscribe = (listener) => this.versionStore.subscribe(listener);
     this.getSnapshot = () => this.snapshot;
+    this.getPanel = (instanceId) => this.instances.get(instanceId);
     this.RootComponent = () =>
-      createElement(ShellRoot, { system: this, subscribe: this.subscribe, getSnapshot: this.getSnapshot });
+      createElement(ShellRoot, {
+        system: this,
+        subscribe: this.subscribe,
+        getSnapshot: this.getSnapshot,
+        getPanel: this.getPanel,
+      });
   }
 
   async initialize(): Promise<void> {

@@ -73,6 +73,13 @@
   white-space: nowrap;
 }
 
+.etable-toolbar-divider {
+  flex: 0 0 auto;
+  align-self: stretch;
+  margin: 2px 0;
+  border-left: 1px solid rgba(0, 0, 0, 0.12);
+}
+
 .etable-schema-banner {
   flex: 0 0 auto;
   overflow: hidden;

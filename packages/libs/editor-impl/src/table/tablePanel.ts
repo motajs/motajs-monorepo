@@ -195,6 +195,16 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     return this.component;
   }
 
+  /**
+   * 获取此面板实例的显示标题，供外壳标签按实例显示（如「表格 table.demo」）
+   * @returns 已设目标时为「表格 <资源 id>」；未设目标时为 undefined，外壳据此回退面板类型名
+   */
+  getTitle(): string | undefined {
+    const target = this.target;
+
+    return target === null ? undefined : `表格 ${target.data.id}`;
+  }
+
   async onFocus(): Promise<void> {}
 
   async onBlur(): Promise<void> {}
