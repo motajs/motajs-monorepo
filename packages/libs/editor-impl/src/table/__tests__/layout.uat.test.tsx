@@ -181,3 +181,46 @@ describe('多栏布局（L4 结构）', () => {
     expect(columns[1].textContent).toContain('尚未设置目标表');
   });
 });
+
+describe('栏内尺寸与输入控件（L4 细节）', () => {
+  // 值文本域渲染为 antd Input.TextArea（.ant-input + .etable-input-textarea），而非裸 textarea
+  it('值文本域使用 antd Input.TextArea', async () => {
+    const system = await createSystem();
+
+    seedSampleTable(system, 'demo');
+    const panels: TablePanel[] = [];
+    const panel = await openTablePanel(system, panels);
+
+    await setTarget(panel, 'demo');
+    const { container } = render(createElement(system.shellSystem.render()));
+
+    const cell = container.querySelector('[data-test-id="table-input-name"]');
+    const textarea = cell === null ? null : cell.querySelector('textarea');
+
+    if (textarea === null) throw new Error('值文本域缺失');
+
+    expect(textarea.classList.contains('ant-input')).toBe(true);
+    expect(textarea.classList.contains('etable-input-textarea')).toBe(true);
+  });
+
+  // 表头四列类名保持 name / comment / value / action（对应 2:2:4:1 的四列）
+  it('表头四列类名保持 name / comment / value / action', async () => {
+    const system = await createSystem();
+
+    seedSampleTable(system, 'demo');
+    const panels: TablePanel[] = [];
+    const panel = await openTablePanel(system, panels);
+
+    await setTarget(panel, 'demo');
+    const { container } = render(createElement(system.shellSystem.render()));
+
+    const header = container.querySelector('.etable-header');
+    const cells = header === null ? [] : header.querySelectorAll('.etable-cell');
+
+    expect(cells.length).toBe(4);
+    expect(cells[0].classList.contains('etable-cell-name')).toBe(true);
+    expect(cells[1].classList.contains('etable-cell-comment')).toBe(true);
+    expect(cells[2].classList.contains('etable-cell-value')).toBe(true);
+    expect(cells[3].classList.contains('etable-cell-action')).toBe(true);
+  });
+});

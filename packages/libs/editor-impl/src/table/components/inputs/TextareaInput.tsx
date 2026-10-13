@@ -1,3 +1,4 @@
+import { Input } from 'antd';
 import { ChangeEvent, ReactElement, useEffect, useState } from 'react';
 
 export interface ITextareaInputProps {
@@ -50,19 +51,20 @@ export function TextareaInput(props: ITextareaInputProps): ReactElement {
   useEffect((): void => setText(toText(props.value, indent)), [props.value, indent]);
 
   return (
-    <div className="etable-input-textarea">
-      <textarea
-        spellCheck={false}
-        disabled={props.disabled}
-        value={text}
-        onChange={(event: ChangeEvent<HTMLTextAreaElement>): void => setText(event.target.value)}
-        onBlur={(): void => {
-          const parsed = parseText(text);
+    <Input.TextArea
+      className="etable-input-textarea"
+      size="small"
+      spellCheck={false}
+      autoSize={{ minRows: 1, maxRows: 6 }}
+      disabled={props.disabled}
+      value={text}
+      onChange={(event: ChangeEvent<HTMLTextAreaElement>): void => setText(event.target.value)}
+      onBlur={(): void => {
+        const parsed = parseText(text);
 
-          if (parsed.ok) props.onChange(parsed.value);
-          else setText(toText(props.value, indent));
-        }}
-      />
-    </div>
+        if (parsed.ok) props.onChange(parsed.value);
+        else setText(toText(props.value, indent));
+      }}
+    />
   );
 }

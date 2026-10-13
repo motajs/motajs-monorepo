@@ -32,5 +32,21 @@ function installMapGetOrInsertComputed(): void {
   });
 }
 
+/** jsdom 未实现的 ResizeObserver 空桩：仅提供接口，不做任何观察 */
+class ResizeObserverStub {
+  observe(): void {}
+
+  unobserve(): void {}
+
+  disconnect(): void {}
+}
+
+function installResizeObserver(): void {
+  if (typeof globalThis.ResizeObserver !== 'undefined') return;
+
+  globalThis.ResizeObserver = ResizeObserverStub;
+}
+
 installMapGetOrInsert();
 installMapGetOrInsertComputed();
+installResizeObserver();

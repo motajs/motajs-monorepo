@@ -28,7 +28,7 @@
 .etable-header,
 .etable-row {
   display: grid;
-  grid-template-columns: 400px 400px 400px 400px;
+  grid-template-columns: 2fr 2fr 4fr 1fr;
   align-items: stretch;
 }
 
@@ -47,10 +47,11 @@
 
 .etable-cell {
   min-width: 0;
-  padding: 4px 8px;
+  padding: 6px 8px;
   border-right: 1px solid rgba(0, 0, 0, 0.06);
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   overflow: hidden;
+  line-height: 1.5;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -156,19 +157,12 @@
 }
 
 .etable-input-textarea {
-  position: relative;
-  width: 100%;
-}
-
-.etable-input-textarea > textarea {
   display: block;
   box-sizing: border-box;
   width: 100%;
   min-height: 22px;
   max-height: 160px;
   overflow: auto;
-  resize: vertical;
-  field-sizing: content;
 }
 
 .etable-input-select {
