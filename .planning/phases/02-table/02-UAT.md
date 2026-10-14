@@ -143,4 +143,5 @@ blocked: 0
 - P21 **`x-order` 调换顺序被提示"不合法"**（bug）。规则：`x-order` 是挂在 object 节点上的 `string[]`，列出**同级字段名**的呈现顺序；列出的按其次序在前，其余按自然顺序追加，缺失/非法则完全自然顺序。合法的调换（仅改数组次序）不应报错。
 - P22 把字段 `type` 改成 `textarea` 并未变成文本域——`textarea` **不是合法 JSON Schema type**（合法：string/number/integer/boolean/object/array/null）；文本域是 `string` 的默认控件。需在 schema 编辑里给出可用取值/校验，或明确改用 `x-control`。
 - P23 **切换表格卡顿**：开 3 个面板（table.demo + 两个 table#schema.demo）时切换约 0.5s，需性能优化。
-- P24 `type: string` 的值格**看起来不像文本域、不能拖动调整大小**：实现上确实是 antd `Input.TextArea`，但用了 `autoSize={{ minRows: 1, maxRows: 6 }}` → 最小 1 行、随内容增高、无右下角拖拽手柄。应改为**可见的多行文本域 + 允许手动调整大小**（去 autoSize / 设多行默认高 + `resize: vertical`）。
+- P24 `type: string` 的值格**看起来不像文本域、不能拖动调整大小**：实现上确实是 antd `Input.TextArea`，但用了 `autoSize={{ minRows: 1, maxRows: 6 }}` → 最小 1 行、随内容增高、无右下角拖拽手柄。应改为**可见的多行文本域 + 允许手动调整大小**（去 autoSize / 设多行默认高 + `resize: vertical`）。补充：默认高度按**内容行数**显示（最多 6 行，超出用滚动条）；**允许拖拽调整大小**（autoSize 可接受，但更希望能拖拽）。
+- P25 **操作列宽改为现在的 1.5 倍**（现在偏窄）。
