@@ -5,16 +5,16 @@ current_phase: 02
 current_phase_name: 表格编辑
 current_plan: 9
 status: verifying
-stopped_at: Completed 02-27-PLAN.md
-last_updated: "2026-10-14T09:31:10.741Z"
+stopped_at: Completed 02-28-PLAN.md
+last_updated: "2026-10-14T10:28:23.755Z"
 last_activity: 2026-10-12
 last_activity_desc: "Completed 02-04 (table tracer): editor-impl test infra + end-to-end resource-layer read path"
-state_head: fd342ad62e3c895007b471d0b9a802baf6c259f4
+state_head: 014f42ccfa624fa1922cd6c1db95359bba3110b0
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 37
-  completed_plans: 33
+  completed_plans: 34
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -91,6 +91,7 @@ Progress: [██████████] 100%
 | Phase 02 P25 | 15 | 3 tasks | 5 files |
 | Phase 02 P26 | 10min | 2 tasks | 3 files |
 | Phase 02 P27 | ~25min | 2 tasks | 2 files |
+| Phase 02 P28 | 9min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -161,6 +162,8 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-27: P21 x-order 仍以文本域编辑（x-control: Text），只把校验从 { type:'string' } 改为按字符串数组（{ type:'array', items:{type:'string'} }）；traversal.readOrder 的排序语义不变
 - [Phase 02]: 02-27: P22 type 的合法取值放非导出模块级常量 SCHEMA_TYPE_VALUES（string/number/integer/boolean/object/array/null），经 keywordConfig 合成 { enum } —— 同一份 enum 同时驱动下拉候选与 ajv 校验
 - [Phase 02]: 02-27: 测试查下拉候选项改用 screen.getAllByRole('option') 而非 document 全局 —— coreModuleState 门禁（PORT-02）同样扫描 editor-impl/src，禁 document 全局
+- [Phase 02]: 02-28: P24 值文本域默认行数由非导出函数 resolveTextareaRows(text) 计算（按 text 行数夹在 1..6），去掉 autoSize 改传 rows
+- [Phase 02]: 02-28: P24 值文本域开启纵向拖拽——table.css .etable-input-textarea 加 resize: vertical 并去掉 max-height:160px；React 只控 rows 不控行内 height，拖拽设定的高度不会被重渲染重置
 
 ### Pending Todos
 
@@ -186,6 +189,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-14T09:30:36.315Z
-Stopped at: Completed 02-27-PLAN.md
+Last session: 2026-10-14T10:28:23.588Z
+Stopped at: Completed 02-28-PLAN.md
 Resume file: None
