@@ -98,7 +98,7 @@ Each task was committed atomically:
 1. **Task 1: `ITableGridProps` 增可选 `onCloseColumn`（P15，仅类型）** - `92a4a20` (feat)
 2. **Task 2: `ITableToolbarProps` 增可选 `onCloseColumn` / `closeButtonEnabled`（P15，仅类型）** - `5750282` (feat)
 
-**Plan metadata:** `pending` (docs: complete plan)
+**Plan metadata:** `234e7f3` (docs: complete plan)
 
 ## Files Created/Modified
 - `packages/libs/editor-impl/src/table/components/TableGrid.tsx` - `ITableGridProps` 增可选 `onCloseColumn`（2 行新增）
