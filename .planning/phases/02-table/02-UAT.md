@@ -148,3 +148,4 @@ blocked: 0
 - P26 **性能仍在**（P23 未彻底解决）：剖析显示瓶颈是 `tablePanel.ts:1083` 的 `refresh` 方法 + react-dom 的 `scheduleMicrotask` 回调 → 主要是**元素挂载开销**（非表格分析）。方向：减少每次刷新的整树重挂载（React 的 memo / 稳定 key / 只更新变更行，或虚拟滚动）。对标 Vue 的 `v-once`/`v-memo`（注意：`v-mount` 并非 Vue 指令；React 对应物是 `React.memo`/`useMemo`/虚拟化）。
 - P27 折叠行**整行**都应 `cursor: pointer`（现在只有箭头）。
 - P28 文本域现效果**不如之前的 autoSize** → 换回 `autoSize`（撤销 02-28 的行数高度/拖拽改动）。
+- P29 **性能仍在**（主要来自 Schema，Schema 又主要是**折叠项多**）：剖析仍在 react-dom 内、难溯源；猜测是"一次性更新大量元素"。**建议方向**：默认**全部折叠**；**滚动进入视野时才展开**（打开时先做一次初始可见性判定）——以减少首屏渲染。可考虑 IntersectionObserver / 懒渲染。
