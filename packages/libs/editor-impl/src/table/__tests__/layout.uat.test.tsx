@@ -3,9 +3,13 @@ import { IEditorPanel, IEditorPanelFactoryParam, ResourceSystem, ShellSystem, Un
 import { createElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { tableDataResourceId, tablePanelType, tableSchemaResourceId, TablePanel } from '..';
+import tableCss from '../table.css?inline';
 import { FakeResourceInjection } from './fixtures';
 
 configure({ testIdAttribute: 'data-test-id' });
+
+/** 表格样式表原文：jsdom 不应用外部 CSS，布局断言改为核对样式规则文本 */
+const TABLE_CSS = tableCss;
 
 // 用例开始前的原始窗口宽度，供 afterEach 复位
 const ORIGINAL_INNER_WIDTH = window.innerWidth;
@@ -312,5 +316,53 @@ describe('栏内尺寸与输入控件（L4 细节）', () => {
     expect(cells[1].classList.contains('etable-cell-comment')).toBe(true);
     expect(cells[2].classList.contains('etable-cell-value')).toBe(true);
     expect(cells[3].classList.contains('etable-cell-action')).toBe(true);
+  });
+});
+
+describe('每栏独立滚动（P14）', () => {
+  // 内容区 .etable-body 是表格行的容器，就绪栏的行渲染在其内
+  it('就绪栏的表格行渲染在内容区 .etable-body 内', async () => {
+    const system = await createSystem();
+
+    seedSampleTable(system, 'demo');
+    const panels: TablePanel[] = [];
+    const panel = await openTablePanel(system, panels);
+
+    await setTarget(panel, 'demo');
+    const { container } = render(createElement(system.shellSystem.render()));
+
+    const body = container.querySelector('.etable-body');
+
+    if (body === null) throw new Error('内容区缺失');
+
+    expect(body.querySelector('[data-test-id="table-row-name"]')).not.toBeNull();
+  });
+
+  // 工具栏与提示行位于内容区之外，滚动内容时保持固定
+  it('工具栏与提示行位于内容区之外', async () => {
+    const system = await createSystem();
+
+    seedSampleTable(system, 'demo');
+    const panels: TablePanel[] = [];
+    const panel = await openTablePanel(system, panels);
+
+    await setTarget(panel, 'demo');
+    const { container } = render(createElement(system.shellSystem.render()));
+
+    const body = container.querySelector('.etable-body');
+    const toolbar = container.querySelector('.etable-toolbar');
+    const notice = container.querySelector('.etable-notice');
+
+    if (body === null || toolbar === null || notice === null) throw new Error('滚动区 / 工具栏 / 提示行节点缺失');
+
+    expect(body.contains(toolbar)).toBe(false);
+    expect(body.contains(notice)).toBe(false);
+  });
+
+  // 只有内容区可滚动：栏与表格根都 overflow hidden，滚动交给 .etable-body
+  it('栏与表格根不外溢滚动，滚动由内容区承担', () => {
+    expect(TABLE_CSS).toMatch(/\.etable-body\s*\{[^}]*overflow:\s*auto/);
+    expect(TABLE_CSS).toMatch(/\.etable-column\s*\{[^}]*overflow:\s*hidden/);
+    expect(TABLE_CSS).toMatch(/\.etable\s*\{[^}]*overflow:\s*hidden/);
   });
 });
