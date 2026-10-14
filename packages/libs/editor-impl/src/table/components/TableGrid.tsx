@@ -1,5 +1,5 @@
 import { Button, Input, InputNumber, Spin } from 'antd';
-import { createElement, ReactElement, useState } from 'react';
+import { CSSProperties, createElement, ReactElement, useState } from 'react';
 import { ICodeEditorOpener, ITablePanelOpener, useTableCapabilities } from '../../react';
 import { ITableRowNode, TableEditMode } from '../types';
 import { getParentFieldPath, getShortField, parseFieldPath } from '../model/fieldPath';
@@ -10,6 +10,17 @@ import { SchemaBanner } from './SchemaBanner';
 import { TableRow } from './TableRow';
 import { TableToolbar } from './TableToolbar';
 import '../table.css';
+
+/** 层级缩进步长（像素），约旧缩进 12px 的 3/4 */
+const TREE_INDENT_STEP = 12;
+
+/** 表头与成对行内纯文本在 flex 单元格内的截断样式（保留省略号） */
+const CELL_TEXT_STYLE: CSSProperties = {
+  minWidth: 0,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+};
 
 export const enum TablePanelStatus {
   /** 尚未设置目标表 */
@@ -250,10 +261,26 @@ function renderHeader(): ReactElement {
     'div',
     { className: 'etable-header' },
     createElement('div', { className: 'etable-gutter' }),
-    createElement('div', { className: 'etable-cell etable-cell-name' }, '条目'),
-    createElement('div', { className: 'etable-cell etable-cell-comment' }, '注释'),
-    createElement('div', { className: 'etable-cell etable-cell-value' }, '值'),
-    createElement('div', { className: 'etable-cell etable-cell-action' }, '操作'),
+    createElement(
+      'div',
+      { className: 'etable-cell etable-cell-name' },
+      createElement('span', { style: CELL_TEXT_STYLE }, '条目'),
+    ),
+    createElement(
+      'div',
+      { className: 'etable-cell etable-cell-comment' },
+      createElement('span', { style: CELL_TEXT_STYLE }, '注释'),
+    ),
+    createElement(
+      'div',
+      { className: 'etable-cell etable-cell-value' },
+      createElement('span', { style: CELL_TEXT_STYLE }, '值'),
+    ),
+    createElement(
+      'div',
+      { className: 'etable-cell etable-cell-action' },
+      createElement('span', { style: CELL_TEXT_STYLE }, '操作'),
+    ),
   );
 }
 
@@ -331,9 +358,10 @@ function renderState(props: ITableGridProps): ReactElement | null {
  * 把单个行节点渲染为 React 元素：叶子行走 TableRow，分组行走可折叠的 GapRow
  * @param row 行节点
  * @param context 行渲染上下文（模式与回调）
+ * @param level 当前行在行树中的深度（0 基），逐层传递给行组件并向下递增
  * @returns 行元素
  */
-function renderRowNode(row: ITableRowNode, context: IRowRenderContext): ReactElement {
+function renderRowNode(row: ITableRowNode, context: IRowRenderContext, level: number): ReactElement {
   const gutter = renderGutter(row, context);
 
   if (row.children === undefined) {
@@ -341,13 +369,20 @@ function renderRowNode(row: ITableRowNode, context: IRowRenderContext): ReactEle
       key: row.key,
       row,
       mode: context.mode,
+      level,
       gutter,
       onChange: context.onChange,
       onOpenExternalEditor: context.onOpenExternalEditor,
     });
   }
 
-  return createElement(GapRow, { key: row.key, row, gutter, children: renderRows(row.children, context) });
+  return createElement(GapRow, {
+    key: row.key,
+    row,
+    level,
+    gutter,
+    children: renderRows(row.children, context, level + 1),
+  });
 }
 
 /**
@@ -356,6 +391,7 @@ function renderRowNode(row: ITableRowNode, context: IRowRenderContext): ReactEle
  * @param right 右侧关键字行
  * @param label 左侧关键字名，作为行标识
  * @param context 行渲染上下文
+ * @param level 当前行在行树中的深度（0 基），用于「条目」列的层级缩进
  * @returns 成对行元素
  */
 function renderPairedRow(
@@ -363,17 +399,30 @@ function renderPairedRow(
   right: ITableRowNode,
   label: string,
   context: IRowRenderContext,
+  level: number,
 ): ReactElement {
   const disabled = context.mode === TableEditMode.Delete;
   const leftValue = typeof left.value === 'number' ? left.value : undefined;
   const rightValue = typeof right.value === 'number' ? right.value : undefined;
   const dataAttr = parseFieldPath(left.key).join('-');
+  const guides = Array.from({ length: level }, (_, index) =>
+    createElement('span', { key: index, className: 'etable-tree-guide', style: { width: TREE_INDENT_STEP } }),
+  );
 
   return createElement(
     'div',
     { key: label, className: 'etable-row etable-row-pair', 'data-test-id': `schema-pair-${label}` },
     createElement('div', { className: 'etable-gutter' }),
-    createElement('div', { className: 'etable-cell etable-cell-name' }, `${label} / ${getShortField(right.key)}`),
+    createElement(
+      'div',
+      {
+        className: 'etable-cell etable-cell-name',
+        'data-level': level,
+        title: `${label} / ${getShortField(right.key)}`,
+      },
+      ...guides,
+      createElement('span', { style: CELL_TEXT_STYLE }, `${label} / ${getShortField(right.key)}`),
+    ),
     createElement('div', { className: 'etable-cell etable-cell-comment' }),
     createElement(
       'div',
@@ -399,9 +448,10 @@ function renderPairedRow(
  * 按 schema 专用呈现规则渲染一组同层关键字行：成对关键字合成一行，其余各占一行
  * @param rows 同层关键字行
  * @param context 行渲染上下文
+ * @param level 当前同层行在行树中的深度（0 基），继续下传给每一行
  * @returns 行元素列表
  */
-function renderSchemaRows(rows: readonly ITableRowNode[], context: IRowRenderContext): ReactElement[] {
+function renderSchemaRows(rows: readonly ITableRowNode[], context: IRowRenderContext, level: number): ReactElement[] {
   const rules = buildSchemaPresentation(rows);
   const byKeyword = new Map(rows.map((row) => [getShortField(row.key), row]));
   const elements: ReactElement[] = [];
@@ -412,14 +462,14 @@ function renderSchemaRows(rows: readonly ITableRowNode[], context: IRowRenderCon
       const right = byKeyword.get(rule.pair.keywords[1]);
 
       if (left !== undefined && right !== undefined) {
-        elements.push(renderPairedRow(left, right, rule.keyword, context));
+        elements.push(renderPairedRow(left, right, rule.keyword, context, level));
         continue;
       }
     }
 
     const row = byKeyword.get(rule.keyword);
 
-    if (row !== undefined) elements.push(renderRowNode(row, context));
+    if (row !== undefined) elements.push(renderRowNode(row, context, level));
   }
 
   return elements;
@@ -429,12 +479,13 @@ function renderSchemaRows(rows: readonly ITableRowNode[], context: IRowRenderCon
  * 按节点形态把一组行渲染为 React 元素：schema 模式走成对合行布局，常规模式逐行渲染
  * @param rows 行节点列表
  * @param context 行渲染上下文（模式与回调）
+ * @param level 当前同层行在行树中的深度（0 基）
  * @returns 行元素列表
  */
-function renderRows(rows: readonly ITableRowNode[], context: IRowRenderContext): ReactElement[] {
-  if (context.schemaMode) return renderSchemaRows(rows, context);
+function renderRows(rows: readonly ITableRowNode[], context: IRowRenderContext, level: number): ReactElement[] {
+  if (context.schemaMode) return renderSchemaRows(rows, context, level);
 
-  return rows.map((row) => renderRowNode(row, context));
+  return rows.map((row) => renderRowNode(row, context, level));
 }
 
 /**
@@ -500,7 +551,7 @@ export function TableGrid(props: ITableGridProps): ReactElement {
     createElement(
       'div',
       { className: 'etable-body', 'data-test-id': 'data-table-grid' },
-      renderRows(props.rows, context),
+      renderRows(props.rows, context, 0),
     ),
   );
 }

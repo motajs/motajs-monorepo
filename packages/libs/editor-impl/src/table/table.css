@@ -219,11 +219,6 @@
   text-overflow: ellipsis;
 }
 
-.etable-group-children {
-  padding-left: 12px;
-  border-left: 1px solid rgba(0, 0, 0, 0.06);
-}
-
 .etable-state {
   display: flex;
   flex-direction: column;

@@ -2,9 +2,14 @@ import { ReactElement, ReactNode, useState } from 'react';
 import { ITableRowNode } from '../types';
 import { getShortField, parseFieldPath } from '../model/fieldPath';
 
+/** 层级缩进步长（像素），约旧缩进 12px 的 3/4 */
+const TREE_INDENT_STEP = 12;
+
 export interface IGapRowProps {
   /** 分组行节点 */
   readonly row: ITableRowNode;
+  /** 该行在行树中的深度（0 基），用于「条目」列的层级缩进与层级底色 */
+  readonly level: number;
   /** 该行 gutter 内要渲染的增删按钮；为空时仅占位 */
   readonly gutter?: ReactNode;
   /** 展开时渲染的子行 */
@@ -30,7 +35,10 @@ export function GapRow(props: IGapRowProps): ReactElement {
     <>
       <div className="etable-row etable-row-group" data-test-id={`table-row-${dataAttr}`}>
         <div className="etable-gutter">{props.gutter}</div>
-        <div className="etable-cell etable-cell-name" title={props.row.key}>
+        <div className="etable-cell etable-cell-name" data-level={props.level} title={props.row.key}>
+          {Array.from({ length: props.level }, (_, index) => (
+            <span key={index} className="etable-tree-guide" style={{ width: TREE_INDENT_STEP }} />
+          ))}
           <button
             type="button"
             className="etable-group-toggle"

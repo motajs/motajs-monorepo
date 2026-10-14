@@ -1,4 +1,4 @@
-import { ReactElement, ReactNode, useRef, useState } from 'react';
+import { CSSProperties, ReactElement, ReactNode, useRef, useState } from 'react';
 import { ITableEditorCapabilities, IMultiSelectItem, useTableCapabilities } from '../../react';
 import { ITableRowNode, TableControlKind, TableEditMode, TableExternalEditor } from '../types';
 import { inferControlKind } from '../model/control';
@@ -15,11 +15,24 @@ import { TextareaInput } from './inputs/TextareaInput';
 /** 两次点击间隔小于该值即视为双击（毫秒），对齐 legacy 的触屏双击语义 */
 const DOUBLE_CLICK_INTERVAL_MS = 500;
 
+/** 层级缩进步长（像素），约旧缩进 12px 的 3/4 */
+const TREE_INDENT_STEP = 12;
+
+/** 「条目」「注释」等纯文本在 flex 单元格内的截断样式（保留省略号） */
+const CELL_TEXT_STYLE: CSSProperties = {
+  minWidth: 0,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+};
+
 export interface ITableRowProps {
   /** 要渲染的叶子行节点 */
   readonly row: ITableRowNode;
   /** 当前编辑模式，决定双击的分发行为 */
   readonly mode: TableEditMode;
+  /** 该行在行树中的深度（0 基），用于「条目」列的层级缩进 */
+  readonly level: number;
   /** 该行 gutter 内要渲染的增删按钮；为空时仅占位 */
   readonly gutter?: ReactNode;
   /** 提交一个已通过校验的新值 */
@@ -335,8 +348,11 @@ export function TableRow(props: ITableRowProps): ReactElement {
     <>
       <div className="etable-row" data-test-id={`table-row-${dataAttr}`} onClick={handleRowClick}>
         <div className="etable-gutter">{props.gutter}</div>
-        <div className="etable-cell etable-cell-name" title={row.key}>
-          {getShortField(row.key)}
+        <div className="etable-cell etable-cell-name" data-level={props.level} title={row.key}>
+          {Array.from({ length: props.level }, (_, index) => (
+            <span key={index} className="etable-tree-guide" style={{ width: TREE_INDENT_STEP }} />
+          ))}
+          <span style={CELL_TEXT_STYLE}>{getShortField(row.key)}</span>
         </div>
         <div className="etable-cell etable-cell-comment" title={row.description ?? ''}>
           {row.description ?? ''}
