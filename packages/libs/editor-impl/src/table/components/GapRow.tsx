@@ -1,4 +1,4 @@
-import { ReactElement, ReactNode, useState } from 'react';
+import { ReactElement, ReactNode, useEffect, useRef, useState } from 'react';
 import { ITableRowNode } from '../types';
 import { getShortField, parseFieldPath } from '../model/fieldPath';
 
@@ -19,26 +19,70 @@ export interface IGapRowProps {
 /**
  * 可折叠分组行：最左为折叠指示与对象名，其子行渲染在带缩进的容器内
  *
- * 折叠状态是面板本地的界面状态，不进入撤销历史；展开时显示「折叠」，折叠时显示「展开」。分组行
- * 最左的折叠指示与紧随其后的对象名、以及子行容器的缩进，让「分组的作用范围」一眼可读（L2）。点
- * 该行任意处（gutter 增删按钮除外）都切换折叠，折叠箭头按钮自身只切换一次。
+ * 分组行默认**折叠**——折叠子行不进入 DOM，使折叠项较多的表（如 schema）首屏只挂载顶层可见行，
+ * 降低首屏挂载量（P29）。折叠行 header **首次进入视野时自动展开**：组件自持一个
+ * `IntersectionObserver` 观察 header，首次相交即展开并断开观察器；打开时的首次回调即充当初始可见性
+ * 判定。`IntersectionObserver` 不可用时（jsdom / 老浏览器）退化为立即展开，绝不把内容永久隐藏。
+ *
+ * 折叠状态是面板本地的界面状态，不进入撤销历史；展开时显示「折叠」，折叠时显示「展开」。分组行最左
+ * 的折叠指示与紧随其后的对象名、以及子行容器的缩进，让「分组的作用范围」一眼可读（L2）。点该行任意
+ * 处（gutter 增删按钮除外）都切换折叠，折叠箭头按钮自身只切换一次；用户一旦点过该行即视为接管，此后
+ * 不再被自动展开。
  * @param props 行 props
  * @returns 分组行元素
  */
 export function GapRow(props: IGapRowProps): ReactElement {
-  const expandedState = useState(true);
+  const expandedState = useState(false);
   const expanded = expandedState[0];
   const setExpanded = expandedState[1];
+  const autoRevealState = useState(true);
+  const autoRevealPending = autoRevealState[0];
+  const setAutoRevealPending = autoRevealState[1];
+  const headerRef = useRef<HTMLDivElement>(null);
   const dataAttr = parseFieldPath(props.row.key).join('-');
   const shortField = getShortField(props.row.key);
+
+  useEffect((): (() => void) | undefined => {
+    const header = headerRef.current;
+
+    if (header === null || !autoRevealPending) return undefined;
+
+    // 缺少观察器（jsdom / 老浏览器）时退化：直接展开，保证内容不会永久隐藏
+    if (typeof IntersectionObserver === 'undefined') {
+      setAutoRevealPending(false);
+      setExpanded(true);
+      return undefined;
+    }
+
+    // 默认视口 root：祖先滚动容器 .etable-body 的 overflow 裁剪会让 isIntersecting 反映「在表体内可见」
+    const observer = new IntersectionObserver((entries): void => {
+      if (!entries.some((entry) => entry.isIntersecting)) return;
+
+      setAutoRevealPending(false);
+      setExpanded(true);
+      observer.disconnect();
+    });
+
+    observer.observe(header);
+
+    // 释放观察器，避免组件卸载后泄漏（T-02-34-01）
+    return (): void => observer.disconnect();
+  }, [autoRevealPending]);
+
+  // 先标记用户已接管（不再自动展开），再切换折叠
+  const toggleExpanded = (): void => {
+    setAutoRevealPending(false);
+    setExpanded(!expanded);
+  };
 
   return (
     <>
       <div
+        ref={headerRef}
         className="etable-row etable-row-group"
         data-level={props.level}
         data-test-id={`table-row-${dataAttr}`}
-        onClick={(): void => setExpanded(!expanded)}
+        onClick={toggleExpanded}
       >
         <div className="etable-gutter">{props.gutter}</div>
         <div className="etable-cell etable-cell-name" data-level={props.level} title={props.row.key}>
@@ -53,7 +97,7 @@ export function GapRow(props: IGapRowProps): ReactElement {
             data-test-id={`gap-toggle-${dataAttr}`}
             onClick={(event): void => {
               event.stopPropagation();
-              setExpanded(!expanded);
+              toggleExpanded();
             }}
           >
             <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
