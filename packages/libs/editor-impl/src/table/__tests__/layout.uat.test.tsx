@@ -493,3 +493,10 @@ describe('文本域可拖拽调整大小（P24）', () => {
     expect(TABLE_CSS).not.toMatch(/\.etable-input-textarea\s*\{[^}]*max-height/);
   });
 });
+
+describe('折叠行整行手型光标（P27）', () => {
+  // 折叠（分组）行整行可点即折叠，整行显示手型光标
+  it('折叠行整行显示手型光标', () => {
+    expect(TABLE_CSS).toMatch(/\.etable-row-group\s*\{[^}]*cursor:\s*pointer/);
+  });
+});

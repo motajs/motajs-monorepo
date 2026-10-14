@@ -171,6 +171,7 @@
   border-top: 2px solid rgba(0, 0, 0, 0.15);
   border-bottom: 2px solid rgba(0, 0, 0, 0.15);
   background: rgba(0, 0, 0, 0.02);
+  cursor: pointer;
 }
 
 .etable-row-group[data-level='1'] {
