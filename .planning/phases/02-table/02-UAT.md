@@ -139,3 +139,7 @@ blocked: 0
 - P17 **未打开表的栏**，顶部按钮应**右对齐**（现在左对齐）。
 - P18 **同一面板内**改 schema 后，其他 schema 编辑栏应**立即同步**（现在要触发 focus 才同步）。
 - P19 **折叠行点击行内任意处都应触发折叠**（现在只有点箭头才行）。
+- P20 调整 Schema 后**主表似乎不同步**（不确定）——疑与 P18 同源。
+- P21 **`x-order` 调换顺序被提示"不合法"**（bug）。规则：`x-order` 是挂在 object 节点上的 `string[]`，列出**同级字段名**的呈现顺序；列出的按其次序在前，其余按自然顺序追加，缺失/非法则完全自然顺序。合法的调换（仅改数组次序）不应报错。
+- P22 把字段 `type` 改成 `textarea` 并未变成文本域——`textarea` **不是合法 JSON Schema type**（合法：string/number/integer/boolean/object/array/null）；文本域是 `string` 的默认控件。需在 schema 编辑里给出可用取值/校验，或明确改用 `x-control`。
+- P23 **切换表格卡顿**：开 3 个面板（table.demo + 两个 table#schema.demo）时切换约 0.5s，需性能优化。
