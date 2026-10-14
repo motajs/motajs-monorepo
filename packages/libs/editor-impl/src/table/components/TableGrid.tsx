@@ -74,6 +74,8 @@ export interface ITableGridProps {
   readonly onOpenSchema?: TableGridOpenSchemaHandler;
   /** 「在代码编辑器中打开」回调，由能力接缝的代码编辑器打开器驱动 */
   readonly onOpenInCodeEditor?: TableGridOpenCodeHandler;
+  /** 「关闭本栏表格」回调；缺省时工具栏不显示 ✕ */
+  readonly onCloseColumn?: () => void;
 }
 
 interface IRowRenderContext {
