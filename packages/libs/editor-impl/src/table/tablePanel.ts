@@ -147,6 +147,8 @@ interface ITablePanelViewProps {
   readonly onOpenSchema: (columnIndex: number, opener: ITablePanelOpener) => void;
   /** 某栏的「在代码编辑器中打开」回调 */
   readonly onOpenInCodeEditor: (columnIndex: number, opener: ICodeEditorOpener) => void;
+  /** 某栏的「关闭本栏表格」回调 */
+  readonly onCloseColumn: (columnIndex: number) => void;
 }
 
 /** 单栏组件的 props：把该栏序号与各回调转交给一张表格 */
@@ -167,6 +169,8 @@ interface ITableColumnProps {
   readonly onOpenSchema: (columnIndex: number, opener: ITablePanelOpener) => void;
   /** 该栏的「在代码编辑器中打开」回调 */
   readonly onOpenInCodeEditor: (columnIndex: number, opener: ICodeEditorOpener) => void;
+  /** 该栏的「关闭本栏表格」回调 */
+  readonly onCloseColumn: (columnIndex: number) => void;
 }
 
 /**
@@ -263,6 +267,7 @@ function TableColumn(props: ITableColumnProps): ReactElement {
     onDelete: (key): void => props.onDelete(props.columnIndex, key),
     onOpenSchema: (opener): void => props.onOpenSchema(props.columnIndex, opener),
     onOpenInCodeEditor: (opener): void => props.onOpenInCodeEditor(props.columnIndex, opener),
+    onCloseColumn: (): void => props.onCloseColumn(props.columnIndex),
   };
 
   return createElement(
@@ -321,6 +326,7 @@ function TablePanelView(props: ITablePanelViewProps): ReactElement {
         onDelete: props.onDelete,
         onOpenSchema: props.onOpenSchema,
         onOpenInCodeEditor: props.onOpenInCodeEditor,
+        onCloseColumn: props.onCloseColumn,
       }),
     );
   }
@@ -371,6 +377,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
         onDelete: (columnIndex, key): void => void this.deleteItem(key, columnIndex),
         onOpenSchema: (columnIndex, opener): void => void this.openSchemaPanel(opener, columnIndex),
         onOpenInCodeEditor: (columnIndex, opener): void => void this.openCurrentViewInCodeEditor(opener, columnIndex),
+        onCloseColumn: (columnIndex): void => this.closeColumn(columnIndex),
       });
   }
 
@@ -423,6 +430,23 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   setTable(target: ITablePanelTarget, columnIndex: number = 0): void {
     this.columnAt(columnIndex).target = target;
     void this.refresh(columnIndex);
+  }
+
+  /**
+   * 关闭某一栏的表格：清空本栏目标与内容并回到未设目标态，只作用于本栏
+   *
+   * 关闭后本栏 `target` 归空，`findEmptyColumnIndex` 随后即可把它当作空栏供「编辑 Schema」复用；
+   * 同时递增本栏请求序号以丢弃在途读取结果，避免关闭后旧结果再写回本栏。其它栏的目标与状态不受影响。
+   * @param columnIndex 要关闭的栏序号（0 基）
+   */
+  private closeColumn(columnIndex: number): void {
+    const column = this.columnAt(columnIndex);
+
+    column.target = null;
+    column.data = null;
+    column.schema = null;
+    this.nextToken(columnIndex);
+    this.publish(columnIndex, TablePanelStatus.NoTarget, []);
   }
 
   /**

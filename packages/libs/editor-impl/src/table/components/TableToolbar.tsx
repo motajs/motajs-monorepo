@@ -27,7 +27,8 @@ export interface ITableToolbarProps {
 }
 
 /**
- * 表格工具栏：编辑模式控件 + 可选 muted 标题 + 「编辑 Schema」主按钮 + 「在代码编辑器中打开」按钮
+ * 表格工具栏：编辑模式控件 + 可选 muted 标题 + 「编辑 Schema」主按钮 + 「在代码编辑器中打开」按钮 +
+ * 可选 ✕ 关闭本栏按钮
  * @param props 工具栏 props
  * @returns 工具栏元素
  */
@@ -68,6 +69,18 @@ export function TableToolbar(props: ITableToolbarProps): ReactElement {
       >
         在代码编辑器中打开
       </Button>
+      {props.onCloseColumn === undefined ? null : (
+        <Button
+          size="small"
+          autoInsertSpace={false}
+          aria-label="关闭本栏表格"
+          disabled={!props.closeButtonEnabled}
+          data-test-id="table-close-column"
+          onClick={props.onCloseColumn}
+        >
+          ✕
+        </Button>
+      )}
     </div>
   );
 }

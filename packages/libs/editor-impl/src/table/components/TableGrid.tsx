@@ -572,6 +572,8 @@ export function TableGrid(props: ITableGridProps): ReactElement {
 
       if (opener !== undefined) props.onOpenInCodeEditor?.(opener);
     },
+    onCloseColumn: props.onCloseColumn,
+    closeButtonEnabled: props.onCloseColumn !== undefined && props.status !== TablePanelStatus.NoTarget,
   });
   const banner = schemaMode ? createElement(SchemaBanner, {}) : null;
   const notice = renderNotice(props);
