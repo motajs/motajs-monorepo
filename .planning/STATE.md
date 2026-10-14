@@ -5,16 +5,16 @@ current_phase: 02
 current_phase_name: 表格编辑
 current_plan: 9
 status: verifying
-stopped_at: Completed 02-24-PLAN.md
-last_updated: "2026-10-14T08:23:15.956Z"
+stopped_at: Completed 02-25-PLAN.md
+last_updated: "2026-10-14T08:42:39.420Z"
 last_activity: 2026-10-12
 last_activity_desc: "Completed 02-04 (table tracer): editor-impl test infra + end-to-end resource-layer read path"
-state_head: 5750282e6b6c07ee320e61ca49e31b2cdd729ee4
+state_head: a70dd22ff0cfec4456997ea0731f54abe060578e
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 37
-  completed_plans: 30
+  completed_plans: 31
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -88,6 +88,7 @@ Progress: [██████████] 100%
 | Phase 02 P22 | 14min | 2 tasks | 3 files |
 | Phase 02-table P23 | 11min | 2 tasks | 5 files |
 | Phase 02-table P24 | 3min | 2 tasks | 2 files |
+| Phase 02 P25 | 15 | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -151,6 +152,8 @@ Recent decisions affecting current work:
 - [Phase 02]: Dev demo table scales via a count constant + generator functions (TABLE_DEMO_ENTRY_COUNT / createTableDemoData / createTableDemoSchema)
 - [Phase 02]: Undo/redo exposed as flat top-level dev-host menu items (registerDevMenu) calling core.undoSystem; no shell sub-menu, no core/impl change
 - [Phase 02]: 02-24: P15 组件侧契约（仅类型）——ITableGridProps.onCloseColumn 与 ITableToolbarProps.onCloseColumn / closeButtonEnabled 均为可选成员，接口计划先落地不致既有构造点 typecheck 失败，透传在 02-31 实现
+- [Phase 02]: P14 用受限高度链（.etable-column 定高 + .etable 绝对填充）使 .etable-body 成为唯一滚动容器，不改 DOM 结构
+- [Phase 02]: P17 弹性占位 .etable-toolbar-spacer 仅在空栏出现，有表栏沿用 title 撑开；P25 操作列 1fr→1.5fr
 
 ### Pending Todos
 
@@ -176,6 +179,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-14T08:23:15.794Z
-Stopped at: Completed 02-24-PLAN.md
+Last session: 2026-10-14T08:42:39.234Z
+Stopped at: Completed 02-25-PLAN.md
 Resume file: None
