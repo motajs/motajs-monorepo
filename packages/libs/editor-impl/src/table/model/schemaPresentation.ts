@@ -1,4 +1,10 @@
-import { ITableRowNode, ITableSchemaNode, IPairedFieldGroup, ISchemaPresentationRule, TableControlKind } from '../types';
+import {
+  ITableRowNode,
+  ITableSchemaNode,
+  IPairedFieldGroup,
+  ISchemaPresentationRule,
+  TableControlKind,
+} from '../types';
 import { getShortField } from './fieldPath';
 
 // schema 专用呈现：内建规则集把 schema 文档的关键字排成行布局——成对关键字（minimum/maximum、
@@ -27,6 +33,17 @@ const NUMBER_KEYWORDS: readonly string[] = Object.freeze([
   'maxLength',
   'minItems',
   'maxItems',
+]);
+
+/** JSON Schema 的合法 `type` 取值集合，供 `type` 关键字构造候选项并挡住非法值 */
+const SCHEMA_TYPE_VALUES: readonly string[] = Object.freeze([
+  'string',
+  'number',
+  'integer',
+  'boolean',
+  'object',
+  'array',
+  'null',
 ]);
 
 /**
@@ -64,7 +81,8 @@ function findPairGroup(keyword: string, present: ReadonlySet<string>): IPairedFi
 }
 
 /**
- * 内建关键字到合成校验节点的映射：数字关键字用数字、`required` 用字符串数组，其余回退字符串
+ * 内建关键字到合成校验节点的映射：数字关键字用数字、`required` 用字符串数组，`x-order` 用
+ * 字符串数组但以文本域编辑，`type` 限合法取值并以下拉呈现，其余回退字符串
  * @param keyword 关键字名
  * @returns 供行内控件推导与提交校验使用的合成节点
  */
@@ -74,6 +92,9 @@ function keywordConfig(keyword: string): ITableSchemaNode {
 
   // x-order 的值是字符串数组：按数组校验以免纯重排被误判非法，x-control 让控件仍取文本域
   if (keyword === 'x-order') return { type: 'array', items: { type: 'string' }, 'x-control': TableControlKind.Text };
+
+  // type 只允许 JSON Schema 的合法取值：enum 让控件取下拉，并挡住 textarea 之类的非法值
+  if (keyword === 'type') return { enum: SCHEMA_TYPE_VALUES };
 
   return { type: 'string' };
 }

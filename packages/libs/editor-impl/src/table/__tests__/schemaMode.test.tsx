@@ -169,7 +169,17 @@ describe('表格 schema 模式与工具栏', () => {
 
     const compact = container.querySelector('[data-test-id="table-input-type"]');
 
-    expect(compact === null ? 0 : compact.querySelectorAll('textarea').length).toBe(1);
+    expect(compact === null ? 0 : compact.querySelectorAll('textarea').length).toBe(0);
+    expect(compact === null ? null : compact.querySelector('.ant-select')).not.toBeNull();
+
+    fireEvent.mouseDown(compact?.querySelector('[role="combobox"]') as Element);
+
+    const optionTitles = Array.from(document.querySelectorAll('.ant-select-item-option')).map(
+      (element) => element.getAttribute('title') ?? '',
+    );
+
+    expect(optionTitles).toEqual(['string', 'number', 'integer', 'boolean', 'object', 'array', 'null']);
+    expect(optionTitles).not.toContain('textarea');
   });
 
   // schema 资源加载中时「编辑 Schema」按钮禁用
@@ -370,5 +380,27 @@ describe('schema 关键字 x-order 的编辑（P21）', () => {
     const schema = (await system.resourceSystem.readContent(tableSchemaResourceId('t'))) as Record<string, unknown>;
 
     expect(schema['x-order']).toEqual(['a', 'b']);
+  });
+});
+
+describe('schema 关键字 type 的取值（P22）', () => {
+  // 非法 type 文本（textarea）提交被拒，schema 文档保持原值并给出错误提示
+  it('type 非法取值被挡且文档不变', async () => {
+    const system = await createSystem();
+
+    seed(system, 't', { a: '1' }, { type: 'object', properties: { a: { type: 'string' } } });
+    const panel = await openPanel(system);
+
+    await setSchemaTarget(panel, 't');
+    renderWithCapabilities(system, {});
+
+    await act(async () => {
+      await panel.commitValue("['type']", 'textarea');
+    });
+
+    const schema = (await system.resourceSystem.readContent(tableSchemaResourceId('t'))) as Record<string, unknown>;
+
+    expect(schema.type).toBe('object');
+    expect(screen.getByText(/输入的值不合要求/)).not.toBeNull();
   });
 });
