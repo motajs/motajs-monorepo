@@ -485,3 +485,11 @@ describe('值文本域高度按内容行数（P24）', () => {
     expect(textarea.rows).toBe(6);
   });
 });
+
+describe('文本域可拖拽调整大小（P24）', () => {
+  // 文本域允许纵向拖拽，且不再被固定最大高度卡住
+  it('文本域可纵向拖拽且无固定最大高度', () => {
+    expect(TABLE_CSS).toMatch(/\.etable-input-textarea\s*\{[^}]*resize:\s*vertical/);
+    expect(TABLE_CSS).not.toMatch(/\.etable-input-textarea\s*\{[^}]*max-height/);
+  });
+});
