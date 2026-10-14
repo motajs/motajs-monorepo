@@ -1,4 +1,4 @@
-import { act, cleanup, configure, render } from '@testing-library/react';
+import { act, cleanup, configure, fireEvent, render } from '@testing-library/react';
 import { IEditorPanel, IEditorPanelFactoryParam, ResourceSystem, ShellSystem, UndoSystem } from '@motajs/editor-core';
 import { createElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -421,5 +421,67 @@ describe('空栏顶部控件右对齐（P17）', () => {
 
     expect(toolbar.querySelector('.etable-toolbar-spacer')).toBeNull();
     expect(toolbar.querySelector('.etable-toolbar-title')).not.toBeNull();
+  });
+});
+
+describe('值文本域高度按内容行数（P24）', () => {
+  // 单行值的文本域默认 1 行
+  it('单行值文本域默认 1 行', async () => {
+    const system = await createSystem();
+
+    seedSampleTable(system, 'demo');
+    const panels: TablePanel[] = [];
+    const panel = await openTablePanel(system, panels);
+
+    await setTarget(panel, 'demo');
+    const { container } = render(createElement(system.shellSystem.render()));
+
+    const textarea = container.querySelector<HTMLTextAreaElement>('[data-test-id="table-input-name"] textarea');
+
+    if (textarea === null) throw new Error('值文本域缺失');
+
+    expect(textarea.rows).toBe(1);
+  });
+
+  // 输入 3 行文本后文本域行数为 3
+  it('三行文本的文本域行数为 3', async () => {
+    const system = await createSystem();
+
+    seedSampleTable(system, 'demo');
+    const panels: TablePanel[] = [];
+    const panel = await openTablePanel(system, panels);
+
+    await setTarget(panel, 'demo');
+    const { container } = render(createElement(system.shellSystem.render()));
+
+    const textarea = container.querySelector<HTMLTextAreaElement>('[data-test-id="table-input-name"] textarea');
+
+    if (textarea === null) throw new Error('值文本域缺失');
+
+    fireEvent.change(textarea, { target: { value: 'a\nb\nc' } });
+
+    expect(textarea.rows).toBe(3);
+  });
+
+  // 超过 6 行的文本行数封顶 6（超出部分由文本域内部滚动）
+  it('超过 6 行的文本行数封顶 6', async () => {
+    const system = await createSystem();
+
+    seedSampleTable(system, 'demo');
+    const panels: TablePanel[] = [];
+    const panel = await openTablePanel(system, panels);
+
+    await setTarget(panel, 'demo');
+    const { container } = render(createElement(system.shellSystem.render()));
+
+    const textarea = container.querySelector<HTMLTextAreaElement>('[data-test-id="table-input-name"] textarea');
+
+    if (textarea === null) throw new Error('值文本域缺失');
+
+    const tenLines = Array.from({ length: 10 }, (_, index) => `line-${index}`).join('\n');
+
+    fireEvent.change(textarea, { target: { value: tenLines } });
+
+    expect(textarea.rows).toBe(6);
   });
 });

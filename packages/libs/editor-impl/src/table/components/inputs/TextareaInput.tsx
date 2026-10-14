@@ -40,6 +40,17 @@ function parseText(text: string): { readonly ok: boolean; readonly value?: unkno
 }
 
 /**
+ * 计算文本域的默认行数：取文本行数并夹在 1 到 6 之间（空文本按 1 行）
+ * @param text 文本域当前文本
+ * @returns 夹在 1 到 6 之间的行数
+ */
+function resolveTextareaRows(text: string): number {
+  const lineCount = text.split('\n').length;
+
+  return Math.min(Math.max(lineCount, 1), 6);
+}
+
+/**
  * JSON 文本域控件：显示值的 JSON，失焦时解析提交，解析失败则恢复为最后一次合法值
  * @param props 控件 props
  * @returns 文本域元素
@@ -55,7 +66,7 @@ export function TextareaInput(props: ITextareaInputProps): ReactElement {
       className="etable-input-textarea"
       size="small"
       spellCheck={false}
-      autoSize={{ minRows: 1, maxRows: 6 }}
+      rows={resolveTextareaRows(text)}
       disabled={props.disabled}
       value={text}
       onChange={(event: ChangeEvent<HTMLTextAreaElement>): void => setText(event.target.value)}
