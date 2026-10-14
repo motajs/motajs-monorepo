@@ -363,7 +363,20 @@
 - **02-19（全局撤销/重做快捷键）**：非导出 `const enum UndoRedoShortcut`；非导出函数 `resolveUndoRedoShortcut`；`IShellRootProps.onUndo` / `onRedo`。
 - 新测试文件：`behaviour.uat.test.tsx` / `layout.uat.test.tsx` / `interaction.uat.test.tsx` / `shellTitle.test.ts` / `shellUndoShortcut.test.ts`。
 
-## 待确认的规划假设
+## Plan 20–23 — 布局修正批（P1–P13，gap_closure）
+
+- **02-20（分栏机制）**：非导出函数 `resolveColumnCount(windowWidth, columnWidth)`；非导出成员 `ITablePanelViewProps.onLayout`；非导出方法 `TablePanel.findEmptyColumnIndex()`。
+- **02-21（层级视觉）**：`ITableRowProps.level` / `IGapRowProps.level`（各新增只读成员）；`renderRows` / `renderRowNode` 增加 `level` 参；CSS 钩子 `.etable-tree-guide` / `data-level` / `--etable-indent`。
+- **02-22（添加按钮 + 文本域）**：预计不新增对外命名（若抽非导出助手如 `commitAddName` 再登记）。
+- **02-23（dev 宿主）**：`TABLE_DEMO_ENTRY_COUNT`；`createTableDemoData(count)` / `createTableDemoSchema(count)`；`registerDevMenu(core)`；`DEV_UNDO_MENU_ID`/`DEV_UNDO_MENU_TITLE`（「撤销」）、`DEV_REDO_MENU_ID`/`DEV_REDO_MENU_TITLE`（「重做」）。
+
+### 设计取舍（供确认）
+
+- **P5**：栏数由 `window.innerWidth` 决定，但**可视栏在容器内等分**（若硬写 `innerWidth/N` 会撑破略窄的容器、反而冒出横向滚动条，与 P6 冲突）。
+- **P1**：面板需知道当前可视栏数才能找空栏——由视图经 `onLayout` 回报给面板（而非面板读窗口）。
+- **P10**：外壳目前**无子菜单机制**，故「撤销/重做」以两个**顶层菜单项**呈现（即顶部按钮），不动内核。
+
+## 待确认的规划假设（历史）
 
 - A2：本阶段「schema」= 旧 `CommentObject`（已在 Plan 01 checkpoint 确认）。
 - A3：schema 呈现规则集（`min`/`max` 成对行）为内建规则；请在 Plan 01 checkpoint 确认。
