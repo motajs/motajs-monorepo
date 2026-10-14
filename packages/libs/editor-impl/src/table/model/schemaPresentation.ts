@@ -1,4 +1,4 @@
-import { ITableRowNode, ITableSchemaNode, IPairedFieldGroup, ISchemaPresentationRule } from '../types';
+import { ITableRowNode, ITableSchemaNode, IPairedFieldGroup, ISchemaPresentationRule, TableControlKind } from '../types';
 import { getShortField } from './fieldPath';
 
 // schema 专用呈现：内建规则集把 schema 文档的关键字排成行布局——成对关键字（minimum/maximum、
@@ -71,6 +71,9 @@ function findPairGroup(keyword: string, present: ReadonlySet<string>): IPairedFi
 function keywordConfig(keyword: string): ITableSchemaNode {
   if (NUMBER_KEYWORDS.includes(keyword)) return { type: 'number' };
   if (keyword === 'required') return { type: 'array', items: { type: 'string' } };
+
+  // x-order 的值是字符串数组：按数组校验以免纯重排被误判非法，x-control 让控件仍取文本域
+  if (keyword === 'x-order') return { type: 'array', items: { type: 'string' }, 'x-control': TableControlKind.Text };
 
   return { type: 'string' };
 }

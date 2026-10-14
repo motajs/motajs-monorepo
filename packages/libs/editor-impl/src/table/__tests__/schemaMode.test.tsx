@@ -65,6 +65,17 @@ function seed(system: TestSystem, name: string, data: unknown, schema: unknown):
   system.injection.seed(tableSchemaResourceId(name), schema);
 }
 
+// 按渲染顺序取表体内所有行的 data-test-id
+function rowKeys(container: HTMLElement): string[] {
+  const body = container.querySelector('[data-test-id="data-table-grid"]');
+
+  if (body === null) return [];
+
+  return Array.from(body.querySelectorAll('[data-test-id^="table-row-"]')).map(
+    (element) => element.getAttribute('data-test-id') ?? '',
+  );
+}
+
 // 把面板目标指向数据表，并等待一次切入刷新完成
 async function setDataTarget(panel: TablePanel, name: string): Promise<void> {
   panel.setTable({ data: tableDataResourceId(name), schema: tableSchemaResourceId(name) });
@@ -290,5 +301,74 @@ describe('「在代码编辑器中打开」（D-30）', () => {
     renderWithCapabilities(system, {});
 
     expect(screen.getByTestId('table-open-code').getAttribute('disabled')).not.toBeNull();
+  });
+});
+
+describe('schema 关键字 x-order 的编辑（P21）', () => {
+  // 纯重排 x-order 数组次序被接受、写回 schema，且数据表行序随之变化
+  it('x-order 纯重排被接受并改变行序', async () => {
+    const system = await createSystem();
+
+    seed(
+      system,
+      't',
+      { a: '1', b: '2' },
+      { type: 'object', properties: { a: { type: 'string' }, b: { type: 'string' } }, 'x-order': ['a', 'b'] },
+    );
+    const panel = await openPanel(system);
+
+    await setSchemaTarget(panel, 't');
+    const { container } = renderWithCapabilities(system, {});
+
+    const textarea = container.querySelector('[data-test-id="table-input-x-order"] textarea');
+
+    expect(textarea).not.toBeNull();
+
+    await act(async () => {
+      fireEvent.change(textarea as HTMLTextAreaElement, { target: { value: '["b","a"]' } });
+      fireEvent.blur(textarea as HTMLTextAreaElement);
+    });
+
+    expect(container.querySelector('[data-test-id="table-error-x-order"]')).toBeNull();
+
+    const schema = (await system.resourceSystem.readContent(tableSchemaResourceId('t'))) as Record<string, unknown>;
+
+    expect(schema['x-order']).toEqual(['b', 'a']);
+
+    await act(async () => {
+      panel.setTable({ data: tableDataResourceId('t'), schema: tableSchemaResourceId('t') });
+      await panel.onSwitchIn();
+    });
+
+    expect(rowKeys(container)).toEqual(['table-row-b', 'table-row-a']);
+  });
+
+  // 非字符串数组的 x-order 值被拒，schema 文档不变并给出错误提示
+  it('x-order 非字符串数组被拒且文档不变', async () => {
+    const system = await createSystem();
+
+    seed(
+      system,
+      't',
+      { a: '1', b: '2' },
+      { type: 'object', properties: { a: { type: 'string' }, b: { type: 'string' } }, 'x-order': ['a', 'b'] },
+    );
+    const panel = await openPanel(system);
+
+    await setSchemaTarget(panel, 't');
+    const { container } = renderWithCapabilities(system, {});
+
+    const textarea = container.querySelector('[data-test-id="table-input-x-order"] textarea');
+
+    await act(async () => {
+      fireEvent.change(textarea as HTMLTextAreaElement, { target: { value: '[1,2]' } });
+      fireEvent.blur(textarea as HTMLTextAreaElement);
+    });
+
+    expect(container.querySelector('[data-test-id="table-error-x-order"]')).not.toBeNull();
+
+    const schema = (await system.resourceSystem.readContent(tableSchemaResourceId('t'))) as Record<string, unknown>;
+
+    expect(schema['x-order']).toEqual(['a', 'b']);
   });
 });
