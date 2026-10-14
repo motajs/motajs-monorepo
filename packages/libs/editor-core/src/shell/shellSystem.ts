@@ -1,6 +1,6 @@
 import './shell.css';
 import { Store } from '@tanstack/store';
-import { createElement, FC, ReactElement, useSyncExternalStore } from 'react';
+import { createElement, FC, ReactElement, useEffect, useSyncExternalStore } from 'react';
 import { IHookController } from '../hook';
 import { logger } from '../log';
 import { IEditorPanel, IEditorPanelContext, IEditorPanelType, PanelContext } from '../panel';
@@ -19,6 +19,16 @@ const enum ShellInstanceStatus {
   Ready,
   /** 创建或初始化失败，标签内呈现错误态 */
   Error,
+}
+
+/** 全局撤销 / 重做快捷键的语义 */
+const enum UndoRedoShortcut {
+  /** 触发撤销 */
+  Undo,
+  /** 触发重做 */
+  Redo,
+  /** 与撤销 / 重做无关的按键 */
+  None,
 }
 
 /** 一次面板实例创建的产物：core 生成的实例 id 与其面板实例 */
@@ -55,6 +65,10 @@ interface IShellRootProps {
   readonly getSnapshot: () => IShellViewState;
   /** 按实例 id 取面板实例，供标签解析按实例标题 */
   readonly getPanel: (instanceId: string) => IEditorPanel | undefined;
+  /** 触发撤销系统的撤销 */
+  readonly onUndo: () => void;
+  /** 触发撤销系统的重做 */
+  readonly onRedo: () => void;
 }
 
 /** 菜单行组件的 props */
@@ -138,6 +152,22 @@ function resolveTabName(
   const type = panelTypes.find((item) => item.id === tab.typeId);
 
   return type === undefined ? tab.typeId : type.name;
+}
+
+/**
+ * 把一次键盘事件解析为撤销 / 重做 / 无关：仅当按下 Ctrl 或 Meta（macOS 的 Cmd）时才判定；「z」不带 Shift 为撤销、带 Shift 为重做，「y」为重做
+ * @param event 待解析的键盘事件
+ * @returns 该事件对应的快捷键语义
+ */
+function resolveUndoRedoShortcut(event: KeyboardEvent): UndoRedoShortcut {
+  if (!event.ctrlKey && !event.metaKey) return UndoRedoShortcut.None;
+
+  const key = event.key.toLowerCase();
+
+  if (key === 'z') return event.shiftKey ? UndoRedoShortcut.Redo : UndoRedoShortcut.Undo;
+  if (key === 'y') return UndoRedoShortcut.Redo;
+
+  return UndoRedoShortcut.None;
 }
 
 /**
@@ -308,7 +338,26 @@ function ContentArea(props: IContentAreaProps): ReactElement {
  */
 function ShellRoot(props: IShellRootProps): ReactElement {
   const view = useSyncExternalStore(props.subscribe, props.getSnapshot);
+  const onUndo = props.onUndo;
+  const onRedo = props.onRedo;
   const activeTab = view.tabs.find((tab) => tab.id === view.activeTabId) ?? null;
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent): void => {
+      const decision = resolveUndoRedoShortcut(event);
+
+      if (decision === UndoRedoShortcut.Undo) {
+        event.preventDefault();
+        onUndo();
+      } else if (decision === UndoRedoShortcut.Redo) {
+        event.preventDefault();
+        onRedo();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onUndo, onRedo]);
 
   return createElement(
     'div',
@@ -370,6 +419,10 @@ export class ShellSystem implements IShellSystem {
   private readonly getSnapshot: () => IShellViewState;
   /** 按实例 id 取面板实例的解析器，供标签解析按实例标题 */
   private readonly getPanel: (instanceId: string) => IEditorPanel | undefined;
+  /** 触发撤销系统的撤销，供外壳根的全局快捷键调用 */
+  private readonly onUndo: () => void;
+  /** 触发撤销系统的重做，供外壳根的全局快捷键调用 */
+  private readonly onRedo: () => void;
   /** 撤回系统 */
   private readonly undoSystem: IUndoSystem;
   /** 资源系统 */
@@ -384,12 +437,16 @@ export class ShellSystem implements IShellSystem {
     this.subscribe = (listener) => this.versionStore.subscribe(listener);
     this.getSnapshot = () => this.snapshot;
     this.getPanel = (instanceId) => this.instances.get(instanceId);
+    this.onUndo = () => void this.undoSystem.undo();
+    this.onRedo = () => void this.undoSystem.redo();
     this.RootComponent = () =>
       createElement(ShellRoot, {
         system: this,
         subscribe: this.subscribe,
         getSnapshot: this.getSnapshot,
         getPanel: this.getPanel,
+        onUndo: this.onUndo,
+        onRedo: this.onRedo,
       });
   }
 
