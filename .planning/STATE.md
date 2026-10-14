@@ -5,16 +5,16 @@ current_phase: 02
 current_phase_name: 表格编辑
 current_plan: 9
 status: verifying
-stopped_at: Completed 02-31-PLAN.md
-last_updated: "2026-10-14T11:23:24.090Z"
+stopped_at: Completed 02-32-PLAN.md
+last_updated: "2026-10-14T13:07:30.387Z"
 last_activity: 2026-10-12
 last_activity_desc: "Completed 02-04 (table tracer): editor-impl test infra + end-to-end resource-layer read path"
-state_head: 5d4ead09c6879e586ff41d622f7b5a650e919404
+state_head: aa84b67a3efc343d8dd9de9cc66b4ed77708c599
 progress:
   total_phases: 7
   completed_phases: 0
-  total_plans: 37
-  completed_plans: 37
+  total_plans: 39
+  completed_plans: 38
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -95,6 +95,7 @@ Progress: [██████████] 100%
 | Phase 02 P29 | 12min | 2 tasks | 2 files |
 | Phase 02 P30 | 11min | 2 tasks | 4 files |
 | Phase 02-table P31 | 12min | 2 tasks | 4 files |
+| Phase 02-table P32 | 14min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -171,6 +172,9 @@ Recent decisions affecting current work:
 - [Phase 02]: P23 值校验改为共享单个 ajv 实例（模块级 const）+ WeakMap 按 schema 引用缓存已编译校验器；行树 buildTableTree/buildSchemaTree 按输入对象引用用 WeakMap 缓存，命中即复用同一数组
 - [Phase 02]: ✕ 仅当 onCloseColumn 传入时渲染；禁用态由 closeButtonEnabled 决定（本栏 NoTarget 即禁用）
 - [Phase 02]: TablePanel.closeColumn 递增本栏 nextToken 丢弃在途结果，只清空 columnAt(columnIndex) 一栏
+- [Phase 02]: 02-32: P26 刷新原地更新——TablePanel.refresh 仅在本栏尚无就绪行树（首载/失败重试）时才发 Loading+空行树，已有内容时保持 Ready 就地更新，避免约 100 行 DOM 整树卸载重挂
+- [Phase 02]: 02-32: TablePanel.setTable 仅在换到另一张目标表（data.id 变化或此前无目标）时清旧行树；refresh 自身不再清树
+- [Phase 02]: 02-32: React.memo(TableGrid) + Ready 分支行元素列表 useMemo + TableColumn 各回调 useCallback（依赖取具体 props 字段，不取整个 props 对象）；内容未变的刷新跳过整表重渲染，无需改 ITableRowProps/IGapRowProps
 
 ### Pending Todos
 
@@ -196,6 +200,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-14T11:23:23.912Z
-Stopped at: Completed 02-31-PLAN.md
+Last session: 2026-10-14T13:07:30.200Z
+Stopped at: Completed 02-32-PLAN.md
 Resume file: None
