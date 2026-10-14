@@ -5,16 +5,16 @@ current_phase: 02
 current_phase_name: 表格编辑
 current_plan: 9
 status: verifying
-stopped_at: Completed 02-18-PLAN.md
-last_updated: "2026-10-13T16:04:59.361Z"
+stopped_at: Completed 02-19-PLAN.md
+last_updated: "2026-10-14T02:58:42.834Z"
 last_activity: 2026-10-12
 last_activity_desc: "Completed 02-04 (table tracer): editor-impl test infra + end-to-end resource-layer read path"
-state_head: 2b2207a0252ed3a5c9d935a10f6d643b6ed799a3
+state_head: 65c71e15bb06ff9ce7818fc34ce15c716d4725d1
 progress:
   total_phases: 7
   completed_phases: 0
-  total_plans: 25
-  completed_plans: 24
+  total_plans: 29
+  completed_plans: 25
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -82,6 +82,7 @@ Progress: [██████████] 100%
 | Phase 02 P16 | 10min | 2 tasks | 3 files |
 | Phase 02 P17 | 1h 27m | 3 tasks | 8 files |
 | Phase 02 P18 | ~30min | 3 tasks | 13 files |
+| Phase 02-table P19 | ~15min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -129,6 +130,8 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-18: B4 新字段名来源——点 + 后在插入点内联渲染 antd Input（Enter 确认 / Escape、失焦取消），确认前经 validateId 校验；不使用原生 prompt / confirm
 - [Phase 02]: 02-18: L3 x-order——数据表新增时按完整同级顺序把新名称写进该层 schema 的 x-order（缺省时新建）；行树按 x-order 排同级字段，缺失时回退对象自然键序
 - [Phase 02]: 02-18: 删除不再用 window.confirm——左侧红底圆形 − 直接在统一撤销路径上删除一行（可 Ctrl+Z 回退）；schema 禁止 null 时 − 禁用
+- [Phase 02]: 02-19: 全局撤销/重做快捷键绑在 editor-core 外壳（ShellSystem 的 ShellRoot），任何渲染 shellSystem.render() 的宿主零接线即得；Ctrl/Cmd+Z 撤销、Ctrl/Cmd+Shift+Z 与 Ctrl/Cmd+Y 重做，命中即 preventDefault（B5）
+- [Phase 02]: 02-19: 快捷键监听挂 window 而非 document——PORT-02 门禁在 editor-core（含测试）禁 document 全局，window 由 D-38 明确允许；按键解析抽成非导出纯函数 resolveUndoRedoShortcut，无模块级可变绑定
 
 ### Pending Todos
 
@@ -154,6 +157,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-13T16:04:59.255Z
-Stopped at: Completed 02-18-PLAN.md
+Last session: 2026-10-14T02:58:42.723Z
+Stopped at: Completed 02-19-PLAN.md
 Resume file: None
