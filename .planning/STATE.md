@@ -5,16 +5,16 @@ current_phase: 02
 current_phase_name: 表格编辑
 current_plan: 9
 status: verifying
-stopped_at: Completed 02-21-PLAN.md
-last_updated: "2026-10-14T03:42:57.502Z"
+stopped_at: Completed 02-22-PLAN.md
+last_updated: "2026-10-14T04:08:46.111Z"
 last_activity: 2026-10-12
 last_activity_desc: "Completed 02-04 (table tracer): editor-impl test infra + end-to-end resource-layer read path"
-state_head: ba34de3d96ce4750b1132eadddcd21151ad0e040
+state_head: d2411edda7eca6f9a119ffd89037f50ae7702eae
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 29
-  completed_plans: 27
+  completed_plans: 28
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -85,6 +85,7 @@ Progress: [██████████] 100%
 | Phase 02-table P19 | ~15min | 2 tasks | 2 files |
 | Phase 02-table P20 | ~13min | 3 tasks | 5 files |
 | Phase 02 P21 | ~17min | 3 tasks | 5 files |
+| Phase 02 P22 | 14min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -142,6 +143,9 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-21: 层级缩进只在「条目」列——取消 .etable-group-children 的 padding/border（不再整行收窄），改由条目列内 level 个 .etable-tree-guide 等宽占位同时承担缩进与树形引导竖线
 - [Phase 02]: 02-21: 展开行逐级底色用 data-level 整数驱动 CSS（[data-level='1'] 等），不写内联背景色；缩进步长 12→9px（组件常量 TREE_INDENT_STEP 与 CSS 变量 --etable-indent 同步）
 - [Phase 02]: 02-21: .etable-cell 改 flex 垂直居中后，纯文本统一包 .etable-cell-text 容器以保留省略号截断（新增内部 CSS 钩子，特此登记备查）
+- [Phase 02]: P12 根因在交互侧（失焦丢弃 + 输入框压条目列），写入路径本就正确，故不改 tablePanel.ts
+- [Phase 02]: 名称输入改为独立浮层 .etable-add-popover，提交入口扩为回车 / 失焦 / 确定三处（P12）
+- [Phase 02]: P13 审计确认无裸 textarea / 原生对话框，TextareaInput 已是 antd，仅补回归断言
 
 ### Pending Todos
 
@@ -167,6 +171,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-14T03:42:57.402Z
-Stopped at: Completed 02-21-PLAN.md
+Last session: 2026-10-14T04:08:32.139Z
+Stopped at: Completed 02-22-PLAN.md
 Resume file: None
