@@ -5,16 +5,16 @@ current_phase: 02
 current_phase_name: 表格编辑
 current_plan: 9
 status: verifying
-stopped_at: Completed 02-28-PLAN.md
-last_updated: "2026-10-14T10:28:23.755Z"
+stopped_at: Completed 02-29-PLAN.md
+last_updated: "2026-10-14T10:48:14.036Z"
 last_activity: 2026-10-12
 last_activity_desc: "Completed 02-04 (table tracer): editor-impl test infra + end-to-end resource-layer read path"
-state_head: 014f42ccfa624fa1922cd6c1db95359bba3110b0
+state_head: 4fa7f9c5fdc7d04831114ae839bcdfc7a2893bce
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 37
-  completed_plans: 34
+  completed_plans: 35
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -92,6 +92,7 @@ Progress: [██████████] 100%
 | Phase 02 P26 | 10min | 2 tasks | 3 files |
 | Phase 02 P27 | ~25min | 2 tasks | 2 files |
 | Phase 02 P28 | 9min | 2 tasks | 3 files |
+| Phase 02 P29 | 12min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -164,6 +165,7 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-27: 测试查下拉候选项改用 screen.getAllByRole('option') 而非 document 全局 —— coreModuleState 门禁（PORT-02）同样扫描 editor-impl/src，禁 document 全局
 - [Phase 02]: 02-28: P24 值文本域默认行数由非导出函数 resolveTextareaRows(text) 计算（按 text 行数夹在 1..6），去掉 autoSize 改传 rows
 - [Phase 02]: 02-28: P24 值文本域开启纵向拖拽——table.css .etable-input-textarea 加 resize: vertical 并去掉 max-height:160px；React 只控 rows 不控行内 height，拖拽设定的高度不会被重渲染重置
+- [Phase 02]: 02-29: P18/P20 同面板依赖同步——新增私有 TablePanel.refreshDependents(columnIndex, changedId)，在 commitValue/deleteItem/addItem/openCurrentViewInCodeEditor/applyUndoRedo 写盘后按被写资源 id 精确匹配本面板引用它的其它栏并 void refresh；不做全量刷新、不跨面板广播（D-15 修订 / D-31）
 
 ### Pending Todos
 
@@ -189,6 +191,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-14T10:28:23.588Z
-Stopped at: Completed 02-28-PLAN.md
+Last session: 2026-10-14T10:48:13.858Z
+Stopped at: Completed 02-29-PLAN.md
 Resume file: None
