@@ -7,17 +7,17 @@ import { FakeResourceInjection } from './fixtures';
 
 configure({ testIdAttribute: 'data-test-id' });
 
-// 在 jsdom 下按注入宽度驱动栏数：读取 clientWidth 时返回当前设定值
-let mockColumnsWidth = 0;
+// 用例开始前的原始窗口宽度，供 afterEach 复位
+const ORIGINAL_INNER_WIDTH = window.innerWidth;
 
-Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
-  configurable: true,
-  get: (): number => mockColumnsWidth,
-});
+// 在 jsdom 下按窗口宽度驱动栏数：改写 window.innerWidth，视图据此计算可视栏数
+function setWindowWidth(value: number): void {
+  Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value });
+}
 
-// 每个用例前把可用宽度复位为 0，使缺省渲染回退到 1 栏
+// 每个用例前把窗口宽度复位为足够宽的值，使缺省渲染铺出多栏
 beforeEach(() => {
-  mockColumnsWidth = 0;
+  setWindowWidth(1000);
 });
 
 interface TestSystem {
@@ -29,9 +29,10 @@ interface TestSystem {
   readonly injection: FakeResourceInjection;
 }
 
-// 每个用例结束后卸载已挂载的组件，避免 DOM 在用例之间累积
+// 每个用例结束后卸载已挂载的组件并复位窗口宽度，避免状态在用例之间累积
 afterEach(() => {
   cleanup();
+  setWindowWidth(ORIGINAL_INNER_WIDTH);
 });
 
 // 组装一套已初始化的外壳 / 资源 / 撤销系统与内存后端
@@ -126,8 +127,8 @@ describe('面板标题与工具栏布局（L1）', () => {
 });
 
 describe('多栏布局（L4 结构）', () => {
-  // 可用宽度 / 每栏宽度决定栏数：800 / 400 = 2 栏
-  it('按可用宽度铺出 round(width / columnWidth) 栏', async () => {
+  // 窗口宽度 / 每栏宽度决定栏数：floor(1000 / 400) = floor(1000 / 500) = 2 栏
+  it('按窗口宽度铺出 floor(innerWidth / columnWidth) 栏', async () => {
     const system = await createSystem();
 
     seedSampleTable(system, 'demo');
@@ -135,16 +136,15 @@ describe('多栏布局（L4 结构）', () => {
     const panel = await openTablePanel(system, panels);
 
     await setTarget(panel, 'demo');
-
-    mockColumnsWidth = 800;
+    setWindowWidth(1000);
 
     const { container } = render(createElement(system.shellSystem.render()));
 
     expect(container.querySelectorAll('.etable-column').length).toBe(2);
   });
 
-  // 可用宽度为 0 时保底渲染 1 栏
-  it('可用宽度为 0 时保底 1 栏', async () => {
+  // 窗口宽度为 0 时保底渲染 1 栏
+  it('窗口宽度为 0 时保底 1 栏', async () => {
     const system = await createSystem();
 
     seedSampleTable(system, 'demo');
@@ -152,8 +152,7 @@ describe('多栏布局（L4 结构）', () => {
     const panel = await openTablePanel(system, panels);
 
     await setTarget(panel, 'demo');
-
-    mockColumnsWidth = 0;
+    setWindowWidth(0);
 
     const { container } = render(createElement(system.shellSystem.render()));
 
@@ -169,8 +168,7 @@ describe('多栏布局（L4 结构）', () => {
     const panel = await openTablePanel(system, panels);
 
     await setTarget(panel, 'demo');
-
-    mockColumnsWidth = 800;
+    setWindowWidth(1000);
 
     const { container } = render(createElement(system.shellSystem.render()));
 
@@ -179,6 +177,48 @@ describe('多栏布局（L4 结构）', () => {
     expect(columns.length).toBe(2);
     expect(columns[0].querySelector('[data-test-id="table-row-name"]')).not.toBeNull();
     expect(columns[1].textContent).toContain('尚未设置目标表');
+  });
+
+  // 窗口宽度 1000、栏宽缺省时各栏等分：flex 值一致且不再使用固定像素宽度（末栏不再偏宽）
+  it('各栏等分且不再使用固定像素宽度', async () => {
+    const system = await createSystem();
+
+    seedSampleTable(system, 'demo');
+    const panels: TablePanel[] = [];
+    const panel = await openTablePanel(system, panels);
+
+    await setTarget(panel, 'demo');
+    setWindowWidth(1000);
+
+    const { container } = render(createElement(system.shellSystem.render()));
+
+    const columns = Array.from(container.querySelectorAll<HTMLElement>('.etable-column'));
+
+    expect(columns.length).toBe(2);
+    expect(new Set(columns.map((column) => column.style.flexGrow)).size).toBe(1);
+    expect(columns.every((column) => column.style.width === '')).toBe(true);
+  });
+
+  // 窗口宽度小于两倍栏宽时只铺 1 栏，且多栏容器不出现横向滚动条
+  it('窄窗只铺 1 栏且不出现横向滚动条', async () => {
+    const system = await createSystem();
+
+    seedSampleTable(system, 'demo');
+    const panels: TablePanel[] = [];
+    const panel = await openTablePanel(system, panels);
+
+    await setTarget(panel, 'demo');
+    setWindowWidth(600);
+
+    const { container } = render(createElement(system.shellSystem.render()));
+
+    expect(container.querySelectorAll('.etable-column').length).toBe(1);
+
+    const columns = container.querySelector('.etable-columns');
+
+    if (columns === null) throw new Error('多栏容器缺失');
+
+    expect(['auto', 'scroll']).not.toContain(getComputedStyle(columns).overflowX);
   });
 });
 

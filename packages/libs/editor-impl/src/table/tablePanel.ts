@@ -133,6 +133,8 @@ interface ITablePanelViewProps {
   readonly getStore: (columnIndex: number) => Store<ITablePanelViewState>;
   /** 每栏的像素宽度 */
   readonly columnWidth: number;
+  /** 视图把当前铺出的可视栏数回报给面板（供「编辑 Schema」复用空栏） */
+  readonly onLayout: (columnCount: number) => void;
   /** 某栏加载失败态下的重试回调 */
   readonly onRetry: (columnIndex: number) => void;
   /** 某栏的字段提交回调 */
@@ -151,8 +153,6 @@ interface ITablePanelViewProps {
 interface ITableColumnProps {
   /** 该栏的序号（0 基） */
   readonly columnIndex: number;
-  /** 该栏的像素宽度 */
-  readonly columnWidth: number;
   /** 按栏序号取该栏的视图状态订阅源 */
   readonly getStore: (columnIndex: number) => Store<ITablePanelViewState>;
   /** 该栏加载失败态下的重试回调 */
@@ -234,6 +234,16 @@ function resolveColumnWidth(openParam: Record<string, unknown> | undefined): num
 }
 
 /**
+ * 计算可视栏数：按窗口宽度与每栏宽度向下取整，至少保留一栏
+ * @param windowWidth 窗口可用宽度（像素）
+ * @param columnWidth 期望的每栏宽度（像素）
+ * @returns 可视栏数，下限为 1
+ */
+function resolveColumnCount(windowWidth: number, columnWidth: number): number {
+  return Math.max(1, Math.floor(windowWidth / columnWidth));
+}
+
+/**
  * 单栏组件：订阅该栏视图状态并把各回调绑定到该栏序号后渲染一张表格
  * @param props 单栏 props
  * @returns 该栏的表格元素
@@ -257,40 +267,46 @@ function TableColumn(props: ITableColumnProps): ReactElement {
 
   return createElement(
     'div',
-    { className: 'etable-column', style: { width: props.columnWidth } },
+    { className: 'etable-column', style: { flexGrow: 1, flexShrink: 1, flexBasis: 0 } },
     createElement(TableGrid, gridProps),
   );
 }
 
 /**
- * 面板渲染根组件：量取容器可用宽度并按 columnWidth 铺出等量栏，每栏一张独立表格
+ * 面板渲染根组件：按窗口宽度与每栏宽度铺出等分栏，每栏一张独立表格
  * @param props 渲染根 props
  * @returns 多栏容器元素
  */
 function TablePanelView(props: ITablePanelViewProps): ReactElement {
   const containerRef = useRef<HTMLDivElement>(null);
-  const sizeState = useState(0);
-  const width = sizeState[0];
-  const setWidth = sizeState[1];
+  const widthState = useState<number>((): number => window.innerWidth);
+  const windowWidth = widthState[0];
+  const setWindowWidth = widthState[1];
 
   useEffect((): (() => void) | undefined => {
     const element = containerRef.current;
 
-    if (element === null) return undefined;
+    setWindowWidth(window.innerWidth);
 
-    setWidth(element.clientWidth);
+    if (element === null) return undefined;
 
     if (typeof ResizeObserver === 'undefined') return undefined;
 
-    const observer = new ResizeObserver((): void => setWidth(element.clientWidth));
+    const observer = new ResizeObserver((): void => setWindowWidth(window.innerWidth));
 
     observer.observe(element);
 
-    // 释放观察器，避免组件卸载后泄漏（T-02-17-03）
+    // 释放观察器，避免组件卸载后泄漏（T-02-20-01）
     return (): void => observer.disconnect();
   }, []);
 
-  const count = Math.max(1, Math.round(width / props.columnWidth));
+  const count = resolveColumnCount(windowWidth, props.columnWidth);
+
+  // 把当前铺出的可视栏数回报给面板，供「编辑 Schema」在可视范围内寻找空栏
+  useEffect((): void => {
+    props.onLayout(count);
+  }, [count, props.onLayout]);
+
   const columns: ReactElement[] = [];
 
   for (let index = 0; index < count; index += 1) {
@@ -298,7 +314,6 @@ function TablePanelView(props: ITablePanelViewProps): ReactElement {
       createElement(TableColumn, {
         key: index,
         columnIndex: index,
-        columnWidth: props.columnWidth,
         getStore: props.getStore,
         onRetry: props.onRetry,
         onChange: props.onChange,
@@ -330,6 +345,9 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   /** 每栏的像素宽度 */
   private readonly columnWidth: number;
 
+  /** 视图当前铺出的可视栏数，由视图经 `onLayout` 回报，至少为 1 */
+  private visibleColumnCount: number = 1;
+
   /** 各栏的运行时状态；按需补建，至少第 0 栏 */
   private readonly columns: ITablePanelColumn[] = [];
 
@@ -344,6 +362,9 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       createElement(TablePanelView, {
         getStore: (columnIndex): Store<ITablePanelViewState> => this.columnAt(columnIndex).store,
         columnWidth: this.columnWidth,
+        onLayout: (columnCount): void => {
+          this.visibleColumnCount = columnCount;
+        },
         onRetry: (columnIndex): void => void this.refresh(columnIndex),
         onChange: (columnIndex, key, value): void => void this.commitValue(key, value, columnIndex),
         onAdd: (columnIndex, anchorKey, name): void => void this.addItem(anchorKey, name, columnIndex),
