@@ -20,6 +20,10 @@ export interface ITableToolbarProps {
   readonly codeButtonEnabled: boolean;
   /** 「在代码编辑器中打开」点击回调 */
   readonly onOpenInCodeEditor: () => void;
+  /** ✕ 关闭本栏表格的点击回调；缺省时不显示 ✕ */
+  readonly onCloseColumn?: () => void;
+  /** ✕ 是否可点；缺省视作不可点 */
+  readonly closeButtonEnabled?: boolean;
 }
 
 /**
