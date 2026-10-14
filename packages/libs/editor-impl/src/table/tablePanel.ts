@@ -428,7 +428,16 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   }
 
   setTable(target: ITablePanelTarget, columnIndex: number = 0): void {
-    this.columnAt(columnIndex).target = target;
+    const column = this.columnAt(columnIndex);
+    const previous = column.target;
+
+    column.target = target;
+
+    // 换到另一张表（或此前无目标）时先清掉旧表行树：不同表的旧行在新表加载期间不能继续显示（P26）
+    if (previous === null || previous.data.id !== target.data.id) {
+      this.publish(columnIndex, TablePanelStatus.Loading, []);
+    }
+
     void this.refresh(columnIndex);
   }
 
@@ -1078,19 +1087,26 @@ export class TablePanel implements IEditorPanel, ITablePanel {
 
   /**
    * 请求某一栏目标表的数据与 schema 资源并重算行树；该栏无目标时落回未设目标态
+   *
+   * 刷新原则上**原地更新**：该栏已就绪且已有行树时不再先切成加载态，避免整棵行树卸载后重挂
+   * （P26）；仅首载（尚无就绪行树）与失败重试才发加载态。读取完成后经既有的 `applyLoaded` /
+   * `applySchemaLoaded` / `Error` 就地更新，加载 / 空 / 错误 / 未设目标四种状态语义与文案不变。
    * @param columnIndex 栏序号（0 基）
    */
   private async refresh(columnIndex: number = 0): Promise<void> {
-    const target = this.columnAt(columnIndex).target;
+    const column = this.columnAt(columnIndex);
+    const target = column.target;
 
     if (target === null) {
       this.publish(columnIndex, TablePanelStatus.NoTarget, []);
       return;
     }
 
+    const current = column.store.state;
+    const hasContent = current.status === TablePanelStatus.Ready && current.rows.length > 0;
     const token = this.nextToken(columnIndex);
 
-    this.publish(columnIndex, TablePanelStatus.Loading, []);
+    if (!hasContent) this.publish(columnIndex, TablePanelStatus.Loading, []);
 
     // 资源读取失败是行为关键路径：落回固定错误态而非抛穿，面板保持打开（D-29）
     try {
