@@ -1,4 +1,4 @@
-import { act, cleanup, configure, render, screen } from '@testing-library/react';
+import { act, cleanup, configure, fireEvent, render, screen } from '@testing-library/react';
 import { IEditorPanel, IEditorPanelFactoryParam, ResourceSystem, ShellSystem, UndoSystem } from '@motajs/editor-core';
 import { createElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -201,5 +201,78 @@ describe('分组行懒展开（P29）', () => {
 
     expect(row(container, 'table-row-nested-inner')).not.toBeNull();
     expect(screen.getByTestId('gap-toggle-nested').getAttribute('aria-expanded')).toBe('true');
+  });
+
+  // 用户点击折叠后接管：再次相交不再自动展开
+  it('用户点击折叠后不再被自动展开', async () => {
+    const system = await createSystem();
+    const sample = nestedTable();
+
+    seed(system, 'fold', sample.data, sample.schema);
+    const panel = await openPanel(system);
+
+    await setTarget(panel, 'fold');
+    const { container } = render(createElement(system.shellSystem.render()));
+
+    await act(async () => {
+      ControlledIntersectionObserver.triggerAll(true);
+    });
+
+    expect(row(container, 'table-row-nested-inner')).not.toBeNull();
+
+    const groupName = container.querySelector('.etable-group-name');
+
+    if (groupName === null) throw new Error('分组行条目名缺失');
+
+    await act(async () => {
+      fireEvent.click(groupName);
+    });
+
+    expect(row(container, 'table-row-nested-inner')).toBeNull();
+
+    await act(async () => {
+      ControlledIntersectionObserver.triggerAll(true);
+    });
+
+    expect(row(container, 'table-row-nested-inner')).toBeNull();
+  });
+
+  // 无 IntersectionObserver 时退化为立即展开，内容不永久隐藏
+  it('无 IntersectionObserver 时立即展开（退化）', async () => {
+    vi.stubGlobal('IntersectionObserver', undefined);
+
+    const system = await createSystem();
+    const sample = nestedTable();
+
+    seed(system, 'fold', sample.data, sample.schema);
+    const panel = await openPanel(system);
+
+    await setTarget(panel, 'fold');
+    const { container } = render(createElement(system.shellSystem.render()));
+
+    expect(row(container, 'table-row-nested-inner')).not.toBeNull();
+    expect(screen.getByTestId('gap-toggle-nested').getAttribute('aria-expanded')).toBe('true');
+  });
+
+  // 首次相交后观察器即断开，避免观察器累积 / 泄漏
+  it('首次相交后观察器断开', async () => {
+    const system = await createSystem();
+    const sample = nestedTable();
+
+    seed(system, 'fold', sample.data, sample.schema);
+    const panel = await openPanel(system);
+
+    await setTarget(panel, 'fold');
+    render(createElement(system.shellSystem.render()));
+
+    const observer = ControlledIntersectionObserver.instances[0];
+
+    expect(observer.disconnected).toBe(false);
+
+    await act(async () => {
+      ControlledIntersectionObserver.triggerAll(true);
+    });
+
+    expect(observer.disconnected).toBe(true);
   });
 });
