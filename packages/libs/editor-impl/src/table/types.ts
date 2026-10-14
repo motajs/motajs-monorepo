@@ -84,7 +84,7 @@ export interface ITablePanel {
 }
 
 export interface ITablePanelParam extends Record<string, unknown> {
-  /** 多栏布局中每一栏的像素宽度；缺省约 400px */
+  /** 多栏布局中每一栏的像素宽度；缺省约 500px */
   readonly columnWidth?: number;
 }
 

@@ -33,7 +33,7 @@ import { validateId, validateValue } from './model/validation';
 import { tableSchemaResourceId } from './resourceType';
 
 /** 多栏布局中每栏的默认像素宽度 */
-const DEFAULT_COLUMN_WIDTH = 400;
+const DEFAULT_COLUMN_WIDTH = 500;
 
 const enum TableUndoType {
   /** 修改既有字段的值 */
