@@ -307,7 +307,7 @@
   box-sizing: border-box;
   width: 100%;
   min-height: 22px;
-  resize: vertical;
+  max-height: 160px;
   overflow: auto;
 }
 
