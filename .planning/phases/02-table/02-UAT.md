@@ -145,3 +145,6 @@ blocked: 0
 - P23 **切换表格卡顿**：开 3 个面板（table.demo + 两个 table#schema.demo）时切换约 0.5s，需性能优化。
 - P24 `type: string` 的值格**看起来不像文本域、不能拖动调整大小**：实现上确实是 antd `Input.TextArea`，但用了 `autoSize={{ minRows: 1, maxRows: 6 }}` → 最小 1 行、随内容增高、无右下角拖拽手柄。应改为**可见的多行文本域 + 允许手动调整大小**（去 autoSize / 设多行默认高 + `resize: vertical`）。补充：默认高度按**内容行数**显示（最多 6 行，超出用滚动条）；**允许拖拽调整大小**（autoSize 可接受，但更希望能拖拽）。
 - P25 **操作列宽改为现在的 1.5 倍**（现在偏窄）。
+- P26 **性能仍在**（P23 未彻底解决）：剖析显示瓶颈是 `tablePanel.ts:1083` 的 `refresh` 方法 + react-dom 的 `scheduleMicrotask` 回调 → 主要是**元素挂载开销**（非表格分析）。方向：减少每次刷新的整树重挂载（React 的 memo / 稳定 key / 只更新变更行，或虚拟滚动）。对标 Vue 的 `v-once`/`v-memo`（注意：`v-mount` 并非 Vue 指令；React 对应物是 `React.memo`/`useMemo`/虚拟化）。
+- P27 折叠行**整行**都应 `cursor: pointer`（现在只有箭头）。
+- P28 文本域现效果**不如之前的 autoSize** → 换回 `autoSize`（撤销 02-28 的行数高度/拖拽改动）。
