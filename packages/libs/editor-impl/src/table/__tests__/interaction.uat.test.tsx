@@ -3,9 +3,13 @@ import { IEditorPanel, IEditorPanelFactoryParam, ResourceSystem, ShellSystem, Un
 import { createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { tableDataResourceId, tablePanelType, tableSchemaResourceId, TablePanel } from '..';
+import tableCss from '../table.css?inline';
 import { FakeResourceInjection } from './fixtures';
 
 configure({ testIdAttribute: 'data-test-id' });
+
+/** 表格样式表原文：jsdom 不应用外部 CSS，折叠行边框断言改为核对样式规则文本 */
+const TABLE_CSS = tableCss;
 
 interface TestSystem {
   /** 外壳系统 */
@@ -232,6 +236,14 @@ describe('折叠行整行点击（P19）', () => {
     fireEvent.click(child);
 
     expect(container.querySelector('[data-test-id="table-row-nested-inner"]')).not.toBeNull();
+  });
+});
+
+describe('折叠行上下边框加粗（P16）', () => {
+  // 折叠行样式含比普通单元格（1px）更粗的上下边框
+  it('折叠行上下边框加粗', () => {
+    expect(TABLE_CSS).toMatch(/\.etable-row-group\s*\{[^}]*border-top:\s*2px[^}]*\}/);
+    expect(TABLE_CSS).toMatch(/\.etable-row-group\s*\{[^}]*border-bottom:\s*2px[^}]*\}/);
   });
 });
 
