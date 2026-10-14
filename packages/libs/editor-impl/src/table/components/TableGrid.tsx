@@ -108,12 +108,13 @@ interface IGutterButtonProps {
 }
 
 /**
- * 左侧 gutter 的圆形按钮：新增模式下点 + 在插入点弹出名称输入，删除模式下点 − 直接删除该行
+ * 左侧 gutter 的圆形按钮：新增模式下点 + 在插入点弹出名称浮层，删除模式下点 − 直接删除该行
  *
- * 命名输入为 antd `Input`，确认时先经 `validateId` 校验字符集合规；两种操作都不触碰浏览器
- * 原生对话框。删除每一步都可由统一撤销路径回退。
+ * 名称浮层与「条目」单元格在 DOM 上分离（不再把条目单元格本身变成输入框）；输入为 antd
+ * `Input`，按下回车、失焦或点「确定」都提交，且提交前一并经 `validateId` 校验，失败给出可见
+ * 提示而非静默丢弃。两种操作都不触碰浏览器原生对话框，删除 / 新增每一步都可由统一撤销路径回退。
  * @param props 按钮 props
- * @returns 圆形按钮或名称输入元素
+ * @returns 圆形按钮或名称浮层元素
  */
 function GutterButton(props: IGutterButtonProps): ReactElement {
   const editingState = useState(false);
@@ -122,6 +123,9 @@ function GutterButton(props: IGutterButtonProps): ReactElement {
   const nameState = useState('');
   const name = nameState[0];
   const setName = nameState[1];
+  const errorState = useState<string | undefined>(undefined);
+  const error = errorState[0];
+  const setError = errorState[1];
   const dataAttr = parseFieldPath(props.anchorKey).join('-');
 
   if (props.kind === TableEditMode.Delete) {
@@ -146,18 +150,32 @@ function GutterButton(props: IGutterButtonProps): ReactElement {
     );
   }
 
+  const cancelName = (): void => {
+    setName('');
+    setError(undefined);
+    setEditing(false);
+  };
+
   const commitName = (): void => {
+    if (!editing) return;
+
     const trimmed = name.trim();
 
     if (trimmed.length === 0) {
-      setEditing(false);
+      cancelName();
       return;
     }
 
-    if (!validateId(trimmed, [], false).valid) return;
+    const validation = validateId(trimmed, [], false);
+
+    if (!validation.valid) {
+      setError(validation.error ?? '名称未通过校验');
+      return;
+    }
 
     props.onAdd?.(props.anchorKey, trimmed);
     setName('');
+    setError(undefined);
     setEditing(false);
   };
 
@@ -178,29 +196,63 @@ function GutterButton(props: IGutterButtonProps): ReactElement {
     );
   }
 
-  return createElement(Input, {
-    size: 'small',
-    autoFocus: true,
-    className: 'etable-gutter-input',
-    value: name,
-    'data-test-id': `table-add-input-${dataAttr}`,
-    onChange: (event): void => setName(event.target.value),
-    onKeyDown: (event): void => {
-      if (event.key === 'Enter') {
-        commitName();
-        return;
-      }
+  return createElement(
+    'div',
+    {
+      className: 'etable-add-popover',
+      'data-test-id': `table-add-popover-${dataAttr}`,
+      onClick: (event): void => event.stopPropagation(),
+    },
+    createElement(Input, {
+      size: 'small',
+      autoFocus: true,
+      className: 'etable-add-popover-input',
+      status: error === undefined ? undefined : 'error',
+      value: name,
+      'data-test-id': `table-add-input-${dataAttr}`,
+      onChange: (event): void => {
+        setError(undefined);
+        setName(event.target.value);
+      },
+      onKeyDown: (event): void => {
+        if (event.key === 'Enter') {
+          commitName();
+          return;
+        }
 
-      if (event.key === 'Escape') {
-        setName('');
-        setEditing(false);
-      }
-    },
-    onBlur: (): void => {
-      setName('');
-      setEditing(false);
-    },
-  });
+        if (event.key === 'Escape') cancelName();
+      },
+      onBlur: (): void => commitName(),
+    }),
+    createElement(
+      Button,
+      {
+        size: 'small',
+        type: 'primary',
+        'data-test-id': `table-add-confirm-${dataAttr}`,
+        onMouseDown: (event): void => event.preventDefault(),
+        onClick: (): void => commitName(),
+      },
+      '确定',
+    ),
+    createElement(
+      Button,
+      {
+        size: 'small',
+        'data-test-id': `table-add-cancel-${dataAttr}`,
+        onMouseDown: (event): void => event.preventDefault(),
+        onClick: (): void => cancelName(),
+      },
+      '取消',
+    ),
+    error === undefined
+      ? null
+      : createElement(
+          'div',
+          { className: 'etable-add-popover-error', 'data-test-id': `table-add-error-${dataAttr}` },
+          error,
+        ),
+  );
 }
 
 /**
