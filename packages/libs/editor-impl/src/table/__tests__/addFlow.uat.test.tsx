@@ -236,3 +236,43 @@ describe('添加流程（P12）', () => {
     expect((schema as Record<string, unknown>)['x-order']).toBeUndefined();
   });
 });
+
+describe('文本域统一 antd（P13）', () => {
+  // 值单元格文本域为 antd Input.TextArea（带 .ant-input 类）
+  it('值单元格文本域为 antd Input.TextArea', async () => {
+    const system = await createSystem();
+    const sample = pairTable();
+
+    seed(system, 'value', sample.data, sample.schema);
+    const panel = await openPanel(system);
+
+    await setTarget(panel, 'value');
+    const { container } = render(createElement(system.shellSystem.render()));
+
+    const cell = container.querySelector('[data-test-id="table-input-a"]');
+    const textarea = cell === null ? null : cell.querySelector('textarea');
+
+    if (textarea === null) throw new Error('值文本域缺失');
+
+    expect(textarea.classList.contains('ant-input')).toBe(true);
+  });
+
+  // 表格内不存在未托管的原生文本域：任何 textarea 都必须带 .ant-input 类
+  it('表格内任何 textarea 均为 antd 组件', async () => {
+    const system = await createSystem();
+    const sample = pairTable();
+
+    seed(system, 'audit', sample.data, sample.schema);
+    const panel = await openPanel(system);
+
+    await setTarget(panel, 'audit');
+    const { container } = render(createElement(system.shellSystem.render()));
+
+    await switchMode('添加');
+    await openAddInput('a');
+
+    const textareas = Array.from(container.querySelectorAll('textarea'));
+
+    expect(textareas.every((textarea) => textarea.classList.contains('ant-input'))).toBe(true);
+  });
+});
