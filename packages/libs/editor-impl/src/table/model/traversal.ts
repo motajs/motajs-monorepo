@@ -1,5 +1,10 @@
 import { ITableRowNode, ITableSchemaNode } from '../types';
 
+/** 按 (schema, data) 的对象引用缓存 `buildTableTree` 结果：命中即复用同一数组，输入换成新对象即重算（P23） */
+const tableTreeCache: WeakMap<object, WeakMap<object, readonly ITableRowNode[]>> = Object.freeze(
+  new WeakMap<object, WeakMap<object, readonly ITableRowNode[]>>(),
+);
+
 /**
  * 判断一个值是否可作为 JSON Schema 对象节点参与行树构建
  * @param value 待判断的值
@@ -174,12 +179,28 @@ function buildRows(
 
 /**
  * 把标准 JSON Schema 的 properties 与数据组成行树（递归展开嵌套 object，同级按 `x-order` 排序）
+ *
+ * 结果以 (schema, data) 的对象引用为键缓存：输入引用未变时直接复用同一数组，不再重复构建
+ * （P23）；数据或 schema 换成新对象（面板写盘后的情形）即重算。数据非对象时不缓存，直接计算。
  * @param schema 目标表的 JSON Schema 文档；缺失或非对象时不产生任何行
  * @param data 目标表的数据对象
  * @returns 行树节点列表，schema 缺失或非对象时为空数组
  */
 export function buildTableTree(schema: unknown, data: unknown): readonly ITableRowNode[] {
   if (!isSchemaObject(schema)) return [];
+  if (!isDataObject(data)) return buildRows(schema.properties, data, '', readOrder(schema));
 
-  return buildRows(schema.properties, data, '', readOrder(schema));
+  let byData = tableTreeCache.get(schema);
+
+  if (byData === undefined) {
+    byData = new WeakMap<object, readonly ITableRowNode[]>();
+    tableTreeCache.set(schema, byData);
+  }
+
+  const cached = byData.get(data);
+  if (cached !== undefined) return cached;
+
+  const rows = buildRows(schema.properties, data, '', readOrder(schema));
+  byData.set(data, rows);
+  return rows;
 }

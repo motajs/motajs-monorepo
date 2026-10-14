@@ -1,6 +1,8 @@
 import { cleanup, configure } from '@testing-library/react';
 import { Ajv2020 } from 'ajv/dist/2020';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { buildSchemaTree } from '../model/schemaPresentation';
+import { buildTableTree } from '../model/traversal';
 import { validateValue } from '../model/validation';
 
 configure({ testIdAttribute: 'data-test-id' });
@@ -45,5 +47,54 @@ describe('值校验共享 ajv 与编译缓存（P23）', () => {
     expect(validateValue(undefined, 'anything')).toBe(true);
     expect(validateValue({}, null)).toBe(true);
     expect(validateValue({ type: 'number' }, null)).toBe(false);
+  });
+});
+
+describe('行树按输入引用缓存（P23）', () => {
+  // 数据表：同一 (schema, data) 引用连续两次调用返回同一数组
+  it('数据表同一输入引用复用同一行树', () => {
+    const schema = { type: 'object', properties: { a: { type: 'string' } } };
+    const data = { a: '1' };
+
+    const first = buildTableTree(schema, data);
+    const second = buildTableTree(schema, data);
+
+    expect(second).toBe(first);
+  });
+
+  // 数据表：换成新的 data 对象后重算，返回新引用且内容反映新输入
+  it('数据表数据对象变更后重算', () => {
+    const schema = { type: 'object', properties: { a: { type: 'string' }, b: { type: 'string' } } };
+    const data1 = { a: '1' };
+    const data2 = { a: '1', b: '2' };
+
+    const first = buildTableTree(schema, data1);
+    const second = buildTableTree(schema, data2);
+
+    expect(second).not.toBe(first);
+    expect(second.some((row) => row.key === "['b']")).toBe(true);
+  });
+
+  // schema 表：同 schema 引用复用同一行树，换成新 schema 对象后重算
+  it('schema 表按引用复用并随 schema 变更重算', () => {
+    const schema1 = { type: 'object', properties: { a: { type: 'string' } } };
+    const schema2 = { type: 'object', properties: { a: { type: 'string' }, b: { type: 'number' } } };
+
+    const first = buildSchemaTree(schema1);
+    const again = buildSchemaTree(schema1);
+    const changed = buildSchemaTree(schema2);
+    const propertiesRow = changed.find((row) => row.key === "['properties']");
+    const children = propertiesRow === undefined ? [] : (propertiesRow.children ?? []);
+
+    expect(again).toBe(first);
+    expect(changed).not.toBe(first);
+    expect(children.some((row) => row.key === "['properties']['b']")).toBe(true);
+  });
+
+  // schema 非对象时行树为空（不缓存，行为与改造前一致）
+  it('schema 非对象时返回空数组', () => {
+    expect(buildTableTree(undefined, {})).toEqual([]);
+    expect(buildTableTree('x', {})).toEqual([]);
+    expect(buildSchemaTree(null)).toEqual([]);
   });
 });

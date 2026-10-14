@@ -46,6 +46,11 @@ const SCHEMA_TYPE_VALUES: readonly string[] = Object.freeze([
   'null',
 ]);
 
+/** 按 schema 引用缓存 `buildSchemaTree` 结果：命中即复用同一数组，schema 换成新对象即重算（P23） */
+const schemaTreeCache: WeakMap<object, readonly ITableRowNode[]> = Object.freeze(
+  new WeakMap<object, readonly ITableRowNode[]>(),
+);
+
 /**
  * 判断一个值是否为可读写的普通对象
  * @param value 待判断的值
@@ -198,11 +203,19 @@ export function buildSchemaPresentation(rows: readonly ITableRowNode[]): readonl
 
 /**
  * 把一份标准 JSON Schema 文档组成行树：各级关键字为行、`properties` 与 `items` 递归展开（D-24）
+ *
+ * 结果以 schema 的对象引用为键缓存：引用未变时直接复用同一数组，不再重复构建（P23）；schema
+ * 换成新对象（面板写盘后的情形）即重算。
  * @param schema schema 文档（即 `table#schema.<name>` 的内容）
  * @returns 行树节点列表；schema 缺失或非对象时为空数组
  */
 export function buildSchemaTree(schema: unknown): readonly ITableRowNode[] {
   if (!isRecord(schema)) return [];
 
-  return buildKeywordRows(schema, '');
+  const cached = schemaTreeCache.get(schema);
+  if (cached !== undefined) return cached;
+
+  const rows = buildKeywordRows(schema, '');
+  schemaTreeCache.set(schema, rows);
+  return rows;
 }
