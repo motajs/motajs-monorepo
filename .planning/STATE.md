@@ -5,16 +5,16 @@ current_phase: 02
 current_phase_name: 表格编辑
 current_plan: 9
 status: verifying
-stopped_at: Completed 02-20-PLAN.md
-last_updated: "2026-10-14T03:16:16.257Z"
+stopped_at: Completed 02-21-PLAN.md
+last_updated: "2026-10-14T03:42:57.502Z"
 last_activity: 2026-10-12
 last_activity_desc: "Completed 02-04 (table tracer): editor-impl test infra + end-to-end resource-layer read path"
-state_head: 5cb61526992a26c6064cfa7f2262a82e4f578cf4
+state_head: ba34de3d96ce4750b1132eadddcd21151ad0e040
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 29
-  completed_plans: 26
+  completed_plans: 27
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -84,6 +84,7 @@ Progress: [██████████] 100%
 | Phase 02 P18 | ~30min | 3 tasks | 13 files |
 | Phase 02-table P19 | ~15min | 2 tasks | 2 files |
 | Phase 02-table P20 | ~13min | 3 tasks | 5 files |
+| Phase 02 P21 | ~17min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -137,6 +138,10 @@ Recent decisions affecting current work:
 - [Phase 02-table]: 02-20: 面板不自行读窗口——视图经只读回调 onLayout 回报可视栏数，模型只在 0..visibleColumnCount-1 内找空栏，越界即回退打开器（T-02-20-02）
 - [Phase 02-table]: 02-20: 栏分隔线改为覆盖整列高度的 ::before 竖线（align-self: stretch + min-height: 100%），两侧表格高度不一致时不断口（P9）
 - [Phase 02-table]: 02-20: 测试环境缺省 window.innerWidth 归零（mapPolyfill.ts），等价改造前未桩 clientWidth 的单栏缺省；产品代码零行为影响（Rule 3）
+- [Phase 02]: 02-21: 层级以渲染期 level 参数在 renderRows / renderRowNode / renderSchemaRows 里层层传递（顶层 0），不给 ITableRowNode 加深度字段，避免数据模型类型变更
+- [Phase 02]: 02-21: 层级缩进只在「条目」列——取消 .etable-group-children 的 padding/border（不再整行收窄），改由条目列内 level 个 .etable-tree-guide 等宽占位同时承担缩进与树形引导竖线
+- [Phase 02]: 02-21: 展开行逐级底色用 data-level 整数驱动 CSS（[data-level='1'] 等），不写内联背景色；缩进步长 12→9px（组件常量 TREE_INDENT_STEP 与 CSS 变量 --etable-indent 同步）
+- [Phase 02]: 02-21: .etable-cell 改 flex 垂直居中后，纯文本统一包 .etable-cell-text 容器以保留省略号截断（新增内部 CSS 钩子，特此登记备查）
 
 ### Pending Todos
 
@@ -162,6 +167,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-14T03:16:16.161Z
-Stopped at: Completed 02-20-PLAN.md
+Last session: 2026-10-14T03:42:57.402Z
+Stopped at: Completed 02-21-PLAN.md
 Resume file: None
