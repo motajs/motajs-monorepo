@@ -5,16 +5,16 @@ current_phase: 02
 current_phase_name: 表格编辑
 current_plan: 9
 status: verifying
-stopped_at: Completed 02-26-PLAN.md
-last_updated: "2026-10-14T08:58:30.751Z"
+stopped_at: Completed 02-27-PLAN.md
+last_updated: "2026-10-14T09:31:10.741Z"
 last_activity: 2026-10-12
 last_activity_desc: "Completed 02-04 (table tracer): editor-impl test infra + end-to-end resource-layer read path"
-state_head: 03a8faba080538a72ba63c56b438434245cfd8ad
+state_head: fd342ad62e3c895007b471d0b9a802baf6c259f4
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 37
-  completed_plans: 32
+  completed_plans: 33
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -90,6 +90,7 @@ Progress: [██████████] 100%
 | Phase 02-table P24 | 3min | 2 tasks | 2 files |
 | Phase 02 P25 | 15 | 3 tasks | 5 files |
 | Phase 02 P26 | 10min | 2 tasks | 3 files |
+| Phase 02 P27 | ~25min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -157,6 +158,9 @@ Recent decisions affecting current work:
 - [Phase 02]: P17 弹性占位 .etable-toolbar-spacer 仅在空栏出现，有表栏沿用 title 撑开；P25 操作列 1fr→1.5fr
 - [Phase 02]: 02-26: P19 折叠行整行 onClick 切换折叠，折叠箭头按钮先 stopPropagation 再切换以保证只切换一次；gutter 增删按钮本已 stopPropagation 不改动，子行在兄弟容器 .etable-group-children 内故不误折叠父行
 - [Phase 02]: 02-26: P16 折叠行上下边框显式用 2px solid rgba(0,0,0,0.15)（比 .etable-cell 的 1px 更明显），不改 02-21 的层级底色；jsdom 不应用外部 CSS，边框断言以 ../table.css?inline 读样式表原文正则核对
+- [Phase 02]: 02-27: P21 x-order 仍以文本域编辑（x-control: Text），只把校验从 { type:'string' } 改为按字符串数组（{ type:'array', items:{type:'string'} }）；traversal.readOrder 的排序语义不变
+- [Phase 02]: 02-27: P22 type 的合法取值放非导出模块级常量 SCHEMA_TYPE_VALUES（string/number/integer/boolean/object/array/null），经 keywordConfig 合成 { enum } —— 同一份 enum 同时驱动下拉候选与 ajv 校验
+- [Phase 02]: 02-27: 测试查下拉候选项改用 screen.getAllByRole('option') 而非 document 全局 —— coreModuleState 门禁（PORT-02）同样扫描 editor-impl/src，禁 document 全局
 
 ### Pending Todos
 
@@ -182,6 +186,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-14T08:58:30.585Z
-Stopped at: Completed 02-26-PLAN.md
+Last session: 2026-10-14T09:30:36.315Z
+Stopped at: Completed 02-27-PLAN.md
 Resume file: None
