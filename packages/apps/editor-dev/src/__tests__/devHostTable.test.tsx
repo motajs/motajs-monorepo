@@ -9,6 +9,7 @@ import {
   createTablePanelOpener,
   openTableDemoPanel,
   TABLE_DEMO_DATA,
+  TABLE_DEMO_ENTRY_COUNT,
   TABLE_DEMO_MENU_ID,
   TABLE_DEMO_MENU_TITLE,
   TABLE_DEMO_SCHEMA,
@@ -81,7 +82,7 @@ describe('开发宿主表格接入', () => {
       createElement(CapabilityProvider, { children: createElement(core.shellSystem.render()) }),
     );
 
-    expect(screen.getByText("['position']")).not.toBeNull();
+    expect(screen.getByText('position')).not.toBeNull();
     expect(screen.getByText('标题')).not.toBeNull();
     expect(screen.getByText('等级')).not.toBeNull();
     expect(screen.getByText('横坐标')).not.toBeNull();
@@ -136,5 +137,36 @@ describe('开发宿主表格接入', () => {
     expect(core.shellSystem.listTabs().length).toBe(tabsBefore + 1);
     expect(container.querySelector('[data-test-id="schema-banner"]')).not.toBeNull();
     expect(screen.getByText('正在编辑表格结构（Schema）')).not.toBeNull();
+  });
+
+  // 打开 demo 表格后表体渲染出约 TABLE_DEMO_ENTRY_COUNT 个可见行（含 position 的两个子行），量级足以触发纵向滚动（P7）
+  it('演示表数据量约 100 条', async () => {
+    const core = await createHost();
+
+    await act(async () => {
+      await openTableDemoPanel(core);
+    });
+
+    const { container } = renderWithTableOpener(core);
+    const rows = container.querySelectorAll('[data-test-id^="table-row-"]');
+
+    expect(rows.length).toBeGreaterThanOrEqual(TABLE_DEMO_ENTRY_COUNT - 10);
+    expect(rows.length).toBeLessThanOrEqual(TABLE_DEMO_ENTRY_COUNT + 20);
+  });
+
+  // demo 表体由独立的滚动容器承载（.etable-body 声明 overflow:auto），行数超出可视高度即可上下滚动（P7）；
+  // jsdom 不落地外部 CSS，故此处断言滚动容器存在并携带滚动类名，真实滚动高度由手动验收核对
+  it('表体是可纵向滚动的独立容器', async () => {
+    const core = await createHost();
+
+    await act(async () => {
+      await openTableDemoPanel(core);
+    });
+
+    const { container } = renderWithTableOpener(core);
+    const body = container.querySelector('[data-test-id="data-table-grid"]');
+
+    expect(body).not.toBeNull();
+    expect(body === null ? false : body.classList.contains('etable-body')).toBe(true);
   });
 });
