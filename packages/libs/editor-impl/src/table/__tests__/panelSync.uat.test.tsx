@@ -3,6 +3,7 @@ import { IEditorPanel, IEditorPanelFactoryParam, ResourceSystem, ShellSystem, Un
 import { createElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { tableDataResourceId, tablePanelType, tableSchemaResourceId, TablePanel, ITablePanelTarget } from '..';
+import { ICodeEditorOpener } from '../../react';
 import { FakeResourceInjection } from './fixtures';
 
 configure({ testIdAttribute: 'data-test-id' });
@@ -182,5 +183,70 @@ describe('同面板依赖栏即时同步（P18 / P20）', () => {
 
     expect(unrelatedReads.length).toBe(0);
     expect(relatedReads.length).toBeGreaterThan(0);
+  });
+});
+
+describe('代码编辑器写回与撤销 / 重做也走同面板同步（P18 / P20）', () => {
+  // 代码编辑器整份写回 schema 后，同面板其它 schema 栏与主数据表立即同步
+  it('代码编辑器写回 schema 后同面板其它栏立即同步', async () => {
+    const system = await createSystem();
+
+    seed(system, 't', { a: '1' }, { type: 'object', properties: { a: { type: 'string' } } });
+    const panel = await openPanel(system);
+
+    panel.setTable(dataTarget('t'), 0);
+    panel.setTable(schemaTarget('t'), 1);
+    panel.setTable(schemaTarget('t'), 2);
+    await panel.onSwitchIn();
+
+    setWindowWidth(1500);
+
+    const { container } = render(createElement(system.shellSystem.render()));
+    const codeEditor: ICodeEditorOpener = {
+      open: vi.fn(async (): Promise<string | null> =>
+        JSON.stringify({ type: 'object', properties: { a: { type: 'number' } } }),
+      ),
+    };
+
+    await act(async () => {
+      await panel.openCurrentViewInCodeEditor(codeEditor, 1);
+    });
+    await flush();
+
+    expect(selectText(columnAt(container, 2), 'table-input-properties-a-type')).toBe('number');
+    expect(columnAt(container, 0).querySelector('[data-test-id="table-input-a"] .ant-input-number')).not.toBeNull();
+  });
+
+  // 数据栏新增（写 schema 的 x-order）后撤销，同面板 schema 栏与数据栏都回到撤销后的状态
+  it('撤销新增后同面板 schema 栏与数据栏都同步回退', async () => {
+    const system = await createSystem();
+
+    seed(system, 't', { a: '1' }, { type: 'object', properties: { a: { type: 'string' } } });
+    const panel = await openPanel(system);
+
+    panel.setTable(dataTarget('t'), 0);
+    panel.setTable(schemaTarget('t'), 1);
+    await panel.onSwitchIn();
+
+    setWindowWidth(1000);
+
+    const { container } = render(createElement(system.shellSystem.render()));
+
+    await act(async () => {
+      await panel.addItem("['a']", 'mid', 0);
+    });
+    await flush();
+
+    expect(await system.resourceSystem.readContent(tableDataResourceId('t'))).toEqual({ a: '1', mid: null });
+    expect(columnAt(container, 0).querySelector('[data-test-id="table-row-mid"]')).not.toBeNull();
+    expect(columnAt(container, 1).querySelector('[data-test-id="table-row-x-order"]')).not.toBeNull();
+
+    await act(async () => {
+      await system.undoSystem.undo();
+    });
+    await flush();
+
+    expect(columnAt(container, 0).querySelector('[data-test-id="table-row-mid"]')).toBeNull();
+    expect(columnAt(container, 1).querySelector('[data-test-id="table-row-x-order"]')).toBeNull();
   });
 });

@@ -495,6 +495,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       data: { columnIndex, path: '', previousValue: column.data, nextValue: parsed },
     });
     this.applyData(columnIndex, parsed);
+    this.refreshDependents(columnIndex, target.data);
   }
 
   /**
@@ -1036,6 +1037,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     if (next === undefined) return;
 
     await this.writeData(columnIndex, next);
+    this.refreshDependents(columnIndex, column.target.data);
 
     const schema = isUndo ? context.data.previousSchema : context.data.nextSchema;
 
@@ -1043,6 +1045,8 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       await this.writeSchema(columnIndex, schema);
 
       if (isRecord(schema)) column.schema = schema;
+
+      this.refreshDependents(columnIndex, column.target.schema);
     }
 
     this.applyData(columnIndex, next);
