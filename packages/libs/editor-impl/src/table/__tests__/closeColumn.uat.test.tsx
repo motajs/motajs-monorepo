@@ -1,7 +1,7 @@
 import { act, cleanup, configure, fireEvent, render } from '@testing-library/react';
 import { IEditorPanel, IEditorPanelFactoryParam, ResourceSystem, ShellSystem, UndoSystem } from '@motajs/editor-core';
 import { createElement } from 'react';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ITablePanelTarget, tableDataResourceId, tablePanelType, tableSchemaResourceId, TablePanel } from '..';
 import { FakeResourceInjection } from './fixtures';
 
@@ -192,5 +192,41 @@ describe('每栏关闭按钮（P15）', () => {
 
     expect(columnAt(container, 0).textContent).toContain('尚未设置目标表');
     expect(columnAt(container, 1).querySelector('[data-test-id="table-row-b"]')).not.toBeNull();
+  });
+});
+
+describe('关闭后空栏可被「编辑 Schema」复用（P15）', () => {
+  // 两栏都有表、无空栏时；关掉第 1 栏后该空栏被「编辑 Schema」直接占用，不再经打开器新开面板
+  it('关闭出来的空栏被「编辑 Schema」复用而非新开面板', async () => {
+    const system = await createSystem();
+
+    seed(system, 'demo', { a: '1' }, { type: 'object', properties: { a: { type: 'string' } } });
+    const panel = await openPanel(system);
+
+    panel.setTable(dataTarget('demo'), 0);
+    panel.setTable(dataTarget('demo'), 1);
+    await panel.onSwitchIn();
+    setWindowWidth(1000);
+
+    const { container } = render(createElement(system.shellSystem.render()));
+    const close = columnAt(container, 1).querySelector('[data-test-id="table-close-column"]');
+
+    if (close === null) throw new Error('✕ 缺失');
+
+    await act(async () => {
+      fireEvent.click(close);
+    });
+
+    expect(columnAt(container, 1).textContent).toContain('尚未设置目标表');
+
+    const opener = { open: vi.fn(async (): Promise<void> => {}) };
+
+    await act(async () => {
+      await panel.openSchemaPanel(opener);
+      await panel.onSwitchIn();
+    });
+
+    expect(opener.open).not.toHaveBeenCalled();
+    expect(columnAt(container, 1).querySelector('[data-test-id="schema-banner"]')).not.toBeNull();
   });
 });
