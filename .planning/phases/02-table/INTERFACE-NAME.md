@@ -376,6 +376,17 @@
 - **P1**：面板需知道当前可视栏数才能找空栏——由视图经 `onLayout` 回报给面板（而非面板读窗口）。
 - **P10**：外壳目前**无子菜单机制**，故「撤销/重做」以两个**顶层菜单项**呈现（即顶部按钮），不动内核。
 
+## Plan 24–31 — 第二轮 UAT 修复（P14–P25，gap_closure）
+
+- **02-24（接口，仅类型）**：`ITableGridProps.onCloseColumn?(): void`；`ITableToolbarProps.onCloseColumn?(): void`；`ITableToolbarProps.closeButtonEnabled?: boolean`。
+- **02-25（P14/P17/P25）**：`.etable-toolbar-spacer`（占位类名，非对外）。
+- **02-26（P16/P19）**：无新对外命名。
+- **02-27（P21/P22）**：`SCHEMA_TYPE_VALUES`（合法 JSON Schema `type` 取值集合）。
+- **02-28（P24）**：`resolveTextareaRows(text)`（文本行数夹在 1–6）。
+- **02-29（P18/P20）**：`TablePanel.refreshDependents(columnIndex, changedId)`（写盘后刷新同面板依赖栏）。
+- **02-30（P23）**：`sharedAjv` / `validatorCache` / `getValidator`、`tableTreeCache` / `schemaTreeCache`。
+- **02-31（P15 实现）**：非导出 `ITablePanelViewProps.onCloseColumn(columnIndex)`；`TablePanel.closeColumn(columnIndex)`；测试断点 `data-test-id="table-close-column"`。
+
 ## 待确认的规划假设（历史）
 
 - A2：本阶段「schema」= 旧 `CommentObject`（已在 Plan 01 checkpoint 确认）。
