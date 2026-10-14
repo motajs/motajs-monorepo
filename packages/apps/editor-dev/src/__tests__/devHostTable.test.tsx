@@ -3,8 +3,15 @@ import { EditorCore } from '@motajs/editor-core';
 import { CapabilityProvider } from '@motajs/editor-impl/react';
 import { tablePanelType } from '@motajs/editor-impl/table';
 import { createElement } from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryBackend } from '../backend/memoryBackend';
+import {
+  DEV_REDO_MENU_ID,
+  DEV_REDO_MENU_TITLE,
+  DEV_UNDO_MENU_ID,
+  DEV_UNDO_MENU_TITLE,
+  registerDevMenu,
+} from '../demo/devMenu';
 import {
   createTablePanelOpener,
   openTableDemoPanel,
@@ -38,6 +45,7 @@ async function createHost(): Promise<EditorCore> {
       void openTableDemoPanel(core);
     },
   });
+  registerDevMenu(core);
 
   await core.initialize(backend);
   return core;
@@ -168,5 +176,72 @@ describe('开发宿主表格接入', () => {
 
     expect(body).not.toBeNull();
     expect(body === null ? false : body.classList.contains('etable-body')).toBe(true);
+  });
+
+  // 组合根接好线：已注册「撤销」「重做」菜单项，标题分别为「撤销」「重做」（P10）
+  it('已注册「撤销」「重做」菜单项', async () => {
+    const core = await createHost();
+    const items = core.shellSystem.listMenuItems();
+    const undo = items.find((item) => item.id === DEV_UNDO_MENU_ID);
+    const redo = items.find((item) => item.id === DEV_REDO_MENU_ID);
+
+    expect(undo === undefined ? undefined : undo.title).toBe(DEV_UNDO_MENU_TITLE);
+    expect(redo === undefined ? undefined : redo.title).toBe(DEV_REDO_MENU_TITLE);
+  });
+
+  // 点击顶部「撤销」「重做」菜单项分别调用 core 的撤销系统（P10）
+  it('「撤销」「重做」菜单项点击触发 core 的撤销 / 重做', async () => {
+    const core = await createHost();
+
+    render(createElement(CapabilityProvider, { children: createElement(core.shellSystem.render()) }));
+
+    const undoSpy = vi.spyOn(core.undoSystem, 'undo');
+    const redoSpy = vi.spyOn(core.undoSystem, 'redo');
+
+    await act(async () => {
+      fireEvent.click(screen.getByText(DEV_UNDO_MENU_TITLE));
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText(DEV_REDO_MENU_TITLE));
+    });
+
+    expect(undoSpy).toHaveBeenCalledTimes(1);
+    expect(redoSpy).toHaveBeenCalledTimes(1);
+
+    undoSpy.mockRestore();
+    redoSpy.mockRestore();
+  });
+
+  // 点击顶部「撤销」按钮能把 demo 表的一次改值编辑还原，证明按钮可用于测试撤销 / 重做（P10 端到端）
+  it('点击「撤销」按钮还原表格的改值编辑', async () => {
+    const core = await createHost();
+
+    await act(async () => {
+      await openTableDemoPanel(core);
+    });
+
+    const { container } = renderWithTableOpener(core);
+    const cell = container.querySelector('[data-test-id="table-input-title"]');
+    const textarea = cell === null ? null : cell.querySelector('textarea');
+
+    if (textarea === null) throw new Error('标题值文本域缺失');
+
+    await act(async () => {
+      fireEvent.change(textarea, { target: { value: JSON.stringify('改后标题') } });
+      fireEvent.blur(textarea);
+    });
+
+    const edited = await core.resourceSystem.readContent<Record<string, unknown>>(TABLE_DEMO_TARGET.data);
+
+    expect(edited === undefined ? undefined : edited.title).toBe('改后标题');
+
+    await act(async () => {
+      fireEvent.click(screen.getByText(DEV_UNDO_MENU_TITLE));
+    });
+
+    const restored = await core.resourceSystem.readContent<Record<string, unknown>>(TABLE_DEMO_TARGET.data);
+
+    expect(restored === undefined ? undefined : restored.title).toBe('示例条目');
   });
 });

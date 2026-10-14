@@ -4,6 +4,7 @@ import { EditorCore } from '@motajs/editor-core';
 import { CapabilityProvider } from '@motajs/editor-impl/react';
 import { tablePanelType } from '@motajs/editor-impl/table';
 import { MemoryBackend } from './backend/memoryBackend';
+import { registerDevMenu } from './demo/devMenu';
 import { DEMO_PANEL_TYPE, DEMO_RESOURCE_ID, DEMO_SAMPLE_CONTENT } from './demo/demoPanel';
 import {
   createTablePanelOpener,
@@ -30,6 +31,7 @@ core.shellSystem.registerMenuItem({
     void openTableDemoPanel(core);
   },
 });
+registerDevMenu(core);
 
 await core.initialize(backend);
 
