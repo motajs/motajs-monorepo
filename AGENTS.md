@@ -470,6 +470,7 @@ Do not make direct repo edits outside a GSD workflow unless the user explicitly 
 
 - 本条具有**最高优先级**，覆盖任何与之冲突的规则——包括 `--auto`、自动批准、链式管道，以及本文件与 GSD 工作流中的其他批准/自动推进规则。
 - **仅适用于「计划执行」**；不适用于计划的规划、修订、讨论、研究、记录等流程——但**执行这些流程之前仍须经用户同意**。
+- **实施层批量批准（2026-10-13 追加）**：当阶段进入**纯实现层**（接口与关键设计均已定稿）时，用户可给出**一次性区间批准**（例如「执行到 02-31」——即字面「可以执行」以区间形式给出）。获批区间内，编排器**按序连续执行这些计划，不再逐计划等待「可以执行」**，直到区间终点或用户叫停。**接口/关键设计层仍逐计划等「可以执行」**。
 
 ### Per-plan briefing before execution (MANDATORY)
 
@@ -483,6 +484,8 @@ Then **wait for explicit user approval** before running that plan. Brief **per p
 
 Scope: this rule governs **plan execution** only. Discussion, planning, and research artifacts may still be produced automatically.
 
+**实施层批量批准例外（2026-10-13 追加）：** 当用户已按上一条给出区间批准时，区间内各计划的简报可**合并为一次性列表**（列出剩余计划各自的目标 / 大致内容 / 验证方式），批准以该区间为准；**区间内不再逐计划停下等批准**。接口/关键设计层仍逐计划简报并等待。
+
 ### Per-plan completion report (MANDATORY)
 
 When a plan finishes, **report before moving on — do not stay silent.** Every plan boundary produces exactly two things, in this order:
@@ -491,6 +494,8 @@ When a plan finishes, **report before moving on — do not stay silent.** Every 
 2. **The next plan itself** — its id, goal, main tasks, the problem it solves, and how completion will be verified (i.e. the per-plan briefing above).
 
 Then **wait for explicit user approval** before executing the next plan. Never chain silently from one plan into the next, and never report only one of the two items.
+
+**实施层批量批准例外（2026-10-13 追加）：** 获批区间内，每个计划完成后仍须**照常汇报 ①②**，但**无需等待批准即可继续下一个计划**；到达区间终点、或出现偏差/阻塞时停下并等用户指示。
 
 ### Important naming requires prior confirmation (MANDATORY)
 
