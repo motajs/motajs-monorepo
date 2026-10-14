@@ -1,5 +1,5 @@
 .etable {
-  --etable-indent: 12px;
+  --etable-indent: 9px;
 
   display: flex;
   flex-direction: column;
@@ -147,6 +147,18 @@
 
 .etable-row-group {
   background: rgba(0, 0, 0, 0.02);
+}
+
+.etable-row-group[data-level='1'] {
+  background: rgba(0, 0, 0, 0.045);
+}
+
+.etable-row-group[data-level='2'] {
+  background: rgba(0, 0, 0, 0.07);
+}
+
+.etable-row-group[data-level='3'] {
+  background: rgba(0, 0, 0, 0.095);
 }
 
 .etable-row-error {

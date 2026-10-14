@@ -16,7 +16,7 @@ import { TextareaInput } from './inputs/TextareaInput';
 const DOUBLE_CLICK_INTERVAL_MS = 500;
 
 /** 层级缩进步长（像素），约旧缩进 12px 的 3/4 */
-const TREE_INDENT_STEP = 12;
+const TREE_INDENT_STEP = 9;
 
 export interface ITableRowProps {
   /** 要渲染的叶子行节点 */

@@ -91,6 +91,22 @@ function levelSample(): { readonly data: unknown; readonly schema: unknown } {
   };
 }
 
+// 一张两层嵌套 object 的样例表（外层与内层都是可折叠的展开行）
+function deepSample(): { readonly data: unknown; readonly schema: unknown } {
+  return {
+    data: { outer: { inner: { deep: 'v' } } },
+    schema: {
+      type: 'object',
+      properties: {
+        outer: {
+          type: 'object',
+          properties: { inner: { type: 'object', properties: { deep: { type: 'string' } } } },
+        },
+      },
+    },
+  };
+}
+
 // 取某一行的条目标题单元格，缺失时抛错
 function nameCell(container: HTMLElement, testId: string): Element {
   const row = container.querySelector(`[data-test-id="${testId}"]`);
@@ -189,5 +205,53 @@ describe('树形引导线、外框与垂直居中（P4/P11）', () => {
     expect(container.querySelector('.etable')).not.toBeNull();
     expect(container.querySelectorAll('.etable-tree-guide').length).toBeGreaterThan(0);
     expect(container.querySelectorAll('.etable-cell').length).toBeGreaterThan(0);
+  });
+});
+
+describe('嵌套展开行逐级加深与缩进步长（P8）', () => {
+  // 外层 / 内层展开行分别标注 data-level 0 / 1，供逐级加深底色
+  it('展开行按层级标注 data-level', async () => {
+    const system = await createSystem();
+    const sample = deepSample();
+
+    seed(system, 'deep', sample.data, sample.schema);
+    const container = await renderTable(system, 'deep');
+    const outer = container.querySelector('[data-test-id="table-row-outer"]');
+    const inner = container.querySelector('[data-test-id="table-row-outer-inner"]');
+
+    if (outer === null || inner === null) throw new Error('展开行缺失');
+
+    expect(outer.classList.contains('etable-row-group')).toBe(true);
+    expect(inner.classList.contains('etable-row-group')).toBe(true);
+    expect(outer.getAttribute('data-level')).toBe('0');
+    expect(inner.getAttribute('data-level')).toBe('1');
+  });
+
+  // 子行（非展开行）不带层级底色属性，保持透明
+  it('子行不带层级底色属性', async () => {
+    const system = await createSystem();
+    const sample = deepSample();
+
+    seed(system, 'deep', sample.data, sample.schema);
+    const container = await renderTable(system, 'deep');
+    const leaf = container.querySelector('[data-test-id="table-row-outer-inner-deep"]');
+
+    if (leaf === null) throw new Error('叶子行缺失');
+
+    expect(leaf.classList.contains('etable-row-group')).toBe(false);
+    expect(leaf.getAttribute('data-level')).toBeNull();
+  });
+
+  // 缩进步长缩到约 9px（原 12px 的 3/4）
+  it('缩进步长约为 9px', async () => {
+    const system = await createSystem();
+    const sample = deepSample();
+
+    seed(system, 'deep', sample.data, sample.schema);
+    const container = await renderTable(system, 'deep');
+    const guides = nameCell(container, 'table-row-outer-inner').querySelectorAll<HTMLElement>('.etable-tree-guide');
+
+    expect(guides.length).toBe(1);
+    expect(guides[0].style.width).toBe('9px');
   });
 });

@@ -3,7 +3,7 @@ import { ITableRowNode } from '../types';
 import { getShortField, parseFieldPath } from '../model/fieldPath';
 
 /** 层级缩进步长（像素），约旧缩进 12px 的 3/4 */
-const TREE_INDENT_STEP = 12;
+const TREE_INDENT_STEP = 9;
 
 export interface IGapRowProps {
   /** 分组行节点 */
@@ -33,7 +33,7 @@ export function GapRow(props: IGapRowProps): ReactElement {
 
   return (
     <>
-      <div className="etable-row etable-row-group" data-test-id={`table-row-${dataAttr}`}>
+      <div className="etable-row etable-row-group" data-level={props.level} data-test-id={`table-row-${dataAttr}`}>
         <div className="etable-gutter">{props.gutter}</div>
         <div className="etable-cell etable-cell-name" data-level={props.level} title={props.row.key}>
           {Array.from({ length: props.level }, (_, index) => (

@@ -12,7 +12,7 @@ import { TableToolbar } from './TableToolbar';
 import '../table.css';
 
 /** 层级缩进步长（像素），约旧缩进 12px 的 3/4 */
-const TREE_INDENT_STEP = 12;
+const TREE_INDENT_STEP = 9;
 
 export const enum TablePanelStatus {
   /** 尚未设置目标表 */
