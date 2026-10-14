@@ -426,7 +426,21 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   }
 
   /**
-   * 经注入的表格面板打开器打开一个指向当前栏表 schema 的新面板（D-06）
+   * 在当前可视栏范围内查找第一个尚未设目标的空栏
+   * @returns 空栏的序号（0 基）；当前可视栏都已设目标时为 -1
+   */
+  private findEmptyColumnIndex(): number {
+    for (let index = 0; index < this.visibleColumnCount; index += 1) {
+      const column = this.columns[index];
+
+      if (column === undefined || column.target === null) return index;
+    }
+
+    return -1;
+  }
+
+  /**
+   * 优先把当前表的 schema 放进本面板的一个空栏；没有空栏时才经注入的打开器新开面板（D-06 / P1）
    * @param opener 组合根注入的表格面板打开器
    * @param columnIndex 取表名的栏序号（0 基），省略为第 0 栏
    */
@@ -435,9 +449,18 @@ export class TablePanel implements IEditorPanel, ITablePanel {
 
     if (name === null) return;
 
-    const param: ITablePanelParam = {
-      target: { data: tableSchemaResourceId(name), schema: tableSchemaResourceId(name) },
+    const target: ITablePanelTarget = {
+      data: tableSchemaResourceId(name),
+      schema: tableSchemaResourceId(name),
     };
+    const emptyIndex = this.findEmptyColumnIndex();
+
+    if (emptyIndex !== -1) {
+      this.setTable(target, emptyIndex);
+      return;
+    }
+
+    const param: ITablePanelParam = { target };
 
     await opener.open(param);
   }

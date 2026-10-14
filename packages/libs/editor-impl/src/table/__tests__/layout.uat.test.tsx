@@ -1,7 +1,7 @@
 import { act, cleanup, configure, render } from '@testing-library/react';
 import { IEditorPanel, IEditorPanelFactoryParam, ResourceSystem, ShellSystem, UndoSystem } from '@motajs/editor-core';
 import { createElement } from 'react';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { tableDataResourceId, tablePanelType, tableSchemaResourceId, TablePanel } from '..';
 import { FakeResourceInjection } from './fixtures';
 
@@ -219,6 +219,56 @@ describe('多栏布局（L4 结构）', () => {
     if (columns === null) throw new Error('多栏容器缺失');
 
     expect(['auto', 'scroll']).not.toContain(getComputedStyle(columns).overflowX);
+  });
+});
+
+describe('「编辑 Schema」复用空栏（P1）', () => {
+  // 宽窗只剩空栏时，不调用打开器，直接把 schema 放进第 1 栏
+  it('有空栏时「编辑 Schema」复用空栏而不新开面板', async () => {
+    const system = await createSystem();
+
+    seedSampleTable(system, 'demo');
+    const panels: TablePanel[] = [];
+    const panel = await openTablePanel(system, panels);
+
+    await setTarget(panel, 'demo');
+    setWindowWidth(1000);
+
+    const { container } = render(createElement(system.shellSystem.render()));
+    const opener = { open: vi.fn(async (): Promise<void> => {}) };
+
+    await act(async () => {
+      await panel.openSchemaPanel(opener);
+      await panel.onSwitchIn();
+    });
+
+    expect(opener.open).not.toHaveBeenCalled();
+
+    const columns = container.querySelectorAll('.etable-column');
+
+    expect(columns.length).toBe(2);
+    expect(columns[1].querySelector('[data-test-id="schema-banner"]')).not.toBeNull();
+  });
+
+  // 窄窗只有 1 栏且已设目标时，无空栏，经打开器新开面板
+  it('窄窗无空栏时「编辑 Schema」经打开器新开面板', async () => {
+    const system = await createSystem();
+
+    seedSampleTable(system, 'demo');
+    const panels: TablePanel[] = [];
+    const panel = await openTablePanel(system, panels);
+
+    await setTarget(panel, 'demo');
+    setWindowWidth(400);
+
+    render(createElement(system.shellSystem.render()));
+    const opener = { open: vi.fn(async (): Promise<void> => {}) };
+
+    await act(async () => {
+      await panel.openSchemaPanel(opener);
+    });
+
+    expect(opener.open).toHaveBeenCalledTimes(1);
   });
 });
 
