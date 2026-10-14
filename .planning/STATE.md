@@ -5,16 +5,16 @@ current_phase: 02
 current_phase_name: 表格编辑
 current_plan: 9
 status: verifying
-stopped_at: Completed 02-30-PLAN.md
-last_updated: "2026-10-14T11:07:09.223Z"
+stopped_at: Completed 02-31-PLAN.md
+last_updated: "2026-10-14T11:23:24.090Z"
 last_activity: 2026-10-12
 last_activity_desc: "Completed 02-04 (table tracer): editor-impl test infra + end-to-end resource-layer read path"
-state_head: f7c0945c3b9bbf46da96f8fcb9d9850c9f13bff3
+state_head: 5d4ead09c6879e586ff41d622f7b5a650e919404
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 37
-  completed_plans: 36
+  completed_plans: 37
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -94,6 +94,7 @@ Progress: [██████████] 100%
 | Phase 02 P28 | 9min | 2 tasks | 3 files |
 | Phase 02 P29 | 12min | 2 tasks | 2 files |
 | Phase 02 P30 | 11min | 2 tasks | 4 files |
+| Phase 02-table P31 | 12min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -168,6 +169,8 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-28: P24 值文本域开启纵向拖拽——table.css .etable-input-textarea 加 resize: vertical 并去掉 max-height:160px；React 只控 rows 不控行内 height，拖拽设定的高度不会被重渲染重置
 - [Phase 02]: 02-29: P18/P20 同面板依赖同步——新增私有 TablePanel.refreshDependents(columnIndex, changedId)，在 commitValue/deleteItem/addItem/openCurrentViewInCodeEditor/applyUndoRedo 写盘后按被写资源 id 精确匹配本面板引用它的其它栏并 void refresh；不做全量刷新、不跨面板广播（D-15 修订 / D-31）
 - [Phase 02]: P23 值校验改为共享单个 ajv 实例（模块级 const）+ WeakMap 按 schema 引用缓存已编译校验器；行树 buildTableTree/buildSchemaTree 按输入对象引用用 WeakMap 缓存，命中即复用同一数组
+- [Phase 02]: ✕ 仅当 onCloseColumn 传入时渲染；禁用态由 closeButtonEnabled 决定（本栏 NoTarget 即禁用）
+- [Phase 02]: TablePanel.closeColumn 递增本栏 nextToken 丢弃在途结果，只清空 columnAt(columnIndex) 一栏
 
 ### Pending Todos
 
@@ -193,6 +196,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-14T11:07:08.543Z
-Stopped at: Completed 02-30-PLAN.md
+Last session: 2026-10-14T11:23:23.912Z
+Stopped at: Completed 02-31-PLAN.md
 Resume file: None
