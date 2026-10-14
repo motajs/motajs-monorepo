@@ -366,3 +366,17 @@ describe('每栏独立滚动（P14）', () => {
     expect(TABLE_CSS).toMatch(/\.etable\s*\{[^}]*overflow:\s*hidden/);
   });
 });
+
+describe('「操作」列 1.5 倍宽（P25）', () => {
+  // 表头 / 行网格末列（操作列）为 1.5fr，其余四列保持 24px 2fr 2fr 4fr
+  it('表头与行网格末列（操作列）为 1.5fr', () => {
+    const match = TABLE_CSS.match(/\.etable-header,\s*\.etable-row\s*\{[^}]*grid-template-columns:\s*([^;]+);/);
+
+    if (match === null) throw new Error('未找到表头行网格定义');
+
+    const columns = match[1].trim().split(/\s+/);
+
+    expect(columns.slice(0, 4)).toEqual(['24px', '2fr', '2fr', '4fr']);
+    expect(columns.at(-1)).toBe('1.5fr');
+  });
+});
