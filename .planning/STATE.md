@@ -5,16 +5,16 @@ current_phase: 02
 current_phase_name: 表格编辑
 current_plan: 9
 status: verifying
-stopped_at: Completed 02-32-PLAN.md
-last_updated: "2026-10-14T13:07:30.387Z"
+stopped_at: Completed 02-33-PLAN.md
+last_updated: "2026-10-14T13:18:29.170Z"
 last_activity: 2026-10-12
 last_activity_desc: "Completed 02-04 (table tracer): editor-impl test infra + end-to-end resource-layer read path"
-state_head: aa84b67a3efc343d8dd9de9cc66b4ed77708c599
+state_head: 6b195ae45daadb7c373157ca1e646e64af593ec3
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 39
-  completed_plans: 38
+  completed_plans: 39
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -96,6 +96,7 @@ Progress: [██████████] 100%
 | Phase 02 P30 | 11min | 2 tasks | 4 files |
 | Phase 02-table P31 | 12min | 2 tasks | 4 files |
 | Phase 02-table P32 | 14min | 2 tasks | 3 files |
+| Phase 02 P33 | 6min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -175,6 +176,7 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-32: P26 刷新原地更新——TablePanel.refresh 仅在本栏尚无就绪行树（首载/失败重试）时才发 Loading+空行树，已有内容时保持 Ready 就地更新，避免约 100 行 DOM 整树卸载重挂
 - [Phase 02]: 02-32: TablePanel.setTable 仅在换到另一张目标表（data.id 变化或此前无目标）时清旧行树；refresh 自身不再清树
 - [Phase 02]: 02-32: React.memo(TableGrid) + Ready 分支行元素列表 useMemo + TableColumn 各回调 useCallback（依赖取具体 props 字段，不取整个 props 对象）；内容未变的刷新跳过整表重渲染，无需改 ITableRowProps/IGapRowProps
+- [Phase 02]: P27/P28: 折叠行整行加 cursor:pointer；值文本域精确回退到 antd autoSize（撤销 02-28 的 rows + resize）
 
 ### Pending Todos
 
@@ -200,6 +202,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-14T13:07:30.200Z
-Stopped at: Completed 02-32-PLAN.md
+Last session: 2026-10-14T13:18:29.007Z
+Stopped at: Completed 02-33-PLAN.md
 Resume file: None
