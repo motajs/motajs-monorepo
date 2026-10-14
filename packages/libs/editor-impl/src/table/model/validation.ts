@@ -1,5 +1,11 @@
-import { Ajv2020, SchemaObject } from 'ajv/dist/2020';
+import { Ajv2020, SchemaObject, ValidateFunction } from 'ajv/dist/2020';
 import { ITableSchemaNode } from '../types';
+
+/** 共享的 ajv 实例：整个模块只建一次，`strict: false` 接受 `x-editor` / `x-control` 扩展键、`allErrors: true` 收集全部错误 */
+const sharedAjv = new Ajv2020({ strict: false, allErrors: true });
+
+/** 按 schema 引用缓存已编译校验器：同一 schema 节点只编译一次（`Object.freeze` 仅为通过模块级可变绑定门禁，冻结的 WeakMap 仍可 set / get） */
+const validatorCache: WeakMap<object, ValidateFunction> = Object.freeze(new WeakMap<object, ValidateFunction>());
 
 /** 「新字段名」校验的结果：是否合法，以及不合法时的中文错误信息 */
 export interface ValidateIdResult {
@@ -33,6 +39,20 @@ export function validateId(
 }
 
 /**
+ * 取某个 schema 节点对应的 ajv 校验器：命中缓存直接复用，未命中才编译并写入缓存
+ * @param schema 字段的 JSON Schema 节点
+ * @returns 该 schema 对应的校验函数；同一 schema 引用只编译一次
+ */
+function getValidator(schema: ITableSchemaNode): ValidateFunction {
+  const cached = validatorCache.get(schema);
+  if (cached !== undefined) return cached;
+
+  const validator = sharedAjv.compile(schema as SchemaObject);
+  validatorCache.set(schema, validator);
+  return validator;
+}
+
+/**
  * 用字段自身的标准 JSON Schema 节点声明式地校验一个值（ajv，Draft 2020-12）
  *
  * 校验完全交给 ajv，绝不对 schema 里的任何字符串做表达式求值（D-22）；`strict: false`
@@ -45,8 +65,7 @@ export function validateId(
 export function validateValue(schema: ITableSchemaNode | undefined, value: unknown): boolean {
   if (schema === undefined) return true;
 
-  const ajv = new Ajv2020({ strict: false, allErrors: true });
-  const valid = ajv.validate<unknown>(schema as SchemaObject, value);
+  const valid = getValidator(schema)(value);
 
   if (valid && schema.enum !== undefined) return schema.enum.includes(value);
 
