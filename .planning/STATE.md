@@ -5,16 +5,16 @@ current_phase: 02
 current_phase_name: 表格编辑
 current_plan: 9
 status: verifying
-stopped_at: Completed 02-33-PLAN.md
-last_updated: "2026-10-14T13:18:29.170Z"
+stopped_at: Completed 02-34-PLAN.md
+last_updated: "2026-10-14T15:19:58.176Z"
 last_activity: 2026-10-12
 last_activity_desc: "Completed 02-04 (table tracer): editor-impl test infra + end-to-end resource-layer read path"
-state_head: 6b195ae45daadb7c373157ca1e646e64af593ec3
+state_head: 9dbf68585bb741f1cf7bacaa95b15b0414525b5c
 progress:
   total_phases: 7
   completed_phases: 0
-  total_plans: 39
-  completed_plans: 39
+  total_plans: 40
+  completed_plans: 40
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -97,6 +97,7 @@ Progress: [██████████] 100%
 | Phase 02-table P31 | 12min | 2 tasks | 4 files |
 | Phase 02-table P32 | 14min | 2 tasks | 3 files |
 | Phase 02 P33 | 6min | 2 tasks | 3 files |
+| Phase 02 P34 | 11min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -177,6 +178,7 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-32: TablePanel.setTable 仅在换到另一张目标表（data.id 变化或此前无目标）时清旧行树；refresh 自身不再清树
 - [Phase 02]: 02-32: React.memo(TableGrid) + Ready 分支行元素列表 useMemo + TableColumn 各回调 useCallback（依赖取具体 props 字段，不取整个 props 对象）；内容未变的刷新跳过整表重渲染，无需改 ITableRowProps/IGapRowProps
 - [Phase 02]: P27/P28: 折叠行整行加 cursor:pointer；值文本域精确回退到 antd autoSize（撤销 02-28 的 rows + resize）
+- [Phase 02]: 02-34: P29 分组行默认折叠（expanded 初值 false，折叠子树不挂载）+ 首次可见自动展开（GapRow 自持 IntersectionObserver，首次相交即展开并 disconnect）；autoRevealPending 本地标记使自动展开只发生一次且用户点击后不再自动展开；无 IntersectionObserver 时退化立即展开（jsdom 既有用例因此保持绿）；折叠状态仍为组件本地 useState、不进撤销；IGapRowProps/GapRow 签名不变，无接口计划
 
 ### Pending Todos
 
@@ -202,6 +204,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-14T13:18:29.007Z
-Stopped at: Completed 02-33-PLAN.md
+Last session: 2026-10-14T15:19:57.895Z
+Stopped at: Completed 02-34-PLAN.md
 Resume file: None
