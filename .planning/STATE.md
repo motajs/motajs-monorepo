@@ -5,16 +5,16 @@ current_phase: 02
 current_phase_name: 表格编辑
 current_plan: 9
 status: verifying
-stopped_at: Completed 02-19-PLAN.md
-last_updated: "2026-10-14T02:58:42.834Z"
+stopped_at: Completed 02-20-PLAN.md
+last_updated: "2026-10-14T03:16:16.257Z"
 last_activity: 2026-10-12
 last_activity_desc: "Completed 02-04 (table tracer): editor-impl test infra + end-to-end resource-layer read path"
-state_head: 65c71e15bb06ff9ce7818fc34ce15c716d4725d1
+state_head: 5cb61526992a26c6064cfa7f2262a82e4f578cf4
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 29
-  completed_plans: 25
+  completed_plans: 26
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -83,6 +83,7 @@ Progress: [██████████] 100%
 | Phase 02 P17 | 1h 27m | 3 tasks | 8 files |
 | Phase 02 P18 | ~30min | 3 tasks | 13 files |
 | Phase 02-table P19 | ~15min | 2 tasks | 2 files |
+| Phase 02-table P20 | ~13min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -132,6 +133,10 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-18: 删除不再用 window.confirm——左侧红底圆形 − 直接在统一撤销路径上删除一行（可 Ctrl+Z 回退）；schema 禁止 null 时 − 禁用
 - [Phase 02]: 02-19: 全局撤销/重做快捷键绑在 editor-core 外壳（ShellSystem 的 ShellRoot），任何渲染 shellSystem.render() 的宿主零接线即得；Ctrl/Cmd+Z 撤销、Ctrl/Cmd+Shift+Z 与 Ctrl/Cmd+Y 重做，命中即 preventDefault（B5）
 - [Phase 02]: 02-19: 快捷键监听挂 window 而非 document——PORT-02 门禁在 editor-core（含测试）禁 document 全局，window 由 D-38 明确允许；按键解析抽成非导出纯函数 resolveUndoRedoShortcut，无模块级可变绑定
+- [Phase 02-table]: 02-20: 栏数由 window.innerWidth 决定（N = max(1, floor(innerWidth / 栏宽))），可视栏在容器内等分（flex 1 1 0），既满足末栏不偏宽又不产生横向滚动条（P5/P6 冲突落点）
+- [Phase 02-table]: 02-20: 面板不自行读窗口——视图经只读回调 onLayout 回报可视栏数，模型只在 0..visibleColumnCount-1 内找空栏，越界即回退打开器（T-02-20-02）
+- [Phase 02-table]: 02-20: 栏分隔线改为覆盖整列高度的 ::before 竖线（align-self: stretch + min-height: 100%），两侧表格高度不一致时不断口（P9）
+- [Phase 02-table]: 02-20: 测试环境缺省 window.innerWidth 归零（mapPolyfill.ts），等价改造前未桩 clientWidth 的单栏缺省；产品代码零行为影响（Rule 3）
 
 ### Pending Todos
 
@@ -157,6 +162,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-14T02:58:42.723Z
-Stopped at: Completed 02-19-PLAN.md
+Last session: 2026-10-14T03:16:16.161Z
+Stopped at: Completed 02-20-PLAN.md
 Resume file: None
