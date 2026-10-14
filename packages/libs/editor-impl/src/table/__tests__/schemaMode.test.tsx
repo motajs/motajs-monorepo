@@ -174,9 +174,7 @@ describe('表格 schema 模式与工具栏', () => {
 
     fireEvent.mouseDown(compact?.querySelector('[role="combobox"]') as Element);
 
-    const optionTitles = Array.from(document.querySelectorAll('.ant-select-item-option')).map(
-      (element) => element.getAttribute('title') ?? '',
-    );
+    const optionTitles = screen.getAllByRole('option').map((option) => option.textContent ?? '');
 
     expect(optionTitles).toEqual(['string', 'number', 'integer', 'boolean', 'object', 'array', 'null']);
     expect(optionTitles).not.toContain('textarea');
