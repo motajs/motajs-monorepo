@@ -8,7 +8,7 @@ import {
   IUndoContext,
 } from '@motajs/editor-core';
 import { get } from 'es-toolkit/compat';
-import { createElement, FC, ReactElement, useEffect, useRef, useState } from 'react';
+import { createElement, FC, ReactElement, useCallback, useEffect, useRef, useState } from 'react';
 import { ICodeEditorOpener, ITablePanelOpener } from '../react';
 import { ITablePanel, ITablePanelParam, ITablePanelTarget, ITableRowNode } from './types';
 import {
@@ -249,11 +249,39 @@ function resolveColumnCount(windowWidth: number, columnWidth: number): number {
 
 /**
  * 单栏组件：订阅该栏视图状态并把各回调绑定到该栏序号后渲染一张表格
+ *
+ * 各回调经 `useCallback` 稳定身份（依赖为来自视图根、本身稳定的 props），配合 `React.memo(TableGrid)`
+ * 的浅比较，使该栏状态未实质变化时不重渲染整张表（P26）。
  * @param props 单栏 props
  * @returns 该栏的表格元素
  */
 function TableColumn(props: ITableColumnProps): ReactElement {
   const view = useStore(props.getStore(props.columnIndex));
+  const onRetry = useCallback((): void => props.onRetry(props.columnIndex), [props.onRetry, props.columnIndex]);
+  const onChange = useCallback(
+    (key: string, value: unknown): void => props.onChange(props.columnIndex, key, value),
+    [props.onChange, props.columnIndex],
+  );
+  const onAdd = useCallback(
+    (anchorKey: string, name: string): void => props.onAdd(props.columnIndex, anchorKey, name),
+    [props.onAdd, props.columnIndex],
+  );
+  const onDelete = useCallback(
+    (key: string): void => props.onDelete(props.columnIndex, key),
+    [props.onDelete, props.columnIndex],
+  );
+  const onOpenSchema = useCallback(
+    (opener: ITablePanelOpener): void => props.onOpenSchema(props.columnIndex, opener),
+    [props.onOpenSchema, props.columnIndex],
+  );
+  const onOpenInCodeEditor = useCallback(
+    (opener: ICodeEditorOpener): void => props.onOpenInCodeEditor(props.columnIndex, opener),
+    [props.onOpenInCodeEditor, props.columnIndex],
+  );
+  const onCloseColumn = useCallback(
+    (): void => props.onCloseColumn(props.columnIndex),
+    [props.onCloseColumn, props.columnIndex],
+  );
   const gridProps: ITableGridProps = {
     status: view.status,
     rows: view.rows,
@@ -261,13 +289,13 @@ function TableColumn(props: ITableColumnProps): ReactElement {
     error: view.error,
     schemaMode: view.schemaMode,
     title: view.title,
-    onRetry: (): void => props.onRetry(props.columnIndex),
-    onChange: (key, value): void => props.onChange(props.columnIndex, key, value),
-    onAdd: (anchorKey, name): void => props.onAdd(props.columnIndex, anchorKey, name),
-    onDelete: (key): void => props.onDelete(props.columnIndex, key),
-    onOpenSchema: (opener): void => props.onOpenSchema(props.columnIndex, opener),
-    onOpenInCodeEditor: (opener): void => props.onOpenInCodeEditor(props.columnIndex, opener),
-    onCloseColumn: (): void => props.onCloseColumn(props.columnIndex),
+    onRetry,
+    onChange,
+    onAdd,
+    onDelete,
+    onOpenSchema,
+    onOpenInCodeEditor,
+    onCloseColumn,
   };
 
   return createElement(

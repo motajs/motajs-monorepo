@@ -1,5 +1,5 @@
 import { Button, Input, InputNumber, Spin } from 'antd';
-import { createElement, ReactElement, useState } from 'react';
+import { createElement, memo, ReactElement, useMemo, useState } from 'react';
 import { ICodeEditorOpener, ITablePanelOpener, useTableCapabilities } from '../../react';
 import { ITableRowNode, TableEditMode } from '../types';
 import { getParentFieldPath, getShortField, parseFieldPath } from '../model/fieldPath';
@@ -539,7 +539,7 @@ function renderRows(rows: readonly ITableRowNode[], context: IRowRenderContext, 
  * @param props 表格 props
  * @returns 表格元素
  */
-export function TableGrid(props: ITableGridProps): ReactElement {
+export const TableGrid = memo(function TableGrid(props: ITableGridProps): ReactElement {
   const modeState = useState<TableEditMode>(TableEditMode.Change);
   const mode = modeState[0];
   const setMode = modeState[1];
@@ -547,14 +547,18 @@ export function TableGrid(props: ITableGridProps): ReactElement {
   const schemaMode = props.schemaMode ?? false;
   const loading = props.status === TablePanelStatus.Loading;
   const failed = props.status === TablePanelStatus.Error;
-  const context: IRowRenderContext = {
-    mode,
-    schemaMode,
-    onChange: props.onChange,
-    onAdd: props.onAdd,
-    onDelete: props.onDelete,
-    onOpenExternalEditor: props.onOpenExternalEditor,
-  };
+  const rows = useMemo((): ReactElement[] => {
+    const context: IRowRenderContext = {
+      mode,
+      schemaMode,
+      onChange: props.onChange,
+      onAdd: props.onAdd,
+      onDelete: props.onDelete,
+      onOpenExternalEditor: props.onOpenExternalEditor,
+    };
+
+    return renderRows(props.rows, context, 0);
+  }, [props.rows, mode, schemaMode, props.onChange, props.onAdd, props.onDelete, props.onOpenExternalEditor]);
   const toolbar = createElement(TableToolbar, {
     mode,
     onModeChange: setMode,
@@ -596,10 +600,6 @@ export function TableGrid(props: ITableGridProps): ReactElement {
     banner,
     notice,
     renderHeader(),
-    createElement(
-      'div',
-      { className: 'etable-body', 'data-test-id': 'data-table-grid' },
-      renderRows(props.rows, context, 0),
-    ),
+    createElement('div', { className: 'etable-body', 'data-test-id': 'data-table-grid' }, rows),
   );
-}
+});

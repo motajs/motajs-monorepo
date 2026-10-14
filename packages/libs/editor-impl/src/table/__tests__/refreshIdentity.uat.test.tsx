@@ -99,6 +99,57 @@ describe('刷新原地更新、不再整树重挂（P26）', () => {
     expect(container.querySelector('[data-test-id="table-row-name"]')).toBe(first);
   });
 
+  // 同一内容刷新后值单元格内输入控件的 DOM 节点身份不变（记忆化命中，整表重渲染被跳过）
+  it('同一内容刷新后输入控件身份不变', async () => {
+    const system = await createSystem();
+    const panels: TablePanel[] = [];
+    const panel = await openTablePanel(system, panels);
+
+    seed(system, 't', { name: 'hello' }, { type: 'object', properties: { name: { type: 'string' } } });
+    await setTarget(panel, 't');
+
+    const { container } = render(createElement(system.shellSystem.render()));
+    const first = container.querySelector('[data-test-id="table-input-name"] textarea');
+
+    expect(first).not.toBeNull();
+
+    await act(async () => {
+      await panel.onSwitchIn();
+    });
+
+    expect(container.querySelector('[data-test-id="table-input-name"] textarea')).toBe(first);
+  });
+
+  // 对某字段写盘后刷新，其余未变更字段的行 DOM 节点身份保持不变
+  it('未受影响的行刷新后不重挂', async () => {
+    const system = await createSystem();
+    const panels: TablePanel[] = [];
+    const panel = await openTablePanel(system, panels);
+
+    seed(
+      system,
+      't',
+      { a: 'x', b: 'y' },
+      { type: 'object', properties: { a: { type: 'string' }, b: { type: 'string' } } },
+    );
+    await setTarget(panel, 't');
+
+    const { container } = render(createElement(system.shellSystem.render()));
+    const rowA = container.querySelector('[data-test-id="table-row-a"]');
+    const rowB = container.querySelector('[data-test-id="table-row-b"]');
+
+    expect(rowA).not.toBeNull();
+    expect(rowB).not.toBeNull();
+
+    await act(async () => {
+      await system.resourceSystem.writeContent(tableDataResourceId('t'), { a: 'z', b: 'y' });
+      await panel.onSwitchIn();
+    });
+
+    expect(valueOf(container, 'a')).toBe('"z"');
+    expect(container.querySelector('[data-test-id="table-row-b"]')).toBe(rowB);
+  });
+
   // 内容真的变了时行树仍正确更新（写盘产生新对象后读到新值，不与同内容用例冲突）
   it('内容变更后刷新仍更新为新值', async () => {
     const system = await createSystem();
