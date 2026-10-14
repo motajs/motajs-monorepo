@@ -1,8 +1,12 @@
 .etable {
+  --etable-indent: 12px;
+
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
   height: 100%;
   min-height: 0;
+  border: 2px solid rgba(0, 0, 0, 0.15);
   overflow: hidden;
   font-size: 13px;
 }
@@ -106,12 +110,29 @@
 }
 
 .etable-cell {
+  display: flex;
+  align-items: center;
   min-width: 0;
   padding: 6px 8px;
   border-right: 1px solid rgba(0, 0, 0, 0.06);
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   overflow: hidden;
   line-height: 1.5;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.etable-tree-guide {
+  display: inline-block;
+  flex: 0 0 auto;
+  align-self: stretch;
+  width: var(--etable-indent);
+  border-left: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.etable-cell-text {
+  min-width: 0;
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

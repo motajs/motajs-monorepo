@@ -145,3 +145,49 @@ describe('层级缩进只在条目列（P3）', () => {
     expect(nameCell(container, 'table-row-nested-inner')).not.toBeNull();
   });
 });
+
+describe('树形引导线、外框与垂直居中（P4/P11）', () => {
+  // 深层条目列里的引导竖线严格多于顶层（0 层 0 条、1 层 1 条）
+  it('深层条目列的引导竖线多于顶层', async () => {
+    const system = await createSystem();
+    const sample = levelSample();
+
+    seed(system, 'guide', sample.data, sample.schema);
+    const container = await renderTable(system, 'guide');
+    const topGuides = nameCell(container, 'table-row-top').querySelectorAll('.etable-tree-guide').length;
+    const childGuides = nameCell(container, 'table-row-nested-inner').querySelectorAll('.etable-tree-guide').length;
+
+    expect(topGuides).toBe(0);
+    expect(childGuides).toBe(1);
+    expect(childGuides).toBeGreaterThan(topGuides);
+  });
+
+  // 引导线只出现在条目列，其余三列不带引导竖线
+  it('引导竖线只占条目列', async () => {
+    const system = await createSystem();
+    const sample = levelSample();
+
+    seed(system, 'guide', sample.data, sample.schema);
+    const container = await renderTable(system, 'guide');
+    const childRow = container.querySelector('[data-test-id="table-row-nested-inner"]');
+
+    if (childRow === null) throw new Error('子行缺失');
+
+    expect(childRow.querySelectorAll('.etable-cell-comment .etable-tree-guide').length).toBe(0);
+    expect(childRow.querySelectorAll('.etable-cell-value .etable-tree-guide').length).toBe(0);
+    expect(childRow.querySelectorAll('.etable-cell-action .etable-tree-guide').length).toBe(0);
+  });
+
+  // 外框 / 居中结构就绪（jsdom 不做 CSS 布局，退化为结构断言：外框根、引导线、单元格均在）
+  it('外框 / 引导线 / 居中结构就绪', async () => {
+    const system = await createSystem();
+    const sample = levelSample();
+
+    seed(system, 'guide', sample.data, sample.schema);
+    const container = await renderTable(system, 'guide');
+
+    expect(container.querySelector('.etable')).not.toBeNull();
+    expect(container.querySelectorAll('.etable-tree-guide').length).toBeGreaterThan(0);
+    expect(container.querySelectorAll('.etable-cell').length).toBeGreaterThan(0);
+  });
+});

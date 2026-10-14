@@ -1,5 +1,5 @@
 import { Button, Input, InputNumber, Spin } from 'antd';
-import { CSSProperties, createElement, ReactElement, useState } from 'react';
+import { createElement, ReactElement, useState } from 'react';
 import { ICodeEditorOpener, ITablePanelOpener, useTableCapabilities } from '../../react';
 import { ITableRowNode, TableEditMode } from '../types';
 import { getParentFieldPath, getShortField, parseFieldPath } from '../model/fieldPath';
@@ -13,14 +13,6 @@ import '../table.css';
 
 /** 层级缩进步长（像素），约旧缩进 12px 的 3/4 */
 const TREE_INDENT_STEP = 12;
-
-/** 表头与成对行内纯文本在 flex 单元格内的截断样式（保留省略号） */
-const CELL_TEXT_STYLE: CSSProperties = {
-  minWidth: 0,
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
-  whiteSpace: 'nowrap',
-};
 
 export const enum TablePanelStatus {
   /** 尚未设置目标表 */
@@ -264,22 +256,22 @@ function renderHeader(): ReactElement {
     createElement(
       'div',
       { className: 'etable-cell etable-cell-name' },
-      createElement('span', { style: CELL_TEXT_STYLE }, '条目'),
+      createElement('span', { className: 'etable-cell-text' }, '条目'),
     ),
     createElement(
       'div',
       { className: 'etable-cell etable-cell-comment' },
-      createElement('span', { style: CELL_TEXT_STYLE }, '注释'),
+      createElement('span', { className: 'etable-cell-text' }, '注释'),
     ),
     createElement(
       'div',
       { className: 'etable-cell etable-cell-value' },
-      createElement('span', { style: CELL_TEXT_STYLE }, '值'),
+      createElement('span', { className: 'etable-cell-text' }, '值'),
     ),
     createElement(
       'div',
       { className: 'etable-cell etable-cell-action' },
-      createElement('span', { style: CELL_TEXT_STYLE }, '操作'),
+      createElement('span', { className: 'etable-cell-text' }, '操作'),
     ),
   );
 }
@@ -421,7 +413,7 @@ function renderPairedRow(
         title: `${label} / ${getShortField(right.key)}`,
       },
       ...guides,
-      createElement('span', { style: CELL_TEXT_STYLE }, `${label} / ${getShortField(right.key)}`),
+      createElement('span', { className: 'etable-cell-text' }, `${label} / ${getShortField(right.key)}`),
     ),
     createElement('div', { className: 'etable-cell etable-cell-comment' }),
     createElement(

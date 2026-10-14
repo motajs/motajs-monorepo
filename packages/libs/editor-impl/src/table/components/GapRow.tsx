@@ -59,7 +59,7 @@ export function GapRow(props: IGapRowProps): ReactElement {
           <span className="etable-group-name">{shortField}</span>
         </div>
         <div className="etable-cell etable-cell-comment" title={props.row.description ?? ''}>
-          {props.row.description ?? ''}
+          <span className="etable-cell-text">{props.row.description ?? ''}</span>
         </div>
         <div className="etable-cell etable-cell-value" />
         <div className="etable-cell etable-cell-action" />

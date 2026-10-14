@@ -1,4 +1,4 @@
-import { CSSProperties, ReactElement, ReactNode, useRef, useState } from 'react';
+import { ReactElement, ReactNode, useRef, useState } from 'react';
 import { ITableEditorCapabilities, IMultiSelectItem, useTableCapabilities } from '../../react';
 import { ITableRowNode, TableControlKind, TableEditMode, TableExternalEditor } from '../types';
 import { inferControlKind } from '../model/control';
@@ -17,14 +17,6 @@ const DOUBLE_CLICK_INTERVAL_MS = 500;
 
 /** 层级缩进步长（像素），约旧缩进 12px 的 3/4 */
 const TREE_INDENT_STEP = 12;
-
-/** 「条目」「注释」等纯文本在 flex 单元格内的截断样式（保留省略号） */
-const CELL_TEXT_STYLE: CSSProperties = {
-  minWidth: 0,
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
-  whiteSpace: 'nowrap',
-};
 
 export interface ITableRowProps {
   /** 要渲染的叶子行节点 */
@@ -352,10 +344,10 @@ export function TableRow(props: ITableRowProps): ReactElement {
           {Array.from({ length: props.level }, (_, index) => (
             <span key={index} className="etable-tree-guide" style={{ width: TREE_INDENT_STEP }} />
           ))}
-          <span style={CELL_TEXT_STYLE}>{getShortField(row.key)}</span>
+          <span className="etable-cell-text">{getShortField(row.key)}</span>
         </div>
         <div className="etable-cell etable-cell-comment" title={row.description ?? ''}>
-          {row.description ?? ''}
+          <span className="etable-cell-text">{row.description ?? ''}</span>
         </div>
         <div className="etable-cell etable-cell-value" data-test-id={`table-input-${dataAttr}`}>
           {renderValueControl(row, disabled, handleValueChange)}
