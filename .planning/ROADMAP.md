@@ -105,7 +105,7 @@ Plans:
 - [x] 02-20-PLAN.md
 - [x] 02-21-PLAN.md
 - [x] 02-22-PLAN.md
-- [ ] 02-23-PLAN.md
+- [x] 02-23-PLAN.md
 
 - [x] 02-15-PLAN.md
 - [x] 02-16-PLAN.md

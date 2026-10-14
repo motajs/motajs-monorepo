@@ -5,16 +5,16 @@ current_phase: 02
 current_phase_name: 表格编辑
 current_plan: 9
 status: verifying
-stopped_at: Completed 02-22-PLAN.md
-last_updated: "2026-10-14T04:08:46.111Z"
+stopped_at: Completed 02-23-PLAN.md
+last_updated: "2026-10-14T05:51:40.266Z"
 last_activity: 2026-10-12
 last_activity_desc: "Completed 02-04 (table tracer): editor-impl test infra + end-to-end resource-layer read path"
-state_head: d2411edda7eca6f9a119ffd89037f50ae7702eae
+state_head: e140dab6a403be15f21adadecd649841bd9f3b5f
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 29
-  completed_plans: 28
+  completed_plans: 29
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -86,6 +86,7 @@ Progress: [██████████] 100%
 | Phase 02-table P20 | ~13min | 3 tasks | 5 files |
 | Phase 02 P21 | ~17min | 3 tasks | 5 files |
 | Phase 02 P22 | 14min | 2 tasks | 3 files |
+| Phase 02-table P23 | 11min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -146,6 +147,8 @@ Recent decisions affecting current work:
 - [Phase 02]: P12 根因在交互侧（失焦丢弃 + 输入框压条目列），写入路径本就正确，故不改 tablePanel.ts
 - [Phase 02]: 名称输入改为独立浮层 .etable-add-popover，提交入口扩为回车 / 失焦 / 确定三处（P12）
 - [Phase 02]: P13 审计确认无裸 textarea / 原生对话框，TextareaInput 已是 antd，仅补回归断言
+- [Phase 02]: Dev demo table scales via a count constant + generator functions (TABLE_DEMO_ENTRY_COUNT / createTableDemoData / createTableDemoSchema)
+- [Phase 02]: Undo/redo exposed as flat top-level dev-host menu items (registerDevMenu) calling core.undoSystem; no shell sub-menu, no core/impl change
 
 ### Pending Todos
 
@@ -171,6 +174,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-14T04:08:32.139Z
-Stopped at: Completed 02-22-PLAN.md
+Last session: 2026-10-14T05:51:40.161Z
+Stopped at: Completed 02-23-PLAN.md
 Resume file: None
