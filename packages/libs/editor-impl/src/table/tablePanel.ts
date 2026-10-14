@@ -526,6 +526,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       data: { columnIndex, path: key, previousValue, nextValue: value },
     });
     this.applyData(columnIndex, next);
+    this.refreshDependents(columnIndex, column.target.data);
   }
 
   /**
@@ -573,6 +574,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
         data: { columnIndex, path, previousValue: undefined, nextValue: {}, anchor },
       });
       this.applyData(columnIndex, ordered, '添加成功');
+      this.refreshDependents(columnIndex, column.target.data);
       return;
     }
 
@@ -583,10 +585,13 @@ export class TablePanel implements IEditorPanel, ITablePanel {
 
     if (!(await this.persist(columnIndex, next))) return;
 
+    this.refreshDependents(columnIndex, column.target.data);
+
     if (nextSchema !== undefined) {
       if (!(await this.persistSchema(columnIndex, nextSchema))) return;
 
       column.schema = nextSchema;
+      this.refreshDependents(columnIndex, column.target.schema);
     }
 
     this.context.addUndoContext(this, {
@@ -616,6 +621,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       data: { columnIndex, path: key, previousValue, nextValue: undefined },
     });
     this.applyData(columnIndex, next, '删除成功');
+    this.refreshDependents(columnIndex, column.target.data);
   }
 
   /**
@@ -1079,6 +1085,30 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       if (this.requestTokens[columnIndex] !== token) return;
 
       this.publish(columnIndex, TablePanelStatus.Error, []);
+    }
+  }
+
+  /**
+   * 按被写资源 id 刷新本面板内引用它的其它栏：对每一栏 j（j ≠ columnIndex），当该栏目标的数据或
+   * schema 资源 id 命中 changedId 时重新请求资源并重算行树
+   *
+   * 只刷新本面板内引用该资源的栏（按 id 精确匹配），不做无差别全量刷新，也绝不做跨面板广播
+   * （跨面板仍只在切入时刷新，D-15 修订版 / D-31）。
+   * @param columnIndex 触发写盘的栏序号（0 基），该栏自身不在此刷新
+   * @param changedId 刚写入的资源标识（数据资源 `table.<name>` 或 schema 资源 `table#schema.<name>`）
+   */
+  private refreshDependents(columnIndex: number, changedId: IResourceIdentifier): void {
+    const count = this.columns.length;
+
+    for (let index = 0; index < count; index += 1) {
+      if (index === columnIndex) continue;
+
+      const target = this.columns[index].target;
+
+      if (target === null) continue;
+      if (target.data.id !== changedId.id && target.schema.id !== changedId.id) continue;
+
+      void this.refresh(index);
     }
   }
 }
