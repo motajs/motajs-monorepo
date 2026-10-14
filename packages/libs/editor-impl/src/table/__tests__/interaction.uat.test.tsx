@@ -175,6 +175,66 @@ describe('分组行呈现（L2）', () => {
   });
 });
 
+describe('折叠行整行点击（P19）', () => {
+  // 点折叠行非按钮处折叠，再次点击展开
+  it('点折叠行任意处切换折叠', async () => {
+    const system = await createSystem();
+    const sample = nestedTable();
+
+    seed(system, 'fold', sample.data, sample.schema);
+    const panel = await openPanel(system);
+
+    await setTarget(panel, 'fold');
+    const { container } = render(createElement(system.shellSystem.render()));
+
+    const groupName = container.querySelector('.etable-group-name');
+
+    if (groupName === null) throw new Error('分组行条目名缺失');
+
+    fireEvent.click(groupName);
+    expect(container.querySelector('[data-test-id="table-row-nested-inner"]')).toBeNull();
+
+    fireEvent.click(groupName);
+    expect(container.querySelector('[data-test-id="table-row-nested-inner"]')).not.toBeNull();
+  });
+
+  // 点折叠箭头一次只切换一次：子行消失且不立即重现（未与整行点击重复切换）
+  it('点折叠箭头只切换一次', async () => {
+    const system = await createSystem();
+    const sample = nestedTable();
+
+    seed(system, 'fold', sample.data, sample.schema);
+    const panel = await openPanel(system);
+
+    await setTarget(panel, 'fold');
+    const { container } = render(createElement(system.shellSystem.render()));
+
+    fireEvent.click(screen.getByTestId('gap-toggle-nested'));
+
+    expect(container.querySelector('[data-test-id="table-row-nested-inner"]')).toBeNull();
+  });
+
+  // 点折叠行的子行不折叠父行
+  it('点子行不折叠父行', async () => {
+    const system = await createSystem();
+    const sample = nestedTable();
+
+    seed(system, 'fold', sample.data, sample.schema);
+    const panel = await openPanel(system);
+
+    await setTarget(panel, 'fold');
+    const { container } = render(createElement(system.shellSystem.render()));
+
+    const child = container.querySelector('[data-test-id="table-row-nested-inner"]');
+
+    if (child === null) throw new Error('子行缺失');
+
+    fireEvent.click(child);
+
+    expect(container.querySelector('[data-test-id="table-row-nested-inner"]')).not.toBeNull();
+  });
+});
+
 describe('左侧 ± 圆形按钮（B4）', () => {
   // 添加模式下每行位置出现绿底圆形「+」
   it('添加模式在行上出现 + 按钮', async () => {

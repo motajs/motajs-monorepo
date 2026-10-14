@@ -20,7 +20,8 @@ export interface IGapRowProps {
  * 可折叠分组行：最左为折叠指示与对象名，其子行渲染在带缩进的容器内
  *
  * 折叠状态是面板本地的界面状态，不进入撤销历史；展开时显示「折叠」，折叠时显示「展开」。分组行
- * 最左的折叠指示与紧随其后的对象名、以及子行容器的缩进，让「分组的作用范围」一眼可读（L2）。
+ * 最左的折叠指示与紧随其后的对象名、以及子行容器的缩进，让「分组的作用范围」一眼可读（L2）。点
+ * 该行任意处（gutter 增删按钮除外）都切换折叠，折叠箭头按钮自身只切换一次。
  * @param props 行 props
  * @returns 分组行元素
  */
@@ -33,7 +34,12 @@ export function GapRow(props: IGapRowProps): ReactElement {
 
   return (
     <>
-      <div className="etable-row etable-row-group" data-level={props.level} data-test-id={`table-row-${dataAttr}`}>
+      <div
+        className="etable-row etable-row-group"
+        data-level={props.level}
+        data-test-id={`table-row-${dataAttr}`}
+        onClick={(): void => setExpanded(!expanded)}
+      >
         <div className="etable-gutter">{props.gutter}</div>
         <div className="etable-cell etable-cell-name" data-level={props.level} title={props.row.key}>
           {Array.from({ length: props.level }, (_, index) => (
@@ -45,7 +51,10 @@ export function GapRow(props: IGapRowProps): ReactElement {
             aria-label={expanded ? '折叠' : '展开'}
             aria-expanded={expanded}
             data-test-id={`gap-toggle-${dataAttr}`}
-            onClick={(): void => setExpanded(!expanded)}
+            onClick={(event): void => {
+              event.stopPropagation();
+              setExpanded(!expanded);
+            }}
           >
             <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
               <path
