@@ -196,6 +196,11 @@
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
 
+.etable-toolbar-spacer {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .etable-toolbar-title {
   flex: 1 1 auto;
   min-width: 0;

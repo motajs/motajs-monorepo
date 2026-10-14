@@ -380,3 +380,46 @@ describe('「操作」列 1.5 倍宽（P25）', () => {
     expect(columns.at(-1)).toBe('1.5fr');
   });
 });
+
+describe('空栏顶部控件右对齐（P17）', () => {
+  // 未打开表的空栏工具栏含弹性占位，把右侧按钮推向右端
+  it('未打开表的栏工具栏含弹性占位', async () => {
+    const system = await createSystem();
+
+    seedSampleTable(system, 'demo');
+    const panels: TablePanel[] = [];
+    const panel = await openTablePanel(system, panels);
+
+    await setTarget(panel, 'demo');
+    setWindowWidth(1000);
+    const { container } = render(createElement(system.shellSystem.render()));
+    const columns = container.querySelectorAll('.etable-column');
+    const toolbar = columns[1].querySelector('.etable-toolbar');
+    const spacer = toolbar === null ? null : toolbar.querySelector('.etable-toolbar-spacer');
+    const codeButton = toolbar === null ? null : toolbar.querySelector('[data-test-id="table-open-code"]');
+
+    if (spacer === null || codeButton === null) throw new Error('空栏工具栏弹性占位缺失');
+
+    expect(spacer.compareDocumentPosition(codeButton) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+  });
+
+  // 已打开表的栏由标题撑开，不出现弹性占位，既有标题 / 分隔线布局不变
+  it('已打开表的栏工具栏不含弹性占位', async () => {
+    const system = await createSystem();
+
+    seedSampleTable(system, 'demo');
+    const panels: TablePanel[] = [];
+    const panel = await openTablePanel(system, panels);
+
+    await setTarget(panel, 'demo');
+    setWindowWidth(1000);
+    const { container } = render(createElement(system.shellSystem.render()));
+    const columns = container.querySelectorAll('.etable-column');
+    const toolbar = columns[0].querySelector('.etable-toolbar');
+
+    if (toolbar === null) throw new Error('有表栏工具栏缺失');
+
+    expect(toolbar.querySelector('.etable-toolbar-spacer')).toBeNull();
+    expect(toolbar.querySelector('.etable-toolbar-title')).not.toBeNull();
+  });
+});

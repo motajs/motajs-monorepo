@@ -37,7 +37,9 @@ export function TableToolbar(props: ITableToolbarProps): ReactElement {
   return (
     <div className="etable-toolbar">
       <EditModeSegmented value={props.mode} onChange={props.onModeChange} />
-      {title === undefined ? null : (
+      {title === undefined ? (
+        <span className="etable-toolbar-spacer" aria-hidden="true" />
+      ) : (
         <>
           <span className="etable-toolbar-title" title={title}>
             {title}
