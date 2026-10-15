@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "02.1"
 current_phase_name: 资源层重构与表格文件管理
-current_plan: 8
+current_plan: 9
 status: executing
-stopped_at: Completed 02.1-07-PLAN.md
-last_updated: "2026-10-15T13:39:06.601Z"
+stopped_at: Completed 02.1-08-PLAN.md
+last_updated: "2026-10-15T14:27:26.778Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 02.1 execution started
-state_head: 8308aaaea2844bc9f8194bfdd1e5ef4e96204496
+state_head: 8c93dfceee08a9338040fd9bcc2ffcf28b421966
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 52
-  completed_plans: 47
+  completed_plans: 48
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 02.1 (资源层重构与表格文件管理) — EXECUTING
-Current Plan: 8
+Current Plan: 9
 Total Plans in Phase: 12
 Status: Ready to execute
 Last activity: 2026-10-15 — Phase 02.1 execution started
@@ -105,6 +105,7 @@ Progress: [██████████] 100%
 | Phase 02.1 P5 | 7min | 2 tasks | 2 files |
 | Phase 02.1 P06 | 40min | 2 tasks | 9 files |
 | Phase 02.1 P07 | 29min | 1 tasks | 9 files |
+| Phase 02.1 P08 | 44min | 1 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -208,6 +209,9 @@ Recent decisions affecting current work:
 - [Phase 02.1]: 02.1-07: createTableHarness 只装配并初始化 EditorCore、不注册面板类型——保住 tracer『真实 tablePanelType 可注册进外壳』断言，且不新增对外命名
 - [Phase 02.1]: 02.1-07: 测试 seed 一律先于 createTableHarness（核心初始化即建文件索引）；Plan 08 须沿用此约定
 - [Phase 02.1]: 02.1-07: 缺失的 schema 文件按『无 schema』处理而非错误（TablePanel.fileExists + TablePanel.readSchemaText），存在但读取失败仍落错误态
+- [Phase 02.1]: 本计划只改 __tests__ 下测试，未改任何生产源码；复用 Plan 07 的 FakeFileSystem / createTableHarness，不新增第二份替身
+- [Phase 02.1]: performance.uat.test.tsx 不含资源装配（仅纯函数断言），原样保留仅复跑；计划 <files> 将其列入实为清单出入
+- [Phase 02.1]: layout 的 getTitle 断言随路径约定由「表格 table.demo」改为「表格 demo.json」，为标识串更新而非放松断言
 
 ### Pending Todos
 
@@ -234,6 +238,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-15T13:39:06.276Z
-Stopped at: Completed 02.1-07-PLAN.md
+Last session: 2026-10-15T14:27:26.314Z
+Stopped at: Completed 02.1-08-PLAN.md
 Resume file: None
