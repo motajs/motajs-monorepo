@@ -6,6 +6,7 @@ import {
   IMultiSelectResult,
   IPointSelectOpenRequest,
   IPointSelectResult,
+  ITablePreset,
 } from './types';
 
 // 注入式能力接缝：表格经此触达外部编辑器与宿主能力，而不导入宿主或引擎代码。
@@ -74,6 +75,8 @@ export interface ITableEditorCapabilities {
   readonly pointSelect?: IPointSelectOpener;
   /** 表格面板打开器（「编辑 Schema」使用）；缺省时无法新开表格面板 */
   readonly tablePanel?: ITablePanelOpener;
+  /** 组合根注入的预设表清单，「打开表格」列表上半区渲染；缺省时列表只显示目录树 */
+  readonly tablePresets?: readonly ITablePreset[];
   /** 剪贴板复制能力；缺省时复制动作降级为不可用 */
   readonly copy?: ICopyCapability;
 }
