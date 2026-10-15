@@ -6,3 +6,4 @@ export * from './EditModeSegmented';
 export * from './TableToolbar';
 export * from './SchemaBanner';
 export * from './inputs';
+export * from './TableListPanelView';
