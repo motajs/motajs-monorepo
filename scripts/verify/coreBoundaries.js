@@ -14,9 +14,11 @@
  *       cruise 必须被 capabilities-must-not-import-each-other 拦下；
  *   (d) 依赖方向 —— 临时在 editor-core/src 写入一个 import `@motajs/editor-impl` 的 fixture，
  *       cruise 必须被 editor-core-must-not-import-editor-impl 以 error 级命中（T-05.1-07）；
- *   (e) 底层 IO 清零 —— editor-core/src 的生产源码不得出现文件读写**调用**形态（`this.fs`、
- *       `.readFile(` …），真实树命中 0、扫描文件数不低于非空转下界；一个含 `this.fs.readFile(` 的
- *       合成 fixture 必须被同一条断言拦下；
+ *   (e) 底层不触达真实文件系统 —— editor-core/src 的生产源码与测试（全量）都不得直接触达真实文件
+ *       系统：禁 `node:fs` / `from 'fs'` / `require('fs')` / 全局 `fetch`；真实树命中 0、扫描文件数
+ *       不低于非空转下界；一个含 `import fs from 'node:fs'` 的合成 fixture 必须被同一条断言拦下。
+ *       （D-06 后 core 必须调用注入的 `IEditorFileSystem`，旧语义「禁任何文件读写调用形态」会连测试
+ *       替身的 `x.readFile(...)` 一并误伤，故改写为「禁直接触达真实文件系统」。）
  *   (f) PKG-03 负极性 —— 临时写入一个错误的包内相对导入，core 自己的 `tsc -p` 必须报 TS2307，
  *       证明 core 的 TypeScript program 真的在检查 core 自己的文件；
  *   (g) 边方向 —— editor 真实 import 默认实现包的 `./react`，且两个包的 manifest 都不反向声明
@@ -71,28 +73,28 @@ const DIRECTION_FIXTURE = path.join(REPO_ROOT, 'packages/libs/editor-core/src/__
 const DIRECTION_SOURCE = "import '@motajs/editor-impl';\n";
 const DIRECTION_RULE = 'editor-core-must-not-import-editor-impl';
 
-/** (e) 底层 IO 清零：只匹配带前导点的调用形态；`ports/fs.ts` 的接口成员声明不带前导点，故不误报。 */
+/**
+ * (e) 底层不触达真实文件系统：只匹配「真 IO」形态（Node `fs` 模块 / 全局 `fetch`），
+ * 不再匹配 `this.fs` / `.readFile(` 等**调用形态**——D-06 后 core 必须调用注入的 fs，且测试替身
+ * 也会出现 `x.readFile(...)`，旧 token 会连替身一并误伤（Pitfall 1）。
+ * `node:fs` 已覆盖 `node:fs/promises`，此处仍显式列出以表明意图。
+ */
 const BOTTOM_LAYER_IO_TOKENS = [
-  'this.fs',
-  '.readFile(',
-  '.readFileBinary(',
-  '.writeFile(',
-  '.deleteFile(',
-  '.readdir(',
-  '.mkdir(',
-  '.moveFile(',
+  'node:fs',
+  'node:fs/promises',
+  "from 'fs'",
+  'from "fs"',
+  "require('fs')",
+  'require("fs")',
+  'fetch(',
 ];
 const BOTTOM_LAYER_LIB = 'packages/libs/editor-core/src';
 const IO_FIXTURE = path.join(REPO_ROOT, BOTTOM_LAYER_LIB, '__bottomLayerIoProbe__.ts');
 const IO_FIXTURE_SOURCE = [
-  '/** 合成 fixture：底层 IO 清零门禁必须命中的调用形态（coreBoundaries.js 创建与删除，绝不入库）。 */',
-  'export class BottomLayerIoProbe {',
-  '  private readonly fs = { readFile: (path: string): string => path };',
+  '/** 合成 fixture：底层直接触达真实文件系统（node:fs）必须被拦下（coreBoundaries.js 创建与删除，绝不入库）。 */',
+  "import fs from 'node:fs';",
   '',
-  '  probe(): string {',
-  "    return this.fs.readFile('x');",
-  '  }',
-  '}',
+  'export const probe = fs;',
   '',
 ].join('\n');
 /** 真实树扫描文件数的非空转下界（比 `> 0` 更紧，又不随 core 增长而误红）。 */
@@ -303,7 +305,7 @@ function checkDependencyDirection() {
   console.log(`coreBoundaries: 依赖方向两极性成立（合成 fixture 被 ${DIRECTION_RULE} 以 error 级命中；真实树 0 违规）`);
 }
 
-// ==================== (e) 底层 IO 清零两极性 ====================
+// ==================== (e) 底层不触达真实文件系统两极性 ====================
 
 /** 递归收集目录下全部 .ts/.tsx 源文件（返回相对仓库根的路径）。 */
 function collectTsFiles(absoluteDir) {
@@ -344,7 +346,8 @@ function checkBottomLayerIoFree() {
   const realHits = findIoHits(files);
   check(
     realHits.length === 0,
-    `底层出现 ${realHits.length} 条文件读写调用（期望 0，底层只允许定义接口、永不调用）：` +
+    `底层直接触达真实文件系统 ${realHits.length} 条（期望 0，core 只能驱动注入的 fs、` +
+      `不得 import node:fs / 使用全局 fetch）：` +
       realHits.map((hit) => `${hit.file} 含 ${hit.token}`).join(' | '),
   );
 
@@ -358,11 +361,12 @@ function checkBottomLayerIoFree() {
   const fixtureRel = relative(IO_FIXTURE);
   check(
     fixtureHits.some((hit) => hit.file === fixtureRel),
-    '底层 IO 清零两极性失败：含 `this.fs.readFile(` 的合成 fixture 未被同一条断言拦下',
+    "底层不触达真实文件系统两极性失败：含 `import fs from 'node:fs'` 的合成 fixture 未被同一条断言拦下",
   );
-  check(!fs.existsSync(IO_FIXTURE), `底层 IO 清零 fixture 未被删除：${fixtureRel}`);
+  check(!fs.existsSync(IO_FIXTURE), `底层 IO fixture 未被删除：${fixtureRel}`);
   console.log(
-    `coreBoundaries: 底层 IO 清零两极性成立（真实树 ${files.length} 个文件 0 命中；合成 fixture 被拦下并已删除）`,
+    `coreBoundaries: 底层不触达真实文件系统两极性成立（真实树 ${files.length} 个文件 0 命中；` +
+      '合成 node:fs fixture 被拦下并已删除）',
   );
 }
 
@@ -463,7 +467,7 @@ function main() {
     process.exit(1);
   }
   console.log(
-    'coreBoundaries: 全部断言通过（真实树 0 违规、能力互斥与底层→实现方向各被拦、底层 IO 清零两极性、' +
+    'coreBoundaries: 全部断言通过（真实树 0 违规、能力互斥与底层→实现方向各被拦、底层不触达真实文件系统两极性、' +
       'PKG-03 负极性 TS2307、两包 manifest 与 editor→impl 边方向正确）',
   );
 }
