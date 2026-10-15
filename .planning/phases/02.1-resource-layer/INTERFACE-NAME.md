@@ -76,8 +76,8 @@
 ### `ITablePanel.setTable(target, columnIndex?)`（既有方法，签名语义调整）
 - **用途**：从外部设置某一栏要编辑的表；`target` 改为 `ITablePanelTarget`（单一 `dataPath`）。方法体属实现计划（Plan 06）。
 
-### `ITablePreset`（interface，成员 `name` / `path`）
-- **用途**：预设表条目——显示名 + 数据文件路径；由组合根注入（D-11）。
+### `ITablePreset`（interface，成员 `name` / `path`；**唯一声明处** `src/react/types.ts`）
+- **用途**：预设表条目——显示名 + 数据文件路径；由组合根注入（D-11）。声明在接缝层 `react/types.ts`（`react` 不得 import `table`），`table/types.ts` 从 `../react/types` 引入复用，保证**只有一个声明模块**。
 
 ### `ITableEditorCapabilities.tablePresets?`（`src/react/capabilities.ts` 新增可选成员）
 - **用途**：组合根注入的预设表清单（D-11），供「打开表格」列表上半区渲染。
@@ -139,13 +139,34 @@
 
 ---
 
-## Plan 07 — `02.1-07-PLAN.md`（表格「打开列表 / 新建 / 删除」）
+## Plan 07 — `02.1-07-PLAN.md`（表格测试装配迁移·上半；无新增对外命名）
+
+本 Plan 不含新增对外命名——下列两项属**测试内部装配**（非对外命名），列出以备查；本 Plan 建立共享测试替身与装配工厂，并把 10 个既有表格测试的装配迁到 fs 注入（`tracer` / `edit` / `undo` / `validation` / `inputs` / `externalEditor` / `modals` / `openParam` / `schemaMode` / `switchRefresh`）。
+
+---
+
+## Plan 08 — `02.1-08-PLAN.md`（表格测试装配迁移·下半；无新增对外命名）
+
+本 Plan 不含新增对外命名——复用 Plan 07 的 `FakeFileSystem` / `createTableHarness`，迁移剩余 11 个既有表格测试（`integration` + 10 个 `*.uat.test.tsx`）并使 editor-impl 整包测试与 typecheck 恢复全绿。
+
+### `FakeFileSystem`（class，`packages/libs/editor-impl/src/table/__tests__/fixtures.ts`，测试内部）
+- **用途**：editor-impl 侧**自持**的内存文件系统测试替身（`implements IEditorFileSystem`）——与 editor-core 的同名替身保持同形（按路径 `Map`、`seed(path, content)`、带类型 `listDirectory`、二进制读写、越界抛错）；供表格测试复用。
+
+### `createTableHarness()`（函数，测试装配工厂）
+- **用途**：按注入的 `FakeFileSystem` 装配一个已 `EditorCore.initialize`、已注册 `tablePanelType` 的 `EditorCore`，供表格测试复用。
+
+---
+
+## Plan 09 — `02.1-09-PLAN.md`（表格「打开列表 / 新建 / 删除」）
 
 ### `tableListPanelType`（导出常量，`IEditorPanelType`，`src/table/tableListPanelType.ts`）
 - **用途**：可经 `ShellSystem.registerPanelType` 注册的「打开表格」**列表面板类型**（id / name / 图标 / 工厂）。上半显示预设表，下半显示项目目录树（D-10 / D-11）。
 
 ### `TableListPanel`（class，`src/table/tableListPanel.ts`，`implements IEditorPanel`）
 - **用途**：列表面板实例——读 core 索引铺目录树、按「打开表格」注入器打开选中表、新建 / 删除表格。
+
+### `TableListPanel.selectDirectory(path)`（`TableListPanel` 的方法）
+- **用途**：设置列表面板当前选中的目录路径（目录树里点进 / 选中某目录时调用）；新建表格即在该目录下建一对文件。纯状态设置 + 触发目录树重取，不直接读写文件。
 
 ### `TableListPanel.createTable(directoryPath, name)`（`TableListPanel` 的方法）
 - **用途**：在当前选中目录下一次性建一对文件 `name.json`（初值空对象）+ `name.schema.json`（初值 `{ "type": "object", "properties": {} }`，D-12）。
@@ -164,13 +185,10 @@
 
 ---
 
-## Plan 08 — `02.1-08-PLAN.md`（打开 / 新建 / 删除端到端集成验证）
+## Plan 10 — `02.1-10-PLAN.md`（开发宿主接入）
 
-无新增对外命名（仅新增测试文件与 `02.1-VALIDATION.md` 记账）。
-
----
-
-## Plan 09 — `02.1-09-PLAN.md`（开发宿主接入）
+### `DEMO_PANEL_TYPE`（既有导出，**不改名**）
+- **用途**：开发宿主演示面板类型（`packages/apps/editor-dev/src/demo/demoPanel.ts:147` 已导出，`main.tsx:25` 已注册）。本阶段只沿用，不重命名、不改形——仅在此登记为「已存在、未变更」，避免被当作新增命名遗漏。
 
 ### `IMemoryBackend`（interface，`packages/apps/editor-dev/src/backend/types.ts`，成员 `maxUndoStep` / `seed(path, content)`）
 - **用途**：开发宿主内存文件系统契约——同时满足撤销注入（`maxUndoStep`）与文件系统（`implements IEditorFileSystem`），并提供 `seed` 预置。
@@ -189,6 +207,12 @@
 
 ---
 
-## Plan 10 — `02.1-10-PLAN.md`（旧契约收口）
+## Plan 11 — `02.1-11-PLAN.md`（打开 / 新建 / 删除端到端集成验证）
 
-无新增对外命名（修订 `REQUIREMENTS.md` 的 `CORE-01`、回改 `.planning/phases/03-asset/03-CONTEXT.md` 受影响的 D-04 / D-05 / D-06）。
+无新增对外命名（仅新增测试文件 `openNewDelete.uat.test.tsx` 与 `02.1-VALIDATION.md` 记账）。
+
+---
+
+## Plan 12 — `02.1-12-PLAN.md`（旧契约收口）
+
+无新增对外命名（修订 `REQUIREMENTS.md` 的 `CORE-01` / `TABLE-01`、回改 `.planning/phases/03-asset/03-CONTEXT.md` 受影响的 D-04 / D-05 / D-06 / D-11 及全部相关参考 / 结构说明、回改 `03-UI-SPEC.md` 的资源层前提）。
