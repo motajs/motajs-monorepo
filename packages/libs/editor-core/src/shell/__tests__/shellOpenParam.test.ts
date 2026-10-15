@@ -1,9 +1,9 @@
 import { act, cleanup, render } from '@testing-library/react';
 import { createElement, FC } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
+import { FakeFileSystem } from '../../__tests__/fixtures';
 import { IEditorPanel, IEditorPanelFactoryParam } from '../../panel/types';
 import { ResourceSystem } from '../../resource/resourceSystem';
-import { IResourceIdentifier, IResourceInjection } from '../../resource/types';
 import { UndoSystem } from '../../undo/undoSystem';
 import { ShellSystem } from '../shellSystem';
 
@@ -11,22 +11,6 @@ import { ShellSystem } from '../shellSystem';
 afterEach(() => {
   cleanup();
 });
-
-class NoopInjection implements IResourceInjection {
-  async requestResource<T>(): Promise<T> {
-    return undefined as T;
-  }
-
-  async requestResourceList(): Promise<readonly IResourceIdentifier[]> {
-    return [];
-  }
-
-  async writeResource(): Promise<void> {}
-
-  async createResource(): Promise<void> {}
-
-  async deleteResource(): Promise<void> {}
-}
 
 class ProbePanel implements IEditorPanel {
   readonly id: string;
@@ -56,8 +40,6 @@ class ProbePanel implements IEditorPanel {
 
   async onUpdateResource(): Promise<void> {}
 
-  async onUpdateResourceList(): Promise<void> {}
-
   async undo(): Promise<void> {}
 
   async redo(): Promise<void> {}
@@ -66,7 +48,7 @@ class ProbePanel implements IEditorPanel {
 // 组装一套已初始化的外壳 / 资源 / 撤回系统与空后端
 async function createSystem(): Promise<ShellSystem> {
   const resourceSystem = new ResourceSystem();
-  await resourceSystem.initialize(new NoopInjection());
+  await resourceSystem.initialize(new FakeFileSystem());
   const undoSystem = new UndoSystem();
   await undoSystem.initialize({ maxUndoStep: 100 });
   const shellSystem = new ShellSystem(undoSystem, resourceSystem);

@@ -1,10 +1,10 @@
 import { act, cleanup, render } from '@testing-library/react';
 import { createElement, FC } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { FakeFileSystem } from '../../__tests__/fixtures';
 import { logger } from '../../log';
 import { IEditorPanel, IEditorPanelFactoryParam } from '../../panel/types';
 import { ResourceSystem } from '../../resource/resourceSystem';
-import { IResourceIdentifier, IResourceInjection } from '../../resource/types';
 import { UndoSystem } from '../../undo/undoSystem';
 import { ShellSystem } from '../shellSystem';
 
@@ -12,23 +12,6 @@ import { ShellSystem } from '../shellSystem';
 afterEach(() => {
   cleanup();
 });
-
-// 空的资源后端：本文件的面板不读资源，仅用于装配外壳
-class EmptyInjection implements IResourceInjection {
-  async requestResource<T>(): Promise<T> {
-    return undefined as T;
-  }
-
-  async requestResourceList(): Promise<readonly IResourceIdentifier[]> {
-    return [];
-  }
-
-  async writeResource(): Promise<void> {}
-
-  async createResource(): Promise<void> {}
-
-  async deleteResource(): Promise<void> {}
-}
 
 // 记录切换钩子调用的面板；可令切入点钩子抛错以验证失败隔离
 class SwitchPanel implements IEditorPanel {
@@ -75,8 +58,6 @@ class SwitchPanel implements IEditorPanel {
 
   async onUpdateResource<T>(): Promise<void> {}
 
-  async onUpdateResourceList(): Promise<void> {}
-
   async undo<T>(): Promise<void> {}
 
   async redo<T>(): Promise<void> {}
@@ -91,7 +72,7 @@ interface TestSystem {
 async function createSystem(): Promise<TestSystem> {
   const resourceSystem = new ResourceSystem();
 
-  await resourceSystem.initialize(new EmptyInjection());
+  await resourceSystem.initialize(new FakeFileSystem());
 
   const undoSystem = new UndoSystem();
 

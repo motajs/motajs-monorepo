@@ -4,10 +4,8 @@ import {
   EditorCore,
   Hookable,
   HookController,
-  IEditorCoreInjection,
   IEditorPanel,
   IEditorPanelContext,
-  IResourceIdentifier,
   IUndoContext,
   IUndoable,
   logger,
@@ -15,57 +13,7 @@ import {
   ShellSystem,
   UndoSystem,
 } from '../index';
-
-// 内存资源后端，同时满足撤销注入，供 EditorCore.initialize 使用
-class FakeEditorInjection implements IEditorCoreInjection {
-  readonly maxUndoStep: number = 100;
-
-  readonly content: Map<number, Map<string, unknown>> = new Map();
-
-  readonly list: Map<number, IResourceIdentifier[]> = new Map();
-
-  requestResourceCount = 0;
-
-  requestResourceListCount = 0;
-
-  // 向内存后端预置一个资源内容及其所属的资源列表
-  seed(id: IResourceIdentifier, value: unknown): void {
-    let byId = this.content.get(id.type);
-
-    if (!byId) {
-      byId = new Map();
-      this.content.set(id.type, byId);
-    }
-
-    byId.set(id.id, value);
-
-    const ids = this.list.get(id.type) ?? [];
-    ids.push(id);
-    this.list.set(id.type, ids);
-  }
-
-  async requestResource<T>(id: IResourceIdentifier): Promise<T> {
-    this.requestResourceCount += 1;
-    return this.content.get(id.type)?.get(id.id) as T;
-  }
-
-  async requestResourceList(type: number): Promise<readonly IResourceIdentifier[]> {
-    this.requestResourceListCount += 1;
-    return this.list.get(type) ?? [];
-  }
-
-  async writeResource(id: IResourceIdentifier, content: unknown): Promise<void> {
-    this.content.get(id.type)?.set(id.id, content);
-  }
-
-  async createResource(id: IResourceIdentifier, content: unknown): Promise<void> {
-    this.seed(id, content);
-  }
-
-  async deleteResource(id: IResourceIdentifier): Promise<void> {
-    this.content.get(id.type)?.delete(id.id);
-  }
-}
+import { FakeFileSystem, createCoreHarness } from './fixtures';
 
 // 测试用的最小面板，记录生命周期与资源更新回调
 class FakePanel implements IEditorPanel {
@@ -77,9 +25,7 @@ class FakePanel implements IEditorPanel {
 
   updateResourceCount = 0;
 
-  updateResourceListCount = 0;
-
-  lastUpdateList: readonly IResourceIdentifier[] = [];
+  lastUpdateData?: unknown;
 
   private readonly component: FC = () => null;
 
@@ -115,13 +61,9 @@ class FakePanel implements IEditorPanel {
     return;
   }
 
-  async onUpdateResource<T>(id: IResourceIdentifier, data: T): Promise<void> {
+  async onUpdateResource<T>(id: string, data: T): Promise<void> {
     this.updateResourceCount += 1;
-  }
-
-  async onUpdateResourceList(type: number, list: readonly IResourceIdentifier[]): Promise<void> {
-    this.updateResourceListCount += 1;
-    this.lastUpdateList = list;
+    this.lastUpdateData = data;
   }
 
   async undo<T>(context: IUndoContext<T>): Promise<void> {
@@ -159,72 +101,75 @@ describe('EditorCore 组装', () => {
     expect(core.shellSystem).toBeDefined();
   });
 
-  // initialize 下发注入且不抛错，随后经外壳系统注册类型并打开面板、经资源系统广播列表更新
+  // initialize 下发注入且不抛错，随后经外壳系统注册类型并打开面板、经资源系统按路径广播更新
   it('initialize 下发注入并驱动面板与资源系统', async () => {
-    const core = new EditorCore();
-    const injection = new FakeEditorInjection();
-    const id = Object.freeze({ type: 1, id: 'alpha', path: 'test' });
-    injection.seed(id, 'v1');
+    const fs = new FakeFileSystem();
 
-    await expect(core.initialize(injection)).resolves.toBeUndefined();
+    fs.seed('tables/demo.json', 'v1');
 
+    const core = await createCoreHarness(fs);
     const panel = new FakePanel('panel-a');
+
     core.shellSystem.registerPanelType({ id: 'panel-a', name: '面板 A', icon: null, create: () => panel });
+
     const tabId = core.shellSystem.listTabs()[0].id;
+
     await core.shellSystem.openPanelInTab(tabId, 'panel-a');
 
     expect(core.shellSystem.listTabs()[0].typeId).toBe('panel-a');
 
-    await core.resourceSystem.updateResourceList(id.type);
+    await core.resourceSystem.updateResource('tables/demo.json');
 
-    expect(panel.updateResourceListCount).toBe(1);
-    expect(panel.lastUpdateList).toEqual([id]);
+    expect(panel.updateResourceCount).toBe(1);
+    expect(panel.lastUpdateData).toBe('v1');
   });
 });
 
 describe('EditorCore 初始化生命周期', () => {
-  // 连续 initialize 第二次被拒：记 warn 且不重复下发注入
+  // 连续 initialize 第二次被拒：记 warn 且不重复下发注入，资源仍读首个文件系统
   it('重复 initialize 只生效一次并记 warn', async () => {
-    const core = new EditorCore();
-    const injection = new FakeEditorInjection();
-    const id = Object.freeze({ type: 1, id: 'alpha', path: 'test' });
-    injection.seed(id, 'v1');
-    await core.initialize(injection);
-    const warnSpy = vi.spyOn(logger, 'warn');
-    const second = new FakeEditorInjection();
-    second.seed(id, 'v2');
+    const fs = new FakeFileSystem();
 
-    await core.initialize(second);
+    fs.seed('tables/demo.json', 'v1');
+
+    const core = await createCoreHarness(fs);
+    const warnSpy = vi.spyOn(logger, 'warn');
+    const second = new FakeFileSystem();
+
+    second.seed('tables/demo.json', 'v2');
+
+    await core.initialize({ fs: second, maxUndoStep: 100 });
 
     expect(warnSpy).toHaveBeenCalledWith('core.duplicateInitialize');
 
-    const resource = await core.resourceSystem.requestResource<string>(id);
+    const value = await core.resourceSystem.readContent('tables/demo.json');
 
-    expect(resource).not.toBeNull();
-    expect(second.requestResourceCount).toBe(0);
+    expect(value).toBe('v1');
     warnSpy.mockRestore();
   });
 
   // dispose 之后再 initialize 被拒：记 error 且资源保持未注入
   it('dispose 后 initialize 被拒并记 error', async () => {
-    const core = new EditorCore();
-    const injection = new FakeEditorInjection();
-    const id = Object.freeze({ type: 1, id: 'alpha', path: 'test' });
-    injection.seed(id, 'v1');
-    await core.initialize(injection);
-    await core.dispose();
-    const errorSpy = vi.spyOn(logger, 'error');
-    const second = new FakeEditorInjection();
-    second.seed(id, 'v2');
+    const fs = new FakeFileSystem();
 
-    await core.initialize(second);
+    fs.seed('tables/demo.json', 'v1');
+
+    const core = await createCoreHarness(fs);
+
+    await core.dispose();
+
+    const errorSpy = vi.spyOn(logger, 'error');
+    const second = new FakeFileSystem();
+
+    second.seed('tables/demo.json', 'v2');
+
+    await core.initialize({ fs: second, maxUndoStep: 100 });
 
     expect(errorSpy).toHaveBeenCalledWith('core.initializeAfterDispose');
 
-    const resource = await core.resourceSystem.requestResource<string>(id);
+    const resource = await core.resourceSystem.requestResource('tables/demo.json');
 
     expect(resource).toBeNull();
-    expect(second.requestResourceCount).toBe(0);
     errorSpy.mockRestore();
   });
 });
@@ -232,14 +177,14 @@ describe('EditorCore 初始化生命周期', () => {
 describe('EditorCore 释放', () => {
   // dispose 逆序释放后：当前面板清空、面板被释放、资源释放后访问被拒、撤回栈清空
   it('dispose 后三系统状态复位', async () => {
-    const core = new EditorCore();
-    const injection = new FakeEditorInjection();
-    const id = Object.freeze({ type: 1, id: 'alpha', path: 'test' });
-    injection.seed(id, 'v1');
-    await core.initialize(injection);
+    const fs = new FakeFileSystem();
 
+    fs.seed('tables/demo.json', 'v1');
+
+    const core = await createCoreHarness(fs);
     const contexts: IEditorPanelContext[] = [];
     const panel = new FakePanel('panel-a');
+
     core.shellSystem.registerPanelType({
       id: 'panel-a',
       name: '面板 A',
@@ -249,24 +194,24 @@ describe('EditorCore 释放', () => {
         return panel;
       },
     });
+
     const tabId = core.shellSystem.listTabs()[0].id;
+
     await core.shellSystem.openPanelInTab(tabId, 'panel-a');
 
     const undoable = new FakeUndoable();
-    core.undoSystem.addUndoContext(undoable, { type: 1, data: 'x' });
-    await contexts[0].requestResource<string>(id);
 
-    expect(injection.requestResourceListCount).toBe(1);
+    core.undoSystem.addUndoContext(undoable, { type: 1, data: 'x' });
+    await contexts[0].requestResource('tables/demo.json');
 
     await core.dispose();
 
     expect(core.shellSystem.listTabs().length).toBe(0);
     expect(panel.disposeCount).toBe(1);
 
-    const afterDispose = await contexts[0].requestResource<string>(id);
+    const afterDispose = await contexts[0].requestResource('tables/demo.json');
 
     expect(afterDispose).toBeNull();
-    expect(injection.requestResourceListCount).toBe(1);
 
     await core.undoSystem.undo();
 

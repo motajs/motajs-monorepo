@@ -1,10 +1,11 @@
 import { act, cleanup, render, screen } from '@testing-library/react';
 import { createElement, FC } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { FakeFileSystem } from '../../__tests__/fixtures';
 import { logger } from '../../log';
 import { IEditorPanel, IEditorPanelFactoryParam } from '../../panel/types';
 import { ResourceSystem } from '../../resource/resourceSystem';
-import { IResourceIdentifier, IResourceInjection } from '../../resource/types';
+import { IResourceIdentifier } from '../../resource/types';
 import { IUndoContext } from '../../undo/types';
 import { UndoSystem } from '../../undo/undoSystem';
 import { ShellSystem } from '../shellSystem';
@@ -13,48 +14,6 @@ import { ShellSystem } from '../shellSystem';
 afterEach(() => {
   cleanup();
 });
-
-class FakeResourceInjection implements IResourceInjection {
-  readonly content: Map<number, Map<string, unknown>> = new Map();
-
-  readonly list: Map<number, IResourceIdentifier[]> = new Map();
-
-  // 向内存后端预置一个资源内容及其所属的资源列表
-  seed(id: IResourceIdentifier, value: unknown): void {
-    let byId = this.content.get(id.type);
-
-    if (!byId) {
-      byId = new Map();
-      this.content.set(id.type, byId);
-    }
-
-    byId.set(id.id, value);
-
-    const ids = this.list.get(id.type) ?? [];
-    ids.push(id);
-    this.list.set(id.type, ids);
-  }
-
-  async requestResource<T>(id: IResourceIdentifier): Promise<T> {
-    return this.content.get(id.type)?.get(id.id) as T;
-  }
-
-  async requestResourceList(type: number): Promise<readonly IResourceIdentifier[]> {
-    return this.list.get(type) ?? [];
-  }
-
-  async writeResource(id: IResourceIdentifier, content: unknown): Promise<void> {
-    this.content.get(id.type)?.set(id.id, content);
-  }
-
-  async createResource(id: IResourceIdentifier, content: unknown): Promise<void> {
-    this.seed(id, content);
-  }
-
-  async deleteResource(id: IResourceIdentifier): Promise<void> {
-    this.content.get(id.type)?.delete(id.id);
-  }
-}
 
 class FakePanel implements IEditorPanel {
   readonly id: string;
@@ -66,13 +25,10 @@ class FakePanel implements IEditorPanel {
   switchInCount = 0;
   switchOutCount = 0;
   updateResourceCount = 0;
-  updateResourceListCount = 0;
   undoCount = 0;
   redoCount = 0;
   lastUpdateId?: IResourceIdentifier;
   lastUpdateData?: unknown;
-  lastUpdateType?: number;
-  lastUpdateList: readonly IResourceIdentifier[] = [];
   /** 设置后 initialize 抛出该文本的错误，用于验证错误态 */
   initializeError?: string;
   /** 设置后 initialize 等待该 Promise，用于验证加载态 */
@@ -121,12 +77,6 @@ class FakePanel implements IEditorPanel {
     this.lastUpdateData = data;
   }
 
-  async onUpdateResourceList(type: number, list: readonly IResourceIdentifier[]): Promise<void> {
-    this.updateResourceListCount += 1;
-    this.lastUpdateType = type;
-    this.lastUpdateList = list;
-  }
-
   async undo<T>(context: IUndoContext<T>): Promise<void> {
     this.undoCount += 1;
   }
@@ -140,19 +90,19 @@ interface TestSystem {
   readonly shellSystem: ShellSystem;
   readonly undoSystem: UndoSystem;
   readonly resourceSystem: ResourceSystem;
-  readonly injection: FakeResourceInjection;
+  readonly fs: FakeFileSystem;
 }
 
-// 组装一套已初始化的外壳/资源/撤回系统与内存后端
+// 组装一套已初始化的外壳/资源/撤回系统与内存文件系统
 async function createSystem(maxUndoStep = 100): Promise<TestSystem> {
-  const injection = new FakeResourceInjection();
+  const fs = new FakeFileSystem();
   const resourceSystem = new ResourceSystem();
-  await resourceSystem.initialize(injection);
+  await resourceSystem.initialize(fs);
   const undoSystem = new UndoSystem();
   await undoSystem.initialize({ maxUndoStep });
   const shellSystem = new ShellSystem(undoSystem, resourceSystem);
   await shellSystem.initialize();
-  return { shellSystem, undoSystem, resourceSystem, injection };
+  return { shellSystem, undoSystem, resourceSystem, fs };
 }
 
 // 注册一个面板类型，其工厂按 core 生成的实例 id 创建面板并收集到列表
@@ -602,39 +552,17 @@ describe('ShellSystem 资源桥接', () => {
     const system = await createSystem();
     const panels: FakePanel[] = [];
     registerType(system, 'table', '表格面板', panels);
-    const id = Object.freeze({ type: 1, id: 'alpha', path: 'test' });
 
-    system.injection.seed(id, 'v1');
+    system.fs.seed('tables/demo.json', 'v1');
 
     const tabId = system.shellSystem.listTabs()[0].id;
 
     await system.shellSystem.openPanelInTab(tabId, 'table');
-
-    await system.resourceSystem.updateResource(id);
+    await system.resourceSystem.updateResource('tables/demo.json');
 
     expect(panels[0].updateResourceCount).toBe(1);
-    expect(panels[0].lastUpdateId).toBe(id);
+    expect(panels[0].lastUpdateId).toBe('tables/demo.json');
     expect(panels[0].lastUpdateData).toBe('v1');
-  });
-
-  // 资源列表更新经 ShellPanelHooks 重新申请并通知面板最新列表
-  it('updateResourceList 通知面板最新列表', async () => {
-    const system = await createSystem();
-    const panels: FakePanel[] = [];
-    registerType(system, 'table', '表格面板', panels);
-    const id = Object.freeze({ type: 2, id: 'beta', path: 'test' });
-
-    system.injection.seed(id, 'v1');
-
-    const tabId = system.shellSystem.listTabs()[0].id;
-
-    await system.shellSystem.openPanelInTab(tabId, 'table');
-
-    await system.resourceSystem.updateResourceList(id.type);
-
-    expect(panels[0].updateResourceListCount).toBe(1);
-    expect(panels[0].lastUpdateType).toBe(id.type);
-    expect(panels[0].lastUpdateList).toEqual([id]);
   });
 });
 

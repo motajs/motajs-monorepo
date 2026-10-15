@@ -1,9 +1,9 @@
 import { act, cleanup, render, screen } from '@testing-library/react';
 import { createElement, FC } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
+import { FakeFileSystem } from '../../__tests__/fixtures';
 import { IEditorPanel, IEditorPanelFactoryParam } from '../../panel/types';
 import { ResourceSystem } from '../../resource/resourceSystem';
-import { IResourceIdentifier, IResourceInjection } from '../../resource/types';
 import { UndoSystem } from '../../undo/undoSystem';
 import { ShellSystem } from '../shellSystem';
 
@@ -11,23 +11,6 @@ import { ShellSystem } from '../shellSystem';
 afterEach(() => {
   cleanup();
 });
-
-// 空的资源后端：本文件的面板不读资源，仅用于装配外壳
-class EmptyInjection implements IResourceInjection {
-  async requestResource<T>(): Promise<T> {
-    return undefined as T;
-  }
-
-  async requestResourceList(): Promise<readonly IResourceIdentifier[]> {
-    return [];
-  }
-
-  async writeResource(): Promise<void> {}
-
-  async createResource(): Promise<void> {}
-
-  async deleteResource(): Promise<void> {}
-}
 
 // 带按实例标题的面板：getTitle 返回构造时给定的标题
 class TitlePanel implements IEditorPanel {
@@ -66,8 +49,6 @@ class TitlePanel implements IEditorPanel {
 
   async onUpdateResource<T>(): Promise<void> {}
 
-  async onUpdateResourceList(): Promise<void> {}
-
   async undo<T>(): Promise<void> {}
 
   async redo<T>(): Promise<void> {}
@@ -102,8 +83,6 @@ class PlainPanel implements IEditorPanel {
 
   async onUpdateResource<T>(): Promise<void> {}
 
-  async onUpdateResourceList(): Promise<void> {}
-
   async undo<T>(): Promise<void> {}
 
   async redo<T>(): Promise<void> {}
@@ -113,7 +92,7 @@ class PlainPanel implements IEditorPanel {
 async function createShell(): Promise<ShellSystem> {
   const resourceSystem = new ResourceSystem();
 
-  await resourceSystem.initialize(new EmptyInjection());
+  await resourceSystem.initialize(new FakeFileSystem());
 
   const undoSystem = new UndoSystem();
 
