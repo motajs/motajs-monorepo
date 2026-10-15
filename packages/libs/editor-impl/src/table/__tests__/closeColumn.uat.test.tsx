@@ -1,9 +1,9 @@
 import { act, cleanup, configure, fireEvent, render } from '@testing-library/react';
-import { IEditorPanel, IEditorPanelFactoryParam, ResourceSystem, ShellSystem, UndoSystem } from '@motajs/editor-core';
+import { EditorCore, IEditorPanel, IEditorPanelFactoryParam } from '@motajs/editor-core';
 import { createElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ITablePanelTarget, tableDataResourceId, tablePanelType, tableSchemaResourceId, TablePanel } from '..';
-import { FakeResourceInjection } from './fixtures';
+import { deriveSchemaPath, ITablePanelTarget, tablePanelType, TablePanel } from '..';
+import { createTableHarness, FakeFileSystem } from './fixtures';
 
 configure({ testIdAttribute: 'data-test-id' });
 
@@ -13,17 +13,6 @@ const ORIGINAL_INNER_WIDTH = window.innerWidth;
 // 在 jsdom 下按窗口宽度驱动可视栏数：改写 window.innerWidth，视图据此铺出多栏
 function setWindowWidth(value: number): void {
   Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value });
-}
-
-interface TestSystem {
-  /** 外壳系统 */
-  readonly shellSystem: ShellSystem;
-  /** 资源系统 */
-  readonly resourceSystem: ResourceSystem;
-  /** 撤销系统 */
-  readonly undoSystem: UndoSystem;
-  /** 内存资源后端 */
-  readonly injection: FakeResourceInjection;
 }
 
 // 每个用例前把窗口宽度复位为足够宽的值，使渲染能铺出两栏
@@ -37,25 +26,18 @@ afterEach(() => {
   setWindowWidth(ORIGINAL_INNER_WIDTH);
 });
 
-// 组装一套已初始化的外壳 / 资源 / 撤销系统与内存后端
-async function createSystem(): Promise<TestSystem> {
-  const injection = new FakeResourceInjection();
-  const resourceSystem = new ResourceSystem();
+// 数据文件路径（`xxx.json`）
+function tableDataPath(name: string): string {
+  return `${name}.json`;
+}
 
-  await resourceSystem.initialize(injection);
-
-  const undoSystem = new UndoSystem();
-
-  await undoSystem.initialize({ maxUndoStep: 100 });
-
-  const shellSystem = new ShellSystem(undoSystem, resourceSystem);
-
-  await shellSystem.initialize();
-  return { shellSystem, resourceSystem, undoSystem, injection };
+// schema 文件路径（按 `xxx.schema.json` 约定推导）
+function tableSchemaPath(name: string): string {
+  return deriveSchemaPath(tableDataPath(name));
 }
 
 // 在空白标签页打开表格面板并返回其实例
-async function openPanel(system: TestSystem): Promise<TablePanel> {
+async function openPanel(system: EditorCore): Promise<TablePanel> {
   const created: TablePanel[] = [];
 
   system.shellSystem.registerPanelType({
@@ -76,15 +58,15 @@ async function openPanel(system: TestSystem): Promise<TablePanel> {
   return created[0];
 }
 
-// 预置一张表的数据与 schema
-function seed(system: TestSystem, name: string, data: unknown, schema: unknown): void {
-  system.injection.seed(tableDataResourceId(name), data);
-  system.injection.seed(tableSchemaResourceId(name), schema);
+// 以文本预置一张表的数据与 schema
+function seed(fs: FakeFileSystem, name: string, data: unknown, schema: unknown): void {
+  fs.seed(tableDataPath(name), JSON.stringify(data));
+  fs.seed(tableSchemaPath(name), JSON.stringify(schema));
 }
 
-// 数据表目标：数据资源指向 `table.<名>`、schema 资源指向 `table#schema.<名>`
+// 数据表目标：数据文件路径按 `xxx.json` 约定
 function dataTarget(name: string): ITablePanelTarget {
-  return { data: tableDataResourceId(name), schema: tableSchemaResourceId(name) };
+  return { dataPath: tableDataPath(name) };
 }
 
 // 按渲染顺序取第 index 栏的容器
@@ -100,9 +82,10 @@ function columnAt(container: HTMLElement, index: number): HTMLElement {
 describe('每栏关闭按钮（P15）', () => {
   // ✕ 渲染在「在代码编辑器中打开」右侧
   it('✕ 位于「在代码编辑器中打开」右侧', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
 
-    seed(system, 'demo', { name: 'hello' }, { type: 'object', properties: { name: { type: 'string' } } });
+    seed(fs, 'demo', { name: 'hello' }, { type: 'object', properties: { name: { type: 'string' } } });
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     panel.setTable(dataTarget('demo'), 0);
@@ -121,9 +104,10 @@ describe('每栏关闭按钮（P15）', () => {
 
   // 有目标栏的 ✕ 可点；点后本栏回到「尚未设置目标表」空态
   it('有目标栏的 ✕ 可点，点后本栏回到未设目标态', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
 
-    seed(system, 'demo', { name: 'hello' }, { type: 'object', properties: { name: { type: 'string' } } });
+    seed(fs, 'demo', { name: 'hello' }, { type: 'object', properties: { name: { type: 'string' } } });
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     panel.setTable(dataTarget('demo'), 0);
@@ -149,9 +133,10 @@ describe('每栏关闭按钮（P15）', () => {
 
   // 本栏没有打开任何表时 ✕ 禁用
   it('空栏的 ✕ 禁用，有目标栏的 ✕ 可点', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
 
-    seed(system, 'demo', { name: 'hello' }, { type: 'object', properties: { name: { type: 'string' } } });
+    seed(fs, 'demo', { name: 'hello' }, { type: 'object', properties: { name: { type: 'string' } } });
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     panel.setTable(dataTarget('demo'), 0);
@@ -170,10 +155,11 @@ describe('每栏关闭按钮（P15）', () => {
 
   // 两栏都有表时关第 0 栏，只影响本栏，第 1 栏内容不变
   it('关闭只影响本栏，其它栏保持不变', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
 
-    seed(system, 'demo', { name: 'hello' }, { type: 'object', properties: { name: { type: 'string' } } });
-    seed(system, 'other', { b: 'x' }, { type: 'object', properties: { b: { type: 'string' } } });
+    seed(fs, 'demo', { name: 'hello' }, { type: 'object', properties: { name: { type: 'string' } } });
+    seed(fs, 'other', { b: 'x' }, { type: 'object', properties: { b: { type: 'string' } } });
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     panel.setTable(dataTarget('demo'), 0);
@@ -198,9 +184,10 @@ describe('每栏关闭按钮（P15）', () => {
 describe('关闭后空栏可被「编辑 Schema」复用（P15）', () => {
   // 两栏都有表、无空栏时；关掉第 1 栏后该空栏被「编辑 Schema」直接占用，不再经打开器新开面板
   it('关闭出来的空栏被「编辑 Schema」复用而非新开面板', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
 
-    seed(system, 'demo', { a: '1' }, { type: 'object', properties: { a: { type: 'string' } } });
+    seed(fs, 'demo', { a: '1' }, { type: 'object', properties: { a: { type: 'string' } } });
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     panel.setTable(dataTarget('demo'), 0);

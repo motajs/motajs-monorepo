@@ -1,23 +1,12 @@
 import { act, cleanup, configure, fireEvent, render, screen, within } from '@testing-library/react';
-import { IEditorPanel, IEditorPanelFactoryParam, ResourceSystem, ShellSystem, UndoSystem } from '@motajs/editor-core';
+import { EditorCore, IEditorPanel, IEditorPanelFactoryParam } from '@motajs/editor-core';
 import { createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { tableDataResourceId, tablePanelType, tableSchemaResourceId, TableExternalEditor, TablePanel } from '..';
+import { deriveSchemaPath, TableExternalEditor, tablePanelType, TablePanel } from '..';
 import { CapabilityProvider, ITableEditorCapabilities } from '../../react';
-import { FakeResourceInjection } from './fixtures';
+import { createTableHarness, FakeFileSystem } from './fixtures';
 
 configure({ testIdAttribute: 'data-test-id' });
-
-interface TestSystem {
-  /** 外壳系统 */
-  readonly shellSystem: ShellSystem;
-  /** 资源系统 */
-  readonly resourceSystem: ResourceSystem;
-  /** 撤销系统 */
-  readonly undoSystem: UndoSystem;
-  /** 内存资源后端 */
-  readonly injection: FakeResourceInjection;
-}
 
 // 每个用例结束后卸载已挂载的组件并清理被 stub 的浏览器对话框，避免 DOM 与全局桩在用例之间累积
 afterEach(() => {
@@ -25,20 +14,18 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-// 组装一套已初始化的外壳 / 资源 / 撤销系统与内存后端
-async function createSystem(): Promise<TestSystem> {
-  const injection = new FakeResourceInjection();
-  const resourceSystem = new ResourceSystem();
-  await resourceSystem.initialize(injection);
-  const undoSystem = new UndoSystem();
-  await undoSystem.initialize({ maxUndoStep: 100 });
-  const shellSystem = new ShellSystem(undoSystem, resourceSystem);
-  await shellSystem.initialize();
-  return { shellSystem, resourceSystem, undoSystem, injection };
+// 数据文件路径（`xxx.json`）
+function tableDataPath(name: string): string {
+  return `${name}.json`;
+}
+
+// schema 文件路径（按 `xxx.schema.json` 约定推导）
+function tableSchemaPath(name: string): string {
+  return deriveSchemaPath(tableDataPath(name));
 }
 
 // 在空白标签页打开表格面板并返回其实例
-async function openPanel(system: TestSystem): Promise<TablePanel> {
+async function openPanel(system: EditorCore): Promise<TablePanel> {
   const created: TablePanel[] = [];
 
   system.shellSystem.registerPanelType({
@@ -59,25 +46,34 @@ async function openPanel(system: TestSystem): Promise<TablePanel> {
   return created[0];
 }
 
-// 预置一张表的数据与 schema
-function seed(system: TestSystem, name: string, data: unknown, schema: unknown): void {
-  system.injection.seed(tableDataResourceId(name), data);
-  system.injection.seed(tableSchemaResourceId(name), schema);
+// 以文本预置一张表的数据与 schema
+function seed(fs: FakeFileSystem, name: string, data: unknown, schema: unknown): void {
+  fs.seed(tableDataPath(name), JSON.stringify(data));
+  fs.seed(tableSchemaPath(name), JSON.stringify(schema));
 }
 
 // 把面板目标指向数据表，并等待一次切入刷新完成
 async function setTarget(panel: TablePanel, name: string): Promise<void> {
-  panel.setTable({ data: tableDataResourceId(name), schema: tableSchemaResourceId(name) });
+  panel.setTable({ dataPath: tableDataPath(name) });
   await panel.onSwitchIn();
 }
 
+// 读取某个路径的当前内容（面板以文本写回，读取后解析）
+async function readContent(system: EditorCore, path: string): Promise<unknown> {
+  const text = await system.resourceSystem.readContent(path);
+
+  if (typeof text !== 'string') return undefined;
+
+  return JSON.parse(text);
+}
+
 // 读取目标表的当前数据内容
-async function readData(system: TestSystem, name: string): Promise<unknown> {
-  return system.resourceSystem.readContent(tableDataResourceId(name));
+async function readData(system: EditorCore, name: string): Promise<unknown> {
+  return readContent(system, tableDataPath(name));
 }
 
 // 用能力 Provider 包裹外壳渲染根，注入假能力包（缺省时由 Provider 补齐默认弹窗打开器）
-function renderWithCapabilities(system: TestSystem, capabilities: ITableEditorCapabilities): ReturnType<typeof render> {
+function renderWithCapabilities(system: EditorCore, capabilities: ITableEditorCapabilities): ReturnType<typeof render> {
   return render(
     createElement(CapabilityProvider, {
       capabilities,
@@ -119,14 +115,15 @@ async function gutterAdd(field: string, name: string): Promise<void> {
 describe('B1 值校验失败的可见拒绝', () => {
   // 外部编辑器返回不满足字段 schema 的值时落行内拒绝，且不把非法值写回资源
   it('外部编辑器返回非法值时行内拒绝且不写回', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
 
     seed(
-      system,
+      fs,
       't',
       { level: 1 },
       { type: 'object', properties: { level: { type: 'number', 'x-editor': TableExternalEditor.Code } } },
     );
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setTarget(panel, 't');
@@ -143,14 +140,15 @@ describe('B1 值校验失败的可见拒绝', () => {
 
   // 外部编辑器返回满足字段 schema 的值时正常提交，且不出现行内拒绝
   it('外部编辑器返回合法值时正常提交', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
 
     seed(
-      system,
+      fs,
       't',
       { script: 'old' },
       { type: 'object', properties: { script: { type: 'string', 'x-editor': TableExternalEditor.Code } } },
     );
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setTarget(panel, 't');
@@ -169,9 +167,10 @@ describe('B1 值校验失败的可见拒绝', () => {
 describe('B3 成功提示文案与常驻预留', () => {
   // 新增成功后提示行只显示「添加成功」，不含「刷新」
   it('新增成功后提示为「添加成功」且不含刷新', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
 
-    seed(system, 't', { name: 'hello' }, { type: 'object', properties: { name: { type: 'string' } } });
+    seed(fs, 't', { name: 'hello' }, { type: 'object', properties: { name: { type: 'string' } } });
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setTarget(panel, 't');
@@ -186,9 +185,10 @@ describe('B3 成功提示文案与常驻预留', () => {
 
   // 就绪但无提示时提示行容器仍常驻占位，故出现 / 消失不改变占用的垂直空间
   it('就绪但无提示时提示行容器常驻占位', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
 
-    seed(system, 't', { name: 'hello' }, { type: 'object', properties: { name: { type: 'string' } } });
+    seed(fs, 't', { name: 'hello' }, { type: 'object', properties: { name: { type: 'string' } } });
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setTarget(panel, 't');
@@ -201,9 +201,10 @@ describe('B3 成功提示文案与常驻预留', () => {
 describe('B2 数字字段的单行数字控件', () => {
   // 数字字段渲染 antd InputNumber 而非多行文本域，输入后提交数字值
   it('数字字段渲染 InputNumber 并提交数字', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
 
-    seed(system, 't', { level: 1 }, { type: 'object', properties: { level: { type: 'number' } } });
+    seed(fs, 't', { level: 1 }, { type: 'object', properties: { level: { type: 'number' } } });
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setTarget(panel, 't');

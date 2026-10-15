@@ -1,9 +1,9 @@
 import { act, cleanup, configure, fireEvent, render, screen } from '@testing-library/react';
-import { IEditorPanel, IEditorPanelFactoryParam, ResourceSystem, ShellSystem, UndoSystem } from '@motajs/editor-core';
+import { EditorCore, IEditorPanel, IEditorPanelFactoryParam } from '@motajs/editor-core';
 import { createElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { tableDataResourceId, tablePanelType, tableSchemaResourceId, TablePanel } from '..';
-import { FakeResourceInjection } from './fixtures';
+import { deriveSchemaPath, tablePanelType, TablePanel } from '..';
+import { createTableHarness, FakeFileSystem } from './fixtures';
 
 configure({ testIdAttribute: 'data-test-id' });
 
@@ -79,17 +79,6 @@ class ControlledIntersectionObserver implements IntersectionObserver {
   }
 }
 
-interface TestSystem {
-  /** 外壳系统 */
-  readonly shellSystem: ShellSystem;
-  /** 资源系统 */
-  readonly resourceSystem: ResourceSystem;
-  /** 撤销系统 */
-  readonly undoSystem: UndoSystem;
-  /** 内存资源后端 */
-  readonly injection: FakeResourceInjection;
-}
-
 // 每条用例前装上受控观察器，让分组行走「观察 → 相交才展开」的路径
 beforeEach(() => {
   ControlledIntersectionObserver.reset();
@@ -102,20 +91,18 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-// 组装一套已初始化的外壳 / 资源 / 撤销系统与内存后端
-async function createSystem(): Promise<TestSystem> {
-  const injection = new FakeResourceInjection();
-  const resourceSystem = new ResourceSystem();
-  await resourceSystem.initialize(injection);
-  const undoSystem = new UndoSystem();
-  await undoSystem.initialize({ maxUndoStep: 100 });
-  const shellSystem = new ShellSystem(undoSystem, resourceSystem);
-  await shellSystem.initialize();
-  return { shellSystem, resourceSystem, undoSystem, injection };
+// 数据文件路径（`xxx.json`）
+function tableDataPath(name: string): string {
+  return `${name}.json`;
+}
+
+// schema 文件路径（按 `xxx.schema.json` 约定推导）
+function tableSchemaPath(name: string): string {
+  return deriveSchemaPath(tableDataPath(name));
 }
 
 // 在空白标签页打开表格面板并返回其实例
-async function openPanel(system: TestSystem): Promise<TablePanel> {
+async function openPanel(system: EditorCore): Promise<TablePanel> {
   const created: TablePanel[] = [];
 
   system.shellSystem.registerPanelType({
@@ -136,15 +123,15 @@ async function openPanel(system: TestSystem): Promise<TablePanel> {
   return created[0];
 }
 
-// 预置一张表的数据与 schema
-function seed(system: TestSystem, name: string, data: unknown, schema: unknown): void {
-  system.injection.seed(tableDataResourceId(name), data);
-  system.injection.seed(tableSchemaResourceId(name), schema);
+// 以文本预置一张表的数据与 schema
+function seed(fs: FakeFileSystem, name: string, data: unknown, schema: unknown): void {
+  fs.seed(tableDataPath(name), JSON.stringify(data));
+  fs.seed(tableSchemaPath(name), JSON.stringify(schema));
 }
 
 // 把面板目标指向数据表，并等待一次切入刷新完成
 async function setTarget(panel: TablePanel, name: string): Promise<void> {
-  panel.setTable({ data: tableDataResourceId(name), schema: tableSchemaResourceId(name) });
+  panel.setTable({ dataPath: tableDataPath(name) });
   await panel.onSwitchIn();
 }
 
@@ -169,10 +156,11 @@ function row(container: HTMLElement, testId: string): Element | null {
 describe('分组行懒展开（P29）', () => {
   // 受控观察器下分组行默认折叠：子行不挂载
   it('分组行默认折叠，子行不挂载', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
     const sample = nestedTable();
 
-    seed(system, 'fold', sample.data, sample.schema);
+    seed(fs, 'fold', sample.data, sample.schema);
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setTarget(panel, 'fold');
@@ -184,10 +172,11 @@ describe('分组行懒展开（P29）', () => {
 
   // 分组行首次进入视野即自动展开：触发相交后子行出现
   it('分组行首次可见即自动展开', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
     const sample = nestedTable();
 
-    seed(system, 'fold', sample.data, sample.schema);
+    seed(fs, 'fold', sample.data, sample.schema);
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setTarget(panel, 'fold');
@@ -205,10 +194,11 @@ describe('分组行懒展开（P29）', () => {
 
   // 用户点击折叠后接管：再次相交不再自动展开
   it('用户点击折叠后不再被自动展开', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
     const sample = nestedTable();
 
-    seed(system, 'fold', sample.data, sample.schema);
+    seed(fs, 'fold', sample.data, sample.schema);
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setTarget(panel, 'fold');
@@ -241,10 +231,11 @@ describe('分组行懒展开（P29）', () => {
   it('无 IntersectionObserver 时立即展开（退化）', async () => {
     vi.stubGlobal('IntersectionObserver', undefined);
 
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
     const sample = nestedTable();
 
-    seed(system, 'fold', sample.data, sample.schema);
+    seed(fs, 'fold', sample.data, sample.schema);
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setTarget(panel, 'fold');
@@ -256,10 +247,11 @@ describe('分组行懒展开（P29）', () => {
 
   // 首次相交后观察器即断开，避免观察器累积 / 泄漏
   it('首次相交后观察器断开', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
     const sample = nestedTable();
 
-    seed(system, 'fold', sample.data, sample.schema);
+    seed(fs, 'fold', sample.data, sample.schema);
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setTarget(panel, 'fold');

@@ -1,24 +1,13 @@
 import { act, cleanup, configure, fireEvent, render, screen } from '@testing-library/react';
-import { IEditorPanel, IEditorPanelFactoryParam, ResourceSystem, ShellSystem, UndoSystem } from '@motajs/editor-core';
+import { EditorCore, IEditorPanel, IEditorPanelFactoryParam } from '@motajs/editor-core';
 import { createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { tableDataResourceId, tablePanelType, tableSchemaResourceId, TablePanel } from '..';
+import { deriveSchemaPath, tablePanelType, TablePanel } from '..';
 import { ITablePanelTarget } from '../types';
 import { CapabilityProvider, ITablePanelOpener } from '../../react';
-import { FakeResourceInjection } from './fixtures';
+import { createTableHarness, FakeFileSystem } from './fixtures';
 
 configure({ testIdAttribute: 'data-test-id' });
-
-interface TestSystem {
-  /** 外壳系统 */
-  readonly shellSystem: ShellSystem;
-  /** 资源系统 */
-  readonly resourceSystem: ResourceSystem;
-  /** 撤销系统 */
-  readonly undoSystem: UndoSystem;
-  /** 内存资源后端 */
-  readonly injection: FakeResourceInjection;
-}
 
 // 每个用例结束后卸载已挂载的组件并清理被 stub 的浏览器对话框，避免 DOM 与全局桩在用例之间累积
 afterEach(() => {
@@ -26,20 +15,18 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-// 组装一套已初始化的外壳 / 资源 / 撤销系统与内存后端
-async function createSystem(): Promise<TestSystem> {
-  const injection = new FakeResourceInjection();
-  const resourceSystem = new ResourceSystem();
-  await resourceSystem.initialize(injection);
-  const undoSystem = new UndoSystem();
-  await undoSystem.initialize({ maxUndoStep: 100 });
-  const shellSystem = new ShellSystem(undoSystem, resourceSystem);
-  await shellSystem.initialize();
-  return { shellSystem, resourceSystem, undoSystem, injection };
+// 数据文件路径（`xxx.json`）
+function tableDataPath(name: string): string {
+  return `${name}.json`;
+}
+
+// schema 文件路径（按 `xxx.schema.json` 约定推导）
+function tableSchemaPath(name: string): string {
+  return deriveSchemaPath(tableDataPath(name));
 }
 
 // 注册一个捕获实例的面板类型：每次外壳创建表格面板都把实例推入 created，供测试与打开器引用
-function registerTablePanel(system: TestSystem, created: TablePanel[]): void {
+function registerTablePanel(system: EditorCore, created: TablePanel[]): void {
   system.shellSystem.registerPanelType({
     id: tablePanelType.id,
     name: tablePanelType.name,
@@ -53,7 +40,7 @@ function registerTablePanel(system: TestSystem, created: TablePanel[]): void {
 }
 
 // 在第一个空白标签页打开表格面板并返回其实例
-async function openFirstPanel(system: TestSystem, created: TablePanel[]): Promise<TablePanel> {
+async function openFirstPanel(system: EditorCore, created: TablePanel[]): Promise<TablePanel> {
   registerTablePanel(system, created);
 
   const tabId = system.shellSystem.listTabs()[0].id;
@@ -66,7 +53,7 @@ async function openFirstPanel(system: TestSystem, created: TablePanel[]): Promis
 }
 
 // 组合根注入的表格面板打开器：新开一个标签承载目标面板并设好目标（D-06）
-function createOpener(system: TestSystem, created: TablePanel[]): ITablePanelOpener {
+function createOpener(system: EditorCore, created: TablePanel[]): ITablePanelOpener {
   return {
     open: async (param): Promise<void> => {
       const target = param.target as ITablePanelTarget;
@@ -81,21 +68,30 @@ function createOpener(system: TestSystem, created: TablePanel[]): ITablePanelOpe
   };
 }
 
-// 预置一张表的数据与 schema
-function seed(system: TestSystem, name: string, data: unknown, schema: unknown): void {
-  system.injection.seed(tableDataResourceId(name), data);
-  system.injection.seed(tableSchemaResourceId(name), schema);
+// 以文本预置一张表的数据与 schema
+function seed(fs: FakeFileSystem, name: string, data: unknown, schema: unknown): void {
+  fs.seed(tableDataPath(name), JSON.stringify(data));
+  fs.seed(tableSchemaPath(name), JSON.stringify(schema));
+}
+
+// 读取某个路径的当前内容（面板以文本写回，读取后解析）
+async function readContent(system: EditorCore, path: string): Promise<unknown> {
+  const text = await system.resourceSystem.readContent(path);
+
+  if (typeof text !== 'string') return undefined;
+
+  return JSON.parse(text);
 }
 
 // 把面板目标指向给定数据表，并等待一次切入刷新完成
 async function setTarget(panel: TablePanel, name: string): Promise<void> {
-  panel.setTable({ data: tableDataResourceId(name), schema: tableSchemaResourceId(name) });
+  panel.setTable({ dataPath: tableDataPath(name) });
   await panel.onSwitchIn();
 }
 
 // 读取目标表的当前数据内容
-async function readData(system: TestSystem, name: string): Promise<unknown> {
-  return system.resourceSystem.readContent(tableDataResourceId(name));
+async function readData(system: EditorCore, name: string): Promise<unknown> {
+  return readContent(system, tableDataPath(name));
 }
 
 // 读取某个字段值单元格内文本域的当前文本
@@ -146,7 +142,7 @@ async function gutterDelete(field: string): Promise<void> {
 }
 
 // 用能力 Provider 包裹外壳渲染根，注入携带表格面板打开器的能力包
-function renderWithOpener(system: TestSystem, opener: ITablePanelOpener): ReturnType<typeof render> {
+function renderWithOpener(system: EditorCore, opener: ITablePanelOpener): ReturnType<typeof render> {
   return render(
     createElement(CapabilityProvider, {
       capabilities: { tablePanel: opener },
@@ -158,13 +154,10 @@ function renderWithOpener(system: TestSystem, opener: ITablePanelOpener): Return
 describe('阶段集成：完整流程与安全边界', () => {
   // 单个用例端到端跑通「打开 → 编辑 → 添加 → 删除（各一步撤销 / 重做）→ 注入打开器新开 schema 面板 → 改 schema → 切回数据面板因切入刷新而重算」
   it('数据表完整流程与 schema 切入刷新端到端跑通', async () => {
-    const system = await createSystem();
-    const created: TablePanel[] = [];
-    const panel = await openFirstPanel(system, created);
-    const firstTab = system.shellSystem.listTabs()[0].id;
+    const fs = new FakeFileSystem();
 
     seed(
-      system,
+      fs,
       't',
       { name: 'a', note: 'x' },
       {
@@ -175,6 +168,10 @@ describe('阶段集成：完整流程与安全边界', () => {
         },
       },
     );
+    const system = await createTableHarness(fs);
+    const created: TablePanel[] = [];
+    const panel = await openFirstPanel(system, created);
+    const firstTab = system.shellSystem.listTabs()[0].id;
 
     await act(async () => {
       await setTarget(panel, 't');
@@ -255,7 +252,7 @@ describe('阶段集成：完整流程与安全边界', () => {
     // 在 schema 面板里改 name 的注释：整份写回 schema 资源；此刻数据面板不可见、无跨面板广播
     await commitText(container, 'properties-name-description', '"改名"');
 
-    expect(await system.resourceSystem.readContent(tableSchemaResourceId('t'))).toEqual({
+    expect(await readContent(system, tableSchemaPath('t'))).toEqual({
       type: 'object',
       properties: {
         name: { type: 'string', description: '改名' },
@@ -276,18 +273,22 @@ describe('阶段集成：完整流程与安全边界', () => {
 
   // 字段名、注释与值均含脚本样文本时以字面文本渲染，绝不生成元素（XSS 回归守卫）
   it('脚本样字段名、注释与值以字面文本渲染', async () => {
-    const system = await createSystem();
-    const created: TablePanel[] = [];
-    const panel = await openFirstPanel(system, created);
+    const fs = new FakeFileSystem();
     const fieldName = '<img src=x onerror="alert(1)">';
     const description = '<script>alert(2)</script>';
     const payload = '<img src=x onerror="alert(3)">';
 
-    system.injection.seed(tableDataResourceId('xss'), { [fieldName]: payload });
-    system.injection.seed(tableSchemaResourceId('xss'), {
-      type: 'object',
-      properties: { [fieldName]: { type: 'string', description } },
-    });
+    fs.seed(tableDataPath('xss'), JSON.stringify({ [fieldName]: payload }));
+    fs.seed(
+      tableSchemaPath('xss'),
+      JSON.stringify({
+        type: 'object',
+        properties: { [fieldName]: { type: 'string', description } },
+      }),
+    );
+    const system = await createTableHarness(fs);
+    const created: TablePanel[] = [];
+    const panel = await openFirstPanel(system, created);
 
     await act(async () => {
       await setTarget(panel, 'xss');

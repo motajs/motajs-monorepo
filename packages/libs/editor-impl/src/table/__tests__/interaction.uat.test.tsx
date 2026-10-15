@@ -1,26 +1,15 @@
 import { act, cleanup, configure, fireEvent, render, screen } from '@testing-library/react';
-import { IEditorPanel, IEditorPanelFactoryParam, ResourceSystem, ShellSystem, UndoSystem } from '@motajs/editor-core';
+import { EditorCore, IEditorPanel, IEditorPanelFactoryParam } from '@motajs/editor-core';
 import { createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { tableDataResourceId, tablePanelType, tableSchemaResourceId, TablePanel } from '..';
+import { deriveSchemaPath, tablePanelType, TablePanel } from '..';
 import tableCss from '../table.css?inline';
-import { FakeResourceInjection } from './fixtures';
+import { createTableHarness, FakeFileSystem } from './fixtures';
 
 configure({ testIdAttribute: 'data-test-id' });
 
 /** 表格样式表原文：jsdom 不应用外部 CSS，折叠行边框断言改为核对样式规则文本 */
 const TABLE_CSS = tableCss;
-
-interface TestSystem {
-  /** 外壳系统 */
-  readonly shellSystem: ShellSystem;
-  /** 资源系统 */
-  readonly resourceSystem: ResourceSystem;
-  /** 撤销系统 */
-  readonly undoSystem: UndoSystem;
-  /** 内存资源后端 */
-  readonly injection: FakeResourceInjection;
-}
 
 // 每个用例结束后卸载已挂载的组件并清理被 stub 的浏览器对话框
 afterEach(() => {
@@ -28,20 +17,18 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-// 组装一套已初始化的外壳 / 资源 / 撤销系统与内存后端
-async function createSystem(): Promise<TestSystem> {
-  const injection = new FakeResourceInjection();
-  const resourceSystem = new ResourceSystem();
-  await resourceSystem.initialize(injection);
-  const undoSystem = new UndoSystem();
-  await undoSystem.initialize({ maxUndoStep: 100 });
-  const shellSystem = new ShellSystem(undoSystem, resourceSystem);
-  await shellSystem.initialize();
-  return { shellSystem, resourceSystem, undoSystem, injection };
+// 数据文件路径（`xxx.json`）
+function tableDataPath(name: string): string {
+  return `${name}.json`;
+}
+
+// schema 文件路径（按 `xxx.schema.json` 约定推导）
+function tableSchemaPath(name: string): string {
+  return deriveSchemaPath(tableDataPath(name));
 }
 
 // 在空白标签页打开表格面板并返回其实例
-async function openPanel(system: TestSystem): Promise<TablePanel> {
+async function openPanel(system: EditorCore): Promise<TablePanel> {
   const created: TablePanel[] = [];
 
   system.shellSystem.registerPanelType({
@@ -62,21 +49,30 @@ async function openPanel(system: TestSystem): Promise<TablePanel> {
   return created[0];
 }
 
-// 预置一张表的数据与 schema
-function seed(system: TestSystem, name: string, data: unknown, schema: unknown): void {
-  system.injection.seed(tableDataResourceId(name), data);
-  system.injection.seed(tableSchemaResourceId(name), schema);
+// 以文本预置一张表的数据与 schema
+function seed(fs: FakeFileSystem, name: string, data: unknown, schema: unknown): void {
+  fs.seed(tableDataPath(name), JSON.stringify(data));
+  fs.seed(tableSchemaPath(name), JSON.stringify(schema));
 }
 
 // 把面板目标指向数据表，并等待一次切入刷新完成
 async function setTarget(panel: TablePanel, name: string): Promise<void> {
-  panel.setTable({ data: tableDataResourceId(name), schema: tableSchemaResourceId(name) });
+  panel.setTable({ dataPath: tableDataPath(name) });
   await panel.onSwitchIn();
 }
 
+// 读取某个路径的当前内容（面板以文本写回，读取后解析）
+async function readContent(system: EditorCore, path: string): Promise<unknown> {
+  const text = await system.resourceSystem.readContent(path);
+
+  if (typeof text !== 'string') return undefined;
+
+  return JSON.parse(text);
+}
+
 // 读取目标表的当前数据内容
-async function readData(system: TestSystem, name: string): Promise<unknown> {
-  return system.resourceSystem.readContent(tableDataResourceId(name));
+async function readData(system: EditorCore, name: string): Promise<unknown> {
+  return readContent(system, tableDataPath(name));
 }
 
 // 按渲染顺序取表体内所有行的 data-test-id
@@ -145,10 +141,11 @@ function pairTable(): { readonly data: unknown; readonly schema: unknown } {
 describe('分组行呈现（L2）', () => {
   // 分组行最左有折叠控件与对象名
   it('分组行显示折叠控件与对象名', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
     const sample = nestedTable();
 
-    seed(system, 'fold', sample.data, sample.schema);
+    seed(fs, 'fold', sample.data, sample.schema);
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setTarget(panel, 'fold');
@@ -163,10 +160,11 @@ describe('分组行呈现（L2）', () => {
 
   // 子行位于带缩进的折叠分组容器内
   it('子行位于带缩进的分组容器内', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
     const sample = nestedTable();
 
-    seed(system, 'fold', sample.data, sample.schema);
+    seed(fs, 'fold', sample.data, sample.schema);
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setTarget(panel, 'fold');
@@ -182,10 +180,11 @@ describe('分组行呈现（L2）', () => {
 describe('折叠行整行点击（P19）', () => {
   // 点折叠行非按钮处折叠，再次点击展开
   it('点折叠行任意处切换折叠', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
     const sample = nestedTable();
 
-    seed(system, 'fold', sample.data, sample.schema);
+    seed(fs, 'fold', sample.data, sample.schema);
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setTarget(panel, 'fold');
@@ -204,10 +203,11 @@ describe('折叠行整行点击（P19）', () => {
 
   // 点折叠箭头一次只切换一次：子行消失且不立即重现（未与整行点击重复切换）
   it('点折叠箭头只切换一次', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
     const sample = nestedTable();
 
-    seed(system, 'fold', sample.data, sample.schema);
+    seed(fs, 'fold', sample.data, sample.schema);
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setTarget(panel, 'fold');
@@ -220,10 +220,11 @@ describe('折叠行整行点击（P19）', () => {
 
   // 点折叠行的子行不折叠父行
   it('点子行不折叠父行', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
     const sample = nestedTable();
 
-    seed(system, 'fold', sample.data, sample.schema);
+    seed(fs, 'fold', sample.data, sample.schema);
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setTarget(panel, 'fold');
@@ -250,10 +251,11 @@ describe('折叠行上下边框加粗（P16）', () => {
 describe('左侧 ± 圆形按钮（B4）', () => {
   // 添加模式下每行位置出现绿底圆形「+」
   it('添加模式在行上出现 + 按钮', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
     const sample = pairTable();
 
-    seed(system, 'add', sample.data, sample.schema);
+    seed(fs, 'add', sample.data, sample.schema);
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setTarget(panel, 'add');
@@ -267,13 +269,14 @@ describe('左侧 ± 圆形按钮（B4）', () => {
 
   // 删除模式下每行位置出现红底圆形「−」，点击直接删除且不调用原生 confirm
   it('删除模式点 − 直接删除且不调用原生 confirm', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
     const sample = pairTable();
     const confirmStub = vi.fn(() => true);
 
     vi.stubGlobal('confirm', confirmStub);
 
-    seed(system, 'del', sample.data, sample.schema);
+    seed(fs, 'del', sample.data, sample.schema);
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setTarget(panel, 'del');
@@ -291,13 +294,14 @@ describe('左侧 ± 圆形按钮（B4）', () => {
 
   // 新增全程不触碰浏览器原生 prompt
   it('新增全程不调用原生 prompt', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
     const sample = pairTable();
     const promptStub = vi.fn();
 
     vi.stubGlobal('prompt', promptStub);
 
-    seed(system, 'add', sample.data, sample.schema);
+    seed(fs, 'add', sample.data, sample.schema);
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setTarget(panel, 'add');
@@ -314,10 +318,11 @@ describe('左侧 ± 圆形按钮（B4）', () => {
 describe('新增位置与 x-order（L3）', () => {
   // 新增行插在锚点行之后，而不是落到末尾
   it('新增行插到锚点行之后', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
     const sample = pairTable();
 
-    seed(system, 'ins', sample.data, sample.schema);
+    seed(fs, 'ins', sample.data, sample.schema);
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setTarget(panel, 'ins');
@@ -331,10 +336,10 @@ describe('新增位置与 x-order（L3）', () => {
 
   // 行序按 schema 的 x-order 排列，而非 properties 自然顺序
   it('行序按 schema 的 x-order 排列', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
 
     seed(
-      system,
+      fs,
       'order',
       { a: '1', b: '2' },
       {
@@ -343,6 +348,7 @@ describe('新增位置与 x-order（L3）', () => {
         'x-order': ['b', 'a'],
       },
     );
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setTarget(panel, 'order');
@@ -353,10 +359,11 @@ describe('新增位置与 x-order（L3）', () => {
 
   // 新增后撤销，数据与行序都回到新增前
   it('新增后撤销还原数据与行序', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
     const sample = pairTable();
 
-    seed(system, 'undo', sample.data, sample.schema);
+    seed(fs, 'undo', sample.data, sample.schema);
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setTarget(panel, 'undo');

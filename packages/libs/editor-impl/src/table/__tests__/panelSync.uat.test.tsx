@@ -1,10 +1,10 @@
 import { act, cleanup, configure, render } from '@testing-library/react';
-import { IEditorPanel, IEditorPanelFactoryParam, ResourceSystem, ShellSystem, UndoSystem } from '@motajs/editor-core';
+import { EditorCore, IEditorPanel, IEditorPanelFactoryParam } from '@motajs/editor-core';
 import { createElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { tableDataResourceId, tablePanelType, tableSchemaResourceId, TablePanel, ITablePanelTarget } from '..';
+import { deriveSchemaPath, ITablePanelTarget, tablePanelType, TablePanel } from '..';
 import { ICodeEditorOpener } from '../../react';
-import { FakeResourceInjection } from './fixtures';
+import { createTableHarness, FakeFileSystem } from './fixtures';
 
 configure({ testIdAttribute: 'data-test-id' });
 
@@ -14,17 +14,6 @@ const ORIGINAL_INNER_WIDTH = window.innerWidth;
 // 在 jsdom 下按窗口宽度驱动可视栏数：改写 window.innerWidth，视图据此铺出多栏
 function setWindowWidth(value: number): void {
   Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value });
-}
-
-interface TestSystem {
-  /** 外壳系统 */
-  readonly shellSystem: ShellSystem;
-  /** 资源系统 */
-  readonly resourceSystem: ResourceSystem;
-  /** 撤销系统 */
-  readonly undoSystem: UndoSystem;
-  /** 内存资源后端 */
-  readonly injection: FakeResourceInjection;
 }
 
 // 每个用例前把窗口宽度复位为足够宽的值，使缺省渲染能铺出多栏
@@ -39,25 +28,18 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-// 组装一套已初始化的外壳 / 资源 / 撤销系统与内存后端
-async function createSystem(): Promise<TestSystem> {
-  const injection = new FakeResourceInjection();
-  const resourceSystem = new ResourceSystem();
+// 数据文件路径（`xxx.json`）
+function tableDataPath(name: string): string {
+  return `${name}.json`;
+}
 
-  await resourceSystem.initialize(injection);
-
-  const undoSystem = new UndoSystem();
-
-  await undoSystem.initialize({ maxUndoStep: 100 });
-
-  const shellSystem = new ShellSystem(undoSystem, resourceSystem);
-
-  await shellSystem.initialize();
-  return { shellSystem, resourceSystem, undoSystem, injection };
+// schema 文件路径（按 `xxx.schema.json` 约定推导）
+function tableSchemaPath(name: string): string {
+  return deriveSchemaPath(tableDataPath(name));
 }
 
 // 在空白标签页打开表格面板并返回其实例
-async function openPanel(system: TestSystem): Promise<TablePanel> {
+async function openPanel(system: EditorCore): Promise<TablePanel> {
   const created: TablePanel[] = [];
 
   system.shellSystem.registerPanelType({
@@ -78,20 +60,29 @@ async function openPanel(system: TestSystem): Promise<TablePanel> {
   return created[0];
 }
 
-// 预置一张表的数据与 schema
-function seed(system: TestSystem, name: string, data: unknown, schema: unknown): void {
-  system.injection.seed(tableDataResourceId(name), data);
-  system.injection.seed(tableSchemaResourceId(name), schema);
+// 以文本预置一张表的数据与 schema
+function seed(fs: FakeFileSystem, name: string, data: unknown, schema: unknown): void {
+  fs.seed(tableDataPath(name), JSON.stringify(data));
+  fs.seed(tableSchemaPath(name), JSON.stringify(schema));
 }
 
-// 数据表目标：数据资源指向 `table.<名>`、schema 资源指向 `table#schema.<名>`
+// 读取某个路径的当前内容（面板以文本写回，读取后解析）
+async function readContent(system: EditorCore, path: string): Promise<unknown> {
+  const text = await system.resourceSystem.readContent(path);
+
+  if (typeof text !== 'string') return undefined;
+
+  return JSON.parse(text);
+}
+
+// 数据表目标：数据文件路径按 `xxx.json` 约定
 function dataTarget(name: string): ITablePanelTarget {
-  return { data: tableDataResourceId(name), schema: tableSchemaResourceId(name) };
+  return { dataPath: tableDataPath(name) };
 }
 
-// schema 表目标：数据与 schema 资源都指向 `table#schema.<名>`
+// schema 表目标：数据路径指向 `xxx.schema.json` 的 schema 视图
 function schemaTarget(name: string): ITablePanelTarget {
-  return { data: tableSchemaResourceId(name), schema: tableSchemaResourceId(name) };
+  return { dataPath: tableSchemaPath(name) };
 }
 
 // 让已排队的资源读取 / 重算微任务全部落定，再冲刷 React 更新（写盘后的同面板刷新是即发即忘的）
@@ -124,9 +115,10 @@ function selectText(column: HTMLElement, testId: string): string | null {
 describe('同面板依赖栏即时同步（P18 / P20）', () => {
   // 同一面板内改 schema 后，另一 schema 栏与主数据表都立即跟随，不再需要切入 / focus
   it('改 schema 后同面板的其它 schema 栏与主数据表立即同步', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
 
-    seed(system, 't', { a: '1' }, { type: 'object', properties: { a: { type: 'string' } } });
+    seed(fs, 't', { a: '1' }, { type: 'object', properties: { a: { type: 'string' } } });
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     panel.setTable(dataTarget('t'), 0);
@@ -152,10 +144,11 @@ describe('同面板依赖栏即时同步（P18 / P20）', () => {
 
   // 写盘只刷新引用被写资源的栏：引用其它表的栏不被这次写盘触发重读
   it('写盘不刷新引用其它表的栏', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
 
-    seed(system, 't', { a: '1' }, { type: 'object', properties: { a: { type: 'string' } } });
-    seed(system, 'other', { b: 'x' }, { type: 'object', properties: { b: { type: 'string' } } });
+    seed(fs, 't', { a: '1' }, { type: 'object', properties: { a: { type: 'string' } } });
+    seed(fs, 'other', { b: 'x' }, { type: 'object', properties: { b: { type: 'string' } } });
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     panel.setTable(dataTarget('t'), 0);
@@ -177,9 +170,9 @@ describe('同面板依赖栏即时同步（P18 / P20）', () => {
     await flush();
 
     const unrelatedReads = readSpy.mock.calls.filter(
-      (call) => call[0].id === 'table.other' || call[0].id === 'table#schema.other',
+      (call) => call[0] === tableDataPath('other') || call[0] === tableSchemaPath('other'),
     );
-    const relatedReads = readSpy.mock.calls.filter((call) => call[0].id === 'table#schema.t');
+    const relatedReads = readSpy.mock.calls.filter((call) => call[0] === tableSchemaPath('t'));
 
     expect(unrelatedReads.length).toBe(0);
     expect(relatedReads.length).toBeGreaterThan(0);
@@ -189,9 +182,10 @@ describe('同面板依赖栏即时同步（P18 / P20）', () => {
 describe('代码编辑器写回与撤销 / 重做也走同面板同步（P18 / P20）', () => {
   // 代码编辑器整份写回 schema 后，同面板其它 schema 栏与主数据表立即同步
   it('代码编辑器写回 schema 后同面板其它栏立即同步', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
 
-    seed(system, 't', { a: '1' }, { type: 'object', properties: { a: { type: 'string' } } });
+    seed(fs, 't', { a: '1' }, { type: 'object', properties: { a: { type: 'string' } } });
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     panel.setTable(dataTarget('t'), 0);
@@ -219,9 +213,10 @@ describe('代码编辑器写回与撤销 / 重做也走同面板同步（P18 / P
 
   // 数据栏新增（写 schema 的 x-order）后撤销，同面板 schema 栏与数据栏都回到撤销后的状态
   it('撤销新增后同面板 schema 栏与数据栏都同步回退', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
 
-    seed(system, 't', { a: '1' }, { type: 'object', properties: { a: { type: 'string' } } });
+    seed(fs, 't', { a: '1' }, { type: 'object', properties: { a: { type: 'string' } } });
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     panel.setTable(dataTarget('t'), 0);
@@ -237,7 +232,7 @@ describe('代码编辑器写回与撤销 / 重做也走同面板同步（P18 / P
     });
     await flush();
 
-    expect(await system.resourceSystem.readContent(tableDataResourceId('t'))).toEqual({ a: '1', mid: null });
+    expect(await readContent(system, tableDataPath('t'))).toEqual({ a: '1', mid: null });
     expect(columnAt(container, 0).querySelector('[data-test-id="table-row-mid"]')).not.toBeNull();
     expect(columnAt(container, 1).querySelector('[data-test-id="table-row-x-order"]')).not.toBeNull();
 
