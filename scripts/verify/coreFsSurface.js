@@ -1,21 +1,24 @@
 #!/usr/bin/env node
 /**
- * 「通用 fs 接口不外泄」门禁的两极性证明（CORE-01 / D-13）。
+ * 「core 确实驱动注入的文件系统」门禁的两极性证明（CORE-01 修订 / D-06 / D-16）。
  *
  * 用法：node scripts/verify/coreFsSurface.js
  *
- * 断言的是「门禁真的会响」，而不是「此刻恰好没有实现」：
- *   (a) 真实树 —— `packages/libs/editor-core/src` 与 `packages/libs/editor-impl/src` 下的全部
- *       `*.ts`/`*.tsx`（含测试树）里，通用 fs 接口标识符 `IEditorFileSystem` 只允许出现在它的
- *       声明文件 `packages/libs/editor-core/src/fs/types.ts`；任何其它文件出现该标识符
- *       （`implements`、类型引用、调用等）都算违规。真实树命中必须为 0，且扫描文件数不低于
- *       非空转下界——范围被静默削弱（glob 写错、只扫一个包）会立刻变红。
- *   (b) 可失败 —— 临时往 editor-core 的 src 写一个 `class ... implements IEditorFileSystem`
- *       的 fixture：同一条「逐文件逐行」断言必须把它拦下；fixture 在 `finally` 里删除，随后断言
- *       其确实不存在。
+ * 本门禁的语义在本阶段被**反转**：旧语义要求「通用 fs 接口 `IEditorFileSystem` 只允许出现在它的
+ * 声明文件 `fs/types.ts`，其余任何文件出现即违规」；新语义要求「core 的资源驱动文件**确实引用**
+ * 它」——core 的资源层是注入文件系统的唯一调用方（D-06）。
+ *
+ * 断言的是「门禁真的会响」，而不是「此刻恰好有引用」：
+ *   (a) 真实树（正极性）—— `packages/libs/editor-core/src` 下全部 `*.ts`/`*.tsx`（含测试树）里，
+ *       `IEditorFileSystem` 必须出现在**驱动文件集合**中（至少核心驱动注入 fs 的
+ *       `resource/resourceSystem.ts`）。扫描文件数不低于非空转下界——扫描范围被静默削弱会立刻变红。
+ *   (b) 可失败（两极性）—— 合成 fixture A（`implements IEditorFileSystem`）必须被同一条「逐文件
+ *       逐行」扫描**命中**；合成 fixture B（只含近似名 `IEditorFileSystemLike`、无该标识符本身）
+ *       **不得**被计入。两个 fixture 证明扫描能区分「有 / 无」，避免恒真空转；均在 `finally` 删除
+ *       并断言已删。
  *   (c) 包根可导入（正极性）—— 临时写一个用普通 import 从包根 `./index` 引入 `IEditorFileSystem`
  *       并作类型使用的探针，`pnpm --filter @motajs/editor-core exec tsc -p tsconfig.json` 必须退出 0，
- *       证明 CORE-01 的接口确实经包根对外暴露、可被外部统一实现。
+ *       证明接口仍经包根对外暴露、可被宿主统一 `implements`。
  *   (d) 包根可导入（负极性）—— 把探针改为从包根 `./index` 引入一个不存在的名字，同一条 tsc 必须
  *       非零退出并报告错误，且错误指向探针文件，证明该 typecheck 真的在检查这个探针而非空转通过。
  *
@@ -35,34 +38,40 @@ import process from 'node:process';
 
 const REPO_ROOT = path.resolve(import.meta.dirname, '..', '..');
 
-/** 扫描范围根（CORE-01 / D-13）：底层与默认实现两个包的 src 全量，包含测试树。 */
-const CORE_LIBS = ['packages/libs/editor-core/src', 'packages/libs/editor-impl/src'];
-const CORE_LIB_ABS = CORE_LIBS.map((lib) => path.join(REPO_ROOT, lib));
+/** 扫描范围根（core 的资源层 / D-06）：editor-core 的 src 全量，包含测试树。 */
+const CORE_DIR = 'packages/libs/editor-core/src';
+const CORE_DIR_ABS = path.join(REPO_ROOT, CORE_DIR);
 
-/** 被门禁锁定的通用 fs 接口标识符（CORE-01 / D-13）。 */
+/** 被门禁锁定的通用 fs 接口标识符（CORE-01 修订）。 */
 const TARGET_IDENTIFIER = 'IEditorFileSystem';
 
-/** 唯一允许出现该标识符的声明文件；其余任何文件出现即违规。 */
-const DECLARATION_FILE = `${CORE_LIBS[0]}/fs/types.ts`;
+/**
+ * 驱动文件集合：core 里真正驱动注入文件系统的资源层文件，每一个都必须引用该标识符。
+ * 至少包含核心驱动注入 fs 的 `resource/resourceSystem.ts`（读写 / 增删移都落到注入 fs）。
+ */
+const DRIVER_FILES = [
+  `${CORE_DIR}/resource/resourceSystem.ts`,
+  `${CORE_DIR}/resource/fileIndex.ts`,
+];
 
-/** 匹配标识符的词边界模式（`IEditorFileSystemXxx` 式假朋友不会误命中）。 */
+/** 匹配标识符的词边界模式（`IEditorFileSystemLike` 式近似名不会误命中）。 */
 const REFERENCE_PATTERN = new RegExp(`\\b${TARGET_IDENTIFIER}\\b`);
 
 /** 扫描扩展名（与 coreImportType.js / coreEngineNeutral.js 一致）。 */
 const SOURCE_EXTENSION = /\.tsx?$/;
 
 /**
- * 真实树非空转底线：两个包全量源码文件数的保守下界。它比 `> 0` 更紧——若扫描范围被静默削弱
- * （glob 写错、排除规则被放大、只扫一个包），扫描数会塌到下界以下并立刻变红。
+ * 真实树非空转底线：editor-core 全量源码文件数的保守下界。它**高于**「排除测试树」的文件数，
+ * 因此一旦扫描范围被削弱（glob 写错、排除规则被放大、只扫生产源码），扫描数会塌到下界以下并立刻变红。
  */
-const MIN_EXPECTED_SOURCES = 20;
+const MIN_EXPECTED_SOURCES = 30;
 
-/** (b) 两极性 fixture 的路径与源码（脚本创建、脚本删除，绝不入库）。 */
-const SURFACE_FIXTURE_PATH = `${CORE_LIBS[0]}/__fsSurfaceProbe__.ts`;
+/** (b) 两极性 fixture A（必须被命中）的路径与源码（脚本创建、脚本删除，绝不入库）。 */
+const SURFACE_FIXTURE_PATH = `${CORE_DIR}/__fsSurfaceProbe__.ts`;
 const SURFACE_FIXTURE_ABS = path.join(REPO_ROOT, SURFACE_FIXTURE_PATH);
 const SURFACE_FIXTURE_LINES = [
   '/**',
-  ' * 合成违规 fixture：一个 class 实现核心 fs 接口，必须被同一条断言拦下',
+  ' * 合成违规 fixture A：一个 class 实现核心 fs 接口，必须被同一条断言逐行命中',
   ' * （coreFsSurface.js 创建与删除，绝不入库）。',
   ' */',
   'export class FsSurfaceProbe implements IEditorFileSystem {',
@@ -92,11 +101,27 @@ const SURFACE_FIXTURE_LINES = [
   '}',
 ];
 const SURFACE_FIXTURE_MARKERS = { implements: 'implements IEditorFileSystem' };
-/** fixture 里必须被命中的行数（标识符只出现一次：`implements` 那一行）。 */
+/** fixture A 里必须被命中的行数（标识符只出现一次：`implements` 那一行）。 */
 const SURFACE_FIXTURE_EXPECTED_HITS = 1;
 
+/** (b) 两极性 fixture B（不得被计入）的路径与源码：只含近似名，不含标识符本身。 */
+const CLEAN_FIXTURE_PATH = `${CORE_DIR}/__fsSurfaceCleanProbe__.ts`;
+const CLEAN_FIXTURE_ABS = path.join(REPO_ROOT, CLEAN_FIXTURE_PATH);
+const CLEAN_FIXTURE_LINES = [
+  '/**',
+  ' * 合成 clean fixture B：只含近似名 `IEditorFileSystemLike`，不含标识符本身，不得被计入',
+  ' * （coreFsSurface.js 创建与删除，绝不入库）。',
+  ' */',
+  'export class FsSurfaceCleanProbe implements IEditorFileSystemLike {',
+  '  probe(): string {',
+  "    return 'clean';",
+  '  }',
+  '}',
+];
+const CLEAN_FIXTURE_MARKERS = { implements: 'implements IEditorFileSystemLike' };
+
 /** (c)/(d) 包根导入探针的路径（脚本创建、脚本删除，绝不入库）。 */
-const IMPORT_PROBE_PATH = `${CORE_LIBS[0]}/__fsImportProbe__.ts`;
+const IMPORT_PROBE_PATH = `${CORE_DIR}/__fsImportProbe__.ts`;
 const IMPORT_PROBE_ABS = path.join(REPO_ROOT, IMPORT_PROBE_PATH);
 
 /** (c) 正极性探针：普通 import（**禁** `import type`，与 coreImportType.js 门禁一致）从包根引入并作类型使用。 */
@@ -168,21 +193,15 @@ function collectSources(dir) {
   return results;
 }
 
-/** 合并两个包的 src 全部源码（逐包 collectSources 后拼接，保持确定性排序）。 */
+/** 收集 core src 全部源码（保持确定性排序）。 */
 function collectAllSources() {
-  return CORE_LIB_ABS.flatMap((dir) => collectSources(dir)).sort((left, right) =>
-    left.relPath.localeCompare(right.relPath),
-  );
+  return collectSources(CORE_DIR_ABS);
 }
 
-/**
- * 逐文件逐行匹配标识符，返回按 `relPath → line` 稳定排序的违规列表。声明文件本身豁免（它正是
- * 该标识符唯一允许出现的地方）。
- */
+/** 逐文件逐行匹配标识符，返回按 `relPath → line` 稳定排序的命中列表。 */
 function findReferences(sources) {
   const references = [];
   for (const file of sources) {
-    if (file.relPath === DECLARATION_FILE) continue;
     const lines = file.source.split(/\r?\n/);
     for (let index = 0; index < lines.length; index += 1) {
       if (REFERENCE_PATTERN.test(lines[index])) {
@@ -201,20 +220,30 @@ let scannedFileCount = 0;
 function checkRealTree() {
   const sources = collectAllSources();
   scannedFileCount = sources.length;
-  check(sources.length > 0, `没有扫描到任何 ${CORE_LIBS.join('、')}/**/*.{ts,tsx} —— 门禁无从生效`);
+  check(sources.length > 0, `没有扫描到任何 ${CORE_DIR}/**/*.{ts,tsx} —— 门禁无从生效`);
   check(
     sources.length >= MIN_EXPECTED_SOURCES,
     `真实树只扫描到 ${sources.length} 个源码文件，低于非空转下界 ${MIN_EXPECTED_SOURCES} —— 扫描范围可能被削弱`,
   );
+
   const references = findReferences(sources);
-  check(
-    references.length === 0,
-    `真实树出现 ${references.length} 处 ${TARGET_IDENTIFIER}（期望 0，必须去修源码而非放宽门禁；` +
-      `唯一允许的位置是声明文件 ${DECLARATION_FILE}）：${formatReferences(references)}`,
-  );
+  const hitsByFile = new Map();
+  for (const reference of references) {
+    hitsByFile.set(reference.relPath, (hitsByFile.get(reference.relPath) ?? 0) + 1);
+  }
+  for (const driverFile of DRIVER_FILES) {
+    const hits = hitsByFile.get(driverFile) ?? 0;
+    check(
+      hits > 0,
+      `真实树驱动文件未引用 ${TARGET_IDENTIFIER}：${driverFile} —— ` +
+        `core 的资源层必须驱动注入的文件系统（D-06）`,
+    );
+  }
   console.log(
     `coreFsSurface: 真实树通过（已扫描 ${scannedFileCount} 个源码文件 ≥ 非空转下界 ${MIN_EXPECTED_SOURCES}，` +
-      `${TARGET_IDENTIFIER} 仅出现在声明文件 ${DECLARATION_FILE}、其余 0 命中）`,
+      `驱动文件均引用 ${TARGET_IDENTIFIER}：` +
+      DRIVER_FILES.map((file) => `${file}×${hitsByFile.get(file) ?? 0}`).join('、') +
+      '）',
   );
 }
 
@@ -222,34 +251,46 @@ function checkRealTree() {
 
 function checkTwoPolarity() {
   const fixture = buildFixture(SURFACE_FIXTURE_LINES, SURFACE_FIXTURE_MARKERS);
+  const clean = buildFixture(CLEAN_FIXTURE_LINES, CLEAN_FIXTURE_MARKERS);
   fs.writeFileSync(SURFACE_FIXTURE_ABS, fixture.source, 'utf8');
+  fs.writeFileSync(CLEAN_FIXTURE_ABS, clean.source, 'utf8');
   let references = [];
   try {
     references = findReferences(collectAllSources());
   } finally {
     fs.rmSync(SURFACE_FIXTURE_ABS, { force: true });
+    fs.rmSync(CLEAN_FIXTURE_ABS, { force: true });
   }
 
   const fixtureReferences = references.filter((reference) => reference.relPath === SURFACE_FIXTURE_PATH);
   const line = fixture.lineOf.implements;
   if (line <= 0) {
-    check(false, '`implements` 定位标记在 fixture 里找不到 —— 断言无法定位');
+    check(false, '`implements` 定位标记在 fixture A 里找不到 —— 断言无法定位');
   } else {
     const onLine = fixtureReferences.filter((reference) => reference.line === line);
     check(
       onLine.length === 1,
-      `两极性失败：合成 fixture 的 class 实现（第 ${line} 行）未被逐行命中：${formatReferences(fixtureReferences)}`,
+      `两极性失败：合成 fixture A 的 class 实现（第 ${line} 行）未被逐行命中：${formatReferences(fixtureReferences)}`,
     );
   }
   check(
     fixtureReferences.length === SURFACE_FIXTURE_EXPECTED_HITS,
-    `两极性失败：fixture 应恰好产生 ${SURFACE_FIXTURE_EXPECTED_HITS} 处 ${TARGET_IDENTIFIER}，` +
+    `两极性失败：fixture A 应恰好产生 ${SURFACE_FIXTURE_EXPECTED_HITS} 处 ${TARGET_IDENTIFIER}，` +
       `实际 ${fixtureReferences.length} 处：${formatReferences(fixtureReferences)}`,
   );
-  check(!fs.existsSync(SURFACE_FIXTURE_ABS), `两极性 fixture 未被删除：${SURFACE_FIXTURE_PATH}`);
+
+  const cleanReferences = references.filter((reference) => reference.relPath === CLEAN_FIXTURE_PATH);
+  check(
+    cleanReferences.length === 0,
+    `两极性失败：不含 ${TARGET_IDENTIFIER}（只含近似名 ` +
+      `\`IEditorFileSystemLike\`）的 fixture B 被误计入：${formatReferences(cleanReferences)}`,
+  );
+
+  check(!fs.existsSync(SURFACE_FIXTURE_ABS), `两极性 fixture A 未被删除：${SURFACE_FIXTURE_PATH}`);
+  check(!fs.existsSync(CLEAN_FIXTURE_ABS), `两极性 fixture B 未被删除：${CLEAN_FIXTURE_PATH}`);
   console.log(
-    `coreFsSurface: 两极性成立（合成 fixture 的 \`implements ${TARGET_IDENTIFIER}\` 被逐行命中、` +
-      '真实树 0 命中，且 fixture 已删除）',
+    `coreFsSurface: 两极性成立（含 \`implements ${TARGET_IDENTIFIER}\` 的 fixture A 被逐行命中、` +
+      '只含近似名 `IEditorFileSystemLike` 的 fixture B 未被计入，且两个 fixture 均已删除）',
   );
 }
 
@@ -318,15 +359,8 @@ function checkRootImportProbe() {
 // ==================== 入口 ====================
 
 function main() {
-  for (const [index, abs] of CORE_LIB_ABS.entries()) {
-    if (!fs.existsSync(abs)) {
-      console.error(`coreFsSurface: 找不到 ${CORE_LIBS[index]} —— 无法验证门禁`);
-      process.exit(1);
-    }
-  }
-  const declarationAbs = path.join(REPO_ROOT, DECLARATION_FILE);
-  if (!fs.existsSync(declarationAbs)) {
-    console.error(`coreFsSurface: 找不到声明文件 ${DECLARATION_FILE} —— 无法验证门禁`);
+  if (!fs.existsSync(CORE_DIR_ABS)) {
+    console.error(`coreFsSurface: 找不到 ${CORE_DIR} —— 无法验证门禁`);
     process.exit(1);
   }
 
@@ -339,8 +373,9 @@ function main() {
     process.exit(1);
   }
   console.log(
-    `coreFsSurface: 全部断言通过（真实树扫描 ${scannedFileCount} 个源码文件、${TARGET_IDENTIFIER} 仅在声明文件；` +
-      '两极性 fixture 被逐行拦下并已删除；包根导入正极性 tsc 退出 0、负极性报 TS2305 且指向探针）',
+    `coreFsSurface: 全部断言通过（真实树扫描 ${scannedFileCount} 个源码文件、驱动文件均引用 ${TARGET_IDENTIFIER}；` +
+      '两极性 fixture A 被逐行命中、fixture B 未被计入并均已删除；' +
+      '包根导入正极性 tsc 退出 0、负极性报 TS2305 且指向探针）',
   );
 }
 
