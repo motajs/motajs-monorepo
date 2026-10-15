@@ -113,7 +113,9 @@
 
 ---
 
-## Plan 06 — `02.1-06-PLAN.md`（表格迁移到路径约定）
+## Plan 06 — `02.1-06-PLAN.md`（表格迁移到路径约定 + `.jsonc` 系统前缀约定）
+
+**`.jsonc` 项目级约定（用户已定）：** 可带一段**系统前缀注释块**，由精确这一行终止：`// --- SYSTEM PREFIX END --- //`；该行及其之前的全部文本 = 系统前缀，其后 = 严格 JSON 正文。**没有注释即合规**（标记行不是必需）。打开时三段检测：整段严格 JSON → 标记行拆分 + 正文严格解析（记住前缀）→ `json5` 宽松回退（非合规，需确认删注释）→ 无效。同一约定适用于数据 `.jsonc` 与 `.schema.jsonc`。
 
 ### `isSchemaPath(path: string): boolean`（函数，`src/table/resourceType.ts`）
 - **用途**：判断一个路径是否为 schema 约定文件（以 `.schema.json` / `.schema.jsonc` 结尾，D-15）。
@@ -124,18 +126,34 @@
 ### `isTableDataPath(path: string): boolean`（函数，`src/table/resourceType.ts`）
 - **用途**：判断一个路径是否可作为表格打开的数据文件（扩展名为 `json` / `jsonc` 且**不是** schema 约定文件）——「打开表格」目录树过滤用（D-10）。
 
-### `parseTableText(text: string, path: string): unknown`（函数，`src/table/model/tableText.ts`）
-- **用途**：按扩展名解析表格文本（`.jsonc` 用宽容解析、`.json` 用严格 JSON）——D-08 要求解析在调用方（core 只给原文）。
+### `SYSTEM_PREFIX_END_MARKER`（模块级常量，`string`，`src/table/model/tableText.ts`）
+- **用途**：项目级 `.jsonc` 系统前缀注释块的**结束标记行**，精确文本为 `// --- SYSTEM PREFIX END --- //`。该行及其之前的全部文本即「系统前缀」，其后是严格 JSON 正文；该行不是必需的（无注释即合规）。
 
-### `serializeTableText(value: unknown, path: string): string`（函数，`src/table/model/tableText.ts`）
-- **用途**：把表格数据序列化为写回文本。**已知取舍**：`.jsonc` 的注释在写回时不被保留（`json5` 的 stringify 不保留注释；本阶段写入统一用 `JSON.stringify`，如需保留待后续）；请在确认时一并表态。
+### `TableTextParseStatus`（`const enum`，成员 `Conforming` / `NeedsCommentStrip` / `Invalid`，`src/table/model/tableText.ts`）
+- **用途**：表格文本解析的三种结论——合规（可直接打开，可能带系统前缀）、只需宽松解析（含注释 / 尾逗号、需先确认删注释才可打开）、无效（严格与宽松解析都失败）。
 
-### `json5`（新增 catalog 依赖）
-- **用途**：解析 `.jsonc`（含注释 / 尾逗号）。它**已在本仓 lockfile 内**（`packages/libs/file2x` 直接依赖 `json5@2.2.3`），本阶段只是把它上收到 `pnpm-workspace.yaml` 的 `catalog:` 并加入 `@motajs/editor-impl` 依赖；**非**新引入到仓库。
-- **备选**：本阶段只支持严格 JSON（`.jsonc` 可列出但打开报解析错误）。请择一。
+### `ITableTextParseResult`（interface，成员 `status` / `prefix` / `value?`，`src/table/model/tableText.ts`）
+- **用途**：解析结果——`status` 为结论；`prefix` 为**记住的系统前缀原文**（合规但无前缀时为 `''`；`NeedsCommentStrip` / `Invalid` 时亦为 `''`），供写回时逐字还原；`value` 为解析出的数据（`Invalid` 时缺省）。**这就是「能带回前缀」的最小形状**。
+
+### `parseTableText(text: string): ITableTextParseResult`（函数，`src/table/model/tableText.ts`）
+- **用途**：按项目约定解析表格 / schema 文本——先对整段严格 `JSON.parse`（成功 ⇒ `Conforming`、`prefix` 为 `''`）；失败则在**第一处**标记行处拆出系统前缀、对正文再严格解析（成功 ⇒ `Conforming` 并带回 `prefix`）；再失败才用既有 `json5` 宽松解析整段（成功 ⇒ `NeedsCommentStrip`、携带 `value`、`prefix` 为 `''`）；仍失败 ⇒ `Invalid`。**取代原提案 `parseTableText(text, path)`**——解析按内容判定、不需要扩展名，且结果必须能把系统前缀带回。
+- **备选**：另开 `parseTableTextLeniently` 只做 json5 回退；本提案把回退合进同一结果，面板不必 import `json5`。
+
+### `serializeTableText(value: unknown, prefix: string): string`（函数，`src/table/model/tableText.ts`）
+- **用途**：把表格数据序列化为写回文本——`prefix` 非空时**逐字**写回系统前缀注释块、再 `JSON.stringify(value, null, 2)`；`prefix` 为空时只写 JSON 正文。**取代原提案 `serializeTableText(value, path)`**——写回需要记住的前缀而非扩展名。（**已知取舍**：无系统前缀的 `.jsonc` 注释不被保留——非合规文件经确认后本就以「删除注释」打开，属预期行为。）
+
+### 面板内确认框相关命名（`src/table/tablePanel.ts`，**非注入接缝**）
+- `ITablePanelViewState.commentStripPending`（视图状态成员，`boolean`）——该栏当前是否在等用户确认「剥离注释后打开」；React 视图据此渲染 antd `Modal`。
+- `ITablePanelViewProps.onConfirmCommentStrip` / `onCancelCommentStrip`（视图根回调，`(columnIndex: number) => void`）——确认 / 取消后转交面板处理。
+- `TablePanel.confirmCommentStrip(columnIndex)` / `TablePanel.cancelCommentStrip(columnIndex)`（`TablePanel` 的方法）——确认后以宽松解析值 + 空前缀打开该栏；取消则清空暂存、该栏不打开。
+- **明确不做**：不新增 `IConfirmOpener` / `IConfirmRequest` 等注入式接缝，不改 `src/react/types.ts` / `src/react/capabilities.ts`；确认框直接在表格面板视图内用 antd `Modal` 渲染（antd 已是 `editor-impl` 的 peerDependency）。
+
+### `json5`（新增 catalog 依赖；**必需**，用户已定）
+- **用途**：在「非合规文件、打开前剥离注释」的回退路径里宽松解析 `.jsonc`（含注释 / 尾逗号）。它**已在本仓 lockfile 内**（`packages/libs/file2x` 直接依赖 `json5@2.2.3`），本阶段把它上收到 `pnpm-workspace.yaml` 的 `catalog:` 并加入 `@motajs/editor-impl` 依赖；**非**新引入到仓库。**系统前缀往返路径本身不需要 json5**——只有非合规回退路径需要。
 
 ### 对既有符号的删除（逐条确认）
-- **删除** `isSchemaResourceId`（`model/schemaPresentation.ts`）与 `SCHEMA_RESOURCE_PREFIX`；schema 视图判定改由 `isSchemaPath(target.dataPath)`。
+- **删除** `SCHEMA_RESOURCE_PREFIX` 与 schema 前缀识别函数（`model/schemaPresentation.ts`）；schema 视图判定改由 `isSchemaPath(target.dataPath)`。
+- **删除** `TableResourceType` / `tableDataResourceId` / `tableSchemaResourceId`（`resourceType.ts`）。
 
 ---
 
