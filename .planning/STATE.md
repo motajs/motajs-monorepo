@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "02.1"
 current_phase_name: 资源层重构与表格文件管理
-current_plan: 7
+current_plan: 8
 status: executing
-stopped_at: Completed 02.1-06-PLAN.md
-last_updated: "2026-10-15T12:45:45.587Z"
+stopped_at: Completed 02.1-07-PLAN.md
+last_updated: "2026-10-15T13:39:06.601Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 02.1 execution started
-state_head: 48d438c8507a995a04234bbb0cad38e8ef539a6a
+state_head: 8308aaaea2844bc9f8194bfdd1e5ef4e96204496
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 52
-  completed_plans: 46
+  completed_plans: 47
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 02.1 (资源层重构与表格文件管理) — EXECUTING
-Current Plan: 7
+Current Plan: 8
 Total Plans in Phase: 12
 Status: Ready to execute
 Last activity: 2026-10-15 — Phase 02.1 execution started
@@ -104,6 +104,7 @@ Progress: [██████████] 100%
 | Phase 02.1 P04 | 7 | 3 tasks | 7 files |
 | Phase 02.1 P5 | 7min | 2 tasks | 2 files |
 | Phase 02.1 P06 | 40min | 2 tasks | 9 files |
+| Phase 02.1 P07 | 29min | 1 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -204,6 +205,9 @@ Recent decisions affecting current work:
 - [Phase 02.1]: 02.1-06: 注释剥离确认框直接在表格面板视图内用 antd Modal 渲染（renderCommentStripModal），未新增 IConfirmOpener/IConfirmRequest，未改 react/types.ts 与 react/capabilities.ts
 - [Phase 02.1]: 02.1-06: 外部代码编辑器返回文本改用 parseTableText 解析（只接受 Conforming）以支持系统前缀往返，保留原非合法 JSON 不写回的严格性
 - [Phase 02.1]: 02.1-06: json5 上收至 catalog（2.2.3）并加入 editor-impl 依赖（离线安装）；系统前缀往返路径本身不依赖 json5，仅非合规回退路径需要
+- [Phase 02.1]: 02.1-07: createTableHarness 只装配并初始化 EditorCore、不注册面板类型——保住 tracer『真实 tablePanelType 可注册进外壳』断言，且不新增对外命名
+- [Phase 02.1]: 02.1-07: 测试 seed 一律先于 createTableHarness（核心初始化即建文件索引）；Plan 08 须沿用此约定
+- [Phase 02.1]: 02.1-07: 缺失的 schema 文件按『无 schema』处理而非错误（TablePanel.fileExists + TablePanel.readSchemaText），存在但读取失败仍落错误态
 
 ### Pending Todos
 
@@ -230,6 +234,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-15T12:45:45.366Z
-Stopped at: Completed 02.1-06-PLAN.md
+Last session: 2026-10-15T13:39:06.276Z
+Stopped at: Completed 02.1-07-PLAN.md
 Resume file: None
