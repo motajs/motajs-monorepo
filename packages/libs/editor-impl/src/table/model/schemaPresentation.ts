@@ -11,9 +11,6 @@ import { getShortField } from './fieldPath';
 // exclusiveMinimum/exclusiveMaximum）合成一行左右两个小输入，紧凑标量为一行单控件。规则集内建、
 // 绝不由被编辑的 schema 描述，也不对 schema 做任何表达式求值。
 
-/** schema 资源 id 前缀：命中即表示当前目标是 schema 而非数据（D-04 / D-05） */
-const SCHEMA_RESOURCE_PREFIX = 'table#schema.';
-
 /** 内建成对关键字组：两个关键字合成一行呈现（D-25） */
 const PAIRED_KEYWORD_GROUPS: readonly IPairedFieldGroup[] = Object.freeze([
   Object.freeze({ keywords: Object.freeze(['minimum', 'maximum']) }),
@@ -159,15 +156,6 @@ function buildPropertyRows(properties: Record<string, unknown>, prefix: string):
   }
 
   return rows;
-}
-
-/**
- * 判断一个资源 id 是否指向 schema 目标
- * @param id 资源标识符字符串
- * @returns id 形如 `table#schema.<name>` 时为 true
- */
-export function isSchemaResourceId(id: string): boolean {
-  return id.startsWith(SCHEMA_RESOURCE_PREFIX);
 }
 
 /**

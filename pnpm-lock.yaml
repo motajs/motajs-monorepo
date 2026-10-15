@@ -102,6 +102,9 @@ catalogs:
     json-schema-typed:
       specifier: 8.0.2
       version: 8.0.2
+    json5:
+      specifier: 2.2.3
+      version: 2.2.3
     jszip:
       specifier: ^3.10.1
       version: 3.10.1
@@ -601,6 +604,9 @@ importers:
       json-schema-typed:
         specifier: catalog:default
         version: 8.0.2
+      json5:
+        specifier: 'catalog:'
+        version: 2.2.3
       ts-pattern:
         specifier: catalog:default
         version: 5.9.0

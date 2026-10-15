@@ -43,6 +43,7 @@
     "ajv": "catalog:default",
     "es-toolkit": "catalog:default",
     "json-schema-typed": "catalog:default",
+    "json5": "catalog:",
     "ts-pattern": "catalog:default"
   },
   "devDependencies": {
