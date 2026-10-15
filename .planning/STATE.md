@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "02.1"
 current_phase_name: 资源层重构与表格文件管理
-current_plan: 10
+current_plan: 11
 status: executing
-stopped_at: Completed 02.1-09-PLAN.md
-last_updated: "2026-10-15T14:59:48.471Z"
+stopped_at: Completed 02.1-10-PLAN.md
+last_updated: "2026-10-15T15:21:46.875Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 02.1 execution started
-state_head: d814b7bcb54aaff68876c82d7924d2b99192b88d
+state_head: 1fa02e2f3c12f74ee32595e95a6d64c5d79ce6ca
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 52
-  completed_plans: 49
+  completed_plans: 50
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 02.1 (资源层重构与表格文件管理) — EXECUTING
-Current Plan: 10
+Current Plan: 11
 Total Plans in Phase: 12
 Status: Ready to execute
 Last activity: 2026-10-15 — Phase 02.1 execution started
@@ -107,6 +107,7 @@ Progress: [██████████] 100%
 | Phase 02.1 P07 | 29min | 1 tasks | 9 files |
 | Phase 02.1 P08 | 44min | 1 tasks | 10 files |
 | Phase 02.1 P09 | 20min | 3 tasks | 8 files |
+| Phase 02.1 P10 | 35min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -218,6 +219,10 @@ Recent decisions affecting current work:
 - [Phase 02.1]: 02.1-09: 删除确认用视图内受控 antd Modal（同 Plan 06 注释剥离确认），非 window.confirm / 非命令式 Modal.confirm；TableListPanel.deleteTable 不登记任何 IUndoContext（D-13 不可撤销）
 - [Phase 02.1]: 02.1-09: CapabilityProvider 漏转发 tablePresets 能力已修正（Rule 2），使预设表注入接缝端到端可用（Plan 10 开发宿主将经同一 Provider 注入 TABLE_PRESETS）
 - [Phase 02.1]: 02.1-09: ITableListPanelViewState 与 ITableListPanelViewProps 同落 TableListPanelView.tsx，面板从视图文件引入状态类型以规避 panel ↔ view 循环引用
+- [Phase 02.1]: MemoryBackend.moveFile 迁移子树（含路径前缀下的全部文件与已显式创建的目录），而非只搬单个文件；越界拒绝沿用「任一路径段为 .. 即抛错」（与 FakeFileSystem 同形，承接 T-02.1-23）
+- [Phase 02.1]: openTableDemoPanel 改为打开列表面板；迁移后的 devHostTable 用例另用测试本地 helper openDemoTable(core) 直接带 dataPath 打开表格面板，避免引入新对外命名
+- [Phase 02.1]: 演示数据 TABLE_DEMO_DATA / TABLE_DEMO_SCHEMA 由对象改为文本（JSON.stringify(..., null, 2)），seed 进内存 fs；测试经 JSON.parse 读回断言
+- [Phase 02.1]: main.tsx 同时注册 DEMO_PANEL_TYPE / tablePanelType / tableListPanelType 三种面板类型；ignore 传 node_modules / .git
 
 ### Pending Todos
 
@@ -244,6 +249,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-15T14:59:48.051Z
-Stopped at: Completed 02.1-09-PLAN.md
+Last session: 2026-10-15T15:21:27.135Z
+Stopped at: Completed 02.1-10-PLAN.md
 Resume file: None
