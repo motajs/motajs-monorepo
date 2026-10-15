@@ -1,8 +1,8 @@
 import { EditorEntryKind, IFileEntry } from '@motajs/editor-core';
 import { useStore } from '@tanstack/react-store';
 import { Store } from '@tanstack/store';
-import { Button } from 'antd';
-import { createElement, ReactElement } from 'react';
+import { Button, Input } from 'antd';
+import { ChangeEvent, createElement, KeyboardEvent, ReactElement, useCallback, useState } from 'react';
 import { ITablePanelOpener, ITablePreset, useTableCapabilities } from '../../react';
 import { isTableDataPath } from '../resourceType';
 import '../table.css';
@@ -25,8 +25,17 @@ export interface ITableListPanelViewProps {
   readonly store: Store<ITableListPanelViewState>;
   /** 选中某目录的回调 */
   readonly onSelectDirectory: (path: string) => void;
+  /** 在当前目录新建一对表格文件的回调 */
+  readonly onCreate: (directoryPath: string, name: string) => void;
   /** 打开某个数据文件的回调，携带表格面板打开器 */
   readonly onOpen: (dataPath: string, opener: ITablePanelOpener) => void;
+}
+
+interface ITableListCreateProps {
+  /** 新建表格所在目录路径；根目录为空串 */
+  readonly directory: string;
+  /** 确认新建的回调 */
+  readonly onCreate: (directoryPath: string, name: string) => void;
 }
 
 /**
@@ -137,10 +146,75 @@ function renderFileRow(
 }
 
 /**
+ * 「新建表格」入口：点 + 后内联 antd 输入名称，回车确认、Escape 或失焦取消
+ *
+ * 不使用浏览器原生对话框；名称在面板侧经 `validateId` 校验。
+ * @param props 新建入口 props
+ * @returns 新建按钮或名称输入元素
+ */
+function TableListCreate(props: ITableListCreateProps): ReactElement {
+  const addingState = useState(false);
+  const adding = addingState[0];
+  const setAdding = addingState[1];
+  const nameState = useState('');
+  const name = nameState[0];
+  const setName = nameState[1];
+
+  const open = useCallback((): void => setAdding(true), []);
+  const cancel = useCallback((): void => {
+    setAdding(false);
+    setName('');
+  }, []);
+  const submit = useCallback((): void => {
+    const trimmed = name.trim();
+
+    setAdding(false);
+    setName('');
+
+    if (trimmed !== '') props.onCreate(props.directory, trimmed);
+  }, [name, props]);
+  const change = useCallback((event: ChangeEvent<HTMLInputElement>): void => setName(event.target.value), []);
+  const keydown = useCallback(
+    (event: KeyboardEvent<HTMLInputElement>): void => {
+      if (event.key === 'Enter') submit();
+      if (event.key === 'Escape') cancel();
+    },
+    [submit, cancel],
+  );
+
+  if (!adding) {
+    return createElement(
+      Button,
+      {
+        size: 'small',
+        autoInsertSpace: false,
+        className: 'etable-list-create',
+        'data-test-id': 'table-list-create',
+        onClick: open,
+      },
+      '新建表格',
+    );
+  }
+
+  return createElement(Input, {
+    autoFocus: true,
+    size: 'small',
+    className: 'etable-list-create-input',
+    'data-test-id': 'table-list-create-input',
+    value: name,
+    placeholder: '表格名称',
+    onChange: change,
+    onKeyDown: keydown,
+    onBlur: cancel,
+  });
+}
+
+/**
  * 渲染目录树：当前目录的「..」父目录行 + 目录子项 + 可作为表格打开的数据文件
  * @param state 视图状态
  * @param opener 表格面板打开器
  * @param onSelectDirectory 选中目录回调
+ * @param onCreate 新建表格回调
  * @param onOpen 打开回调
  * @returns 目录树元素
  */
@@ -148,6 +222,7 @@ function renderTree(
   state: ITableListPanelViewState,
   opener: ITablePanelOpener | undefined,
   onSelectDirectory: (path: string) => void,
+  onCreate: (directoryPath: string, name: string) => void,
   onOpen: (dataPath: string, opener: ITablePanelOpener) => void,
 ): ReactElement {
   const rows: ReactElement[] = [];
@@ -184,7 +259,8 @@ function renderTree(
     createElement(
       'div',
       { className: 'etable-list-current', title: state.directory === '' ? '/' : state.directory },
-      state.directory === '' ? '/' : state.directory,
+      createElement('span', { className: 'etable-list-path' }, state.directory === '' ? '/' : state.directory),
+      createElement(TableListCreate, { directory: state.directory, onCreate }),
     ),
     createElement('div', { className: 'etable-list-entries' }, body),
     error,
@@ -206,6 +282,6 @@ export function TableListPanelView(props: ITableListPanelViewProps): ReactElemen
     'div',
     { className: 'etable-list', 'data-test-id': 'table-list' },
     renderPresets(presets ?? [], opener, props.onOpen),
-    renderTree(state, opener, props.onSelectDirectory, props.onOpen),
+    renderTree(state, opener, props.onSelectDirectory, props.onCreate, props.onOpen),
   );
 }

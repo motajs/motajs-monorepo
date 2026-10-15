@@ -381,13 +381,25 @@
 }
 
 .etable-list-current {
+  display: flex;
   flex: 0 0 auto;
-  overflow: hidden;
+  align-items: center;
+  gap: 8px;
   padding: 4px 8px;
   color: rgba(0, 0, 0, 0.45);
   font-size: 12px;
+}
+
+.etable-list-path {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.etable-list-create-input {
+  width: 120px;
 }
 
 .etable-list-entries {
