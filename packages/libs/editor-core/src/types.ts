@@ -1,8 +1,14 @@
 import { IUndoInjection, IUndoSystem } from './undo';
-import { IResourceInjection, IResourceSystem } from './resource';
+import { IResourceSystem } from './resource';
 import { IShellInjection, IShellSystem } from './shell';
+import { IEditorFileSystem } from './fs';
 
-export interface IEditorCoreInjection extends IUndoInjection, IResourceInjection, IShellInjection {}
+export interface IEditorCoreInjection extends IUndoInjection, IShellInjection {
+  /** 宿主注入的文件系统实现；core 只驱动它、不解析文件格式 */
+  readonly fs: IEditorFileSystem;
+  /** 建索引时跳过的目录 / 文件模式列表，可含通配，如 `node_modules`、`.git` */
+  readonly ignore?: readonly string[];
+}
 
 export interface IEditorCore {
   /** 编辑器版本 */

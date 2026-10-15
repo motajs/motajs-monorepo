@@ -1,32 +1,35 @@
 import { FC, ReactNode } from 'react';
 import { IUndoable, IUndoContext } from '../undo';
-import { IResource, IResourceIdentifier } from '../resource';
+import { IFileEntry, IResource, IResourceIdentifier, ResourceContent } from '../resource';
 
 export interface IEditorPanelContext {
   /**
    * 请求指定资源
-   * @param id 资源标识符
+   * @param identifier 资源标识（纯路径）
+   * @returns 资源句柄；资源不存在时为 null
    */
-  requestResource<T>(id: IResourceIdentifier): Promise<IResource<T> | null>;
-
-  /**
-   * 获取指定资源类型的资源列表
-   * @param type 资源类型
-   */
-  requestResourceList(type: number): Promise<readonly IResourceIdentifier[]>;
+  requestResource(identifier: IResourceIdentifier): Promise<IResource | null>;
 
   /**
    * 创建新的资源
-   * @param id 资源标识符
+   * @param identifier 资源标识（纯路径）
    * @param content 资源的初始内容
+   * @returns 新建的资源句柄；创建失败时为 null
    */
-  createResource<T>(id: IResourceIdentifier, content: T): Promise<IResource<T> | null>;
+  createResource(identifier: IResourceIdentifier, content: ResourceContent): Promise<IResource | null>;
 
   /**
    * 删除指定资源
-   * @param id 资源标识符
+   * @param identifier 资源标识（纯路径）
    */
-  deleteResource(id: IResourceIdentifier): Promise<void>;
+  deleteResource(identifier: IResourceIdentifier): Promise<void>;
+
+  /**
+   * 列出指定目录下的直接子条目
+   * @param path 目录路径
+   * @returns 目录下的直接子条目列表
+   */
+  listDirectory(path: string): Promise<readonly IFileEntry[]>;
 
   /**
    * 添加某个面板的撤回操作
@@ -88,13 +91,6 @@ export interface IEditorPanel extends IUndoable {
    * @param data 更新后的资源数据
    */
   onUpdateResource<T>(id: IResourceIdentifier, data: T): Promise<void>;
-
-  /**
-   * 当指定资源列表更新时执行
-   * @param type 资源类型
-   * @param list 更新后的资源列表
-   */
-  onUpdateResourceList(type: number, list: readonly IResourceIdentifier[]): Promise<void>;
 }
 
 /** 面板实例工厂的入参对象：打包面板上下文与 core 生成的实例 id */
