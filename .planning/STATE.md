@@ -4,17 +4,17 @@ milestone: v1.0
 current_phase: "02.1"
 current_phase_name: 资源层重构与表格文件管理
 current_plan: 12
-status: executing
-stopped_at: Completed 02.1-11-PLAN.md
-last_updated: "2026-10-15T15:37:50.044Z"
+status: verifying
+stopped_at: Completed 02.1-12-PLAN.md
+last_updated: "2026-10-15T15:49:35.993Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 02.1 execution started
-state_head: 0886a2b5743f107a406f587cfb46527212beede3
+state_head: 8154c1112c4398671a17426d9b0068809e2a94b7
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 52
-  completed_plans: 51
+  completed_plans: 52
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -32,7 +32,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 Phase: 02.1 (资源层重构与表格文件管理) — EXECUTING
 Current Plan: 12
 Total Plans in Phase: 12
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-10-15 — Phase 02.1 execution started
 
 Progress: [██████████] 100%
@@ -109,6 +109,7 @@ Progress: [██████████] 100%
 | Phase 02.1 P09 | 20min | 3 tasks | 8 files |
 | Phase 02.1 P10 | 35min | 3 tasks | 7 files |
 | Phase 02.1 P11 | 6min | 2 tasks | 2 files |
+| Phase 02.1 P12 | 12min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -228,6 +229,8 @@ Recent decisions affecting current work:
 - [Phase 02.1]: 02.1-11: 「删除不可撤销」以 undoSystem.addUndoContext 计数为 0 的集成断言落地（T-02.1-21）；「切入刷新」以外部 createResource 改索引 + activateTab 触发并以 listDirectory spy 断言重取
 - [Phase 02.1]: 02.1-11: 复用 Plan 07 的 FakeFileSystem / createTableHarness 与 Plan 09/10 的能力注入装配，零生产源码改动、零新对外命名
 - [Phase 02.1]: 02.1-11: 三包 test / typecheck 与五条生效门禁整验全绿；VALIDATION.md 置 nyquist_compliant true / status validated，Wave 1–8 行依各自 SUMMARY 置绿、Plan 12 行保留 pending
+- [Phase 02.1]: 02.1-12: CORE-01 由「只定义接口、不提供实现」改为 core 资源系统驱动注入的文件系统（唯一调用方）；TABLE-01 扩展为打开（预设表 + 目录树）/ 新建 / 删除表格文件
+- [Phase 02.1]: 02.1-12: 03-CONTEXT / 03-UI-SPEC 中残留的类型号、IResourceInjection、IResourceIdentifier.path 前提全部收口为「路径标识 + 索引 + core 驱动 fs」；INTERFACE-NAME 记入最终定稿（随 Plan 01–11 落地）
 
 ### Pending Todos
 
@@ -254,6 +257,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-15T15:37:29.704Z
-Stopped at: Completed 02.1-11-PLAN.md
+Last session: 2026-10-15T15:49:35.746Z
+Stopped at: Completed 02.1-12-PLAN.md
 Resume file: None
