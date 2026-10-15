@@ -2,7 +2,7 @@
 
 **Gathered:** 2026-10-15
 **Status:** Ready for planning
-**Note:** 本轮讨论依据**新版引擎的内容模型**（用户 2026-10-15 提供）重新界定了素材范围——详见 §F。部分细节（资源层接口修订、转码配置界面、新增素材交互）仍待用户后续补充。
+**Note:** 本轮讨论依据**新版引擎的内容模型**（用户 2026-10-15 提供）重新界定了素材范围——详见 §F。部分细节（资源层接口修订、转码配置界面、新增素材交互）仍待用户后续补充。Phase 3 讨论稿中受 Phase 2.1 影响的前提（D-04 / D-05 / D-06 / D-11 及参考、结构、集成点说明）已全部回改；前提由「类型号 + 标识串、只定义 fs 不实现」改为「路径标识 + 索引 + core 驱动 fs」。
 
 <domain>
 ## Phase Boundary
@@ -26,9 +26,9 @@
 
 ### B. 数据来源（`editor-core` 资源层）
 
-- **D-04:** 素材的**列表与字节都经 `editor-core` 资源层**获取与写入；**不**使用 Phase 1 的通用 fs 接口（`IEditorFileSystem`，CORE-01 明确禁止 core/impl 引用）。 — **Reversibility:** costly — 数据访问一旦铺开，换抽象要改面板与所有写入点。
-- **D-05:** **资源粒度**：每个分类的 **`.list.jsonc` 列表文件 = 一个资源**（内容 = 该分类的条目数组）；每个**素材字节文件各自是一个资源**；面板把「列表资源 + 字节资源」二者结合。
-- **D-06:** `IResourceIdentifier` 新增 **`path`** 成员；该 path **在 core 中不消费、只在 impl 中消费**，用于判定与写入。（资源层接口的进一步修订**由用户自行进行**；`path` 当前为未提交改动。）
+- **D-04:** 素材的**列表与字节都经 `editor-core` 资源层**获取与写入；**不**直接触达真实文件系统，一律经注入的 `IEditorFileSystem` 与资源系统（core 的资源系统是文件系统的唯一调用方）。 — **Reversibility:** costly — 数据访问一旦铺开，换抽象要改面板与所有写入点。
+- **D-05:** **资源粒度按文件路径**：每个分类的 **`.list.jsonc` 列表文件是一个路径资源**（内容 = 该分类的条目数组）；每个**素材字节文件各自是一个路径资源**；面板把「列表文件 + 字节文件」二者结合。
+- **D-06:** `IResourceIdentifier` = **纯文件路径**（相对项目根、以 `/` 分隔、不带前导斜线）；路径即标识，core 以它读写、建索引。
 
 ### C. 配置表单与 Schema（复用表格引擎）
 
@@ -36,7 +36,7 @@
 - **D-08:** `editor-impl/asset` **内置两套分类 Schema**：**legacy**（= 现有 `@motajs/editor` 的旧素材模型，`tower.main.images` / `icons.js` / `maps.js` 那套）与**新引擎**（按新内容模型）；**由装配方按引擎选择注入**。
 - **D-09:** **Schema 解析顺序**——**引擎自带的分类 Schema 优先**（约定**固定文件名**，如每个分类目录下一个约定文件 `.schema.jsonc`）；读不到则**回退到内置 Schema**。
 - **D-10:** **新增素材的默认值取自 `defaults`**（`defaults/*.jsonc`）；其中 `@required` 作为**字段必需性**参与校验，对象按「逐属性比较」语义合并。
-- **D-11:** **注入 + 内置默认**：`editor-impl/asset` 内置「图片 / 音频 / 动画 / 字体」四种**预览**与通用框架作为默认；引擎在顶层**注入分类清单、资源类型号（`IResourceIdentifier.type`，由外部枚举定义）、配置表单描述**，可增删改。
+- **D-11:** **注入 + 内置默认**：`editor-impl/asset` 内置「图片 / 音频 / 动画 / 字体」四种**预览**与通用框架作为默认；引擎在顶层**注入分类清单与「分类 → 目录 / 列表文件路径」的映射、配置表单描述**，可增删改——资源不再有类型号，按文件路径（含目录约定）组织。
 
 ### D. 素材选择器
 
@@ -101,7 +101,7 @@
 - `packages/libs/editor-impl/package.json` — 已预留 `./asset` 子路径与 peerDependencies（antd / pixi.js / semi-ui 等）
 - `packages/libs/editor-impl/src/` — 默认实现落点（`./table`、`./react` 已存在）
 - `packages/libs/editor-impl/src/react/` — 能力接缝（`ITableEditorCapabilities` / `IMultiSelectOpener` / `CapabilityProvider` / `MultiSelectModal`）
-- `packages/libs/editor-core/src/resource/types.ts` — 资源层接口（`IResourceIdentifier`（含新增 `path`）/ `IResourceInjection` / `IResourceSystem`）
+- `packages/libs/editor-core/src/resource/types.ts` — 资源层接口（`IResourceIdentifier`（= 纯文件路径）/ `IResourceSystem` / `IResourceSystemAccess` / `IEditorFileSystem`（注入的文件系统））
 - `packages/libs/editor-core/src/undo/` — 撤销系统（D-15 需加返回值）
 - `packages/libs/editor-core/src/shell/` — 外壳（`registerPanelType`、切换时 `onSwitchIn` / `onSwitchOut`）
 
@@ -119,7 +119,7 @@
 ### Reusable Assets
 - **Phase 2 表格/表单引擎**（`editor-impl/table`：`TableGrid` / `TableRow` / 五类行内控件 / `model/validation` / `schemaPresentation` / 撤销提交）：直接复用为「每素材配置表单」（D-07）。
 - **`editor-impl/react` 能力接缝**（`ITableEditorCapabilities` / `IMultiSelectOpener` / `CapabilityProvider` / `MultiSelectModal`）：素材选择器可作为一项 asset 能力注入（D-12）。
-- **`editor-core` 资源层**（`IResourceSystem` / `IResourceIdentifier` / `IResourceInjection`）：素材列表与字节的底座（D-04/D-05）。
+- **`editor-core` 资源层**（`IResourceSystem` / `IResourceIdentifier`（= 路径）/ `IResourceSystemAccess`）：素材列表与字节的底座（D-04/D-05）。
 - **`editor-core` 撤销层**（`undo`）：统一撤销；D-15 需要加返回值。
 - **Phase 1 外壳**（`ShellSystem.registerPanelType` / `IEditorPanelType` / `onSwitchIn` / `onSwitchOut`）：素材面板类型注册落点、切入时重取。
 - **现状可搬运的通用件**：`CanvasRasterCodec` + `raster.ts`（canvas 编解码 / 纯像素运算）、`GridCanvas`（网格框选）、`useImageAssetUrl`、`ImagePreview` / `AudioPreview` / `ModalShell`、`appendPic/materialConfig`（网格尺寸 / 帧数）、`MapEditor/MaterialPanel/layout`（调色板布局）。
@@ -134,8 +134,8 @@
 
 ### Integration Points
 - `@motajs/editor-impl` 的 `./asset` 子路径导出（`package.json` 已预留）：面板类型常量（如 `assetPanelType`）+ 底层组件 + 默认素材选择器 + 内置 Schema 集。
-- 装配方（dev 宿主 / 未来 `@motajs/editor`）：注册面板类型、注入分类清单 / 资源类型号 / 配置 Schema、注入素材选择器能力、提供资源层实现。
-- 分类资源标识：`.list.jsonc`（列表资源，type = 分类）+ 各素材字节资源（path 经 `IResourceIdentifier.path`）。
+- 装配方（dev 宿主 / 未来 `@motajs/editor`）：注册面板类型、注入分类清单、分类 → 目录 / 列表文件路径的映射、配置 Schema、注入素材选择器能力、提供注入的文件系统实现。
+- 分类资源标识：`.list.jsonc` 列表文件与各素材字节文件各自是一个**文件路径资源**（路径即标识，如 `content/texture/.list.jsonc`、`content/texture/x.png`）；列某分类的资源 = 列该目录。
 
 </code_context>
 
@@ -150,7 +150,7 @@
 <deferred>
 ## Deferred Ideas
 
-- **资源层接口修订**（支持新增素材、`path` 获取等）：**用户自行进行**；`IResourceIdentifier.path` 已加入（core 不消费、impl 用于判定与写入），当前为未提交改动。
+- **资源层接口修订已由 Phase 2.1 完成**：`IResourceIdentifier` = 纯文件路径；资源按路径读写、core 驱动注入的文件系统并维护项目索引。
 - **转码配置界面 / 新增素材输入体验等交互细节**：待后续继续讨论。
 - **引擎为各 `.list.jsonc` 自带 Schema**：格式与存放细节后续定（本阶段先按「约定固定文件名 + 回退内置」实现）。
 - **地图 / 代码 / 事件编辑器**：Phase 4/5/6。
