@@ -1,33 +1,20 @@
-import { IEditorPanel, IEditorPanelFactoryParam, ResourceSystem, ShellSystem, UndoSystem } from '@motajs/editor-core';
+import { EditorCore, IEditorPanel, IEditorPanelFactoryParam } from '@motajs/editor-core';
 import { describe, expect, it } from 'vitest';
-import { tableDataResourceId, tablePanelType, tableSchemaResourceId, TablePanel } from '..';
-import { FakeResourceInjection } from './fixtures';
+import { deriveSchemaPath, tablePanelType, TablePanel } from '..';
+import { createTableHarness, FakeFileSystem } from './fixtures';
 
-interface TestSystem {
-  /** 外壳系统 */
-  readonly shellSystem: ShellSystem;
-  /** 资源系统 */
-  readonly resourceSystem: ResourceSystem;
-  /** 撤销系统 */
-  readonly undoSystem: UndoSystem;
-  /** 内存资源后端 */
-  readonly injection: FakeResourceInjection;
+// 数据文件路径（`xxx.json`）
+function tableDataPath(name: string): string {
+  return `${name}.json`;
 }
 
-// 组装一套已初始化的外壳 / 资源 / 撤销系统与内存后端
-async function createSystem(maxUndoStep: number): Promise<TestSystem> {
-  const injection = new FakeResourceInjection();
-  const resourceSystem = new ResourceSystem();
-  await resourceSystem.initialize(injection);
-  const undoSystem = new UndoSystem();
-  await undoSystem.initialize({ maxUndoStep });
-  const shellSystem = new ShellSystem(undoSystem, resourceSystem);
-  await shellSystem.initialize();
-  return { shellSystem, resourceSystem, undoSystem, injection };
+// schema 文件路径（按 `xxx.schema.json` 约定推导）
+function tableSchemaPath(name: string): string {
+  return deriveSchemaPath(tableDataPath(name));
 }
 
 // 在空白标签页打开表格面板并返回其实例
-async function openPanel(system: TestSystem): Promise<TablePanel> {
+async function openPanel(system: EditorCore): Promise<TablePanel> {
   const created: TablePanel[] = [];
 
   system.shellSystem.registerPanelType({
@@ -48,21 +35,25 @@ async function openPanel(system: TestSystem): Promise<TablePanel> {
   return created[0];
 }
 
-// 预置一张表的数据与 schema
-function seed(system: TestSystem, name: string, data: unknown, schema: unknown): void {
-  system.injection.seed(tableDataResourceId(name), data);
-  system.injection.seed(tableSchemaResourceId(name), schema);
+// 以文本预置一张表的数据与 schema
+function seed(fs: FakeFileSystem, name: string, data: unknown, schema: unknown): void {
+  fs.seed(tableDataPath(name), JSON.stringify(data));
+  fs.seed(tableSchemaPath(name), JSON.stringify(schema));
 }
 
 // 把面板目标指向给定表名，并等待一次切入刷新完成
 async function setTarget(panel: TablePanel, name: string): Promise<void> {
-  panel.setTable({ data: tableDataResourceId(name), schema: tableSchemaResourceId(name) });
+  panel.setTable({ dataPath: tableDataPath(name) });
   await panel.onSwitchIn();
 }
 
-// 读取目标表的当前数据内容
-async function readData(system: TestSystem, name: string): Promise<unknown> {
-  return system.resourceSystem.readContent(tableDataResourceId(name));
+// 读取目标表的当前数据内容（面板以文本写回，读取后解析）
+async function readData(system: EditorCore, name: string): Promise<unknown> {
+  const text = await system.resourceSystem.readContent(tableDataPath(name));
+
+  if (typeof text !== 'string') return undefined;
+
+  return JSON.parse(text);
 }
 
 // 一张带单个字符串字段、顶层可新增的样例表
@@ -76,10 +67,11 @@ function stringTable(): { readonly data: unknown; readonly schema: unknown } {
 describe('表格统一撤销路径', () => {
   // 一次编辑写入资源并记录一步撤销，撤销与重做分别还原旧值与新值
   it('一次编辑是一步撤销，撤销还原旧值、重做恢复新值', async () => {
-    const system = await createSystem(100);
+    const fs = new FakeFileSystem();
     const sample = stringTable();
 
-    seed(system, 't', sample.data, sample.schema);
+    seed(fs, 't', sample.data, sample.schema);
+    const system = await createTableHarness(fs, 100);
     const panel = await openPanel(system);
     await setTarget(panel, 't');
 
@@ -95,10 +87,11 @@ describe('表格统一撤销路径', () => {
 
   // 撤销后再次撤回为空操作，证明一次编辑恰好只产生一步撤销
   it('一次编辑恰好一步：撤销后再次撤回为空操作', async () => {
-    const system = await createSystem(100);
+    const fs = new FakeFileSystem();
     const sample = stringTable();
 
-    seed(system, 't', sample.data, sample.schema);
+    seed(fs, 't', sample.data, sample.schema);
+    const system = await createTableHarness(fs, 100);
     const panel = await openPanel(system);
     await setTarget(panel, 't');
 
@@ -111,10 +104,11 @@ describe('表格统一撤销路径', () => {
 
   // 撤销后新的编辑会清空重做路径，其后的重做为空操作
   it('撤销后新编辑清空重做路径', async () => {
-    const system = await createSystem(100);
+    const fs = new FakeFileSystem();
     const sample = stringTable();
 
-    seed(system, 't', sample.data, sample.schema);
+    seed(fs, 't', sample.data, sample.schema);
+    const system = await createTableHarness(fs, 100);
     const panel = await openPanel(system);
     await setTarget(panel, 't');
 
@@ -128,10 +122,11 @@ describe('表格统一撤销路径', () => {
 
   // 新增一项可撤销：撤销移除新增字段，重做把它加回
   it('新增是一项可撤销操作', async () => {
-    const system = await createSystem(100);
+    const fs = new FakeFileSystem();
     const sample = stringTable();
 
-    seed(system, 't', sample.data, sample.schema);
+    seed(fs, 't', sample.data, sample.schema);
+    const system = await createTableHarness(fs, 100);
     const panel = await openPanel(system);
     await setTarget(panel, 't');
 
@@ -147,10 +142,11 @@ describe('表格统一撤销路径', () => {
 
   // 删除一项可撤销：撤销恢复字段与旧值，重做再次删除
   it('删除是一项可撤销操作', async () => {
-    const system = await createSystem(100);
+    const fs = new FakeFileSystem();
     const sample = stringTable();
 
-    seed(system, 't', { name: 'a', extra: 'x' }, sample.schema);
+    seed(fs, 't', { name: 'a', extra: 'x' }, sample.schema);
+    const system = await createTableHarness(fs, 100);
     const panel = await openPanel(system);
     await setTarget(panel, 't');
 
@@ -166,10 +162,11 @@ describe('表格统一撤销路径', () => {
 
   // 新增名为原型污染键时拒绝写入，数据保持不变、不产生 __proto__ 自有属性
   it('新增原型污染键时拒绝写入', async () => {
-    const system = await createSystem(100);
+    const fs = new FakeFileSystem();
     const sample = stringTable();
 
-    seed(system, 't', sample.data, sample.schema);
+    seed(fs, 't', sample.data, sample.schema);
+    const system = await createTableHarness(fs, 100);
     const panel = await openPanel(system);
     await setTarget(panel, 't');
 
@@ -183,10 +180,11 @@ describe('表格统一撤销路径', () => {
 
   // maxUndoStep 为 0 时禁用撤销，但写入依然发生
   it('maxUndoStep 为 0 时不记录撤销但仍写入', async () => {
-    const system = await createSystem(0);
+    const fs = new FakeFileSystem();
     const sample = stringTable();
 
-    seed(system, 't', sample.data, sample.schema);
+    seed(fs, 't', sample.data, sample.schema);
+    const system = await createTableHarness(fs, 0);
     const panel = await openPanel(system);
     await setTarget(panel, 't');
 

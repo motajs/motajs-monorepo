@@ -1,43 +1,30 @@
 import { act, cleanup, configure, fireEvent, render, screen, within } from '@testing-library/react';
-import { IEditorPanel, IEditorPanelFactoryParam, ResourceSystem, ShellSystem, UndoSystem } from '@motajs/editor-core';
+import { EditorCore, IEditorPanel, IEditorPanelFactoryParam } from '@motajs/editor-core';
 import { createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { tableDataResourceId, tablePanelType, tableSchemaResourceId, TableExternalEditor, TablePanel } from '..';
+import { deriveSchemaPath, tablePanelType, TableExternalEditor, TablePanel } from '..';
 import { CapabilityProvider, ICodeEditorOpenRequest, ITableEditorCapabilities } from '../../react';
-import { FakeResourceInjection } from './fixtures';
+import { createTableHarness, FakeFileSystem } from './fixtures';
 
 configure({ testIdAttribute: 'data-test-id' });
-
-interface TestSystem {
-  /** 外壳系统 */
-  readonly shellSystem: ShellSystem;
-  /** 资源系统 */
-  readonly resourceSystem: ResourceSystem;
-  /** 撤销系统 */
-  readonly undoSystem: UndoSystem;
-  /** 内存资源后端 */
-  readonly injection: FakeResourceInjection;
-}
 
 // 每个用例结束后卸载已挂载的组件，避免 DOM 在用例之间累积
 afterEach(() => {
   cleanup();
 });
 
-// 组装一套已初始化的外壳 / 资源 / 撤销系统与内存后端
-async function createSystem(): Promise<TestSystem> {
-  const injection = new FakeResourceInjection();
-  const resourceSystem = new ResourceSystem();
-  await resourceSystem.initialize(injection);
-  const undoSystem = new UndoSystem();
-  await undoSystem.initialize({ maxUndoStep: 100 });
-  const shellSystem = new ShellSystem(undoSystem, resourceSystem);
-  await shellSystem.initialize();
-  return { shellSystem, resourceSystem, undoSystem, injection };
+// 数据文件路径（`xxx.json`）
+function tableDataPath(name: string): string {
+  return `${name}.json`;
+}
+
+// schema 文件路径（按 `xxx.schema.json` 约定推导）
+function tableSchemaPath(name: string): string {
+  return deriveSchemaPath(tableDataPath(name));
 }
 
 // 在空白标签页打开表格面板并返回其实例
-async function openPanel(system: TestSystem): Promise<TablePanel> {
+async function openPanel(system: EditorCore): Promise<TablePanel> {
   const created: TablePanel[] = [];
 
   system.shellSystem.registerPanelType({
@@ -58,25 +45,29 @@ async function openPanel(system: TestSystem): Promise<TablePanel> {
   return created[0];
 }
 
-// 预置一张表的数据与 schema
-function seed(system: TestSystem, name: string, data: unknown, schema: unknown): void {
-  system.injection.seed(tableDataResourceId(name), data);
-  system.injection.seed(tableSchemaResourceId(name), schema);
+// 以文本预置一张表的数据与 schema
+function seed(fs: FakeFileSystem, name: string, data: unknown, schema: unknown): void {
+  fs.seed(tableDataPath(name), JSON.stringify(data));
+  fs.seed(tableSchemaPath(name), JSON.stringify(schema));
 }
 
 // 把面板目标指向数据表，并等待一次切入刷新完成
 async function setTarget(panel: TablePanel, name: string): Promise<void> {
-  panel.setTable({ data: tableDataResourceId(name), schema: tableSchemaResourceId(name) });
+  panel.setTable({ dataPath: tableDataPath(name) });
   await panel.onSwitchIn();
 }
 
-// 读取目标表的当前数据内容
-async function readData(system: TestSystem, name: string): Promise<unknown> {
-  return system.resourceSystem.readContent(tableDataResourceId(name));
+// 读取目标表的当前数据内容（面板以文本写回，读取后解析）
+async function readData(system: EditorCore, name: string): Promise<unknown> {
+  const text = await system.resourceSystem.readContent(tableDataPath(name));
+
+  if (typeof text !== 'string') return undefined;
+
+  return JSON.parse(text);
 }
 
 // 用能力 Provider 包裹外壳渲染根，注入假能力包（缺省时由 Provider 补齐默认弹窗打开器）
-function renderWithCapabilities(system: TestSystem, capabilities: ITableEditorCapabilities): ReturnType<typeof render> {
+function renderWithCapabilities(system: EditorCore, capabilities: ITableEditorCapabilities): ReturnType<typeof render> {
   return render(
     createElement(CapabilityProvider, {
       capabilities,
@@ -105,10 +96,10 @@ async function doubleClickRow(field: string): Promise<void> {
 describe('操作列显示规则', () => {
   // 「编辑」仅在字段声明 `x-editor` 时显示，其余字段不显示编辑动作
   it('「编辑」仅在声明 x-editor 的字段显示', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
 
     seed(
-      system,
+      fs,
       't',
       { script: 'a', plain: 'b' },
       {
@@ -119,6 +110,7 @@ describe('操作列显示规则', () => {
         },
       },
     );
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setTarget(panel, 't');
@@ -130,10 +122,10 @@ describe('操作列显示规则', () => {
 
   // `x-editor: MultiSelect` 显示「多选框编辑」并打开通用多选弹窗，结果经统一路径写回
   it('「多选框编辑」打开多选弹窗并写回选中 id', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
 
     seed(
-      system,
+      fs,
       't',
       { tags: ['a'] },
       {
@@ -143,6 +135,7 @@ describe('操作列显示规则', () => {
         },
       },
     );
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setTarget(panel, 't');
@@ -159,9 +152,10 @@ describe('操作列显示规则', () => {
 
   // 只读字段显示「复制」，点击经注入的剪贴板能力复制当前值文本
   it('只读字段的「复制」经注入能力复制值文本', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
 
-    seed(system, 't', { note: 'text' }, { type: 'object', properties: { note: { type: 'string', readOnly: true } } });
+    seed(fs, 't', { note: 'text' }, { type: 'object', properties: { note: { type: 'string', readOnly: true } } });
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setTarget(panel, 't');
@@ -179,14 +173,15 @@ describe('操作列显示规则', () => {
 describe('外部编辑器分发', () => {
   // `x-editor: Material` 的「编辑」分发到多选弹窗（而非代码面板），选中结果写回
   it('material 字段分发到多选弹窗而非代码面板', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
 
     seed(
-      system,
+      fs,
       't',
       { pic: [] },
       { type: 'object', properties: { pic: { type: 'array', 'x-editor': TableExternalEditor.Material } } },
     );
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setTarget(panel, 't');
@@ -205,14 +200,15 @@ describe('外部编辑器分发', () => {
 
   // `x-editor: Code` 的「编辑」打开独立面板打开器，返回值经校验后可撤销路径写回
   it('code 字段打开独立面板并经可撤销路径提交', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
 
     seed(
-      system,
+      fs,
       't',
       { script: 'old' },
       { type: 'object', properties: { script: { type: 'string', 'x-editor': TableExternalEditor.Code } } },
     );
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setTarget(panel, 't');
@@ -239,14 +235,15 @@ describe('外部编辑器分发', () => {
 
   // 双击行与「编辑」按钮走同一条分发：双击代码字段同样打开面板
   it('双击代码字段同样打开面板', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
 
     seed(
-      system,
+      fs,
       't',
       { script: 'old' },
       { type: 'object', properties: { script: { type: 'string', 'x-editor': TableExternalEditor.Code } } },
     );
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setTarget(panel, 't');
@@ -262,14 +259,15 @@ describe('外部编辑器分发', () => {
 
   // 能力缺失时「编辑」按钮禁用并在 title 中给出中文提示
   it('能力缺失时「编辑」禁用并提示', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
 
     seed(
-      system,
+      fs,
       't',
       { script: 'old' },
       { type: 'object', properties: { script: { type: 'string', 'x-editor': TableExternalEditor.Code } } },
     );
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setTarget(panel, 't');
@@ -283,9 +281,10 @@ describe('外部编辑器分发', () => {
 
   // 只读字段缺少剪贴板能力时「复制」禁用并提示
   it('剪贴板能力缺失时「复制」禁用并提示', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
 
-    seed(system, 't', { note: 'text' }, { type: 'object', properties: { note: { type: 'string', readOnly: true } } });
+    seed(fs, 't', { note: 'text' }, { type: 'object', properties: { note: { type: 'string', readOnly: true } } });
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setTarget(panel, 't');
@@ -299,14 +298,15 @@ describe('外部编辑器分发', () => {
 
   // D-30 的「在代码编辑器中打开」与字段级代码编辑复用同一个代码编辑器打开器
   it('整份文件打开与字段级代码编辑复用同一个代码编辑器打开器', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
 
     seed(
-      system,
+      fs,
       't',
       { script: 'old' },
       { type: 'object', properties: { script: { type: 'string', 'x-editor': TableExternalEditor.Code } } },
     );
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setTarget(panel, 't');
@@ -327,7 +327,7 @@ describe('外部编辑器分发', () => {
     await clickAction('script', '编辑');
 
     expect(codeEditor.open).toHaveBeenCalledTimes(2);
-    expect(requests[0].title).toBe('table.t');
+    expect(requests[0].title).toBe(tableDataPath('t'));
     expect(requests[1].title).toBe('script');
   });
 });

@@ -1,55 +1,246 @@
-import { IResourceIdentifier, IResourceInjection } from '@motajs/editor-core';
+import { EditorCore, EditorEntryKind, IEditorDirectoryEntry, IEditorFileSystem } from '@motajs/editor-core';
 
-export class FakeResourceInjection implements IResourceInjection {
-  /** 资源类型号到（资源 id 到内容）的映射 */
-  readonly content: Map<number, Map<string, unknown>> = new Map();
+// 表格测试共享的测试替身与装配工厂。
+// FakeFileSystem 与 editor-core 的同类替身保持同形（按路径存内容、文本 / 二进制、越界抛错），因它不经包根导出，editor-impl 侧自持一份。
+// createTableHarness 按注入的文件系统装配一个已初始化的 EditorCore，供表格测试复用，收敛迁移期的装配改动面。
 
-  /** 资源类型号到资源标识符列表的映射 */
-  readonly list: Map<number, IResourceIdentifier[]> = new Map();
+/**
+ * 归一化目录路径：去掉首尾斜线，根目录归为空串
+ * @param path 原始目录路径
+ * @returns 归一化后的目录路径
+ */
+function normalizeDirectory(path: string): string {
+  return path.replace(/^\/+/, '').replace(/\/+$/, '');
+}
 
-  /** 请求时应抛错的资源 id 集合 */
+/**
+ * 取路径的最后一段名
+ * @param path 完整路径
+ * @returns 末段名
+ */
+function baseName(path: string): string {
+  const index = path.lastIndexOf('/');
+
+  return index === -1 ? path : path.slice(index + 1);
+}
+
+/**
+ * 取路径的父目录路径，根目录下返回空串
+ * @param path 完整路径
+ * @returns 父目录路径
+ */
+function parentDirectory(path: string): string {
+  const index = path.lastIndexOf('/');
+
+  return index === -1 ? '' : path.slice(0, index);
+}
+
+/**
+ * 判断 child 是否位于 directory 之下（不要求直接子级）
+ * @param directory 目录路径
+ * @param child 候选路径
+ * @returns child 更靠下时为 true
+ */
+function isUnder(directory: string, child: string): boolean {
+  return directory === '' ? child.includes('/') : child.startsWith(`${directory}/`);
+}
+
+/**
+ * 取 child 相对 directory 的首段名
+ * @param directory 目录路径
+ * @param child 位于其下的路径
+ * @returns 首段名
+ */
+function firstSegmentUnder(directory: string, child: string): string {
+  const remainder = directory === '' ? child : child.slice(directory.length + 1);
+  const index = remainder.indexOf('/');
+
+  return index === -1 ? remainder : remainder.slice(0, index);
+}
+
+export class FakeFileSystem implements IEditorFileSystem {
+  /** 路径到文件内容的映射：文本为 string，二进制为 Uint8Array */
+  private readonly content: Map<string, string | Uint8Array> = new Map();
+  /** 显式创建的目录路径集合（空目录不在内容映射中体现） */
+  private readonly directories: Set<string> = new Set();
+  /** 读取 / 写入时应抛错的路径集合 */
   readonly failing: Set<string> = new Set();
-
-  /** 请求时应永久挂起的资源 id 集合 */
+  /** 读取 / 写入时应永久挂起的路径集合 */
   readonly hanging: Set<string> = new Set();
 
-  // 向内存后端预置一个资源的内容及其所属的资源列表
-  seed(id: IResourceIdentifier, value: unknown): void {
-    let byId = this.content.get(id.type);
+  /**
+   * 预置一个文件路径的初始内容，并保证其各级父目录可被列出
+   * @param path 文件路径
+   * @param content 文件初始内容
+   */
+  seed(path: string, content: string | Uint8Array): void {
+    this.assertInBounds(path);
+    this.content.set(path, content);
+    this.registerParents(path);
+  }
 
-    if (!byId) {
-      byId = new Map();
-      this.content.set(id.type, byId);
+  async readFile(path: string): Promise<string> {
+    const value = await this.read(path);
+
+    if (typeof value !== 'string') throw new Error(`fake fs: not a text file: ${path}`);
+
+    return value;
+  }
+
+  async writeFile(path: string, data: string): Promise<void> {
+    await this.write(path, data);
+  }
+
+  async readBinary(path: string): Promise<Uint8Array> {
+    const value = await this.read(path);
+
+    if (!(value instanceof Uint8Array)) throw new Error(`fake fs: not a binary file: ${path}`);
+
+    return value;
+  }
+
+  async writeBinary(path: string, data: Uint8Array): Promise<void> {
+    await this.write(path, data);
+  }
+
+  async listDirectory(path: string): Promise<readonly IEditorDirectoryEntry[]> {
+    this.assertInBounds(path);
+    const directory = normalizeDirectory(path);
+    const kinds: Map<string, EditorEntryKind> = new Map();
+
+    for (const filePath of this.content.keys()) {
+      this.collectEntry(directory, filePath, EditorEntryKind.File, kinds);
     }
 
-    byId.set(id.id, value);
+    for (const dirPath of this.directories) {
+      this.collectEntry(directory, dirPath, EditorEntryKind.Directory, kinds);
+    }
 
-    const ids = this.list.get(id.type) ?? [];
-    ids.push(id);
-    this.list.set(id.type, ids);
+    const entries: IEditorDirectoryEntry[] = [];
+
+    for (const [name, kind] of kinds) entries.push({ name, kind });
+
+    return entries;
   }
 
-  async requestResource<T>(id: IResourceIdentifier): Promise<T> {
-    if (this.hanging.has(id.id)) return new Promise<T>(() => {});
+  async makeDirectory(path: string): Promise<void> {
+    this.assertInBounds(path);
+    const directory = normalizeDirectory(path);
 
-    if (this.failing.has(id.id)) throw new Error(`request failed: ${id.id}`);
+    if (directory === '') return;
 
-    return this.content.get(id.type)?.get(id.id) as T;
+    this.directories.add(directory);
+    this.registerParents(directory);
   }
 
-  async requestResourceList(type: number): Promise<readonly IResourceIdentifier[]> {
-    return this.list.get(type) ?? [];
+  async moveFile(source: string, destination: string): Promise<void> {
+    this.assertInBounds(source);
+    this.assertInBounds(destination);
+    const value = this.content.get(source);
+
+    if (value === undefined) throw new Error(`fake fs: file not found: ${source}`);
+
+    this.content.delete(source);
+    this.content.set(destination, value);
+    this.registerParents(destination);
   }
 
-  async writeResource(id: IResourceIdentifier, content: unknown): Promise<void> {
-    this.content.get(id.type)?.set(id.id, content);
+  async deleteFile(path: string): Promise<void> {
+    this.assertInBounds(path);
+    this.content.delete(path);
   }
 
-  async createResource(id: IResourceIdentifier, content: unknown): Promise<void> {
-    this.seed(id, content);
+  /**
+   * 读取指定路径的内容，处理失败 / 挂起开关与越界校验
+   * @param path 文件路径
+   * @returns 文件内容
+   */
+  private async read(path: string): Promise<string | Uint8Array> {
+    this.assertInBounds(path);
+
+    if (this.hanging.has(path)) return new Promise<string | Uint8Array>(() => {});
+    if (this.failing.has(path)) throw new Error(`fake fs: read failed: ${path}`);
+
+    const value = this.content.get(path);
+
+    if (value === undefined) throw new Error(`fake fs: file not found: ${path}`);
+
+    return value;
   }
 
-  async deleteResource(id: IResourceIdentifier): Promise<void> {
-    this.content.get(id.type)?.delete(id.id);
+  /**
+   * 写入指定路径的内容，处理失败 / 挂起开关与越界校验
+   * @param path 文件路径
+   * @param data 要写入的内容
+   */
+  private async write(path: string, data: string | Uint8Array): Promise<void> {
+    this.assertInBounds(path);
+
+    if (this.hanging.has(path)) return new Promise<void>(() => {});
+    if (this.failing.has(path)) throw new Error(`fake fs: write failed: ${path}`);
+
+    this.content.set(path, data);
+    this.registerParents(path);
   }
+
+  /**
+   * 把一条候选路径按「直接子条目」或「直接子目录」归入结果表
+   * @param directory 归一化后的目录路径
+   * @param candidate 候选文件 / 目录路径
+   * @param selfKind 候选自身是文件还是目录（用于直接子条目）
+   * @param kinds 结果表
+   */
+  private collectEntry(
+    directory: string,
+    candidate: string,
+    selfKind: EditorEntryKind,
+    kinds: Map<string, EditorEntryKind>,
+  ): void {
+    if (parentDirectory(candidate) === directory) {
+      kinds.set(baseName(candidate), selfKind);
+      return;
+    }
+
+    if (isUnder(directory, candidate)) {
+      kinds.set(firstSegmentUnder(directory, candidate), EditorEntryKind.Directory);
+    }
+  }
+
+  /**
+   * 登记一个路径的各级父目录，保证父目录可被列出
+   * @param path 文件或目录路径
+   */
+  private registerParents(path: string): void {
+    let parent = parentDirectory(path);
+
+    while (parent !== '') {
+      if (this.directories.has(parent)) return;
+
+      this.directories.add(parent);
+      parent = parentDirectory(parent);
+    }
+  }
+
+  /**
+   * 校验路径未越出项目根；越界（含 `..` 段）由本实现负责拒绝
+   * @param path 待校验路径
+   */
+  private assertInBounds(path: string): void {
+    const segments = normalizeDirectory(path).split('/');
+
+    if (segments.includes('..')) throw new Error(`fake fs: path escapes project root: ${path}`);
+  }
+}
+
+/**
+ * 按注入的文件系统装配一个已初始化的编辑器核心
+ * @param fs 内存文件系统替身
+ * @param maxUndoStep 最大撤回步数，缺省 100；0 表示禁用撤销
+ * @returns 已初始化的编辑器核心
+ */
+export async function createTableHarness(fs: FakeFileSystem, maxUndoStep: number = 100): Promise<EditorCore> {
+  const core = new EditorCore();
+
+  await core.initialize({ fs, maxUndoStep });
+  return core;
 }

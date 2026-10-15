@@ -1,25 +1,26 @@
 import { act, cleanup, configure, fireEvent, render, screen } from '@testing-library/react';
-import { IEditorPanel, IEditorPanelFactoryParam, ResourceSystem, ShellSystem, UndoSystem } from '@motajs/editor-core';
+import { EditorCore, IEditorPanel, IEditorPanelFactoryParam } from '@motajs/editor-core';
 import { createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { tableDataResourceId, tablePanelType, tableSchemaResourceId, TablePanel } from '..';
-import { FakeResourceInjection } from './fixtures';
+import { deriveSchemaPath, tablePanelType, TablePanel } from '..';
+import { createTableHarness, FakeFileSystem } from './fixtures';
 
 configure({ testIdAttribute: 'data-test-id' });
-
-interface TestSystem {
-  /** 外壳系统 */
-  readonly shellSystem: ShellSystem;
-  /** 资源系统 */
-  readonly resourceSystem: ResourceSystem;
-  /** 内存资源后端 */
-  readonly injection: FakeResourceInjection;
-}
 
 // 每个用例结束后卸载已挂载的组件，避免 DOM 在用例之间累积
 afterEach(() => {
   cleanup();
 });
+
+// 数据文件路径（`xxx.json`）
+function tableDataPath(name: string): string {
+  return `${name}.json`;
+}
+
+// schema 文件路径（按 `xxx.schema.json` 约定推导）
+function tableSchemaPath(name: string): string {
+  return deriveSchemaPath(tableDataPath(name));
+}
 
 // 读取某个字段值单元格内输入控件（文本域或数字输入框）的当前文本（字段用连字符形态，如 `nested-inner`）
 function inputValue(container: HTMLElement, field: string): string | undefined {
@@ -31,20 +32,8 @@ function inputValue(container: HTMLElement, field: string): string | undefined {
   return undefined;
 }
 
-// 组装一套已初始化的外壳 / 资源 / 撤回系统与内存后端
-async function createSystem(): Promise<TestSystem> {
-  const injection = new FakeResourceInjection();
-  const resourceSystem = new ResourceSystem();
-  await resourceSystem.initialize(injection);
-  const undoSystem = new UndoSystem();
-  await undoSystem.initialize({ maxUndoStep: 100 });
-  const shellSystem = new ShellSystem(undoSystem, resourceSystem);
-  await shellSystem.initialize();
-  return { shellSystem, resourceSystem, injection };
-}
-
 // 注册一个捕获实例的面板类型（元信息取自 tablePanelType），在空白标签页打开面板并返回实例
-async function openTablePanel(system: TestSystem, panels: TablePanel[]): Promise<TablePanel> {
+async function openTablePanel(system: EditorCore, panels: TablePanel[]): Promise<TablePanel> {
   system.shellSystem.registerPanelType({
     id: tablePanelType.id,
     name: tablePanelType.name,
@@ -68,32 +57,35 @@ async function openTablePanel(system: TestSystem, panels: TablePanel[]): Promise
 // 把面板目标指向给定表名，并等待一次切入刷新完成
 async function setTarget(panel: TablePanel, name: string): Promise<void> {
   await act(async () => {
-    panel.setTable({ data: tableDataResourceId(name), schema: tableSchemaResourceId(name) });
+    panel.setTable({ dataPath: tableDataPath(name) });
     await panel.onSwitchIn();
   });
 }
 
-// 预置一张带扁平字符串字段、嵌套 object 与数值字段的表格及其 schema
-function seedSampleTable(system: TestSystem, name: string): void {
-  system.injection.seed(tableDataResourceId(name), { name: 'hello', count: 42, nested: { inner: 'deep' } });
-  system.injection.seed(tableSchemaResourceId(name), {
-    type: 'object',
-    properties: {
-      name: { type: 'string', description: '名字' },
-      count: { type: 'number', description: '数量' },
-      nested: {
-        type: 'object',
-        description: '嵌套组',
-        properties: { inner: { type: 'string', description: '内部字段' } },
+// 以文本预置一张带扁平字符串字段、嵌套 object 与数值字段的表格及其 schema
+function seedSampleTable(fs: FakeFileSystem, name: string): void {
+  fs.seed(tableDataPath(name), JSON.stringify({ name: 'hello', count: 42, nested: { inner: 'deep' } }));
+  fs.seed(
+    tableSchemaPath(name),
+    JSON.stringify({
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: '名字' },
+        count: { type: 'number', description: '数量' },
+        nested: {
+          type: 'object',
+          description: '嵌套组',
+          properties: { inner: { type: 'string', description: '内部字段' } },
+        },
       },
-    },
-  });
+    }),
+  );
 }
 
 describe('tablePanelType 注册与打开', () => {
   // 真实 tablePanelType 可注册进外壳
   it('tablePanelType 可注册进外壳', async () => {
-    const system = await createSystem();
+    const system = await createTableHarness(new FakeFileSystem());
     const registered = system.shellSystem.registerPanelType(tablePanelType);
 
     expect(registered).toBe(true);
@@ -102,7 +94,7 @@ describe('tablePanelType 注册与打开', () => {
 
   // 打开面板后未设目标时渲染未设置目标态
   it('未设目标时渲染未设置目标态', async () => {
-    const system = await createSystem();
+    const system = await createTableHarness(new FakeFileSystem());
     const panels: TablePanel[] = [];
     const panel = await openTablePanel(system, panels);
 
@@ -117,8 +109,11 @@ describe('tablePanelType 注册与打开', () => {
 describe('表格面板端到端读取与渲染', () => {
   // 设置目标后经资源层读取数据与 schema，渲染四栏网格与分组 / 叶子行
   it('设置目标后渲染四栏网格与分组 / 叶子行', async () => {
-    const system = await createSystem();
-    seedSampleTable(system, 'test');
+    const fs = new FakeFileSystem();
+
+    seedSampleTable(fs, 'test');
+    const system = await createTableHarness(fs);
+
     const panels: TablePanel[] = [];
     const panel = await openTablePanel(system, panels);
 
@@ -140,8 +135,11 @@ describe('表格面板端到端读取与渲染', () => {
 
   // 分组行折叠后子行离开 DOM，展开后回到 DOM
   it('分组行折叠与展开切换子行是否在 DOM 中', async () => {
-    const system = await createSystem();
-    seedSampleTable(system, 'fold');
+    const fs = new FakeFileSystem();
+
+    seedSampleTable(fs, 'fold');
+    const system = await createTableHarness(fs);
+
     const panels: TablePanel[] = [];
     const panel = await openTablePanel(system, panels);
 
@@ -165,9 +163,12 @@ describe('表格面板端到端读取与渲染', () => {
 
   // schema 存在但无字段时显示空态默认文案
   it('schema 无字段时显示空态默认文案', async () => {
-    const system = await createSystem();
-    system.injection.seed(tableDataResourceId('empty'), {});
-    system.injection.seed(tableSchemaResourceId('empty'), { type: 'object' });
+    const fs = new FakeFileSystem();
+
+    fs.seed(tableDataPath('empty'), JSON.stringify({}));
+    fs.seed(tableSchemaPath('empty'), JSON.stringify({ type: 'object' }));
+    const system = await createTableHarness(fs);
+
     const panels: TablePanel[] = [];
     const panel = await openTablePanel(system, panels);
 
@@ -178,10 +179,13 @@ describe('表格面板端到端读取与渲染', () => {
     expect(screen.getByText('该表格当前没有可显示的字段，或内容为空。')).not.toBeNull();
   });
 
-  // schema 资源缺失、数据为空时显示尚未定义任何字段
+  // schema 文件缺失、数据为空时显示尚未定义任何字段
   it('schema 缺失时显示尚未定义任何字段', async () => {
-    const system = await createSystem();
-    system.injection.seed(tableDataResourceId('noschema'), {});
+    const fs = new FakeFileSystem();
+
+    fs.seed(tableDataPath('noschema'), JSON.stringify({}));
+    const system = await createTableHarness(fs);
+
     const panels: TablePanel[] = [];
     const panel = await openTablePanel(system, panels);
 
@@ -194,9 +198,12 @@ describe('表格面板端到端读取与渲染', () => {
 
   // 资源请求失败时显示错误态与重试控件，面板保持打开
   it('资源请求失败时显示错误态且面板保持打开', async () => {
-    const system = await createSystem();
-    seedSampleTable(system, 'boom');
-    system.injection.failing.add('table.boom');
+    const fs = new FakeFileSystem();
+
+    seedSampleTable(fs, 'boom');
+    fs.failing.add(tableDataPath('boom'));
+    const system = await createTableHarness(fs);
+
     const panels: TablePanel[] = [];
     const panel = await openTablePanel(system, panels);
 
@@ -211,14 +218,17 @@ describe('表格面板端到端读取与渲染', () => {
 
   // 资源尚未返回时显示加载态
   it('资源尚未返回时显示加载态', async () => {
-    const system = await createSystem();
-    seedSampleTable(system, 'slow');
-    system.injection.hanging.add('table.slow');
+    const fs = new FakeFileSystem();
+
+    seedSampleTable(fs, 'slow');
+    fs.hanging.add(tableDataPath('slow'));
+    const system = await createTableHarness(fs);
+
     const panels: TablePanel[] = [];
     const panel = await openTablePanel(system, panels);
 
     await act(async () => {
-      panel.setTable({ data: tableDataResourceId('slow'), schema: tableSchemaResourceId('slow') });
+      panel.setTable({ dataPath: tableDataPath('slow') });
     });
     render(createElement(system.shellSystem.render()));
 
@@ -228,9 +238,12 @@ describe('表格面板端到端读取与渲染', () => {
   // 脚本样值以字面文本渲染，不生成任何元素
   it('危险值以字面文本渲染', async () => {
     const payload = '<img src=x onerror="alert(1)">';
-    const system = await createSystem();
-    system.injection.seed(tableDataResourceId('xss'), { evil: payload });
-    system.injection.seed(tableSchemaResourceId('xss'), { type: 'object', properties: { evil: { type: 'string' } } });
+    const fs = new FakeFileSystem();
+
+    fs.seed(tableDataPath('xss'), JSON.stringify({ evil: payload }));
+    fs.seed(tableSchemaPath('xss'), JSON.stringify({ type: 'object', properties: { evil: { type: 'string' } } }));
+    const system = await createTableHarness(fs);
+
     const panels: TablePanel[] = [];
     const panel = await openTablePanel(system, panels);
 

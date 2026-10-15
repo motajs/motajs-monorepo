@@ -1,44 +1,31 @@
 import { act, cleanup, configure, fireEvent, render, screen } from '@testing-library/react';
-import { IEditorPanel, IEditorPanelFactoryParam, ResourceSystem, ShellSystem, UndoSystem } from '@motajs/editor-core';
+import { EditorCore, IEditorPanel, IEditorPanelFactoryParam } from '@motajs/editor-core';
 import { createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { tableDataResourceId, tablePanelType, tableSchemaResourceId, TablePanel } from '..';
+import { deriveSchemaPath, tablePanelType, TablePanel } from '..';
 import { ICodeEditorOpenRequest, ITableEditorCapabilities } from '../../react';
 import { TableCapabilitiesContext } from '../../react/capabilitiesContext';
-import { FakeResourceInjection } from './fixtures';
+import { createTableHarness, FakeFileSystem } from './fixtures';
 
 configure({ testIdAttribute: 'data-test-id' });
-
-interface TestSystem {
-  /** 外壳系统 */
-  readonly shellSystem: ShellSystem;
-  /** 资源系统 */
-  readonly resourceSystem: ResourceSystem;
-  /** 撤销系统 */
-  readonly undoSystem: UndoSystem;
-  /** 内存资源后端 */
-  readonly injection: FakeResourceInjection;
-}
 
 // 每个用例结束后卸载已挂载的组件，避免 DOM 在用例之间累积
 afterEach(() => {
   cleanup();
 });
 
-// 组装一套已初始化的外壳 / 资源 / 撤销系统与内存后端
-async function createSystem(): Promise<TestSystem> {
-  const injection = new FakeResourceInjection();
-  const resourceSystem = new ResourceSystem();
-  await resourceSystem.initialize(injection);
-  const undoSystem = new UndoSystem();
-  await undoSystem.initialize({ maxUndoStep: 100 });
-  const shellSystem = new ShellSystem(undoSystem, resourceSystem);
-  await shellSystem.initialize();
-  return { shellSystem, resourceSystem, undoSystem, injection };
+// 数据文件路径（`xxx.json`）
+function tableDataPath(name: string): string {
+  return `${name}.json`;
+}
+
+// schema 文件路径（按 `xxx.schema.json` 约定推导）
+function tableSchemaPath(name: string): string {
+  return deriveSchemaPath(tableDataPath(name));
 }
 
 // 在空白标签页打开表格面板并返回其实例
-async function openPanel(system: TestSystem): Promise<TablePanel> {
+async function openPanel(system: EditorCore): Promise<TablePanel> {
   const created: TablePanel[] = [];
 
   system.shellSystem.registerPanelType({
@@ -59,10 +46,19 @@ async function openPanel(system: TestSystem): Promise<TablePanel> {
   return created[0];
 }
 
-// 预置一张表的数据与 schema
-function seed(system: TestSystem, name: string, data: unknown, schema: unknown): void {
-  system.injection.seed(tableDataResourceId(name), data);
-  system.injection.seed(tableSchemaResourceId(name), schema);
+// 以文本预置一张表的数据与 schema
+function seed(fs: FakeFileSystem, name: string, data: unknown, schema: unknown): void {
+  fs.seed(tableDataPath(name), JSON.stringify(data));
+  fs.seed(tableSchemaPath(name), JSON.stringify(schema));
+}
+
+// 读取某个路径的当前内容（面板以文本写回，读取后解析）
+async function readContent(system: EditorCore, path: string): Promise<unknown> {
+  const text = await system.resourceSystem.readContent(path);
+
+  if (typeof text !== 'string') return undefined;
+
+  return JSON.parse(text);
 }
 
 // 按渲染顺序取表体内所有行的 data-test-id
@@ -78,18 +74,18 @@ function rowKeys(container: HTMLElement): string[] {
 
 // 把面板目标指向数据表，并等待一次切入刷新完成
 async function setDataTarget(panel: TablePanel, name: string): Promise<void> {
-  panel.setTable({ data: tableDataResourceId(name), schema: tableSchemaResourceId(name) });
+  panel.setTable({ dataPath: tableDataPath(name) });
   await panel.onSwitchIn();
 }
 
 // 把面板目标指向 schema 表，并等待一次切入刷新完成
 async function setSchemaTarget(panel: TablePanel, name: string): Promise<void> {
-  panel.setTable({ data: tableSchemaResourceId(name), schema: tableSchemaResourceId(name) });
+  panel.setTable({ dataPath: tableSchemaPath(name) });
   await panel.onSwitchIn();
 }
 
 // 用能力 Provider 包裹外壳渲染根，注入假能力包
-function renderWithCapabilities(system: TestSystem, capabilities: ITableEditorCapabilities): ReturnType<typeof render> {
+function renderWithCapabilities(system: EditorCore, capabilities: ITableEditorCapabilities): ReturnType<typeof render> {
   return render(
     createElement(
       TableCapabilitiesContext.Provider,
@@ -110,9 +106,10 @@ function stringTable(): { readonly data: unknown; readonly schema: unknown } {
 describe('表格 schema 模式与工具栏', () => {
   // schema 目标下不显示「编辑 Schema」按钮，且网格上方渲染 schema 提示条
   it('schema 目标下不显示「编辑 Schema」按钮并渲染提示条', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
 
-    system.injection.seed(tableSchemaResourceId('t'), { type: 'object', properties: { name: { type: 'string' } } });
+    fs.seed(tableSchemaPath('t'), JSON.stringify({ type: 'object', properties: { name: { type: 'string' } } }));
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setSchemaTarget(panel, 't');
@@ -122,12 +119,13 @@ describe('表格 schema 模式与工具栏', () => {
     expect(screen.getByTestId('schema-banner')).not.toBeNull();
   });
 
-  // 数据目标下「编辑 Schema」存在，点击经注入打开器以 table#schema.<名> 打开新面板
+  // 数据目标下「编辑 Schema」存在，点击经注入打开器以 schema 路径打开新面板
   it('数据目标下「编辑 Schema」经注入打开器打开 schema 面板', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
     const sample = stringTable();
 
-    seed(system, 't', sample.data, sample.schema);
+    seed(fs, 't', sample.data, sample.schema);
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setDataTarget(panel, 't');
@@ -147,16 +145,17 @@ describe('表格 schema 模式与工具栏', () => {
 
     expect(tablePanel.open).toHaveBeenCalledTimes(1);
     expect(captured.length).toBe(1);
-    expect(JSON.stringify(captured[0])).toContain('table#schema.t');
-    expect(JSON.stringify(captured[0])).toContain('"data"');
+    expect(JSON.stringify(captured[0])).toContain(tableSchemaPath('t'));
+    expect(JSON.stringify(captured[0])).toContain('"dataPath"');
   });
 
   // schema 目标下成对关键字合成一行两个小数字输入，紧凑标量为一行单控件
   it('schema 目标下成对关键字合行、紧凑标量单控件', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
     const schemaDoc = { type: 'object', properties: { level: { type: 'integer', minimum: 0, maximum: 100 } } };
 
-    system.injection.seed(tableSchemaResourceId('t'), schemaDoc);
+    fs.seed(tableSchemaPath('t'), JSON.stringify(schemaDoc));
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setSchemaTarget(panel, 't');
@@ -182,15 +181,16 @@ describe('表格 schema 模式与工具栏', () => {
 
   // schema 资源加载中时「编辑 Schema」按钮禁用
   it('schema 资源加载中「编辑 Schema」按钮禁用', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
     const sample = stringTable();
 
-    seed(system, 't', sample.data, sample.schema);
-    system.injection.hanging.add('table#schema.t');
+    seed(fs, 't', sample.data, sample.schema);
+    fs.hanging.add(tableSchemaPath('t'));
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await act(async () => {
-      panel.setTable({ data: tableDataResourceId('t'), schema: tableSchemaResourceId('t') });
+      panel.setTable({ dataPath: tableDataPath('t') });
     });
     renderWithCapabilities(system, { tablePanel: { open: vi.fn(async (): Promise<void> => {}) } });
 
@@ -199,11 +199,12 @@ describe('表格 schema 模式与工具栏', () => {
 
   // schema 资源不可用时「编辑 Schema」按钮隐藏
   it('schema 资源不可用时「编辑 Schema」按钮隐藏', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
     const sample = stringTable();
 
-    seed(system, 't', sample.data, sample.schema);
-    system.injection.failing.add('table#schema.t');
+    seed(fs, 't', sample.data, sample.schema);
+    fs.failing.add(tableSchemaPath('t'));
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setDataTarget(panel, 't');
@@ -216,10 +217,11 @@ describe('表格 schema 模式与工具栏', () => {
 describe('「在代码编辑器中打开」（D-30）', () => {
   // 数据视图下经注入代码打开器打开数据文件，整份写回并记一次可逆操作
   it('数据视图下打开数据文件并整份写回记一次可逆操作', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
     const sample = stringTable();
 
-    seed(system, 't', sample.data, sample.schema);
+    seed(fs, 't', sample.data, sample.schema);
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setDataTarget(panel, 't');
@@ -239,20 +241,21 @@ describe('「在代码编辑器中打开」（D-30）', () => {
     });
 
     expect(requests.length).toBe(1);
-    expect(requests[0].title).toBe('table.t');
+    expect(requests[0].title).toBe(tableDataPath('t'));
     expect(JSON.parse(requests[0].content)).toEqual({ name: 'a' });
-    expect(await system.resourceSystem.readContent(tableDataResourceId('t'))).toEqual({ name: 'b' });
+    expect(await readContent(system, tableDataPath('t'))).toEqual({ name: 'b' });
 
     await system.undoSystem.undo();
-    expect(await system.resourceSystem.readContent(tableDataResourceId('t'))).toEqual({ name: 'a' });
+    expect(await readContent(system, tableDataPath('t'))).toEqual({ name: 'a' });
   });
 
   // 代码编辑器返回非法 JSON 时拒绝写回，资源保持不变并提示
   it('代码编辑器返回非法 JSON 时拒绝写回', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
     const sample = stringTable();
 
-    seed(system, 't', sample.data, sample.schema);
+    seed(fs, 't', sample.data, sample.schema);
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setDataTarget(panel, 't');
@@ -265,15 +268,16 @@ describe('「在代码编辑器中打开」（D-30）', () => {
       fireEvent.click(screen.getByTestId('table-open-code'));
     });
 
-    expect(await system.resourceSystem.readContent(tableDataResourceId('t'))).toEqual({ name: 'a' });
+    expect(await readContent(system, tableDataPath('t'))).toEqual({ name: 'a' });
     expect(screen.getByText('内容不是合法的 JSON，未写回。')).not.toBeNull();
   });
 
   // schema 视图下经注入代码打开器打开的是 schema 文件
   it('schema 视图下打开 schema 文件', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
 
-    system.injection.seed(tableSchemaResourceId('t'), { type: 'object', properties: { name: { type: 'string' } } });
+    fs.seed(tableSchemaPath('t'), JSON.stringify({ type: 'object', properties: { name: { type: 'string' } } }));
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setSchemaTarget(panel, 't');
@@ -293,16 +297,17 @@ describe('「在代码编辑器中打开」（D-30）', () => {
     });
 
     expect(requests.length).toBe(1);
-    expect(requests[0].title).toBe('table#schema.t');
+    expect(requests[0].title).toBe(tableSchemaPath('t'));
     expect(JSON.parse(requests[0].content)).toEqual({ type: 'object', properties: { name: { type: 'string' } } });
   });
 
   // 能力缺失时「在代码编辑器中打开」按钮禁用
   it('无代码编辑器能力时按钮禁用', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
     const sample = stringTable();
 
-    seed(system, 't', sample.data, sample.schema);
+    seed(fs, 't', sample.data, sample.schema);
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setDataTarget(panel, 't');
@@ -315,14 +320,15 @@ describe('「在代码编辑器中打开」（D-30）', () => {
 describe('schema 关键字 x-order 的编辑（P21）', () => {
   // 纯重排 x-order 数组次序被接受、写回 schema，且数据表行序随之变化
   it('x-order 纯重排被接受并改变行序', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
 
     seed(
-      system,
+      fs,
       't',
       { a: '1', b: '2' },
       { type: 'object', properties: { a: { type: 'string' }, b: { type: 'string' } }, 'x-order': ['a', 'b'] },
     );
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setSchemaTarget(panel, 't');
@@ -339,12 +345,12 @@ describe('schema 关键字 x-order 的编辑（P21）', () => {
 
     expect(container.querySelector('[data-test-id="table-error-x-order"]')).toBeNull();
 
-    const schema = (await system.resourceSystem.readContent(tableSchemaResourceId('t'))) as Record<string, unknown>;
+    const schema = (await readContent(system, tableSchemaPath('t'))) as Record<string, unknown>;
 
     expect(schema['x-order']).toEqual(['b', 'a']);
 
     await act(async () => {
-      panel.setTable({ data: tableDataResourceId('t'), schema: tableSchemaResourceId('t') });
+      panel.setTable({ dataPath: tableDataPath('t') });
       await panel.onSwitchIn();
     });
 
@@ -353,14 +359,15 @@ describe('schema 关键字 x-order 的编辑（P21）', () => {
 
   // 非字符串数组的 x-order 值被拒，schema 文档不变并给出错误提示
   it('x-order 非字符串数组被拒且文档不变', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
 
     seed(
-      system,
+      fs,
       't',
       { a: '1', b: '2' },
       { type: 'object', properties: { a: { type: 'string' }, b: { type: 'string' } }, 'x-order': ['a', 'b'] },
     );
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setSchemaTarget(panel, 't');
@@ -375,7 +382,7 @@ describe('schema 关键字 x-order 的编辑（P21）', () => {
 
     expect(container.querySelector('[data-test-id="table-error-x-order"]')).not.toBeNull();
 
-    const schema = (await system.resourceSystem.readContent(tableSchemaResourceId('t'))) as Record<string, unknown>;
+    const schema = (await readContent(system, tableSchemaPath('t'))) as Record<string, unknown>;
 
     expect(schema['x-order']).toEqual(['a', 'b']);
   });
@@ -384,9 +391,10 @@ describe('schema 关键字 x-order 的编辑（P21）', () => {
 describe('schema 关键字 type 的取值（P22）', () => {
   // 非法 type 文本（textarea）提交被拒，schema 文档保持原值并给出错误提示
   it('type 非法取值被挡且文档不变', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
 
-    seed(system, 't', { a: '1' }, { type: 'object', properties: { a: { type: 'string' } } });
+    seed(fs, 't', { a: '1' }, { type: 'object', properties: { a: { type: 'string' } } });
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setSchemaTarget(panel, 't');
@@ -396,7 +404,7 @@ describe('schema 关键字 type 的取值（P22）', () => {
       await panel.commitValue("['type']", 'textarea');
     });
 
-    const schema = (await system.resourceSystem.readContent(tableSchemaResourceId('t'))) as Record<string, unknown>;
+    const schema = (await readContent(system, tableSchemaPath('t'))) as Record<string, unknown>;
 
     expect(schema.type).toBe('object');
     expect(screen.getByText(/输入的值不合要求/)).not.toBeNull();

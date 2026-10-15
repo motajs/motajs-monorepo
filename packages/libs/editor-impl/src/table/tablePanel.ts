@@ -764,7 +764,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       return;
     }
 
-    const schemaText = await this.readText(deriveSchemaPath(target.dataPath));
+    const schemaText = await this.readSchemaText(deriveSchemaPath(target.dataPath));
     const schema = schemaText === undefined ? undefined : parseTableText(schemaText).value;
 
     this.applyLoaded(columnIndex, schema, value);
@@ -842,6 +842,35 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     if (typeof content === 'string') return content;
 
     return new TextDecoder().decode(content);
+  }
+
+  /**
+   * 判断某个文件当前是否存在：经资源层列其所在目录核对直接条目
+   *
+   * 数据表可以没有同名 schema 文件（缺失即「无 schema」，不是错误）；但存在却读不出
+   * 才是错误。资源层按原文读取时无法区分「文件不存在」与「读取失败」，故先用目录条目
+   * 确认存在性，缺该文件时由调用方按「无 schema」处理。
+   * @param path 文件的相对路径
+   * @returns 该目录的直接条目中含此路径时为 true
+   */
+  private async fileExists(path: string): Promise<boolean> {
+    const slash = path.lastIndexOf('/');
+    const directory = slash === -1 ? '' : path.slice(0, slash);
+    const entries = await this.context.listDirectory(directory);
+
+    return entries.some((entry) => entry.path === path);
+  }
+
+  /**
+   * 读取 schema 文件的原文：文件不存在时返回 undefined（表可无 schema），存在但读取
+   * 失败仍抛出，交由刷新路径落错误态
+   * @param path schema 文件路径
+   * @returns 资源原文；文件不存在时为 undefined
+   */
+  private async readSchemaText(path: string): Promise<string | undefined> {
+    if (!(await this.fileExists(path))) return undefined;
+
+    return this.readText(path);
   }
 
   /**
@@ -992,7 +1021,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       return;
     }
 
-    const schemaText = await this.readText(deriveSchemaPath(target.dataPath));
+    const schemaText = await this.readSchemaText(deriveSchemaPath(target.dataPath));
 
     if (this.requestTokens[columnIndex] !== token) return;
 

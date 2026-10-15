@@ -1,22 +1,13 @@
 import { act, cleanup, configure, fireEvent, render, screen } from '@testing-library/react';
-import { IEditorPanel, IEditorPanelFactoryParam, ResourceSystem, ShellSystem, UndoSystem } from '@motajs/editor-core';
+import { EditorCore, IEditorPanel, IEditorPanelFactoryParam } from '@motajs/editor-core';
 import { createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { tableDataResourceId, tablePanelType, tableSchemaResourceId, TablePanel } from '..';
+import { deriveSchemaPath, tablePanelType, TablePanel } from '..';
 import { ITableGridProps, TableGrid, TablePanelStatus } from '../components/TableGrid';
 import { ITableRowNode } from '../types';
-import { FakeResourceInjection } from './fixtures';
+import { createTableHarness, FakeFileSystem } from './fixtures';
 
 configure({ testIdAttribute: 'data-test-id' });
-
-interface TestSystem {
-  /** 外壳系统 */
-  readonly shellSystem: ShellSystem;
-  /** 资源系统 */
-  readonly resourceSystem: ResourceSystem;
-  /** 内存资源后端 */
-  readonly injection: FakeResourceInjection;
-}
 
 // 每个用例结束后卸载已挂载的组件并清理被 stub 的浏览器对话框
 afterEach(() => {
@@ -24,20 +15,18 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-// 组装一套已初始化的外壳 / 资源 / 撤销系统与内存后端
-async function createSystem(): Promise<TestSystem> {
-  const injection = new FakeResourceInjection();
-  const resourceSystem = new ResourceSystem();
-  await resourceSystem.initialize(injection);
-  const undoSystem = new UndoSystem();
-  await undoSystem.initialize({ maxUndoStep: 100 });
-  const shellSystem = new ShellSystem(undoSystem, resourceSystem);
-  await shellSystem.initialize();
-  return { shellSystem, resourceSystem, injection };
+// 数据文件路径（`xxx.json`）
+function tableDataPath(name: string): string {
+  return `${name}.json`;
+}
+
+// schema 文件路径（按 `xxx.schema.json` 约定推导）
+function tableSchemaPath(name: string): string {
+  return deriveSchemaPath(tableDataPath(name));
 }
 
 // 在空白标签页打开表格面板并返回其实例
-async function openPanel(system: TestSystem): Promise<TablePanel> {
+async function openPanel(system: EditorCore): Promise<TablePanel> {
   const created: TablePanel[] = [];
 
   system.shellSystem.registerPanelType({
@@ -58,21 +47,25 @@ async function openPanel(system: TestSystem): Promise<TablePanel> {
   return created[0];
 }
 
-// 预置一张表的数据与 schema
-function seed(system: TestSystem, name: string, data: unknown, schema: unknown): void {
-  system.injection.seed(tableDataResourceId(name), data);
-  system.injection.seed(tableSchemaResourceId(name), schema);
+// 以文本预置一张表的数据与 schema
+function seed(fs: FakeFileSystem, name: string, data: unknown, schema: unknown): void {
+  fs.seed(tableDataPath(name), JSON.stringify(data));
+  fs.seed(tableSchemaPath(name), JSON.stringify(schema));
 }
 
 // 把面板目标指向给定表名，并等待一次切入刷新完成
 async function setTarget(panel: TablePanel, name: string): Promise<void> {
-  panel.setTable({ data: tableDataResourceId(name), schema: tableSchemaResourceId(name) });
+  panel.setTable({ dataPath: tableDataPath(name) });
   await panel.onSwitchIn();
 }
 
-// 读取目标表的当前数据内容
-async function readData(system: TestSystem, name: string): Promise<unknown> {
-  return system.resourceSystem.readContent(tableDataResourceId(name));
+// 读取目标表的当前数据内容（面板以文本写回，读取后解析）
+async function readData(system: EditorCore, name: string): Promise<unknown> {
+  const text = await system.resourceSystem.readContent(tableDataPath(name));
+
+  if (typeof text !== 'string') return undefined;
+
+  return JSON.parse(text);
 }
 
 // 读取某个字段值单元格内文本域的当前文本
@@ -151,10 +144,11 @@ function stringTable(): { readonly data: unknown; readonly schema: unknown } {
 describe('表格内联编辑', () => {
   // 合法值提交后写回资源并把显示更新为新值
   it('合法值提交后写回资源并更新显示', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
     const sample = stringTable();
 
-    seed(system, 't', sample.data, sample.schema);
+    seed(fs, 't', sample.data, sample.schema);
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setTarget(panel, 't');
@@ -183,13 +177,14 @@ describe('表格内联编辑', () => {
 
   // 添加模式下点 gutter 的「+」在插入点输入名称后追加子项；全程不调用原生 prompt
   it('添加模式下用 gutter 的名称输入追加子项', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
     const sample = stringTable();
     const promptStub = vi.fn();
 
     vi.stubGlobal('prompt', promptStub);
 
-    seed(system, 't', sample.data, sample.schema);
+    seed(fs, 't', sample.data, sample.schema);
+    const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     await setTarget(panel, 't');

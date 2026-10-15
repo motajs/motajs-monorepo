@@ -1,38 +1,27 @@
 import { act, cleanup, render } from '@testing-library/react';
-import { IEditorPanel, IEditorPanelFactoryParam, ResourceSystem, ShellSystem, UndoSystem } from '@motajs/editor-core';
+import { EditorCore, IEditorPanel, IEditorPanelFactoryParam } from '@motajs/editor-core';
 import { createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { tableDataResourceId, tablePanelType, tableSchemaResourceId, TablePanel } from '..';
-import { FakeResourceInjection } from './fixtures';
-
-interface TestSystem {
-  /** 外壳系统 */
-  readonly shellSystem: ShellSystem;
-  /** 资源系统 */
-  readonly resourceSystem: ResourceSystem;
-  /** 内存资源后端 */
-  readonly injection: FakeResourceInjection;
-}
+import { deriveSchemaPath, tablePanelType, TablePanel } from '..';
+import { createTableHarness, FakeFileSystem } from './fixtures';
 
 // 每个用例结束后卸载已挂载的组件，避免 DOM 在用例之间累积
 afterEach(() => {
   cleanup();
 });
 
-// 组装一套已初始化的外壳 / 资源 / 撤销系统与内存后端
-async function createSystem(): Promise<TestSystem> {
-  const injection = new FakeResourceInjection();
-  const resourceSystem = new ResourceSystem();
-  await resourceSystem.initialize(injection);
-  const undoSystem = new UndoSystem();
-  await undoSystem.initialize({ maxUndoStep: 100 });
-  const shellSystem = new ShellSystem(undoSystem, resourceSystem);
-  await shellSystem.initialize();
-  return { shellSystem, resourceSystem, injection };
+// 数据文件路径（`xxx.json`）
+function tableDataPath(name: string): string {
+  return `${name}.json`;
+}
+
+// schema 文件路径（按 `xxx.schema.json` 约定推导）
+function tableSchemaPath(name: string): string {
+  return deriveSchemaPath(tableDataPath(name));
 }
 
 // 注册一个捕获实例的面板类型，在空白标签页打开面板并返回实例
-async function openTablePanel(system: TestSystem, panels: TablePanel[]): Promise<TablePanel> {
+async function openTablePanel(system: EditorCore, panels: TablePanel[]): Promise<TablePanel> {
   system.shellSystem.registerPanelType({
     id: tablePanelType.id,
     name: tablePanelType.name,
@@ -53,10 +42,10 @@ async function openTablePanel(system: TestSystem, panels: TablePanel[]): Promise
   return panels[0];
 }
 
-// 预置一张表的数据与 schema
-function seed(system: TestSystem, name: string, data: unknown, schema: unknown): void {
-  system.injection.seed(tableDataResourceId(name), data);
-  system.injection.seed(tableSchemaResourceId(name), schema);
+// 以文本预置一张表的数据与 schema
+function seed(fs: FakeFileSystem, name: string, data: unknown, schema: unknown): void {
+  fs.seed(tableDataPath(name), JSON.stringify(data));
+  fs.seed(tableSchemaPath(name), JSON.stringify(schema));
 }
 
 // 读取某个字段值单元格内文本域的当前文本
@@ -70,12 +59,14 @@ function valueOf(container: HTMLElement, field: string): string | undefined {
 describe('切入时刷新（D-15 修订版 / D-31）', () => {
   // 外壳切入面板时，面板重新请求数据与 schema 资源并重算行树
   it('外壳切入面板时重新请求数据与 schema 并重算', async () => {
-    const system = await createSystem();
+    const fs = new FakeFileSystem();
+
+    seed(fs, 't', { name: 'a' }, { type: 'object', properties: { name: { type: 'string' } } });
+    const system = await createTableHarness(fs);
     const panels: TablePanel[] = [];
     const panel = await openTablePanel(system, panels);
 
-    seed(system, 't', { name: 'a' }, { type: 'object', properties: { name: { type: 'string' } } });
-    panel.setTable({ data: tableDataResourceId('t'), schema: tableSchemaResourceId('t') });
+    panel.setTable({ dataPath: tableDataPath('t') });
 
     await act(async () => {
       await panel.onSwitchIn();
@@ -98,7 +89,7 @@ describe('切入时刷新（D-15 修订版 / D-31）', () => {
 
     // 外部改变资源内容，再切回第一个标签触发 onSwitchIn 重新请求
     await act(async () => {
-      await system.resourceSystem.writeContent(tableDataResourceId('t'), { name: 'c' });
+      await system.resourceSystem.writeContent(tableDataPath('t'), JSON.stringify({ name: 'c' }));
     });
 
     const first = system.shellSystem.listTabs()[0].id;
@@ -110,9 +101,9 @@ describe('切入时刷新（D-15 修订版 / D-31）', () => {
 
     expect(valueOf(container, 'name')).toBe('"c"');
 
-    const ids = requestSpy.mock.calls.map((call) => call[0].id);
+    const ids = requestSpy.mock.calls.map((call) => call[0]);
 
-    expect(ids).toContain('table.t');
-    expect(ids).toContain('table#schema.t');
+    expect(ids).toContain(tableDataPath('t'));
+    expect(ids).toContain(tableSchemaPath('t'));
   });
 });
