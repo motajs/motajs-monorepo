@@ -180,13 +180,13 @@ Plans:
   4. 既有表格编辑行为（编辑 / 撤销 / 多栏 / 切入刷新）不回归；`CORE-01`、`coreFsSurface`、`coreBoundaries`(e) 与 Phase 3 讨论稿前提全部收口。
   5. 本阶段能力接入开发宿主，可在浏览器里手动验收「打开 / 新建 / 删除」。
 
-**Plans:** 1/12 plans executed
+**Plans:** 2/12 plans executed
 
 Plans:
 **Wave 1 — 接口（仅类型，无实现）**
 
 - [x] 02.1-01-PLAN.md — `editor-core` 资源层接口重写（路径标识 / 文件系统 / 索引 / 缓存 / 注入）
-- [ ] 02.1-02-PLAN.md — `editor-impl` 表格与接缝接口重写（单一数据路径 / 预设表接缝）
+- [x] 02.1-02-PLAN.md — `editor-impl` 表格与接缝接口重写（单一数据路径 / 预设表接缝）
 
 **Wave 2 — 核心 tracer（依赖 Wave 1）**
 
@@ -295,7 +295,7 @@ Phases execute in numeric order: 1 → 1.1 → 2 → 2.1 → 3 → 4 → 5 → 6
 | 1. 编辑器外壳与通用 fs 接口 | 4/4 | Complete    | 2026-10-12 |
 | 1.1. 编辑器开发宿主 (INSERTED) | 3/3 | Complete    | 2026-10-12 |
 | 2. 表格编辑 | 33/33 | Complete | 2026-10-15 |
-| 2.1. 资源层重构与表格文件管理 (INSERTED) | 1/12 | In Progress|  |
+| 2.1. 资源层重构与表格文件管理 (INSERTED) | 2/12 | In Progress|  |
 | 3. 素材管理 | 0/TBD | Not started | - |
 | 4. 地图编辑 | 0/TBD | Not started | - |
 | 5. 代码编辑 | 0/TBD | Not started | - |

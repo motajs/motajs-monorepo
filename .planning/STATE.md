@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "02.1"
 current_phase_name: 资源层重构与表格文件管理
-current_plan: 2
+current_plan: 3
 status: executing
-stopped_at: Completed 02.1-01-PLAN.md
-last_updated: "2026-10-15T10:54:04.443Z"
+stopped_at: Completed 02.1-02-PLAN.md
+last_updated: "2026-10-15T11:09:09.344Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 02.1 execution started
-state_head: 1edae771cae30abc7f7eb4039ee19ef8a78d5836
+state_head: 8d5280c15ca7b839108c738b6e450ccc80afd680
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 52
-  completed_plans: 41
+  completed_plans: 42
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 02.1 (资源层重构与表格文件管理) — EXECUTING
-Current Plan: 2
+Current Plan: 3
 Total Plans in Phase: 12
 Status: Ready to execute
 Last activity: 2026-10-15 — Phase 02.1 execution started
@@ -99,6 +99,7 @@ Progress: [██████████] 100%
 | Phase 02 P33 | 6min | 2 tasks | 3 files |
 | Phase 02 P34 | 11min | 2 tasks | 2 files |
 | Phase 02.1 P01 | 8min | 3 tasks | 4 files |
+| Phase 02.1 P02 | 3min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -183,6 +184,9 @@ Recent decisions affecting current work:
 - [Phase 02.1]: D-06 已由用户预先裁定为 delete-injection：核心初始化只注入文件系统实现（IEditorCoreInjection.fs），彻底删除 IResourceInjection
 - [Phase 02.1]: IResourceIdentifier 采用 type 别名 = string（纯路径），不用 interface 包装对象，贴合 D-01 原文并减少迁移包装层
 - [Phase 02.1]: 02.1-01 接口先于实现：只声明资源层类型契约，实现（FileIndex/ContentCache/core.ts 接线）留待 Plan 03/04；中间态整包 tsc 预期为红
+- [Phase 02.1]: 02.1-02: ITablePanelTarget 收敛为单一 readonly dataPath:string（schema 路径按文件名约定推导），删除原 data / schema 两成员；schema 视图复用同一字段
+- [Phase 02.1]: 02.1-02: ITablePreset 唯一声明于接缝层 react/types.ts，table/types.ts 引入后 export type 再导出——维持依赖方向 table → react（react 不得反向 import table）
+- [Phase 02.1]: 02.1-02: 预设表清单经能力接缝注入（ITableEditorCapabilities.tablePresets?），非经面板打开参数（D-11）；缺省时「打开表格」列表只显示目录树
 
 ### Pending Todos
 
@@ -209,6 +213,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-15T10:54:04.201Z
-Stopped at: Completed 02.1-01-PLAN.md
+Last session: 2026-10-15T11:07:15.114Z
+Stopped at: Completed 02.1-02-PLAN.md
 Resume file: None
