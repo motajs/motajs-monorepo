@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "02.1"
 current_phase_name: 资源层重构与表格文件管理
-current_plan: 4
+current_plan: 5
 status: executing
-stopped_at: Completed 02.1-03-PLAN.md
-last_updated: "2026-10-15T11:35:38.522Z"
+stopped_at: Completed 02.1-04-PLAN.md
+last_updated: "2026-10-15T11:45:07.359Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 02.1 execution started
-state_head: fa887659e31cd233519bb14fc67285caad65098f
+state_head: 5e5f03785cd9d6827e8d26f07e1ef42ab22bddb3
 progress:
   total_phases: 8
-  completed_phases: 3
+  completed_phases: 0
   total_plans: 52
-  completed_plans: 43
+  completed_plans: 44
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 02.1 (资源层重构与表格文件管理) — EXECUTING
-Current Plan: 4
+Current Plan: 5
 Total Plans in Phase: 12
 Status: Ready to execute
 Last activity: 2026-10-15 — Phase 02.1 execution started
@@ -101,6 +101,7 @@ Progress: [██████████] 100%
 | Phase 02.1 P01 | 8min | 3 tasks | 4 files |
 | Phase 02.1 P02 | 3min | 2 tasks | 3 files |
 | Phase 02.1 P03 | 9min | 3 tasks | 14 files |
+| Phase 02.1 P04 | 7 | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -191,6 +192,9 @@ Recent decisions affecting current work:
 - [Phase 02.1]: 02.1-03: ResourceSystem.initialize 只接收 fs（省略 options）——本计划不实现忽略模式（Plan 04），避免未使用形参；接口 initialize(fs, options?) 仍成立（实现少参合法）
 - [Phase 02.1]: 02.1-03: readContent 直接委托 fs.readFile（返回原文、不缓存不解析）；writeContent 按 typeof data 分流 writeFile / writeBinary，二进制与文本路径分离（T-02.1-07）
 - [Phase 02.1]: 02.1-03: FakeFileSystem 越界拒绝采用「任一路径段为 .. 即抛错」（比计划描述的以 .. 开头更严）；目录条目由已 seed 文件路径 + 显式 makeDirectory 集合推导，seed 即自动保证父目录可列
+- [Phase 02.1]: 02.1-04: 忽略模式按条目名匹配（含 * 通配），索引/缓存键为 / 规范化相对路径精确比对
+- [Phase 02.1]: 02.1-04: ContentCache 单条超总上限时不入缓存；LRU 用 Map 插入序，get 命中即刷新
+- [Phase 02.1]: 02.1-04: ResourceSystem 接线——listDirectory 索引驱动、读写经缓存、增删移同步；updateResource 先失效缓存，readBinary 为类公开方法（不入接口）
 
 ### Pending Todos
 
@@ -217,6 +221,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-15T11:35:11.544Z
-Stopped at: Completed 02.1-03-PLAN.md
+Last session: 2026-10-15T11:45:07.120Z
+Stopped at: Completed 02.1-04-PLAN.md
 Resume file: None
