@@ -35,7 +35,11 @@ export class EditorCore implements IEditorCore {
 
     this.initialized = true;
 
-    const arr = [this.undoSystem.initialize(injection), this.resourceSystem.initialize(injection)];
+    const arr = [
+      this.undoSystem.initialize(injection),
+      this.resourceSystem.initialize(injection.fs, { ignore: injection.ignore }),
+    ];
+
     await Promise.all(arr);
     await this.shellSystem.initialize(injection);
   }

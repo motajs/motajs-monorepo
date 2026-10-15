@@ -1,6 +1,6 @@
-import { IResource, IResourceIdentifier, IResourceStore } from './types';
+import { IResource, IResourceIdentifier, IResourceStore, ResourceContent } from './types';
 
-export class Resource<T> implements IResource<T> {
+export class Resource implements IResource {
   readonly identifier: IResourceIdentifier;
 
   /** 资源内容读写的窄接缝，由资源系统提供 */
@@ -11,11 +11,11 @@ export class Resource<T> implements IResource<T> {
     this.store = store;
   }
 
-  request(): Promise<T | undefined> {
-    return this.store.readContent<T>(this.identifier);
+  request(): Promise<ResourceContent | undefined> {
+    return this.store.readContent(this.identifier);
   }
 
-  write(data: T): Promise<void> {
+  write(data: ResourceContent): Promise<void> {
     return this.store.writeContent(this.identifier, data);
   }
 }

@@ -1,4 +1,4 @@
-import { IResource, IResourceAccess, IResourceIdentifier } from '../resource';
+import { IFileEntry, IResource, IResourceAccess, IResourceIdentifier, ResourceContent } from '../resource';
 import { IUndoContext, IUndoSystem } from '../undo';
 import { IEditorPanel, IEditorPanelContext } from './types';
 
@@ -13,20 +13,20 @@ export class PanelContext implements IEditorPanelContext {
     this.undoSystem = undoSystem;
   }
 
-  requestResource<T>(id: IResourceIdentifier): Promise<IResource<T> | null> {
-    return this.resourceAccess.requestResource<T>(id);
+  requestResource(id: IResourceIdentifier): Promise<IResource | null> {
+    return this.resourceAccess.requestResource(id);
   }
 
-  requestResourceList(type: number): Promise<readonly IResourceIdentifier[]> {
-    return this.resourceAccess.requestResourceList(type);
-  }
-
-  createResource<T>(id: IResourceIdentifier, content: T): Promise<IResource<T> | null> {
-    return this.resourceAccess.createResource<T>(id, content);
+  createResource(id: IResourceIdentifier, content: ResourceContent): Promise<IResource | null> {
+    return this.resourceAccess.createResource(id, content);
   }
 
   deleteResource(id: IResourceIdentifier): Promise<void> {
     return this.resourceAccess.deleteResource(id);
+  }
+
+  listDirectory(path: string): Promise<readonly IFileEntry[]> {
+    return this.resourceAccess.listDirectory(path);
   }
 
   addUndoContext(panel: IEditorPanel, context: IUndoContext<unknown>): void {

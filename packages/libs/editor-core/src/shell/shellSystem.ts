@@ -837,8 +837,4 @@ export class ShellPanelHooks implements IResourceSystemHooks {
 
     await this.panel.onUpdateResource(id, data);
   }
-
-  async onUpdateResourceList(type: number): Promise<void> {
-    await this.panel.onUpdateResourceList(type, await this.context.requestResourceList(type));
-  }
 }
