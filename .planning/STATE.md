@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "02.1"
 current_phase_name: 资源层重构与表格文件管理
-current_plan: 5
+current_plan: 6
 status: executing
-stopped_at: Completed 02.1-04-PLAN.md
-last_updated: "2026-10-15T11:45:07.359Z"
+stopped_at: Completed 02.1-05-PLAN.md
+last_updated: "2026-10-15T11:59:43.332Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 02.1 execution started
-state_head: 5e5f03785cd9d6827e8d26f07e1ef42ab22bddb3
+state_head: 545aa643b2fcd9d69d5324e1b68874fe7ca3c1cb
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 52
-  completed_plans: 44
+  completed_plans: 45
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 02.1 (资源层重构与表格文件管理) — EXECUTING
-Current Plan: 5
+Current Plan: 6
 Total Plans in Phase: 12
 Status: Ready to execute
 Last activity: 2026-10-15 — Phase 02.1 execution started
@@ -102,6 +102,7 @@ Progress: [██████████] 100%
 | Phase 02.1 P02 | 3min | 2 tasks | 3 files |
 | Phase 02.1 P03 | 9min | 3 tasks | 14 files |
 | Phase 02.1 P04 | 7 | 3 tasks | 7 files |
+| Phase 02.1 P5 | 7min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -195,6 +196,8 @@ Recent decisions affecting current work:
 - [Phase 02.1]: 02.1-04: 忽略模式按条目名匹配（含 * 通配），索引/缓存键为 / 规范化相对路径精确比对
 - [Phase 02.1]: 02.1-04: ContentCache 单条超总上限时不入缓存；LRU 用 Map 插入序，get 命中即刷新
 - [Phase 02.1]: 02.1-04: ResourceSystem 接线——listDirectory 索引驱动、读写经缓存、增删移同步；updateResource 先失效缓存，readBinary 为类公开方法（不入接口）
+- [Phase 02.1]: 02.1-05: coreFsSurface 反转后只扫 editor-core/src，扫描文件数下界由 20 调为 30（editor-core 全量 42、排除测试树 28，故 30 仍钉住『含测试树』）
+- [Phase 02.1]: 02.1-05: coreBoundaries (e) 判据由『是否出现文件读写调用形态』改为『是否触达真实文件系统』（node:fs / from 'fs' / require('fs') / fetch），避免误伤测试替身的 .readFile(...)
 
 ### Pending Todos
 
@@ -221,6 +224,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-15T11:45:07.120Z
-Stopped at: Completed 02.1-04-PLAN.md
+Last session: 2026-10-15T11:59:43.104Z
+Stopped at: Completed 02.1-05-PLAN.md
 Resume file: None
