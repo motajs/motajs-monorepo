@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "02.1"
 current_phase_name: 资源层重构与表格文件管理
-current_plan: 34
-status: complete
-stopped_at: Phase 2.1 context gathered
-last_updated: "2026-10-15T10:19:32.560Z"
+current_plan: 2
+status: executing
+stopped_at: Completed 02.1-01-PLAN.md
+last_updated: "2026-10-15T10:54:04.443Z"
 last_activity: 2026-10-15
-last_activity_desc: "Completed 02-04 (table tracer): editor-impl test infra + end-to-end resource-layer read path"
-state_head: ec860f180e6056db9e6637948c273d27c9ce0b61
+last_activity_desc: Phase 02.1 execution started
+state_head: 1edae771cae30abc7f7eb4039ee19ef8a78d5836
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 52
-  completed_plans: 40
+  completed_plans: 41
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -29,11 +29,11 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 
 ## Current Position
 
-Phase: 02.1 (资源层重构与表格文件管理) — READY TO EXECUTE
-Current Plan: 34
+Phase: 02.1 (资源层重构与表格文件管理) — EXECUTING
+Current Plan: 2
 Total Plans in Phase: 12
-Status: Complete — verified（无 gap；「行为与现状一致」的视觉对齐已多轮浏览器 UAT 接受）
-Last activity: 2026-10-15 — Phase 02 收尾（02-02…02-34 全部完成、阶段验证通过、02-13 halted 结清）
+Status: Ready to execute
+Last activity: 2026-10-15 — Phase 02.1 execution started
 
 Progress: [██████████] 100%
 
@@ -98,6 +98,7 @@ Progress: [██████████] 100%
 | Phase 02-table P32 | 14min | 2 tasks | 3 files |
 | Phase 02 P33 | 6min | 2 tasks | 3 files |
 | Phase 02 P34 | 11min | 2 tasks | 2 files |
+| Phase 02.1 P01 | 8min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -179,6 +180,9 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-32: React.memo(TableGrid) + Ready 分支行元素列表 useMemo + TableColumn 各回调 useCallback（依赖取具体 props 字段，不取整个 props 对象）；内容未变的刷新跳过整表重渲染，无需改 ITableRowProps/IGapRowProps
 - [Phase 02]: P27/P28: 折叠行整行加 cursor:pointer；值文本域精确回退到 antd autoSize（撤销 02-28 的 rows + resize）
 - [Phase 02]: 02-34: P29 分组行默认折叠（expanded 初值 false，折叠子树不挂载）+ 首次可见自动展开（GapRow 自持 IntersectionObserver，首次相交即展开并 disconnect）；autoRevealPending 本地标记使自动展开只发生一次且用户点击后不再自动展开；无 IntersectionObserver 时退化立即展开（jsdom 既有用例因此保持绿）；折叠状态仍为组件本地 useState、不进撤销；IGapRowProps/GapRow 签名不变，无接口计划
+- [Phase 02.1]: D-06 已由用户预先裁定为 delete-injection：核心初始化只注入文件系统实现（IEditorCoreInjection.fs），彻底删除 IResourceInjection
+- [Phase 02.1]: IResourceIdentifier 采用 type 别名 = string（纯路径），不用 interface 包装对象，贴合 D-01 原文并减少迁移包装层
+- [Phase 02.1]: 02.1-01 接口先于实现：只声明资源层类型契约，实现（FileIndex/ContentCache/core.ts 接线）留待 Plan 03/04；中间态整包 tsc 预期为红
 
 ### Pending Todos
 
@@ -205,6 +209,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-15T08:16:23.136Z
-Stopped at: Phase 2.1 context gathered
-Resume file: .planning/phases/02.1-resource-layer/02.1-CONTEXT.md
+Last session: 2026-10-15T10:54:04.201Z
+Stopped at: Completed 02.1-01-PLAN.md
+Resume file: None
