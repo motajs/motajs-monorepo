@@ -1,10 +1,11 @@
 import { act, cleanup, configure, fireEvent, render, screen } from '@testing-library/react';
 import { EditorCore } from '@motajs/editor-core';
 import { CapabilityProvider } from '@motajs/editor-impl/react';
-import { tablePanelType } from '@motajs/editor-impl/table';
+import { tableListPanelType, tablePanelType } from '@motajs/editor-impl/table';
 import { createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryBackend } from '../backend/memoryBackend';
+import { DEMO_PANEL_TYPE } from '../demo/demoPanel';
 import {
   DEV_REDO_MENU_ID,
   DEV_REDO_MENU_TITLE,
@@ -16,11 +17,13 @@ import {
   createTablePanelOpener,
   openTableDemoPanel,
   TABLE_DEMO_DATA,
+  TABLE_DEMO_DATA_PATH,
   TABLE_DEMO_ENTRY_COUNT,
   TABLE_DEMO_MENU_ID,
   TABLE_DEMO_MENU_TITLE,
   TABLE_DEMO_SCHEMA,
-  TABLE_DEMO_TARGET,
+  TABLE_DEMO_SCHEMA_PATH,
+  TABLE_PRESETS,
 } from '../demo/tableDemo';
 
 configure({ testIdAttribute: 'data-test-id' });
@@ -30,14 +33,16 @@ afterEach(() => {
   cleanup();
 });
 
-// 装配开发宿主组合根：内存后端 seed demo 表资源、注册表格面板类型与「打开表格」菜单项
+// 装配开发宿主组合根：内存文件系统 seed demo 示例与 demo 表、注册三种面板类型与「打开表格」菜单项
 async function createHost(): Promise<EditorCore> {
   const core = new EditorCore();
   const backend = new MemoryBackend();
 
-  backend.seed(TABLE_DEMO_TARGET.data, TABLE_DEMO_DATA);
-  backend.seed(TABLE_DEMO_TARGET.schema, TABLE_DEMO_SCHEMA);
+  backend.seed(TABLE_DEMO_DATA_PATH, TABLE_DEMO_DATA);
+  backend.seed(TABLE_DEMO_SCHEMA_PATH, TABLE_DEMO_SCHEMA);
+  core.shellSystem.registerPanelType(DEMO_PANEL_TYPE);
   core.shellSystem.registerPanelType(tablePanelType);
+  core.shellSystem.registerPanelType(tableListPanelType);
   core.shellSystem.registerMenuItem({
     id: TABLE_DEMO_MENU_ID,
     title: TABLE_DEMO_MENU_TITLE,
@@ -47,8 +52,15 @@ async function createHost(): Promise<EditorCore> {
   });
   registerDevMenu(core);
 
-  await core.initialize(backend);
+  await core.initialize({ fs: backend, maxUndoStep: backend.maxUndoStep });
   return core;
+}
+
+// 直接瞄准备 demo 数据路径打开表格面板（绕过列表面板；供断言表格渲染的用例复用）
+async function openDemoTable(core: EditorCore): Promise<void> {
+  const tabId = core.shellSystem.openBlankTab();
+
+  await core.shellSystem.openPanelInTab(tabId, tablePanelType.id, { target: { dataPath: TABLE_DEMO_DATA_PATH } });
 }
 
 // 读取某个字段值单元格内文本域的当前文本
@@ -67,11 +79,18 @@ function numberValue(container: HTMLElement, field: string): string | undefined 
   return input === null ? undefined : input.value;
 }
 
-// 用能力 Provider 包裹外壳渲染根，注入开发宿主的表格面板打开器（对应 main.tsx 的接线）
+// 读取某路径数据文件的解析值（面板以文本写回）
+async function readData(core: EditorCore, path: string): Promise<Record<string, unknown> | undefined> {
+  const text = await core.resourceSystem.readContent(path);
+
+  return typeof text === 'string' ? (JSON.parse(text) as Record<string, unknown>) : undefined;
+}
+
+// 用能力 Provider 包裹外壳渲染根，注入开发宿主的表格面板打开器与预设表（对应 main.tsx 的接线）
 function renderWithTableOpener(core: EditorCore): ReturnType<typeof render> {
   return render(
     createElement(CapabilityProvider, {
-      capabilities: { tablePanel: createTablePanelOpener(core) },
+      capabilities: { tablePanel: createTablePanelOpener(core), tablePresets: TABLE_PRESETS },
       children: createElement(core.shellSystem.render()),
     }),
   );
@@ -83,7 +102,7 @@ describe('开发宿主表格接入', () => {
     const core = await createHost();
 
     await act(async () => {
-      await openTableDemoPanel(core);
+      await openDemoTable(core);
     });
 
     const { container } = render(
@@ -101,7 +120,7 @@ describe('开发宿主表格接入', () => {
     expect(numberValue(container, 'position-y')).toBe('34');
   });
 
-  // 组合根接好线：已注册「打开表格」菜单项与表格面板类型
+  // 组合根接好线：已注册「打开表格」菜单项与表格 / 列表两种面板类型
   it('已注册「打开表格」菜单项与表格面板类型', async () => {
     const core = await createHost();
 
@@ -109,7 +128,11 @@ describe('开发宿主表格接入', () => {
 
     expect(matching.length).toBe(1);
     expect(matching[0].title).toBe(TABLE_DEMO_MENU_TITLE);
-    expect(core.shellSystem.listPanelTypes().map((type) => type.id)).toContain('table');
+
+    const typeIds = core.shellSystem.listPanelTypes().map((type) => type.id);
+
+    expect(typeIds).toContain('table');
+    expect(typeIds).toContain('table-list');
   });
 
   // 注入表格打开器后，数据表格工具栏的「编辑 Schema」按钮存在且未被禁用
@@ -117,7 +140,7 @@ describe('开发宿主表格接入', () => {
     const core = await createHost();
 
     await act(async () => {
-      await openTableDemoPanel(core);
+      await openDemoTable(core);
     });
 
     const { container } = renderWithTableOpener(core);
@@ -132,7 +155,7 @@ describe('开发宿主表格接入', () => {
     const core = await createHost();
 
     await act(async () => {
-      await openTableDemoPanel(core);
+      await openDemoTable(core);
     });
 
     const { container } = renderWithTableOpener(core);
@@ -152,7 +175,7 @@ describe('开发宿主表格接入', () => {
     const core = await createHost();
 
     await act(async () => {
-      await openTableDemoPanel(core);
+      await openDemoTable(core);
     });
 
     const { container } = renderWithTableOpener(core);
@@ -168,7 +191,7 @@ describe('开发宿主表格接入', () => {
     const core = await createHost();
 
     await act(async () => {
-      await openTableDemoPanel(core);
+      await openDemoTable(core);
     });
 
     const { container } = renderWithTableOpener(core);
@@ -218,7 +241,7 @@ describe('开发宿主表格接入', () => {
     const core = await createHost();
 
     await act(async () => {
-      await openTableDemoPanel(core);
+      await openDemoTable(core);
     });
 
     const { container } = renderWithTableOpener(core);
@@ -232,7 +255,7 @@ describe('开发宿主表格接入', () => {
       fireEvent.blur(textarea);
     });
 
-    const edited = await core.resourceSystem.readContent<Record<string, unknown>>(TABLE_DEMO_TARGET.data);
+    const edited = await readData(core, TABLE_DEMO_DATA_PATH);
 
     expect(edited === undefined ? undefined : edited.title).toBe('改后标题');
 
@@ -240,7 +263,7 @@ describe('开发宿主表格接入', () => {
       fireEvent.click(screen.getByText(DEV_UNDO_MENU_TITLE));
     });
 
-    const restored = await core.resourceSystem.readContent<Record<string, unknown>>(TABLE_DEMO_TARGET.data);
+    const restored = await readData(core, TABLE_DEMO_DATA_PATH);
 
     expect(restored === undefined ? undefined : restored.title).toBe('示例条目');
   });

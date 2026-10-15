@@ -5,18 +5,12 @@ import {
   IEditorPanelFactoryParam,
   IEditorPanelType,
   IResource,
-  IResourceIdentifier,
 } from '@motajs/editor-core';
 
-const enum DemoResourceType {
-  /** 演示面板读取的示例资源 */
-  Sample = 1,
-}
+/** 演示面板读取的示例文件路径（替代原按资源类型分桶的资源标识） */
+export const DEMO_SAMPLE_PATH: string = 'demo/sample.txt';
 
-/** 演示资源的标识符，主入口与面板据此读写示例资源 */
-export const DEMO_RESOURCE_ID: IResourceIdentifier = Object.freeze({ type: DemoResourceType.Sample, id: 'sample' });
-
-/** 预置到内存后端的示例内容（演示假数据，非真实项目数据） */
+/** 预置到内存文件系统的示例内容（演示假数据，非真实项目数据） */
 export const DEMO_SAMPLE_CONTENT: string = '来自内存后端的示例内容';
 
 /** 演示面板类型的字符串标识符 */
@@ -38,14 +32,14 @@ interface IDemoPanelViewProps {
  */
 function DemoPanelView(props: IDemoPanelViewProps): ReactElement {
   const context = props.context;
-  const [resource, setResource] = useState<IResource<string> | null>(null);
+  const [resource, setResource] = useState<IResource | null>(null);
   const [content, setContent] = useState<string>('');
 
   useEffect(() => {
     let cancelled = false;
 
     void (async (): Promise<void> => {
-      const found = await context.requestResource<string>(DEMO_RESOURCE_ID);
+      const found = await context.requestResource(DEMO_SAMPLE_PATH);
 
       if (found === null) return;
 
@@ -54,7 +48,7 @@ function DemoPanelView(props: IDemoPanelViewProps): ReactElement {
       if (cancelled) return;
 
       setResource(found);
-      setContent(data ?? '');
+      setContent(typeof data === 'string' ? data : '');
     })();
 
     return (): void => {
@@ -127,10 +121,6 @@ export class DemoPanel implements IEditorPanel {
   }
 
   async onUpdateResource(): Promise<void> {
-    return;
-  }
-
-  async onUpdateResourceList(): Promise<void> {
     return;
   }
 

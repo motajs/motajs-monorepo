@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { EditorCore } from '@motajs/editor-core';
 import { MemoryBackend } from '../backend/memoryBackend';
-import { DEMO_PANEL_TYPE, DEMO_RESOURCE_ID, DEMO_SAMPLE_CONTENT } from '../demo/demoPanel';
+import { DEMO_PANEL_TYPE, DEMO_SAMPLE_CONTENT, DEMO_SAMPLE_PATH } from '../demo/demoPanel';
 
 describe('开发宿主端到端冒烟', () => {
   // 启动：initialize 解析为 void，外壳自动开出一个空白标签页（typeId 为 null）
@@ -11,9 +11,9 @@ describe('开发宿主端到端冒烟', () => {
     const core = new EditorCore();
     const backend = new MemoryBackend();
 
-    backend.seed(DEMO_RESOURCE_ID, DEMO_SAMPLE_CONTENT);
+    backend.seed(DEMO_SAMPLE_PATH, DEMO_SAMPLE_CONTENT);
 
-    await expect(core.initialize(backend)).resolves.toBeUndefined();
+    await expect(core.initialize({ fs: backend, maxUndoStep: backend.maxUndoStep })).resolves.toBeUndefined();
 
     const tabs = core.shellSystem.listTabs();
 
@@ -26,8 +26,8 @@ describe('开发宿主端到端冒烟', () => {
     const core = new EditorCore();
     const backend = new MemoryBackend();
 
-    backend.seed(DEMO_RESOURCE_ID, DEMO_SAMPLE_CONTENT);
-    await core.initialize(backend);
+    backend.seed(DEMO_SAMPLE_PATH, DEMO_SAMPLE_CONTENT);
+    await core.initialize({ fs: backend, maxUndoStep: backend.maxUndoStep });
 
     expect(core.shellSystem.registerPanelType(DEMO_PANEL_TYPE)).toBe(true);
 
@@ -45,13 +45,13 @@ describe('开发宿主端到端冒烟', () => {
     expect(tabs[0].typeId).toBeNull();
   });
 
-  // 读内存数据：外壳渲染后演示面板经 context.requestResource 读到内存后端预置内容
-  it('演示面板渲染出内存后端内容', async () => {
+  // 读内存数据：外壳渲染后演示面板经 context.requestResource 读到内存文件系统预置内容
+  it('演示面板渲染出内存文件系统内容', async () => {
     const core = new EditorCore();
     const backend = new MemoryBackend();
 
-    backend.seed(DEMO_RESOURCE_ID, DEMO_SAMPLE_CONTENT);
-    await core.initialize(backend);
+    backend.seed(DEMO_SAMPLE_PATH, DEMO_SAMPLE_CONTENT);
+    await core.initialize({ fs: backend, maxUndoStep: backend.maxUndoStep });
     core.shellSystem.registerPanelType(DEMO_PANEL_TYPE);
 
     const tabId = core.shellSystem.listTabs()[0].id;

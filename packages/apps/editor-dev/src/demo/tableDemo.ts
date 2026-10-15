@@ -1,19 +1,18 @@
 import { EditorCore } from '@motajs/editor-core';
-import { ITablePanelOpener } from '@motajs/editor-impl/react';
-import {
-  ITablePanelParam,
-  ITablePanelTarget,
-  ITableSchemaNode,
-  tableDataResourceId,
-  tablePanelType,
-  tableSchemaResourceId,
-} from '@motajs/editor-impl/table';
+import { ITablePanelOpener, ITablePreset } from '@motajs/editor-impl/react';
+import { ITableSchemaNode, tableListPanelType, tablePanelType } from '@motajs/editor-impl/table';
 
-/** 演示表的不透明表名，数据与 schema 资源 id 均据此生成 */
+/** 演示表的不透明表名，数据与 schema 路径均据此生成 */
 export const TABLE_DEMO_NAME: string = 'demo';
 
 /** 演示表的字段条数：约 100 条以触发开发宿主表体的纵向滚动（P7） */
 export const TABLE_DEMO_ENTRY_COUNT: number = 100;
+
+/** 演示表数据文件的路径（按表名约定 `tables/<名>.json`） */
+export const TABLE_DEMO_DATA_PATH: string = `tables/${TABLE_DEMO_NAME}.json`;
+
+/** 演示表 schema 文件的路径（按 `xxx.schema.json` 约定推导） */
+export const TABLE_DEMO_SCHEMA_PATH: string = `tables/${TABLE_DEMO_NAME}.schema.json`;
 
 /** 生成字段名前缀在序号前的补零宽度，令 `field07` 排在 `field10` 之前 */
 const FIELD_INDEX_WIDTH = 2;
@@ -80,17 +79,14 @@ export function createTableDemoSchema(count: number): ITableSchemaNode {
   return { type: 'object', properties, 'x-order': order };
 }
 
-/** seed 进 demo 数据表的示例内容（dev-only 生成值，非真实项目数据） */
-export const TABLE_DEMO_DATA: Record<string, unknown> = createTableDemoData(TABLE_DEMO_ENTRY_COUNT);
+/** seed 进 demo 数据表的示例内容文本（dev-only 生成值，非真实项目数据） */
+export const TABLE_DEMO_DATA: string = JSON.stringify(createTableDemoData(TABLE_DEMO_ENTRY_COUNT), null, 2);
 
-/** demo 数据表所用的标准 JSON Schema 文档，含一个嵌套 object 与约 100 个同级字段 */
-export const TABLE_DEMO_SCHEMA: ITableSchemaNode = createTableDemoSchema(TABLE_DEMO_ENTRY_COUNT);
+/** demo 数据表所用的标准 JSON Schema 文档文本，含一个嵌套 object 与约 100 个同级字段 */
+export const TABLE_DEMO_SCHEMA: string = JSON.stringify(createTableDemoSchema(TABLE_DEMO_ENTRY_COUNT), null, 2);
 
-/** 表格演示的目标表，指向 `table.demo` 数据与其 `table#schema.demo` schema */
-export const TABLE_DEMO_TARGET: ITablePanelTarget = {
-  data: tableDataResourceId(TABLE_DEMO_NAME),
-  schema: tableSchemaResourceId(TABLE_DEMO_NAME),
-};
+/** 开发宿主注入给「打开表格」列表的预设表清单（演示 `ITableEditorCapabilities.tablePresets`） */
+export const TABLE_PRESETS: readonly ITablePreset[] = [{ name: '演示表', path: TABLE_DEMO_DATA_PATH }];
 
 /** 「打开表格」菜单项的唯一标识符 */
 export const TABLE_DEMO_MENU_ID: string = 'table-demo';
@@ -99,14 +95,13 @@ export const TABLE_DEMO_MENU_ID: string = 'table-demo';
 export const TABLE_DEMO_MENU_TITLE: string = '打开表格';
 
 /**
- * 打开一张已瞄准 demo 表的表格面板：先开一个空白标签页，再带打开参数打开表格面板类型
+ * 打开「打开表格」列表面板：先开一个空白标签页，再打开列表面板类型
  * @param core 开发宿主的编辑器核心，经其外壳系统开标签页与面板
  */
 export async function openTableDemoPanel(core: EditorCore): Promise<void> {
   const tabId = core.shellSystem.openBlankTab();
-  const param: ITablePanelParam = { target: TABLE_DEMO_TARGET };
 
-  await core.shellSystem.openPanelInTab(tabId, tablePanelType.id, param);
+  await core.shellSystem.openPanelInTab(tabId, tableListPanelType.id);
 }
 
 /**

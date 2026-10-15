@@ -164,7 +164,7 @@ export class MemoryBackend implements IMemoryBackend {
 
     for (const [path] of files) this.content.delete(path);
 
-    for (const directory of directories) this.directories.delete(directory);
+    for (const [oldDirectory] of directories) this.directories.delete(oldDirectory);
 
     for (const [, nextPath, value] of files) {
       this.content.set(nextPath, value);
