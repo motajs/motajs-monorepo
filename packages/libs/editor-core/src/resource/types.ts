@@ -1,138 +1,103 @@
 import { IHookable, IHookBase } from '../hook';
+import { EditorEntryKind, IEditorFileSystem } from '../fs';
 
-export interface IResourceIdentifier {
-  /** 资源类型，由外部的枚举真正进行定义 */
-  readonly type: number;
-  /** 资源的标识符 */
-  readonly id: string;
-  /** 资源的文件路径 */
-  readonly path: string;
-}
+/** 资源的唯一标识，即相对项目根、以 `/` 分隔、无前导斜线的文件路径；资源相等即路径相等 */
+export type IResourceIdentifier = string;
 
-export interface IResource<T> {
-  /** 资源标识符 */
+/** 资源内容的两种形态：原文（text）字符串或原始字节（binary）；core 不解析任何文件格式 */
+export type ResourceContent = string | Uint8Array;
+
+export interface IResource {
+  /** 资源标识（纯路径） */
   readonly identifier: IResourceIdentifier;
 
   /**
    * 请求资源内容
+   * @returns 资源的原文或原始字节；资源不存在时为 undefined
    */
-  request(): Promise<T | undefined>;
+  request(): Promise<ResourceContent | undefined>;
 
   /**
    * 写入资源内容
    * @param data 要写入的资源内容
    */
-  write(data: T): Promise<void>;
+  write(data: ResourceContent): Promise<void>;
 }
 
 export interface IResourceAccess {
   /**
    * 请求指定资源
-   * @param id 资源标识符
+   * @param identifier 资源标识（纯路径）
+   * @returns 资源句柄；资源不存在时为 null
    */
-  requestResource<T>(id: IResourceIdentifier): Promise<IResource<T> | null>;
-
-  /**
-   * 获取指定资源类型的资源列表
-   * @param type 资源类型
-   */
-  requestResourceList(type: number): Promise<readonly IResourceIdentifier[]>;
+  requestResource(identifier: IResourceIdentifier): Promise<IResource | null>;
 
   /**
    * 创建新的资源
-   * @param id 资源标识符
+   * @param identifier 资源标识（纯路径）
    * @param content 资源的初始内容
+   * @returns 新建的资源句柄；创建失败时为 null
    */
-  createResource<T>(id: IResourceIdentifier, content: T): Promise<IResource<T> | null>;
+  createResource(identifier: IResourceIdentifier, content: ResourceContent): Promise<IResource | null>;
 
   /**
    * 删除指定资源
-   * @param id 资源标识符
+   * @param identifier 资源标识（纯路径）
    */
-  deleteResource(id: IResourceIdentifier): Promise<void>;
+  deleteResource(identifier: IResourceIdentifier): Promise<void>;
+
+  /**
+   * 移动资源
+   * @param source 源路径
+   * @param destination 目标路径
+   */
+  moveResource(source: IResourceIdentifier, destination: IResourceIdentifier): Promise<void>;
+
+  /**
+   * 列出指定目录下的直接子条目
+   * @param path 目录路径
+   * @returns 目录下的直接子条目列表，供打开列表 / 目录树读取
+   */
+  listDirectory(path: string): Promise<readonly IFileEntry[]>;
 }
 
 export interface IResourceStore {
   /**
    * 读取指定资源的内容
-   * @param id 资源标识符
+   * @param identifier 资源标识（纯路径）
+   * @returns 资源的原文或原始字节；资源不存在时为 undefined
    */
-  readContent<T>(id: IResourceIdentifier): Promise<T | undefined>;
+  readContent(identifier: IResourceIdentifier): Promise<ResourceContent | undefined>;
 
   /**
    * 写入指定资源的内容
-   * @param id 资源标识符
+   * @param identifier 资源标识（纯路径）
    * @param data 要写入的资源内容
    */
-  writeContent<T>(id: IResourceIdentifier, data: T): Promise<void>;
-}
-
-export interface IResourceInjection {
-  /**
-   * 请求指定资源的资源内容
-   * @param id 资源标识符
-   */
-  requestResource<T>(id: IResourceIdentifier): Promise<T>;
-
-  /**
-   * 请求指定资源类型的资源标识符列表
-   * @param type 资源类型
-   */
-  requestResourceList(type: number): Promise<readonly IResourceIdentifier[]>;
-
-  /**
-   * 向指定资源写入资源内容
-   * @param id 资源标识符
-   * @param content 要写入的资源内容
-   */
-  writeResource(id: IResourceIdentifier, content: unknown): Promise<void>;
-
-  /**
-   * 创建新的资源
-   * @param id 资源标识符
-   * @param content 资源的初始内容
-   */
-  createResource(id: IResourceIdentifier, content: unknown): Promise<void>;
-
-  /**
-   * 删除指定资源
-   * @param id 资源标识符
-   */
-  deleteResource(id: IResourceIdentifier): Promise<void>;
+  writeContent(identifier: IResourceIdentifier, data: ResourceContent): Promise<void>;
 }
 
 export interface IResourceSystemHooks extends IHookBase {
   /**
    * 当资源更新时触发，需要重新手动申请指定资源以获取更新后的资源内容
-   * @param id 资源标识符
+   * @param identifier 资源标识（纯路径）
    */
-  onUpdateResource?(id: IResourceIdentifier): Promise<void>;
-
-  /**
-   * 当更新资源列表时触发，需要重新手动申请指定类型的资源列表以获取更新后的列表
-   * @param type 资源类型
-   */
-  onUpdateResourceList?(type: number): Promise<void>;
+  onUpdateResource?(identifier: IResourceIdentifier): Promise<void>;
 }
 
 export interface IResourceSystem extends IHookable<IResourceSystemHooks> {
   /**
-   * 初始化并注入资源实现对象
-   * @param injection 资源注入对象
+   * 初始化并接入宿主注入的文件系统实现，递归全扫建索引
+   * @param fs 宿主注入的文件系统实现
+   * @param options 资源系统初始化选项，如索引忽略模式
    */
-  initialize(injection: IResourceInjection): Promise<void>;
+  initialize(fs: IEditorFileSystem, options?: IResourceSystemOptions): Promise<void>;
 
   /**
    * 更新指定资源，系统会重新请求资源以获取其更新后的内容
-   * @param id 资源标识符
+   * @param identifier 资源标识（纯路径）
    */
-  updateResource(id: IResourceIdentifier): Promise<void>;
-
-  /**
-   * 更新指定资源类型的资源列表，系统会重新请求资源列表以获取其更新后的内容
-   * @param type 资源类型
-   */
-  updateResourceList(type: number): Promise<void>;
+  updateResource(identifier: IResourceIdentifier): Promise<void>;
 
   /**
    * 释放此资源系统
