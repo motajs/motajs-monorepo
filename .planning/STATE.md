@@ -1,18 +1,18 @@
 ---
 gsd_state_version: "1.0"
 milestone: v1.0
-current_phase: 02
-current_phase_name: 表格编辑
+current_phase: "02.1"
+current_phase_name: 资源层重构与表格文件管理
 current_plan: 34
 status: complete
-stopped_at: Phase 3 context gathered
-last_updated: "2026-10-15T07:14:22.430Z"
+stopped_at: Phase 2.1 context gathered
+last_updated: "2026-10-15T08:16:23.469Z"
 last_activity: 2026-10-15
 last_activity_desc: "Completed 02-04 (table tracer): editor-impl test infra + end-to-end resource-layer read path"
-state_head: b9e0da8853126f8d352047087dc9e90040cbb025
+state_head: 8d197c611ce59b4b9dc476b796e8d4fabedc170d
 progress:
-  total_phases: 7
-  completed_phases: 3
+  total_phases: 8
+  completed_phases: 0
   total_plans: 40
   completed_plans: 40
 milestone_name: editor-core 空壳 + editor-impl 重做
@@ -25,11 +25,11 @@ milestone_name: editor-core 空壳 + editor-impl 重做
 See: .planning/PROJECT.md (updated 2026-10-09)
 
 **Core value:** 把编辑器内核与引擎细节彻底解耦——`editor-core` 只给接口、`editor-impl` 写默认实现，让新旧引擎共用同一套编辑能力，第三方可高自由度定制。
-**Current focus:** Phase 02 — 表格编辑
+**Current focus:** Phase 02.1 — 资源层重构与表格文件管理
 
 ## Current Position
 
-Phase: 02 — 表格编辑
+Phase: 02.1 — 资源层重构与表格文件管理
 Current Plan: 34
 Total Plans in Phase: 33
 Status: Complete — verified（无 gap；「行为与现状一致」的视觉对齐已多轮浏览器 UAT 接受）
@@ -193,6 +193,7 @@ None yet.
 
 - Phase 1 edited: renamed phase 1 to 编辑器外壳 (shell-focused)
 - Phase 1.1 inserted after Phase 1: 编辑器开发宿主（最小可运行整合，用于验证 editor-core/editor-impl） (URGENT)
+- Phase 02.1 inserted after Phase 2: 资源层重构与表格文件管理 (URGENT)
 
 ## Deferred Items
 
@@ -204,6 +205,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-15T07:14:22.095Z
-Stopped at: Phase 3 context gathered
-Resume file: .planning/phases/03-asset/03-CONTEXT.md
+Last session: 2026-10-15T08:16:23.136Z
+Stopped at: Phase 2.1 context gathered
+Resume file: .planning/phases/02.1-resource-layer/02.1-CONTEXT.md
