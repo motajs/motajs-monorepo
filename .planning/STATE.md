@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "02.1"
 current_phase_name: 资源层重构与表格文件管理
-current_plan: 11
+current_plan: 12
 status: executing
-stopped_at: Completed 02.1-10-PLAN.md
-last_updated: "2026-10-15T15:21:46.875Z"
+stopped_at: Completed 02.1-11-PLAN.md
+last_updated: "2026-10-15T15:37:50.044Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 02.1 execution started
-state_head: 1fa02e2f3c12f74ee32595e95a6d64c5d79ce6ca
+state_head: 0886a2b5743f107a406f587cfb46527212beede3
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 52
-  completed_plans: 50
+  completed_plans: 51
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 02.1 (资源层重构与表格文件管理) — EXECUTING
-Current Plan: 11
+Current Plan: 12
 Total Plans in Phase: 12
 Status: Ready to execute
 Last activity: 2026-10-15 — Phase 02.1 execution started
@@ -108,6 +108,7 @@ Progress: [██████████] 100%
 | Phase 02.1 P08 | 44min | 1 tasks | 10 files |
 | Phase 02.1 P09 | 20min | 3 tasks | 8 files |
 | Phase 02.1 P10 | 35min | 3 tasks | 7 files |
+| Phase 02.1 P11 | 6min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -223,6 +224,10 @@ Recent decisions affecting current work:
 - [Phase 02.1]: openTableDemoPanel 改为打开列表面板；迁移后的 devHostTable 用例另用测试本地 helper openDemoTable(core) 直接带 dataPath 打开表格面板，避免引入新对外命名
 - [Phase 02.1]: 演示数据 TABLE_DEMO_DATA / TABLE_DEMO_SCHEMA 由对象改为文本（JSON.stringify(..., null, 2)），seed 进内存 fs；测试经 JSON.parse 读回断言
 - [Phase 02.1]: main.tsx 同时注册 DEMO_PANEL_TYPE / tablePanelType / tableListPanelType 三种面板类型；ignore 传 node_modules / .git
+- [Phase 02.1]: 02.1-11: 阶段级端到端集成用例以单个用例贯穿「打开列表 → 预设/目录树打开 → 编辑 + 撤销 → 切入刷新 → 新建 → 打开新表 → 删除确认后消失」
+- [Phase 02.1]: 02.1-11: 「删除不可撤销」以 undoSystem.addUndoContext 计数为 0 的集成断言落地（T-02.1-21）；「切入刷新」以外部 createResource 改索引 + activateTab 触发并以 listDirectory spy 断言重取
+- [Phase 02.1]: 02.1-11: 复用 Plan 07 的 FakeFileSystem / createTableHarness 与 Plan 09/10 的能力注入装配，零生产源码改动、零新对外命名
+- [Phase 02.1]: 02.1-11: 三包 test / typecheck 与五条生效门禁整验全绿；VALIDATION.md 置 nyquist_compliant true / status validated，Wave 1–8 行依各自 SUMMARY 置绿、Plan 12 行保留 pending
 
 ### Pending Todos
 
@@ -249,6 +254,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-15T15:21:27.135Z
-Stopped at: Completed 02.1-10-PLAN.md
+Last session: 2026-10-15T15:37:29.704Z
+Stopped at: Completed 02.1-11-PLAN.md
 Resume file: None
