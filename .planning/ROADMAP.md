@@ -167,6 +167,55 @@ Plans:
 
 **UI hint**: yes
 
+### Phase 02.1: 资源层重构与表格文件管理 (INSERTED)
+
+**Goal**: 把编辑器资源层重构为「以文件路径为唯一标识、`editor-core` 真正接入注入的文件系统、并维护项目文件索引 + 内容缓存池」的形态，并在此基础上给表格能力补上「打开表格（预设表 + 目录树）/ 新建表格 / 删除表格」三个用户入口；同时收口被推翻的旧契约（`CORE-01`、两条门禁、表格命名、Phase 3 讨论稿前提）。
+**Depends on:** Phase 2
+**Requirements**: CORE-01 (revised), TABLE-01 (extended)
+**Success Criteria** (what must be TRUE):
+
+  1. 资源以纯文件路径为唯一标识；core 初始化只注入文件系统实现并驱动它（读 / 写 / 二进制 / 列目录 / 建目录 / 移动 / 删除）。
+  2. 资源系统维护项目文件索引（初始化递归全扫 + 增删移增量 + 外部忽略模式）与带字节上限的 LRU 内容缓存池。
+  3. 用户可打开「表格列表」（预设表 + 目录树，只列 json / jsonc 且排除 schema 文件）、新建表格（数据 + schema 一对）、删除表格（二次确认、不可撤销）。
+  4. 既有表格编辑行为（编辑 / 撤销 / 多栏 / 切入刷新）不回归；`CORE-01`、`coreFsSurface`、`coreBoundaries`(e) 与 Phase 3 讨论稿前提全部收口。
+  5. 本阶段能力接入开发宿主，可在浏览器里手动验收「打开 / 新建 / 删除」。
+
+**Plans:** 10 plans
+
+Plans:
+**Wave 1 — 接口（仅类型，无实现）**
+
+- [ ] 02.1-01-PLAN.md — `editor-core` 资源层接口重写（路径标识 / 文件系统 / 索引 / 缓存 / 注入）
+- [ ] 02.1-02-PLAN.md — `editor-impl` 表格与接缝接口重写（单一数据路径 / 预设表接缝）
+
+**Wave 2 — 核心 tracer（依赖 Wave 1）**
+
+- [ ] 02.1-03-PLAN.md — 端到端 tracer：注入文件系统 → 按路径读写（含共享 `FakeFileSystem`）
+
+**Wave 3 — 索引 / 缓存 + 门禁（依赖 Wave 2）**
+
+- [ ] 02.1-04-PLAN.md — 文件索引 `FileIndex` + 内容缓存池 `ContentCache` + 资源系统接线
+- [ ] 02.1-05-PLAN.md — 门禁反转：`coreFsSurface` 与 `coreBoundaries`(e)
+
+**Wave 4 — 表格迁移（依赖 Wave 3）**
+
+- [ ] 02.1-06-PLAN.md — 表格迁移到路径约定（目标 / 读写 / schema 推导 / 既有测试）
+
+**Wave 5 — 表格新入口（依赖 Wave 4）**
+
+- [ ] 02.1-07-PLAN.md — 表格「打开列表 / 新建 / 删除」界面与能力
+
+**Wave 6 — 集成与开发宿主（依赖 Wave 5）**
+
+- [ ] 02.1-08-PLAN.md — 打开 / 新建 / 删除端到端集成验证
+- [ ] 02.1-09-PLAN.md — 开发宿主接入（内存文件系统 + 端到端）
+
+**Wave 7 — 收口（依赖 Wave 6）**
+
+- [ ] 02.1-10-PLAN.md — 旧契约收口（REQUIREMENTS `CORE-01` / Phase 3 讨论稿）
+
+**UI hint**: yes
+
 ### Phase 3: 素材管理
 
 **Goal**: 用户可管理素材（图片 / 动画 / 材质）。
@@ -228,13 +277,14 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 1.1 → 2 → 3 → 4 → 5 → 6
+Phases execute in numeric order: 1 → 1.1 → 2 → 2.1 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. 编辑器外壳与通用 fs 接口 | 4/4 | Complete    | 2026-10-12 |
 | 1.1. 编辑器开发宿主 (INSERTED) | 3/3 | Complete    | 2026-10-12 |
 | 2. 表格编辑 | 33/33 | Complete | 2026-10-15 |
+| 2.1. 资源层重构与表格文件管理 (INSERTED) | 0/10 | Planned | - |
 | 3. 素材管理 | 0/TBD | Not started | - |
 | 4. 地图编辑 | 0/TBD | Not started | - |
 | 5. 代码编辑 | 0/TBD | Not started | - |
