@@ -297,11 +297,11 @@
 
 ---
 
-# 缺口收口轮（UAT `G-02.1-1`） — 命名提案（Plan 13–15）
+# 缺口收口轮（UAT `G-02.1-1`） — 命名提案（Plan 13–16）
 
 **状态：待用户确认。** 依据 `02.1-UAT.md` 的缺口 `G-02.1-1`：用户实测发现 Plan 09 把「打开表格」做成了**覆盖整个外壳的独立面板**，要求改为**表格面板空栏内的内联状态**——空栏显示「打开表格 / 新建表格 / 删除表格」三个按钮，点按钮在同一栏内展示对应组件；打开 / 删除两个组件可复用，差异仅在于是否注入预设表；不再新开独立面板；`editor-dev` 工具栏的「打开表格」入口随之删除；表格面板标签名支持多表（`表格{table0}` 等）。
 
-**为什么要有这一轮**：Plan 09/10 交付的 `tableListPanelType`（独立面板类型）+ `TableListPanel` + `TableListPanelView` 是「独立面板」形态，方向与用户要求相左，须拆成「可复用组件 + 表格面板空栏内联承载」。按项目规则「先接口、后实现」，本轮先做接口（Plan 13），再做实现（Plan 14 表格面板内联 / Plan 15 开发宿主收口）。
+**为什么要有这一轮**：Plan 09/10 交付的 `tableListPanelType`（独立面板类型）+ `TableListPanel` + `TableListPanelView` 是「独立面板」形态，方向与用户要求相左，须拆成「可复用组件 + 表格面板空栏内联承载」。按项目规则「先接口、后实现」，本轮先做接口（Plan 13），再做实现（Plan 14 两个可复用组件 / Plan 15 空栏内联承载 + 移除独立面板 / Plan 16 开发宿主收口）。Plan 15 承载原 Plan 14 的「面板流 + 删除 + 测试迁移」，为把每计划文件数与上下文预算压回阈值内而拆分。
 
 ---
 
@@ -321,6 +321,7 @@
 ### `ITablePickerProps`（interface，`src/table/components/TablePicker.tsx`）
 - **用途**：**可复用的表格浏览器**组件的 props——可选预设表 + 项目目录树。打开表格（注入预设）与删除表格（不注入预设）共用它，**唯一差异就是 `presets` 是否传入**，对应用户「这些组件应该是可以复用的，差距只是有没有预设表」。
 - **成员**：`presets?`（`readonly ITablePreset[]`，缺省或无项时不渲染预设区）、`directory`（`string`，根目录为空串）、`entries`（`readonly IFileEntry[]`，该目录直接子条目）、`error?`（`string`，目录读取失败提示）、`deletable?`（`boolean`，为真时每个数据文件行渲染「删除」入口——删除态用）、`onNavigate(path: string)`（进入某目录）、`onSelect(dataPath: string)`（打开某数据表——打开态的行点击）、`onRequestDelete?`（`(dataPath: string) => void`，请求删除某数据表——删除态用）。
+- **`onSelect` 保持 required（不是可选）**：删除态下点表项的动作不被使用，但契约不因调用态而变——`TableEmptyColumn` 在 `Delete` 态给 `TablePicker` 传一个**空操作函数**满足该 required 成员，而不是省略它（Plan 15 据此实现）。
 
 ### `TablePicker`（组件，`src/table/components/TablePicker.tsx`）
 - **用途**：`ITablePickerProps` 的渲染实现（Plan 14）。无自身状态，纯粹由 props 驱动。
@@ -337,7 +338,7 @@
 - **成员**：`mode`（`TableEmptyMode`）、`presets?`（`readonly ITablePreset[]`）、`directory`（`string`）、`entries`（`readonly IFileEntry[]`）、`error?`（`string`）、`onModeChange(mode: TableEmptyMode)`（切换内联视图，含「返回」到 `Buttons`）、`onNavigate(path: string)`（进入目录）、`onOpen(dataPath: string)`（打开某表——在该栏内）、`onCreate(directory: string, name: string)`（新建该表——在该栏内）、`onDelete(dataPath: string)`（删除某表，删除前已由本组件二次确认）。
 
 ### `TableEmptyColumn`（组件，`src/table/components/TableEmptyColumn.tsx`）
-- **用途**：`ITableEmptyStateProps` 的渲染实现（Plan 14）——`Buttons` 态渲染「打开表格 / 新建表格 / 删除表格」三个按钮；`Open` / `Delete` 态内联渲染 `TablePicker`（`Open` 传预设、`Delete` 不传）；`Create` 态内联渲染 `TableCreateForm`；删除的 antd 二次确认弹窗在本组件内（受控 `Modal`，同 Plan 06 / 09 既有写法）。
+- **用途**：`ITableEmptyStateProps` 的渲染实现（Plan 15）——`Buttons` 态渲染「打开表格 / 新建表格 / 删除表格」三个按钮；`Open` / `Delete` 态内联渲染 `TablePicker`（`Open` 传预设、`Delete` 不传且 `onSelect` 传空操作）；`Create` 态内联渲染 `TableCreateForm`；删除的 antd 二次确认弹窗在本组件内（受控 `Modal`，同 Plan 06 / 09 既有写法）。
 
 ### 命名沿用（不新增、仅换落点）
 - `INITIAL_TABLE_DATA_TEXT` / `INITIAL_TABLE_SCHEMA_TEXT`（`string` 常量）——新建表格一对文件的初始文本，由 `tableListPanel.ts` 迁到 `tablePanel.ts`，**名字不变**。
@@ -353,19 +354,24 @@
 ### 新增内部 CSS 钩子（非对外命名，登记备查）
 - `.etable-empty`（空栏控件根）、`.etable-empty-actions`（三个按钮行）、`.etable-empty-mode`（按钮 / 组件容器）。表格浏览器沿用既有 `.etable-list*` 类名，不另起。
 
-### 面板内部方法（`TablePanel` 的私有方法，供 Plan 14 视图回调）
+### 面板内部方法（`TablePanel` 的私有方法，供 Plan 15 视图回调）
 - `TablePanel.setEmptyMode(columnIndex, mode)` —— 切换某栏空栏内联视图（进入 `Open` / `Delete` 时顺带取该目录子条目）。
 - `TablePanel.navigatePicker(columnIndex, path)` —— 内联浏览器切换目录并重取子条目。
+- `TablePanel.refreshPicker(columnIndex)` —— 取该栏当前目录的直接子条目写入该栏 `entries` 并发布；用请求序号 `pickerToken` 丢弃过期结果，读失败把该栏 `pickerError` 置为「目录读取失败，请重试。」（`TablePanel.setEmptyMode` / `TablePanel.navigatePicker` / `TablePanel.createIntoColumn` / `TablePanel.deleteFromColumn` 均复用它）。
 - `TablePanel.openIntoColumn(columnIndex, dataPath)` —— 把选中的数据表**在本栏**打开（`TablePanel.setTable` + 该栏序号），不新开面板。
 - `TablePanel.createIntoColumn(columnIndex, directory, name)` —— 在当前目录建一对文件并把新表**在本栏**打开。
 - `TablePanel.deleteFromColumn(columnIndex, dataPath)` —— 删数据 + schema 一对文件后重取该栏浏览器目录（不可撤销，D-13）。
 
 ---
 
-## Plan 14 — `02.1-14-PLAN.md`（表格面板空栏内联承载，实现）
+## Plan 14 — `02.1-14-PLAN.md`（两个可复用组件，实现）
 
-**无新增对外命名**（Plan 13 已定义 `TableEmptyMode` / `ITablePickerProps` / `ITableCreateFormProps` / `ITableEmptyStateProps` 与五个 `TablePanel` 私有方法；本计划只写实现与测试）。新增测试文件 `tableEmptyColumn.test.tsx`（小驼峰文件名）。
+**无新增对外命名**（Plan 13 已定义 `ITablePickerProps` / `ITableCreateFormProps`；本计划只把 `TablePicker` / `TableCreateForm` 两个组件实现出来并登记进 `components/index.ts`）。
 
-## Plan 15 — `02.1-15-PLAN.md`（开发宿主收口，实现）
+## Plan 15 — `02.1-15-PLAN.md`（表格面板空栏内联承载 + 移除独立面板，实现）
+
+**无新增对外命名**（Plan 13 已定义 `TableEmptyMode` / `ITableEmptyStateProps` 与六个 `TablePanel` 私有方法；本计划实现 `TableEmptyColumn`、把空栏接入 `TablePanel`、移除独立列表面板、多表标题、迁移测试）。新增测试文件 `tableEmptyColumn.test.tsx`（小驼峰文件名）；删除 `tableListPanel.ts` / `tableListPanelType.ts` / `components/TableListPanelView.tsx` / `__tests__/tableList.test.tsx`。
+
+## Plan 16 — `02.1-16-PLAN.md`（开发宿主收口，实现）
 
 **无新增对外命名**（仅删除 `openTableDemoPanel` / `TABLE_DEMO_MENU_ID` / `TABLE_DEMO_MENU_TITLE` 与 `tableListPanelType` 注册；迁移 `devHostTable.test.tsx`）。
