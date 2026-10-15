@@ -1,6 +1,6 @@
 # Phase 2.1 — 命名提案（INTERFACE-NAME）
 
-**状态：全部为提案，待用户逐条确认后方可落代码 / 计划 / 配置。**
+**状态：已定稿（随 Plan 01–11 实现落地）。** 本文件条目原为逐条提案；各条目随其所属计划经执行门禁（「可以执行」）批准后写入代码，实际落地的名字与所在文件见文末「最终定稿」一节。如用户对个别命名另有异议，以用户后续指示为准（届时回改代码与本文）。
 
 依据 `AGENTS.md` §Project Rules「重要命名先确认」与 §Code style（方法引用一律写作 `类名.方法名`；类 / 接口 / 枚举本身不写 jsDoc，`type` 别名要写 jsDoc；接口成员默认 `readonly`；数值枚举 + 大驼峰成员；桶文件 `export *`；禁 `import type`）。**每个条目说明「它是干什么的」，只给名字不算报告。**
 
@@ -234,3 +234,63 @@
 ## Plan 12 — `02.1-12-PLAN.md`（旧契约收口）
 
 无新增对外命名（修订 `REQUIREMENTS.md` 的 `CORE-01` / `TABLE-01`、回改 `.planning/phases/03-asset/03-CONTEXT.md` 受影响的 D-04 / D-05 / D-06 / D-11 及全部相关参考 / 结构说明、回改 `03-UI-SPEC.md` 的资源层前提）。
+
+---
+
+## 最终定稿
+
+> Phase 2.1 收口（Plan 12）——下列名字已随 Plan 01–11 写入代码，实际落点以仓库为准。与「提案」的偏差逐条注明。
+
+### editor-core（资源层 / 文件系统 / 测试装配）
+
+| 名字 | 归属 | 实现文件 |
+|------|------|----------|
+| `IResourceIdentifier`（= `string`） | 资源标识 = 纯文件路径 | `packages/libs/editor-core/src/resource/types.ts` |
+| `ResourceContent`（= `string \| Uint8Array`） | 资源内容 | `packages/libs/editor-core/src/resource/types.ts` |
+| `IFileEntry` | 索引条目 | `packages/libs/editor-core/src/resource/types.ts` |
+| `IFileIndex` / `FileIndex` | 项目文件索引 | `packages/libs/editor-core/src/resource/types.ts` / `resource/fileIndex.ts` |
+| `IContentCache` / `ContentCache` | 内容缓存池 | `packages/libs/editor-core/src/resource/types.ts` / `resource/contentCache.ts` |
+| `CONTENT_CACHE_MAX_BYTES`（= 8 MiB） | 缓存上限默认值 | `packages/libs/editor-core/src/resource/types.ts` |
+| `IResourceSystemOptions` | 初始化选项（`ignore?`） | `packages/libs/editor-core/src/resource/types.ts` |
+| `EditorEntryKind`（`const enum`：`File` / `Directory`） | 目录条目种类 | `packages/libs/editor-core/src/fs/types.ts` |
+| `IEditorDirectoryEntry` | `listDirectory` 条目 | `packages/libs/editor-core/src/fs/types.ts` |
+| `FakeFileSystem` | 共享测试替身 | `packages/libs/editor-core/src/__tests__/fixtures.ts` |
+| `createCoreHarness(fs, ignore?)` | 测试装配工厂 | `packages/libs/editor-core/src/__tests__/fixtures.ts` |
+
+### editor-impl（表格 / 接缝 / 测试装配）
+
+| 名字 | 归属 | 实现文件 |
+|------|------|----------|
+| `ITablePanelTarget`（成员 `dataPath`） | 表格目标 = 单一数据文件路径 | `packages/libs/editor-impl/src/table/types.ts` |
+| `ITablePreset`（成员 `name` / `path`） | 预设表条目（唯一声明处） | `packages/libs/editor-impl/src/react/types.ts` |
+| `ITableEditorCapabilities.tablePresets?` | 预设表注入接缝 | `packages/libs/editor-impl/src/react/capabilities.ts` |
+| `isSchemaPath` / `deriveSchemaPath` / `isTableDataPath` | 路径约定判定 / 推导 | `packages/libs/editor-impl/src/table/resourceType.ts` |
+| `SYSTEM_PREFIX_END_MARKER` | `.jsonc` 系统前缀结束标记 | `packages/libs/editor-impl/src/table/model/tableText.ts` |
+| `TableTextParseStatus`（`const enum`：`Conforming` / `NeedsCommentStrip` / `Invalid`） | 解析结论 | `packages/libs/editor-impl/src/table/model/tableText.ts` |
+| `ITableTextParseResult`（成员 `status` / `prefix` / `value?`） | 解析结果 | `packages/libs/editor-impl/src/table/model/tableText.ts` |
+| `parseTableText(text)` / `serializeTableText(value, prefix)` | 解析 / 序列化（取代原 `(…, path)` 形态） | `packages/libs/editor-impl/src/table/model/tableText.ts` |
+| `ITablePanelViewState.commentStripPending` | 注释剥离确认状态 | `packages/libs/editor-impl/src/table/tablePanel.ts` |
+| `ITablePanelViewProps.onConfirmCommentStrip` / `onCancelCommentStrip` | 确认 / 取消回调 | `packages/libs/editor-impl/src/table/tablePanel.ts` |
+| `TablePanel.confirmCommentStrip(columnIndex)` / `TablePanel.cancelCommentStrip(columnIndex)` | 面板方法 | `packages/libs/editor-impl/src/table/tablePanel.ts` |
+| `tableListPanelType`（`IEditorPanelType`） | 「打开表格」列表面板类型 | `packages/libs/editor-impl/src/table/tableListPanelType.ts` |
+| `TableListPanel`（`implements IEditorPanel`） | 列表面板实例 | `packages/libs/editor-impl/src/table/tableListPanel.ts` |
+| `TableListPanel.selectDirectory(path)` / `TableListPanel.createTable(directoryPath, name)` / `TableListPanel.deleteTable(dataPath)` / `TableListPanel.openTable(dataPath, opener)` | 面板方法 | `packages/libs/editor-impl/src/table/tableListPanel.ts` |
+| `INITIAL_TABLE_DATA_TEXT` / `INITIAL_TABLE_SCHEMA_TEXT` | 新建表格初始文本 | `packages/libs/editor-impl/src/table/tableListPanel.ts` |
+| `ITableListPanelViewState` / `ITableListPanelViewProps` | 列表面板视图类型 | `packages/libs/editor-impl/src/table/components/TableListPanelView.tsx` |
+| `FakeFileSystem`（impl 侧自持） / `createTableHarness(...)` | 表格测试替身与装配工厂 | `packages/libs/editor-impl/src/table/__tests__/fixtures.ts` |
+
+### editor-dev（开发宿主）
+
+| 名字 | 归属 | 实现文件 |
+|------|------|----------|
+| `DEMO_PANEL_TYPE`（既有，未改名） | 演示面板类型 | `packages/apps/editor-dev/src/demo/demoPanel.ts` |
+| `DEMO_SAMPLE_PATH`（`demo/sample.txt`） | 示例文件路径 | `packages/apps/editor-dev/src/demo/demoPanel.ts` |
+| `IMemoryBackend`（`extends IEditorFileSystem`） | 内存后端契约 | `packages/apps/editor-dev/src/backend/types.ts` |
+| `MemoryBackend`（`implements IMemoryBackend`） | 内存文件系统实现 | `packages/apps/editor-dev/src/backend/memoryBackend.ts` |
+| `TABLE_DEMO_DATA_PATH` / `TABLE_DEMO_SCHEMA_PATH` | 演示表文件路径 | `packages/apps/editor-dev/src/demo/tableDemo.ts` |
+| `TABLE_PRESETS`（`readonly ITablePreset[]`） | 预设表清单 | `packages/apps/editor-dev/src/demo/tableDemo.ts` |
+
+### 与提案的偏差
+
+- 无实质偏差：提案名字均按原样落地。形态上的两处收窄已在 Plan 06 记录——`parseTableText` / `serializeTableText` 的签名由原提案的 `(…, path)` 改为按内容判定的 `(text)` / `(value, prefix)`；`EditorEntryKind` 落在 `fs/types.ts`（提案未指定承载文件）。
+- 本阶段未新增除上表以外的对外命名。
