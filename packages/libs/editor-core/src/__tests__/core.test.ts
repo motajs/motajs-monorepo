@@ -163,7 +163,7 @@ describe('EditorCore 组装', () => {
   it('initialize 下发注入并驱动面板与资源系统', async () => {
     const core = new EditorCore();
     const injection = new FakeEditorInjection();
-    const id = Object.freeze({ type: 1, id: 'alpha' });
+    const id = Object.freeze({ type: 1, id: 'alpha', path: 'test' });
     injection.seed(id, 'v1');
 
     await expect(core.initialize(injection)).resolves.toBeUndefined();
@@ -187,7 +187,7 @@ describe('EditorCore 初始化生命周期', () => {
   it('重复 initialize 只生效一次并记 warn', async () => {
     const core = new EditorCore();
     const injection = new FakeEditorInjection();
-    const id = Object.freeze({ type: 1, id: 'alpha' });
+    const id = Object.freeze({ type: 1, id: 'alpha', path: 'test' });
     injection.seed(id, 'v1');
     await core.initialize(injection);
     const warnSpy = vi.spyOn(logger, 'warn');
@@ -209,7 +209,7 @@ describe('EditorCore 初始化生命周期', () => {
   it('dispose 后 initialize 被拒并记 error', async () => {
     const core = new EditorCore();
     const injection = new FakeEditorInjection();
-    const id = Object.freeze({ type: 1, id: 'alpha' });
+    const id = Object.freeze({ type: 1, id: 'alpha', path: 'test' });
     injection.seed(id, 'v1');
     await core.initialize(injection);
     await core.dispose();
@@ -234,7 +234,7 @@ describe('EditorCore 释放', () => {
   it('dispose 后三系统状态复位', async () => {
     const core = new EditorCore();
     const injection = new FakeEditorInjection();
-    const id = Object.freeze({ type: 1, id: 'alpha' });
+    const id = Object.freeze({ type: 1, id: 'alpha', path: 'test' });
     injection.seed(id, 'v1');
     await core.initialize(injection);
 

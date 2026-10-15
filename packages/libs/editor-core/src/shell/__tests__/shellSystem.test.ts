@@ -602,7 +602,7 @@ describe('ShellSystem 资源桥接', () => {
     const system = await createSystem();
     const panels: FakePanel[] = [];
     registerType(system, 'table', '表格面板', panels);
-    const id = Object.freeze({ type: 1, id: 'alpha' });
+    const id = Object.freeze({ type: 1, id: 'alpha', path: 'test' });
 
     system.injection.seed(id, 'v1');
 
@@ -622,7 +622,7 @@ describe('ShellSystem 资源桥接', () => {
     const system = await createSystem();
     const panels: FakePanel[] = [];
     registerType(system, 'table', '表格面板', panels);
-    const id = Object.freeze({ type: 2, id: 'beta' });
+    const id = Object.freeze({ type: 2, id: 'beta', path: 'test' });
 
     system.injection.seed(id, 'v1');
 

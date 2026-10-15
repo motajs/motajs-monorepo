@@ -70,7 +70,7 @@ class FakeResourceInjection implements IResourceInjection {
 }
 
 const TYPE = 1;
-const ID: IResourceIdentifier = Object.freeze({ type: TYPE, id: 'alpha' });
+const ID: IResourceIdentifier = Object.freeze({ type: TYPE, id: 'alpha', path: 'test' });
 
 describe('ResourceSystem 最小闭环', () => {
   // requestResourceList 首次请求后端一次，二次命中列表缓存不再请求后端
@@ -96,7 +96,7 @@ describe('ResourceSystem 最小闭环', () => {
     await system.initialize(injection);
 
     const hit = await system.requestResource<string>(ID);
-    const miss = await system.requestResource<string>({ type: TYPE, id: 'missing' });
+    const miss = await system.requestResource<string>({ type: TYPE, id: 'missing', path: 'test' });
 
     expect(hit).not.toBeNull();
     expect(hit?.identifier).toBe(ID);

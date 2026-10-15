@@ -5,6 +5,8 @@ export interface IResourceIdentifier {
   readonly type: number;
   /** 资源的标识符 */
   readonly id: string;
+  /** 资源的文件路径 */
+  readonly path: string;
 }
 
 export interface IResource<T> {
