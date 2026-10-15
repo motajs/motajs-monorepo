@@ -31,32 +31,15 @@ function createTableIcon(): ReactNode {
 }
 
 /**
- * 判断一个未知值是否为表格面板目标：非 null 对象且 `data` / `schema` 均为资源标识
+ * 判断一个未知值是否为表格面板目标：非 null 对象且 `dataPath` 为字符串
  * @param value 待判断的值，来自打开参数的不透明记录
- * @returns 两个键均为带数值 `type` 与字符串 `id` 的对象时为 true
+ * @returns `dataPath` 为字符串时为 true
  */
 function isTablePanelTarget(value: unknown): value is ITablePanelTarget {
   if (typeof value !== 'object' || value === null) return false;
+  if (!('dataPath' in value)) return false;
 
-  if (!('data' in value) || !('schema' in value)) return false;
-
-  const data = value.data;
-  const schema = value.schema;
-
-  return (
-    typeof data === 'object' &&
-    data !== null &&
-    'type' in data &&
-    typeof data.type === 'number' &&
-    'id' in data &&
-    typeof data.id === 'string' &&
-    typeof schema === 'object' &&
-    schema !== null &&
-    'type' in schema &&
-    typeof schema.type === 'number' &&
-    'id' in schema &&
-    typeof schema.id === 'string'
-  );
+  return typeof value.dataPath === 'string';
 }
 
 export const tablePanelType: IEditorPanelType = Object.freeze({

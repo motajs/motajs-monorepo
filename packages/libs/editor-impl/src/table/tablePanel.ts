@@ -1,12 +1,7 @@
 import { Store } from '@tanstack/store';
 import { useStore } from '@tanstack/react-store';
-import {
-  IEditorPanel,
-  IEditorPanelContext,
-  IEditorPanelFactoryParam,
-  IResourceIdentifier,
-  IUndoContext,
-} from '@motajs/editor-core';
+import { Button, Modal } from 'antd';
+import { IEditorPanel, IEditorPanelContext, IEditorPanelFactoryParam, IUndoContext } from '@motajs/editor-core';
 import { get } from 'es-toolkit/compat';
 import { createElement, FC, ReactElement, useCallback, useEffect, useRef, useState } from 'react';
 import { ICodeEditorOpener, ITablePanelOpener } from '../react';
@@ -20,7 +15,8 @@ import {
   TablePanelStatus,
 } from './components/TableGrid';
 import { buildTableTree } from './model/traversal';
-import { buildSchemaTree, isSchemaResourceId } from './model/schemaPresentation';
+import { buildSchemaTree } from './model/schemaPresentation';
+import { parseTableText, serializeTableText, TableTextParseStatus } from './model/tableText';
 import {
   deleteByFieldPath,
   getParentFieldPath,
@@ -30,7 +26,7 @@ import {
   setByFieldPath,
 } from './model/fieldPath';
 import { validateId, validateValue } from './model/validation';
-import { tableSchemaResourceId } from './resourceType';
+import { deriveSchemaPath, isSchemaPath } from './resourceType';
 
 /** 多栏布局中每栏的默认像素宽度 */
 const DEFAULT_COLUMN_WIDTH = 500;
@@ -108,6 +104,10 @@ interface ITablePanelColumn {
   data: unknown;
   /** 该栏最近读取到的 schema 内容 */
   schema: unknown;
+  /** 该栏主文件记住的系统前缀原文，写回时逐字还原；无前缀时为 `''` */
+  prefix: string;
+  /** 该栏待确认剥离注释时暂存的宽松解析值；无需确认时为 undefined */
+  pendingStrip: unknown;
   /** 该栏的视图状态订阅源 */
   readonly store: Store<ITablePanelViewState>;
 }
@@ -125,6 +125,8 @@ export interface ITablePanelViewState {
   readonly error?: string;
   /** 可选的面板标题（资源名等），缺省时不显示 */
   readonly title?: string;
+  /** 该栏是否正等待用户确认「剥离注释后打开」；为真时视图渲染确认弹窗 */
+  readonly commentStripPending?: boolean;
 }
 
 /** 面板渲染根的 props：按可用宽度铺出多栏，每栏一张独立订阅的表格 */
@@ -149,6 +151,10 @@ interface ITablePanelViewProps {
   readonly onOpenInCodeEditor: (columnIndex: number, opener: ICodeEditorOpener) => void;
   /** 某栏的「关闭本栏表格」回调 */
   readonly onCloseColumn: (columnIndex: number) => void;
+  /** 某栏确认「剥离注释后打开」的回调 */
+  readonly onConfirmCommentStrip: (columnIndex: number) => void;
+  /** 某栏取消「剥离注释后打开」的回调 */
+  readonly onCancelCommentStrip: (columnIndex: number) => void;
 }
 
 /** 单栏组件的 props：把该栏序号与各回调转交给一张表格 */
@@ -171,6 +177,10 @@ interface ITableColumnProps {
   readonly onOpenInCodeEditor: (columnIndex: number, opener: ICodeEditorOpener) => void;
   /** 该栏的「关闭本栏表格」回调 */
   readonly onCloseColumn: (columnIndex: number) => void;
+  /** 该栏确认「剥离注释后打开」的回调 */
+  readonly onConfirmCommentStrip: (columnIndex: number) => void;
+  /** 该栏取消「剥离注释后打开」的回调 */
+  readonly onCancelCommentStrip: (columnIndex: number) => void;
 }
 
 /**
@@ -207,24 +217,6 @@ function isTableUndoData(value: unknown): value is ITableUndoData {
 }
 
 /**
- * 把代码编辑器返回的文本解析为 JSON 对象；解析失败或不是对象时返回 null（T-02-23）
- * @param text 编辑器返回的文本
- * @returns 解析出的普通对象；解析失败或不是对象时为 null
- */
-function parseJsonRecord(text: string): Record<string, unknown> | null {
-  let parsed: unknown;
-
-  // 返回文本来自外部编辑器，必须解析校验后才允许写回，解析失败即拒绝（T-02-23）
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-    return null;
-  }
-
-  return isRecord(parsed) ? parsed : null;
-}
-
-/**
  * 从打开参数收窄每栏宽度：缺省、非数字或非正数时回退默认宽度
  * @param openParam 面板打开参数（不透明记录）
  * @returns 每栏的像素宽度
@@ -245,6 +237,49 @@ function resolveColumnWidth(openParam: Record<string, unknown> | undefined): num
  */
 function resolveColumnCount(windowWidth: number, columnWidth: number): number {
   return Math.max(1, Math.floor(windowWidth / columnWidth));
+}
+
+/**
+ * 渲染某栏的「剥离注释后打开」确认弹窗：使用 antd `Modal`，确认 / 取消转交面板方法
+ *
+ * 确认框不是注入接缝，直接在表格面板视图内渲染；不使用浏览器原生对话框。
+ * @param onConfirm 确认回调
+ * @param onCancel 取消回调
+ * @returns 确认弹窗元素
+ */
+function renderCommentStripModal(onConfirm: () => void, onCancel: () => void): ReactElement {
+  return createElement(
+    Modal,
+    {
+      open: true,
+      title: '该文件包含注释',
+      closable: false,
+      maskClosable: false,
+      keyboard: false,
+      onCancel,
+      footer: createElement(
+        'div',
+        { className: 'etable-strip-footer' },
+        createElement(
+          Button,
+          { size: 'small', autoInsertSpace: false, 'data-test-id': 'table-strip-cancel', onClick: onCancel },
+          '取消',
+        ),
+        createElement(
+          Button,
+          {
+            size: 'small',
+            type: 'primary',
+            autoInsertSpace: false,
+            'data-test-id': 'table-strip-confirm',
+            onClick: onConfirm,
+          },
+          '继续',
+        ),
+      ),
+    },
+    '该文件包含注释或尾逗号；打开并保存后会删除全部注释。是否继续？',
+  );
 }
 
 /**
@@ -282,6 +317,14 @@ function TableColumn(props: ITableColumnProps): ReactElement {
     (): void => props.onCloseColumn(props.columnIndex),
     [props.onCloseColumn, props.columnIndex],
   );
+  const onConfirmCommentStrip = useCallback(
+    (): void => props.onConfirmCommentStrip(props.columnIndex),
+    [props.onConfirmCommentStrip, props.columnIndex],
+  );
+  const onCancelCommentStrip = useCallback(
+    (): void => props.onCancelCommentStrip(props.columnIndex),
+    [props.onCancelCommentStrip, props.columnIndex],
+  );
   const gridProps: ITableGridProps = {
     status: view.status,
     rows: view.rows,
@@ -297,11 +340,14 @@ function TableColumn(props: ITableColumnProps): ReactElement {
     onOpenInCodeEditor,
     onCloseColumn,
   };
+  const stripModal =
+    view.commentStripPending === true ? renderCommentStripModal(onConfirmCommentStrip, onCancelCommentStrip) : null;
 
   return createElement(
     'div',
     { className: 'etable-column', style: { flexGrow: 1, flexShrink: 1, flexBasis: 0 } },
     createElement(TableGrid, gridProps),
+    stripModal,
   );
 }
 
@@ -355,6 +401,8 @@ function TablePanelView(props: ITablePanelViewProps): ReactElement {
         onOpenSchema: props.onOpenSchema,
         onOpenInCodeEditor: props.onOpenInCodeEditor,
         onCloseColumn: props.onCloseColumn,
+        onConfirmCommentStrip: props.onConfirmCommentStrip,
+        onCancelCommentStrip: props.onCancelCommentStrip,
       }),
     );
   }
@@ -406,6 +454,8 @@ export class TablePanel implements IEditorPanel, ITablePanel {
         onOpenSchema: (columnIndex, opener): void => void this.openSchemaPanel(opener, columnIndex),
         onOpenInCodeEditor: (columnIndex, opener): void => void this.openCurrentViewInCodeEditor(opener, columnIndex),
         onCloseColumn: (columnIndex): void => this.closeColumn(columnIndex),
+        onConfirmCommentStrip: (columnIndex): void => void this.confirmCommentStrip(columnIndex),
+        onCancelCommentStrip: (columnIndex): void => this.cancelCommentStrip(columnIndex),
       });
   }
 
@@ -418,8 +468,8 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   }
 
   /**
-   * 获取此面板实例的显示标题，供外壳标签按实例显示（如「表格 table.demo」）
-   * @returns 已设目标时为「表格 <资源 id>」；未设目标时为 undefined，外壳据此回退面板类型名
+   * 获取此面板实例的显示标题，供外壳标签按实例显示（如「表格 tables/demo.json」）
+   * @returns 已设目标时为「表格 <数据文件路径>」；未设目标时为 undefined，外壳据此回退面板类型名
    */
   getTitle(): string | undefined {
     const column = this.columns[0];
@@ -428,7 +478,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
 
     const target = column.target;
 
-    return target === null ? undefined : `表格 ${target.data.id}`;
+    return target === null ? undefined : `表格 ${target.dataPath}`;
   }
 
   async onFocus(): Promise<void> {}
@@ -462,7 +512,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     column.target = target;
 
     // 换到另一张表（或此前无目标）时先清掉旧表行树：不同表的旧行在新表加载期间不能继续显示（P26）
-    if (previous === null || previous.data.id !== target.data.id) {
+    if (previous === null || previous.dataPath !== target.dataPath) {
       this.publish(columnIndex, TablePanelStatus.Loading, []);
     }
 
@@ -482,6 +532,8 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     column.target = null;
     column.data = null;
     column.schema = null;
+    column.prefix = '';
+    column.pendingStrip = undefined;
     this.nextToken(columnIndex);
     this.publish(columnIndex, TablePanelStatus.NoTarget, []);
   }
@@ -503,25 +555,23 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   /**
    * 优先把当前表的 schema 放进本面板的一个空栏；没有空栏时才经注入的打开器新开面板（D-06 / P1）
    * @param opener 组合根注入的表格面板打开器
-   * @param columnIndex 取表名的栏序号（0 基），省略为第 0 栏
+   * @param columnIndex 取目标的栏序号（0 基），省略为第 0 栏
    */
   async openSchemaPanel(opener: ITablePanelOpener, columnIndex: number = 0): Promise<void> {
-    const name = this.currentTableName(columnIndex);
+    const target = this.columnAt(columnIndex).target;
 
-    if (name === null) return;
+    if (target === null) return;
 
-    const target: ITablePanelTarget = {
-      data: tableSchemaResourceId(name),
-      schema: tableSchemaResourceId(name),
-    };
+    // 当前已是 schema 视图时 deriveSchemaPath 原样返回，不再重复派生
+    const schemaTarget: ITablePanelTarget = { dataPath: deriveSchemaPath(target.dataPath) };
     const emptyIndex = this.findEmptyColumnIndex();
 
     if (emptyIndex !== -1) {
-      this.setTable(target, emptyIndex);
+      this.setTable(schemaTarget, emptyIndex);
       return;
     }
 
-    const param: ITablePanelParam = { target };
+    const param: ITablePanelParam = { target: schemaTarget };
 
     await opener.open(param);
   }
@@ -537,26 +587,28 @@ export class TablePanel implements IEditorPanel, ITablePanel {
 
     if (target === null) return;
 
-    const content = JSON.stringify(column.data, null, 2) ?? '';
-    const result = await opener.open({ title: target.data.id, content });
+    const content = serializeTableText(column.data, column.prefix);
+    const result = await opener.open({ title: target.dataPath, content });
 
     if (result === null) return;
 
-    const parsed = parseJsonRecord(result);
+    const parsed = parseTableText(result);
 
-    if (parsed === null) {
+    if (parsed.status !== TableTextParseStatus.Conforming || !isRecord(parsed.value)) {
       this.publishError(columnIndex, '内容不是合法的 JSON，未写回。');
       return;
     }
 
-    if (!(await this.persist(columnIndex, parsed))) return;
+    column.prefix = parsed.prefix;
+
+    if (!(await this.persist(columnIndex, parsed.value))) return;
 
     this.context.addUndoContext(this, {
       type: TableUndoType.Replace,
-      data: { columnIndex, path: '', previousValue: column.data, nextValue: parsed },
+      data: { columnIndex, path: '', previousValue: column.data, nextValue: parsed.value },
     });
-    this.applyData(columnIndex, parsed);
-    this.refreshDependents(columnIndex, target.data);
+    this.applyData(columnIndex, parsed.value);
+    this.refreshDependents(columnIndex, target.dataPath);
   }
 
   /**
@@ -588,7 +640,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       data: { columnIndex, path: key, previousValue, nextValue: value },
     });
     this.applyData(columnIndex, next);
-    this.refreshDependents(columnIndex, column.target.data);
+    this.refreshDependents(columnIndex, column.target.dataPath);
   }
 
   /**
@@ -636,7 +688,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
         data: { columnIndex, path, previousValue: undefined, nextValue: {}, anchor },
       });
       this.applyData(columnIndex, ordered, '添加成功');
-      this.refreshDependents(columnIndex, column.target.data);
+      this.refreshDependents(columnIndex, column.target.dataPath);
       return;
     }
 
@@ -647,13 +699,13 @@ export class TablePanel implements IEditorPanel, ITablePanel {
 
     if (!(await this.persist(columnIndex, next))) return;
 
-    this.refreshDependents(columnIndex, column.target.data);
+    this.refreshDependents(columnIndex, column.target.dataPath);
 
     if (nextSchema !== undefined) {
       if (!(await this.persistSchema(columnIndex, nextSchema))) return;
 
       column.schema = nextSchema;
-      this.refreshDependents(columnIndex, column.target.schema);
+      this.refreshDependents(columnIndex, deriveSchemaPath(column.target.dataPath));
     }
 
     this.context.addUndoContext(this, {
@@ -683,7 +735,57 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       data: { columnIndex, path: key, previousValue, nextValue: undefined },
     });
     this.applyData(columnIndex, next, '删除成功');
-    this.refreshDependents(columnIndex, column.target.data);
+    this.refreshDependents(columnIndex, column.target.dataPath);
+  }
+
+  /**
+   * 确认「剥离注释后打开」某一栏：以暂存的宽松解析值 + 空前缀应用该栏内容，并清空暂存与提示
+   * @param columnIndex 栏序号（0 基）
+   */
+  async confirmCommentStrip(columnIndex: number = 0): Promise<void> {
+    const column = this.columnAt(columnIndex);
+
+    if (column.pendingStrip === undefined) return;
+
+    const value = column.pendingStrip;
+
+    column.pendingStrip = undefined;
+    column.prefix = '';
+
+    const target = column.target;
+
+    if (target === null) {
+      this.publish(columnIndex, TablePanelStatus.NoTarget, []);
+      return;
+    }
+
+    if (this.isSchemaView(columnIndex)) {
+      this.applySchemaLoaded(columnIndex, value);
+      return;
+    }
+
+    const schemaText = await this.readText(deriveSchemaPath(target.dataPath));
+    const schema = schemaText === undefined ? undefined : parseTableText(schemaText).value;
+
+    this.applyLoaded(columnIndex, schema, value);
+  }
+
+  /**
+   * 取消「剥离注释后打开」某一栏：清空暂存与提示并关闭该栏（不打开）
+   * @param columnIndex 栏序号（0 基）
+   */
+  cancelCommentStrip(columnIndex: number = 0): void {
+    const column = this.columnAt(columnIndex);
+
+    if (column.pendingStrip === undefined) return;
+
+    column.pendingStrip = undefined;
+    column.prefix = '';
+    column.target = null;
+    column.data = null;
+    column.schema = null;
+    this.nextToken(columnIndex);
+    this.publish(columnIndex, TablePanelStatus.NoTarget, []);
   }
 
   /**
@@ -706,6 +808,8 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       target: null,
       data: null,
       schema: null,
+      prefix: '',
+      pendingStrip: undefined,
       store: new Store<ITablePanelViewState>({ status: TablePanelStatus.NoTarget, rows: [], schemaMode: false }),
     };
   }
@@ -723,16 +827,21 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   }
 
   /**
-   * 经资源层读取一个资源的内容
-   * @param id 资源标识符
-   * @returns 资源内容；资源不在资源列表中时为 undefined
+   * 经资源层读取一个资源的原文
+   * @param path 资源路径
+   * @returns 资源原文；资源不存在或读取为空时为 undefined
    */
-  private async readResource(id: IResourceIdentifier): Promise<unknown> {
-    const resource = await this.context.requestResource(id);
+  private async readText(path: string): Promise<string | undefined> {
+    const resource = await this.context.requestResource(path);
 
     if (resource === null) return undefined;
 
-    return resource.request();
+    const content = await resource.request();
+
+    if (content === undefined) return undefined;
+    if (typeof content === 'string') return content;
+
+    return new TextDecoder().decode(content);
   }
 
   /**
@@ -755,10 +864,26 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     this.columnAt(columnIndex).store.setState({
       status,
       rows,
-      schemaMode: target !== null && isSchemaResourceId(target.data.id),
-      title: target === null ? undefined : target.data.id,
+      schemaMode: target !== null && isSchemaPath(target.dataPath),
+      title: target === null ? undefined : target.dataPath,
       message,
       error,
+    });
+  }
+
+  /**
+   * 发布某栏的「待确认剥离注释」视图状态：不呈现内容，仅置提示位供视图渲染确认弹窗
+   * @param columnIndex 栏序号（0 基）
+   */
+  private publishCommentStrip(columnIndex: number): void {
+    const target = this.columnAt(columnIndex).target;
+
+    this.columnAt(columnIndex).store.setState({
+      status: TablePanelStatus.Loading,
+      rows: [],
+      schemaMode: target !== null && isSchemaPath(target.dataPath),
+      title: target === null ? undefined : target.dataPath,
+      commentStripPending: true,
     });
   }
 
@@ -841,28 +966,39 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   /**
    * 判断某栏目标是否为 schema 视图（schema 视图不向资源层请求 schema）
    * @param columnIndex 栏序号（0 基）
-   * @returns 该栏的数据资源 id 形如 `table#schema.<name>` 时为 true
+   * @returns 该栏目标路径为 schema 约定文件时为 true
    */
   private isSchemaView(columnIndex: number): boolean {
     const target = this.columnAt(columnIndex).target;
 
-    return target !== null && isSchemaResourceId(target.data.id);
+    return target !== null && isSchemaPath(target.dataPath);
   }
 
   /**
-   * 从某栏目标的资源 id 推导表名
+   * 以已解析的主文件值重算某栏视图：schema 视图直接落 schema 呈现，数据视图再读 schema 后落数据行树
    * @param columnIndex 栏序号（0 基）
-   * @returns 表名；该栏目标未设置或 id 不合约定时为 null
+   * @param target 该栏目标
+   * @param value 主文件解析出的值
+   * @param token 本次刷新的请求序号，用于丢弃在途结果
    */
-  private currentTableName(columnIndex: number): string | null {
-    const target = this.columnAt(columnIndex).target;
+  private async loadPrimary(
+    columnIndex: number,
+    target: ITablePanelTarget,
+    value: unknown,
+    token: number,
+  ): Promise<void> {
+    if (this.isSchemaView(columnIndex)) {
+      this.applySchemaLoaded(columnIndex, value);
+      return;
+    }
 
-    if (target === null) return null;
+    const schemaText = await this.readText(deriveSchemaPath(target.dataPath));
 
-    const id = target.data.id;
-    const prefix = 'table.';
+    if (this.requestTokens[columnIndex] !== token) return;
 
-    return id.startsWith(prefix) ? id.slice(prefix.length) : null;
+    const schema = schemaText === undefined ? undefined : parseTableText(schemaText).value;
+
+    this.applyLoaded(columnIndex, schema, value);
   }
 
   /**
@@ -871,15 +1007,16 @@ export class TablePanel implements IEditorPanel, ITablePanel {
    * @param data 变更后的完整数据
    */
   private async writeData(columnIndex: number, data: Record<string, unknown>): Promise<void> {
-    const target = this.columnAt(columnIndex).target;
+    const column = this.columnAt(columnIndex);
+    const target = column.target;
 
     if (target === null) return;
 
-    const resource = await this.context.requestResource<Record<string, unknown>>(target.data);
+    const resource = await this.context.requestResource(target.dataPath);
 
     if (resource === null) return;
 
-    await resource.write(data);
+    await resource.write(serializeTableText(data, column.prefix));
   }
 
   /**
@@ -905,16 +1042,17 @@ export class TablePanel implements IEditorPanel, ITablePanel {
    * @returns 写入成功时为 true
    */
   private async persistSchema(columnIndex: number, schema: unknown): Promise<boolean> {
-    const target = this.columnAt(columnIndex).target;
+    const column = this.columnAt(columnIndex);
+    const target = column.target;
 
     if (target === null) return true;
 
-    const resource = await this.context.requestResource<Record<string, unknown>>(target.schema);
+    const resource = await this.context.requestResource(deriveSchemaPath(target.dataPath));
 
     if (resource === null) return true;
 
     try {
-      if (isRecord(schema)) await resource.write(schema);
+      if (isRecord(schema)) await resource.write(serializeTableText(schema, column.prefix));
 
       return true;
     } catch {
@@ -929,15 +1067,16 @@ export class TablePanel implements IEditorPanel, ITablePanel {
    * @param schema 要写回的 schema 内容
    */
   private async writeSchema(columnIndex: number, schema: unknown): Promise<void> {
-    const target = this.columnAt(columnIndex).target;
+    const column = this.columnAt(columnIndex);
+    const target = column.target;
 
     if (target === null) return;
 
-    const resource = await this.context.requestResource<Record<string, unknown>>(target.schema);
+    const resource = await this.context.requestResource(deriveSchemaPath(target.dataPath));
 
     if (resource === null) return;
 
-    if (isRecord(schema)) await resource.write(schema);
+    if (isRecord(schema)) await resource.write(serializeTableText(schema, column.prefix));
   }
 
   /**
@@ -1098,7 +1237,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     if (next === undefined) return;
 
     await this.writeData(columnIndex, next);
-    this.refreshDependents(columnIndex, column.target.data);
+    this.refreshDependents(columnIndex, column.target.dataPath);
 
     const schema = isUndo ? context.data.previousSchema : context.data.nextSchema;
 
@@ -1107,18 +1246,18 @@ export class TablePanel implements IEditorPanel, ITablePanel {
 
       if (isRecord(schema)) column.schema = schema;
 
-      this.refreshDependents(columnIndex, column.target.schema);
+      this.refreshDependents(columnIndex, deriveSchemaPath(column.target.dataPath));
     }
 
     this.applyData(columnIndex, next);
   }
 
   /**
-   * 请求某一栏目标表的数据与 schema 资源并重算行树；该栏无目标时落回未设目标态
+   * 请求某一栏目标表的原文并解析后重算行树；该栏无目标时落回未设目标态
    *
    * 刷新原则上**原地更新**：该栏已就绪且已有行树时不再先切成加载态，避免整棵行树卸载后重挂
-   * （P26）；仅首载（尚无就绪行树）与失败重试才发加载态。读取完成后经既有的 `applyLoaded` /
-   * `applySchemaLoaded` / `Error` 就地更新，加载 / 空 / 错误 / 未设目标四种状态语义与文案不变。
+   * （P26）；仅首载（尚无就绪行树）与失败重试才发加载态。读到原文后按项目约定解析：合规即打开并
+   * 记住系统前缀；非合规则暂存宽松解析值并请用户确认剥离注释；无效则落固定错误态。
    * @param columnIndex 栏序号（0 基）
    */
   private async refresh(columnIndex: number = 0): Promise<void> {
@@ -1138,21 +1277,32 @@ export class TablePanel implements IEditorPanel, ITablePanel {
 
     // 资源读取失败是行为关键路径：落回固定错误态而非抛穿，面板保持打开（D-29）
     try {
-      if (isSchemaResourceId(target.data.id)) {
-        const schema = await this.readResource(target.data);
-
-        if (this.requestTokens[columnIndex] !== token) return;
-
-        this.applySchemaLoaded(columnIndex, schema);
-        return;
-      }
-
-      const data = await this.readResource(target.data);
-      const schema = await this.readResource(target.schema);
+      const primaryText = await this.readText(target.dataPath);
 
       if (this.requestTokens[columnIndex] !== token) return;
 
-      this.applyLoaded(columnIndex, schema, data);
+      if (primaryText === undefined) {
+        column.prefix = '';
+        await this.loadPrimary(columnIndex, target, undefined, token);
+        return;
+      }
+
+      const parsed = parseTableText(primaryText);
+
+      if (parsed.status === TableTextParseStatus.NeedsCommentStrip) {
+        column.prefix = '';
+        column.pendingStrip = parsed.value;
+        this.publishCommentStrip(columnIndex);
+        return;
+      }
+
+      if (parsed.status === TableTextParseStatus.Invalid) {
+        this.publish(columnIndex, TablePanelStatus.Error, []);
+        return;
+      }
+
+      column.prefix = parsed.prefix;
+      await this.loadPrimary(columnIndex, target, parsed.value, token);
     } catch {
       if (this.requestTokens[columnIndex] !== token) return;
 
@@ -1161,15 +1311,15 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   }
 
   /**
-   * 按被写资源 id 刷新本面板内引用它的其它栏：对每一栏 j（j ≠ columnIndex），当该栏目标的数据或
-   * schema 资源 id 命中 changedId 时重新请求资源并重算行树
+   * 按被写资源路径刷新本面板内引用它的其它栏：对每一栏 j（j ≠ columnIndex），当该栏目标的数据或
+   * schema 路径命中 changedPath 时重新请求资源并重算行树
    *
-   * 只刷新本面板内引用该资源的栏（按 id 精确匹配），不做无差别全量刷新，也绝不做跨面板广播
+   * 只刷新本面板内引用该资源的栏（按路径精确匹配），不做无差别全量刷新，也绝不做跨面板广播
    * （跨面板仍只在切入时刷新，D-15 修订版 / D-31）。
    * @param columnIndex 触发写盘的栏序号（0 基），该栏自身不在此刷新
-   * @param changedId 刚写入的资源标识（数据资源 `table.<name>` 或 schema 资源 `table#schema.<name>`）
+   * @param changedPath 刚写入的资源路径（数据文件路径或其推导出的 schema 路径）
    */
-  private refreshDependents(columnIndex: number, changedId: IResourceIdentifier): void {
+  private refreshDependents(columnIndex: number, changedPath: string): void {
     const count = this.columns.length;
 
     for (let index = 0; index < count; index += 1) {
@@ -1178,7 +1328,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       const target = this.columns[index].target;
 
       if (target === null) continue;
-      if (target.data.id !== changedId.id && target.schema.id !== changedId.id) continue;
+      if (target.dataPath !== changedPath && deriveSchemaPath(target.dataPath) !== changedPath) continue;
 
       void this.refresh(index);
     }
