@@ -1,5 +1,7 @@
-import { IResourceIdentifier } from '@motajs/editor-core';
+import { ITablePreset } from '../react/types';
 import { JSONSchema } from 'json-schema-typed';
+
+export type { ITablePreset };
 
 export const enum TableExternalEditor {
   /** 代码编辑器 */
@@ -68,16 +70,14 @@ export interface ITableRowNode {
 export type TableAction = readonly [mode: TableEditMode, path: readonly string[], value: unknown];
 
 export interface ITablePanelTarget {
-  /** 数据表资源标识，id 形如 `table.<name>` */
-  readonly data: IResourceIdentifier;
-  /** schema 资源标识，id 形如 `table#schema.<name>` */
-  readonly schema: IResourceIdentifier;
+  /** 表格面板要编辑的数据文件路径；schema 路径一律按 `xxx.schema.json(c)` 约定推导，不允许单独指定；schema 视图同样使用此字段，其值本身是一个 schema 文件路径 */
+  readonly dataPath: string;
 }
 
 export interface ITablePanel {
   /**
    * 从外部设置此面板实例某一栏要编辑的目标表
-   * @param target 目标表的数据资源标识与 schema 资源标识
+   * @param target 目标表的单一数据文件路径
    * @param columnIndex 目标栏的序号（0 基）；省略时默认为第 0 栏
    */
   setTable(target: ITablePanelTarget, columnIndex?: number): void;

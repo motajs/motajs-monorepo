@@ -50,3 +50,10 @@ export interface IPointSelectResult {
   /** 选中的 y 坐标 */
   readonly y: number;
 }
+
+export interface ITablePreset {
+  /** 预设表的显示名 */
+  readonly name: string;
+  /** 预设表的数据文件路径 */
+  readonly path: string;
+}
