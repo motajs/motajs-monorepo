@@ -13,7 +13,7 @@
 
 ### CORE（通用接口）
 
-- [x] **CORE-01**: `editor-core` 暴露通用 fs 接口（**只定义接口、不提供实现**），由外部注入真正的实现
+- [x] **CORE-01**: `editor-core` 定义通用文件系统接口（读 / 写 / 列目录 / 建目录 / 移动 / 删除 / 二进制读写），由外部注入实现；core 的资源系统是该接口的唯一调用方（驱动文件系统、维护项目文件索引与内容缓存）
 
 ### DEVHOST（开发宿主，INSERTED）
 
@@ -21,7 +21,7 @@
 
 ### TABLE（表格）
 
-- [x] **TABLE-01**: 用户可编辑 schema 驱动的表格数据
+- [x] **TABLE-01**: 用户可编辑 schema 驱动的表格数据；并可在编辑器内**打开**（预设表 + 目录树）/ **新建** / **删除**表格文件（数据 + schema 一对，按文件名约定推导 schema），表格目标为单一数据文件路径
 
 ### ASSET（素材）
 
@@ -52,13 +52,13 @@
 
 ## Traceability
 
-| Requirement | Phase | Status |
-|-------------|-------|--------|
-| SHELL-01 | Phase 1 | Complete |
-| CORE-01 | Phase 1 | Complete |
-| DEVHOST-01 | Phase 1.1 | Complete |
-| TABLE-01 | Phase 2 | Complete |
-| ASSET-01 | Phase 3 | Pending |
-| MAP-01 | Phase 4 | Pending |
-| CODE-01 | Phase 5 | Pending |
-| EVENT-01 | Phase 6 | Pending |
+| Requirement | Phase | Status | Notes |
+|-------------|-------|--------|-------|
+| SHELL-01 | Phase 1 | Complete | |
+| CORE-01 | Phase 1 | Complete | Phase 2.1 修订：已废止原文「接口只声明、不落地实现」的表述；现为 core 的资源系统驱动注入的文件系统 |
+| DEVHOST-01 | Phase 1.1 | Complete | |
+| TABLE-01 | Phase 2 | Complete | Phase 2.1 扩展：新增「打开（预设表 + 目录树）/ 新建 / 删除」表格文件 |
+| ASSET-01 | Phase 3 | Pending | |
+| MAP-01 | Phase 4 | Pending | |
+| CODE-01 | Phase 5 | Pending | |
+| EVENT-01 | Phase 6 | Pending | |
