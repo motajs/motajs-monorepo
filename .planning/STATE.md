@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "02.1"
 current_phase_name: 资源层重构与表格文件管理
-current_plan: 3
+current_plan: 4
 status: executing
-stopped_at: Completed 02.1-02-PLAN.md
-last_updated: "2026-10-15T11:09:09.344Z"
+stopped_at: Completed 02.1-03-PLAN.md
+last_updated: "2026-10-15T11:35:38.522Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 02.1 execution started
-state_head: 8d5280c15ca7b839108c738b6e450ccc80afd680
+state_head: fa887659e31cd233519bb14fc67285caad65098f
 progress:
   total_phases: 8
-  completed_phases: 0
+  completed_phases: 3
   total_plans: 52
-  completed_plans: 42
+  completed_plans: 43
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 02.1 (资源层重构与表格文件管理) — EXECUTING
-Current Plan: 3
+Current Plan: 4
 Total Plans in Phase: 12
 Status: Ready to execute
 Last activity: 2026-10-15 — Phase 02.1 execution started
@@ -100,6 +100,7 @@ Progress: [██████████] 100%
 | Phase 02 P34 | 11min | 2 tasks | 2 files |
 | Phase 02.1 P01 | 8min | 3 tasks | 4 files |
 | Phase 02.1 P02 | 3min | 2 tasks | 3 files |
+| Phase 02.1 P03 | 9min | 3 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -187,6 +188,9 @@ Recent decisions affecting current work:
 - [Phase 02.1]: 02.1-02: ITablePanelTarget 收敛为单一 readonly dataPath:string（schema 路径按文件名约定推导），删除原 data / schema 两成员；schema 视图复用同一字段
 - [Phase 02.1]: 02.1-02: ITablePreset 唯一声明于接缝层 react/types.ts，table/types.ts 引入后 export type 再导出——维持依赖方向 table → react（react 不得反向 import table）
 - [Phase 02.1]: 02.1-02: 预设表清单经能力接缝注入（ITableEditorCapabilities.tablePresets?），非经面板打开参数（D-11）；缺省时「打开表格」列表只显示目录树
+- [Phase 02.1]: 02.1-03: ResourceSystem.initialize 只接收 fs（省略 options）——本计划不实现忽略模式（Plan 04），避免未使用形参；接口 initialize(fs, options?) 仍成立（实现少参合法）
+- [Phase 02.1]: 02.1-03: readContent 直接委托 fs.readFile（返回原文、不缓存不解析）；writeContent 按 typeof data 分流 writeFile / writeBinary，二进制与文本路径分离（T-02.1-07）
+- [Phase 02.1]: 02.1-03: FakeFileSystem 越界拒绝采用「任一路径段为 .. 即抛错」（比计划描述的以 .. 开头更严）；目录条目由已 seed 文件路径 + 显式 makeDirectory 集合推导，seed 即自动保证父目录可列
 
 ### Pending Todos
 
@@ -213,6 +217,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-15T11:07:15.114Z
-Stopped at: Completed 02.1-02-PLAN.md
+Last session: 2026-10-15T11:35:11.544Z
+Stopped at: Completed 02.1-03-PLAN.md
 Resume file: None
