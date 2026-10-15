@@ -444,3 +444,28 @@
 .etable-list-error {
   color: #cf1322;
 }
+
+.etable-list-row {
+  display: flex;
+  align-items: center;
+}
+
+.etable-list-row .etable-list-entry {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+}
+
+.etable-list-delete {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border: none;
+  background: transparent;
+  color: #cf1322;
+  font: inherit;
+  cursor: pointer;
+}
+
+.etable-list-delete:hover {
+  background: rgba(255, 77, 79, 0.08);
+}

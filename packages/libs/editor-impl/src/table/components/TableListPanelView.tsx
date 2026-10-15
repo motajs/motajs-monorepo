@@ -1,7 +1,7 @@
 import { EditorEntryKind, IFileEntry } from '@motajs/editor-core';
 import { useStore } from '@tanstack/react-store';
 import { Store } from '@tanstack/store';
-import { Button, Input } from 'antd';
+import { Button, Input, Modal } from 'antd';
 import { ChangeEvent, createElement, KeyboardEvent, ReactElement, useCallback, useState } from 'react';
 import { ITablePanelOpener, ITablePreset, useTableCapabilities } from '../../react';
 import { isTableDataPath } from '../resourceType';
@@ -27,6 +27,8 @@ export interface ITableListPanelViewProps {
   readonly onSelectDirectory: (path: string) => void;
   /** 在当前目录新建一对表格文件的回调 */
   readonly onCreate: (directoryPath: string, name: string) => void;
+  /** 删除某张表格（数据 + schema 一对）的回调 */
+  readonly onDelete: (dataPath: string) => void;
   /** 打开某个数据文件的回调，携带表格面板打开器 */
   readonly onOpen: (dataPath: string, opener: ITablePanelOpener) => void;
 }
@@ -118,30 +120,45 @@ function renderDirectoryRow(
 }
 
 /**
- * 渲染一个数据文件行：点击经打开器打开该表
+ * 渲染一个数据文件行：点击经打开器打开该表，另一侧提供删除入口
  * @param entry 可作为表格打开的数据文件条目
  * @param opener 表格面板打开器；缺省时该行不可点
  * @param onOpen 打开回调
+ * @param onRequestDelete 请求删除该表的回调
  * @returns 数据文件行元素
  */
 function renderFileRow(
   entry: IFileEntry,
   opener: ITablePanelOpener | undefined,
   onOpen: (dataPath: string, opener: ITablePanelOpener) => void,
+  onRequestDelete: (dataPath: string) => void,
 ): ReactElement {
   return createElement(
-    'button',
-    {
-      key: `file:${entry.path}`,
-      type: 'button',
-      className: 'etable-list-entry etable-list-file',
-      'data-test-id': `table-list-entry-${entry.path}`,
-      disabled: opener === undefined,
-      onClick: (): void => {
-        if (opener !== undefined) onOpen(entry.path, opener);
+    'div',
+    { key: `file:${entry.path}`, className: 'etable-list-row' },
+    createElement(
+      'button',
+      {
+        type: 'button',
+        className: 'etable-list-entry etable-list-file',
+        'data-test-id': `table-list-entry-${entry.path}`,
+        disabled: opener === undefined,
+        onClick: (): void => {
+          if (opener !== undefined) onOpen(entry.path, opener);
+        },
       },
-    },
-    entry.name,
+      entry.name,
+    ),
+    createElement(
+      'button',
+      {
+        type: 'button',
+        className: 'etable-list-delete',
+        'data-test-id': `table-list-delete-${entry.path}`,
+        onClick: (): void => onRequestDelete(entry.path),
+      },
+      '删除',
+    ),
   );
 }
 
@@ -210,12 +227,56 @@ function TableListCreate(props: ITableListCreateProps): ReactElement {
 }
 
 /**
+ * 渲染删除确认弹窗：使用 antd `Modal`，明确数据与 schema 一对文件不可找回、不可撤销
+ * @param dataPath 待删除的数据文件路径
+ * @param onConfirm 确认回调
+ * @param onCancel 取消回调
+ * @returns 确认弹窗元素
+ */
+function renderDeleteModal(dataPath: string, onConfirm: () => void, onCancel: () => void): ReactElement {
+  return createElement(
+    Modal,
+    {
+      open: true,
+      title: '删除表格',
+      closable: false,
+      maskClosable: false,
+      keyboard: false,
+      onCancel,
+      footer: createElement(
+        'div',
+        { className: 'etable-list-delete-footer' },
+        createElement(
+          Button,
+          { size: 'small', autoInsertSpace: false, 'data-test-id': 'table-list-delete-cancel', onClick: onCancel },
+          '取消',
+        ),
+        createElement(
+          Button,
+          {
+            size: 'small',
+            type: 'primary',
+            danger: true,
+            autoInsertSpace: false,
+            'data-test-id': 'table-list-delete-confirm',
+            onClick: onConfirm,
+          },
+          '删除',
+        ),
+      ),
+    },
+    `将删除 ${dataPath} 的数据与 schema 一对文件，且无法找回、不可撤销。是否继续？`,
+  );
+}
+
+/**
  * 渲染目录树：当前目录的「..」父目录行 + 目录子项 + 可作为表格打开的数据文件
  * @param state 视图状态
  * @param opener 表格面板打开器
  * @param onSelectDirectory 选中目录回调
  * @param onCreate 新建表格回调
  * @param onOpen 打开回调
+ * @param onRequestDelete 请求删除表格回调
  * @returns 目录树元素
  */
 function renderTree(
@@ -224,6 +285,7 @@ function renderTree(
   onSelectDirectory: (path: string) => void,
   onCreate: (directoryPath: string, name: string) => void,
   onOpen: (dataPath: string, opener: ITablePanelOpener) => void,
+  onRequestDelete: (dataPath: string) => void,
 ): ReactElement {
   const rows: ReactElement[] = [];
 
@@ -237,7 +299,7 @@ function renderTree(
       continue;
     }
 
-    if (isTableDataPath(entry.path)) rows.push(renderFileRow(entry, opener, onOpen));
+    if (isTableDataPath(entry.path)) rows.push(renderFileRow(entry, opener, onOpen, onRequestDelete));
   }
 
   const body =
@@ -277,11 +339,26 @@ export function TableListPanelView(props: ITableListPanelViewProps): ReactElemen
   const capabilities = useTableCapabilities();
   const opener = capabilities.tablePanel;
   const presets = capabilities.tablePresets;
+  const pendingState = useState<string | undefined>(undefined);
+  const pending = pendingState[0];
+  const setPending = pendingState[1];
+
+  const requestDelete = useCallback((dataPath: string): void => setPending(dataPath), []);
+  const confirmDelete = useCallback((): void => {
+    const dataPath = pending;
+
+    setPending(undefined);
+
+    if (dataPath !== undefined) props.onDelete(dataPath);
+  }, [pending, props]);
+  const cancelDelete = useCallback((): void => setPending(undefined), []);
+  const modal = pending === undefined ? null : renderDeleteModal(pending, confirmDelete, cancelDelete);
 
   return createElement(
     'div',
     { className: 'etable-list', 'data-test-id': 'table-list' },
     renderPresets(presets ?? [], opener, props.onOpen),
-    renderTree(state, opener, props.onSelectDirectory, props.onCreate, props.onOpen),
+    renderTree(state, opener, props.onSelectDirectory, props.onCreate, props.onOpen, requestDelete),
+    modal,
   );
 }

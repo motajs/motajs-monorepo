@@ -59,6 +59,7 @@ export function CapabilityProvider(props: ITableCapabilitiesProviderProps): Reac
     multiSelect: provided?.multiSelect ?? openMultiSelect,
     pointSelect: provided?.pointSelect ?? openPointSelect,
     tablePanel: provided?.tablePanel,
+    tablePresets: provided?.tablePresets,
     copy: provided?.copy,
   };
 

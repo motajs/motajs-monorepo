@@ -76,6 +76,7 @@ export class TableListPanel implements IEditorPanel {
         store: this.store,
         onSelectDirectory: (path): void => void this.selectDirectory(path),
         onCreate: (directoryPath, name): void => void this.createTable(directoryPath, name),
+        onDelete: (dataPath): void => void this.deleteTable(dataPath),
         onOpen: (dataPath, opener): void => void this.openTable(dataPath, opener),
       });
   }
@@ -147,6 +148,20 @@ export class TableListPanel implements IEditorPanel {
     await this.context.createResource(schemaPath, INITIAL_TABLE_SCHEMA_TEXT);
 
     this.directory = directoryPath;
+    await this.refresh();
+  }
+
+  /**
+   * 删除某张表格：删数据文件与其推导出的 schema 文件一对
+   *
+   * 删除不可撤销（D-13）——本方法不登记任何 `IUndoContext`；「二次确认」由视图在调用本方法
+   * 前完成。删完刷新目录树。
+   * @param dataPath 要删除的数据文件路径
+   */
+  async deleteTable(dataPath: string): Promise<void> {
+    await this.context.deleteResource(dataPath);
+    await this.context.deleteResource(deriveSchemaPath(dataPath));
+
     await this.refresh();
   }
 
