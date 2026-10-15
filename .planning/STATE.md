@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "02.1"
 current_phase_name: 资源层重构与表格文件管理
-current_plan: 6
+current_plan: 7
 status: executing
-stopped_at: Completed 02.1-05-PLAN.md
-last_updated: "2026-10-15T11:59:43.332Z"
+stopped_at: Completed 02.1-06-PLAN.md
+last_updated: "2026-10-15T12:45:45.587Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 02.1 execution started
-state_head: 545aa643b2fcd9d69d5324e1b68874fe7ca3c1cb
+state_head: 48d438c8507a995a04234bbb0cad38e8ef539a6a
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 52
-  completed_plans: 45
+  completed_plans: 46
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 02.1 (资源层重构与表格文件管理) — EXECUTING
-Current Plan: 6
+Current Plan: 7
 Total Plans in Phase: 12
 Status: Ready to execute
 Last activity: 2026-10-15 — Phase 02.1 execution started
@@ -103,6 +103,7 @@ Progress: [██████████] 100%
 | Phase 02.1 P03 | 9min | 3 tasks | 14 files |
 | Phase 02.1 P04 | 7 | 3 tasks | 7 files |
 | Phase 02.1 P5 | 7min | 2 tasks | 2 files |
+| Phase 02.1 P06 | 40min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -198,6 +199,11 @@ Recent decisions affecting current work:
 - [Phase 02.1]: 02.1-04: ResourceSystem 接线——listDirectory 索引驱动、读写经缓存、增删移同步；updateResource 先失效缓存，readBinary 为类公开方法（不入接口）
 - [Phase 02.1]: 02.1-05: coreFsSurface 反转后只扫 editor-core/src，扫描文件数下界由 20 调为 30（editor-core 全量 42、排除测试树 28，故 30 仍钉住『含测试树』）
 - [Phase 02.1]: 02.1-05: coreBoundaries (e) 判据由『是否出现文件读写调用形态』改为『是否触达真实文件系统』（node:fs / from 'fs' / require('fs') / fetch），避免误伤测试替身的 .readFile(...)
+- [Phase 02.1]: 02.1-06: 每栏单槽 prefix/pendingStrip——注释剥离确认针对该栏主文件（数据视图为主数据文件、schema 视图为该 schema 文件），写回时按该栏记住的前缀逐字还原
+- [Phase 02.1]: 02.1-06: 打开三段检测落在 TablePanel.refresh——读原文后 parseTableText 分类：合规记住前缀打开；NeedsCommentStrip 暂存宽松值并发布 commentStripPending；Invalid 落既有 Error 态（D-29）
+- [Phase 02.1]: 02.1-06: 注释剥离确认框直接在表格面板视图内用 antd Modal 渲染（renderCommentStripModal），未新增 IConfirmOpener/IConfirmRequest，未改 react/types.ts 与 react/capabilities.ts
+- [Phase 02.1]: 02.1-06: 外部代码编辑器返回文本改用 parseTableText 解析（只接受 Conforming）以支持系统前缀往返，保留原非合法 JSON 不写回的严格性
+- [Phase 02.1]: 02.1-06: json5 上收至 catalog（2.2.3）并加入 editor-impl 依赖（离线安装）；系统前缀往返路径本身不依赖 json5，仅非合规回退路径需要
 
 ### Pending Todos
 
@@ -224,6 +230,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-15T11:59:43.104Z
-Stopped at: Completed 02.1-05-PLAN.md
+Last session: 2026-10-15T12:45:45.366Z
+Stopped at: Completed 02.1-06-PLAN.md
 Resume file: None
