@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "02.1"
 current_phase_name: 资源层重构与表格文件管理
-current_plan: 9
+current_plan: 10
 status: executing
-stopped_at: Completed 02.1-08-PLAN.md
-last_updated: "2026-10-15T14:27:26.778Z"
+stopped_at: Completed 02.1-09-PLAN.md
+last_updated: "2026-10-15T14:59:48.471Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 02.1 execution started
-state_head: 8c93dfceee08a9338040fd9bcc2ffcf28b421966
+state_head: d814b7bcb54aaff68876c82d7924d2b99192b88d
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 52
-  completed_plans: 48
+  completed_plans: 49
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 02.1 (资源层重构与表格文件管理) — EXECUTING
-Current Plan: 9
+Current Plan: 10
 Total Plans in Phase: 12
 Status: Ready to execute
 Last activity: 2026-10-15 — Phase 02.1 execution started
@@ -106,6 +106,7 @@ Progress: [██████████] 100%
 | Phase 02.1 P06 | 40min | 2 tasks | 9 files |
 | Phase 02.1 P07 | 29min | 1 tasks | 9 files |
 | Phase 02.1 P08 | 44min | 1 tasks | 10 files |
+| Phase 02.1 P09 | 20min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -212,6 +213,11 @@ Recent decisions affecting current work:
 - [Phase 02.1]: 本计划只改 __tests__ 下测试，未改任何生产源码；复用 Plan 07 的 FakeFileSystem / createTableHarness，不新增第二份替身
 - [Phase 02.1]: performance.uat.test.tsx 不含资源装配（仅纯函数断言），原样保留仅复跑；计划 <files> 将其列入实为清单出入
 - [Phase 02.1]: layout 的 getTitle 断言随路径约定由「表格 table.demo」改为「表格 demo.json」，为标识串更新而非放松断言
+- [Phase 02.1]: 02.1-09: 「打开表格」做成独立面板类型（tableListPanelType，id=table-list），预设表经能力接缝 ITableEditorCapabilities.tablePresets 注入（D-10 / D-11），非经打开参数
+- [Phase 02.1]: 02.1-09: 目录树为单层可导航浏览器（当前目录直接子条目 + 「..」父目录行），文件项按 isTableDataPath 过滤、排除 *.schema.json(c)；面板只持有当前目录与其直接子条目
+- [Phase 02.1]: 02.1-09: 删除确认用视图内受控 antd Modal（同 Plan 06 注释剥离确认），非 window.confirm / 非命令式 Modal.confirm；TableListPanel.deleteTable 不登记任何 IUndoContext（D-13 不可撤销）
+- [Phase 02.1]: 02.1-09: CapabilityProvider 漏转发 tablePresets 能力已修正（Rule 2），使预设表注入接缝端到端可用（Plan 10 开发宿主将经同一 Provider 注入 TABLE_PRESETS）
+- [Phase 02.1]: 02.1-09: ITableListPanelViewState 与 ITableListPanelViewProps 同落 TableListPanelView.tsx，面板从视图文件引入状态类型以规避 panel ↔ view 循环引用
 
 ### Pending Todos
 
@@ -238,6 +244,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-15T14:27:26.314Z
-Stopped at: Completed 02.1-08-PLAN.md
+Last session: 2026-10-15T14:59:48.051Z
+Stopped at: Completed 02.1-09-PLAN.md
 Resume file: None
