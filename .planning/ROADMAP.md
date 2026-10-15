@@ -180,7 +180,7 @@ Plans:
   4. 既有表格编辑行为（编辑 / 撤销 / 多栏 / 切入刷新）不回归；`CORE-01`、`coreFsSurface`、`coreBoundaries`(e) 与 Phase 3 讨论稿前提全部收口。
   5. 本阶段能力接入开发宿主，可在浏览器里手动验收「打开 / 新建 / 删除」。
 
-**Plans:** 12/12 plans executed
+**Plans:** 12/12 plans executed（另追加 3 个缺口收口计划 02.1-13/14/15，闭环 UAT 缺口 `G-02.1-1`）
 
 Plans:
 **Wave 1 — 接口（仅类型，无实现）**
@@ -224,6 +224,12 @@ Plans:
 **Wave 10 — 收口（依赖 Wave 9）**
 
 - [x] 02.1-12-PLAN.md — 旧契约收口（REQUIREMENTS `CORE-01` / Phase 3 讨论稿含 UI-SPEC）
+
+**Wave 11 — 缺口收口 `G-02.1-1`（UAT 测试 1：空栏内联打开 / 新建 / 删除）**
+
+- [ ] 02.1-13-PLAN.md — 空栏内联控件接口（仅类型：`TableEmptyMode` + 空栏视图字段 + 三个组件 props）
+- [ ] 02.1-14-PLAN.md — 表格面板空栏内联承载（实现三个可复用组件 + 移除独立列表面板 + 多表标题 + 迁移测试）
+- [ ] 02.1-15-PLAN.md — 开发宿主收口（去掉「打开表格」工具栏入口与列表面板注册 + 迁移端到端）
 
 **UI hint**: yes
 
@@ -295,7 +301,7 @@ Phases execute in numeric order: 1 → 1.1 → 2 → 2.1 → 3 → 4 → 5 → 6
 | 1. 编辑器外壳与通用 fs 接口 | 4/4 | Complete    | 2026-10-12 |
 | 1.1. 编辑器开发宿主 (INSERTED) | 3/3 | Complete    | 2026-10-12 |
 | 2. 表格编辑 | 33/33 | Complete | 2026-10-15 |
-| 2.1. 资源层重构与表格文件管理 (INSERTED) | 12/12 | In Progress|  |
+| 2.1. 资源层重构与表格文件管理 (INSERTED) | 12/15 | Gap closure (G-02.1-1) |  |
 | 3. 素材管理 | 0/TBD | Not started | - |
 | 4. 地图编辑 | 0/TBD | Not started | - |
 | 5. 代码编辑 | 0/TBD | Not started | - |
