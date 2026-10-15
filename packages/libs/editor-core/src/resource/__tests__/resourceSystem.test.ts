@@ -226,3 +226,115 @@ describe('ResourceSystem 释放', () => {
     errorSpy.mockRestore();
   });
 });
+
+describe('ResourceSystem 索引与缓存接线', () => {
+  // 读内容命中缓存：底层被外部改写后，未失效前仍返回缓存；经系统写入则同步刷新
+  test('读内容命中缓存且写入同步更新', async () => {
+    const fs = new FakeFileSystem();
+
+    fs.seed(PATH, 'v1');
+
+    const system = new ResourceSystem();
+
+    await system.initialize(fs);
+
+    expect(await system.readContent(PATH)).toBe('v1');
+
+    await fs.writeFile(PATH, 'external');
+
+    expect(await system.readContent(PATH)).toBe('v1');
+
+    await system.writeContent(PATH, 'v3');
+
+    expect(await system.readContent(PATH)).toBe('v3');
+  });
+
+  // createResource 后索引即时新增，listDirectory 立刻可见新条目
+  test('createResource 后索引新增且目录可见', async () => {
+    const fs = new FakeFileSystem();
+
+    fs.seed('tables/existing.json', '{}');
+
+    const system = new ResourceSystem();
+
+    await system.initialize(fs);
+    await system.createResource('tables/new.json', '{}');
+
+    const names = (await system.listDirectory('tables')).map((entry) => entry.name).sort();
+
+    expect(names).toEqual(['existing.json', 'new.json']);
+    expect(await system.readContent('tables/new.json')).toBe('{}');
+  });
+
+  // deleteResource 后索引移除条目、缓存同步失效
+  test('deleteResource 后索引移除且缓存失效', async () => {
+    const fs = new FakeFileSystem();
+
+    fs.seed('tables/demo.json', 'v1');
+
+    const system = new ResourceSystem();
+
+    await system.initialize(fs);
+    expect(await system.readContent('tables/demo.json')).toBe('v1');
+
+    await system.deleteResource('tables/demo.json');
+
+    expect(await system.listDirectory('tables')).toEqual([]);
+    await expect(system.readContent('tables/demo.json')).rejects.toThrow();
+  });
+
+  // moveResource 后索引搬迁（旧路径消失、新路径出现），源缓存失效
+  test('moveResource 后索引搬迁且源缓存失效', async () => {
+    const fs = new FakeFileSystem();
+
+    fs.seed('tables/demo.json', 'v1');
+
+    const system = new ResourceSystem();
+
+    await system.initialize(fs);
+    expect(await system.readContent('tables/demo.json')).toBe('v1');
+
+    await system.moveResource('tables/demo.json', 'tables/renamed.json');
+
+    expect((await system.listDirectory('tables')).map((entry) => entry.name)).toEqual(['renamed.json']);
+    expect(await system.readContent('tables/renamed.json')).toBe('v1');
+  });
+
+  // 二进制读写走 readBinary / writeBinary，与文本分离且同样入缓存
+  test('二进制读写与文本分离并入缓存', async () => {
+    const fs = new FakeFileSystem();
+    const payload = new Uint8Array([1, 2, 3]);
+
+    fs.seed('assets/icon.bin', payload);
+
+    const system = new ResourceSystem();
+
+    await system.initialize(fs);
+
+    expect(await system.readBinary('assets/icon.bin')).toBe(payload);
+
+    const written = new Uint8Array([9, 9]);
+
+    await system.writeContent('assets/icon.bin', written);
+
+    expect(await system.readBinary('assets/icon.bin')).toBe(written);
+    expect(await fs.readBinary('assets/icon.bin')).toBe(written);
+  });
+
+  // updateResource 使缓存失效，下次读取回源拿到最新内容
+  test('updateResource 使缓存失效后回源', async () => {
+    const fs = new FakeFileSystem();
+
+    fs.seed(PATH, 'v1');
+
+    const system = new ResourceSystem();
+
+    await system.initialize(fs);
+    expect(await system.readContent(PATH)).toBe('v1');
+
+    await fs.writeFile(PATH, 'v2');
+    await system.updateResource(PATH);
+
+    expect(await system.readContent(PATH)).toBe('v2');
+  });
+});
