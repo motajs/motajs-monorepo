@@ -268,3 +268,92 @@ describe('开发宿主表格接入', () => {
     expect(restored === undefined ? undefined : restored.title).toBe('示例条目');
   });
 });
+
+describe('开发宿主表格端到端', () => {
+  // 端到端：打开列表面板 → 从预设打开演示表 → 在演示目录新建 → 打开新表 → 删除并确认
+  it('打开列表 / 预设打开 / 新建 / 打开新表 / 删除 端到端贯通', async () => {
+    const core = await createHost();
+
+    await act(async () => {
+      await openTableDemoPanel(core);
+    });
+
+    const listTab = core.shellSystem.listTabs().find((tab) => tab.typeId === tableListPanelType.id);
+
+    if (listTab === undefined) throw new Error('列表面板标签缺失');
+
+    const listTabId = listTab.id;
+
+    renderWithTableOpener(core);
+
+    // 从预设区打开演示表并渲染 schema 驱动行
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('table-list-preset-演示表'));
+    });
+    await act(async () => {});
+
+    expect(screen.getByText('position')).not.toBeNull();
+    expect(screen.getByText('标题')).not.toBeNull();
+
+    // 切回列表面板，进入演示表所在的 tables 目录
+    await act(async () => {
+      core.shellSystem.activateTab(listTabId);
+    });
+    await act(async () => {});
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('table-list-entry-tables'));
+    });
+    await act(async () => {});
+
+    // 在 tables 目录新建一张 hero 表，内存文件系统里出现一对文件
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('table-list-create'));
+    });
+
+    const input = screen.getByTestId('table-list-create-input');
+
+    await act(async () => {
+      fireEvent.change(input, { target: { value: 'hero' } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+    });
+    await act(async () => {});
+
+    const createdNames = (await core.resourceSystem.listDirectory('tables')).map((entry) => entry.name);
+
+    expect(createdNames).toEqual(expect.arrayContaining(['hero.json', 'hero.schema.json']));
+
+    // 打开新建的表：外壳新增一个标签承载它
+    const tabsBefore = core.shellSystem.listTabs().length;
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('table-list-entry-tables/hero.json'));
+    });
+    await act(async () => {});
+
+    expect(core.shellSystem.listTabs().length).toBe(tabsBefore + 1);
+
+    // 切回列表面板删除 hero 表：经确认后一对文件从内存文件系统与目录树一并消失
+    await act(async () => {
+      core.shellSystem.activateTab(listTabId);
+    });
+    await act(async () => {});
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('table-list-delete-tables/hero.json'));
+    });
+
+    expect(screen.getByTestId('table-list-delete-confirm')).not.toBeNull();
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('table-list-delete-confirm'));
+    });
+    await act(async () => {});
+
+    const remainingNames = (await core.resourceSystem.listDirectory('tables')).map((entry) => entry.name);
+
+    expect(remainingNames).not.toContain('hero.json');
+    expect(remainingNames).not.toContain('hero.schema.json');
+    expect(screen.queryByTestId('table-list-entry-tables/hero.json')).toBeNull();
+  });
+});
