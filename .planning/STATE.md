@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "02.1"
 current_phase_name: 资源层重构与表格文件管理
-current_plan: 12
+current_plan: 18
 status: verifying
-stopped_at: Completed 02.1-16-PLAN.md
-last_updated: "2026-10-16T07:51:19.165Z"
+stopped_at: Completed 02.1-18-PLAN.md
+last_updated: "2026-10-16T08:04:00.083Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 02.1 execution started
-state_head: bacd8d55fe39094978da4910e750a234b379415c
+state_head: 6b47640cb937ac92f9533d7274fdb5756c8966ee
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 58
-  completed_plans: 57
+  completed_plans: 58
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,10 +30,10 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 02.1 (资源层重构与表格文件管理) — EXECUTING
-Current Plan: 12
-Total Plans in Phase: 12
+Current Plan: 18
+Total Plans in Phase: 18
 Status: Phase complete — ready for verification
-Last activity: 2026-10-15 — Phase 02.1 execution started
+Last activity: 2026-10-16 — Completed 02.1-18-PLAN.md
 
 Progress: [██████████] 100%
 
@@ -115,6 +115,7 @@ Progress: [██████████] 100%
 | Phase 02.1 P15 | 22 | 2 tasks | 11 files |
 | Phase 02.1 P17 | 8min | 3 tasks | 5 files |
 | Phase 02.1 P16 | 7 | 2 tasks | 3 files |
+| Phase 02.1 P18 | 6min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -251,6 +252,9 @@ Recent decisions affecting current work:
 - [Phase 02.1]: 02.1-17: 打开 / 新建「开进本栏」断言外壳标签数不变；逐张操作前以本栏 ✕ 关栏复位三按钮（TablePanel.closeColumn），使单表 getTitle 断言始终成立
 - [Phase 02.1]: 02.1-17: 删除态「无预设区」以注入预设但断言其不出现落地；新建态「开进本栏」以 getTitle==='表格 hero.json' + 本栏无三按钮落地（新表 schema 为空、无行树）
 - [Phase 02.1]: 02.1-16: 开发宿主去掉「打开表格」工具栏入口与 tableListPanelType 注册，删除 openTableDemoPanel / TABLE_DEMO_MENU_ID / TABLE_DEMO_MENU_TITLE；e2e 迁到表格面板空栏内联流程（预设开进本栏、✕ 关栏回三按钮、新建前导航进 tables、删除二次确认）
+- [Phase 02.1]: 02.1-18: 合规 .jsonc 样本前缀逐字往返以 parseTableText(样本常量).prefix 作期望值——测试不硬编码前缀字符串，样本与断言同源
+- [Phase 02.1]: 02.1-18: 非合规样本为两行中文注释 + 尾逗号、无标记行（严格 JSON.parse 失败、json5 可解析 → NeedsCommentStrip）；两样本共用 TABLE_DEMO_SAMPLE_SCHEMA（title/level + x-order）
+- [Phase 02.1]: 02.1-18: 确认剥离注释后写回原文不含注释，以 JSON.parse 成功 + title 为改后值断言；取消后该栏落 NoTarget + emptyMode=Buttons（空栏三按钮）
 
 ### Pending Todos
 
@@ -277,6 +281,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-16T07:51:18.855Z
-Stopped at: Completed 02.1-16-PLAN.md
+Last session: 2026-10-16T08:03:15.791Z
+Stopped at: Completed 02.1-18-PLAN.md
 Resume file: None
