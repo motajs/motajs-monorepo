@@ -173,11 +173,7 @@ export function TablePicker(props: ITablePickerProps): ReactElement {
   const presetArea = presets === undefined || presets.length === 0 ? null : renderPresets(presets, props.onSelect);
   const body =
     rows.length === 0
-      ? createElement(
-          'div',
-          { className: 'etable-list-empty', 'data-test-id': 'table-list-empty' },
-          '该目录下没有表格',
-        )
+      ? createElement('div', { className: 'etable-list-empty', 'data-test-id': 'table-list-empty' }, '该目录下没有表格')
       : rows;
   const error =
     props.error === undefined
