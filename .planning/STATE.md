@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "02.1"
 current_phase_name: 资源层重构与表格文件管理
-current_plan: 18
-status: verifying
-stopped_at: Completed 02.1-18-PLAN.md
-last_updated: "2026-10-16T08:04:00.083Z"
-last_activity: 2026-10-15
-last_activity_desc: Phase 02.1 execution started
-state_head: 6b47640cb937ac92f9533d7274fdb5756c8966ee
+current_plan: 19
+status: executing
+stopped_at: Completed 02.1-19-PLAN.md
+last_updated: "2026-10-16T12:41:20.150Z"
+last_activity: 2026-10-16
+last_activity_desc: Completed 02.1-19-PLAN.md
+state_head: 3abf88c0a9f237906dad54dfbfc0c3997bbf2183
 progress:
   total_phases: 8
   completed_phases: 0
-  total_plans: 58
-  completed_plans: 58
+  total_plans: 64
+  completed_plans: 59
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,10 +30,10 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 02.1 (资源层重构与表格文件管理) — EXECUTING
-Current Plan: 18
-Total Plans in Phase: 18
-Status: Phase complete — ready for verification
-Last activity: 2026-10-16 — Completed 02.1-18-PLAN.md
+Current Plan: 19
+Total Plans in Phase: 24
+Status: In progress — gap closure (G-02.1-3)
+Last activity: 2026-10-16 - Completed 02.1-19-PLAN.md
 
 Progress: [██████████] 100%
 
@@ -116,6 +116,7 @@ Progress: [██████████] 100%
 | Phase 02.1 P17 | 8min | 3 tasks | 5 files |
 | Phase 02.1 P16 | 7 | 2 tasks | 3 files |
 | Phase 02.1 P18 | 6min | 3 tasks | 4 files |
+| Phase 02.1 P19 | 8min | 1 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -255,6 +256,8 @@ Recent decisions affecting current work:
 - [Phase 02.1]: 02.1-18: 合规 .jsonc 样本前缀逐字往返以 parseTableText(样本常量).prefix 作期望值——测试不硬编码前缀字符串，样本与断言同源
 - [Phase 02.1]: 02.1-18: 非合规样本为两行中文注释 + 尾逗号、无标记行（严格 JSON.parse 失败、json5 可解析 → NeedsCommentStrip）；两样本共用 TABLE_DEMO_SAMPLE_SCHEMA（title/level + x-order）
 - [Phase 02.1]: 02.1-18: 确认剥离注释后写回原文不含注释，以 JSON.parse 成功 + title 为改后值断言；取消后该栏落 NoTarget + emptyMode=Buttons（空栏三按钮）
+- [Phase 02.1]: 02.1-19: 缺口 G-02.1-3 五处接口面（ITablePanel.save? / ITablePanelViewState.unsaved? / 视图与工具栏 onSave? / TableCreateForm entries?+onNavigate?）只声明不实现，零行为改动
+- [Phase 02.1]: 02.1-19: 新增接口成员一律可选（optional）——TablePanel.save 实现留 Plan 20，写成必选会令既有 TablePanel 立即 TS2420 失败
 
 ### Pending Todos
 
@@ -281,6 +284,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-16T08:03:15.791Z
-Stopped at: Completed 02.1-18-PLAN.md
+Last session: 2026-10-16T12:39:37.485Z
+Stopped at: Completed 02.1-19-PLAN.md
 Resume file: None
