@@ -5,16 +5,16 @@ current_phase: "02.1"
 current_phase_name: 资源层重构与表格文件管理
 current_plan: 12
 status: verifying
-stopped_at: Completed 02.1-17-PLAN.md
-last_updated: "2026-10-16T07:34:55.000Z"
+stopped_at: Completed 02.1-16-PLAN.md
+last_updated: "2026-10-16T07:51:19.165Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 02.1 execution started
-state_head: 13fe61d
+state_head: bacd8d55fe39094978da4910e750a234b379415c
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 58
-  completed_plans: 56
+  completed_plans: 57
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -114,6 +114,7 @@ Progress: [██████████] 100%
 | Phase 02.1 P14 | 10min | 2 tasks | 3 files |
 | Phase 02.1 P15 | 22 | 2 tasks | 11 files |
 | Phase 02.1 P17 | 8min | 3 tasks | 5 files |
+| Phase 02.1 P16 | 7 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -249,6 +250,7 @@ Recent decisions affecting current work:
 - [Phase 02.1]: 02.1-17: 空栏相关断言统一限定到单栏（container.querySelectorAll('.etable-column')[i]），避免加宽窗口铺出多栏时同 data-test-id / 文案重复命中
 - [Phase 02.1]: 02.1-17: 打开 / 新建「开进本栏」断言外壳标签数不变；逐张操作前以本栏 ✕ 关栏复位三按钮（TablePanel.closeColumn），使单表 getTitle 断言始终成立
 - [Phase 02.1]: 02.1-17: 删除态「无预设区」以注入预设但断言其不出现落地；新建态「开进本栏」以 getTitle==='表格 hero.json' + 本栏无三按钮落地（新表 schema 为空、无行树）
+- [Phase 02.1]: 02.1-16: 开发宿主去掉「打开表格」工具栏入口与 tableListPanelType 注册，删除 openTableDemoPanel / TABLE_DEMO_MENU_ID / TABLE_DEMO_MENU_TITLE；e2e 迁到表格面板空栏内联流程（预设开进本栏、✕ 关栏回三按钮、新建前导航进 tables、删除二次确认）
 
 ### Pending Todos
 
@@ -275,6 +277,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-16T07:34:55.000Z
-Stopped at: Completed 02.1-17-PLAN.md
+Last session: 2026-10-16T07:51:18.855Z
+Stopped at: Completed 02.1-16-PLAN.md
 Resume file: None
