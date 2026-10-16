@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "02.1"
 current_phase_name: 资源层重构与表格文件管理
-current_plan: 19
+current_plan: 20
 status: executing
-stopped_at: Completed 02.1-19-PLAN.md
-last_updated: "2026-10-16T12:41:20.150Z"
+stopped_at: Completed 02.1-20-PLAN.md
+last_updated: "2026-10-16T13:10:30.750Z"
 last_activity: 2026-10-16
 last_activity_desc: Completed 02.1-19-PLAN.md
-state_head: 3abf88c0a9f237906dad54dfbfc0c3997bbf2183
+state_head: 59617ce9c6cead8fa4b8a017243c0935ba75efe7
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 64
-  completed_plans: 59
+  completed_plans: 60
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 02.1 (资源层重构与表格文件管理) — EXECUTING
-Current Plan: 19
+Current Plan: 20
 Total Plans in Phase: 24
 Status: In progress — gap closure (G-02.1-3)
 Last activity: 2026-10-16 - Completed 02.1-19-PLAN.md
@@ -117,6 +117,7 @@ Progress: [██████████] 100%
 | Phase 02.1 P16 | 7 | 2 tasks | 3 files |
 | Phase 02.1 P18 | 6min | 3 tasks | 4 files |
 | Phase 02.1 P19 | 8min | 1 tasks | 5 files |
+| Phase 02.1 P20 | ~45min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -258,6 +259,10 @@ Recent decisions affecting current work:
 - [Phase 02.1]: 02.1-18: 确认剥离注释后写回原文不含注释，以 JSON.parse 成功 + title 为改后值断言；取消后该栏落 NoTarget + emptyMode=Buttons（空栏三按钮）
 - [Phase 02.1]: 02.1-19: 缺口 G-02.1-3 五处接口面（ITablePanel.save? / ITablePanelViewState.unsaved? / 视图与工具栏 onSave? / TableCreateForm entries?+onNavigate?）只声明不实现，零行为改动
 - [Phase 02.1]: 02.1-19: 新增接口成员一律可选（optional）——TablePanel.save 实现留 Plan 20，写成必选会令既有 TablePanel 立即 TS2420 失败
+- [Phase 02.1]: 02.1-20: 表格面板改手动保存——commitValue/addItem/deleteItem/openCurrentViewInCodeEditor/applyUndoRedo 只改内存 + 置 unsaved（必要时 unsavedSchema）+ 登记撤销 + applyData；refreshDependents 移到 TablePanel.save 成功后
+- [Phase 02.1]: 02.1-20: 注释剥离记忆以「路径 → 确认时原文」记录（stripConfirmed），TablePanel.refresh 命中且原文逐字未变才免弹框，原文变化即重弹
+- [Phase 02.1]: 02.1-20: TablePanel.flushColumn 写成异步方法（同步前缀完成快照与清标记），void 调用先于 setTable/closeColumn 的目标切换，既保快照又不引入函数内局部函数
+- [Phase 02.1]: 02.1-20: 列表实时同步复用既有 IEditorPanel.onUpdateResource 通道（TablePanel.onUpdateResource→refreshAwaitingPickers），未新增 editor-core 接口（D-04 锁定）
 
 ### Pending Todos
 
@@ -284,6 +289,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-16T12:39:37.485Z
-Stopped at: Completed 02.1-19-PLAN.md
+Last session: 2026-10-16T13:10:30.458Z
+Stopped at: Completed 02.1-20-PLAN.md
 Resume file: None
