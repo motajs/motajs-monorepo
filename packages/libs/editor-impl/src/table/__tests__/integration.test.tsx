@@ -94,6 +94,14 @@ async function readData(system: EditorCore, name: string): Promise<unknown> {
   return readContent(system, tableDataPath(name));
 }
 
+/**
+ * 把面板内存中的未落盘改动写回资源（手动保存模型）
+ * @param panel 表格面板实例
+ */
+async function savePanel(panel: TablePanel): Promise<void> {
+  await panel.save();
+}
+
 // 读取某个字段值单元格内文本域的当前文本
 function valueOf(container: HTMLElement, field: string): string | undefined {
   const cell = container.querySelector(`[data-test-id="table-input-${field}"]`);
@@ -188,6 +196,7 @@ describe('阶段集成：完整流程与安全边界', () => {
 
     // 编辑一个值：写回资源并更新显示，撤销还原旧值、重做恢复新值（一次编辑恰为一步撤销）
     await commitText(container, 'name', '"b"');
+    await savePanel(panel);
 
     expect(await readData(system, 't')).toEqual({ name: 'b', note: 'x' });
     expect(valueOf(container, 'name')).toBe('"b"');
@@ -195,48 +204,56 @@ describe('阶段集成：完整流程与安全边界', () => {
     await act(async () => {
       await system.undoSystem.undo();
     });
+    await savePanel(panel);
 
     expect(await readData(system, 't')).toEqual({ name: 'a', note: 'x' });
 
     await act(async () => {
       await system.undoSystem.redo();
     });
+    await savePanel(panel);
 
     expect(await readData(system, 't')).toEqual({ name: 'b', note: 'x' });
 
     // 添加一行：添加模式点「name」行 gutter 的「+」并输入名字，新行插到 name 之后；撤销移除、重做加回
     await switchMode('添加');
     await gutterAdd('name', 'extra');
+    await savePanel(panel);
 
     expect(await readData(system, 't')).toEqual({ name: 'b', note: 'x', extra: null });
 
     await act(async () => {
       await system.undoSystem.undo();
     });
+    await savePanel(panel);
 
     expect(await readData(system, 't')).toEqual({ name: 'b', note: 'x' });
 
     await act(async () => {
       await system.undoSystem.redo();
     });
+    await savePanel(panel);
 
     expect(await readData(system, 't')).toEqual({ name: 'b', note: 'x', extra: null });
 
     // 删除一行：schema 允许 null 的字段在删除模式点「−」直接移除；撤销恢复、重做再次删除
     await switchMode('删除');
     await gutterDelete('note');
+    await savePanel(panel);
 
     expect(await readData(system, 't')).toEqual({ name: 'b', extra: null });
 
     await act(async () => {
       await system.undoSystem.undo();
     });
+    await savePanel(panel);
 
     expect(await readData(system, 't')).toEqual({ name: 'b', note: 'x', extra: null });
 
     await act(async () => {
       await system.undoSystem.redo();
     });
+    await savePanel(panel);
 
     expect(await readData(system, 't')).toEqual({ name: 'b', extra: null });
 
@@ -251,6 +268,7 @@ describe('阶段集成：完整流程与安全边界', () => {
 
     // 在 schema 面板里改 name 的注释：整份写回 schema 资源；此刻数据面板不可见、无跨面板广播
     await commitText(container, 'properties-name-description', '"改名"');
+    await savePanel(created[1]);
 
     expect(await readContent(system, tableSchemaPath('t'))).toEqual({
       type: 'object',

@@ -66,6 +66,14 @@ async function readData(system: EditorCore, name: string): Promise<unknown> {
   return JSON.parse(text);
 }
 
+/**
+ * 把面板内存中的未落盘改动写回资源（手动保存模型）
+ * @param panel 表格面板实例
+ */
+async function savePanel(panel: TablePanel): Promise<void> {
+  await panel.save();
+}
+
 // 用能力 Provider 包裹外壳渲染根，注入假能力包（缺省时由 Provider 补齐默认弹窗打开器）
 function renderWithCapabilities(system: EditorCore, capabilities: ITableEditorCapabilities): ReturnType<typeof render> {
   return render(
@@ -145,6 +153,7 @@ describe('操作列显示规则', () => {
     renderWithCapabilities(system, { multiSelect });
 
     await clickAction('tags', '多选框编辑');
+    await savePanel(panel);
 
     expect(multiSelect.open).toHaveBeenCalledTimes(1);
     expect(await readData(system, 't')).toEqual({ tags: ['a', 'b'] });
@@ -192,6 +201,7 @@ describe('外部编辑器分发', () => {
     renderWithCapabilities(system, { multiSelect, codeEditor });
 
     await clickAction('pic', '编辑');
+    await savePanel(panel);
 
     expect(multiSelect.open).toHaveBeenCalledTimes(1);
     expect(codeEditor.open).not.toHaveBeenCalled();
@@ -224,12 +234,14 @@ describe('外部编辑器分发', () => {
     renderWithCapabilities(system, { codeEditor });
 
     await clickAction('script', '编辑');
+    await savePanel(panel);
 
     expect(codeEditor.open).toHaveBeenCalledTimes(1);
     expect(requests[0]).toEqual({ title: 'script', content: 'old' });
     expect(await readData(system, 't')).toEqual({ script: 'new' });
 
     await system.undoSystem.undo();
+    await savePanel(panel);
     expect(await readData(system, 't')).toEqual({ script: 'old' });
   });
 

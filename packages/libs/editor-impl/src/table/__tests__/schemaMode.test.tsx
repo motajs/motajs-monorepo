@@ -61,6 +61,14 @@ async function readContent(system: EditorCore, path: string): Promise<unknown> {
   return JSON.parse(text);
 }
 
+/**
+ * 把面板内存中的未落盘改动写回资源（手动保存模型）
+ * @param panel 表格面板实例
+ */
+async function savePanel(panel: TablePanel): Promise<void> {
+  await panel.save();
+}
+
 // 按渲染顺序取表体内所有行的 data-test-id
 function rowKeys(container: HTMLElement): string[] {
   const body = container.querySelector('[data-test-id="data-table-grid"]');
@@ -239,6 +247,7 @@ describe('「在代码编辑器中打开」（D-30）', () => {
     await act(async () => {
       fireEvent.click(screen.getByTestId('table-open-code'));
     });
+    await savePanel(panel);
 
     expect(requests.length).toBe(1);
     expect(requests[0].title).toBe(tableDataPath('t'));
@@ -246,6 +255,7 @@ describe('「在代码编辑器中打开」（D-30）', () => {
     expect(await readContent(system, tableDataPath('t'))).toEqual({ name: 'b' });
 
     await system.undoSystem.undo();
+    await savePanel(panel);
     expect(await readContent(system, tableDataPath('t'))).toEqual({ name: 'a' });
   });
 
@@ -344,6 +354,8 @@ describe('schema 关键字 x-order 的编辑（P21）', () => {
     });
 
     expect(container.querySelector('[data-test-id="table-error-x-order"]')).toBeNull();
+
+    await savePanel(panel);
 
     const schema = (await readContent(system, tableSchemaPath('t'))) as Record<string, unknown>;
 
