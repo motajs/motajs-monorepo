@@ -469,3 +469,44 @@
 .etable-list-delete:hover {
   background: rgba(255, 77, 79, 0.08);
 }
+
+.etable-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 24px;
+  gap: 12px;
+}
+
+.etable-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.etable-empty-mode {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  height: 100%;
+  min-height: 0;
+  padding: 6px 8px;
+  gap: 6px;
+  overflow: hidden;
+  font-size: 13px;
+}
+
+.etable-empty-back {
+  align-self: flex-start;
+}
+
+.etable-empty-mode .etable-list {
+  position: relative;
+  inset: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+}
