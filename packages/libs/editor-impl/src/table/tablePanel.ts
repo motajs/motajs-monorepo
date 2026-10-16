@@ -734,7 +734,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   }
 
   /**
-   * 切换某栏空栏的内联视图；进入打开 / 删除态时顺带取该栏当前目录的直接子条目
+   * 切换某栏空栏的内联视图；进入打开 / 新建 / 删除态时顺带取该栏当前目录的直接子条目
    * @param columnIndex 栏序号（0 基）
    * @param mode 目标内联视图
    */
@@ -744,7 +744,13 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     column.emptyMode = mode;
     this.publish(columnIndex, TablePanelStatus.NoTarget, []);
 
-    if (mode === TableEmptyMode.Open || mode === TableEmptyMode.Delete) void this.refreshPicker(columnIndex);
+    if (
+      mode === TableEmptyMode.Open ||
+      mode === TableEmptyMode.Create ||
+      mode === TableEmptyMode.Delete
+    ) {
+      void this.refreshPicker(columnIndex);
+    }
   }
 
   /**

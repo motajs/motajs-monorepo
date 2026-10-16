@@ -192,7 +192,13 @@ export function TableEmptyColumn(props: ITableEmptyStateProps): ReactElement {
       'div',
       { className: 'etable-empty-mode', 'data-test-id': 'table-empty-mode-create' },
       renderBackButton(back),
-      createElement(TableCreateForm, { directory: props.directory, error: props.error, onCreate: props.onCreate }),
+      createElement(TableCreateForm, {
+        directory: props.directory,
+        entries: props.entries,
+        error: props.error,
+        onNavigate: props.onNavigate,
+        onCreate: props.onCreate,
+      }),
     );
   }
 
