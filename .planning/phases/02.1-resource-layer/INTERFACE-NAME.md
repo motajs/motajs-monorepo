@@ -428,8 +428,9 @@
 
 **本计划只声明类型 / 契约，不写任何行为。** 新增成员一律先声明为**可选**，避免接口计划本身让既有构造点 typecheck 失败（同 Plan 13 做法）。
 
-### `ITablePanel.save(columnIndex?: number): Promise<void>`（`src/table/types.ts`，`ITablePanel` 新增方法）
+### `ITablePanel.save?(columnIndex?: number): Promise<void>`（`src/table/types.ts`，`ITablePanel` 新增**可选**方法）
 - **用途**：把**某一栏**内存中的未落盘改动写回资源——数据文件，以及需要写回的镜像 schema 文件；该栏无未落盘改动时不动盘。视图工具栏的「保存」按钮、以及切出 / 关栏 / 释放时的自动保存路径都经它。
+- **为什么是可选（`?`）**：本计划**只声明类型**，实现（`TablePanel.save`）在 Plan 20 才落地；写成可选可让既有 `TablePanel`（尚未实现该方法）的 typecheck 仍通过（TS2420），Plan 20 补上实现后接口仍保持可选。
 - **备选**：只做私有方法、不进 `ITablePanel` 接口。本提案进接口——「保存」是本面板对外应有的动作，且让测试与将来宿主可显式触发。
 
 ### `ITablePanelViewState.unsaved?: boolean`（`src/table/tablePanel.ts`）
@@ -485,12 +486,27 @@
 
 ---
 
+## Plan 21 — `02.1-21-PLAN.md`（迁移既有表格测试到手动保存，测试）
+
+**无新增对外命名**（纯测试迁移：把 Plan 20 手动保存改变写盘时机后预期变红的既有表格测试，按同一「读回资源前补一次保存 / 切出」规则迁移）。下列项属**测试内部装配**（非对外命名），登记备查。
+
+### `savePanel(panel)`（测试文件内本地辅助，非导出）
+- **用途**：某表格测试里「把某栏未落盘改动写回资源」的一步——内部 `await panel.save()`，供该用例在「编辑之后、读回资源之前」补齐落盘步骤。各测试文件各自定义，不进任何 `export` 面。
+
+### 无新外部命名
+- 除上述测试内局部辅助外，本计划不新增任何导出命名、不改任何 `ITablePanel*` / `ITableGridProps` / `ITableToolbarProps` / `ITableCreateFormProps` 契约。
+
+---
+
 ## Plan 22 — `02.1-22-PLAN.md`（空栏按钮与新建选目录，实现）
 
 **无新增对外命名**（Plan 19 已定义 `ITableCreateFormProps.entries` / `onNavigate`；Plan 20 已定义 `refreshAwaitingPickers`）。本计划只把 `TableCreateForm` 落成「可浏览子目录并选定新建位置」、把空栏三按钮改成更大且竖排、并让 `TablePanel.setEmptyMode` 在进入**新建**态时也取目录。
 
 ### 内部辅助（`TableCreateForm.tsx` 内，登记备查）
 - `renderDirectoryRow` / `renderCurrentDirectory`（组件内渲染当前目录与子目录行的内部函数）——沿用 `TablePicker` 的 `.etable-list-*` 类名与 `table-list-entry-*` / `table-list-up` 惯例。
+
+### 对既有自由函数的修改（不新增名字，登记备查）
+- `renderButtons`（`components/TableEmptyColumn.tsx` 里的**模块级自由函数**，不是类 / 组件的方法）——Plan 22 只把它的三个按钮由 `size="small"` 改为 `size="middle"`；引用时按自由函数**裸名**书写（非 `TableEmptyColumn.renderButtons`）。
 
 ### 对既有行为的调整
 - `TablePanel.setEmptyMode`：进入 `Create` 态时也 `refreshPicker`（当前只对 `Open` / `Delete` 取目录），使新建表单能列出子目录。
