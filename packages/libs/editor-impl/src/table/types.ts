@@ -92,6 +92,12 @@ export interface ITablePanel {
    * @param columnIndex 目标栏的序号（0 基）；省略时默认为第 0 栏
    */
   setTable(target: ITablePanelTarget, columnIndex?: number): void;
+
+  /**
+   * 把某一栏内存中的未落盘改动写回资源：数据文件，以及需要写回的镜像 schema 文件；该栏无未落盘改动时不动盘
+   * @param columnIndex 目标栏的序号（0 基）；省略时默认为第 0 栏
+   */
+  save?(columnIndex?: number): Promise<void>;
 }
 
 export interface ITablePanelParam extends Record<string, unknown> {

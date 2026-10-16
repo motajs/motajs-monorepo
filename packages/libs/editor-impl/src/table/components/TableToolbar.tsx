@@ -24,6 +24,10 @@ export interface ITableToolbarProps {
   readonly onCloseColumn?: () => void;
   /** ✕ 是否可点；缺省视作不可点 */
   readonly closeButtonEnabled?: boolean;
+  /** 本栏是否有未落盘的改动；为真时显示「未保存」标记并启用「保存」 */
+  readonly unsaved?: boolean;
+  /** 「保存」按钮的点击回调 */
+  readonly onSave?: () => void;
 }
 
 /**

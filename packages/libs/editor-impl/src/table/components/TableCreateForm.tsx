@@ -1,3 +1,4 @@
+import { IFileEntry } from '@motajs/editor-core';
 import { Button, Input } from 'antd';
 import { ChangeEvent, createElement, Fragment, KeyboardEvent, ReactElement, useCallback, useState } from 'react';
 import '../table.css';
@@ -7,8 +8,12 @@ import '../table.css';
 export interface ITableCreateFormProps {
   /** 新建所在目录路径；根目录为空串 */
   readonly directory: string;
+  /** 当前目录的直接子条目；缺省时不列出子目录供选择新建位置 */
+  readonly entries?: readonly IFileEntry[];
   /** 名称校验 / 写入失败时的提示文案；缺省时不显示 */
   readonly error?: string;
+  /** 进入某子目录作为新建位置的回调；含 `..` 上行由面板侧目录态承担 */
+  onNavigate?(path: string): void;
   /** 确认新建回调，携带所在目录与表格名 */
   onCreate(directory: string, name: string): void;
 }

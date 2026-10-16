@@ -151,6 +151,8 @@ export interface ITablePanelViewState {
   readonly title?: string;
   /** 该栏是否正等待用户确认「剥离注释后打开」；为真时视图渲染确认弹窗 */
   readonly commentStripPending?: boolean;
+  /** 该栏当前是否有未落盘的改动（视图据此显示「未保存」标记并启用「保存」按钮） */
+  readonly unsaved?: boolean;
   /** 该栏空栏当前的内联视图；缺省视作 `TableEmptyMode.Buttons` */
   readonly emptyMode?: TableEmptyMode;
   /** 内联浏览器当前所在目录路径；根目录为空串 */
@@ -197,6 +199,8 @@ interface ITablePanelViewProps {
   readonly onEmptyCreate: (columnIndex: number, directory: string, name: string) => void;
   /** 某栏内联删除某表格回调 */
   readonly onEmptyDelete: (columnIndex: number, dataPath: string) => void;
+  /** 某栏的「保存」回调 */
+  readonly onSave?: (columnIndex: number) => void;
 }
 
 /** 单栏组件的 props：把该栏序号与各回调转交给一张表格 */
@@ -233,6 +237,8 @@ interface ITableColumnProps {
   readonly onEmptyCreate: (columnIndex: number, directory: string, name: string) => void;
   /** 该栏内联删除某表格回调 */
   readonly onEmptyDelete: (columnIndex: number, dataPath: string) => void;
+  /** 该栏的「保存」回调 */
+  readonly onSave?: (columnIndex: number) => void;
 }
 
 /**

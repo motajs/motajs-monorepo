@@ -76,6 +76,10 @@ export interface ITableGridProps {
   readonly onOpenInCodeEditor?: TableGridOpenCodeHandler;
   /** 「关闭本栏表格」回调；缺省时工具栏不显示 ✕ */
   readonly onCloseColumn?: () => void;
+  /** 本栏是否有未落盘的改动；透传给工具栏显示「未保存」标记并启用「保存」 */
+  readonly unsaved?: boolean;
+  /** 保存本栏未落盘改动的回调 */
+  readonly onSave?: () => void;
 }
 
 interface IRowRenderContext {
