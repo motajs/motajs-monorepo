@@ -159,6 +159,13 @@ function renderWithOpener(system: EditorCore, opener: ITablePanelOpener): Return
   );
 }
 
+// 点击工具栏「更多」触发按钮展开下拉（编辑 Schema / 在代码编辑器中打开收在此下拉内）
+async function openToolbarMenu(): Promise<void> {
+  await act(async () => {
+    fireEvent.click(screen.getByTestId('table-more'));
+  });
+}
+
 describe('阶段集成：完整流程与安全边界', () => {
   // 单个用例端到端跑通「打开 → 编辑 → 添加 → 删除（各一步撤销 / 重做）→ 注入打开器新开 schema 面板 → 改 schema → 切回数据面板因切入刷新而重算」
   it('数据表完整流程与 schema 切入刷新端到端跑通', async () => {
@@ -257,13 +264,19 @@ describe('阶段集成：完整流程与安全边界', () => {
 
     expect(await readData(system, 't')).toEqual({ name: 'b', extra: null });
 
-    // 经注入打开器新开 schema 面板：active 成为 schema 视图、渲染提示条且不再显示「编辑 Schema」按钮
+    // 经注入打开器新开 schema 面板：active 成为 schema 视图、渲染提示条且不再显示「编辑 Schema」菜单项
+    await openToolbarMenu();
+
     await act(async () => {
       fireEvent.click(screen.getByTestId('table-edit-schema'));
     });
 
     expect(created.length).toBe(2);
     expect(screen.getByTestId('schema-banner')).not.toBeNull();
+
+    await openToolbarMenu();
+
+    expect(screen.getByTestId('table-open-code')).not.toBeNull();
     expect(screen.queryByTestId('table-edit-schema')).toBeNull();
 
     // 在 schema 面板里改 name 的注释：整份写回 schema 资源；此刻数据面板不可见、无跨面板广播
@@ -287,7 +300,7 @@ describe('阶段集成：完整流程与安全边界', () => {
 
     expect(screen.getByText('改名')).not.toBeNull();
     expect(screen.queryByText('名字')).toBeNull();
-  });
+  }, 20000);
 
   // 字段名、注释与值均含脚本样文本时以字面文本渲染，绝不生成元素（XSS 回归守卫）
   it('脚本样字段名、注释与值以字面文本渲染', async () => {

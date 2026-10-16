@@ -103,6 +103,18 @@ function renderWithCapabilities(system: EditorCore, capabilities: ITableEditorCa
   );
 }
 
+// 点击工具栏「更多」触发按钮展开下拉（编辑 Schema / 在代码编辑器中打开收在此下拉内）
+async function openToolbarMenu(): Promise<void> {
+  await act(async () => {
+    fireEvent.click(screen.getByTestId('table-more'));
+  });
+}
+
+// 取某菜单项的菜单容器（aria-disabled / 可点性断言用）
+function menuItemOf(testId: string): Element | null {
+  return screen.getByTestId(testId).closest('[role="menuitem"]');
+}
+
 // 一张带单个字符串字段的样例表
 function stringTable(): { readonly data: unknown; readonly schema: unknown } {
   return {
@@ -112,7 +124,7 @@ function stringTable(): { readonly data: unknown; readonly schema: unknown } {
 }
 
 describe('表格 schema 模式与工具栏', () => {
-  // schema 目标下不显示「编辑 Schema」按钮，且网格上方渲染 schema 提示条
+  // schema 目标下不显示「编辑 Schema」菜单项，且网格上方渲染 schema 提示条
   it('schema 目标下不显示「编辑 Schema」按钮并渲染提示条', async () => {
     const fs = new FakeFileSystem();
 
@@ -123,6 +135,9 @@ describe('表格 schema 模式与工具栏', () => {
     await setSchemaTarget(panel, 't');
     renderWithCapabilities(system, {});
 
+    await openToolbarMenu();
+
+    expect(screen.getByTestId('table-open-code')).not.toBeNull();
     expect(screen.queryByTestId('table-edit-schema')).toBeNull();
     expect(screen.getByTestId('schema-banner')).not.toBeNull();
   });
@@ -146,6 +161,8 @@ describe('表格 schema 模式与工具栏', () => {
     };
 
     renderWithCapabilities(system, { tablePanel });
+
+    await openToolbarMenu();
 
     await act(async () => {
       fireEvent.click(screen.getByTestId('table-edit-schema'));
@@ -202,7 +219,9 @@ describe('表格 schema 模式与工具栏', () => {
     });
     renderWithCapabilities(system, { tablePanel: { open: vi.fn(async (): Promise<void> => {}) } });
 
-    expect(screen.getByTestId('table-edit-schema').getAttribute('disabled')).not.toBeNull();
+    await openToolbarMenu();
+
+    expect(menuItemOf('table-edit-schema')?.getAttribute('aria-disabled')).toBe('true');
   });
 
   // schema 资源不可用时「编辑 Schema」按钮隐藏
@@ -218,6 +237,9 @@ describe('表格 schema 模式与工具栏', () => {
     await setDataTarget(panel, 't');
     renderWithCapabilities(system, { tablePanel: { open: vi.fn(async (): Promise<void> => {}) } });
 
+    await openToolbarMenu();
+
+    expect(screen.getByTestId('table-open-code')).not.toBeNull();
     expect(screen.queryByTestId('table-edit-schema')).toBeNull();
   });
 });
@@ -243,6 +265,8 @@ describe('「在代码编辑器中打开」（D-30）', () => {
     };
 
     renderWithCapabilities(system, { codeEditor });
+
+    await openToolbarMenu();
 
     await act(async () => {
       fireEvent.click(screen.getByTestId('table-open-code'));
@@ -274,6 +298,8 @@ describe('「在代码编辑器中打开」（D-30）', () => {
 
     renderWithCapabilities(system, { codeEditor });
 
+    await openToolbarMenu();
+
     await act(async () => {
       fireEvent.click(screen.getByTestId('table-open-code'));
     });
@@ -302,6 +328,8 @@ describe('「在代码编辑器中打开」（D-30）', () => {
 
     renderWithCapabilities(system, { codeEditor });
 
+    await openToolbarMenu();
+
     await act(async () => {
       fireEvent.click(screen.getByTestId('table-open-code'));
     });
@@ -323,7 +351,9 @@ describe('「在代码编辑器中打开」（D-30）', () => {
     await setDataTarget(panel, 't');
     renderWithCapabilities(system, {});
 
-    expect(screen.getByTestId('table-open-code').getAttribute('disabled')).not.toBeNull();
+    await openToolbarMenu();
+
+    expect(menuItemOf('table-open-code')?.getAttribute('aria-disabled')).toBe('true');
   });
 });
 

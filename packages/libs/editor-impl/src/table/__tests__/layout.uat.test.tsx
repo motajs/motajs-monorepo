@@ -112,7 +112,7 @@ describe('面板标题与工具栏布局（L1）', () => {
     expect(panel.getTitle()).toBe('表格 {demo.json} {other.json}');
   });
 
-  // 工具栏中表名节点位于「编辑 Schema」按钮之前，二者之间还有一条竖分隔线
+  // 工具栏中表名节点位于「更多」触发按钮之前，二者之间还有一条竖分隔线
   it('工具栏表名位于按钮左侧且带竖分隔线', async () => {
     const fs = new FakeFileSystem();
 
@@ -126,12 +126,12 @@ describe('面板标题与工具栏布局（L1）', () => {
 
     const title = container.querySelector('.etable-toolbar-title');
     const divider = container.querySelector('.etable-toolbar-divider');
-    const schemaButton = container.querySelector('[data-test-id="table-edit-schema"]');
+    const moreButton = container.querySelector('[data-test-id="table-more"]');
 
-    if (title === null || divider === null || schemaButton === null) throw new Error('工具栏节点缺失');
+    if (title === null || divider === null || moreButton === null) throw new Error('工具栏节点缺失');
 
-    expect(title.compareDocumentPosition(schemaButton) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
-    expect(divider.compareDocumentPosition(schemaButton) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+    expect(title.compareDocumentPosition(moreButton) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+    expect(divider.compareDocumentPosition(moreButton) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
     expect(title.compareDocumentPosition(divider) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
   });
 });

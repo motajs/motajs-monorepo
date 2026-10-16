@@ -84,6 +84,13 @@ function renderWithCapabilities(system: EditorCore, capabilities: ITableEditorCa
   );
 }
 
+// 点击工具栏「更多」触发按钮展开下拉（编辑 Schema / 在代码编辑器中打开收在此下拉内）
+async function openToolbarMenu(): Promise<void> {
+  await act(async () => {
+    fireEvent.click(screen.getByTestId('table-more'));
+  });
+}
+
 // 点击某字段操作列中指定文案的按钮，并等待一次分发完成
 async function clickAction(field: string, name: string): Promise<void> {
   const cell = screen.getByTestId(`table-edit-${field}`);
@@ -332,6 +339,8 @@ describe('外部编辑器分发', () => {
     };
 
     renderWithCapabilities(system, { codeEditor });
+
+    await openToolbarMenu();
 
     await act(async () => {
       fireEvent.click(screen.getByTestId('table-open-code'));

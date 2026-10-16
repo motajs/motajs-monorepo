@@ -80,8 +80,8 @@ function columnAt(container: HTMLElement, index: number): HTMLElement {
 }
 
 describe('每栏关闭按钮（P15）', () => {
-  // ✕ 渲染在「在代码编辑器中打开」右侧
-  it('✕ 位于「在代码编辑器中打开」右侧', async () => {
+  // ✕ 渲染在「更多」触发按钮右侧（两个低频动作已收进该下拉，触发按钮仍在工具栏内常驻）
+  it('✕ 位于「更多」触发按钮右侧', async () => {
     const fs = new FakeFileSystem();
 
     seed(fs, 'demo', { name: 'hello' }, { type: 'object', properties: { name: { type: 'string' } } });
@@ -95,11 +95,11 @@ describe('每栏关闭按钮（P15）', () => {
     const { container } = render(createElement(system.shellSystem.render()));
     const column = columnAt(container, 0);
     const close = column.querySelector('[data-test-id="table-close-column"]');
-    const open = column.querySelector('[data-test-id="table-open-code"]');
+    const more = column.querySelector('[data-test-id="table-more"]');
 
-    if (close === null || open === null) throw new Error('工具栏按钮缺失');
+    if (close === null || more === null) throw new Error('工具栏按钮缺失');
 
-    expect(open.compareDocumentPosition(close) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+    expect(more.compareDocumentPosition(close) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
   });
 
   // 有目标栏的 ✕ 可点；点后本栏回到空栏三按钮（空栏呈现改为内联控件，G-02.1-1）
