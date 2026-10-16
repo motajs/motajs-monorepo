@@ -136,6 +136,7 @@ describe('同面板依赖栏即时同步（P18 / P20）', () => {
     await act(async () => {
       await panel.commitValue("['properties']['a']['type']", 'number', 1);
     });
+    await panel.save(1);
     await flush();
 
     expect(selectText(columnAt(container, 2), 'table-input-properties-a-type')).toBe('number');
@@ -167,6 +168,7 @@ describe('同面板依赖栏即时同步（P18 / P20）', () => {
     await act(async () => {
       await panel.commitValue("['properties']['a']['type']", 'number', 1);
     });
+    await panel.save(1);
     await flush();
 
     const unrelatedReads = readSpy.mock.calls.filter(
@@ -205,6 +207,7 @@ describe('代码编辑器写回与撤销 / 重做也走同面板同步（P18 / P
     await act(async () => {
       await panel.openCurrentViewInCodeEditor(codeEditor, 1);
     });
+    await panel.save(1);
     await flush();
 
     expect(selectText(columnAt(container, 2), 'table-input-properties-a-type')).toBe('number');
@@ -230,6 +233,7 @@ describe('代码编辑器写回与撤销 / 重做也走同面板同步（P18 / P
     await act(async () => {
       await panel.addItem("['a']", 'mid', 0);
     });
+    await panel.save(0);
     await flush();
 
     expect(await readContent(system, tableDataPath('t'))).toEqual({ a: '1', mid: null });
@@ -239,6 +243,7 @@ describe('代码编辑器写回与撤销 / 重做也走同面板同步（P18 / P
     await act(async () => {
       await system.undoSystem.undo();
     });
+    await panel.save(0);
     await flush();
 
     expect(columnAt(container, 0).querySelector('[data-test-id="table-row-mid"]')).toBeNull();
