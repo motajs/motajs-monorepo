@@ -5,16 +5,16 @@ current_phase: "02.1"
 current_phase_name: 资源层重构与表格文件管理
 current_plan: 12
 status: verifying
-stopped_at: Completed 02.1-13-PLAN.md
-last_updated: "2026-10-16T06:47:44.555Z"
+stopped_at: Completed 02.1-14-PLAN.md
+last_updated: "2026-10-16T07:01:00.863Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 02.1 execution started
-state_head: bba6e5a482203775c4e9e299c9bb015bafc78331
+state_head: e6170a67db70fa162c40b0e1272daf3f1906f1c2
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 58
-  completed_plans: 53
+  completed_plans: 54
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -111,6 +111,7 @@ Progress: [██████████] 100%
 | Phase 02.1 P11 | 6min | 2 tasks | 2 files |
 | Phase 02.1 P12 | 12min | 3 tasks | 4 files |
 | Phase 02.1 P13 | 12min | 2 tasks | 5 files |
+| Phase 02.1 P14 | 10min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -235,6 +236,9 @@ Recent decisions affecting current work:
 - [Phase 02.1]: 02.1-13: TableEmptyMode 落 table/types.ts（叶子模块）而非 tablePanel.ts，避免 tablePanel → TableGrid → TableEmptyColumn → tablePanel 环依赖
 - [Phase 02.1]: 02.1-13: ITablePanelViewState 追加四个空栏字段全部可选（emptyMode/pickerDirectory/pickerEntries/pickerError），既有 publish / publishCommentStrip / createColumn 零改动即通过类型检查
 - [Phase 02.1]: 02.1-13: ITablePickerProps.onSelect 保持 required——打开/删除两组件唯一差异是 presets 是否传入，删除态由 TableEmptyColumn 传空操作满足契约
+- [Phase 02.1]: 02.1-14: 两个可复用组件落地——TablePicker 无自身状态、纯 props 驱动，打开态与删除态唯一差异是 presets 是否传入（onSelect 必填，删除态由 Plan 15 传空操作）
+- [Phase 02.1]: 02.1-14: 文件行仅经 isTableDataPath 放行、预设区仅在 presets 非空时渲染；TableCreateForm 只回调 name.trim()，合法性 / 拼路径留 Plan 15 面板侧
+- [Phase 02.1]: 02.1-14: 两组件复用 Plan 09 的 .etable-list* 类名与 table-list-* data-test-id 前缀，降低 Plan 17 测试迁移面
 
 ### Pending Todos
 
@@ -261,6 +265,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-16T06:47:44.230Z
-Stopped at: Completed 02.1-13-PLAN.md
+Last session: 2026-10-16T07:01:00.406Z
+Stopped at: Completed 02.1-14-PLAN.md
 Resume file: None
