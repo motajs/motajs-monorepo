@@ -95,6 +95,23 @@ describe('面板标题与工具栏布局（L1）', () => {
     expect(panel.getTitle()).toBe('表格 demo.json');
   });
 
+  // 两张及以上表时标题为「表格 {<路径0>} {<路径1>}」（按栏序号排列）
+  it('多表时标题按栏序拼出「表格 {a.json} {b.json}」', async () => {
+    const fs = new FakeFileSystem();
+
+    seedSampleTable(fs, 'demo');
+    seedSampleTable(fs, 'other');
+    const system = await createTableHarness(fs);
+    const panels: TablePanel[] = [];
+    const panel = await openTablePanel(system, panels);
+
+    panel.setTable({ dataPath: tableDataPath('demo') }, 0);
+    panel.setTable({ dataPath: tableDataPath('other') }, 1);
+    await panel.onSwitchIn();
+
+    expect(panel.getTitle()).toBe('表格 {demo.json} {other.json}');
+  });
+
   // 工具栏中表名节点位于「编辑 Schema」按钮之前，二者之间还有一条竖分隔线
   it('工具栏表名位于按钮左侧且带竖分隔线', async () => {
     const fs = new FakeFileSystem();
@@ -154,7 +171,7 @@ describe('多栏布局（L4 结构）', () => {
     expect(container.querySelectorAll('.etable-column').length).toBe(1);
   });
 
-  // 缺省只有第 0 栏有目标：仅第 0 栏渲染 schema 驱动行，其余栏显示未设目标空态
+  // 缺省只有第 0 栏有目标：仅第 0 栏渲染 schema 驱动行，其余栏显示空栏内联控件
   it('缺省只有第 0 栏有目标，其余栏为空态', async () => {
     const fs = new FakeFileSystem();
 
@@ -172,7 +189,9 @@ describe('多栏布局（L4 结构）', () => {
 
     expect(columns.length).toBe(2);
     expect(columns[0].querySelector('[data-test-id="table-row-name"]')).not.toBeNull();
-    expect(columns[1].textContent).toContain('尚未设置目标表');
+    expect(columns[1].querySelector('[data-test-id="table-empty-open"]')).not.toBeNull();
+    expect(columns[1].querySelector('[data-test-id="table-empty-create"]')).not.toBeNull();
+    expect(columns[1].querySelector('[data-test-id="table-empty-delete"]')).not.toBeNull();
   });
 
   // 窗口宽度 1000、栏宽缺省时各栏等分：flex 值一致且不再使用固定像素宽度（末栏不再偏宽）
@@ -382,8 +401,8 @@ describe('「操作」列 1.5 倍宽（P25）', () => {
 });
 
 describe('空栏顶部控件右对齐（P17）', () => {
-  // 未打开表的空栏工具栏含弹性占位，把右侧按钮推向右端
-  it('未打开表的栏工具栏含弹性占位', async () => {
+  // 空栏呈现改为内联控件（G-02.1-1）：未打开表的栏不再渲染表格工具栏，改渲染空栏三按钮
+  it('空栏渲染空栏控件而非表格工具栏', async () => {
     const fs = new FakeFileSystem();
 
     seedSampleTable(fs, 'demo');
@@ -395,13 +414,13 @@ describe('空栏顶部控件右对齐（P17）', () => {
     setWindowWidth(1000);
     const { container } = render(createElement(system.shellSystem.render()));
     const columns = container.querySelectorAll('.etable-column');
-    const toolbar = columns[1].querySelector('.etable-toolbar');
-    const spacer = toolbar === null ? null : toolbar.querySelector('.etable-toolbar-spacer');
-    const codeButton = toolbar === null ? null : toolbar.querySelector('[data-test-id="table-open-code"]');
+    const emptyColumn = columns[1];
 
-    if (spacer === null || codeButton === null) throw new Error('空栏工具栏弹性占位缺失');
-
-    expect(spacer.compareDocumentPosition(codeButton) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+    expect(emptyColumn.querySelector('.etable-toolbar')).toBeNull();
+    expect(emptyColumn.querySelector('[data-test-id="table-empty"]')).not.toBeNull();
+    expect(emptyColumn.querySelector('[data-test-id="table-empty-open"]')).not.toBeNull();
+    expect(emptyColumn.querySelector('[data-test-id="table-empty-create"]')).not.toBeNull();
+    expect(emptyColumn.querySelector('[data-test-id="table-empty-delete"]')).not.toBeNull();
   });
 
   // 已打开表的栏由标题撑开，不出现弹性占位，既有标题 / 分隔线布局不变
