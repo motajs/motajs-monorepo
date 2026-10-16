@@ -301,7 +301,7 @@
 
 **状态：待用户确认。** 依据 `02.1-UAT.md` 的缺口 `G-02.1-1`：用户实测发现 Plan 09 把「打开表格」做成了**覆盖整个外壳的独立面板**，要求改为**表格面板空栏内的内联状态**——空栏显示「打开表格 / 新建表格 / 删除表格」三个按钮，点按钮在同一栏内展示对应组件；打开 / 删除两个组件可复用，差异仅在于是否注入预设表；不再新开独立面板；`editor-dev` 工具栏的「打开表格」入口随之删除；表格面板标签名支持多表（`表格{table0}` 等）。
 
-**为什么要有这一轮**：Plan 09/10 交付的 `tableListPanelType`（独立面板类型）+ `TableListPanel` + `TableListPanelView` 是「独立面板」形态，方向与用户要求相左，须拆成「可复用组件 + 表格面板空栏内联承载」。按项目规则「先接口、后实现」，本轮先做接口（Plan 13），再做实现（Plan 14 两个可复用组件 / Plan 15 空栏内联承载 + 移除独立面板 / Plan 16 开发宿主收口）。Plan 15 承载原 Plan 14 的「面板流 + 删除 + 测试迁移」，为把每计划文件数与上下文预算压回阈值内而拆分。
+**为什么要有这一轮**：Plan 09/10 交付的 `tableListPanelType`（独立面板类型）+ `TableListPanel` + `TableListPanelView` 是「独立面板」形态，方向与用户要求相左，须拆成「可复用组件 + 表格面板空栏内联承载」。按项目规则「先接口、后实现」，本轮先做接口（Plan 13），再做实现（Plan 14 两个可复用组件 / Plan 15 空栏内联承载 + 移除独立面板 + `TablePanel.closeColumn` 复位空栏态 / Plan 17 迁移 editor-impl 测试 / Plan 16 开发宿主收口）。为把每计划文件数与上下文预算压回阈值内，把测试迁移从 Plan 15 拆到 Plan 17。
 
 ---
 
@@ -370,7 +370,11 @@
 
 ## Plan 15 — `02.1-15-PLAN.md`（表格面板空栏内联承载 + 移除独立面板，实现）
 
-**无新增对外命名**（Plan 13 已定义 `TableEmptyMode` / `ITableEmptyStateProps` 与六个 `TablePanel` 私有方法；本计划实现 `TableEmptyColumn`、把空栏接入 `TablePanel`、移除独立列表面板、多表标题、迁移测试）。新增测试文件 `tableEmptyColumn.test.tsx`（小驼峰文件名）；删除 `tableListPanel.ts` / `tableListPanelType.ts` / `components/TableListPanelView.tsx` / `__tests__/tableList.test.tsx`。
+**无新增对外命名**（Plan 13 已定义 `TableEmptyMode` / `ITableEmptyStateProps` 与六个 `TablePanel` 私有方法；本计划实现 `TableEmptyColumn`、把空栏接入 `TablePanel`、`TablePanel.closeColumn` 关栏时复位该栏 `emptyMode` 为 `Buttons`（`directory` / `entries` / `pickerError` 一并复位）、移除独立列表面板、多表标题）。删除 `tableListPanel.ts` / `tableListPanelType.ts` / `components/TableListPanelView.tsx`。本计划**不含测试迁移**（既有测试此时预期为红，由 Plan 17 收口）。
+
+## Plan 17 — `02.1-17-PLAN.md`（迁移 editor-impl 表格测试到空栏内联，测试）
+
+**无新增对外命名**（纯测试迁移：新建 `tableEmptyColumn.test.tsx`——小驼峰文件名；迁移 `openNewDelete.uat.test.tsx` / `layout.uat.test.tsx` / `tracer.test.tsx` / `openParam.test.tsx` / `closeColumn.uat.test.tsx`；删除 `__tests__/tableList.test.tsx`）。本计划结束时 editor-impl 测试恢复全绿。
 
 ## Plan 16 — `02.1-16-PLAN.md`（开发宿主收口，实现）
 
