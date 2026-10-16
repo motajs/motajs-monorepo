@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "02.1"
 current_phase_name: 资源层重构与表格文件管理
-current_plan: 20
+current_plan: 21
 status: executing
-stopped_at: Completed 02.1-20-PLAN.md
-last_updated: "2026-10-16T13:10:30.750Z"
+stopped_at: Completed 02.1-21-PLAN.md
+last_updated: "2026-10-16T13:25:40.086Z"
 last_activity: 2026-10-16
 last_activity_desc: Completed 02.1-19-PLAN.md
-state_head: 59617ce9c6cead8fa4b8a017243c0935ba75efe7
+state_head: b8df4630afb5d8c14a73eac2203a901ec1112555
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 64
-  completed_plans: 60
+  completed_plans: 61
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 02.1 (资源层重构与表格文件管理) — EXECUTING
-Current Plan: 20
+Current Plan: 21
 Total Plans in Phase: 24
 Status: In progress — gap closure (G-02.1-3)
 Last activity: 2026-10-16 - Completed 02.1-19-PLAN.md
@@ -118,6 +118,7 @@ Progress: [██████████] 100%
 | Phase 02.1 P18 | 6min | 3 tasks | 4 files |
 | Phase 02.1 P19 | 8min | 1 tasks | 5 files |
 | Phase 02.1 P20 | ~45min | 3 tasks | 5 files |
+| Phase 02.1 P21 | ~50min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -263,6 +264,9 @@ Recent decisions affecting current work:
 - [Phase 02.1]: 02.1-20: 注释剥离记忆以「路径 → 确认时原文」记录（stripConfirmed），TablePanel.refresh 命中且原文逐字未变才免弹框，原文变化即重弹
 - [Phase 02.1]: 02.1-20: TablePanel.flushColumn 写成异步方法（同步前缀完成快照与清标记），void 调用先于 setTable/closeColumn 的目标切换，既保快照又不引入函数内局部函数
 - [Phase 02.1]: 02.1-20: 列表实时同步复用既有 IEditorPanel.onUpdateResource 通道（TablePanel.onUpdateResource→refreshAwaitingPickers），未新增 editor-core 接口（D-04 锁定）
+- [Phase 02.1]: 02.1-21: 既有表格测试迁到手动保存——读回资源前补 TablePanel.save（本地辅助 savePanel(panel) 或按栏号直调）；撤销/重做只改内存故读回前也先保存
+- [Phase 02.1]: 02.1-21: 「添加成功」等面板级内存态提示断言保留在保存之前（保存会把提示改为「已保存」），其余资源读回断言在保存之后
+- [Phase 02.1]: 02.1-21: panelSync 同面板同步断言改到 TablePanel.save(栏号) 之后（refreshDependents 已移到保存成功路径）
 
 ### Pending Todos
 
@@ -289,6 +293,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-16T13:10:30.458Z
-Stopped at: Completed 02.1-20-PLAN.md
+Last session: 2026-10-16T13:25:39.749Z
+Stopped at: Completed 02.1-21-PLAN.md
 Resume file: None
