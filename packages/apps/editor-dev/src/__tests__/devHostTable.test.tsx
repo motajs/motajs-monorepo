@@ -75,6 +75,18 @@ async function readData(core: EditorCore, path: string): Promise<Record<string, 
   return typeof text === 'string' ? (JSON.parse(text) as Record<string, unknown>) : undefined;
 }
 
+// 点击工具栏「更多」触发按钮展开下拉（编辑 Schema / 在代码编辑器中打开收在此下拉内）
+async function openToolbarMenu(): Promise<void> {
+  await act(async () => {
+    fireEvent.click(screen.getByTestId('table-more'));
+  });
+}
+
+// 取某菜单项的菜单容器（aria-disabled 断言用）
+function menuItemOf(testId: string): Element | null {
+  return screen.getByTestId(testId).closest('[role="menuitem"]');
+}
+
 // 用能力 Provider 包裹外壳渲染根，注入开发宿主的表格面板打开器与预设表（对应 main.tsx 的接线）
 function renderWithTableOpener(core: EditorCore): ReturnType<typeof render> {
   return render(
@@ -145,22 +157,22 @@ describe('开发宿主表格接入', () => {
     expect(menuTitles).not.toContain('打开表格');
   });
 
-  // 注入表格打开器后，数据表格工具栏的「编辑 Schema」按钮存在且未被禁用
-  it('注入表格打开器后「编辑 Schema」按钮可用', async () => {
+  // 注入表格打开器后，数据表格工具栏「更多」下拉里的「编辑 Schema」菜单项存在且可用
+  it('注入表格打开器后「编辑 Schema」菜单项可用', async () => {
     const core = await createHost();
 
     await act(async () => {
       await openDemoTable(core);
     });
 
-    const { container } = renderWithTableOpener(core);
-    const button = container.querySelector('[data-test-id="table-edit-schema"]');
+    renderWithTableOpener(core);
+    await openToolbarMenu();
 
-    expect(button).not.toBeNull();
-    expect(button === null ? undefined : button.getAttribute('disabled')).toBeNull();
+    expect(screen.getByTestId('table-edit-schema')).not.toBeNull();
+    expect(menuItemOf('table-edit-schema')?.getAttribute('aria-disabled')).not.toBe('true');
   });
 
-  // 点击「编辑 Schema」后按 D-06 新开一个标签承载 schema 视图面板，且一打开即渲染 schema 提示条
+  // 经「更多」下拉点「编辑 Schema」后按 D-06 新开一个标签承载 schema 视图面板，且一打开即渲染 schema 提示条
   it('点击「编辑 Schema」新开 schema 视图面板', async () => {
     const core = await createHost();
 
@@ -170,6 +182,8 @@ describe('开发宿主表格接入', () => {
 
     const { container } = renderWithTableOpener(core);
     const tabsBefore = core.shellSystem.listTabs().length;
+
+    await openToolbarMenu();
 
     await act(async () => {
       fireEvent.click(screen.getByTestId('table-edit-schema'));
@@ -265,6 +279,12 @@ describe('开发宿主表格接入', () => {
       fireEvent.blur(textarea);
     });
 
+    // 手动保存模型：编辑只留内存，读回资源前先点「保存」落盘
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('table-save'));
+    });
+    await act(async () => {});
+
     const edited = await readData(core, TABLE_DEMO_DATA_PATH);
 
     expect(edited === undefined ? undefined : edited.title).toBe('改后标题');
@@ -272,6 +292,11 @@ describe('开发宿主表格接入', () => {
     await act(async () => {
       fireEvent.click(screen.getByText(DEV_UNDO_MENU_TITLE));
     });
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('table-save'));
+    });
+    await act(async () => {});
 
     const restored = await readData(core, TABLE_DEMO_DATA_PATH);
 
@@ -326,7 +351,7 @@ describe('开发宿主表格端到端', () => {
 
     expect(inColumn(container, 0, 'table-empty-open')).not.toBeNull();
 
-    // 再点「打开表格」→ 目录树点「tables」导航进入 → 点「返回」回三按钮（该栏目录状态保留在 tables）
+    // 再点「打开表格」→ 目录树点「tables」导航进入并列出其数据文件 → 点「..」回根 → 点「返回」回三按钮
     await act(async () => {
       clickInColumn(container, 0, 'table-empty-open');
     });
@@ -340,15 +365,26 @@ describe('开发宿主表格端到端', () => {
     expect(screen.getByTestId('table-list-entry-tables/demo.json')).not.toBeNull();
 
     await act(async () => {
+      fireEvent.click(screen.getByTestId('table-list-up'));
+    });
+    await act(async () => {});
+
+    await act(async () => {
       clickInColumn(container, 0, 'table-empty-back');
     });
     await act(async () => {});
 
     expect(inColumn(container, 0, 'table-empty-create')).not.toBeNull();
 
-    // 点「新建表格」→ 输入 hero 回车：在 tables 目录写出一对文件并把新表开进本栏（不新开标签）
+    // 点「新建表格」→ 在新建表单里进入 tables 目录选定新建位置 → 输入 hero 回车：
+    // 一对文件写在 tables 目录下、新表开进本栏（不新开标签）
     await act(async () => {
       clickInColumn(container, 0, 'table-empty-create');
+    });
+    await act(async () => {});
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('table-list-entry-tables'));
     });
     await act(async () => {});
 
