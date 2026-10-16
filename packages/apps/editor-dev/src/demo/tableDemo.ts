@@ -1,6 +1,6 @@
 import { EditorCore } from '@motajs/editor-core';
 import { ITablePanelOpener, ITablePreset } from '@motajs/editor-impl/react';
-import { ITableSchemaNode, tableListPanelType, tablePanelType } from '@motajs/editor-impl/table';
+import { ITableSchemaNode, tablePanelType } from '@motajs/editor-impl/table';
 
 /** 演示表的不透明表名，数据与 schema 路径均据此生成 */
 export const TABLE_DEMO_NAME: string = 'demo';
@@ -87,22 +87,6 @@ export const TABLE_DEMO_SCHEMA: string = JSON.stringify(createTableDemoSchema(TA
 
 /** 开发宿主注入给「打开表格」列表的预设表清单（演示 `ITableEditorCapabilities.tablePresets`） */
 export const TABLE_PRESETS: readonly ITablePreset[] = [{ name: '演示表', path: TABLE_DEMO_DATA_PATH }];
-
-/** 「打开表格」菜单项的唯一标识符 */
-export const TABLE_DEMO_MENU_ID: string = 'table-demo';
-
-/** 「打开表格」菜单项的显示标题 */
-export const TABLE_DEMO_MENU_TITLE: string = '打开表格';
-
-/**
- * 打开「打开表格」列表面板：先开一个空白标签页，再打开列表面板类型
- * @param core 开发宿主的编辑器核心，经其外壳系统开标签页与面板
- */
-export async function openTableDemoPanel(core: EditorCore): Promise<void> {
-  const tabId = core.shellSystem.openBlankTab();
-
-  await core.shellSystem.openPanelInTab(tabId, tableListPanelType.id);
-}
 
 /**
  * 创建开发宿主的表格面板打开器：开一个空白标签页，再带打开参数打开表格面板类型
