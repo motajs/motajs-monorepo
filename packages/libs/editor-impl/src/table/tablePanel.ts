@@ -1,11 +1,11 @@
 import { Store } from '@tanstack/store';
 import { useStore } from '@tanstack/react-store';
 import { Button, Modal } from 'antd';
-import { IEditorPanel, IEditorPanelContext, IEditorPanelFactoryParam, IUndoContext } from '@motajs/editor-core';
+import { IEditorPanel, IEditorPanelContext, IEditorPanelFactoryParam, IFileEntry, IUndoContext } from '@motajs/editor-core';
 import { get } from 'es-toolkit/compat';
 import { createElement, FC, ReactElement, useCallback, useEffect, useRef, useState } from 'react';
 import { ICodeEditorOpener, ITablePanelOpener } from '../react';
-import { ITablePanel, ITablePanelParam, ITablePanelTarget, ITableRowNode } from './types';
+import { ITablePanel, ITablePanelParam, ITablePanelTarget, ITableRowNode, TableEmptyMode } from './types';
 import {
   ITableGridProps,
   TableGrid,
@@ -127,6 +127,14 @@ export interface ITablePanelViewState {
   readonly title?: string;
   /** 该栏是否正等待用户确认「剥离注释后打开」；为真时视图渲染确认弹窗 */
   readonly commentStripPending?: boolean;
+  /** 该栏空栏当前的内联视图；缺省视作 `TableEmptyMode.Buttons` */
+  readonly emptyMode?: TableEmptyMode;
+  /** 内联浏览器当前所在目录路径；根目录为空串 */
+  readonly pickerDirectory?: string;
+  /** 该目录的直接子条目 */
+  readonly pickerEntries?: readonly IFileEntry[];
+  /** 目录读取失败时的提示文案；缺省表示无错误 */
+  readonly pickerError?: string;
 }
 
 /** 面板渲染根的 props：按可用宽度铺出多栏，每栏一张独立订阅的表格 */

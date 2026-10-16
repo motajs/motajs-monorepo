@@ -40,6 +40,17 @@ export const enum TableEditMode {
   Delete,
 }
 
+export const enum TableEmptyMode {
+  /** 空栏初始态：显示「打开表格 / 新建表格 / 删除表格」三个按钮 */
+  Buttons,
+  /** 内联展示打开表格组件 */
+  Open,
+  /** 内联展示新建表格组件 */
+  Create,
+  /** 内联展示删除表格组件 */
+  Delete,
+}
+
 export interface ITableSchemaNode extends JSONSchema.Interface {
   /** 该字段使用的外部编辑器（`x-editor` 扩展键） */
   readonly 'x-editor'?: TableExternalEditor;
