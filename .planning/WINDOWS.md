@@ -2,9 +2,9 @@
 schema_version: 1
 open_count: 11
 waived_count: 0
-fixed_count: 2
-total_count: 13
-last_updated: 2026-10-12T08:00:04.110Z
+fixed_count: 4
+total_count: 15
+last_updated: 2026-10-16T16:44:52.288Z
 ---
 
 # Broken Windows Ledger
@@ -28,6 +28,8 @@ last_updated: 2026-10-12T08:00:04.110Z
 | 11 | 05.2 | deviation | packages/libs/react-monaco-editor/lib/modelScope.test.ts |  | pnpm test full recursive run intermittently exits 1: monaco worker-close races a pending module fetch (Unhandled Rejection 'Closing rpc while fetch was pending'); 6/6 tests pass, passes isolated; package untouched by 05.2 | open |  | 2026-10-01T15:10:15.467Z |  |
 | 12 | 05.2 | deviation | packages/apps/editor/src/Workbench/CodeEditor/__tests__/ternDeclaration.test.ts | 37 | pnpm test full recursive run intermittently times out this test at 5000ms (measured 6569ms) under memory pressure; 785/785 pass isolated; editor untouched by 05.2 | open |  | 2026-10-01T15:10:16.989Z |  |
 | 13 | 01.1-dev-host | unrun-verify |  |  | Manual dev-host acceptance not run by executor (needs a browser): start pnpm --filter @motajs/editor-dev dev at http://127.0.0.1:1056, verify + follows the last tab and closing a non-active of three tabs keeps the active one | open |  | 2026-10-12T08:00:04.110Z |  |
+| 14 | 02.1 | deviation | packages/libs/editor-core/vitest.config.ts |  | editor-core vitest 未处理 CSS 致 ?inline 返回空串，样式断言无法成立（Plan 23 已修复） | fixed |  | 2026-10-16T16:43:44.904Z | 2026-10-16T16:44:51.427Z |
+| 15 | 02.1 | deviation | packages/libs/editor-impl/src/table/__tests__/integration.test.tsx |  | 重量级端到端用例超 5s 默认超时（满套件并行争用，HEAD 亦同），Plan 23 放宽到 20s | fixed |  | 2026-10-16T16:43:45.730Z | 2026-10-16T16:44:52.288Z |
 
 ````json
 [
@@ -186,6 +188,30 @@ last_updated: 2026-10-12T08:00:04.110Z
     "reason": "",
     "recorded_at": "2026-10-12T08:00:04.110Z",
     "resolved_at": null
+  },
+  {
+    "id": 14,
+    "kind": "deviation",
+    "phase": "02.1",
+    "file": "packages/libs/editor-core/vitest.config.ts",
+    "line": null,
+    "description": "editor-core vitest 未处理 CSS 致 ?inline 返回空串，样式断言无法成立（Plan 23 已修复）",
+    "status": "fixed",
+    "reason": "",
+    "recorded_at": "2026-10-16T16:43:44.904Z",
+    "resolved_at": "2026-10-16T16:44:51.427Z"
+  },
+  {
+    "id": 15,
+    "kind": "deviation",
+    "phase": "02.1",
+    "file": "packages/libs/editor-impl/src/table/__tests__/integration.test.tsx",
+    "line": null,
+    "description": "重量级端到端用例超 5s 默认超时（满套件并行争用，HEAD 亦同），Plan 23 放宽到 20s",
+    "status": "fixed",
+    "reason": "",
+    "recorded_at": "2026-10-16T16:43:45.730Z",
+    "resolved_at": "2026-10-16T16:44:52.288Z"
   }
 ]
 ````
