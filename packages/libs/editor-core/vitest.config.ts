@@ -21,5 +21,6 @@ export default defineConfig({
     environment: 'jsdom',
     include: ['src/**/*.test.{ts,tsx}'],
     setupFiles: ['src/__tests__/mapPolyfill.ts'],
+    css: true,
   },
 });
