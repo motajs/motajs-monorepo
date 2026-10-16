@@ -5,16 +5,16 @@ current_phase: "02.1"
 current_phase_name: 资源层重构与表格文件管理
 current_plan: 12
 status: verifying
-stopped_at: Completed 02.1-14-PLAN.md
-last_updated: "2026-10-16T07:01:00.863Z"
+stopped_at: Completed 02.1-15-PLAN.md
+last_updated: "2026-10-16T07:20:23.303Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 02.1 execution started
-state_head: e6170a67db70fa162c40b0e1272daf3f1906f1c2
+state_head: 9378245ba1490986c49d4399fa7edc0650aaa097
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 58
-  completed_plans: 54
+  completed_plans: 55
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -112,6 +112,7 @@ Progress: [██████████] 100%
 | Phase 02.1 P12 | 12min | 3 tasks | 4 files |
 | Phase 02.1 P13 | 12min | 2 tasks | 5 files |
 | Phase 02.1 P14 | 10min | 2 tasks | 3 files |
+| Phase 02.1 P15 | 22 | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -239,6 +240,10 @@ Recent decisions affecting current work:
 - [Phase 02.1]: 02.1-14: 两个可复用组件落地——TablePicker 无自身状态、纯 props 驱动，打开态与删除态唯一差异是 presets 是否传入（onSelect 必填，删除态由 Plan 15 传空操作）
 - [Phase 02.1]: 02.1-14: 文件行仅经 isTableDataPath 放行、预设区仅在 presets 非空时渲染；TableCreateForm 只回调 name.trim()，合法性 / 拼路径留 Plan 15 面板侧
 - [Phase 02.1]: 02.1-14: 两组件复用 Plan 09 的 .etable-list* 类名与 table-list-* data-test-id 前缀，降低 Plan 17 测试迁移面
+- [Phase 02.1]: 02.1-15: 空栏内联承载——TableColumn 在 NoTarget 渲染 TableEmptyColumn（三按钮 + 打开/新建/删除内联态），不再渲染 TableGrid 未设目标态；TableGrid.renderState 删除 NoTarget 分支（枚举成员保留）
+- [Phase 02.1]: 02.1-15: TablePanel.publish 在 target===null 时经对象展开一并发布 emptyMode/pickerDirectory/pickerEntries/pickerError（store.setState 为整体替换语义）；TablePanel.closeColumn 复位 emptyMode=Buttons/directory=''/entries=[]/pickerError，deleteFromColumn 后保持 Delete（连续删除）
+- [Phase 02.1]: 02.1-15: 删除态向 TablePicker 传模块级空操作 ignoreSelect 满足 required 的 onSelect、不传 presets；删除二次确认用组件本地受控 antd Modal（table-list-delete-confirm/cancel）
+- [Phase 02.1]: 02.1-15: 移除独立列表面板（tableListPanel/tableListPanelType/TableListPanelView）；INITIAL_TABLE_DATA_TEXT/INITIAL_TABLE_SCHEMA_TEXT/joinPath/tableBaseName 迁入 tablePanel.ts（名字与 export 不变）；TablePanel.getTitle 多表为「表格 {a} {b}」
 
 ### Pending Todos
 
@@ -265,6 +270,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-16T07:01:00.406Z
-Stopped at: Completed 02.1-14-PLAN.md
+Last session: 2026-10-16T07:20:22.981Z
+Stopped at: Completed 02.1-15-PLAN.md
 Resume file: None
