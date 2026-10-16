@@ -93,9 +93,9 @@ async function savePanel(panel: TablePanel): Promise<void> {
   await panel.save();
 }
 
-// 读取根目录当前直接子条目名列表
-async function rootNames(system: EditorCore): Promise<string[]> {
-  const entries = await system.resourceSystem.listDirectory('');
+// 读取某目录当前直接子条目名列表
+async function directoryNames(system: EditorCore, path: string): Promise<string[]> {
+  const entries = await system.resourceSystem.listDirectory(path);
 
   return entries.map((entry) => entry.name);
 }
@@ -236,7 +236,7 @@ describe('打开 / 新建 / 删除端到端集成', () => {
     expect(listSpy).toHaveBeenCalled();
     expect(screen.getByTestId('table-list-entry-added.json')).not.toBeNull();
 
-    // 返回三按钮后新建一张表：在当前目录写出一对 name.json + name.schema.json，且新表开进本栏
+    // 返回三按钮后新建一张表：先进入子目录 tables 选定位置，再在该目录写出一对文件，且新表开进本栏
     await act(async () => {
       clickInColumn(container, 0, 'table-empty-back');
     });
@@ -244,6 +244,12 @@ describe('打开 / 新建 / 删除端到端集成', () => {
 
     await act(async () => {
       clickInColumn(container, 0, 'table-empty-create');
+    });
+    await act(async () => {});
+
+    // 进入目标子目录 tables 作为新建位置
+    await act(async () => {
+      clickInColumn(container, 0, 'table-list-entry-tables');
     });
     await act(async () => {});
 
@@ -259,13 +265,17 @@ describe('打开 / 新建 / 删除端到端集成', () => {
     });
     await act(async () => {});
 
-    expect(await rootNames(system)).toEqual(expect.arrayContaining(['newbie.json', 'newbie.schema.json']));
+    // 一对文件写在选定目录 tables，而不是根目录
+    expect(await directoryNames(system, 'tables')).toEqual(
+      expect.arrayContaining(['newbie.json', 'newbie.schema.json']),
+    );
+    expect(await directoryNames(system, '')).not.toEqual(expect.arrayContaining(['newbie.json']));
     expect(system.shellSystem.listTabs().length).toBe(tabsBefore);
 
     // 新表开进本栏：面板标题指向该数据文件（此刻面板内仅一栏有目标）
-    expect(created[0].getTitle()).toBe('表格 newbie.json');
+    expect(created[0].getTitle()).toBe('表格 tables/newbie.json');
 
-    // 点本栏 ✕ 关栏后删除新表：经确认后一对文件消失、目录树不再出现，且未登记任何撤销（D-13）
+    // 点本栏 ✕ 关栏后删除新表：先进入 tables 目录，经确认后一对文件消失、目录树不再出现，且未登记任何撤销（D-13）
     await act(async () => {
       clickInColumn(container, 0, 'table-close-column');
     });
@@ -276,12 +286,18 @@ describe('打开 / 新建 / 删除端到端集成', () => {
     });
     await act(async () => {});
 
+    // 删除态默认在根目录，先进入 tables 目录
+    await act(async () => {
+      clickInColumn(container, 0, 'table-list-entry-tables');
+    });
+    await act(async () => {});
+
     const addSpy = vi.spyOn(system.undoSystem, 'addUndoContext');
 
     addSpy.mockClear();
 
     await act(async () => {
-      fireEvent.click(screen.getByTestId('table-list-delete-newbie.json'));
+      fireEvent.click(screen.getByTestId('table-list-delete-tables/newbie.json'));
     });
 
     expect(screen.getByTestId('table-list-delete-confirm')).not.toBeNull();
@@ -291,11 +307,11 @@ describe('打开 / 新建 / 删除端到端集成', () => {
     });
     await act(async () => {});
 
-    const namesAfterDelete = await rootNames(system);
+    const namesAfterDelete = await directoryNames(system, 'tables');
 
     expect(namesAfterDelete).not.toContain('newbie.json');
     expect(namesAfterDelete).not.toContain('newbie.schema.json');
-    expect(screen.queryByTestId('table-list-delete-newbie.json')).toBeNull();
+    expect(screen.queryByTestId('table-list-delete-tables/newbie.json')).toBeNull();
     expect(addSpy).not.toHaveBeenCalled();
   }, 30000);
 });

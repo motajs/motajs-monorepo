@@ -81,9 +81,9 @@ async function readText(system: EditorCore, path: string): Promise<string | unde
   }
 }
 
-// 读取根目录当前直接子条目名列表
-async function rootNames(system: EditorCore): Promise<string[]> {
-  const entries = await system.resourceSystem.listDirectory('');
+// 读取某目录当前直接子条目名列表
+async function directoryNames(system: EditorCore, path: string): Promise<string[]> {
+  const entries = await system.resourceSystem.listDirectory(path);
 
   return entries.map((entry) => entry.name);
 }
@@ -190,15 +190,23 @@ describe('表格面板空栏内联控件', () => {
     expect(system.shellSystem.listTabs().length).toBe(tabsBefore);
   });
 
-  // 新建态在当前目录写出一对 name.json（空对象）+ name.schema.json（空 schema）并把新表开进本栏
-  it('新建态在当前目录写出一对文件并把新表开进本栏', async () => {
+  // 新建态可先进入子目录选定位置：在选定子目录写出一对 name.json（空对象）+ name.schema.json（空 schema）并把新表开进本栏
+  it('新建态进入子目录后在选定目录写出一对文件并把新表开进本栏', async () => {
     const fs = new FakeFileSystem();
+
+    fs.seed('sub/existing.json', '{}');
     const { system, created } = await openEmptyColumnTablePanel(fs);
 
     const { container } = renderWithCapabilities(system, {});
 
     await act(async () => {
       clickInColumn(container, 0, 'table-empty-create');
+    });
+    await act(async () => {});
+
+    // 进入目标子目录 sub 作为新建位置
+    await act(async () => {
+      clickInColumn(container, 0, 'table-list-entry-sub');
     });
     await act(async () => {});
 
@@ -216,13 +224,15 @@ describe('表格面板空栏内联控件', () => {
     });
     await act(async () => {});
 
-    expect(await readText(system, tableDataPath('hero'))).toBe('{}');
-    expect(await readText(system, tableSchemaPath('hero'))).toBe('{"type":"object","properties":{}}');
-    expect(await rootNames(system)).toEqual(expect.arrayContaining(['hero.json', 'hero.schema.json']));
+    // 一对文件写在该目录（sub），而不是根目录
+    expect(await readText(system, tableDataPath('sub/hero'))).toBe('{}');
+    expect(await readText(system, tableSchemaPath('sub/hero'))).toBe('{"type":"object","properties":{}}');
+    expect(await directoryNames(system, 'sub')).toEqual(expect.arrayContaining(['hero.json', 'hero.schema.json']));
+    expect(await directoryNames(system, '')).not.toEqual(expect.arrayContaining(['hero.json']));
 
     // 新表开进本栏：本栏不再是空栏三按钮态，面板标题指向该数据文件
     expect(inColumn(container, 0, 'table-empty-open')).toBeNull();
-    expect(created[0].getTitle()).toBe('表格 hero.json');
+    expect(created[0].getTitle()).toBe('表格 sub/hero.json');
   });
 
   // 删除态经二次确认后数据 + schema 一对文件同删、目录树不再出现，且未登记任何撤销（D-13）
@@ -264,7 +274,7 @@ describe('表格面板空栏内联控件', () => {
     });
     await act(async () => {});
 
-    const names = await rootNames(system);
+    const names = await directoryNames(system, '');
 
     expect(names).not.toContain('hero.json');
     expect(names).not.toContain('hero.schema.json');
