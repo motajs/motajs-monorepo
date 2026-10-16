@@ -1,4 +1,4 @@
-import { Button } from 'antd';
+import { Button, Dropdown } from 'antd';
 import { ReactElement } from 'react';
 import { TableEditMode } from '../types';
 import { EditModeSegmented } from './EditModeSegmented';
@@ -31,8 +31,8 @@ export interface ITableToolbarProps {
 }
 
 /**
- * 表格工具栏：编辑模式控件 + 可选 muted 标题 + 「编辑 Schema」主按钮 + 「在代码编辑器中打开」按钮 +
- * 可选 ✕ 关闭本栏按钮
+ * 表格工具栏：编辑模式控件 + 可选 muted 标题 + 「更多」下拉（编辑 Schema / 在代码编辑器中打开） +
+ * 「保存」按钮 + 可选 ✕ 关闭本栏按钮
  * @param props 工具栏 props
  * @returns 工具栏元素
  */
@@ -52,27 +52,35 @@ export function TableToolbar(props: ITableToolbarProps): ReactElement {
           <span className="etable-toolbar-divider" aria-hidden="true" />
         </>
       )}
-      {props.showSchemaButton ? (
-        <Button
-          size="small"
-          type="primary"
-          autoInsertSpace={false}
-          disabled={!props.schemaButtonEnabled}
-          data-test-id="table-edit-schema"
-          onClick={props.onOpenSchema}
-        >
-          编辑 Schema
-        </Button>
-      ) : null}
-      <Button
-        size="small"
-        autoInsertSpace={false}
-        disabled={!props.codeButtonEnabled}
-        data-test-id="table-open-code"
-        onClick={props.onOpenInCodeEditor}
+      <Dropdown
+        trigger={['click']}
+        menu={{
+          items: [
+            ...(props.showSchemaButton
+              ? [
+                  {
+                    key: 'edit-schema',
+                    disabled: !props.schemaButtonEnabled,
+                    label: <span data-test-id="table-edit-schema">编辑 Schema</span>,
+                  },
+                ]
+              : []),
+            {
+              key: 'open-code',
+              disabled: !props.codeButtonEnabled,
+              label: <span data-test-id="table-open-code">在代码编辑器中打开</span>,
+            },
+          ],
+          onClick: ({ key }): void => {
+            if (key === 'edit-schema') props.onOpenSchema();
+            else if (key === 'open-code') props.onOpenInCodeEditor();
+          },
+        }}
       >
-        在代码编辑器中打开
-      </Button>
+        <Button size="small" autoInsertSpace={false} className="etable-toolbar-more" data-test-id="table-more">
+          更多
+        </Button>
+      </Dropdown>
       <Button
         size="small"
         autoInsertSpace={false}
