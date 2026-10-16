@@ -6,6 +6,6 @@ export * from './EditModeSegmented';
 export * from './TableToolbar';
 export * from './SchemaBanner';
 export * from './inputs';
-export * from './TableListPanelView';
+export * from './TableEmptyColumn';
 export * from './TablePicker';
 export * from './TableCreateForm';

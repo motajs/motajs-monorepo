@@ -1,10 +1,17 @@
 import { Store } from '@tanstack/store';
 import { useStore } from '@tanstack/react-store';
 import { Button, Modal } from 'antd';
-import { IEditorPanel, IEditorPanelContext, IEditorPanelFactoryParam, IFileEntry, IUndoContext } from '@motajs/editor-core';
+import {
+  EditorEntryKind,
+  IEditorPanel,
+  IEditorPanelContext,
+  IEditorPanelFactoryParam,
+  IFileEntry,
+  IUndoContext,
+} from '@motajs/editor-core';
 import { get } from 'es-toolkit/compat';
 import { createElement, FC, ReactElement, useCallback, useEffect, useRef, useState } from 'react';
-import { ICodeEditorOpener, ITablePanelOpener } from '../react';
+import { ICodeEditorOpener, ITablePanelOpener, useTableCapabilities } from '../react';
 import { ITablePanel, ITablePanelParam, ITablePanelTarget, ITableRowNode, TableEmptyMode } from './types';
 import {
   ITableGridProps,
@@ -14,6 +21,7 @@ import {
   TableGridDeleteHandler,
   TablePanelStatus,
 } from './components/TableGrid';
+import { TableEmptyColumn } from './components/TableEmptyColumn';
 import { buildTableTree } from './model/traversal';
 import { buildSchemaTree } from './model/schemaPresentation';
 import { parseTableText, serializeTableText, TableTextParseStatus } from './model/tableText';
@@ -30,6 +38,12 @@ import { deriveSchemaPath, isSchemaPath } from './resourceType';
 
 /** 多栏布局中每栏的默认像素宽度 */
 const DEFAULT_COLUMN_WIDTH = 500;
+
+/** 新建表格数据文件的初始内容文本：空对象 */
+export const INITIAL_TABLE_DATA_TEXT = '{}';
+
+/** 新建表格 schema 文件的初始内容文本：type 为 object、properties 为空 */
+export const INITIAL_TABLE_SCHEMA_TEXT = '{"type":"object","properties":{}}';
 
 const enum TableUndoType {
   /** 修改既有字段的值 */
@@ -108,6 +122,16 @@ interface ITablePanelColumn {
   prefix: string;
   /** 该栏待确认剥离注释时暂存的宽松解析值；无需确认时为 undefined */
   pendingStrip: unknown;
+  /** 该栏空栏当前的内联视图；初值为 `TableEmptyMode.Buttons` */
+  emptyMode: TableEmptyMode;
+  /** 该栏内联浏览器当前所在目录路径；根目录为空串 */
+  directory: string;
+  /** 该栏内联浏览器当前目录的直接子条目 */
+  entries: readonly IFileEntry[];
+  /** 该栏内联浏览器目录读取失败提示；无错误时为 undefined */
+  pickerError: string | undefined;
+  /** 该栏内联浏览器目录请求序号，用于丢弃过期结果 */
+  pickerToken: number;
   /** 该栏的视图状态订阅源 */
   readonly store: Store<ITablePanelViewState>;
 }
@@ -163,6 +187,16 @@ interface ITablePanelViewProps {
   readonly onConfirmCommentStrip: (columnIndex: number) => void;
   /** 某栏取消「剥离注释后打开」的回调 */
   readonly onCancelCommentStrip: (columnIndex: number) => void;
+  /** 某栏空栏内联视图切换回调 */
+  readonly onEmptyModeChange: (columnIndex: number, mode: TableEmptyMode) => void;
+  /** 某栏内联浏览器进入某目录回调 */
+  readonly onEmptyNavigate: (columnIndex: number, path: string) => void;
+  /** 某栏内联浏览器打开某数据表回调（在本栏打开） */
+  readonly onEmptyOpen: (columnIndex: number, dataPath: string) => void;
+  /** 某栏内联新建某表格回调（在本栏新建并打开） */
+  readonly onEmptyCreate: (columnIndex: number, directory: string, name: string) => void;
+  /** 某栏内联删除某表格回调 */
+  readonly onEmptyDelete: (columnIndex: number, dataPath: string) => void;
 }
 
 /** 单栏组件的 props：把该栏序号与各回调转交给一张表格 */
@@ -189,6 +223,16 @@ interface ITableColumnProps {
   readonly onConfirmCommentStrip: (columnIndex: number) => void;
   /** 该栏取消「剥离注释后打开」的回调 */
   readonly onCancelCommentStrip: (columnIndex: number) => void;
+  /** 该栏空栏内联视图切换回调 */
+  readonly onEmptyModeChange: (columnIndex: number, mode: TableEmptyMode) => void;
+  /** 该栏内联浏览器进入某目录回调 */
+  readonly onEmptyNavigate: (columnIndex: number, path: string) => void;
+  /** 该栏内联浏览器打开某数据表回调（在本栏打开） */
+  readonly onEmptyOpen: (columnIndex: number, dataPath: string) => void;
+  /** 该栏内联新建某表格回调（在本栏新建并打开） */
+  readonly onEmptyCreate: (columnIndex: number, directory: string, name: string) => void;
+  /** 该栏内联删除某表格回调 */
+  readonly onEmptyDelete: (columnIndex: number, dataPath: string) => void;
 }
 
 /**
@@ -248,6 +292,28 @@ function resolveColumnCount(windowWidth: number, columnWidth: number): number {
 }
 
 /**
+ * 拼接目录路径与文件名，根目录下直接返回文件名
+ * @param directory 目录路径；根目录为空串
+ * @param name 文件名
+ * @returns 完整路径（以 `/` 分隔、无前导斜线）
+ */
+function joinPath(directory: string, name: string): string {
+  return directory === '' ? name : `${directory}/${name}`;
+}
+
+/**
+ * 取一个目录条目对应表格的基名：目录取原名，文件去掉 json / schema 约定后缀
+ * @param entry 目录条目
+ * @returns 用于重名校验的表格基名
+ */
+function tableBaseName(entry: IFileEntry): string {
+  if (entry.kind === EditorEntryKind.Directory) return entry.name;
+  if (isSchemaPath(entry.path)) return entry.name.replace(/\.schema\.jsonc?$/, '');
+
+  return entry.name.replace(/\.jsonc?$/, '');
+}
+
+/**
  * 渲染某栏的「剥离注释后打开」确认弹窗：使用 antd `Modal`，确认 / 取消转交面板方法
  *
  * 确认框不是注入接缝，直接在表格面板视图内渲染；不使用浏览器原生对话框。
@@ -291,15 +357,16 @@ function renderCommentStripModal(onConfirm: () => void, onCancel: () => void): R
 }
 
 /**
- * 单栏组件：订阅该栏视图状态并把各回调绑定到该栏序号后渲染一张表格
+ * 单栏组件：订阅该栏视图状态，未设目标时渲染空栏内联控件，否则渲染一张表格
  *
  * 各回调经 `useCallback` 稳定身份（依赖为来自视图根、本身稳定的 props），配合 `React.memo(TableGrid)`
  * 的浅比较，使该栏状态未实质变化时不重渲染整张表（P26）。
  * @param props 单栏 props
- * @returns 该栏的表格元素
+ * @returns 该栏的空栏控件或表格元素
  */
 function TableColumn(props: ITableColumnProps): ReactElement {
   const view = useStore(props.getStore(props.columnIndex));
+  const capabilities = useTableCapabilities();
   const onRetry = useCallback((): void => props.onRetry(props.columnIndex), [props.onRetry, props.columnIndex]);
   const onChange = useCallback(
     (key: string, value: unknown): void => props.onChange(props.columnIndex, key, value),
@@ -333,6 +400,46 @@ function TableColumn(props: ITableColumnProps): ReactElement {
     (): void => props.onCancelCommentStrip(props.columnIndex),
     [props.onCancelCommentStrip, props.columnIndex],
   );
+  const onEmptyModeChange = useCallback(
+    (mode: TableEmptyMode): void => props.onEmptyModeChange(props.columnIndex, mode),
+    [props.onEmptyModeChange, props.columnIndex],
+  );
+  const onEmptyNavigate = useCallback(
+    (path: string): void => props.onEmptyNavigate(props.columnIndex, path),
+    [props.onEmptyNavigate, props.columnIndex],
+  );
+  const onEmptyOpen = useCallback(
+    (dataPath: string): void => props.onEmptyOpen(props.columnIndex, dataPath),
+    [props.onEmptyOpen, props.columnIndex],
+  );
+  const onEmptyCreate = useCallback(
+    (directory: string, name: string): void => props.onEmptyCreate(props.columnIndex, directory, name),
+    [props.onEmptyCreate, props.columnIndex],
+  );
+  const onEmptyDelete = useCallback(
+    (dataPath: string): void => props.onEmptyDelete(props.columnIndex, dataPath),
+    [props.onEmptyDelete, props.columnIndex],
+  );
+
+  if (view.status === TablePanelStatus.NoTarget) {
+    return createElement(
+      'div',
+      { className: 'etable-column', style: { flexGrow: 1, flexShrink: 1, flexBasis: 0 } },
+      createElement(TableEmptyColumn, {
+        mode: view.emptyMode ?? TableEmptyMode.Buttons,
+        presets: capabilities.tablePresets,
+        directory: view.pickerDirectory ?? '',
+        entries: view.pickerEntries ?? [],
+        error: view.pickerError,
+        onModeChange: onEmptyModeChange,
+        onNavigate: onEmptyNavigate,
+        onOpen: onEmptyOpen,
+        onCreate: onEmptyCreate,
+        onDelete: onEmptyDelete,
+      }),
+    );
+  }
+
   const gridProps: ITableGridProps = {
     status: view.status,
     rows: view.rows,
@@ -411,6 +518,11 @@ function TablePanelView(props: ITablePanelViewProps): ReactElement {
         onCloseColumn: props.onCloseColumn,
         onConfirmCommentStrip: props.onConfirmCommentStrip,
         onCancelCommentStrip: props.onCancelCommentStrip,
+        onEmptyModeChange: props.onEmptyModeChange,
+        onEmptyNavigate: props.onEmptyNavigate,
+        onEmptyOpen: props.onEmptyOpen,
+        onEmptyCreate: props.onEmptyCreate,
+        onEmptyDelete: props.onEmptyDelete,
       }),
     );
   }
@@ -464,6 +576,11 @@ export class TablePanel implements IEditorPanel, ITablePanel {
         onCloseColumn: (columnIndex): void => this.closeColumn(columnIndex),
         onConfirmCommentStrip: (columnIndex): void => void this.confirmCommentStrip(columnIndex),
         onCancelCommentStrip: (columnIndex): void => this.cancelCommentStrip(columnIndex),
+        onEmptyModeChange: (columnIndex, mode): void => this.setEmptyMode(columnIndex, mode),
+        onEmptyNavigate: (columnIndex, path): void => this.navigatePicker(columnIndex, path),
+        onEmptyOpen: (columnIndex, dataPath): void => this.openIntoColumn(columnIndex, dataPath),
+        onEmptyCreate: (columnIndex, directory, name): void => void this.createIntoColumn(columnIndex, directory, name),
+        onEmptyDelete: (columnIndex, dataPath): void => void this.deleteFromColumn(columnIndex, dataPath),
       });
   }
 
@@ -477,16 +594,20 @@ export class TablePanel implements IEditorPanel, ITablePanel {
 
   /**
    * 获取此面板实例的显示标题，供外壳标签按实例显示（如「表格 tables/demo.json」）
-   * @returns 已设目标时为「表格 <数据文件路径>」；未设目标时为 undefined，外壳据此回退面板类型名
+   * @returns 未设任何表时为 undefined（外壳回退类型名）；一张表时为「表格 <数据文件路径>」；
+   * 两张及以上时为「表格 {<路径0>} {<路径1>} …」（按栏序号排列）
    */
   getTitle(): string | undefined {
-    const column = this.columns[0];
+    const paths: string[] = [];
 
-    if (column === undefined) return undefined;
+    for (const column of this.columns) {
+      if (column.target !== null) paths.push(column.target.dataPath);
+    }
 
-    const target = column.target;
+    if (paths.length === 0) return undefined;
+    if (paths.length === 1) return `表格 ${paths[0]}`;
 
-    return target === null ? undefined : `表格 ${target.dataPath}`;
+    return `表格 ${paths.map((path) => `{${path}}`).join(' ')}`;
   }
 
   async onFocus(): Promise<void> {}
@@ -531,7 +652,9 @@ export class TablePanel implements IEditorPanel, ITablePanel {
    * 关闭某一栏的表格：清空本栏目标与内容并回到未设目标态，只作用于本栏
    *
    * 关闭后本栏 `target` 归空，`findEmptyColumnIndex` 随后即可把它当作空栏供「编辑 Schema」复用；
-   * 同时递增本栏请求序号以丢弃在途读取结果，避免关闭后旧结果再写回本栏。其它栏的目标与状态不受影响。
+   * 同时递增本栏请求序号以丢弃在途读取结果，避免关闭后旧结果再写回本栏。空栏内联视图一并复位为
+   * 三个按钮态（`emptyMode` 归 `Buttons`、目录归根 `''`、条目与读取错误清空），使「打开表格 → 开进
+   * 本栏 → ✕ 关栏 → 回到三个按钮」成立；其它栏的目标与状态不受影响。
    * @param columnIndex 要关闭的栏序号（0 基）
    */
   private closeColumn(columnIndex: number): void {
@@ -542,8 +665,121 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     column.schema = null;
     column.prefix = '';
     column.pendingStrip = undefined;
+    column.emptyMode = TableEmptyMode.Buttons;
+    column.directory = '';
+    column.entries = [];
+    column.pickerError = undefined;
     this.nextToken(columnIndex);
     this.publish(columnIndex, TablePanelStatus.NoTarget, []);
+  }
+
+  /**
+   * 切换某栏空栏的内联视图；进入打开 / 删除态时顺带取该栏当前目录的直接子条目
+   * @param columnIndex 栏序号（0 基）
+   * @param mode 目标内联视图
+   */
+  private setEmptyMode(columnIndex: number, mode: TableEmptyMode): void {
+    const column = this.columnAt(columnIndex);
+
+    column.emptyMode = mode;
+    this.publish(columnIndex, TablePanelStatus.NoTarget, []);
+
+    if (mode === TableEmptyMode.Open || mode === TableEmptyMode.Delete) void this.refreshPicker(columnIndex);
+  }
+
+  /**
+   * 让某栏内联浏览器切换到某目录并重取该目录的直接子条目
+   * @param columnIndex 栏序号（0 基）
+   * @param path 目标目录路径；根目录传空串
+   */
+  private navigatePicker(columnIndex: number, path: string): void {
+    this.columnAt(columnIndex).directory = path;
+    void this.refreshPicker(columnIndex);
+  }
+
+  /**
+   * 把选中的数据表开进本栏（不是另开面板）
+   * @param columnIndex 栏序号（0 基）
+   * @param dataPath 要打开的数据文件路径
+   */
+  private openIntoColumn(columnIndex: number, dataPath: string): void {
+    this.setTable({ dataPath }, columnIndex);
+  }
+
+  /**
+   * 在某栏当前目录下新建一对文件（`name.json` + 推导出的 schema）并把新表开进本栏
+   *
+   * 名称先经 `validateId` 校验（与同目录既有表格基名查重），非法时不落任何文件并把错误写进该栏
+   * 内联错误提示；合法时经 `IEditorPanelContext.createResource` 写一对文件后把新表开进本栏。
+   * @param columnIndex 栏序号（0 基）
+   * @param directory 新建所在目录路径；根目录传空串
+   * @param name 表格名称（不含扩展名）
+   */
+  private async createIntoColumn(columnIndex: number, directory: string, name: string): Promise<void> {
+    const column = this.columnAt(columnIndex);
+    const entries = await this.context.listDirectory(directory);
+    const existing = entries.map(tableBaseName);
+    const validation = validateId(name, existing);
+
+    if (!validation.valid) {
+      column.pickerError = validation.error ?? '名称未通过校验';
+      this.publish(columnIndex, TablePanelStatus.NoTarget, []);
+      return;
+    }
+
+    const dataPath = joinPath(directory, `${name}.json`);
+    const schemaPath = deriveSchemaPath(dataPath);
+
+    await this.context.createResource(dataPath, INITIAL_TABLE_DATA_TEXT);
+    await this.context.createResource(schemaPath, INITIAL_TABLE_SCHEMA_TEXT);
+
+    column.directory = directory;
+    column.pickerError = undefined;
+    this.setTable({ dataPath }, columnIndex);
+  }
+
+  /**
+   * 删除某栏内联浏览器中的一张表：删数据 + schema 一对文件后重取该栏浏览器目录
+   *
+   * 删除不可撤销（D-13）——本方法不登记任何 `IUndoContext`；二次确认由空栏控件在调用本方法前完成。
+   * 删除后该栏仍是空栏、`emptyMode` 保持删除态以支持连续删除。
+   * @param columnIndex 栏序号（0 基）
+   * @param dataPath 要删除的数据文件路径
+   */
+  private async deleteFromColumn(columnIndex: number, dataPath: string): Promise<void> {
+    await this.context.deleteResource(dataPath);
+    await this.context.deleteResource(deriveSchemaPath(dataPath));
+
+    await this.refreshPicker(columnIndex);
+  }
+
+  /**
+   * 重取某栏内联浏览器当前目录的直接子条目并发布；用请求序号丢弃过期结果
+   *
+   * 读取失败时把该栏内联错误提示置为固定文案，仍保持空栏态（不抛穿面板）。
+   * @param columnIndex 栏序号（0 基）
+   */
+  private async refreshPicker(columnIndex: number): Promise<void> {
+    const column = this.columnAt(columnIndex);
+    const token = column.pickerToken + 1;
+
+    column.pickerToken = token;
+
+    try {
+      const entries = await this.context.listDirectory(column.directory);
+
+      if (column.pickerToken !== token) return;
+
+      column.entries = entries;
+      column.pickerError = undefined;
+      this.publish(columnIndex, TablePanelStatus.NoTarget, []);
+    } catch {
+      if (column.pickerToken !== token) return;
+
+      column.entries = [];
+      column.pickerError = '目录读取失败，请重试。';
+      this.publish(columnIndex, TablePanelStatus.NoTarget, []);
+    }
   }
 
   /**
@@ -818,6 +1054,11 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       schema: null,
       prefix: '',
       pendingStrip: undefined,
+      emptyMode: TableEmptyMode.Buttons,
+      directory: '',
+      entries: [],
+      pickerError: undefined,
+      pickerToken: 0,
       store: new Store<ITablePanelViewState>({ status: TablePanelStatus.NoTarget, rows: [], schemaMode: false }),
     };
   }
@@ -882,7 +1123,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   }
 
   /**
-   * 把某栏新的视图状态写入其订阅源
+   * 把某栏新的视图状态写入其订阅源；空栏（无目标）时一并带上空栏内联视图与目录数据
    * @param columnIndex 栏序号（0 基）
    * @param status 新的加载状态
    * @param rows 新的行树
@@ -896,15 +1137,26 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     message?: string,
     error?: string,
   ): void {
-    const target = this.columnAt(columnIndex).target;
+    const column = this.columnAt(columnIndex);
+    const target = column.target;
+    const emptyState =
+      target === null
+        ? ({
+            emptyMode: column.emptyMode,
+            pickerDirectory: column.directory,
+            pickerEntries: column.entries,
+            pickerError: column.pickerError,
+          } as const)
+        : {};
 
-    this.columnAt(columnIndex).store.setState({
+    column.store.setState({
       status,
       rows,
       schemaMode: target !== null && isSchemaPath(target.dataPath),
       title: target === null ? undefined : target.dataPath,
       message,
       error,
+      ...emptyState,
     });
   }
 

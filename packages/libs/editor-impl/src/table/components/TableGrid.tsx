@@ -362,15 +362,6 @@ function renderState(props: ITableGridProps): ReactElement | null {
     );
   }
 
-  if (props.status === TablePanelStatus.NoTarget) {
-    return createElement(
-      'div',
-      { className: 'etable-state' },
-      createElement('div', { className: 'etable-state-heading' }, '尚未设置目标表'),
-      createElement('div', { className: 'etable-state-body' }, '请先为该表格面板指定要编辑的表格。'),
-    );
-  }
-
   if (props.status === TablePanelStatus.Empty || props.status === TablePanelStatus.EmptySchema) {
     const body =
       props.status === TablePanelStatus.EmptySchema ? '尚未定义任何字段。' : '该表格当前没有可显示的字段，或内容为空。';

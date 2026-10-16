@@ -2,9 +2,8 @@ import { act, cleanup, configure, fireEvent, render, screen } from '@testing-lib
 import { EditorCore, IEditorPanel, IEditorPanelFactoryParam } from '@motajs/editor-core';
 import { createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { deriveSchemaPath, TableListPanel, tableListPanelType, TablePanel, tablePanelType } from '..';
-import { ITablePanelTarget } from '../types';
-import { CapabilityProvider, ITableEditorCapabilities, ITablePanelOpener } from '../../react';
+import { deriveSchemaPath, TablePanel, tablePanelType } from '..';
+import { CapabilityProvider, ITableEditorCapabilities } from '../../react';
 import { createTableHarness, FakeFileSystem } from './fixtures';
 
 configure({ testIdAttribute: 'data-test-id' });
@@ -39,34 +38,25 @@ function registerTablePanel(system: EditorCore, created: TablePanel[]): void {
   });
 }
 
-// 注册一个捕获实例的列表面板类型：外壳每次创建列表面板都把实例推入 created
-function registerListPanel(system: EditorCore, created: TableListPanel[]): void {
-  system.shellSystem.registerPanelType({
-    id: tableListPanelType.id,
-    name: tableListPanelType.name,
-    icon: tableListPanelType.icon,
-    create: (param: IEditorPanelFactoryParam): IEditorPanel => {
-      const panel = new TableListPanel(param);
-      created.push(panel);
-      return panel;
-    },
-  });
+// 取表格面板第 index 栏的 DOM 元素：空栏断言限定到单栏，避免加宽窗口时同 test-id 重复命中
+function columnAt(container: HTMLElement, index: number): Element | null {
+  return container.querySelectorAll('.etable-column')[index] ?? null;
 }
 
-// 组合根注入的表格面板打开器：新开一个标签承载目标面板并按目标设置（D-06）
-function createOpener(system: EditorCore, created: TablePanel[]): ITablePanelOpener {
-  return {
-    open: async (param): Promise<void> => {
-      const target = param.target as ITablePanelTarget;
-      const tabId = system.shellSystem.openBlankTab();
+// 在指定栏内按 data-test-id 查询元素
+function inColumn(container: HTMLElement, index: number, testId: string): Element | null {
+  const column = columnAt(container, index);
 
-      await system.shellSystem.openPanelInTab(tabId, tablePanelType.id);
-      const panel = created[created.length - 1];
+  return column === null ? null : column.querySelector(`[data-test-id="${testId}"]`);
+}
 
-      panel.setTable(target);
-      await panel.onSwitchIn();
-    },
-  };
+// 点击指定栏内按 data-test-id 定位的按钮
+function clickInColumn(container: HTMLElement, index: number, testId: string): void {
+  const element = inColumn(container, index, testId);
+
+  if (element === null) throw new Error(`栏内元素缺失: ${testId}`);
+
+  fireEvent.click(element);
 }
 
 // 读取某个字段值单元格内文本域的当前文本
@@ -102,7 +92,7 @@ async function rootNames(system: EditorCore): Promise<string[]> {
   return entries.map((entry) => entry.name);
 }
 
-// 用能力 Provider 包裹外壳渲染根，注入表格面板打开器与预设表
+// 用能力 Provider 包裹外壳渲染根，注入预设表
 function renderWithCapabilities(system: EditorCore, capabilities: ITableEditorCapabilities): ReturnType<typeof render> {
   return render(
     createElement(CapabilityProvider, {
@@ -113,171 +103,189 @@ function renderWithCapabilities(system: EditorCore, capabilities: ITableEditorCa
 }
 
 describe('打开 / 新建 / 删除端到端集成', () => {
-  // 单个用例贯穿：打开列表 → 预设打开 → 目录树打开并编辑撤销 → 切入刷新 → 新建 → 打开新表 → 删除确认后消失且不可撤销
-  it(
-    '打开 / 新建 / 删除端到端贯通且删除不可撤销',
-    async () => {
-      const fs = new FakeFileSystem();
+  // 单个用例贯穿：空栏三按钮 → 预设开进本栏 → 目录树打开并编辑撤销 → 目录重取 → 新建开进本栏 → 删除确认后一对文件消失且不可撤销
+  it('表格面板空栏内贯通打开 / 新建 / 删除且删除不可撤销', async () => {
+    const fs = new FakeFileSystem();
 
-      fs.seed(tableDataPath('hero'), JSON.stringify({ name: 'a', note: 'x' }));
-      fs.seed(
-        tableSchemaPath('hero'),
-        JSON.stringify({
-          type: 'object',
-          properties: {
-            name: { type: 'string', description: '名字' },
-            note: { type: ['string', 'null'], description: '备注' },
-          },
-        }),
-      );
-      fs.seed('notes.txt', 'x');
-      fs.seed('tables/demo.json', JSON.stringify({ title: 'demo' }));
-      fs.seed(
-        'tables/demo.schema.json',
-        JSON.stringify({ type: 'object', properties: { title: { type: 'string', description: '标题' } } }),
-      );
+    fs.seed(tableDataPath('hero'), JSON.stringify({ name: 'a', note: 'x' }));
+    fs.seed(
+      tableSchemaPath('hero'),
+      JSON.stringify({
+        type: 'object',
+        properties: {
+          name: { type: 'string', description: '名字' },
+          note: { type: ['string', 'null'], description: '备注' },
+        },
+      }),
+    );
+    fs.seed('notes.txt', 'x');
+    fs.seed('tables/demo.json', JSON.stringify({ title: 'demo' }));
+    fs.seed(
+      'tables/demo.schema.json',
+      JSON.stringify({ type: 'object', properties: { title: { type: 'string', description: '标题' } } }),
+    );
 
-      const system = await createTableHarness(fs);
-      const created: TablePanel[] = [];
-      const listCreated: TableListPanel[] = [];
+    const system = await createTableHarness(fs);
+    const created: TablePanel[] = [];
 
-      registerTablePanel(system, created);
-      registerListPanel(system, listCreated);
+    registerTablePanel(system, created);
 
-      const listTabId = system.shellSystem.listTabs()[0].id;
+    // 在首个标签页打开一个未设目标的表格面板（进入空栏三按钮态）
+    const tabId = system.shellSystem.listTabs()[0].id;
 
-      await act(async () => {
-        await system.shellSystem.openPanelInTab(listTabId, tableListPanelType.id);
-      });
+    await act(async () => {
+      await system.shellSystem.openPanelInTab(tabId, tablePanelType.id);
+    });
 
-      const listPanel = listCreated[0];
+    const { container } = renderWithCapabilities(system, {
+      tablePresets: [{ name: '预设表', path: 'tables/demo.json' }],
+    });
 
-      if (listPanel === undefined) throw new Error('列表面板实例缺失');
+    // 空栏初始态：本栏显示「打开表格 / 新建表格 / 删除表格」三个按钮
+    expect(inColumn(container, 0, 'table-empty-open')).not.toBeNull();
+    expect(inColumn(container, 0, 'table-empty-create')).not.toBeNull();
+    expect(inColumn(container, 0, 'table-empty-delete')).not.toBeNull();
 
-      await act(async () => {
-        await listPanel.onSwitchIn();
-      });
+    // 点「打开表格」：本栏内联展示可复用浏览器
+    await act(async () => {
+      clickInColumn(container, 0, 'table-empty-open');
+    });
+    await act(async () => {});
 
-      const { container } = renderWithCapabilities(system, {
-        tablePanel: createOpener(system, created),
-        tablePresets: [{ name: '预设表', path: 'tables/demo.json' }],
-      });
+    // 目录树只列 json / jsonc 数据文件并排除 schema 约定文件与非表格文件；预设表「预设表」可见
+    expect(screen.getByTestId('table-list-entry-hero.json')).not.toBeNull();
+    expect(screen.getByTestId('table-list-entry-tables')).not.toBeNull();
+    expect(screen.queryByTestId('table-list-entry-hero.schema.json')).toBeNull();
+    expect(screen.queryByTestId('table-list-entry-notes.txt')).toBeNull();
+    expect(screen.getByTestId('table-list-preset-预设表')).not.toBeNull();
 
-      // 目录树只列 json / jsonc 数据文件并排除 schema 约定文件与非表格文件；目录子项与预设表可见
-      expect(screen.getByTestId('table-list-entry-hero.json')).not.toBeNull();
-      expect(screen.getByTestId('table-list-entry-tables')).not.toBeNull();
-      expect(screen.queryByTestId('table-list-entry-hero.schema.json')).toBeNull();
-      expect(screen.queryByTestId('table-list-entry-notes.txt')).toBeNull();
-      expect(screen.getByTestId('table-list-preset-预设表')).not.toBeNull();
+    // 从预设打开演示表：开进本栏（不新开标签）并渲染 schema 驱动行
+    const tabsBefore = system.shellSystem.listTabs().length;
 
-      // 从预设打开演示表：外壳新开一个标签承载表格面板并渲染 schema 驱动行
-      await act(async () => {
-        fireEvent.click(screen.getByTestId('table-list-preset-预设表'));
-      });
-      await act(async () => {});
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('table-list-preset-预设表'));
+    });
+    await act(async () => {});
 
-      expect(screen.getByText('标题')).not.toBeNull();
-      expect(valueOf(container, 'title')).toBe('"demo"');
+    expect(screen.getByText('标题')).not.toBeNull();
+    expect(valueOf(container, 'title')).toBe('"demo"');
+    expect(system.shellSystem.listTabs().length).toBe(tabsBefore);
 
-      // 切回列表并从目录树打开 hero 表：外壳新开一个标签承载表格面板并渲染字段行
-      await act(async () => {
-        system.shellSystem.activateTab(listTabId);
-      });
-      await act(async () => {});
+    // 点本栏 ✕ 关栏回三按钮（emptyMode 复位为 Buttons）
+    await act(async () => {
+      clickInColumn(container, 0, 'table-close-column');
+    });
+    await act(async () => {});
 
-      await act(async () => {
-        fireEvent.click(screen.getByTestId('table-list-entry-hero.json'));
-      });
-      await act(async () => {});
+    expect(inColumn(container, 0, 'table-empty-open')).not.toBeNull();
 
-      expect(screen.getByText('名字')).not.toBeNull();
-      expect(valueOf(container, 'name')).toBe('"a"');
+    // 点「打开表格」→ 目录树打开 hero 表：开进本栏（不新开标签）并渲染字段行
+    await act(async () => {
+      clickInColumn(container, 0, 'table-empty-open');
+    });
+    await act(async () => {});
 
-      // 编辑一个字段值：资源被写回；一次撤销后还原
-      await commitText(container, 'name', '"b"');
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('table-list-entry-hero.json'));
+    });
+    await act(async () => {});
 
-      expect(await readData(system, tableDataPath('hero'))).toEqual({ name: 'b', note: 'x' });
+    expect(screen.getByText('名字')).not.toBeNull();
+    expect(valueOf(container, 'name')).toBe('"a"');
+    expect(system.shellSystem.listTabs().length).toBe(tabsBefore);
 
-      await act(async () => {
-        await system.undoSystem.undo();
-      });
+    // 编辑一个字段值：资源被写回；一次撤销后还原
+    await commitText(container, 'name', '"b"');
 
-      expect(await readData(system, tableDataPath('hero'))).toEqual({ name: 'a', note: 'x' });
-      expect(valueOf(container, 'name')).toBe('"a"');
+    expect(await readData(system, tableDataPath('hero'))).toEqual({ name: 'b', note: 'x' });
 
-      // 切出再切入刷新：外部新增一个数据文件后切回列表，切入点重新列举目录并列出新文件
-      await act(async () => {
-        await system.resourceSystem.createResource('added.json', '{}');
-      });
+    await act(async () => {
+      await system.undoSystem.undo();
+    });
 
-      const listSpy = vi.spyOn(system.resourceSystem, 'listDirectory');
+    expect(await readData(system, tableDataPath('hero'))).toEqual({ name: 'a', note: 'x' });
+    expect(valueOf(container, 'name')).toBe('"a"');
 
-      await act(async () => {
-        system.shellSystem.activateTab(listTabId);
-      });
-      await act(async () => {});
+    // 目录重取：外部新增数据文件后重新进入「打开表格」态，本栏重新列举目录并列出新文件
+    await act(async () => {
+      await system.resourceSystem.createResource('added.json', '{}');
+    });
 
-      expect(listSpy).toHaveBeenCalled();
-      expect(screen.getByTestId('table-list-entry-added.json')).not.toBeNull();
+    const listSpy = vi.spyOn(system.resourceSystem, 'listDirectory');
 
-      // 新建一张表：在当前目录写出一对 name.json + name.schema.json，且目录树出现新表
-      await act(async () => {
-        fireEvent.click(screen.getByTestId('table-list-create'));
-      });
+    await act(async () => {
+      clickInColumn(container, 0, 'table-close-column');
+    });
+    await act(async () => {});
 
-      const input = screen.getByTestId('table-list-create-input');
+    await act(async () => {
+      clickInColumn(container, 0, 'table-empty-open');
+    });
+    await act(async () => {});
 
-      await act(async () => {
-        fireEvent.change(input, { target: { value: 'newbie' } });
-        fireEvent.keyDown(input, { key: 'Enter' });
-      });
-      await act(async () => {});
+    expect(listSpy).toHaveBeenCalled();
+    expect(screen.getByTestId('table-list-entry-added.json')).not.toBeNull();
 
-      expect(await rootNames(system)).toEqual(expect.arrayContaining(['newbie.json', 'newbie.schema.json']));
-      expect(screen.getByTestId('table-list-entry-newbie.json')).not.toBeNull();
+    // 返回三按钮后新建一张表：在当前目录写出一对 name.json + name.schema.json，且新表开进本栏
+    await act(async () => {
+      clickInColumn(container, 0, 'table-empty-back');
+    });
+    await act(async () => {});
 
-      // 打开新表：外壳新开一个标签承载它，且面板标题指向该数据文件
-      const tabsBefore = system.shellSystem.listTabs().length;
+    await act(async () => {
+      clickInColumn(container, 0, 'table-empty-create');
+    });
+    await act(async () => {});
 
-      await act(async () => {
-        fireEvent.click(screen.getByTestId('table-list-entry-newbie.json'));
-      });
-      await act(async () => {});
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('table-list-create'));
+    });
 
-      expect(system.shellSystem.listTabs().length).toBe(tabsBefore + 1);
+    const input = screen.getByTestId('table-list-create-input');
 
-      const newbiePanel = created[created.length - 1];
+    await act(async () => {
+      fireEvent.change(input, { target: { value: 'newbie' } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+    });
+    await act(async () => {});
 
-      expect(newbiePanel.getTitle()).toBe('表格 newbie.json');
+    expect(await rootNames(system)).toEqual(expect.arrayContaining(['newbie.json', 'newbie.schema.json']));
+    expect(system.shellSystem.listTabs().length).toBe(tabsBefore);
 
-      // 切回列表删除新表：经确认后一对文件消失、目录树不再出现，且未登记任何撤销（D-13）
-      await act(async () => {
-        system.shellSystem.activateTab(listTabId);
-      });
-      await act(async () => {});
+    // 新表开进本栏：面板标题指向该数据文件（此刻面板内仅一栏有目标）
+    expect(created[0].getTitle()).toBe('表格 newbie.json');
 
-      const addSpy = vi.spyOn(system.undoSystem, 'addUndoContext');
+    // 点本栏 ✕ 关栏后删除新表：经确认后一对文件消失、目录树不再出现，且未登记任何撤销（D-13）
+    await act(async () => {
+      clickInColumn(container, 0, 'table-close-column');
+    });
+    await act(async () => {});
 
-      addSpy.mockClear();
+    await act(async () => {
+      clickInColumn(container, 0, 'table-empty-delete');
+    });
+    await act(async () => {});
 
-      await act(async () => {
-        fireEvent.click(screen.getByTestId('table-list-delete-newbie.json'));
-      });
+    const addSpy = vi.spyOn(system.undoSystem, 'addUndoContext');
 
-      expect(screen.getByTestId('table-list-delete-confirm')).not.toBeNull();
+    addSpy.mockClear();
 
-      await act(async () => {
-        fireEvent.click(screen.getByTestId('table-list-delete-confirm'));
-      });
-      await act(async () => {});
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('table-list-delete-newbie.json'));
+    });
 
-      const namesAfterDelete = await rootNames(system);
+    expect(screen.getByTestId('table-list-delete-confirm')).not.toBeNull();
 
-      expect(namesAfterDelete).not.toContain('newbie.json');
-      expect(namesAfterDelete).not.toContain('newbie.schema.json');
-      expect(screen.queryByTestId('table-list-entry-newbie.json')).toBeNull();
-      expect(addSpy).not.toHaveBeenCalled();
-    },
-    30000,
-  );
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('table-list-delete-confirm'));
+    });
+    await act(async () => {});
+
+    const namesAfterDelete = await rootNames(system);
+
+    expect(namesAfterDelete).not.toContain('newbie.json');
+    expect(namesAfterDelete).not.toContain('newbie.schema.json');
+    expect(screen.queryByTestId('table-list-delete-newbie.json')).toBeNull();
+    expect(addSpy).not.toHaveBeenCalled();
+  }, 30000);
 });
