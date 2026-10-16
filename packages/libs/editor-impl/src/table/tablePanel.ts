@@ -132,6 +132,14 @@ interface ITablePanelColumn {
   pickerError: string | undefined;
   /** 该栏内联浏览器目录请求序号，用于丢弃过期结果 */
   pickerToken: number;
+  /** 该栏是否有未落盘的数据改动（编辑 / 新增 / 删除 / 代码编辑器写回 / 撤销重做 / 确认剥离注释都会置真） */
+  unsaved: boolean;
+  /** 该栏是否有未落盘的镜像 schema 改动（数据视图新增字段会同步改镜像 schema） */
+  unsavedSchema: boolean;
+  /** 该栏已确认「剥离注释后打开」的路径 → 确认时的原文；原文未变时不再重弹 */
+  readonly stripConfirmed: Map<string, string>;
+  /** 该栏待确认剥离时暂存的原文，供 `TablePanel.confirmCommentStrip` 登记进 `stripConfirmed` */
+  pendingStripText: string;
   /** 该栏的视图状态订阅源 */
   readonly store: Store<ITablePanelViewState>;
 }
@@ -426,6 +434,7 @@ function TableColumn(props: ITableColumnProps): ReactElement {
     (dataPath: string): void => props.onEmptyDelete(props.columnIndex, dataPath),
     [props.onEmptyDelete, props.columnIndex],
   );
+  const onSave = useCallback((): void => props.onSave?.(props.columnIndex), [props.onSave, props.columnIndex]);
 
   if (view.status === TablePanelStatus.NoTarget) {
     return createElement(
@@ -460,6 +469,8 @@ function TableColumn(props: ITableColumnProps): ReactElement {
     onOpenSchema,
     onOpenInCodeEditor,
     onCloseColumn,
+    unsaved: view.unsaved ?? false,
+    onSave,
   };
   const stripModal =
     view.commentStripPending === true ? renderCommentStripModal(onConfirmCommentStrip, onCancelCommentStrip) : null;
@@ -529,6 +540,7 @@ function TablePanelView(props: ITablePanelViewProps): ReactElement {
         onEmptyOpen: props.onEmptyOpen,
         onEmptyCreate: props.onEmptyCreate,
         onEmptyDelete: props.onEmptyDelete,
+        onSave: props.onSave,
       }),
     );
   }
@@ -587,12 +599,15 @@ export class TablePanel implements IEditorPanel, ITablePanel {
         onEmptyOpen: (columnIndex, dataPath): void => this.openIntoColumn(columnIndex, dataPath),
         onEmptyCreate: (columnIndex, directory, name): void => void this.createIntoColumn(columnIndex, directory, name),
         onEmptyDelete: (columnIndex, dataPath): void => void this.deleteFromColumn(columnIndex, dataPath),
+        onSave: (columnIndex): void => void this.save(columnIndex),
       });
   }
 
   async initialize(): Promise<void> {}
 
-  async dispose(): Promise<void> {}
+  async dispose(): Promise<void> {
+    await this.saveDirtyColumns();
+  }
 
   render(): FC {
     return this.component;
@@ -624,11 +639,17 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     const count = this.columns.length;
 
     for (let index = 0; index < count; index += 1) await this.refresh(index);
+
+    this.refreshAwaitingPickers();
   }
 
-  async onSwitchOut(): Promise<void> {}
+  async onSwitchOut(): Promise<void> {
+    await this.saveDirtyColumns();
+  }
 
-  async onUpdateResource(): Promise<void> {}
+  async onUpdateResource(): Promise<void> {
+    this.refreshAwaitingPickers();
+  }
 
   async onUpdateResourceList(): Promise<void> {}
 
@@ -644,7 +665,12 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     const column = this.columnAt(columnIndex);
     const previous = column.target;
 
+    // 换目标前先把该栏未落盘改动同步快照后异步写回，避免切换后丢掉内存改动（T-02.1-20-01）
+    if (previous !== null && (column.unsaved || column.unsavedSchema)) void this.flushColumn(columnIndex);
+
     column.target = target;
+    column.unsaved = false;
+    column.unsavedSchema = false;
 
     // 换到另一张表（或此前无目标）时先清掉旧表行树：不同表的旧行在新表加载期间不能继续显示（P26）
     if (previous === null || previous.dataPath !== target.dataPath) {
@@ -654,23 +680,51 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     void this.refresh(columnIndex);
   }
 
+  async save(columnIndex: number = 0): Promise<void> {
+    const column = this.columnAt(columnIndex);
+    const target = column.target;
+
+    if (target === null) return;
+    if (!column.unsaved && !column.unsavedSchema) return;
+
+    const wroteData = column.unsaved;
+    const wroteSchema = column.unsavedSchema;
+
+    if (wroteData && !(await this.persist(columnIndex, column.data))) return;
+    if (wroteSchema && !(await this.persistSchema(columnIndex, column.schema))) return;
+
+    column.unsaved = false;
+    column.unsavedSchema = false;
+
+    if (wroteData) this.refreshDependents(columnIndex, target.dataPath);
+    if (wroteSchema) this.refreshDependents(columnIndex, deriveSchemaPath(target.dataPath));
+
+    this.publish(columnIndex, column.store.state.status, column.store.state.rows, '已保存');
+  }
+
   /**
    * 关闭某一栏的表格：清空本栏目标与内容并回到未设目标态，只作用于本栏
    *
    * 关闭后本栏 `target` 归空，`findEmptyColumnIndex` 随后即可把它当作空栏供「编辑 Schema」复用；
-   * 同时递增本栏请求序号以丢弃在途读取结果，避免关闭后旧结果再写回本栏。空栏内联视图一并复位为
-   * 三个按钮态（`emptyMode` 归 `Buttons`、目录归根 `''`、条目与读取错误清空），使「打开表格 → 开进
-   * 本栏 → ✕ 关栏 → 回到三个按钮」成立；其它栏的目标与状态不受影响。
+   * 同时递增本栏请求序号以丢弃在途读取结果，避免关闭后旧结果再写回本栏。关栏前若本栏有未落盘改动，
+   * 先同步快照后异步写回，避免丢改动（T-02.1-20-01）。空栏内联视图一并复位为三个按钮态（`emptyMode`
+   * 归 `Buttons`、目录归根 `''`、条目与读取错误清空），使「打开表格 → 开进本栏 → ✕ 关栏 → 回到三个
+   * 按钮」成立；其它栏的目标与状态不受影响。
    * @param columnIndex 要关闭的栏序号（0 基）
    */
   private closeColumn(columnIndex: number): void {
     const column = this.columnAt(columnIndex);
+
+    if (column.unsaved || column.unsavedSchema) void this.flushColumn(columnIndex);
 
     column.target = null;
     column.data = null;
     column.schema = null;
     column.prefix = '';
     column.pendingStrip = undefined;
+    column.unsaved = false;
+    column.unsavedSchema = false;
+    column.pendingStripText = '';
     column.emptyMode = TableEmptyMode.Buttons;
     column.directory = '';
     column.entries = [];
@@ -742,6 +796,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     column.directory = directory;
     column.pickerError = undefined;
     this.setTable({ dataPath }, columnIndex);
+    this.refreshAwaitingPickers();
   }
 
   /**
@@ -757,6 +812,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     await this.context.deleteResource(deriveSchemaPath(dataPath));
 
     await this.refreshPicker(columnIndex);
+    this.refreshAwaitingPickers();
   }
 
   /**
@@ -785,6 +841,25 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       column.entries = [];
       column.pickerError = '目录读取失败，请重试。';
       this.publish(columnIndex, TablePanelStatus.NoTarget, []);
+    }
+  }
+
+  /**
+   * 重取本面板**所有**处于打开 / 删除态栏的目录，使「打开表格」列表实时同步
+   *
+   * 供面板内建 / 删表格后、`TablePanel.onSwitchIn` 与 `TablePanel.onUpdateResource` 复用；
+   * 仅重取内联浏览器处于 `Open` / `Delete` 态且尚未设目标的栏，其余栏不受影响。
+   */
+  private refreshAwaitingPickers(): void {
+    const count = this.columns.length;
+
+    for (let index = 0; index < count; index += 1) {
+      const column = this.columns[index];
+
+      if (column.target !== null) continue;
+      if (column.emptyMode !== TableEmptyMode.Open && column.emptyMode !== TableEmptyMode.Delete) continue;
+
+      void this.refreshPicker(index);
     }
   }
 
@@ -850,15 +925,13 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     }
 
     column.prefix = parsed.prefix;
-
-    if (!(await this.persist(columnIndex, parsed.value))) return;
+    column.unsaved = true;
 
     this.context.addUndoContext(this, {
       type: TableUndoType.Replace,
       data: { columnIndex, path: '', previousValue: column.data, nextValue: parsed.value },
     });
     this.applyData(columnIndex, parsed.value);
-    this.refreshDependents(columnIndex, target.dataPath);
   }
 
   /**
@@ -883,14 +956,12 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     const previousValue = this.readField(columnIndex, key);
     const next = setByFieldPath(column.data, key, value);
 
-    if (!(await this.persist(columnIndex, next))) return;
-
+    column.unsaved = true;
     this.context.addUndoContext(this, {
       type: TableUndoType.Change,
       data: { columnIndex, path: key, previousValue, nextValue: value },
     });
     this.applyData(columnIndex, next);
-    this.refreshDependents(columnIndex, column.target.dataPath);
   }
 
   /**
@@ -931,14 +1002,12 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     if (schemaView) {
       const ordered = this.withOrder(next, ownerPath, parentObject, anchor, name);
 
-      if (!(await this.persist(columnIndex, ordered))) return;
-
+      column.unsaved = true;
       this.context.addUndoContext(this, {
         type: TableUndoType.Add,
         data: { columnIndex, path, previousValue: undefined, nextValue: {}, anchor },
       });
       this.applyData(columnIndex, ordered, '添加成功');
-      this.refreshDependents(columnIndex, column.target.dataPath);
       return;
     }
 
@@ -947,15 +1016,11 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       ? this.withOrder(previousSchema, ownerPath, parentObject, anchor, name)
       : undefined;
 
-    if (!(await this.persist(columnIndex, next))) return;
-
-    this.refreshDependents(columnIndex, column.target.dataPath);
+    column.unsaved = true;
 
     if (nextSchema !== undefined) {
-      if (!(await this.persistSchema(columnIndex, nextSchema))) return;
-
       column.schema = nextSchema;
-      this.refreshDependents(columnIndex, deriveSchemaPath(column.target.dataPath));
+      column.unsavedSchema = true;
     }
 
     this.context.addUndoContext(this, {
@@ -978,14 +1043,12 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     const previousValue = this.readField(columnIndex, key);
     const next = deleteByFieldPath(column.data, key);
 
-    if (!(await this.persist(columnIndex, next))) return;
-
+    column.unsaved = true;
     this.context.addUndoContext(this, {
       type: TableUndoType.Delete,
       data: { columnIndex, path: key, previousValue, nextValue: undefined },
     });
     this.applyData(columnIndex, next, '删除成功');
-    this.refreshDependents(columnIndex, column.target.dataPath);
   }
 
   /**
@@ -998,8 +1061,10 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     if (column.pendingStrip === undefined) return;
 
     const value = column.pendingStrip;
+    const rememberedText = column.pendingStripText;
 
     column.pendingStrip = undefined;
+    column.pendingStripText = '';
     column.prefix = '';
 
     const target = column.target;
@@ -1008,6 +1073,9 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       this.publish(columnIndex, TablePanelStatus.NoTarget, []);
       return;
     }
+
+    column.stripConfirmed.set(target.dataPath, rememberedText);
+    column.unsaved = true;
 
     if (this.isSchemaView(columnIndex)) {
       this.applySchemaLoaded(columnIndex, value);
@@ -1030,6 +1098,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     if (column.pendingStrip === undefined) return;
 
     column.pendingStrip = undefined;
+    column.pendingStripText = '';
     column.prefix = '';
     column.target = null;
     column.data = null;
@@ -1065,6 +1134,10 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       entries: [],
       pickerError: undefined,
       pickerToken: 0,
+      unsaved: false,
+      unsavedSchema: false,
+      stripConfirmed: new Map<string, string>(),
+      pendingStripText: '',
       store: new Store<ITablePanelViewState>({ status: TablePanelStatus.NoTarget, rows: [], schemaMode: false }),
     };
   }
@@ -1162,6 +1235,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       title: target === null ? undefined : target.dataPath,
       message,
       error,
+      unsaved: column.unsaved,
       ...emptyState,
     });
   }
@@ -1179,6 +1253,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       schemaMode: target !== null && isSchemaPath(target.dataPath),
       title: target === null ? undefined : target.dataPath,
       commentStripPending: true,
+      unsaved: this.columnAt(columnIndex).unsaved,
     });
   }
 
@@ -1297,21 +1372,71 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   }
 
   /**
+   * 写回本面板**所有**有未落盘改动的栏
+   *
+   * 供 `TablePanel.onSwitchOut` 与 `TablePanel.dispose` 复用，落实「切出面板时自动保存已修改的表格」。
+   */
+  private async saveDirtyColumns(): Promise<void> {
+    const count = this.columns.length;
+
+    for (let index = 0; index < count; index += 1) await this.save(index);
+  }
+
+  /**
+   * 同步快照某栏当前目标与内存内容后异步写回并清该栏未落盘标记
+   *
+   * 快照先于 `TablePanel.setTable` / `TablePanel.closeColumn` 的目标替换 / 清空发生，故换目标 / 关栏
+   * 不会丢改动；写入失败用本栏面板级错误提示隔离，不抛穿。`unsavedSchema` 为真时把捕获的 schema 一并
+   * 写回推导出的 schema 路径。
+   * @param columnIndex 栏序号（0 基）
+   */
+  private async flushColumn(columnIndex: number): Promise<void> {
+    const column = this.columnAt(columnIndex);
+    const target = column.target;
+
+    if (target === null) return;
+    if (!column.unsaved && !column.unsavedSchema) return;
+
+    const data = column.data;
+    const schema = column.schema;
+    const prefix = column.prefix;
+    const writeSchema = column.unsavedSchema;
+
+    column.unsaved = false;
+    column.unsavedSchema = false;
+
+    try {
+      const dataResource = await this.context.requestResource(target.dataPath);
+
+      if (dataResource !== null) await dataResource.write(serializeTableText(data, prefix));
+
+      if (writeSchema) {
+        const schemaResource = await this.context.requestResource(deriveSchemaPath(target.dataPath));
+
+        if (schemaResource !== null) await schemaResource.write(serializeTableText(schema, prefix));
+      }
+    } catch {
+      this.publishError(columnIndex, '写入失败，请重试。');
+    }
+  }
+
+  /**
    * 把某栏变更后的数据写入其目标表的资源
    * @param columnIndex 栏序号（0 基）
    * @param data 变更后的完整数据
    */
-  private async writeData(columnIndex: number, data: Record<string, unknown>): Promise<void> {
+  private async writeData(columnIndex: number, data: unknown): Promise<void> {
     const column = this.columnAt(columnIndex);
     const target = column.target;
 
     if (target === null) return;
 
+    const prefix = column.prefix;
     const resource = await this.context.requestResource(target.dataPath);
 
     if (resource === null) return;
 
-    await resource.write(serializeTableText(data, column.prefix));
+    await resource.write(serializeTableText(data, prefix));
   }
 
   /**
@@ -1320,7 +1445,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
    * @param data 变更后的完整数据
    * @returns 写入成功时为 true
    */
-  private async persist(columnIndex: number, data: Record<string, unknown>): Promise<boolean> {
+  private async persist(columnIndex: number, data: unknown): Promise<boolean> {
     try {
       await this.writeData(columnIndex, data);
       return true;
@@ -1354,24 +1479,6 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       this.publishError(columnIndex, '写入失败，请重试。');
       return false;
     }
-  }
-
-  /**
-   * 把某栏的 schema 内容写入其 schema 资源（撤回 / 重做路径用）
-   * @param columnIndex 栏序号（0 基）
-   * @param schema 要写回的 schema 内容
-   */
-  private async writeSchema(columnIndex: number, schema: unknown): Promise<void> {
-    const column = this.columnAt(columnIndex);
-    const target = column.target;
-
-    if (target === null) return;
-
-    const resource = await this.context.requestResource(deriveSchemaPath(target.dataPath));
-
-    if (resource === null) return;
-
-    if (isRecord(schema)) await resource.write(serializeTableText(schema, column.prefix));
   }
 
   /**
@@ -1531,17 +1638,14 @@ export class TablePanel implements IEditorPanel, ITablePanel {
 
     if (next === undefined) return;
 
-    await this.writeData(columnIndex, next);
-    this.refreshDependents(columnIndex, column.target.dataPath);
+    column.unsaved = true;
 
     const schema = isUndo ? context.data.previousSchema : context.data.nextSchema;
 
     if (schema !== undefined && !this.isSchemaView(columnIndex)) {
-      await this.writeSchema(columnIndex, schema);
-
       if (isRecord(schema)) column.schema = schema;
 
-      this.refreshDependents(columnIndex, deriveSchemaPath(column.target.dataPath));
+      column.unsavedSchema = true;
     }
 
     this.applyData(columnIndex, next);
@@ -1564,6 +1668,9 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       return;
     }
 
+    // 该栏有未落盘改动时不重读覆盖内存，保住手动保存下的内存改动（T-02.1-20-01）
+    if (column.unsaved || column.unsavedSchema) return;
+
     const current = column.store.state;
     const hasContent = current.status === TablePanelStatus.Ready && current.rows.length > 0;
     const token = this.nextToken(columnIndex);
@@ -1585,8 +1692,17 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       const parsed = parseTableText(primaryText);
 
       if (parsed.status === TableTextParseStatus.NeedsCommentStrip) {
+        const remembered = column.stripConfirmed.get(target.dataPath);
+
+        if (remembered === primaryText) {
+          column.prefix = '';
+          await this.loadPrimary(columnIndex, target, parsed.value, token);
+          return;
+        }
+
         column.prefix = '';
         column.pendingStrip = parsed.value;
+        column.pendingStripText = primaryText;
         this.publishCommentStrip(columnIndex);
         return;
       }
