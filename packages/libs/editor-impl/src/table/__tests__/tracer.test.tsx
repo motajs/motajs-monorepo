@@ -92,17 +92,19 @@ describe('tablePanelType 注册与打开', () => {
     expect(system.shellSystem.listPanelTypes().map((type) => type.id)).toEqual(['table']);
   });
 
-  // 打开面板后未设目标时渲染未设置目标态
-  it('未设目标时渲染未设置目标态', async () => {
+  // 打开面板后未设目标时渲染空栏三按钮（空栏呈现改为内联控件，G-02.1-1）
+  it('未设目标时渲染空栏三按钮', async () => {
     const system = await createTableHarness(new FakeFileSystem());
     const panels: TablePanel[] = [];
     const panel = await openTablePanel(system, panels);
 
-    render(createElement(system.shellSystem.render()));
+    const { container } = render(createElement(system.shellSystem.render()));
+    const column = container.querySelectorAll('.etable-column')[0];
 
     expect(panel.id).toBe('instance-1');
-    expect(screen.getByText('尚未设置目标表')).not.toBeNull();
-    expect(screen.getByText('请先为该表格面板指定要编辑的表格。')).not.toBeNull();
+    expect(column.querySelector('[data-test-id="table-empty-open"]')).not.toBeNull();
+    expect(column.querySelector('[data-test-id="table-empty-create"]')).not.toBeNull();
+    expect(column.querySelector('[data-test-id="table-empty-delete"]')).not.toBeNull();
   });
 });
 

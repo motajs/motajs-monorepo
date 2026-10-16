@@ -78,7 +78,7 @@ describe('tablePanelType 经打开参数瞄准目标', () => {
     expect(inputValue(container, 'name')).toBe('"hello"');
   });
 
-  // 缺省打开参数时不瞄准，落回「尚未设置目标表」态，与旧行为一致
+  // 缺省打开参数时不瞄准，落回空栏三按钮态，与旧行为一致（空栏呈现改为内联控件，G-02.1-1）
   it('缺省打开参数时不瞄准目标表', async () => {
     const fs = new FakeFileSystem();
 
@@ -93,9 +93,11 @@ describe('tablePanelType 经打开参数瞄准目标', () => {
       await system.shellSystem.openPanelInTab(tabId, tablePanelType.id);
     });
 
-    render(createElement(system.shellSystem.render()));
+    const { container } = render(createElement(system.shellSystem.render()));
+    const column = container.querySelectorAll('.etable-column')[0];
 
-    expect(screen.getByText('尚未设置目标表')).not.toBeNull();
-    expect(screen.getByText('请先为该表格面板指定要编辑的表格。')).not.toBeNull();
+    expect(column.querySelector('[data-test-id="table-empty-open"]')).not.toBeNull();
+    expect(column.querySelector('[data-test-id="table-empty-create"]')).not.toBeNull();
+    expect(column.querySelector('[data-test-id="table-empty-delete"]')).not.toBeNull();
   });
 });

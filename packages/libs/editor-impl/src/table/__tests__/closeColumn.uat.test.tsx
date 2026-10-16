@@ -102,8 +102,8 @@ describe('每栏关闭按钮（P15）', () => {
     expect(open.compareDocumentPosition(close) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
   });
 
-  // 有目标栏的 ✕ 可点；点后本栏回到「尚未设置目标表」空态
-  it('有目标栏的 ✕ 可点，点后本栏回到未设目标态', async () => {
+  // 有目标栏的 ✕ 可点；点后本栏回到空栏三按钮（空栏呈现改为内联控件，G-02.1-1）
+  it('有目标栏的 ✕ 可点，点后本栏回到空栏三按钮', async () => {
     const fs = new FakeFileSystem();
 
     seed(fs, 'demo', { name: 'hello' }, { type: 'object', properties: { name: { type: 'string' } } });
@@ -127,12 +127,12 @@ describe('每栏关闭按钮（P15）', () => {
       fireEvent.click(close);
     });
 
-    expect(column.textContent).toContain('尚未设置目标表');
+    expect(column.querySelector('[data-test-id="table-empty-open"]')).not.toBeNull();
     expect(column.querySelector('[data-test-id="table-row-name"]')).toBeNull();
   });
 
-  // 本栏没有打开任何表时 ✕ 禁用
-  it('空栏的 ✕ 禁用，有目标栏的 ✕ 可点', async () => {
+  // 空栏呈现改为内联控件（G-02.1-1）：空栏不渲染表格工具栏 / ✕，改渲染空栏三按钮
+  it('空栏不渲染 ✕，有目标栏的 ✕ 可点', async () => {
     const fs = new FakeFileSystem();
 
     seed(fs, 'demo', { name: 'hello' }, { type: 'object', properties: { name: { type: 'string' } } });
@@ -144,12 +144,18 @@ describe('每栏关闭按钮（P15）', () => {
     setWindowWidth(1000);
 
     const { container } = render(createElement(system.shellSystem.render()));
-    const emptyClose = columnAt(container, 1).querySelector('[data-test-id="table-close-column"]');
-    const readyClose = columnAt(container, 0).querySelector('[data-test-id="table-close-column"]');
+    const emptyColumn = columnAt(container, 1);
+    const readyColumn = columnAt(container, 0);
+    const emptyClose = emptyColumn.querySelector('[data-test-id="table-close-column"]');
+    const readyClose = readyColumn.querySelector('[data-test-id="table-close-column"]');
 
-    if (emptyClose === null || readyClose === null) throw new Error('✕ 缺失');
+    expect(emptyClose).toBeNull();
+    expect(emptyColumn.querySelector('[data-test-id="table-empty-open"]')).not.toBeNull();
+    expect(emptyColumn.querySelector('[data-test-id="table-empty-create"]')).not.toBeNull();
+    expect(emptyColumn.querySelector('[data-test-id="table-empty-delete"]')).not.toBeNull();
 
-    expect(emptyClose.getAttribute('disabled')).not.toBeNull();
+    if (readyClose === null) throw new Error('✕ 缺失');
+
     expect(readyClose.getAttribute('disabled')).toBeNull();
   });
 
@@ -176,7 +182,7 @@ describe('每栏关闭按钮（P15）', () => {
       fireEvent.click(close);
     });
 
-    expect(columnAt(container, 0).textContent).toContain('尚未设置目标表');
+    expect(columnAt(container, 0).querySelector('[data-test-id="table-empty-open"]')).not.toBeNull();
     expect(columnAt(container, 1).querySelector('[data-test-id="table-row-b"]')).not.toBeNull();
   });
 });
@@ -204,7 +210,7 @@ describe('关闭后空栏可被「编辑 Schema」复用（P15）', () => {
       fireEvent.click(close);
     });
 
-    expect(columnAt(container, 1).textContent).toContain('尚未设置目标表');
+    expect(columnAt(container, 1).querySelector('[data-test-id="table-empty-open"]')).not.toBeNull();
 
     const opener = { open: vi.fn(async (): Promise<void> => {}) };
 
