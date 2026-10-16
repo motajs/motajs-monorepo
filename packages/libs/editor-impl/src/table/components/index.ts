@@ -7,3 +7,5 @@ export * from './TableToolbar';
 export * from './SchemaBanner';
 export * from './inputs';
 export * from './TableListPanelView';
+export * from './TablePicker';
+export * from './TableCreateForm';
