@@ -68,6 +68,14 @@ async function readData(system: EditorCore, name: string): Promise<unknown> {
   return JSON.parse(text);
 }
 
+/**
+ * 把面板内存中的未落盘改动写回资源（手动保存模型）
+ * @param panel 表格面板实例
+ */
+async function savePanel(panel: TablePanel): Promise<void> {
+  await panel.save();
+}
+
 // 读取某个字段值单元格内文本域的当前文本
 function valueOf(container: HTMLElement, field: string): string | undefined {
   const cell = container.querySelector(`[data-test-id="table-input-${field}"]`);
@@ -157,6 +165,7 @@ describe('表格内联编辑', () => {
     expect(valueOf(container, 'name')).toBe('"hello"');
 
     await commitText(container, 'name', '"world"');
+    await savePanel(panel);
 
     expect(await readData(system, 't')).toEqual({ name: 'world' });
     expect(valueOf(container, 'name')).toBe('"world"');
@@ -193,8 +202,10 @@ describe('表格内联编辑', () => {
     await switchMode('添加');
     await gutterAdd('name', 'extra');
 
-    expect(await readData(system, 't')).toEqual({ name: 'hello', extra: null });
     expect(screen.getByText('添加成功')).not.toBeNull();
+    await savePanel(panel);
+
+    expect(await readData(system, 't')).toEqual({ name: 'hello', extra: null });
     expect(promptStub).not.toHaveBeenCalled();
   });
 });

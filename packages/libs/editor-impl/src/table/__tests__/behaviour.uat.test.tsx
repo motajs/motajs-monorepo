@@ -72,6 +72,14 @@ async function readData(system: EditorCore, name: string): Promise<unknown> {
   return readContent(system, tableDataPath(name));
 }
 
+/**
+ * 把面板内存中的未落盘改动写回资源（手动保存模型）
+ * @param panel 表格面板实例
+ */
+async function savePanel(panel: TablePanel): Promise<void> {
+  await panel.save();
+}
+
 // 用能力 Provider 包裹外壳渲染根，注入假能力包（缺省时由 Provider 补齐默认弹窗打开器）
 function renderWithCapabilities(system: EditorCore, capabilities: ITableEditorCapabilities): ReturnType<typeof render> {
   return render(
@@ -158,6 +166,7 @@ describe('B1 值校验失败的可见拒绝', () => {
     renderWithCapabilities(system, { codeEditor });
 
     await clickAction('script', '编辑');
+    await savePanel(panel);
 
     expect(screen.queryByTestId('table-error-script')).toBeNull();
     expect(await readData(system, 't')).toEqual({ script: 'new' });
@@ -179,8 +188,10 @@ describe('B3 成功提示文案与常驻预留', () => {
     await switchMode('添加');
     await gutterAdd('name', 'extra');
 
-    expect(await readData(system, 't')).toEqual({ name: 'hello', extra: null });
     expect(screen.getByTestId('table-notice').textContent).toBe('添加成功');
+    await savePanel(panel);
+
+    expect(await readData(system, 't')).toEqual({ name: 'hello', extra: null });
   });
 
   // 就绪但无提示时提示行容器仍常驻占位，故出现 / 消失不改变占用的垂直空间
@@ -223,6 +234,7 @@ describe('B2 数字字段的单行数字控件', () => {
       fireEvent.change(input, { target: { value: '5' } });
       fireEvent.blur(input);
     });
+    await savePanel(panel);
 
     expect(await readData(system, 't')).toEqual({ level: 5 });
   });

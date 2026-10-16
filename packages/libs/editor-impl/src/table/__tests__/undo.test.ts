@@ -56,6 +56,14 @@ async function readData(system: EditorCore, name: string): Promise<unknown> {
   return JSON.parse(text);
 }
 
+/**
+ * 把面板内存中的未落盘改动写回资源（手动保存模型）
+ * @param panel 表格面板实例
+ */
+async function savePanel(panel: TablePanel): Promise<void> {
+  await panel.save();
+}
+
 // 一张带单个字符串字段、顶层可新增的样例表
 function stringTable(): { readonly data: unknown; readonly schema: unknown } {
   return {
@@ -76,12 +84,15 @@ describe('表格统一撤销路径', () => {
     await setTarget(panel, 't');
 
     await panel.commitValue("['name']", 'b');
+    await savePanel(panel);
     expect(await readData(system, 't')).toEqual({ name: 'b' });
 
     await system.undoSystem.undo();
+    await savePanel(panel);
     expect(await readData(system, 't')).toEqual({ name: 'a' });
 
     await system.undoSystem.redo();
+    await savePanel(panel);
     expect(await readData(system, 't')).toEqual({ name: 'b' });
   });
 
@@ -98,6 +109,7 @@ describe('表格统一撤销路径', () => {
     await panel.commitValue("['name']", 'b');
     await system.undoSystem.undo();
     await system.undoSystem.undo();
+    await savePanel(panel);
 
     expect(await readData(system, 't')).toEqual({ name: 'a' });
   });
@@ -116,6 +128,7 @@ describe('表格统一撤销路径', () => {
     await system.undoSystem.undo();
     await panel.commitValue("['name']", 'c');
     await system.undoSystem.redo();
+    await savePanel(panel);
 
     expect(await readData(system, 't')).toEqual({ name: 'c' });
   });
@@ -131,12 +144,15 @@ describe('表格统一撤销路径', () => {
     await setTarget(panel, 't');
 
     await panel.addItem('', 'extra');
+    await savePanel(panel);
     expect(await readData(system, 't')).toEqual({ name: 'a', extra: null });
 
     await system.undoSystem.undo();
+    await savePanel(panel);
     expect(await readData(system, 't')).toEqual({ name: 'a' });
 
     await system.undoSystem.redo();
+    await savePanel(panel);
     expect(await readData(system, 't')).toEqual({ name: 'a', extra: null });
   });
 
@@ -151,12 +167,15 @@ describe('表格统一撤销路径', () => {
     await setTarget(panel, 't');
 
     await panel.deleteItem("['extra']");
+    await savePanel(panel);
     expect(await readData(system, 't')).toEqual({ name: 'a' });
 
     await system.undoSystem.undo();
+    await savePanel(panel);
     expect(await readData(system, 't')).toEqual({ name: 'a', extra: 'x' });
 
     await system.undoSystem.redo();
+    await savePanel(panel);
     expect(await readData(system, 't')).toEqual({ name: 'a' });
   });
 
@@ -171,6 +190,7 @@ describe('表格统一撤销路径', () => {
     await setTarget(panel, 't');
 
     await panel.addItem('', '__proto__');
+    await savePanel(panel);
 
     const data = await readData(system, 't');
 
@@ -189,6 +209,7 @@ describe('表格统一撤销路径', () => {
     await setTarget(panel, 't');
 
     await panel.commitValue("['name']", 'b');
+    await savePanel(panel);
     await system.undoSystem.undo();
 
     expect(await readData(system, 't')).toEqual({ name: 'b' });

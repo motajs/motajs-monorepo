@@ -85,6 +85,14 @@ async function readData(system: EditorCore, path: string): Promise<unknown> {
   return typeof text === 'string' ? JSON.parse(text) : undefined;
 }
 
+/**
+ * 把面板内存中的未落盘改动写回资源（手动保存模型）
+ * @param panel 表格面板实例
+ */
+async function savePanel(panel: TablePanel): Promise<void> {
+  await panel.save();
+}
+
 // 读取根目录当前直接子条目名列表
 async function rootNames(system: EditorCore): Promise<string[]> {
   const entries = await system.resourceSystem.listDirectory('');
@@ -196,12 +204,14 @@ describe('打开 / 新建 / 删除端到端集成', () => {
 
     // 编辑一个字段值：资源被写回；一次撤销后还原
     await commitText(container, 'name', '"b"');
+    await savePanel(created[0]);
 
     expect(await readData(system, tableDataPath('hero'))).toEqual({ name: 'b', note: 'x' });
 
     await act(async () => {
       await system.undoSystem.undo();
     });
+    await savePanel(created[0]);
 
     expect(await readData(system, tableDataPath('hero'))).toEqual({ name: 'a', note: 'x' });
     expect(valueOf(container, 'name')).toBe('"a"');

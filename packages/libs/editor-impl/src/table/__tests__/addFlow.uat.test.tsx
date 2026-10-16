@@ -75,6 +75,14 @@ async function readSchema(system: EditorCore, name: string): Promise<unknown> {
   return readContent(system, tableSchemaPath(name));
 }
 
+/**
+ * 把面板内存中的未落盘改动写回资源（手动保存模型）
+ * @param panel 表格面板实例
+ */
+async function savePanel(panel: TablePanel): Promise<void> {
+  await panel.save();
+}
+
 // 按渲染顺序取表体内所有行的 data-test-id
 function rowKeys(container: HTMLElement): string[] {
   const body = container.querySelector('[data-test-id="data-table-grid"]');
@@ -138,6 +146,7 @@ describe('添加流程（P12）', () => {
 
     await switchMode('添加');
     await gutterAddByBlur('a', 'mid');
+    await savePanel(panel);
 
     expect(await readData(system, 'blur')).toEqual({ a: '1', mid: null, b: '2' });
     expect(rowKeys(container)).toEqual(['table-row-a', 'table-row-mid', 'table-row-b']);
@@ -164,6 +173,7 @@ describe('添加流程（P12）', () => {
     await act(async () => {
       fireEvent.click(screen.getByTestId('table-add-confirm-a'));
     });
+    await savePanel(panel);
 
     expect(await readData(system, 'confirm')).toEqual({ a: '1', mid: null, b: '2' });
   });
@@ -182,6 +192,7 @@ describe('添加流程（P12）', () => {
 
     await switchMode('添加');
     await gutterAddByBlur('a', 'mid');
+    await savePanel(panel);
 
     const schema = await readSchema(system, 'order');
 
@@ -223,12 +234,14 @@ describe('添加流程（P12）', () => {
 
     await switchMode('添加');
     await gutterAddByBlur('a', 'mid');
+    await savePanel(panel);
 
     expect(await readData(system, 'undo')).toEqual({ a: '1', mid: null, b: '2' });
 
     await act(async () => {
       await system.undoSystem.undo();
     });
+    await savePanel(panel);
 
     expect(await readData(system, 'undo')).toEqual({ a: '1', b: '2' });
 
