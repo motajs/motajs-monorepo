@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "02.1"
 current_phase_name: 资源层重构与表格文件管理
-current_plan: 22
+current_plan: 23
 status: executing
-stopped_at: Completed 02.1-22-PLAN.md
-last_updated: "2026-10-16T13:42:30.641Z"
+stopped_at: Completed 02.1-23-PLAN.md
+last_updated: "2026-10-16T16:42:39.881Z"
 last_activity: 2026-10-16
 last_activity_desc: Completed 02.1-19-PLAN.md
-state_head: 872e112b2df8e51326ce850ee11fa2b8a184213b
+state_head: 2b2bf19abbb809dfddc2686c80d44a18fb7a3ad5
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 64
-  completed_plans: 62
+  completed_plans: 63
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 02.1 (资源层重构与表格文件管理) — EXECUTING
-Current Plan: 22
+Current Plan: 23
 Total Plans in Phase: 24
 Status: In progress — gap closure (G-02.1-3)
 Last activity: 2026-10-16 - Completed 02.1-19-PLAN.md
@@ -120,6 +120,7 @@ Progress: [██████████] 100%
 | Phase 02.1 P20 | ~45min | 3 tasks | 5 files |
 | Phase 02.1 P21 | ~50min | 3 tasks | 10 files |
 | Phase 02.1 P22 | ~20min | 3 tasks | 7 files |
+| Phase 02.1 P23 | ~40min | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -272,6 +273,10 @@ Recent decisions affecting current work:
 - [Phase 02.1]: 02.1-22: renderDirectoryRow / renderCurrentDirectory 为 TableCreateForm.tsx 模块级自由函数，类名 / data-test-id 沿用表格浏览器惯例（etable-list-entry etable-list-directory、table-list-entry-<path>、table-list-up）
 - [Phase 02.1]: 02.1-22: 空栏三按钮 size 由 small 改 middle（更大），断言「不带 ant-btn-sm」作为「已由 small 改回 middle」的可失败代理；.etable-empty-actions 改竖列
 - [Phase 02.1]: 02.1-22: TablePanel.setEmptyMode 把进入 Create 态纳入 TablePanel.refreshPicker（与 Open/Delete 一致），未改 refreshAwaitingPickers 的 Open/Delete 范围
+- [Phase 02.1]: 02.1-23: 工具栏两个低频动作（编辑 Schema / 在代码编辑器中打开）收进一个 antd Dropdown（触发按钮 table-more），菜单项 data-test-id 落在 label 节点、菜单级 onClick 按 key 分发；disabled 由菜单项自身体现（aria-disabled）
+- [Phase 02.1]: 02.1-23: 「不显示 / 隐藏」类断言必须先展开下拉再断言菜单项不存在（下拉关闭时菜单项本就不在 DOM，直接断言会永真），并以常驻的 table-open-code 存在性确认菜单确已展开
+- [Phase 02.1]: 02.1-23: layout / closeColumn 的位置参照由已收进下拉的菜单项换成常驻的 table-more 触发按钮，位置关系语义逐字保留
+- [Phase 02.1]: 02.1-23: editor-core vitest 开启 css: true（否则 ?inline 返回空串、样式断言无法成立）；重量级 integration 用例超时放宽到 20s（并行争用临界超时，HEAD 亦同）
 
 ### Pending Todos
 
@@ -298,6 +303,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-16T13:42:29.541Z
-Stopped at: Completed 02.1-22-PLAN.md
+Last session: 2026-10-16T16:42:39.383Z
+Stopped at: Completed 02.1-23-PLAN.md
 Resume file: None
