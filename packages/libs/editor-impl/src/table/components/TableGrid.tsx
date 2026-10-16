@@ -573,6 +573,8 @@ export const TableGrid = memo(function TableGrid(props: ITableGridProps): ReactE
     },
     onCloseColumn: props.onCloseColumn,
     closeButtonEnabled: props.onCloseColumn !== undefined && props.status !== TablePanelStatus.NoTarget,
+    unsaved: props.unsaved,
+    onSave: props.onSave,
   });
   const banner = schemaMode ? createElement(SchemaBanner, {}) : null;
   const notice = renderNotice(props);

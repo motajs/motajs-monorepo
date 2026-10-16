@@ -73,6 +73,20 @@ export function TableToolbar(props: ITableToolbarProps): ReactElement {
       >
         在代码编辑器中打开
       </Button>
+      <Button
+        size="small"
+        autoInsertSpace={false}
+        disabled={props.unsaved !== true || props.onSave === undefined}
+        data-test-id="table-save"
+        onClick={(): void => props.onSave?.()}
+      >
+        保存
+      </Button>
+      {props.unsaved === true ? (
+        <span className="etable-toolbar-unsaved" data-test-id="table-unsaved">
+          未保存
+        </span>
+      ) : null}
       {props.onCloseColumn === undefined ? null : (
         <Button
           size="small"
