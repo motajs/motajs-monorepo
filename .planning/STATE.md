@@ -5,16 +5,16 @@ current_phase: "02.1"
 current_phase_name: 资源层重构与表格文件管理
 current_plan: 12
 status: verifying
-stopped_at: Completed 02.1-12-PLAN.md
-last_updated: "2026-10-15T15:49:35.993Z"
+stopped_at: Completed 02.1-13-PLAN.md
+last_updated: "2026-10-16T06:47:44.555Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 02.1 execution started
-state_head: 8154c1112c4398671a17426d9b0068809e2a94b7
+state_head: bba6e5a482203775c4e9e299c9bb015bafc78331
 progress:
   total_phases: 8
   completed_phases: 0
-  total_plans: 52
-  completed_plans: 52
+  total_plans: 58
+  completed_plans: 53
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -110,6 +110,7 @@ Progress: [██████████] 100%
 | Phase 02.1 P10 | 35min | 3 tasks | 7 files |
 | Phase 02.1 P11 | 6min | 2 tasks | 2 files |
 | Phase 02.1 P12 | 12min | 3 tasks | 4 files |
+| Phase 02.1 P13 | 12min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -231,6 +232,9 @@ Recent decisions affecting current work:
 - [Phase 02.1]: 02.1-11: 三包 test / typecheck 与五条生效门禁整验全绿；VALIDATION.md 置 nyquist_compliant true / status validated，Wave 1–8 行依各自 SUMMARY 置绿、Plan 12 行保留 pending
 - [Phase 02.1]: 02.1-12: CORE-01 由「只定义接口、不提供实现」改为 core 资源系统驱动注入的文件系统（唯一调用方）；TABLE-01 扩展为打开（预设表 + 目录树）/ 新建 / 删除表格文件
 - [Phase 02.1]: 02.1-12: 03-CONTEXT / 03-UI-SPEC 中残留的类型号、IResourceInjection、IResourceIdentifier.path 前提全部收口为「路径标识 + 索引 + core 驱动 fs」；INTERFACE-NAME 记入最终定稿（随 Plan 01–11 落地）
+- [Phase 02.1]: 02.1-13: TableEmptyMode 落 table/types.ts（叶子模块）而非 tablePanel.ts，避免 tablePanel → TableGrid → TableEmptyColumn → tablePanel 环依赖
+- [Phase 02.1]: 02.1-13: ITablePanelViewState 追加四个空栏字段全部可选（emptyMode/pickerDirectory/pickerEntries/pickerError），既有 publish / publishCommentStrip / createColumn 零改动即通过类型检查
+- [Phase 02.1]: 02.1-13: ITablePickerProps.onSelect 保持 required——打开/删除两组件唯一差异是 presets 是否传入，删除态由 TableEmptyColumn 传空操作满足契约
 
 ### Pending Todos
 
@@ -257,6 +261,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-15T15:49:35.746Z
-Stopped at: Completed 02.1-12-PLAN.md
+Last session: 2026-10-16T06:47:44.230Z
+Stopped at: Completed 02.1-13-PLAN.md
 Resume file: None
