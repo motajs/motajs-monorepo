@@ -116,7 +116,7 @@ function renderButtons(onModeChange: (mode: TableEmptyMode) => void): ReactEleme
       createElement(
         Button,
         {
-          size: 'small',
+          size: 'middle',
           autoInsertSpace: false,
           'data-test-id': 'table-empty-open',
           onClick: (): void => onModeChange(TableEmptyMode.Open),
@@ -126,7 +126,7 @@ function renderButtons(onModeChange: (mode: TableEmptyMode) => void): ReactEleme
       createElement(
         Button,
         {
-          size: 'small',
+          size: 'middle',
           autoInsertSpace: false,
           'data-test-id': 'table-empty-create',
           onClick: (): void => onModeChange(TableEmptyMode.Create),
@@ -136,7 +136,7 @@ function renderButtons(onModeChange: (mode: TableEmptyMode) => void): ReactEleme
       createElement(
         Button,
         {
-          size: 'small',
+          size: 'middle',
           autoInsertSpace: false,
           'data-test-id': 'table-empty-delete',
           onClick: (): void => onModeChange(TableEmptyMode.Delete),

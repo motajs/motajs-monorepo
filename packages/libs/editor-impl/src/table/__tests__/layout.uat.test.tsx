@@ -451,3 +451,32 @@ describe('折叠行整行手型光标（P27）', () => {
     expect(TABLE_CSS).toMatch(/\.etable-row-group\s*\{[^}]*cursor:\s*pointer/);
   });
 });
+
+describe('空栏三按钮更大且竖排（G-02.1-3 ②）', () => {
+  // 竖排（CSS 原文）：.etable-empty-actions 设 flex-direction: column 且按钮撑满宽度
+  it('空栏三按钮容器竖排且撑满宽度', () => {
+    expect(TABLE_CSS).toMatch(/\.etable-empty-actions\s*\{[^}]*flex-direction: column/);
+    expect(TABLE_CSS).toMatch(/\.etable-empty-actions\s*\{[^}]*width: 100%/);
+  });
+
+  // 更大（渲染类名）：空栏三个 .ant-btn 均不带 ant-btn-sm（size 由 small 改回 middle）
+  it('空栏三个按钮更大且不带 ant-btn-sm', async () => {
+    const fs = new FakeFileSystem();
+
+    seedSampleTable(fs, 'demo');
+    const system = await createTableHarness(fs);
+    const panels: TablePanel[] = [];
+    const panel = await openTablePanel(system, panels);
+
+    await setTarget(panel, 'demo');
+    setWindowWidth(1000);
+
+    const { container } = render(createElement(system.shellSystem.render()));
+    const columns = container.querySelectorAll('.etable-column');
+    const emptyColumn = columns[1];
+    const buttons = emptyColumn.querySelectorAll('.etable-empty-actions .ant-btn');
+
+    expect(buttons.length).toBe(3);
+    for (const button of buttons) expect(button.classList.contains('ant-btn-sm')).toBe(false);
+  });
+});
