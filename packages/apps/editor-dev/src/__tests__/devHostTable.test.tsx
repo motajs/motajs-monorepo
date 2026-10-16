@@ -1,7 +1,7 @@
 import { act, cleanup, configure, fireEvent, render, screen } from '@testing-library/react';
 import { EditorCore } from '@motajs/editor-core';
 import { CapabilityProvider } from '@motajs/editor-impl/react';
-import { tableListPanelType, tablePanelType } from '@motajs/editor-impl/table';
+import { tablePanelType } from '@motajs/editor-impl/table';
 import { createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryBackend } from '../backend/memoryBackend';
@@ -15,12 +15,9 @@ import {
 } from '../demo/devMenu';
 import {
   createTablePanelOpener,
-  openTableDemoPanel,
   TABLE_DEMO_DATA,
   TABLE_DEMO_DATA_PATH,
   TABLE_DEMO_ENTRY_COUNT,
-  TABLE_DEMO_MENU_ID,
-  TABLE_DEMO_MENU_TITLE,
   TABLE_DEMO_SCHEMA,
   TABLE_DEMO_SCHEMA_PATH,
   TABLE_PRESETS,
@@ -33,7 +30,7 @@ afterEach(() => {
   cleanup();
 });
 
-// 装配开发宿主组合根：内存文件系统 seed demo 示例与 demo 表、注册三种面板类型与「打开表格」菜单项
+// 装配开发宿主组合根：内存文件系统 seed demo 示例与 demo 表、注册演示 / 表格两种面板类型与撤销重做菜单
 async function createHost(): Promise<EditorCore> {
   const core = new EditorCore();
   const backend = new MemoryBackend();
@@ -42,14 +39,6 @@ async function createHost(): Promise<EditorCore> {
   backend.seed(TABLE_DEMO_SCHEMA_PATH, TABLE_DEMO_SCHEMA);
   core.shellSystem.registerPanelType(DEMO_PANEL_TYPE);
   core.shellSystem.registerPanelType(tablePanelType);
-  core.shellSystem.registerPanelType(tableListPanelType);
-  core.shellSystem.registerMenuItem({
-    id: TABLE_DEMO_MENU_ID,
-    title: TABLE_DEMO_MENU_TITLE,
-    onClick: (): void => {
-      void openTableDemoPanel(core);
-    },
-  });
   registerDevMenu(core);
 
   await core.initialize({ fs: backend, maxUndoStep: backend.maxUndoStep });
@@ -96,6 +85,27 @@ function renderWithTableOpener(core: EditorCore): ReturnType<typeof render> {
   );
 }
 
+// 取面板第 index 栏的 DOM 元素：空栏控件与其 data-test-id 在多栏下重复，断言须限定到单栏
+function columnAt(container: HTMLElement, index: number): Element | null {
+  return container.querySelectorAll('.etable-column')[index] ?? null;
+}
+
+// 在第 index 栏内按 data-test-id 查询元素
+function inColumn(container: HTMLElement, index: number, testId: string): Element | null {
+  const column = columnAt(container, index);
+
+  return column === null ? null : column.querySelector(`[data-test-id="${testId}"]`);
+}
+
+// 点击第 index 栏内按 data-test-id 定位的元素
+function clickInColumn(container: HTMLElement, index: number, testId: string): void {
+  const element = inColumn(container, index, testId);
+
+  if (element === null) throw new Error(`栏内元素缺失: ${testId}`);
+
+  fireEvent.click(element);
+}
+
 describe('开发宿主表格接入', () => {
   // 经打开参数打开 demo 表格后，外壳渲染出 schema 驱动的嵌套分组行与叶子行
   it('经打开参数打开 demo 表格并渲染 schema 驱动行', async () => {
@@ -120,19 +130,19 @@ describe('开发宿主表格接入', () => {
     expect(numberValue(container, 'position-y')).toBe('34');
   });
 
-  // 组合根接好线：已注册「打开表格」菜单项与表格 / 列表两种面板类型
-  it('已注册「打开表格」菜单项与表格面板类型', async () => {
+  // 组合根接好线：只注册表格 / 演示两种面板类型，且不再有「打开表格」工具栏入口
+  it('只注册表格 / 演示面板类型且无「打开表格」菜单项', async () => {
     const core = await createHost();
-
-    const matching = core.shellSystem.listMenuItems().filter((item) => item.id === TABLE_DEMO_MENU_ID);
-
-    expect(matching.length).toBe(1);
-    expect(matching[0].title).toBe(TABLE_DEMO_MENU_TITLE);
 
     const typeIds = core.shellSystem.listPanelTypes().map((type) => type.id);
 
-    expect(typeIds).toContain('table');
-    expect(typeIds).toContain('table-list');
+    expect(typeIds).toContain(tablePanelType.id);
+    expect(typeIds).toContain(DEMO_PANEL_TYPE.id);
+    expect(typeIds).not.toContain('table-list');
+
+    const menuTitles = core.shellSystem.listMenuItems().map((item) => item.title);
+
+    expect(menuTitles).not.toContain('打开表格');
   });
 
   // 注入表格打开器后，数据表格工具栏的「编辑 Schema」按钮存在且未被禁用
@@ -270,23 +280,35 @@ describe('开发宿主表格接入', () => {
 });
 
 describe('开发宿主表格端到端', () => {
-  // 端到端：打开列表面板 → 从预设打开演示表 → 在演示目录新建 → 打开新表 → 删除并确认
-  it('打开列表 / 预设打开 / 新建 / 打开新表 / 删除 端到端贯通', async () => {
+  // 端到端：在表格面板空栏内贯通「打开（含预设）/ 新建 / 删除」，全程就在该栏内、不再出现覆盖外壳的独立面板
+  it('在表格面板空栏内贯通打开 / 新建 / 删除 端到端', async () => {
     const core = await createHost();
 
+    // 开一个未设目标的表格面板标签，进入第 0 栏的空栏三按钮态
+    const tabId = core.shellSystem.openBlankTab();
+
     await act(async () => {
-      await openTableDemoPanel(core);
+      await core.shellSystem.openPanelInTab(tabId, tablePanelType.id);
     });
 
-    const listTab = core.shellSystem.listTabs().find((tab) => tab.typeId === tableListPanelType.id);
+    const { container } = renderWithTableOpener(core);
 
-    if (listTab === undefined) throw new Error('列表面板标签缺失');
+    // 空栏初始态：本栏显示「打开表格 / 新建表格 / 删除表格」三个按钮
+    expect(inColumn(container, 0, 'table-empty-open')).not.toBeNull();
+    expect(inColumn(container, 0, 'table-empty-create')).not.toBeNull();
+    expect(inColumn(container, 0, 'table-empty-delete')).not.toBeNull();
 
-    const listTabId = listTab.id;
+    // 点「打开表格」：本栏内联展示可复用浏览器，预设表「演示表」可见
+    await act(async () => {
+      clickInColumn(container, 0, 'table-empty-open');
+    });
+    await act(async () => {});
 
-    renderWithTableOpener(core);
+    expect(screen.getByTestId('table-list-preset-演示表')).not.toBeNull();
 
-    // 从预设区打开演示表并渲染 schema 驱动行
+    // 从预设打开演示表：开进本栏（不新开标签）并渲染 schema 驱动行
+    const tabsBefore = core.shellSystem.listTabs().length;
+
     await act(async () => {
       fireEvent.click(screen.getByTestId('table-list-preset-演示表'));
     });
@@ -294,10 +316,19 @@ describe('开发宿主表格端到端', () => {
 
     expect(screen.getByText('position')).not.toBeNull();
     expect(screen.getByText('标题')).not.toBeNull();
+    expect(core.shellSystem.listTabs().length).toBe(tabsBefore);
 
-    // 切回列表面板，进入演示表所在的 tables 目录
+    // 表已开进本栏，本栏不再是空栏；点本栏 ✕ 关栏后回到三按钮
     await act(async () => {
-      core.shellSystem.activateTab(listTabId);
+      clickInColumn(container, 0, 'table-close-column');
+    });
+    await act(async () => {});
+
+    expect(inColumn(container, 0, 'table-empty-open')).not.toBeNull();
+
+    // 再点「打开表格」→ 目录树点「tables」导航进入 → 点「返回」回三按钮（该栏目录状态保留在 tables）
+    await act(async () => {
+      clickInColumn(container, 0, 'table-empty-open');
     });
     await act(async () => {});
 
@@ -306,7 +337,21 @@ describe('开发宿主表格端到端', () => {
     });
     await act(async () => {});
 
-    // 在 tables 目录新建一张 hero 表，内存文件系统里出现一对文件
+    expect(screen.getByTestId('table-list-entry-tables/demo.json')).not.toBeNull();
+
+    await act(async () => {
+      clickInColumn(container, 0, 'table-empty-back');
+    });
+    await act(async () => {});
+
+    expect(inColumn(container, 0, 'table-empty-create')).not.toBeNull();
+
+    // 点「新建表格」→ 输入 hero 回车：在 tables 目录写出一对文件并把新表开进本栏（不新开标签）
+    await act(async () => {
+      clickInColumn(container, 0, 'table-empty-create');
+    });
+    await act(async () => {});
+
     await act(async () => {
       fireEvent.click(screen.getByTestId('table-list-create'));
     });
@@ -322,20 +367,24 @@ describe('开发宿主表格端到端', () => {
     const createdNames = (await core.resourceSystem.listDirectory('tables')).map((entry) => entry.name);
 
     expect(createdNames).toEqual(expect.arrayContaining(['hero.json', 'hero.schema.json']));
+    expect(core.shellSystem.listTabs().length).toBe(tabsBefore);
+    expect(inColumn(container, 0, 'data-table')).not.toBeNull();
 
-    // 打开新建的表：外壳新增一个标签承载它
-    const tabsBefore = core.shellSystem.listTabs().length;
-
+    // 点本栏 ✕ 关栏后删除 hero 表：目录在根、无预设区，导航进 tables 后经二次确认一对文件消失
     await act(async () => {
-      fireEvent.click(screen.getByTestId('table-list-entry-tables/hero.json'));
+      clickInColumn(container, 0, 'table-close-column');
     });
     await act(async () => {});
 
-    expect(core.shellSystem.listTabs().length).toBe(tabsBefore + 1);
-
-    // 切回列表面板删除 hero 表：经确认后一对文件从内存文件系统与目录树一并消失
     await act(async () => {
-      core.shellSystem.activateTab(listTabId);
+      clickInColumn(container, 0, 'table-empty-delete');
+    });
+    await act(async () => {});
+
+    expect(inColumn(container, 0, 'table-list-preset-演示表')).toBeNull();
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('table-list-entry-tables'));
     });
     await act(async () => {});
 
@@ -354,6 +403,6 @@ describe('开发宿主表格端到端', () => {
 
     expect(remainingNames).not.toContain('hero.json');
     expect(remainingNames).not.toContain('hero.schema.json');
-    expect(screen.queryByTestId('table-list-entry-tables/hero.json')).toBeNull();
+    expect(inColumn(container, 0, 'table-list-delete-tables/hero.json')).toBeNull();
   });
 });
