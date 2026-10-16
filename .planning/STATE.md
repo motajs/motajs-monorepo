@@ -3,13 +3,13 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "02.1"
 current_phase_name: 资源层重构与表格文件管理
-current_plan: 23
+current_plan: 24
 status: executing
-stopped_at: Completed 02.1-23-PLAN.md
-last_updated: "2026-10-16T16:42:39.881Z"
+stopped_at: Completed 02.1-24-PLAN.md
+last_updated: "2026-10-16T17:09:00.652Z"
 last_activity: 2026-10-16
 last_activity_desc: Completed 02.1-19-PLAN.md
-state_head: 2b2bf19abbb809dfddc2686c80d44a18fb7a3ad5
+state_head: a1a65fa803760fd0a2e9b2793750d7dc199476ea
 progress:
   total_phases: 8
   completed_phases: 0
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 02.1 (资源层重构与表格文件管理) — EXECUTING
-Current Plan: 23
+Current Plan: 24
 Total Plans in Phase: 24
 Status: In progress — gap closure (G-02.1-3)
 Last activity: 2026-10-16 - Completed 02.1-19-PLAN.md
@@ -121,6 +121,7 @@ Progress: [██████████] 100%
 | Phase 02.1 P21 | ~50min | 3 tasks | 10 files |
 | Phase 02.1 P22 | ~20min | 3 tasks | 7 files |
 | Phase 02.1 P23 | ~40min | 3 tasks | 11 files |
+| Phase 02.1 P24 | ~19min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -277,6 +278,9 @@ Recent decisions affecting current work:
 - [Phase 02.1]: 02.1-23: 「不显示 / 隐藏」类断言必须先展开下拉再断言菜单项不存在（下拉关闭时菜单项本就不在 DOM，直接断言会永真），并以常驻的 table-open-code 存在性确认菜单确已展开
 - [Phase 02.1]: 02.1-23: layout / closeColumn 的位置参照由已收进下拉的菜单项换成常驻的 table-more 触发按钮，位置关系语义逐字保留
 - [Phase 02.1]: 02.1-23: editor-core vitest 开启 css: true（否则 ?inline 返回空串、样式断言无法成立）；重量级 integration 用例超时放宽到 20s（并行争用临界超时，HEAD 亦同）
+- [Phase 02.1]: [Phase 02.1]: 02.1-24: 开发宿主表格 e2e 迁到新交互——工具栏两个动作改经 table-more 下拉、新建在新建表单里进入 tables 目录选位置、读回资源前补一次保存（手动保存模型）
+- [Phase 02.1]: [Phase 02.1]: 02.1-24: 开发宿主 .jsonc e2e 用捕获的面板实例驱动 TablePanel.onSwitchIn（复用 tablePanelType.create 以应用打开参数 target），断言外部改写回原文后再次切入不再弹确认框且内容仍在（只提示一次）
+- [Phase 02.1]: [Phase 02.1]: 02.1-24: 再次切入复用 IEditorPanel.onSwitchIn（接口成员）而非把面板强转成 TablePanel，避免 as 断言并贴合 e2e 的真实切换语义
 
 ### Pending Todos
 
@@ -303,6 +307,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-16T16:42:39.383Z
-Stopped at: Completed 02.1-23-PLAN.md
+Last session: 2026-10-16T17:09:00.295Z
+Stopped at: Completed 02.1-24-PLAN.md
 Resume file: None
