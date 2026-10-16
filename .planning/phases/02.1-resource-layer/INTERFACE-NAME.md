@@ -412,3 +412,104 @@
 
 ### 对既有命名的删除
 - 无。
+
+---
+
+# 缺口收口轮（UAT `G-02.1-3`） — 命名提案（Plan 19–24）
+
+**状态：待用户确认。** 依据 `02.1-UAT.md` 缺口 `G-02.1-3`（severity blocker，来自 UAT 测试 1）：
+① 多表标签名过长 → 限宽 ≤200px；② 空栏三个按钮更大且竖排；③ 新建表格只能建到根目录 → 让用户选目标目录；④「打开将删除全部注释」确认框每次切走再切回都重弹 → 同一栏同一文件只提示一次（内容变化除外）；⑤ **没有保存按钮（blocker）** → 改**手动保存**（编辑先留内存、点「保存」才落盘），并**在切出面板时自动保存已修改的表格**；⑥「编辑 Schema」与「在代码编辑器中打开」收进一个小下拉框；⑦「打开表格」列表实时同步（不再只在切出 / 切入时同步）。
+
+**为什么要有这一轮**：现状是「每次编辑立即写盘 + 无保存按钮 + 工具栏两个低频按钮常驻 + 空栏三按钮小且横排 + 新建只能建到根目录 + 注释剥离确认框每次切回都重弹 + 打开列表只在进入模式时取一次」。按项目规则「先接口、后实现」，本轮先做接口（Plan 19），再排实现（Plan 20 手动保存 / 注释剥离记忆 / 列表实时同步；Plan 22 空栏按钮与新建选目录；Plan 23 工具栏下拉与标签限宽）与测试收口（Plan 21 迁移既有表格测试；Plan 24 开发宿主 e2e + 三包全绿 + 五门禁）。
+
+---
+
+## Plan 19 — `02.1-19-PLAN.md`（缺口收口接口，仅类型）
+
+**本计划只声明类型 / 契约，不写任何行为。** 新增成员一律先声明为**可选**，避免接口计划本身让既有构造点 typecheck 失败（同 Plan 13 做法）。
+
+### `ITablePanel.save(columnIndex?: number): Promise<void>`（`src/table/types.ts`，`ITablePanel` 新增方法）
+- **用途**：把**某一栏**内存中的未落盘改动写回资源——数据文件，以及需要写回的镜像 schema 文件；该栏无未落盘改动时不动盘。视图工具栏的「保存」按钮、以及切出 / 关栏 / 释放时的自动保存路径都经它。
+- **备选**：只做私有方法、不进 `ITablePanel` 接口。本提案进接口——「保存」是本面板对外应有的动作，且让测试与将来宿主可显式触发。
+
+### `ITablePanelViewState.unsaved?: boolean`（`src/table/tablePanel.ts`）
+- **用途**：该栏当前是否有**未落盘**的改动；视图据此显示「未保存」标记并启用「保存」按钮。
+
+### `ITablePanelViewProps.onSave?` / `ITableColumnProps.onSave?`（`(columnIndex: number) => void`，`src/table/tablePanel.ts`）
+- **用途**：视图根 / 单栏把某栏的「保存」动作转交给面板（Plan 20 接成必需）。
+
+### `ITableGridProps.unsaved?: boolean` / `ITableGridProps.onSave?: () => void`（`src/table/components/TableGrid.tsx`）
+- **用途**：表格组件接收「本栏是否未保存」与「保存」回调，并透传给工具栏。
+
+### `ITableToolbarProps.unsaved?: boolean` / `ITableToolbarProps.onSave?: () => void`（`src/table/components/TableToolbar.tsx`）
+- **用途**：工具栏渲染「保存」按钮（无改动时禁用）与「未保存」标记。
+
+### `ITableCreateFormProps.entries?: readonly IFileEntry[]` / `ITableCreateFormProps.onNavigate?: (path: string) => void`（`src/table/components/TableCreateForm.tsx`）
+- **用途**：新建表单可在**当前目录的子目录**间浏览并选定新建位置（不再只能建到根目录）；`entries` 为该目录直接子条目、`onNavigate` 进入某子目录（含 `..` 上行由面板侧目录态承担）。
+
+### 对既有命名的删除
+- 无。
+
+---
+
+## Plan 20 — `02.1-20-PLAN.md`（手动保存状态机 + 注释剥离记忆 + 列表实时同步，实现）
+
+**新增对外命名**：`ITablePanel.save`（Plan 19 已声明，本计划实现）。
+
+### `ITablePanelColumn.unsaved: boolean`（`src/table/tablePanel.ts`，内部字段）
+- **用途**：该栏是否有**未落盘的数据改动**（`commitValue` / `addItem` / `deleteItem` / 代码编辑器写回 / 撤销重做 / 确认剥离注释时置真；`save` 成功后清假）。
+
+### `ITablePanelColumn.unsavedSchema: boolean`（内部字段）
+- **用途**：该栏是否有**未落盘的镜像 schema 改动**（数据视图新增字段会同步改镜像 schema；schema 视图不涉及）。
+
+### `ITablePanelColumn.stripConfirmed: Map<string, string>`（内部字段）
+- **用途**：本栏已确认「剥离注释后打开」的路径 → **确认时的原文**。再次打开同一路径且原文**未变**时不弹框直接按剥离态打开；原文变化（含被外部改写）则重新提示——落实「同一栏同一文件只提示一次，除非内容变化」。
+
+### `ITablePanelColumn.pendingStripText: string`（内部字段）
+- **用途**：待确认剥离时暂存的**原文**，供 `TablePanel.confirmCommentStrip` 登记进 `stripConfirmed`。
+
+### `TablePanel.saveDirtyColumns()`（`TablePanel` 的私有方法）
+- **用途**：写回本面板**所有**有未落盘改动的栏（逐栏调 `itSelf.save`）；供 `TablePanel.onSwitchOut` 与 `TablePanel.dispose` 复用，落实「切出面板时自动保存已修改的表格」。
+
+### `TablePanel.flushColumn(columnIndex)`（`TablePanel` 的私有方法）
+- **用途**：**同步快照**某栏当前目标与内存内容后异步写回并清该栏未落盘标记；供 `TablePanel.setTable`（换目标前）与 `TablePanel.closeColumn`（关栏前）在目标被替换 / 清空前保存用——快照先于切换发生，故换目标 / 关栏不会丢改动。
+
+### `TablePanel.refreshAwaitingPickers()`（`TablePanel` 的私有方法）
+- **用途**：重取本面板**所有处于打开 / 删除态栏**的目录（列表实时同步）；供面板内建 / 删表格后、`TablePanel.onSwitchIn`、`TablePanel.onUpdateResource` 复用。
+
+### 对既有行为的调整（不新增名字，逐条确认语义）
+- `TablePanel.commitValue` / `TablePanel.addItem` / `TablePanel.deleteItem` / `TablePanel.openCurrentViewInCodeEditor` / `TablePanel.applyUndoRedo`：**不再直接写盘**，改为改内存（`column.data` / 必要时 `column.schema`）+ 置 `unsaved`（必要时 `unsavedSchema`）+ 登记撤销 + `applyData`；`refreshDependents` 移到 `save` 成功后。
+- `TablePanel.refresh`：该栏有未落盘改动时**不重读覆盖**（保住内存改动）。
+- `TablePanel.onUpdateResource`：由空实现改为「重取处于打开 / 删除态栏的目录」（复用 `refreshAwaitingPickers`）。
+- `TablePanel.confirmCommentStrip`：登记 `stripConfirmed` 并置 `unsaved`（确认即接受「保存后删注释」）；`TablePanel.refresh` 命中已确认且原文未变时**直接按剥离态打开**。
+
+---
+
+## Plan 22 — `02.1-22-PLAN.md`（空栏按钮与新建选目录，实现）
+
+**无新增对外命名**（Plan 19 已定义 `ITableCreateFormProps.entries` / `onNavigate`；Plan 20 已定义 `refreshAwaitingPickers`）。本计划只把 `TableCreateForm` 落成「可浏览子目录并选定新建位置」、把空栏三按钮改成更大且竖排、并让 `TablePanel.setEmptyMode` 在进入**新建**态时也取目录。
+
+### 内部辅助（`TableCreateForm.tsx` 内，登记备查）
+- `renderDirectoryRow` / `renderCurrentDirectory`（组件内渲染当前目录与子目录行的内部函数）——沿用 `TablePicker` 的 `.etable-list-*` 类名与 `table-list-entry-*` / `table-list-up` 惯例。
+
+### 对既有行为的调整
+- `TablePanel.setEmptyMode`：进入 `Create` 态时也 `refreshPicker`（当前只对 `Open` / `Delete` 取目录），使新建表单能列出子目录。
+
+---
+
+## Plan 23 — `02.1-23-PLAN.md`（工具栏下拉 + 标签限宽，实现）
+
+**无新增对外命名**（`ITableToolbarProps` 沿用 `showSchemaButton` / `onOpenSchema` / `codeButtonEnabled` / `onOpenInCodeEditor`；本计划只改渲染为一个小下拉框）。
+
+### 内部 CSS 钩子（`src/table/table.css`，登记备查）
+- `.etable-toolbar-more`（下拉触发按钮）——「编辑 Schema / 在代码编辑器中打开」收进 antd `Dropdown` 后的触发按钮样式；两个菜单项沿用既有 `data-test-id`（`table-edit-schema` / `table-open-code`）。
+
+### `editor-core`（无新名字）
+- `packages/libs/editor-core/src/shell/shell.css`：`.editor-shell-tab-label` 增加 `max-width: 200px`，令多表标签名超长时省略（`title` 属性仍悬浮显示全名）。
+- `packages/libs/editor-core/src/global.d.ts`：补 `declare module '*.css?inline'`（供新增的 CSS 断言测试读取样式原文）。
+
+---
+
+## Plan 24 — `02.1-24-PLAN.md`（开发宿主 e2e + 三包全绿 + 五门禁收口）
+
+**无新增对外命名**（仅迁移 `devHostJsonc.test.tsx`、更新 `02.1-UAT.md` 的 gap 状态）。
