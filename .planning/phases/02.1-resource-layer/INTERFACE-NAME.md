@@ -379,3 +379,36 @@
 ## Plan 16 — `02.1-16-PLAN.md`（开发宿主收口，实现）
 
 **无新增对外命名**（仅删除 `openTableDemoPanel` / `TABLE_DEMO_MENU_ID` / `TABLE_DEMO_MENU_TITLE` 与 `tableListPanelType` 注册；迁移 `devHostTable.test.tsx`）。
+
+---
+
+# 缺口收口轮（UAT `G-02.1-2`） — 命名提案（Plan 18）
+
+**状态：待用户确认。** 依据 `02.1-UAT.md` 的缺口 `G-02.1-2`：开发宿主里没有 `.jsonc` 文件、也不能打开本地文件，导致「`.jsonc` 系统前缀逐字往返」与「非合规文件删除注释确认」两条人工验收无从进行；且这两条行为此前**零自动化覆盖**。本计划往开发宿主 seed 两个 `.jsonc` 样本、接入「打开表格」列表，并补 `parseTableText` / `serializeTableText` 的自动化测试与宿主级用例。
+
+## Plan 18 — `02.1-18-PLAN.md`（开发宿主 `.jsonc` 样本 + 自动化测试）
+
+### `TABLE_DEMO_SYSTEM_PREFIX_DATA_PATH` / `TABLE_DEMO_SYSTEM_PREFIX_SCHEMA_PATH`（模块级常量，`string`，`packages/apps/editor-dev/src/demo/tableDemo.ts`）
+- **用途**：开发宿主**合规** `.jsonc` 样本的两个文件路径——数据 `tables/system-prefix.jsonc`、schema `tables/system-prefix.schema.jsonc`（后者等于 `deriveSchemaPath` 的结果）。该数据文件带一段系统前缀注释块（由 `// --- SYSTEM PREFIX END --- //` 结束）与严格 JSON 正文；在浏览器里打开它改一个字段并保存后，前缀逐字保留。
+
+### `TABLE_DEMO_SYSTEM_PREFIX_DATA`（模块级常量，`string`，同上）
+- **用途**：上面数据文件的初始内容文本——注释行 + 由 `SYSTEM_PREFIX_END_MARKER` 拼出的标记行 + 换行 + `JSON.stringify` 出的严格 JSON 正文。逐字保留的验收即针对它。
+
+### `TABLE_DEMO_COMMENTED_DATA_PATH` / `TABLE_DEMO_COMMENTED_SCHEMA_PATH`（模块级常量，`string`，同上）
+- **用途**：开发宿主**非合规** `.jsonc` 样本的两个文件路径——数据 `tables/commented.jsonc`、schema `tables/commented.schema.jsonc`（等于 `deriveSchemaPath` 的结果）。数据文件含注释与尾逗号、且**不含**标记行，打开时必触发「删除全部注释」确认框。
+
+### `TABLE_DEMO_COMMENTED_DATA`（模块级常量，`string`，同上）
+- **用途**：上面非合规数据文件的初始内容文本——含注释与尾逗号、无标记行；严格 `JSON.parse` 失败而 json5 可解析，`parseTableText` 判 `NeedsCommentStrip`。
+
+### `TABLE_DEMO_SAMPLE_SCHEMA`（模块级常量，`string`，同上）
+- **用途**：上面两份样本共用的标准 JSON Schema 文本（严格 JSON、字段 `title` / `level`），让两个样本打开后都渲染出可编辑的行。
+
+### `TABLE_PRESETS` 的取值变化（既有名字，不新增）
+- **用途**：由「演示表」一项扩为三项——追加「系统前缀表」→ `TABLE_DEMO_SYSTEM_PREFIX_DATA_PATH`、「带注释表」→ `TABLE_DEMO_COMMENTED_DATA_PATH`，使两个样本在「打开表格」预设区一键可达。
+
+### 新增测试文件（测试内部，登记备查）
+- `packages/libs/editor-impl/src/table/__tests__/tableText.test.ts`——`parseTableText` / `serializeTableText` 纯函数单测（前缀逐字往返 + `Conforming` / `NeedsCommentStrip` / `Invalid` 三段分类）；小驼峰文件名。
+- `packages/apps/editor-dev/src/__tests__/devHostJsonc.test.tsx`——开发宿主 `.jsonc` 端到端（合规前缀往返 / 非合规确认 / 非合规取消）；小驼峰文件名、`.test.tsx` 后缀。
+
+### 对既有命名的删除
+- 无。

@@ -180,7 +180,7 @@ Plans:
   4. 既有表格编辑行为（编辑 / 撤销 / 多栏 / 切入刷新）不回归；`CORE-01`、`coreFsSurface`、`coreBoundaries`(e) 与 Phase 3 讨论稿前提全部收口。
   5. 本阶段能力接入开发宿主，可在浏览器里手动验收「打开 / 新建 / 删除」。
 
-**Plans:** 12/12 plans executed（另追加 5 个缺口收口计划 02.1-13/14/15/16/17，闭环 UAT 缺口 `G-02.1-1`）
+**Plans:** 12/12 plans executed（另追加 6 个缺口收口计划 02.1-13/14/15/16/17 闭环 UAT 缺口 `G-02.1-1`、02.1-18 闭环 UAT 缺口 `G-02.1-2`）
 
 Plans:
 **Wave 1 — 接口（仅类型，无实现）**
@@ -232,6 +232,10 @@ Plans:
 - [ ] 02.1-15-PLAN.md — 表格面板空栏内联承载（实现 `TableEmptyColumn` + 移除独立列表面板 + 多表标题）
 - [ ] 02.1-17-PLAN.md — 迁移 editor-impl 表格测试到空栏内联流程（恢复 editor-impl 全绿）
 - [ ] 02.1-16-PLAN.md — 开发宿主收口（去掉「打开表格」工具栏入口与列表面板注册 + 迁移端到端）
+
+**Wave 12 — 缺口收口 `G-02.1-2`（UAT 测试 2/3：`.jsonc` 前缀往返与删除注释确认）**
+
+- [ ] 02.1-18-PLAN.md — 开发宿主 `.jsonc` 样本（合规 + 非合规）+ 预设接入 + `parseTableText` / `serializeTableText` 自动化测试
 
 **UI hint**: yes
 
