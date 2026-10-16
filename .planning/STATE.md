@@ -5,16 +5,16 @@ current_phase: "02.1"
 current_phase_name: 资源层重构与表格文件管理
 current_plan: 12
 status: verifying
-stopped_at: Completed 02.1-15-PLAN.md
-last_updated: "2026-10-16T07:20:23.303Z"
+stopped_at: Completed 02.1-17-PLAN.md
+last_updated: "2026-10-16T07:34:55.000Z"
 last_activity: 2026-10-15
 last_activity_desc: Phase 02.1 execution started
-state_head: 9378245ba1490986c49d4399fa7edc0650aaa097
+state_head: 13fe61d
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 58
-  completed_plans: 55
+  completed_plans: 56
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -113,6 +113,7 @@ Progress: [██████████] 100%
 | Phase 02.1 P13 | 12min | 2 tasks | 5 files |
 | Phase 02.1 P14 | 10min | 2 tasks | 3 files |
 | Phase 02.1 P15 | 22 | 2 tasks | 11 files |
+| Phase 02.1 P17 | 8min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -244,6 +245,10 @@ Recent decisions affecting current work:
 - [Phase 02.1]: 02.1-15: TablePanel.publish 在 target===null 时经对象展开一并发布 emptyMode/pickerDirectory/pickerEntries/pickerError（store.setState 为整体替换语义）；TablePanel.closeColumn 复位 emptyMode=Buttons/directory=''/entries=[]/pickerError，deleteFromColumn 后保持 Delete（连续删除）
 - [Phase 02.1]: 02.1-15: 删除态向 TablePicker 传模块级空操作 ignoreSelect 满足 required 的 onSelect、不传 presets；删除二次确认用组件本地受控 antd Modal（table-list-delete-confirm/cancel）
 - [Phase 02.1]: 02.1-15: 移除独立列表面板（tableListPanel/tableListPanelType/TableListPanelView）；INITIAL_TABLE_DATA_TEXT/INITIAL_TABLE_SCHEMA_TEXT/joinPath/tableBaseName 迁入 tablePanel.ts（名字与 export 不变）；TablePanel.getTitle 多表为「表格 {a} {b}」
+- [Phase 02.1]: 02.1-17: Plan 15 已先做掉删除 tableList.test.tsx 与迁移 openNewDelete.uat.test.tsx，本计划只做剩余部分（新建 tableEmptyColumn.test.tsx + 迁移 layout/tracer/openParam/closeColumn）——计划 scope delta 记入 SUMMARY
+- [Phase 02.1]: 02.1-17: 空栏相关断言统一限定到单栏（container.querySelectorAll('.etable-column')[i]），避免加宽窗口铺出多栏时同 data-test-id / 文案重复命中
+- [Phase 02.1]: 02.1-17: 打开 / 新建「开进本栏」断言外壳标签数不变；逐张操作前以本栏 ✕ 关栏复位三按钮（TablePanel.closeColumn），使单表 getTitle 断言始终成立
+- [Phase 02.1]: 02.1-17: 删除态「无预设区」以注入预设但断言其不出现落地；新建态「开进本栏」以 getTitle==='表格 hero.json' + 本栏无三按钮落地（新表 schema 为空、无行树）
 
 ### Pending Todos
 
@@ -270,6 +275,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-16T07:20:22.981Z
-Stopped at: Completed 02.1-15-PLAN.md
+Last session: 2026-10-16T07:34:55.000Z
+Stopped at: Completed 02.1-17-PLAN.md
 Resume file: None
