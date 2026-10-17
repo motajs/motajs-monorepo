@@ -1,5 +1,5 @@
 import { ReactElement } from 'react';
-import '../table.css';
+import '../schemaForm.css';
 
 /** schema 提示条的固定文案 */
 const SCHEMA_BANNER_TEXT = '正在编辑表格结构（Schema）';

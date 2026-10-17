@@ -1,9 +1,9 @@
 import { ReactElement, ReactNode, useRef, useState } from 'react';
-import { ITableEditorCapabilities, IMultiSelectItem, useTableCapabilities } from '../../react';
+import { ITableEditorCapabilities, IMultiSelectItem, useTableCapabilities } from '../../../react';
 import { ITableRowNode, TableControlKind, TableEditMode, TableExternalEditor } from '../types';
-import { inferControlKind } from '../../shared/schemaForm/model/control';
-import { validateValue } from '../../shared/schemaForm/model/validation';
-import { getShortField, parseFieldPath } from '../../shared/schemaForm/model/fieldPath';
+import { inferControlKind } from '../model/control';
+import { validateValue } from '../model/validation';
+import { getShortField, parseFieldPath } from '../model/fieldPath';
 import { ActionButtons } from './ActionButtons';
 import { CheckboxInput } from './inputs/CheckboxInput';
 import { CheckboxSet } from './inputs/CheckboxSet';

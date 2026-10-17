@@ -1,15 +1,15 @@
 import { Button, Input, InputNumber, Spin } from 'antd';
 import { createElement, memo, ReactElement, useMemo, useState } from 'react';
-import { ICodeEditorOpener, ITablePanelOpener, useTableCapabilities } from '../../react';
+import { ICodeEditorOpener, ITablePanelOpener, useTableCapabilities } from '../../../react';
 import { ITableRowNode, TableEditMode } from '../types';
-import { getParentFieldPath, getShortField, parseFieldPath } from '../../shared/schemaForm/model/fieldPath';
-import { buildSchemaPresentation } from '../../shared/schemaForm/model/schemaPresentation';
-import { validateId, validateValue } from '../../shared/schemaForm/model/validation';
+import { getParentFieldPath, getShortField, parseFieldPath } from '../model/fieldPath';
+import { buildSchemaPresentation } from '../model/schemaPresentation';
+import { validateId, validateValue } from '../model/validation';
 import { GapRow } from './GapRow';
 import { SchemaBanner } from './SchemaBanner';
 import { TableRow } from './TableRow';
 import { TableToolbar } from './TableToolbar';
-import '../table.css';
+import '../schemaForm.css';
 
 /** 层级缩进步长（像素），约旧缩进 12px 的 3/4 */
 const TREE_INDENT_STEP = 9;

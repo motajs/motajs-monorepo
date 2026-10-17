@@ -1,6 +1,6 @@
 import { ReactElement, ReactNode, useEffect, useRef, useState } from 'react';
 import { ITableRowNode } from '../types';
-import { getShortField, parseFieldPath } from '../../shared/schemaForm/model/fieldPath';
+import { getShortField, parseFieldPath } from '../model/fieldPath';
 
 /** 层级缩进步长（像素），约旧缩进 12px 的 3/4 */
 const TREE_INDENT_STEP = 9;
