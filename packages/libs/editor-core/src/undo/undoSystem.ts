@@ -1,4 +1,5 @@
-import { IUndoContext, IUndoInjection, IUndoSystem, IUndoable } from './types';
+import { Hookable, HookController, IHookController } from '../hook';
+import { IUndoContext, IUndoInjection, IUndoSystem, IUndoSystemHooks, IUndoable } from './types';
 
 interface UndoEntry {
   /** 可撤回对象 */
@@ -7,7 +8,7 @@ interface UndoEntry {
   readonly context: IUndoContext<unknown>;
 }
 
-export class UndoSystem implements IUndoSystem {
+export class UndoSystem extends Hookable<IUndoSystemHooks> implements IUndoSystem {
   maxUndoStep: number = 0;
 
   /** 撤销历史栈 */
@@ -15,6 +16,10 @@ export class UndoSystem implements IUndoSystem {
 
   /** 重做历史栈 */
   private readonly redoStack: UndoEntry[] = [];
+
+  protected createController(hook: Partial<IUndoSystemHooks>): IHookController<IUndoSystemHooks> {
+    return new HookController(this, hook);
+  }
 
   async initialize(injection: IUndoInjection): Promise<void> {
     this.maxUndoStep = injection.maxUndoStep;
@@ -32,26 +37,28 @@ export class UndoSystem implements IUndoSystem {
     this.redoStack.length = 0;
   }
 
-  async undo(): Promise<void> {
+  async undo(): Promise<boolean> {
     const entry = this.undoStack[this.undoStack.length - 1];
 
-    if (!entry) return;
+    if (!entry) return false;
 
     await entry.undo.undo(entry.context);
 
     this.undoStack.pop();
     this.redoStack.push(entry);
+    return true;
   }
 
-  async redo(): Promise<void> {
+  async redo(): Promise<boolean> {
     const entry = this.redoStack[this.redoStack.length - 1];
 
-    if (!entry) return;
+    if (!entry) return false;
 
     await entry.undo.redo(entry.context);
 
     this.redoStack.pop();
     this.undoStack.push(entry);
+    return true;
   }
 
   async dispose(): Promise<void> {

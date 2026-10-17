@@ -125,8 +125,8 @@ describe('UndoSystem 边界', () => {
     const system = new UndoSystem();
     const undoable = new FakeUndoable();
 
-    await expect(system.undo()).resolves.toBeUndefined();
-    await expect(system.redo()).resolves.toBeUndefined();
+    await expect(system.undo()).resolves.toBe(false);
+    await expect(system.redo()).resolves.toBe(false);
 
     expect(undoable.undoCount).toBe(0);
     expect(undoable.redoCount).toBe(0);

@@ -1,8 +1,17 @@
+import { IHookable, IHookBase } from '../hook';
+
 export interface IUndoContext<T> {
   /** 撤回操作类型 */
   readonly type: number;
   /** 撤回操作包含的数据 */
   readonly data: T;
+  /** 标记这条记录是不可撤销的屏障：撤销碰到即停，不跳过它 */
+  readonly barrier?: boolean;
+}
+
+export interface IUndoSystemHooks extends IHookBase {
+  /** 撤销命中屏障时被调用 */
+  onUndoBlocked?(): void;
 }
 
 export interface IUndoable {
@@ -24,7 +33,7 @@ export interface IUndoInjection {
   readonly maxUndoStep: number;
 }
 
-export interface IUndoSystem {
+export interface IUndoSystem extends IHookable<IUndoSystemHooks> {
   /** 最大撤回步数；0 或负数表示禁用撤销 */
   readonly maxUndoStep: number;
 
@@ -43,13 +52,15 @@ export interface IUndoSystem {
 
   /**
    * 执行撤回操作
+   * @returns true 表示真的执行了一步；false 表示没有可撤销的记录或命中屏障
    */
-  undo(): Promise<void>;
+  undo(): Promise<boolean>;
 
   /**
    * 执行重做操作
+   * @returns true 表示真的执行了一步；false 表示没有可重做的记录
    */
-  redo(): Promise<void>;
+  redo(): Promise<boolean>;
 
   /**
    * 释放此撤回系统
