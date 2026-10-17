@@ -5,16 +5,16 @@ current_phase: "02.1"
 current_phase_name: 资源层重构与表格文件管理
 current_plan: 24
 status: executing
-stopped_at: Completed 02.1-24-PLAN.md
-last_updated: "2026-10-16T17:09:00.652Z"
+stopped_at: Completed 02.1-25-PLAN.md
+last_updated: "2026-10-17T07:04:44.867Z"
 last_activity: 2026-10-16
 last_activity_desc: Completed 02.1-19-PLAN.md
-state_head: a1a65fa803760fd0a2e9b2793750d7dc199476ea
+state_head: c8d9cf95d6f4778c71d3813ee28958005f8fea8c
 progress:
   total_phases: 8
   completed_phases: 0
-  total_plans: 64
-  completed_plans: 63
+  total_plans: 66
+  completed_plans: 65
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -122,6 +122,7 @@ Progress: [██████████] 100%
 | Phase 02.1 P22 | ~20min | 3 tasks | 7 files |
 | Phase 02.1 P23 | ~40min | 3 tasks | 11 files |
 | Phase 02.1 P24 | ~19min | 3 tasks | 3 files |
+| Phase 02.1 P25 | 13 min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -281,6 +282,7 @@ Recent decisions affecting current work:
 - [Phase 02.1]: [Phase 02.1]: 02.1-24: 开发宿主表格 e2e 迁到新交互——工具栏两个动作改经 table-more 下拉、新建在新建表单里进入 tables 目录选位置、读回资源前补一次保存（手动保存模型）
 - [Phase 02.1]: [Phase 02.1]: 02.1-24: 开发宿主 .jsonc e2e 用捕获的面板实例驱动 TablePanel.onSwitchIn（复用 tablePanelType.create 以应用打开参数 target），断言外部改写回原文后再次切入不再弹确认框且内容仍在（只提示一次）
 - [Phase 02.1]: [Phase 02.1]: 02.1-24: 再次切入复用 IEditorPanel.onSwitchIn（接口成员）而非把面板强转成 TablePanel，避免 as 断言并贴合 e2e 的真实切换语义
+- [Phase 02.1]: DevCodeEditorProvider 复用既有 ICodeEditorOpener / ITableCapabilitiesProviderProps，类型面零新增；用 JSX（antd Modal 的 data-test-id 无法经 createElement 表达）
 
 ### Pending Todos
 
@@ -307,6 +309,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-16T17:09:00.295Z
-Stopped at: Completed 02.1-24-PLAN.md
+Last session: 2026-10-17T07:04:32.099Z
+Stopped at: Completed 02.1-25-PLAN.md
 Resume file: None
