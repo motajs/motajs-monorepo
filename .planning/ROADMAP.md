@@ -275,10 +275,10 @@ Plans:
 
 - [ ] 03-01-PLAN.md — `editor-core` 契约：撤销屏障 / 布尔返回 / 二进制读取 / 面板移动
 - [ ] 03-02-PLAN.md — `shared` 中立类型落位 + `react` 接缝契约（素材分类 / 选择器 / 素材能力）
-- [ ] 03-03-PLAN.md — `asset` 域类型 + 转码契约 + 命名约定常量
 
-**Wave 2 — core 行为与 `.jsonc` 抽取**
+**Wave 2 — 素材域类型、core 行为与 `.jsonc` 抽取**
 
+- [ ] 03-03-PLAN.md — `asset` 域类型 + 转码契约 + 命名约定常量（依赖 03-02）
 - [ ] 03-04-PLAN.md — 撤销屏障生效 + 二进制 / 移动实现 + 测试
 - [ ] 03-05-PLAN.md — `.jsonc` 编解码抽到 `shared/jsonc` + `./shared` 子路径 + 开发宿主导入改指
 

@@ -489,34 +489,34 @@ createRoot(root).render(
 | A6 | The legacy schema set is injected by the host (not literalized in `editor-impl/src`) so it doesn't trip `coreEngineNeutral`. | Pitfall 3 | If the legacy set must be built-in, its field names must avoid the banned tokens. Medium. |
 | A7 | "与现状一致" is satisfied by the UI-SPEC token/structure re-expression, not pixel 1:1 (UI-SPEC §对齐说明 + F5). | Scope | If exact pixel parity is required, adopt UI-SPEC F5 legacy variables. Low. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Where does the shared schema-form engine live? (BLOCKING)**
    - What we know: D-07 requires reuse; `.dependencyCruiser.cjs` forbids `asset → table`; the engine is currently under `src/table/**` (`TableGrid`, `model/*`, `tableText.ts`, controls, `validation`).
    - What's unclear: whether to (a) extract to a neutral `src/shared/**`, (b) amend the boundary rule for a whitelisted shared subpath, or (c) keep the form inside the host.
-   - Recommendation: (a) — extract to `src/shared/**`; ratify as an architecture decision in the interface phase. This touches "direction is the user's call".
+   - RESOLVED: extract to a neutral `src/shared/**` (option a) — see INTERFACE-NAME.md Plan 03-02 / 03-05 / 03-06 / 03-07 (D-28).
 
 2. **How is the undo barrier modelled? (BLOCKING for D-14/D-15)**
    - What we know: `IUndoSystem.undo(): Promise<void>` today; D-15 wants `Promise<boolean>`; byte changes must stop undo at a barrier and report「无法撤销」.
    - What's unclear: how the `UndoSystem` learns an entry is a barrier (flag on `IUndoContext`? a new `IUndoable.canUndo(context)`? an `IUndoContext.barrier`?).
-   - Recommendation: decide the exact shape in the interface plan and record it in `INTERFACE-NAME.md`; keep `undo`/`redo` signature change minimal (add boolean return; existing `void` callers unaffected).
+   - RESOLVED: an optional `IUndoContext.barrier` flag + `IUndoSystemHooks.onUndoBlocked` + `undo`/`redo` returning `Promise<boolean>` — see INTERFACE-NAME.md Plan 03-01 / 03-04 (D-14 / D-15 / D-29).
 
 3. **Picker capability: new field or extend `IMultiSelectOpener`? (UI-SPEC F8)**
    - What we know: `IMultiSelectOpener` already powers the table's `Material`/`MultiSelect` external editors via `CapabilityProvider` + `MultiSelectModal`. [VERIFIED: TableRow.tsx:45,166-172; capabilities.ts:33-40]
    - What's unclear: whether asset thumbnails/audio-preview warrant a separate `asset` capability or an enriched `IMultiSelectItem`.
-   - Recommendation: add an `asset` capability field that reuses the modal shell, matching F8's leaning.
+   - RESOLVED: add an `asset` capability field (`IAssetEditorCapabilities` / `IAssetPickerOpener`) that reuses the modal shell — see INTERFACE-NAME.md Plan 03-02 / 03-12 (D-12).
 
 4. **Exact convention filenames for per-category schema + list.**
    - What we know: lists are `.list.jsonc`; schema convention is `xxx.schema.json(c)`; D-09 wants a fixed per-category filename like `.schema.jsonc`.
-   - Recommendation: propose names in `INTERFACE-NAME.md` (e.g. list `.list.jsonc`, category schema `.schema.jsonc`, defaults `<category>.jsonc`) and confirm.
+   - RESOLVED: `.list.jsonc` (list) / `.schema.jsonc` (category schema) / `defaults/<category>.jsonc` (defaults) — see INTERFACE-NAME.md Plan 03-03 (D-09 / D-27).
 
 5. **Transcode parameter defaults (UI-SPEC F6).**
    - What we know: WebP quality; audio bitrate/sample rate configurable.
-   - Recommendation: propose defaults (e.g. WebP 80; Opus 96 kbps @ 48000 Hz — Opus prefers 48 kHz; Mediabunny examples use e.g. `128e3`).
+   - RESOLVED: WebP quality 80; Opus 96 kbps @ 48000 Hz; 「覆盖旧文件」默认勾选，不勾时旧文件改名 `{file}-origin.{ext}` — see INTERFACE-NAME.md Plan 03-03 / 03-16 (D-21 / D-22).
 
 6. **Byte-write timing (D-25).**
    - What we know: byte changes are non-undoable barriers; timing (write-on-upload vs. write-on-save) is deferred to planning.
-   - Recommendation: write bytes immediately on upload/replace/delete (bytes are not part of the in-memory manual-save buffer), keeping only list/config edits in the manual-save buffer; document the choice.
+   - RESOLVED: write bytes immediately on upload/replace/delete (bytes are not part of the in-memory manual-save buffer); only list/config edits stay in the manual-save buffer — see INTERFACE-NAME.md「待确认的偏离与口径」#6 (D-25).
 
 ## Environment Availability
 

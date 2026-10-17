@@ -65,7 +65,7 @@
 | `IAssetSchemaResolution` | interface | schema 解析结果：节点 + 来源 |
 | `IAssetPanelTarget` / `IAssetPanelParam` | interface | 打开面板时可带的初始目标 / 工厂参数扩展位 |
 | `IAssetPanel` | interface | 面板对外动作面：`setTarget` / `save` |
-| `IAssetPanelViewState` | interface | 面板视图状态（状态 / 模式 / 分类 / 条目 / 选中 / 配置行树 / 未保存 / 提示） |
+| `IAssetPanelViewState` | interface | 面板视图状态（状态 / 模式 / 分类 / 条目 / 选中 / 配置行树 / 配置校验错误列表 `configErrors`（`readonly string[]`，空数组 = 通过）/ 未保存 / 提示） |
 | `IAssetTranscodeKind` | `const enum`（`ImageWebp` / `AudioOpus`） | 两种瘦身转码动作 |
 | `IAssetTranscodeService` | interface | 转码契约：能力探测 + 图片转 WebP + 音频转 WebM/Opus；测试注入假实现 |
 | `src/asset/constants.ts` | 文件 | 面板级常量 |
