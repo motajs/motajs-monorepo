@@ -66,7 +66,7 @@
 | `IAssetPanelTarget` / `IAssetPanelParam` | interface | 打开面板时可带的初始目标 / 工厂参数扩展位 |
 | `IAssetPanel` | interface | 面板对外动作面：`setTarget` / `save` |
 | `IAssetPanelViewState` | interface | 面板视图状态（状态 / 模式 / 分类 / 条目 / 选中 / 配置行树 / 配置校验错误列表 `configErrors`（`readonly string[]`，空数组 = 通过）/ 未保存 / 提示） |
-| `IAssetTranscodeKind` | `const enum`（`ImageWebp` / `AudioOpus`） | 两种瘦身转码动作 |
+| `AssetTranscodeKind` | `const enum`（`ImageWebp` / `AudioOpus`） | 两种瘦身转码动作（`I` 前缀只给被 `implements` 的接口，故枚举不带 `I`） |
 | `IAssetTranscodeService` | interface | 转码契约：能力探测 + 图片转 WebP + 音频转 WebM/Opus；测试注入假实现 |
 | `src/asset/constants.ts` | 文件 | 面板级常量 |
 | `ASSET_MAX_UPLOAD_BYTES` | 常量 `32 * 1024 * 1024` | 单个上传文件字节上限 |
@@ -184,7 +184,7 @@
 | `AssetPanel.selectCategory` | 方法 | 切换分类并重取 |
 | `AssetPanel.registerBarrier` | 方法 | 把一次字节改动登记成带 `barrier` 的撤销条目 |
 | `AssetPanel.registerConfigUndo` | 方法 | 把一次配置改动登记成普通（可撤）条目 |
-| `AssetPanel.setTarget` / `AssetPanel.buildTitle` | 方法 | 设置初始目标 / 生成标签标题 |
+| `AssetPanel.setTarget` / `AssetPanel.getTitle` | 方法 | 设置初始目标 / 生成标签标题（`getTitle` 与 `IEditorPanel.getTitle?` 同名） |
 | `createAssetPanelType` | 函数 | 用注入的分类造出 `IEditorPanelType`（能力包只在顶层注册，不自行装配） |
 | `ASSET_PANEL_TYPE_ID` | 常量 `'asset'` | 面板类型 id，装配方引用避免各写各的字符串 |
 | `src/asset/__tests__/fixtures.ts` | 测试替身 | 内存文件系统 + 已初始化 core + 四个测试分类 + `listText` 工具 |
@@ -210,12 +210,15 @@
 
 ## Plan 03-12 — 默认素材选择器
 
-**要做什么：** 给表格 / 未来的 Blockly 一个「选素材」弹窗：按分类列素材、缩略图、多选、返回选中的名字。
+**要做什么：** 给表格 / 未来的 Blockly 一个「选素材」弹窗：按分类列素材、带预览（图片缩略图 / 音频试听 / 动画预览）、多选、返回选中的名字。
 
 | 名称 | 种类 | 用途 |
 |------|------|------|
-| `loadPickerItems` | 函数 | 按分类读列表 + 生成候选项（图片分类带 `blob:` 缩略图），返回候选项与需回收的地址 |
+| `loadPickerItems` | 函数 | 按分类读列表 + 生成候选项（图片带 `blob:` 缩略图、音频带 `blob:` 试听地址、动画带预览提示），返回候选项与需回收的地址 |
 | `IAssetPickerItems` | interface | 候选项集合 + 需回收的 `blob:` 地址 |
+| `IMultiSelectItem.audio` | 可选成员 `string` | 候选项的音频试听地址（`blob:`）；存在时选择器渲染内联试听 |
+| `IMultiSelectItem.animation` | 可选成员 `boolean` | 候选项是否有动画预览；为 `true` 时选择器渲染动画预览提示 |
+| `MultiSelectModal` 的三类预览渲染 | 改动 | 按 `IMultiSelectItem` 的 `thumbnail` / `audio` / `animation` 渲染缩略图 / 内联 `<audio controls>` / 动画提示；缺省时为普通多选 |
 | `AssetCapabilityProvider` | 组件 | 在既有 `CapabilityProvider` 之上补素材能力（分类 + 默认选择器）；装配方包一层即可 |
 | `IAssetCapabilityProviderProps` | interface | Provider 的 props（资源访问口 / 分类 / 可选注入选择器 / 既有能力包 / 子节点） |
 | `CapabilityProvider` 的透传修正 | 改动 | 补 `asset` 字段并与上层能力包合并，使多层 Provider 不互相吞掉能力 |
@@ -233,6 +236,9 @@
 | `AssetPanel.replaceAsset` | 方法 | 覆盖某素材字节 → 屏障 |
 | `AssetPanel.deleteAsset` | 方法 | 删字节 + 从列表移除 → 屏障 |
 | `AssetFileInput` | 组件 | 隐藏原生文件选择 + 按钮触发；读字节前拦超限 |
+| `AssetDetail.onReplace` | 组件方法（签名改动） | 由无参改为 `onReplace(upload: IAssetUpload): void`——把上传的名字 + 字节交给上层 |
+| `AssetToolbar.onAddAsset` | 组件方法（签名改动） | 由无参改为 `onAddAsset(upload: IAssetUpload): void`——把上传的名字 + 字节交给上层 |
+| `AssetPanelView` 的字节回调 | 组件 props | 转发 `onAddAsset` / `onReplace`（名字 + 字节）到 `AssetPanel.addAsset` / `AssetPanel.replaceAsset` / `AssetPanel.deleteAsset` |
 
 ---
 

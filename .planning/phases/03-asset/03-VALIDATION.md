@@ -49,7 +49,7 @@ created: "2026-10-17"
 | ASSET-01 | Save writes list with verbatim `.jsonc` prefix; reload still shows changes | unit + integration | `vitest run src/shared/jsonc/__tests__` + lifecycle | ❌ W0 | ⬜ pending |
 | ASSET-01 | Config form edits undoable; byte changes are a barrier (undo returns `false`, no chain-skip) | integration | `vitest run src/asset/__tests__/assetUndo.uat.test.tsx` | ❌ W0 | ⬜ pending |
 | ASSET-01 | Schema resolution: engine-supplied `.schema.jsonc` wins, else built-in fallback | unit | `vitest run src/asset/model/__tests__` | ❌ W0 | ⬜ pending |
-| ASSET-01 | Transcode orchestration (batch, cover-old rename `{file}-origin.{ext}`, override confirm) with a fake `ITranscodeService` | integration | `vitest run src/asset/__tests__/transcode.uat.test.tsx` | ❌ W0 | ⬜ pending |
+| ASSET-01 | Transcode orchestration (batch, cover-old rename `{file}-origin.{ext}`, override confirm) with a fake `IAssetTranscodeService` | integration | `vitest run src/asset/__tests__/transcode.uat.test.tsx` | ❌ W0 | ⬜ pending |
 | ASSET-01 | Picker returns selected ids; empty / loading / error states | integration | `vitest run src/asset/__tests__/assetPicker.test.tsx` | ❌ W0 | ⬜ pending |
 | D-15 | `UndoSystem.undo()` / `redo()` return boolean; barrier stops undo | unit (editor-core) | `pnpm --filter @motajs/editor-core test` | ❌ W0 | ⬜ pending |
 

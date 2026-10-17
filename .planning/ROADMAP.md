@@ -285,33 +285,36 @@ Plans:
 **Wave 3 — 共享引擎抽取与素材纯逻辑**
 
 - [ ] 03-06-PLAN.md — schema 模型层抽到 `shared/schemaForm/model`
-- [ ] 03-07-PLAN.md — 表单渲染与样式抽到 `shared/schemaForm/components`
-- [ ] 03-08-PLAN.md — 素材模型层（路径 / 列表编解码 / defaults / 校验 / schema 解析）+ 内置 schema
 - [ ] 03-09-PLAN.md — 图片 → WebP 转码服务 + 能力探测
 
-**Wave 4 — 面板数据层**
+**Wave 4 — 表单渲染抽取与素材模型层**
+
+- [ ] 03-07-PLAN.md — 表单渲染与样式抽到 `shared/schemaForm/components`
+- [ ] 03-08-PLAN.md — 素材模型层（路径 / 列表编解码 / defaults / 校验 / schema 解析）+ 内置 schema（依赖 03-06 搬迁后的共享校验层）
+
+**Wave 5 — 面板数据层**
 
 - [ ] 03-10-PLAN.md — `AssetPanel` 数据层 + 面板类型工厂 + 集成测试
 
-**Wave 5 — 面板视图与选择器**
+**Wave 6 — 面板视图、选择器与音频转码**
 
 - [ ] 03-11-PLAN.md — 三栏视图 / 网格 / 详情 / 预览 / 五种状态 + 样式
-- [ ] 03-12-PLAN.md — 默认素材选择器 + 素材能力 Provider
-
-**Wave 6 — 字节生命周期与音频转码**
-
-- [ ] 03-13-PLAN.md — 新增 / 替换 / 删除 + 撤销屏障
+- [ ] 03-12-PLAN.md — 默认素材选择器（图片缩略图 / 音频试听 / 动画预览）+ 素材能力 Provider
 - [ ] 03-15-PLAN.md — 音频 → WebM/Opus（Mediabunny，安装需人工确认）
 
-**Wave 7 — 配置表单**
+**Wave 7 — 字节生命周期**
+
+- [ ] 03-13-PLAN.md — 新增 / 替换 / 删除 + 撤销屏障
+
+**Wave 8 — 配置表单**
 
 - [ ] 03-14-PLAN.md — 每素材配置表单（主区挂载）+ 配置撤销 / schema 优先级
 
-**Wave 8 — 转码界面**
+**Wave 9 — 转码界面**
 
 - [ ] 03-16-PLAN.md — 瘦身转码弹窗 + 批量编排 + 覆盖确认
 
-**Wave 9 — 宿主接入与收口**
+**Wave 10 — 宿主接入与收口**
 
 - [ ] 03-17-PLAN.md — 开发宿主接入 + 三包 / 五门禁 + 人工验收登记
 
