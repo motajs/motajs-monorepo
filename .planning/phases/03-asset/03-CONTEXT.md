@@ -69,6 +69,8 @@
 - **D-25:** **素材字节改动（新增 / 替换 / 删除 / 转码）不可撤销**，作为撤销屏障（与 D-14 一致）；其**何时落盘**（随手动保存一并落盘，还是上传时即写）由规划阶段定，但「不可撤销 / 屏障」语义不变。
 - **D-26:** 素材面板**空态借鉴 Phase 2.1 的空栏内联模式**（空分类时内联呈现「新增 / 选择」入口，而非仅一句空文案）；是否复用 `TablePicker` / `TableCreateForm` 的组件思路由规划阶段定。
 - **D-27:** **schema 文件身份沿用 Phase 2.1 的文件名约定**（数据 `xxx.json` / `xxx.jsonc`，schema `xxx.schema.json` / `xxx.schema.jsonc`）；各分类「引擎自带 Schema」的约定文件名由规划阶段提出并经 `INTERFACE-NAME.md` 确认。
+- **D-28:** **复用表格 Schema 表单引擎的方式 = 抽到中立共享模块**（如 `editor-impl/src/shared/`）：把表格渲染引擎 + `.jsonc` 编解码（`tableText`）等**共享件**抽到中立位置，`table` 与 `asset` 都从它 import——**不**破 `.dependencyCruiser.cjs` 的 `capabilities-must-not-import-each-other`（`asset` 不得 import `table`）。 — **Reversibility:** costly — 共享件位置一旦被两个能力依赖，再迁移要同步改双方。
+- **D-29:** **撤销屏障建模 = 在撤销条目上打「不可撤销」标记**：字节改动（新增 / 替换 / 删除 / 转码）作为**带标记的屏障条目**记入历史；`undo` 碰到屏障条目即**停住**、提示 **「无法撤销」**、返回 **`false`**（D-14 / D-15），不跳过它去撤销更早的配置改动。
 
 ### the agent's Discretion
 
@@ -86,6 +88,7 @@
 - `.planning/PROJECT.md` — 里程碑 v1.0（editor-core 空壳 + editor-impl 重做）
 - `.planning/REQUIREMENTS.md` — 本阶段对应 **ASSET-01**
 - `.planning/ROADMAP.md` §Phase 3（目标 + 4 条验收）与 §Cross-cutting Constraints（能力须接入 dev 宿主）
+- `.planning/phases/03-asset/03-RESEARCH.md` — 本阶段技术研究（新资源 API 用法 / 复用表格引擎与门禁陷阱 / Mediabunny / 开放问题）
 
 ### 前序阶段产出
 - `.planning/phases/01-shell/01-CONTEXT.md`、`INTERFACE-NAME.md` — 外壳契约与命名（`EditorCore` / `ShellSystem` / `IEditorPanelType`）
@@ -148,7 +151,9 @@
 - **资源按文件路径读写**，`editor-core` **驱动注入的文件系统**并维护**项目文件索引 + LRU 内容缓存**（Phase 2.1）；无「按类型列资源」，列目录用 `listDirectory` / 读索引。
 - **`.jsonc` 一律经 `parseTableText` / `serializeTableText` 解析与写回**，**逐字保留系统前缀注释块**（Phase 2.1）。
 - **手动保存模型**：面板编辑先记内存、**显式保存**才落盘（Phase 2.1 表格确立，本阶段沿用）。
-- `editor-core` 有其模块状态 / `document` 全局门禁（PORT-02）；canvas 编解码等浏览器专有逻辑放 `editor-impl`。
+- **`editor-core` 与 `editor-impl/src` 都受模块状态 / `document` 全局门禁（PORT-02）**：`window` 允许，`document` / `fetch` / `navigator` / `localStorage` / `XMLHttpRequest` 禁止——图片编解码须用 **`OffscreenCanvas` / `createImageBitmap`**，**不得**用 `document.createElement('canvas')`（旧 `CanvasRasterCodec` 不能照搬）。
+- **`coreEngineNeutral.js` 门禁禁止引擎专有词字面量**（`tower` / `floor` / `loc` / `autotile` / `idnum` / `airwall` / `mota` 等，含注释）出现在两包 `src`——**legacy 引擎专有 Schema 集应由宿主注入**，不写死在 `editor-impl/src`。
+- **能力互不依赖**（`.dependencyCruiser.cjs` `capabilities-must-not-import-each-other`）：`asset` 不得 import `table` / `code` / `map`（见 D-28 的中立共享模块解法）。
 
 ### Integration Points
 - `@motajs/editor-impl` 的 `./asset` 子路径导出（`package.json` 已预留）：面板类型常量（如 `assetPanelType`）+ 底层组件 + 默认素材选择器 + 内置 Schema 集。
