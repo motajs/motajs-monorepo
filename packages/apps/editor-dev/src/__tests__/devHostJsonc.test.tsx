@@ -1,12 +1,8 @@
 import { act, cleanup, configure, fireEvent, render, screen } from '@testing-library/react';
 import { EditorCore, IEditorPanel, IEditorPanelFactoryParam } from '@motajs/editor-core';
 import { CapabilityProvider } from '@motajs/editor-impl/react';
-import {
-  parseTableText,
-  SYSTEM_PREFIX_END_MARKER,
-  TableTextParseStatus,
-  tablePanelType,
-} from '@motajs/editor-impl/table';
+import { parseTableText, SYSTEM_PREFIX_END_MARKER, TableTextParseStatus } from '@motajs/editor-impl/shared';
+import { tablePanelType } from '@motajs/editor-impl/table';
 import { createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { MemoryBackend } from '../backend/memoryBackend';

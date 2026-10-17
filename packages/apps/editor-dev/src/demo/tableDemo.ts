@@ -1,6 +1,7 @@
 import { EditorCore } from '@motajs/editor-core';
 import { ITablePanelOpener, ITablePreset } from '@motajs/editor-impl/react';
-import { ITableSchemaNode, SYSTEM_PREFIX_END_MARKER, tablePanelType } from '@motajs/editor-impl/table';
+import { ITableSchemaNode, SYSTEM_PREFIX_END_MARKER } from '@motajs/editor-impl/shared';
+import { tablePanelType } from '@motajs/editor-impl/table';
 
 /** 演示表的不透明表名，数据与 schema 路径均据此生成 */
 export const TABLE_DEMO_NAME: string = 'demo';
