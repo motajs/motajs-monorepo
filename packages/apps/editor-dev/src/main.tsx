@@ -1,9 +1,9 @@
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import { EditorCore } from '@motajs/editor-core';
-import { CapabilityProvider } from '@motajs/editor-impl/react';
 import { tablePanelType } from '@motajs/editor-impl/table';
 import { MemoryBackend } from './backend/memoryBackend';
+import { DevCodeEditorProvider } from './demo/devCodeEditor';
 import { registerDevMenu } from './demo/devMenu';
 import { DEMO_PANEL_TYPE, DEMO_SAMPLE_CONTENT, DEMO_SAMPLE_PATH } from './demo/demoPanel';
 import {
@@ -39,7 +39,7 @@ registerDevMenu(core);
 await core.initialize({ fs: backend, maxUndoStep: backend.maxUndoStep, ignore: ['node_modules', '.git'] });
 
 createRoot(document.getElementById('root')!).render(
-  createElement(CapabilityProvider, {
+  createElement(DevCodeEditorProvider, {
     capabilities: { tablePanel: createTablePanelOpener(core), tablePresets: TABLE_PRESETS },
     children: createElement(core.shellSystem.render()),
   }),
