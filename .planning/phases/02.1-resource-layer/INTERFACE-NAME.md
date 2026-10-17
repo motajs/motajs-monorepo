@@ -558,3 +558,24 @@
 
 ### 对既有命名的删除
 - 无。
+
+---
+
+# 缺口收口轮（UAT `G-02.1-5`） — 记录（Plan 26）
+
+**状态：已确认（2026-10-17，随 02.1-26 落地）。** 依据 `02.1-UAT.md` 的缺口 `G-02.1-5`（severity minor，来自 UAT 测试 1）：用户实测发现 Plan 22 的 `TableCreateForm` 把「新建表格」的确认入口（按钮 / 名称输入）放在新建视图的**底部**，选完目标目录后需向下寻找，反直觉。本轮把确认入口移到新建视图**顶部**（目录浏览器在其下），既有新建行为与对外契约零变化。
+
+**为什么本缺口不设「仅接口」计划、不新增 interface / type：** 项目规则「先接口、后实现」针对的是**接口 / 类型的设计**。本缺口只是一次**组件内部子元素顺序的调整**——`ITableCreateFormProps` 契约、class 名、`data-test-id`、props 全部不变，**不新增任何对外符号**，故不切出单独的接口计划（同 Plan 25 对本轮缺口的判定）。
+
+## Plan 26 — `02.1-26-PLAN.md`（新建表格确认入口上移，实现 + 测试）
+
+**无新增对外命名**：本轮只在 `TableCreateForm` 内调整子元素顺序，并更新 / 新增测试；不改 `ITableCreateFormProps` 契约、不改 class 名与 `data-test-id`。
+
+### 新增测试文件（测试内部，登记备查）
+- `packages/libs/editor-impl/src/table/__tests__/tableCreateForm.test.tsx`——`TableCreateForm` 组件级用例：确认入口（新建按钮 / 名称输入）在文档顺序上先于目录区（`compareDocumentPosition` + `Node.DOCUMENT_POSITION_FOLLOWING`），并保留目录行切换与去空白名称回调的行为覆盖。小驼峰文件名。
+
+### 对既有测试的追加（不新增名字，登记备查）
+- `packages/libs/editor-impl/src/table/__tests__/tableEmptyColumn.test.tsx` 的「新建态进入子目录后在选定目录写出一对文件并把新表开进本栏」用例：追加「确认入口先于目录区」顺序断言。
+
+### 对既有命名的删除
+- 无。
