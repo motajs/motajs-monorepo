@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "02.1"
 current_phase_name: 资源层重构与表格文件管理
-current_plan: 24
-status: executing
-stopped_at: Completed 02.1-25-PLAN.md
-last_updated: "2026-10-17T07:04:44.867Z"
-last_activity: 2026-10-16
-last_activity_desc: Completed 02.1-19-PLAN.md
-state_head: c8d9cf95d6f4778c71d3813ee28958005f8fea8c
+current_plan: 26
+status: ready_for_verification
+stopped_at: Completed 02.1-26-PLAN.md
+last_updated: "2026-10-17T07:22:23.249Z"
+last_activity: 2026-10-17
+last_activity_desc: Completed 02.1-26-PLAN.md
+state_head: b9cd4f5875c0e106ea8668636ab718c8c4609ae4
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 66
-  completed_plans: 65
+  completed_plans: 66
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -29,11 +29,11 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 
 ## Current Position
 
-Phase: 02.1 (资源层重构与表格文件管理) — EXECUTING
-Current Plan: 24
-Total Plans in Phase: 24
-Status: In progress — gap closure (G-02.1-3)
-Last activity: 2026-10-16 - Completed 02.1-19-PLAN.md
+Phase: 02.1 (资源层重构与表格文件管理) — READY FOR VERIFICATION
+Current Plan: 26
+Total Plans in Phase: 26
+Status: All plans executed — gap closures G-02.1-1 ~ G-02.1-5 done; awaiting user UAT re-test
+Last activity: 2026-10-17 - Completed 02.1-26-PLAN.md
 
 Progress: [██████████] 100%
 
@@ -123,6 +123,7 @@ Progress: [██████████] 100%
 | Phase 02.1 P23 | ~40min | 3 tasks | 11 files |
 | Phase 02.1 P24 | ~19min | 3 tasks | 3 files |
 | Phase 02.1 P25 | 13 min | 3 tasks | 5 files |
+| Phase 02.1 P26 | 17 | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -283,6 +284,7 @@ Recent decisions affecting current work:
 - [Phase 02.1]: [Phase 02.1]: 02.1-24: 开发宿主 .jsonc e2e 用捕获的面板实例驱动 TablePanel.onSwitchIn（复用 tablePanelType.create 以应用打开参数 target），断言外部改写回原文后再次切入不再弹确认框且内容仍在（只提示一次）
 - [Phase 02.1]: [Phase 02.1]: 02.1-24: 再次切入复用 IEditorPanel.onSwitchIn（接口成员）而非把面板强转成 TablePanel，避免 as 断言并贴合 e2e 的真实切换语义
 - [Phase 02.1]: DevCodeEditorProvider 复用既有 ICodeEditorOpener / ITableCapabilitiesProviderProps，类型面零新增；用 JSX（antd Modal 的 data-test-id 无法经 createElement 表达）
+- [Phase 02.1]: 缺口收口 G-02.1-5：把 TableCreateForm 的确认入口移到新建视图顶部（Fragment 子元素顺序 control, location, error），配两层可失败 DOM 顺序断言；不改任何对外契约。
 
 ### Pending Todos
 
@@ -309,6 +311,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-17T07:04:32.099Z
-Stopped at: Completed 02.1-25-PLAN.md
+Last session: 2026-10-17T07:22:22.867Z
+Stopped at: Completed 02.1-26-PLAN.md
 Resume file: None
