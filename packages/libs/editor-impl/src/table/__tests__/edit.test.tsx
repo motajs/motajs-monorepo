@@ -3,7 +3,7 @@ import { EditorCore, IEditorPanel, IEditorPanelFactoryParam } from '@motajs/edit
 import { createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { deriveSchemaPath, tablePanelType, TablePanel } from '..';
-import { ITableGridProps, TableGrid, TablePanelStatus } from '../components/TableGrid';
+import { ITableGridProps, TableGrid, TablePanelStatus } from '../../shared/schemaForm/components/TableGrid';
 import { ITableRowNode } from '../types';
 import { createTableHarness, FakeFileSystem } from './fixtures';
 

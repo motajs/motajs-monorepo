@@ -1,10 +1,10 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { CheckboxInput } from '../components/inputs/CheckboxInput';
-import { CheckboxSet } from '../components/inputs/CheckboxSet';
-import { ColorInput } from '../components/inputs/ColorInput';
-import { SelectInput } from '../components/inputs/SelectInput';
-import { TextareaInput } from '../components/inputs/TextareaInput';
+import { CheckboxInput } from '../../shared/schemaForm/components/inputs/CheckboxInput';
+import { CheckboxSet } from '../../shared/schemaForm/components/inputs/CheckboxSet';
+import { ColorInput } from '../../shared/schemaForm/components/inputs/ColorInput';
+import { SelectInput } from '../../shared/schemaForm/components/inputs/SelectInput';
+import { TextareaInput } from '../../shared/schemaForm/components/inputs/TextareaInput';
 import { inferControlKind } from '../../shared/schemaForm/model/control';
 import { TableControlKind } from '../types';
 

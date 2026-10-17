@@ -3,7 +3,7 @@ import { Button } from 'antd';
 import { createElement, ReactElement } from 'react';
 import { ITablePreset } from '../../react';
 import { isTableDataPath } from '../resourceType';
-import '../table.css';
+import '../../shared/schemaForm/schemaForm.css';
 
 // 可复用的表格浏览器契约：可选预设表 + 项目目录树。
 // 「打开表格」（注入预设）与「删除表格」（不注入预设）共用同一组 props，唯一差异是 presets 是否传入。

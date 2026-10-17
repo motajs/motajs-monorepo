@@ -20,7 +20,7 @@ import {
   TableGridChangeHandler,
   TableGridDeleteHandler,
   TablePanelStatus,
-} from './components/TableGrid';
+} from '../shared/schemaForm/components/TableGrid';
 import { TableEmptyColumn } from './components/TableEmptyColumn';
 import { buildTableTree } from '../shared/schemaForm/model/traversal';
 import { buildSchemaTree } from '../shared/schemaForm/model/schemaPresentation';

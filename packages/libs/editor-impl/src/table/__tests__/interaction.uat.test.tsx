@@ -3,7 +3,7 @@ import { EditorCore, IEditorPanel, IEditorPanelFactoryParam } from '@motajs/edit
 import { createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { deriveSchemaPath, tablePanelType, TablePanel } from '..';
-import tableCss from '../table.css?inline';
+import tableCss from '../../shared/schemaForm/schemaForm.css?inline';
 import { createTableHarness, FakeFileSystem } from './fixtures';
 
 configure({ testIdAttribute: 'data-test-id' });

@@ -1,7 +1,7 @@
 import { EditorEntryKind, IFileEntry } from '@motajs/editor-core';
 import { Button, Input } from 'antd';
 import { ChangeEvent, createElement, Fragment, KeyboardEvent, ReactElement, useCallback, useState } from 'react';
-import '../table.css';
+import '../../shared/schemaForm/schemaForm.css';
 
 // 可复用的新建表格表单契约：收集一个表格名并在当前选中目录下建一对文件。
 

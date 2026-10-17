@@ -5,7 +5,7 @@ import { ITablePreset } from '../../react';
 import { TableEmptyMode } from '../types';
 import { TableCreateForm } from './TableCreateForm';
 import { TablePicker } from './TablePicker';
-import '../table.css';
+import '../../shared/schemaForm/schemaForm.css';
 
 // 空栏内联控件契约与实现：把「当前内联视图 + 目录数据 + 预设表 + 各回调」聚到一处，
 // 供表格面板某一栏在未设目标时渲染。Buttons 态显示三个按钮，其余态在同一栏内内联渲染
