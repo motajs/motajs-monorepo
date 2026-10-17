@@ -529,3 +529,32 @@
 ## Plan 24 — `02.1-24-PLAN.md`（开发宿主 e2e + 三包全绿 + 五门禁收口）
 
 **无新增对外命名**（仅迁移 `devHostJsonc.test.tsx`、更新 `02.1-UAT.md` 的 gap 状态）。
+
+---
+
+# 缺口收口轮（UAT `G-02.1-4`） — 命名提案（Plan 25）
+
+**状态：待用户确认。** 依据 `02.1-UAT.md` 的缺口 `G-02.1-4`（severity major，来自 UAT 测试 2）：开发宿主 `packages/apps/editor-dev/src/main.tsx` 只向 `CapabilityProvider` 注入了 `tablePanel` 打开器（与 `tablePresets`），**没有**注入 `ITableEditorCapabilities.codeEditor`；表格工具栏「更多 → 在代码编辑器中打开」（Plan 23 已收进下拉）在开发宿主里点了无用，用户没有查看文件原文的入口，无法核对「合规 `.jsonc` 保存后系统前缀注释块逐字保留」。本轮给开发宿主补一个**真正可用的代码编辑器打开器**（antd `Modal` + 多行文本域），并把它注入能力包。
+
+**本缺口不设「仅接口」计划、不新增 interface / type：** 所需的两个契约都已在既有代码中存在——接缝 `ICodeEditorOpener` 与 Provider props `ITableCapabilitiesProviderProps`（均在 `packages/libs/editor-impl/src/react/capabilities.ts`）。本轮只写宿主侧实现与注入，唯一新增的对外符号是开发宿主组件 `DevCodeEditorProvider`（下）。
+
+---
+
+## Plan 25 — `02.1-25-PLAN.md`（开发宿主代码编辑器打开器，实现 + 端到端 + 签核）
+
+### `DevCodeEditorProvider`（React 函数组件，`packages/apps/editor-dev/src/demo/devCodeEditor.tsx`）
+- **用途**：开发宿主专用的能力 Provider 包装——把注入的 `tablePanel` / `tablePresets` 等能力**原样透传**给 `CapabilityProvider`，并额外注入一个由 antd `Modal` + 多行文本域实现的**代码编辑器打开器**，使表格工具栏「在代码编辑器中打开」在开发宿主中真正可用：点开可查看该栏当前视图对应的文件原文（合规 `.jsonc` 即「系统前缀注释块 + JSON 正文」），编辑后确认按原样交给表格面板写回。
+- **props 复用既有 `ITableCapabilitiesProviderProps`**（`capabilities?` + `children`，与 `CapabilityProvider` 同形），**不新声明 props 接口**——本缺口类型面零新增。
+- 仅存在于开发宿主、不进入产品路径；`editor-core` / `editor-impl` 源码不改。
+
+### 测试钩子（`data-test-id`，非对外命名，登记备查）
+- `dev-code-editor`（Modal 根）、`dev-code-editor-text`（多行文本域）、`dev-code-editor-confirm`（确定）、`dev-code-editor-cancel`（取消）。
+
+### 新增测试文件（测试内部，登记备查）
+- `packages/apps/editor-dev/src/__tests__/devHostCodeEditor.test.tsx`——开发宿主代码编辑器端到端（菜单项可用 / 打开显示原文含系统前缀标记 / 编辑写回经保存后前缀逐字保留 / 取消不写回）。
+
+### 对既有命名的修改（不新增名字，登记备查）
+- `packages/apps/editor-dev/src/main.tsx`：渲染根由 `CapabilityProvider` 换成 `DevCodeEditorProvider`（`tablePanel` / `tablePresets` 注入不变）。
+
+### 对既有命名的删除
+- 无。
