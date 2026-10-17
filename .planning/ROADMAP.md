@@ -180,7 +180,7 @@ Plans:
   4. 既有表格编辑行为（编辑 / 撤销 / 多栏 / 切入刷新）不回归；`CORE-01`、`coreFsSurface`、`coreBoundaries`(e) 与 Phase 3 讨论稿前提全部收口。
   5. 本阶段能力接入开发宿主，可在浏览器里手动验收「打开 / 新建 / 删除」。
 
-**Plans:** 26/26 plans executed（另追加 6 个缺口收口计划 02.1-13/14/15/16/17 闭环 UAT 缺口 `G-02.1-1`、02.1-18 闭环 UAT 缺口 `G-02.1-2`；再追加 6 个缺口收口计划 02.1-19/20/21/22/23/24 处理 UAT 缺口 `G-02.1-3`；再追加 1 个缺口收口计划 02.1-25 处理 UAT 缺口 `G-02.1-4`；再追加 1 个缺口收口计划 02.1-26 处理 UAT 缺口 `G-02.1-5`）
+**Plans:** 26/26 plans complete
 
 Plans:
 **Wave 1 — 接口（仅类型，无实现）**
@@ -324,7 +324,7 @@ Phases execute in numeric order: 1 → 1.1 → 2 → 2.1 → 3 → 4 → 5 → 6
 | 1. 编辑器外壳与通用 fs 接口 | 4/4 | Complete    | 2026-10-12 |
 | 1.1. 编辑器开发宿主 (INSERTED) | 3/3 | Complete    | 2026-10-12 |
 | 2. 表格编辑 | 33/33 | Complete | 2026-10-15 |
-| 2.1. 资源层重构与表格文件管理 (INSERTED) | 26/26 | In Progress|  |
+| 2.1. 资源层重构与表格文件管理 (INSERTED) | 26/26 | Complete    | 2026-10-17 |
 | 3. 素材管理 | 0/TBD | Not started | - |
 | 4. 地图编辑 | 0/TBD | Not started | - |
 | 5. 代码编辑 | 0/TBD | Not started | - |
