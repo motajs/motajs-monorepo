@@ -26,7 +26,12 @@ const animationCategory: IAssetCategory = {
 describe('readAssetList', () => {
   // 对象数组形态：按 listKey 取出条目，config 原样保留，index 保序
   it('解析对象数组形态', () => {
-    const document = { textures: [{ source: 'a.png', read: 0 }, { source: 'b.png', read: 1 }] };
+    const document = {
+      textures: [
+        { source: 'a.png', read: 0 },
+        { source: 'b.png', read: 1 },
+      ],
+    };
     const entries = readAssetList(textureCategory, document);
 
     expect(entries).toHaveLength(2);
@@ -97,7 +102,13 @@ describe('writeAssetList', () => {
 describe('readAssetList / writeAssetList round-trip', () => {
   // 对象数组形态读写一轮后正文相等（其余键也还在）
   it('对象数组形态 round-trip', () => {
-    const document = { version: 1, textures: [{ source: 'a.png', read: 0 }, { source: 'b.png', read: 1 }] };
+    const document = {
+      version: 1,
+      textures: [
+        { source: 'a.png', read: 0 },
+        { source: 'b.png', read: 1 },
+      ],
+    };
     const entries = readAssetList(textureCategory, document);
 
     expect(writeAssetList(textureCategory, entries, document)).toEqual(document);

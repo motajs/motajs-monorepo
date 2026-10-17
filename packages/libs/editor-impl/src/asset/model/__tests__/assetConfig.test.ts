@@ -146,9 +146,7 @@ describe('resolveAssetSchemaPath', () => {
 
   // 指定时用指定值
   it('指定时用指定值', () => {
-    expect(resolveAssetSchemaPath({ ...baseCategory, schemaPath: 'custom/schema.jsonc' })).toBe(
-      'custom/schema.jsonc',
-    );
+    expect(resolveAssetSchemaPath({ ...baseCategory, schemaPath: 'custom/schema.jsonc' })).toBe('custom/schema.jsonc');
   });
 });
 

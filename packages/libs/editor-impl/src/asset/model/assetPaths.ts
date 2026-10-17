@@ -15,6 +15,36 @@ export const ASSET_ORIGIN_SUFFIX = '-origin';
 /** 文件名长度上限 */
 const MAX_ASSET_FILE_NAME_LENGTH = 128;
 
+/** Windows 非法字符的集合 */
+const WINDOWS_ILLEGAL_CHARS = ':*?"<>|';
+
+/**
+ * 判断字符串里是否含控制字符（U+0000–U+001F）
+ * @param value 待检查的字符串
+ * @returns 含控制字符时为 true
+ */
+function hasControlChar(value: string): boolean {
+  for (const char of value) {
+    if (char.charCodeAt(0) <= 0x1f) return true;
+  }
+
+  return false;
+}
+
+/**
+ * 判断字符串里是否含集合中任一字符
+ * @param value 待检查的字符串
+ * @param chars 要查找的字符集合
+ * @returns 含任一字符时为 true
+ */
+function containsAnyChar(value: string, chars: string): boolean {
+  for (const char of chars) {
+    if (value.includes(char)) return true;
+  }
+
+  return false;
+}
+
 /**
  * 清洗一次上传的文件名：这是防路径穿越的第一道闸，注入的文件系统仍会拒绝 `..`
  * @param fileName 用户提供的原始文件名
@@ -27,8 +57,8 @@ export function sanitizeAssetFileName(fileName: string): string | null {
   if (trimmed === '.' || trimmed === '..') return null;
   if (trimmed.startsWith('.')) return null;
   if (trimmed.includes('/') || trimmed.includes('\\')) return null;
-  if (/[\u0000-\u001f]/.test(trimmed)) return null;
-  if (/[:*?"<>|]/.test(trimmed)) return null;
+  if (hasControlChar(trimmed)) return null;
+  if (containsAnyChar(trimmed, WINDOWS_ILLEGAL_CHARS)) return null;
 
   return trimmed;
 }
