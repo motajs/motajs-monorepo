@@ -42,6 +42,11 @@ export class UndoSystem extends Hookable<IUndoSystemHooks> implements IUndoSyste
 
     if (!entry) return false;
 
+    if (entry.context.barrier === true) {
+      this.forEachHook((hook) => hook.onUndoBlocked?.());
+      return false;
+    }
+
     await entry.undo.undo(entry.context);
 
     this.undoStack.pop();
