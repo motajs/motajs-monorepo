@@ -6,7 +6,7 @@ import { ITableSchemaNode } from '../../shared/schemaForm/types';
 // 注入，不写在这里（引擎专有词不得出现在包内源码）。
 
 /** 图片分类的内置 schema */
-const IMAGE_ASSET_SCHEMA: ITableSchemaNode = {
+const IMAGE_ASSET_SCHEMA = Object.freeze<ITableSchemaNode>({
   type: 'object',
   properties: {
     source: { type: 'string', description: '素材图片文件名' },
@@ -24,20 +24,20 @@ const IMAGE_ASSET_SCHEMA: ITableSchemaNode = {
     tiles: { type: 'array', items: { type: 'number' }, description: '图块序号列表' },
   },
   required: ['source', 'read', 'usage'],
-};
+});
 
 /** 音频分类的内置 schema */
-const AUDIO_ASSET_SCHEMA: ITableSchemaNode = {
+const AUDIO_ASSET_SCHEMA = Object.freeze<ITableSchemaNode>({
   type: 'object',
   properties: {
     type: { type: 'number', enum: [0, 1], description: '音频类型：0=背景音乐 1=音效' },
     source: { type: 'string', description: '音频文件名' },
   },
   required: ['type', 'source'],
-};
+});
 
 /** 动画 / 字体分类的内置 schema：空对象，落回表格引擎的空态 */
-const EMPTY_ASSET_SCHEMA: ITableSchemaNode = { type: 'object', properties: {} };
+const EMPTY_ASSET_SCHEMA = Object.freeze<ITableSchemaNode>({ type: 'object', properties: {} });
 
 /**
  * 取某个大分类的内置「新引擎」schema
