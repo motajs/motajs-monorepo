@@ -11,6 +11,7 @@
     ".": "./src/index.ts",
     "./code": "./src/code/index.ts",
     "./table": "./src/table/index.ts",
+    "./shared": "./src/shared/index.ts",
     "./map": "./src/map/index.ts",
     "./asset": "./src/asset/index.ts",
     "./shell": "./src/shell/index.ts",

@@ -24,7 +24,7 @@ import {
 import { TableEmptyColumn } from './components/TableEmptyColumn';
 import { buildTableTree } from './model/traversal';
 import { buildSchemaTree } from './model/schemaPresentation';
-import { parseTableText, serializeTableText, TableTextParseStatus } from './model/tableText';
+import { parseTableText, serializeTableText, TableTextParseStatus } from '../shared/jsonc';
 import {
   deleteByFieldPath,
   getParentFieldPath,

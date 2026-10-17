@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseTableText, serializeTableText, SYSTEM_PREFIX_END_MARKER, TableTextParseStatus } from '../model/tableText';
+import { parseTableText, serializeTableText, SYSTEM_PREFIX_END_MARKER, TableTextParseStatus } from '../tableText';
 
 const sampleValue = { title: '示例', level: 3, position: { x: 1, y: 2 } };
 
