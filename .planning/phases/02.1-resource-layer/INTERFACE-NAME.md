@@ -534,7 +534,7 @@
 
 # 缺口收口轮（UAT `G-02.1-4`） — 命名提案（Plan 25）
 
-**状态：待用户确认。** 依据 `02.1-UAT.md` 的缺口 `G-02.1-4`（severity major，来自 UAT 测试 2）：开发宿主 `packages/apps/editor-dev/src/main.tsx` 只向 `CapabilityProvider` 注入了 `tablePanel` 打开器（与 `tablePresets`），**没有**注入 `ITableEditorCapabilities.codeEditor`；表格工具栏「更多 → 在代码编辑器中打开」（Plan 23 已收进下拉）在开发宿主里点了无用，用户没有查看文件原文的入口，无法核对「合规 `.jsonc` 保存后系统前缀注释块逐字保留」。本轮给开发宿主补一个**真正可用的代码编辑器打开器**（antd `Modal` + 多行文本域），并把它注入能力包。
+**状态：已确认（2026-10-17，随 02.1-25 落地）。** 依据 `02.1-UAT.md` 的缺口 `G-02.1-4`（severity major，来自 UAT 测试 2）：开发宿主 `packages/apps/editor-dev/src/main.tsx` 只向 `CapabilityProvider` 注入了 `tablePanel` 打开器（与 `tablePresets`），**没有**注入 `ITableEditorCapabilities.codeEditor`；表格工具栏「更多 → 在代码编辑器中打开」（Plan 23 已收进下拉）在开发宿主里点了无用，用户没有查看文件原文的入口，无法核对「合规 `.jsonc` 保存后系统前缀注释块逐字保留」。本轮给开发宿主补一个**真正可用的代码编辑器打开器**（antd `Modal` + 多行文本域），并把它注入能力包。
 
 **本缺口不设「仅接口」计划、不新增 interface / type：** 所需的两个契约都已在既有代码中存在——接缝 `ICodeEditorOpener` 与 Provider props `ITableCapabilitiesProviderProps`（均在 `packages/libs/editor-impl/src/react/capabilities.ts`）。本轮只写宿主侧实现与注入，唯一新增的对外符号是开发宿主组件 `DevCodeEditorProvider`（下）。
 
