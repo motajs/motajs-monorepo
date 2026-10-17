@@ -218,3 +218,91 @@ describe('UndoSystem 禁用撤销', () => {
     expect(undoable.undoCount).toBe(0);
   });
 });
+
+describe('UndoSystem 撤销屏障', () => {
+  // 栈顶是屏障条目时撤销返回 false，且不调用该条目的 undo
+  test('栈顶屏障挡住撤销并返回 false', async () => {
+    const system = new UndoSystem();
+    await system.initialize({ maxUndoStep: 10 });
+    const undoable = new FakeUndoable();
+
+    system.addUndoContext(undoable, { type: 1, data: 'alpha', barrier: true });
+
+    await expect(system.undo()).resolves.toBe(false);
+    expect(undoable.undoCount).toBe(0);
+  });
+
+  // 屏障条目留在栈上，连续第二次撤销仍返回 false 且仍不调用 undo
+  test('屏障不离开撤销栈，再次撤销仍被挡住', async () => {
+    const system = new UndoSystem();
+    await system.initialize({ maxUndoStep: 10 });
+    const undoable = new FakeUndoable();
+
+    system.addUndoContext(undoable, { type: 1, data: 'alpha', barrier: true });
+
+    await expect(system.undo()).resolves.toBe(false);
+    await expect(system.undo()).resolves.toBe(false);
+    expect(undoable.undoCount).toBe(0);
+  });
+
+  // 屏障之上的普通记录可撤销，撤到屏障即停住，不会跳过它去撤更早的记录
+  test('屏障之上的记录可撤销，撤到屏障即停', async () => {
+    const system = new UndoSystem();
+    await system.initialize({ maxUndoStep: 10 });
+    const barrierUndoable = new FakeUndoable();
+    const normalUndoable = new FakeUndoable();
+
+    system.addUndoContext(barrierUndoable, { type: 1, data: 'barrier', barrier: true });
+    system.addUndoContext(normalUndoable, { type: 1, data: 'normal' });
+
+    await expect(system.undo()).resolves.toBe(true);
+    expect(normalUndoable.undoCount).toBe(1);
+
+    await expect(system.undo()).resolves.toBe(false);
+    expect(barrierUndoable.undoCount).toBe(0);
+  });
+
+  // 命中屏障时 onUndoBlocked 恰好被订阅钩子调用一次
+  test('命中屏障时触发一次 onUndoBlocked', async () => {
+    const system = new UndoSystem();
+    await system.initialize({ maxUndoStep: 10 });
+    const undoable = new FakeUndoable();
+    let blockedCount = 0;
+
+    system.addHook({
+      onUndoBlocked: () => {
+        blockedCount += 1;
+      },
+    });
+    system.addUndoContext(undoable, { type: 1, data: 'alpha', barrier: true });
+
+    await system.undo();
+
+    expect(blockedCount).toBe(1);
+  });
+
+  // 没有任何钩子订阅时命中屏障不抛错，仍返回 false
+  test('无钩子订阅时命中屏障不抛错', async () => {
+    const system = new UndoSystem();
+    await system.initialize({ maxUndoStep: 10 });
+    const undoable = new FakeUndoable();
+
+    system.addUndoContext(undoable, { type: 1, data: 'alpha', barrier: true });
+
+    await expect(system.undo()).resolves.toBe(false);
+    expect(undoable.redoCount).toBe(0);
+  });
+
+  // 命中屏障后重做为 false，屏障从未进入重做栈
+  test('屏障不进入重做栈', async () => {
+    const system = new UndoSystem();
+    await system.initialize({ maxUndoStep: 10 });
+    const undoable = new FakeUndoable();
+
+    system.addUndoContext(undoable, { type: 1, data: 'alpha', barrier: true });
+    await system.undo();
+
+    await expect(system.redo()).resolves.toBe(false);
+    expect(undoable.redoCount).toBe(0);
+  });
+});
