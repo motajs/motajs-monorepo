@@ -25,6 +25,13 @@ export interface IEditorPanelContext {
   deleteResource(identifier: IResourceIdentifier): Promise<void>;
 
   /**
+   * 移动（改名）指定资源
+   * @param source 源路径
+   * @param destination 目标路径
+   */
+  moveResource(source: IResourceIdentifier, destination: IResourceIdentifier): Promise<void>;
+
+  /**
    * 列出指定目录下的直接子条目
    * @param path 目录路径
    * @returns 目录下的直接子条目列表

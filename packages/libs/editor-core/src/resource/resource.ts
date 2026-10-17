@@ -15,6 +15,10 @@ export class Resource implements IResource {
     return this.store.readContent(this.identifier);
   }
 
+  requestBinary(): Promise<Uint8Array | undefined> {
+    return this.store.readBinary(this.identifier);
+  }
+
   write(data: ResourceContent): Promise<void> {
     return this.store.writeContent(this.identifier, data);
   }

@@ -25,6 +25,10 @@ export class PanelContext implements IEditorPanelContext {
     return this.resourceAccess.deleteResource(id);
   }
 
+  moveResource(source: IResourceIdentifier, destination: IResourceIdentifier): Promise<void> {
+    return this.resourceAccess.moveResource(source, destination);
+  }
+
   listDirectory(path: string): Promise<readonly IFileEntry[]> {
     return this.resourceAccess.listDirectory(path);
   }

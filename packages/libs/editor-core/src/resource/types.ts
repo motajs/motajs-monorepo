@@ -27,6 +27,12 @@ export interface IResource {
   request(): Promise<ResourceContent | undefined>;
 
   /**
+   * 请求资源原始字节
+   * @returns 资源的原始字节；资源不存在时为 undefined
+   */
+  requestBinary(): Promise<Uint8Array | undefined>;
+
+  /**
    * 写入资源内容
    * @param data 要写入的资源内容
    */
@@ -77,6 +83,13 @@ export interface IResourceStore {
    * @returns 资源的原文或原始字节；资源不存在时为 undefined
    */
   readContent(identifier: IResourceIdentifier): Promise<ResourceContent | undefined>;
+
+  /**
+   * 读取指定路径文件的原始字节
+   * @param identifier 资源标识（纯路径）
+   * @returns 文件的原始字节；资源不存在时为 undefined
+   */
+  readBinary(identifier: IResourceIdentifier): Promise<Uint8Array | undefined>;
 
   /**
    * 写入指定资源的内容
