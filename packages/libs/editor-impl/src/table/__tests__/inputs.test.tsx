@@ -5,7 +5,7 @@ import { CheckboxSet } from '../components/inputs/CheckboxSet';
 import { ColorInput } from '../components/inputs/ColorInput';
 import { SelectInput } from '../components/inputs/SelectInput';
 import { TextareaInput } from '../components/inputs/TextareaInput';
-import { inferControlKind } from '../model/control';
+import { inferControlKind } from '../../shared/schemaForm/model/control';
 import { TableControlKind } from '../types';
 
 class ResizeObserverStub {

@@ -22,8 +22,8 @@ import {
   TablePanelStatus,
 } from './components/TableGrid';
 import { TableEmptyColumn } from './components/TableEmptyColumn';
-import { buildTableTree } from './model/traversal';
-import { buildSchemaTree } from './model/schemaPresentation';
+import { buildTableTree } from '../shared/schemaForm/model/traversal';
+import { buildSchemaTree } from '../shared/schemaForm/model/schemaPresentation';
 import { parseTableText, serializeTableText, TableTextParseStatus } from '../shared/jsonc';
 import {
   deleteByFieldPath,
@@ -32,8 +32,8 @@ import {
   insertAfterFieldPath,
   parseFieldPath,
   setByFieldPath,
-} from './model/fieldPath';
-import { validateId, validateValue } from './model/validation';
+} from '../shared/schemaForm/model/fieldPath';
+import { validateId, validateValue } from '../shared/schemaForm/model/validation';
 import { deriveSchemaPath, isSchemaPath } from './resourceType';
 
 /** 多栏布局中每栏的默认像素宽度 */

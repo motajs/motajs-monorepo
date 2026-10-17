@@ -1,9 +1,9 @@
 import { cleanup, configure } from '@testing-library/react';
 import { Ajv2020 } from 'ajv/dist/2020';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { buildSchemaTree } from '../model/schemaPresentation';
-import { buildTableTree } from '../model/traversal';
-import { validateValue } from '../model/validation';
+import { buildSchemaTree } from '../../shared/schemaForm/model/schemaPresentation';
+import { buildTableTree } from '../../shared/schemaForm/model/traversal';
+import { validateValue } from '../../shared/schemaForm/model/validation';
 
 configure({ testIdAttribute: 'data-test-id' });
 

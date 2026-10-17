@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { validateId, validateValue } from '../model/validation';
+import { validateId, validateValue } from '../../shared/schemaForm/model/validation';
 
 describe('validateId', () => {
   // 空名字被拒绝并给出「ID不能为空」
