@@ -1,5 +1,8 @@
 import { ReactNode } from 'react';
 import {
+  IAssetCategory,
+  IAssetPickerOpenRequest,
+  IAssetPickerResult,
   ICodeEditorOpenRequest,
   IEventEditorOpenRequest,
   IMultiSelectOpenRequest,
@@ -64,6 +67,22 @@ export interface ICopyCapability {
   copyText(text: string): Promise<void>;
 }
 
+export interface IAssetPickerOpener {
+  /**
+   * 打开素材选择器并返回选中结果
+   * @param request 打开请求，携带标题与可选分类、是否多选、初始选中
+   * @returns 用户确认后的选中结果；用户取消时为 null
+   */
+  open(request: IAssetPickerOpenRequest): Promise<IAssetPickerResult | null>;
+}
+
+export interface IAssetEditorCapabilities {
+  /** 分类清单（含各分类的回退 schema）；缺省时素材能力不可用 */
+  readonly categories?: readonly IAssetCategory[];
+  /** 默认素材选择器；缺省时无法经接缝选素材 */
+  readonly picker?: IAssetPickerOpener;
+}
+
 export interface ITableEditorCapabilities {
   /** 代码编辑器打开器；缺省时代码编辑能力不可用 */
   readonly codeEditor?: ICodeEditorOpener;
@@ -79,6 +98,8 @@ export interface ITableEditorCapabilities {
   readonly tablePresets?: readonly ITablePreset[];
   /** 剪贴板复制能力；缺省时复制动作降级为不可用 */
   readonly copy?: ICopyCapability;
+  /** 素材能力（分类清单 + 默认选择器）；缺省时素材选择不可用 */
+  readonly asset?: IAssetEditorCapabilities;
 }
 
 export interface ITableCapabilitiesProviderProps {

@@ -1,3 +1,5 @@
+import { ITableSchemaNode } from '../shared/schemaForm/types';
+
 export interface ICodeEditorOpenRequest {
   /** 代码编辑器的标题，如字段名或文件名 */
   readonly title: string;
@@ -56,4 +58,65 @@ export interface ITablePreset {
   readonly name: string;
   /** 预设表的数据文件路径 */
   readonly path: string;
+}
+
+export const enum AssetCategoryKind {
+  /** 图片 */
+  Image,
+  /** 音频 */
+  Audio,
+  /** 动画 */
+  Animation,
+  /** 字体 */
+  Font,
+}
+
+export const enum AssetListFormat {
+  /** 列表正文是 `string[]` */
+  StringList,
+  /** 列表正文是挂在某个键下的对象数组 */
+  ObjectList,
+}
+
+export interface IAssetCategory {
+  /** 分类标识，如 `texture` */
+  readonly id: string;
+  /** 分类显示名，如「图片」 */
+  readonly label: string;
+  /** 大分类的种类，决定默认列表格式、默认预览与能否转码 */
+  readonly kind: AssetCategoryKind;
+  /** 分类对应的字节目录，如 `content/texture` */
+  readonly dir: string;
+  /** 列表文件路径，如 `content/texture/.list.jsonc` */
+  readonly listPath: string;
+  /** 列表文件的正文格式 */
+  readonly listFormat: AssetListFormat;
+  /** `ObjectList` 时数组所在的键，如 `textures`；`StringList` 时为 undefined */
+  readonly listKey?: string;
+  /** `ObjectList` 时条目里存文件名的键；缺省为 `source` */
+  readonly sourceField?: string;
+  /** 列表名里不含的扩展名，如 `.anim`；缺省表示列表名即完整文件名 */
+  readonly extension?: string;
+  /** 引擎自带 schema 的文件路径；缺省按 `dir + '/.schema.jsonc'` 推导 */
+  readonly schemaPath?: string;
+  /** 默认值文件路径；缺省时新增条目不合并默认值 */
+  readonly defaultsPath?: string;
+  /** 装配方选定的回退 schema，用于渲染该分类的配置表单 */
+  readonly schema?: ITableSchemaNode;
+}
+
+export interface IAssetPickerOpenRequest {
+  /** 选择器弹窗的标题 */
+  readonly title: string;
+  /** 打开时定位的分类标识；缺省时用默认分类 */
+  readonly categoryId?: string;
+  /** 是否允许选中多项；缺省时单选 */
+  readonly multiple?: boolean;
+  /** 打开时已选中的素材名列表 */
+  readonly selectedIds?: readonly string[];
+}
+
+export interface IAssetPickerResult {
+  /** 用户确认后的选中素材名列表 */
+  readonly ids: readonly string[];
 }
