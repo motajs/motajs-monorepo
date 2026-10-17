@@ -103,7 +103,7 @@ function renderCurrentDirectory(
  *
  * 不使用浏览器原生对话框；名称合法性由调用方（面板）承担，组件只把去空白后的名称回调出去。
  * @param props 组件 props
- * @returns 新建位置区、新建按钮（或名称输入）与错误提示
+ * @returns 新建按钮（或名称输入）、新建位置区与错误提示
  */
 export function TableCreateForm(props: ITableCreateFormProps): ReactElement {
   const addingState = useState(false);
@@ -164,5 +164,5 @@ export function TableCreateForm(props: ITableCreateFormProps): ReactElement {
       ? null
       : createElement('div', { className: 'etable-list-error', 'data-test-id': 'table-list-error' }, props.error);
 
-  return createElement(Fragment, null, location, control, error);
+  return createElement(Fragment, null, control, location, error);
 }
