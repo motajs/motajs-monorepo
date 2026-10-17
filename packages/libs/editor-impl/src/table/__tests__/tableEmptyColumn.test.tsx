@@ -210,6 +210,14 @@ describe('表格面板空栏内联控件', () => {
     });
     await act(async () => {});
 
+    // 面板内新建视图的确认入口在目录浏览器之上：按钮态即先于目录区
+    const createButton = inColumn(container, 0, 'table-list-create');
+    const createLocation = inColumn(container, 0, 'table-create-location');
+
+    if (createButton === null || createLocation === null) throw new Error('新建视图元素缺失');
+
+    expect(createButton.compareDocumentPosition(createLocation) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+
     await act(async () => {
       clickInColumn(container, 0, 'table-list-create');
     });
