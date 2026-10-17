@@ -268,7 +268,53 @@ Plans:
   3. 素材改动写入后重新加载仍然存在（经统一持久化路径）。
   4. 素材相关画面与行为与现状一致。
 
-**Plans**: TBD
+**Plans:** 17 plans
+Plans:
+
+**Wave 1 — 接口 / 契约（仅类型，无实现）**
+
+- [ ] 03-01-PLAN.md — `editor-core` 契约：撤销屏障 / 布尔返回 / 二进制读取 / 面板移动
+- [ ] 03-02-PLAN.md — `shared` 中立类型落位 + `react` 接缝契约（素材分类 / 选择器 / 素材能力）
+- [ ] 03-03-PLAN.md — `asset` 域类型 + 转码契约 + 命名约定常量
+
+**Wave 2 — core 行为与 `.jsonc` 抽取**
+
+- [ ] 03-04-PLAN.md — 撤销屏障生效 + 二进制 / 移动实现 + 测试
+- [ ] 03-05-PLAN.md — `.jsonc` 编解码抽到 `shared/jsonc` + `./shared` 子路径 + 开发宿主导入改指
+
+**Wave 3 — 共享引擎抽取与素材纯逻辑**
+
+- [ ] 03-06-PLAN.md — schema 模型层抽到 `shared/schemaForm/model`
+- [ ] 03-07-PLAN.md — 表单渲染与样式抽到 `shared/schemaForm/components`
+- [ ] 03-08-PLAN.md — 素材模型层（路径 / 列表编解码 / defaults / 校验 / schema 解析）+ 内置 schema
+- [ ] 03-09-PLAN.md — 图片 → WebP 转码服务 + 能力探测
+
+**Wave 4 — 面板数据层**
+
+- [ ] 03-10-PLAN.md — `AssetPanel` 数据层 + 面板类型工厂 + 集成测试
+
+**Wave 5 — 面板视图与选择器**
+
+- [ ] 03-11-PLAN.md — 三栏视图 / 网格 / 详情 / 预览 / 五种状态 + 样式
+- [ ] 03-12-PLAN.md — 默认素材选择器 + 素材能力 Provider
+
+**Wave 6 — 字节生命周期与音频转码**
+
+- [ ] 03-13-PLAN.md — 新增 / 替换 / 删除 + 撤销屏障
+- [ ] 03-15-PLAN.md — 音频 → WebM/Opus（Mediabunny，安装需人工确认）
+
+**Wave 7 — 配置表单**
+
+- [ ] 03-14-PLAN.md — 每素材配置表单（主区挂载）+ 配置撤销 / schema 优先级
+
+**Wave 8 — 转码界面**
+
+- [ ] 03-16-PLAN.md — 瘦身转码弹窗 + 批量编排 + 覆盖确认
+
+**Wave 9 — 宿主接入与收口**
+
+- [ ] 03-17-PLAN.md — 开发宿主接入 + 三包 / 五门禁 + 人工验收登记
+
 **UI hint**: yes
 
 ### Phase 4: 地图编辑
@@ -325,7 +371,7 @@ Phases execute in numeric order: 1 → 1.1 → 2 → 2.1 → 3 → 4 → 5 → 6
 | 1.1. 编辑器开发宿主 (INSERTED) | 3/3 | Complete    | 2026-10-12 |
 | 2. 表格编辑 | 33/33 | Complete | 2026-10-15 |
 | 2.1. 资源层重构与表格文件管理 (INSERTED) | 26/26 | Complete    | 2026-10-17 |
-| 3. 素材管理 | 0/TBD | Not started | - |
+| 3. 素材管理 | 0/17 | Planned | - |
 | 4. 地图编辑 | 0/TBD | Not started | - |
 | 5. 代码编辑 | 0/TBD | Not started | - |
 | 6. 事件编辑器 | 0/TBD | Not started | - |
