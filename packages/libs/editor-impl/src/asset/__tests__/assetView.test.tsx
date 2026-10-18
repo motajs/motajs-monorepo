@@ -61,6 +61,7 @@ function makeView(overrides: Partial<IAssetPanelViewState>): IAssetPanelViewStat
     unsaved: false,
     transcodeOpen: false,
     transcoding: false,
+    transcodeCapable: true,
   };
 
   return { ...base, ...overrides };
@@ -190,6 +191,23 @@ describe('素材面板视图', () => {
     const { container } = renderView(makeView({ categoryId: 'animation' }));
 
     expect(container.querySelector('[data-test-id="asset-toolbar-transcode"]')?.hasAttribute('disabled')).toBe(true);
+  });
+
+  // 转码能力探测：图片分类可转码时入口可用
+  it('图片分类可转码时入口可用', () => {
+    const { container } = renderView(makeView({ categoryId: 'texture', transcodeCapable: true }));
+
+    expect(container.querySelector('[data-test-id="asset-toolbar-transcode"]')?.hasAttribute('disabled')).toBe(false);
+  });
+
+  // 转码能力探测：图片分类在当前环境不可转码时禁用入口并给出提示，绝不静默失败（D-22）
+  it('环境不支持转码时禁用入口并提示', () => {
+    const { container } = renderView(makeView({ categoryId: 'texture', transcodeCapable: false }));
+
+    expect(container.querySelector('[data-test-id="asset-toolbar-transcode"]')?.hasAttribute('disabled')).toBe(true);
+    expect(container.querySelector('[data-test-id="asset-transcode-notice"]')?.textContent).toBe(
+      '当前环境不支持图片转码',
+    );
   });
 
   // 分类未注入：分类导航显示「尚无可用分类」

@@ -134,6 +134,8 @@ export interface IAssetPanelViewState {
   readonly transcodeOpen: boolean;
   /** 是否正在批量转码 */
   readonly transcoding: boolean;
+  /** 当前分类在当前环境能否转码（由转码服务探测；未探测或不可转码时为 false） */
+  readonly transcodeCapable: boolean;
   /** 最近一次批量转码的汇总；未转码时为 undefined */
   readonly transcodeSummary?: IAssetTranscodeSummary;
 }

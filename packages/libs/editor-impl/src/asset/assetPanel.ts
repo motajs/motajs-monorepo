@@ -36,6 +36,7 @@ import { BrowserAssetTranscodeService } from './transcode';
 import {
   ASSET_WEBM_EXTENSION,
   ASSET_WEBP_EXTENSION,
+  AssetTranscodeKind,
   IAssetTranscodeItemResult,
   IAssetTranscodeOptions,
   IAssetTranscodeSummary,
@@ -97,6 +98,18 @@ function isAssetConfigUndoData(value: unknown): value is IAssetConfigUndoData {
   if (!('categoryId' in value) || !('name' in value) || !('path' in value)) return false;
 
   return typeof value.categoryId === 'string' && typeof value.name === 'string' && typeof value.path === 'string';
+}
+
+/**
+ * 把素材分类的大分类映射成转码种类
+ * @param kind 素材分类的大分类
+ * @returns 该分类对应的转码种类；不可转码的分类为 undefined
+ */
+function transcodeKindOf(kind: AssetCategoryKind): AssetTranscodeKind | undefined {
+  if (kind === AssetCategoryKind.Image) return AssetTranscodeKind.ImageWebp;
+  if (kind === AssetCategoryKind.Audio) return AssetTranscodeKind.AudioOpus;
+
+  return undefined;
 }
 
 /** 面板容器组件的 props：订阅源 + 由面板类转发过来的回调 */
@@ -248,6 +261,12 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
   /** 转码服务；缺省为浏览器实现，装配方可注入替身 */
   private readonly transcodeService: IAssetTranscodeService;
 
+  /** 当前分类在当前环境能否转码；未探测或不可转码时为 false */
+  private transcodeCapable = false;
+
+  /** 各转码种类的探测结果缓存，切换分类时不必重新探测 */
+  private readonly transcodeCapability: Map<AssetTranscodeKind, boolean> = new Map<AssetTranscodeKind, boolean>();
+
   constructor(
     param: IEditorPanelFactoryParam,
     capabilities: IAssetEditorCapabilities,
@@ -272,7 +291,12 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
       unsaved: false,
       transcodeOpen: false,
       transcoding: false,
+      transcodeCapable: false,
     });
+    const initialCategory = categories.length === 0 ? undefined : categories[0];
+
+    if (initialCategory !== undefined) void this.refreshTranscodeCapability(initialCategory);
+
     this.component = (): ReactElement =>
       createElement(AssetPanelContainer, {
         store: this.store,
@@ -401,6 +425,9 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
     const category = this.findCategory(categoryId);
 
     if (category === undefined) return;
+
+    // 分类切换时探测该分类在当前环境能否转码，供「瘦身转码」入口禁用与提示（D-22）
+    await this.refreshTranscodeCapability(category);
 
     const state = this.stateAt(categoryId);
 
@@ -826,6 +853,26 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
   }
 
   /**
+   * 探测某分类在当前环境能否转码并刷新视图状态；探测结果按转码种类缓存，避免反复探测
+   * @param category 要探测的分类
+   */
+  private async refreshTranscodeCapability(category: IAssetCategory): Promise<void> {
+    const kind = transcodeKindOf(category.kind);
+
+    if (kind === undefined) {
+      this.transcodeCapable = false;
+    } else {
+      const cached = this.transcodeCapability.get(kind);
+
+      this.transcodeCapable = cached === undefined ? await this.transcodeService.canTranscode(kind) : cached;
+      this.transcodeCapability.set(kind, this.transcodeCapable);
+    }
+
+    // 只刷新能力位：沿用当前状态与提示，免得能力探测把刚发布的操作结果冲掉
+    this.publish(this.store.state.status, this.store.state.message, this.store.state.error);
+  }
+
+  /**
    * 经资源层读取列表文件的原文
    * @param resource 列表文件资源句柄；文件不存在时为 null
    * @returns 列表原文；资源不存在或为空时为 undefined
@@ -1080,6 +1127,7 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
       unsaved: state === undefined ? false : state.unsaved,
       transcodeOpen: this.transcodeOpen,
       transcoding: this.transcoding,
+      transcodeCapable: this.transcodeCapable,
       transcodeSummary: this.transcodeSummary,
     });
   }

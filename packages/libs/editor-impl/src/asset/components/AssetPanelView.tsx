@@ -214,6 +214,15 @@ function renderContent(props: IAssetPanelViewProps, category: IAssetCategory | u
 }
 
 /**
+ * 取「当前环境不支持该分类转码」的提示文案
+ * @param category 当前分类
+ * @returns 面向用户的提示文案
+ */
+function transcodeUnsupportedMessage(category: IAssetCategory): string {
+  return category.kind === AssetCategoryKind.Image ? '当前环境不支持图片转码' : '当前环境不支持音频转码';
+}
+
+/**
  * 素材面板视图：工具栏 + 三栏主体，并按数据状态分发加载 / 空 / 错误 / 就绪呈现
  * @param props 面板视图 props
  * @returns 面板视图元素
@@ -222,10 +231,13 @@ export function AssetPanelView(props: IAssetPanelViewProps): ReactElement {
   const state = props.view;
   const category = currentCategory(state);
   const busy = state.status === AssetPanelStatus.Loading || state.status === AssetPanelStatus.NoCategory;
-  const transcodeEnabled =
-    state.status === AssetPanelStatus.Ready &&
-    category !== undefined &&
-    (category.kind === AssetCategoryKind.Image || category.kind === AssetCategoryKind.Audio);
+  const transcodeSupported =
+    category !== undefined && (category.kind === AssetCategoryKind.Image || category.kind === AssetCategoryKind.Audio);
+  const transcodeEnabled = state.status === AssetPanelStatus.Ready && transcodeSupported && state.transcodeCapable;
+  const transcodeNotice =
+    category !== undefined && transcodeSupported && state.status === AssetPanelStatus.Ready && !state.transcodeCapable
+      ? transcodeUnsupportedMessage(category)
+      : undefined;
   const summary = state.transcodeSummary;
 
   return (
@@ -245,6 +257,11 @@ export function AssetPanelView(props: IAssetPanelViewProps): ReactElement {
         onAddAsset={props.onAddAsset}
         onReject={props.onReject}
       />
+      {transcodeNotice === undefined ? null : (
+        <div className="asset-notice" data-test-id="asset-transcode-notice">
+          {transcodeNotice}
+        </div>
+      )}
       {summary === undefined ? null : (
         <div className="asset-transcode-summary" data-test-id="asset-transcode-summary">
           <Alert
