@@ -1,5 +1,6 @@
 import { AssetListFormat, IAssetCategory } from '../../react';
 import { IAssetListEntry } from '../types';
+import { sanitizeAssetFileName } from './assetPaths';
 
 // 列表文件正文的读写：两种分类格式——图片 / 音频是「对象数组挂在某个键下」，动画 / 字体是 `string[]`。
 // 这一层只处理正文值，不含读文件、不碰系统前缀；写回时的前缀逐字保留由调用方（面板数据层）完成。
@@ -20,12 +21,15 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * 判断一个值是否为可用的素材名（非空字符串）
- * @param value 待判断的值
- * @returns 是非空字符串时为 true
+ * 把一个列表元素清洗成可用的素材名：非字符串或清洗不通过（含分隔符 / `..` / 前导点 / 非法字符）时为 null
+ *
+ * 列表文件正文来自工程内容，可能被写成 `../../secret` 之类：名字在进入路径推导前先过一遍上传同款清洗，
+ * 以免拼出越出分类目录的路径（注入的文件系统仍会拒绝 `..`，这里只是多一道边界）。
+ * @param value 列表里的候选项
+ * @returns 清洗后的素材名；不可用时为 null
  */
-function isAssetName(value: unknown): value is string {
-  return typeof value === 'string' && value.length > 0;
+function toAssetName(value: unknown): string | null {
+  return typeof value === 'string' ? sanitizeAssetFileName(value) : null;
 }
 
 /**
@@ -50,7 +54,9 @@ function readStringList(document: unknown): readonly IAssetListEntry[] {
 
   const entries: IAssetListEntry[] = [];
   document.forEach((element, index) => {
-    if (isAssetName(element)) entries.push({ name: element, index });
+    const name = toAssetName(element);
+
+    if (name !== null) entries.push({ name, index });
   });
 
   return entries;
@@ -73,8 +79,10 @@ function readObjectList(category: IAssetCategory, document: unknown): readonly I
   const entries: IAssetListEntry[] = [];
   rawList.forEach((element, index) => {
     if (!isRecord(element)) return;
-    const name = element[sourceField];
-    if (isAssetName(name)) entries.push({ name, config: element, index });
+
+    const name = toAssetName(element[sourceField]);
+
+    if (name !== null) entries.push({ name, config: element, index });
   });
 
   return entries;

@@ -64,6 +64,17 @@ describe('readAssetList', () => {
     expect(() => readAssetList(textureCategory, { textures: {} })).toThrow('素材列表格式不正确');
     expect(() => readAssetList(animationCategory, {})).toThrow('素材列表格式不正确');
   });
+
+  // 含路径分隔符 / `..` 的名字在解析时被丢弃，绝不进路径推导（防目录穿越）
+  it('丢弃含路径穿越的名字', () => {
+    const document = {
+      textures: [{ source: '../../secret' }, { source: 'ok.png' }, { source: 'a/b.png' }, { source: '..' }],
+    };
+    const entries = readAssetList(textureCategory, document);
+
+    expect(entries.map((entry) => entry.name)).toEqual(['ok.png']);
+    expect(readAssetList(animationCategory, ['../x', 'walk']).map((entry) => entry.name)).toEqual(['walk']);
+  });
 });
 
 describe('writeAssetList', () => {
