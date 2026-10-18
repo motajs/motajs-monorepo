@@ -71,6 +71,7 @@ export function AssetDetail(props: IAssetDetailProps): ReactElement {
         <AssetPreview
           key={entry.path}
           kind={props.kind}
+          path={entry.path}
           loadBytes={(): Promise<Uint8Array | undefined> => props.loadBytes(entry.path)}
         />
       </div>

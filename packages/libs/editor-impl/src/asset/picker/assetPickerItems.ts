@@ -1,7 +1,7 @@
 import { IResourceAccess } from '@motajs/editor-core';
 import { AssetCategoryKind, IAssetCategory, IMultiSelectItem } from '../../react';
 import { parseTableText, TableTextParseStatus } from '../../shared/jsonc';
-import { readAssetList, resolveAssetBytePath } from '../model';
+import { readAssetList, resolveAssetBytePath, resolveAssetMime } from '../model';
 import { IAssetPickerItems } from '../types';
 
 // 选择器的数据来源：按分类读列表文件（与面板同一套模型），并为每条素材生成候选预览。
@@ -10,12 +10,6 @@ import { IAssetPickerItems } from '../types';
 
 /** 素材列表正文无法解析时抛出的错误文案 */
 const INVALID_PICKER_LIST_MESSAGE = '素材列表格式不正确';
-
-/** 图片候选缩略图的 MIME 类型 */
-const PICKER_IMAGE_MIME = 'image/*';
-
-/** 音频候选试听的 MIME 类型 */
-const PICKER_AUDIO_MIME = 'audio/*';
 
 /**
  * 经资源层读一个分类下某条素材的字节
@@ -78,19 +72,22 @@ async function buildPickerItem(
   if (category.kind === AssetCategoryKind.Animation) return { id: name, label: name, animation: true };
   if (category.kind === AssetCategoryKind.Font) return { id: name, label: name };
 
-  const bytes = await readAssetBytes(access, resolveAssetBytePath(category, name));
+  const path = resolveAssetBytePath(category, name);
+  const bytes = await readAssetBytes(access, path);
 
   if (bytes === undefined) return { id: name, label: name };
 
+  const mime = resolveAssetMime(path, category.kind);
+
   if (category.kind === AssetCategoryKind.Image) {
-    const url = URL.createObjectURL(new Blob([bytes.slice()], { type: PICKER_IMAGE_MIME }));
+    const url = URL.createObjectURL(new Blob([bytes.slice()], { type: mime }));
 
     objectUrls.push(url);
     return { id: name, label: name, thumbnail: url };
   }
 
   if (category.kind === AssetCategoryKind.Audio) {
-    const url = URL.createObjectURL(new Blob([bytes.slice()], { type: PICKER_AUDIO_MIME }));
+    const url = URL.createObjectURL(new Blob([bytes.slice()], { type: mime }));
 
     objectUrls.push(url);
     return { id: name, label: name, audio: url };
