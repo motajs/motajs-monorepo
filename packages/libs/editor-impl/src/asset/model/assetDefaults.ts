@@ -21,6 +21,15 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
+ * 判断一个键是否为会改动对象原型链的危险键
+ * @param key 待判断的键
+ * @returns 为 `__proto__` / `constructor` / `prototype` 之一时为 true
+ */
+function isUnsafeKey(key: string): boolean {
+  return key === '__proto__' || key === 'constructor' || key === 'prototype';
+}
+
+/**
  * 深拷贝一个默认值：数组与对象重建，标量原样返回
  * @param value 待拷贝的值
  * @returns 与入参结构相同的全新值
@@ -30,7 +39,7 @@ function deepCopyValue(value: unknown): unknown {
   if (!isRecord(value)) return value;
 
   const copy: Record<string, unknown> = {};
-  for (const key of Object.keys(value)) copy[key] = deepCopyValue(value[key]);
+  for (const key of Object.keys(value)) if (!isUnsafeKey(key)) copy[key] = deepCopyValue(value[key]);
 
   return copy;
 }
@@ -46,7 +55,7 @@ export function mergeAssetDefaults(defaults: unknown, config: Record<string, unk
   if (!isRecord(defaults)) return result;
 
   for (const key of Object.keys(defaults)) {
-    if (key.startsWith('@')) continue;
+    if (key.startsWith('@') || isUnsafeKey(key)) continue;
 
     const defaultValue = defaults[key];
     const targetValue = result[key];
@@ -75,7 +84,7 @@ export function collectRequiredPaths(defaults: unknown, prefix: string = ''): re
   }
 
   for (const key of Object.keys(defaults)) {
-    if (key.startsWith('@')) continue;
+    if (key.startsWith('@') || isUnsafeKey(key)) continue;
 
     const child = defaults[key];
     if (isRecord(child)) paths.push(...collectRequiredPaths(child, `${prefix}${key}.`));

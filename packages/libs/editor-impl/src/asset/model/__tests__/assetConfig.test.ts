@@ -42,6 +42,15 @@ describe('mergeAssetDefaults', () => {
 
     expect(config).toEqual({ source: 'mine.png' });
   });
+
+  // `__proto__` 等危险键被跳过，合并结果的原型不被改动
+  it('跳过会污染原型的危险键', () => {
+    const defaults = JSON.parse('{"__proto__": {"polluted": true}, "constructor": 1, "read": 2}');
+    const merged = mergeAssetDefaults(defaults, {});
+
+    expect(merged).toEqual({ read: 2 });
+    expect(Object.getPrototypeOf(merged)).toBe(Object.prototype);
+  });
 });
 
 describe('collectRequiredPaths', () => {
