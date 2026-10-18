@@ -1,6 +1,6 @@
 import { IAssetCategory, IMultiSelectItem } from '../react';
 import { ITableRowNode, ITableSchemaNode } from '../shared/schemaForm/types';
-import { AssetTranscodeKind, IAssetAudioTranscodeOptions } from './transcode/types';
+import { AssetTranscodeKind, IAssetAudioTranscodeOptions, IAssetTranscodeSummary } from './transcode/types';
 
 export const enum AssetPanelStatus {
   /** 分类清单为空，面板无法工作 */
@@ -130,6 +130,12 @@ export interface IAssetPanelViewState {
   readonly message?: string;
   /** 是否存在尚未落盘的改动 */
   readonly unsaved: boolean;
+  /** 是否打开瘦身转码弹窗 */
+  readonly transcodeOpen: boolean;
+  /** 是否正在批量转码 */
+  readonly transcoding: boolean;
+  /** 最近一次批量转码的汇总；未转码时为 undefined */
+  readonly transcodeSummary?: IAssetTranscodeSummary;
 }
 
 export interface IAssetTranscodeService {

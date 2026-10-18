@@ -43,6 +43,12 @@ export interface IAssetTranscodeSummary {
   readonly failed: readonly IAssetTranscodeItemResult[];
 }
 
+/** 图片转码后的文件扩展名 */
+export const ASSET_WEBP_EXTENSION = '.webp';
+
+/** 音频转码后的文件扩展名 */
+export const ASSET_WEBM_EXTENSION = '.webm';
+
 /** WebP 质量默认值（0–100） */
 export const ASSET_DEFAULT_WEBP_QUALITY = 80;
 

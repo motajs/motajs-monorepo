@@ -10,7 +10,7 @@ import {
   IResource,
   IUndoContext,
 } from '@motajs/editor-core';
-import { AssetListFormat, IAssetCategory, IAssetEditorCapabilities } from '../react';
+import { AssetCategoryKind, AssetListFormat, IAssetCategory, IAssetEditorCapabilities } from '../react';
 import { parseTableText, serializeTableText, TableTextParseStatus } from '../shared/jsonc';
 import { setByFieldPath } from '../shared/schemaForm/model/fieldPath';
 import { buildTableTree } from '../shared/schemaForm/model/traversal';
@@ -21,14 +21,25 @@ import {
   collectRequiredPaths,
   mergeAssetDefaults,
   readAssetList,
+  renameAssetListEntry,
   resolveAssetBytePath,
   resolveAssetName,
   resolveAssetSchema,
   resolveAssetSchemaPath,
+  resolveOriginPath,
+  resolveTranscodedPath,
   sanitizeAssetFileName,
   validateAssetConfig,
   writeAssetList,
 } from './model';
+import { BrowserAssetTranscodeService } from './transcode';
+import {
+  ASSET_WEBM_EXTENSION,
+  ASSET_WEBP_EXTENSION,
+  IAssetTranscodeItemResult,
+  IAssetTranscodeOptions,
+  IAssetTranscodeSummary,
+} from './transcode/types';
 import {
   AssetPanelMode,
   AssetPanelStatus,
@@ -38,6 +49,7 @@ import {
   IAssetPanel,
   IAssetPanelTarget,
   IAssetPanelViewState,
+  IAssetTranscodeService,
   IAssetUpload,
 } from './types';
 
@@ -205,10 +217,27 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
   /** 配置模式下的校验错误文案；空数组表示校验通过 */
   private configErrors: readonly string[] = [];
 
-  constructor(param: IEditorPanelFactoryParam, capabilities: IAssetEditorCapabilities) {
+  /** 是否打开瘦身转码弹窗 */
+  private transcodeOpen = false;
+
+  /** 是否正在批量转码 */
+  private transcoding = false;
+
+  /** 最近一次批量转码的汇总；未转码时为 undefined */
+  private transcodeSummary: IAssetTranscodeSummary | undefined;
+
+  /** 转码服务；缺省为浏览器实现，装配方可注入替身 */
+  private readonly transcodeService: IAssetTranscodeService;
+
+  constructor(
+    param: IEditorPanelFactoryParam,
+    capabilities: IAssetEditorCapabilities,
+    transcodeService: IAssetTranscodeService = new BrowserAssetTranscodeService(),
+  ) {
     this.id = param.instanceId;
     this.context = param.context;
     this.capabilities = capabilities;
+    this.transcodeService = transcodeService;
 
     const categories = this.categoryList();
 
@@ -222,6 +251,8 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
       rows: [],
       configErrors: [],
       unsaved: false,
+      transcodeOpen: false,
+      transcoding: false,
     });
     this.component = (): ReactElement =>
       createElement(AssetPanelContainer, {
@@ -556,6 +587,95 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
   }
 
   /**
+   * 打开瘦身转码弹窗；当前分类不是图片 / 音频时不做任何事（入口本就禁用）
+   */
+  openTranscode(): void {
+    const category = this.currentCategory();
+
+    if (category === undefined) return;
+    if (category.kind !== AssetCategoryKind.Image && category.kind !== AssetCategoryKind.Audio) return;
+
+    this.transcodeOpen = true;
+    this.publish(this.store.state.status);
+  }
+
+  /**
+   * 关闭瘦身转码弹窗；最近一次转码的汇总保留在界面上
+   */
+  closeTranscode(): void {
+    this.transcodeOpen = false;
+    this.publish(this.store.state.status);
+  }
+
+  /**
+   * 批量转码当前分类的素材：逐项读字节 → 转码 → 覆盖或改名保留 → 改列表文件名 → 登记屏障；
+   * 单项失败不中断整批，结束时汇总成功数与失败明细
+   * @param names 要转码的素材名
+   * @param options 转码参数（质量 / 码率 / 采样率 / 是否覆盖旧文件）
+   */
+  async transcodeAssets(names: readonly string[], options: IAssetTranscodeOptions): Promise<void> {
+    const category = this.currentCategory();
+
+    if (category === undefined) return;
+    if (names.length === 0) return;
+
+    const state = this.stateAt(category.id);
+    const paths = new Set<string>();
+
+    // 目录列不出时按「没有同名文件」处理；后续写入失败会逐项报错
+    try {
+      for (const item of await this.context.listDirectory(category.dir)) paths.add(item.path);
+    } catch {
+      // 忽略列举失败
+    }
+
+    const failed: IAssetTranscodeItemResult[] = [];
+    let succeeded = 0;
+
+    this.transcoding = true;
+    this.publish(this.store.state.status);
+
+    for (const name of names) {
+      const index = state.entries.findIndex((candidate) => candidate.name === name);
+
+      if (index === -1) {
+        failed.push({ name, ok: false, error: '素材不存在' });
+        continue;
+      }
+
+      const entry = state.entries[index];
+      const result = await this.transcodeEntry(category, entry, options, paths);
+
+      if (!result.ok || result.outputPath === undefined) {
+        failed.push({ name, ok: false, error: result.error });
+        continue;
+      }
+
+      succeeded += 1;
+
+      const newFileName = result.outputPath.slice(result.outputPath.lastIndexOf('/') + 1);
+      const newName = resolveAssetName(category, newFileName);
+      const renamed = renameAssetListEntry(category, { name: entry.name, config: entry.config, index }, newName);
+      const entries = state.entries.slice();
+
+      entries[index] = { name: renamed.name, path: result.outputPath, config: renamed.config, exists: true };
+      state.entries = entries;
+      this.registerBarrier({ action: 'transcode', path: result.outputPath });
+    }
+
+    this.transcoding = false;
+    this.transcodeOpen = false;
+
+    if (succeeded > 0) state.unsaved = true;
+
+    this.transcodeSummary = { total: names.length, succeeded, failed };
+
+    const message = failed.length > 0 ? `转码失败：${failed[0].error}` : `转码完成，共 ${succeeded} 个`;
+
+    this.publish(AssetPanelStatus.Ready, message);
+  }
+
+  /**
    * 打开某素材的配置表单：解析 schema、把该素材的配置建成行树并进入配置模式
    *
    * 配置来源按「工程内 `.schema.jsonc` → 注入 schema → 内置 schema」解析；工程内 schema 存在但无效时发布错误
@@ -802,6 +922,73 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
   }
 
   /**
+   * 转码单个素材：读字节 → 调服务 → 按覆盖设置写回；任一步失败都返回失败结果而不抛出
+   * @param category 当前分类
+   * @param entry 要转码的条目
+   * @param options 转码参数
+   * @param paths 分类目录当前已有文件路径集合，写回后就地更新
+   * @returns 该项的转码结果
+   */
+  private async transcodeEntry(
+    category: IAssetCategory,
+    entry: IAssetEntry,
+    options: IAssetTranscodeOptions,
+    paths: Set<string>,
+  ): Promise<IAssetTranscodeItemResult> {
+    let bytes: Uint8Array | undefined;
+
+    try {
+      const resource = await this.context.requestResource(entry.path);
+
+      bytes = resource === null ? undefined : await resource.requestBinary();
+    } catch {
+      bytes = undefined;
+    }
+
+    if (bytes === undefined) return { name: entry.name, ok: false, error: '无法读取文件' };
+
+    const isImage = category.kind === AssetCategoryKind.Image;
+    const extension = isImage ? ASSET_WEBP_EXTENSION : ASSET_WEBM_EXTENSION;
+    const targetPath = resolveTranscodedPath(entry.path, extension);
+    let output: Uint8Array;
+
+    try {
+      output = isImage
+        ? await this.transcodeService.imageToWebp(bytes, options.quality)
+        : await this.transcodeService.audioToWebmOpus(bytes, {
+            bitrate: options.bitrate,
+            sampleRate: options.sampleRate,
+          });
+    } catch (error) {
+      return { name: entry.name, ok: false, error: error instanceof Error ? error.message : '转码失败' };
+    }
+
+    if (targetPath !== entry.path && paths.has(targetPath)) {
+      return { name: entry.name, ok: false, error: '目标文件已存在' };
+    }
+
+    try {
+      if (options.coverOrigin) {
+        await this.context.createResource(targetPath, output);
+        await this.context.deleteResource(entry.path);
+      } else {
+        const originPath = resolveOriginPath(entry.path);
+
+        await this.context.moveResource(entry.path, originPath);
+        await this.context.createResource(targetPath, output);
+        paths.add(originPath);
+      }
+    } catch {
+      return { name: entry.name, ok: false, error: '写入失败，请重试。' };
+    }
+
+    paths.delete(entry.path);
+    paths.add(targetPath);
+
+    return { name: entry.name, ok: true, outputPath: targetPath };
+  }
+
+  /**
    * 由列表条目与分类目录的文件集合算出面板条目：逐条补上字节路径与「文件是否存在」
    * @param category 素材分类
    * @param listEntries 列表文件里的条目
@@ -857,6 +1044,9 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
       error,
       message,
       unsaved: state === undefined ? false : state.unsaved,
+      transcodeOpen: this.transcodeOpen,
+      transcoding: this.transcoding,
+      transcodeSummary: this.transcodeSummary,
     });
   }
 

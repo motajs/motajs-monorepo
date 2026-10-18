@@ -59,6 +59,8 @@ function makeView(overrides: Partial<IAssetPanelViewState>): IAssetPanelViewStat
     rows: [],
     configErrors: [],
     unsaved: false,
+    transcodeOpen: false,
+    transcoding: false,
   };
 
   return { ...base, ...overrides };
