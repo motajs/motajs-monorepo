@@ -1,8 +1,10 @@
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import { EditorCore } from '@motajs/editor-core';
+import { AssetCapabilityProvider } from '@motajs/editor-impl/asset';
 import { tablePanelType } from '@motajs/editor-impl/table';
 import { MemoryBackend } from './backend/memoryBackend';
+import { ASSET_DEMO_CATEGORIES, ASSET_DEMO_FILES, registerAssetDemo } from './demo/assetDemo';
 import { DevCodeEditorProvider } from './demo/devCodeEditor';
 import { registerDevMenu } from './demo/devMenu';
 import { DEMO_PANEL_TYPE, DEMO_SAMPLE_CONTENT, DEMO_SAMPLE_PATH } from './demo/demoPanel';
@@ -32,15 +34,22 @@ backend.seed(TABLE_DEMO_SYSTEM_PREFIX_DATA_PATH, TABLE_DEMO_SYSTEM_PREFIX_DATA);
 backend.seed(TABLE_DEMO_SYSTEM_PREFIX_SCHEMA_PATH, TABLE_DEMO_SAMPLE_SCHEMA);
 backend.seed(TABLE_DEMO_COMMENTED_DATA_PATH, TABLE_DEMO_COMMENTED_DATA);
 backend.seed(TABLE_DEMO_COMMENTED_SCHEMA_PATH, TABLE_DEMO_SAMPLE_SCHEMA);
+for (const file of ASSET_DEMO_FILES) backend.seed(file.path, file.content);
 core.shellSystem.registerPanelType(DEMO_PANEL_TYPE);
 core.shellSystem.registerPanelType(tablePanelType);
 registerDevMenu(core);
+registerAssetDemo(core);
 
 await core.initialize({ fs: backend, maxUndoStep: backend.maxUndoStep, ignore: ['node_modules', '.git'] });
 
 createRoot(document.getElementById('root')!).render(
-  createElement(DevCodeEditorProvider, {
+  createElement(AssetCapabilityProvider, {
+    access: core.resourceSystem,
+    categories: ASSET_DEMO_CATEGORIES,
     capabilities: { tablePanel: createTablePanelOpener(core), tablePresets: TABLE_PRESETS },
-    children: createElement(core.shellSystem.render()),
+    children: createElement(DevCodeEditorProvider, {
+      capabilities: {},
+      children: createElement(core.shellSystem.render()),
+    }),
   }),
 );
