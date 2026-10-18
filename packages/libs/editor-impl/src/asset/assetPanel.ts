@@ -1,6 +1,7 @@
 import './asset.css';
 import { Store } from '@tanstack/store';
 import { useStore } from '@tanstack/react-store';
+import { get } from 'es-toolkit/compat';
 import { createElement, FC, ReactElement } from 'react';
 import {
   IEditorPanel,
@@ -12,14 +13,20 @@ import {
 import { AssetListFormat, IAssetCategory, IAssetEditorCapabilities } from '../react';
 import { parseTableText, serializeTableText, TableTextParseStatus } from '../shared/jsonc';
 import { setByFieldPath } from '../shared/schemaForm/model/fieldPath';
+import { buildTableTree } from '../shared/schemaForm/model/traversal';
+import { ITableRowNode, ITableSchemaNode } from '../shared/schemaForm/types';
 import { AssetPanelView } from './components';
 import { ASSET_MAX_UPLOAD_BYTES } from './constants';
 import {
+  collectRequiredPaths,
   mergeAssetDefaults,
   readAssetList,
   resolveAssetBytePath,
   resolveAssetName,
+  resolveAssetSchema,
+  resolveAssetSchemaPath,
   sanitizeAssetFileName,
+  validateAssetConfig,
   writeAssetList,
 } from './model';
 import {
@@ -164,6 +171,27 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
   /** 当前显示的分类标识；分类清单为空时为 undefined */
   private currentCategoryId: string | undefined;
 
+  /** 当前面板模式（浏览素材 / 配置某个素材） */
+  private mode: AssetPanelMode = AssetPanelMode.Browse;
+
+  /** 配置模式下正在编辑的素材名；不在配置模式时为 undefined */
+  private configName: string | undefined;
+
+  /** 配置模式使用的 schema 节点；不在配置模式时为 undefined */
+  private configSchema: ITableSchemaNode | undefined;
+
+  /** 配置模式下正在编辑的内存配置文档；不在配置模式时为 undefined */
+  private configDocument: Record<string, unknown> | undefined;
+
+  /** 由 defaults 的 `@required` 收集来的必填字段路径 */
+  private configRequiredPaths: readonly string[] = [];
+
+  /** 配置模式下的行树 */
+  private configRows: readonly ITableRowNode[] = [];
+
+  /** 配置模式下的校验错误文案；空数组表示校验通过 */
+  private configErrors: readonly string[] = [];
+
   constructor(param: IEditorPanelFactoryParam, capabilities: IAssetEditorCapabilities) {
     this.id = param.instanceId;
     this.context = param.context;
@@ -249,6 +277,9 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
    * @param categoryId 目标分类标识
    */
   async selectCategory(categoryId: string): Promise<void> {
+    // 切到别的分类时先退回浏览态，免得配置表单停留在上一个分类的素材上（内存改动保留）
+    if (this.mode === AssetPanelMode.Configure) this.closeConfig();
+
     this.currentCategoryId = categoryId;
     await this.loadCategory(categoryId);
   }
@@ -505,6 +536,80 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
   }
 
   /**
+   * 打开某素材的配置表单：解析 schema、把该素材的配置建成行树并进入配置模式
+   *
+   * 配置来源按「工程内 `.schema.jsonc` → 注入 schema → 内置 schema」解析；工程内 schema 存在但无效时发布错误
+   * 并保持浏览态，绝不半截渲染。进入配置态时按 defaults 的 `@required` 收集必填路径并算出校验结果，一并发布。
+   * @param name 要配置的素材名
+   */
+  async openConfig(name: string): Promise<void> {
+    const category = this.currentCategory();
+
+    if (category === undefined) return;
+
+    const state = this.stateAt(category.id);
+    const entry = state.entries.find((candidate) => candidate.name === name);
+
+    if (entry === undefined) return;
+
+    const schemaText = await this.readSchemaText(category);
+    const resolution = resolveAssetSchema(category.kind, schemaText, category.schema);
+
+    if (resolution === null) {
+      this.publish(this.store.state.status, undefined, '该素材的配置无法解析');
+      return;
+    }
+
+    const defaults = await this.readDefaultsValue(category);
+    const document = entry.config ?? {};
+
+    this.configSchema = resolution.schema;
+    this.configDocument = document;
+    this.configRequiredPaths = collectRequiredPaths(defaults);
+    this.mode = AssetPanelMode.Configure;
+    this.configName = name;
+    this.configRows = buildTableTree(resolution.schema, document);
+    this.configErrors = validateAssetConfig(resolution.schema, document, this.configRequiredPaths);
+    this.publish(AssetPanelStatus.Ready);
+  }
+
+  /**
+   * 关闭配置表单、退回素材列表；内存里的配置改动与未保存标记一律保留
+   */
+  closeConfig(): void {
+    this.mode = AssetPanelMode.Browse;
+    this.configName = undefined;
+    this.configSchema = undefined;
+    this.configDocument = undefined;
+    this.configRequiredPaths = [];
+    this.configRows = [];
+    this.configErrors = [];
+    this.publish(this.store.state.status);
+  }
+
+  /**
+   * 改一个配置字段：写进内存配置与条目、登记一条可撤销记录、标记未保存，并重算行树与校验结果
+   * @param path 配置字段路径（`['a']['b']` 形式）
+   * @param value 目标值
+   */
+  applyConfigEdit(path: string, value: unknown): void {
+    const category = this.currentCategory();
+    const name = this.configName;
+    const document = this.configDocument;
+
+    if (category === undefined || name === undefined || document === undefined) return;
+
+    const previous = get(document, path);
+    const next = setByFieldPath(document, path, value);
+
+    this.configDocument = next;
+    this.storeEntryConfig(category.id, name, next);
+    this.registerConfigUndo({ categoryId: category.id, name, path, previous, next: value });
+    this.refreshConfigView();
+    this.publish(AssetPanelStatus.Ready);
+  }
+
+  /**
    * 取装配方注入的分类清单
    * @returns 可用的分类清单；未注入时为空数组
    */
@@ -567,6 +672,29 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
   }
 
   /**
+   * 读取某分类的配置表单 schema 原文
+   * @param category 素材分类
+   * @returns schema 文件原文；文件不存在或读取失败时为 undefined
+   */
+  private async readSchemaText(category: IAssetCategory): Promise<string | undefined> {
+    // 工程内 schema 只是配置来源之一，读不到就回退注入 / 内置：任何失败都归成「没有工程 schema」
+    try {
+      const resource = await this.context.requestResource(resolveAssetSchemaPath(category));
+
+      if (resource === null) return undefined;
+
+      const content = await resource.request();
+
+      if (content === undefined) return undefined;
+      if (typeof content === 'string') return content;
+
+      return new TextDecoder().decode(content);
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
    * 读取某分类的默认值文件正文，供新增条目的默认配置合并
    * @param category 素材分类
    * @returns defaults 文件的正文值；未配置、缺失或无法解析时为 undefined
@@ -593,6 +721,46 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
     } catch {
       return undefined;
     }
+  }
+
+  /**
+   * 把某素材的内存条目配置换成新对象并标记该分类未保存
+   * @param categoryId 分类标识
+   * @param name 素材名
+   * @param config 新的配置对象
+   */
+  private storeEntryConfig(categoryId: string, name: string, config: Record<string, unknown>): void {
+    const state = this.states.get(categoryId);
+
+    if (state === undefined) return;
+
+    const index = state.entries.findIndex((entry) => entry.name === name);
+
+    if (index === -1) return;
+
+    const entry = state.entries[index];
+    const entries = state.entries.slice();
+
+    entries[index] = { name: entry.name, path: entry.path, config, exists: entry.exists };
+    state.entries = entries;
+    state.unsaved = true;
+  }
+
+  /**
+   * 按当前 schema 与内存配置文档重算配置行树与校验结果
+   */
+  private refreshConfigView(): void {
+    const schema = this.configSchema;
+    const document = this.configDocument;
+
+    if (schema === undefined || document === undefined) {
+      this.configRows = [];
+      this.configErrors = [];
+      return;
+    }
+
+    this.configRows = buildTableTree(schema, document);
+    this.configErrors = validateAssetConfig(schema, document, this.configRequiredPaths);
   }
 
   /**
@@ -658,14 +826,14 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
 
     this.store.setState({
       status,
-      mode: previous.mode,
+      mode: this.mode,
       categories: this.categoryList(),
       categoryId: this.currentCategoryId,
       entries: state === undefined ? [] : state.entries,
       selectedName: previous.selectedName,
-      configName: previous.configName,
-      rows: previous.rows,
-      configErrors: previous.configErrors,
+      configName: this.configName,
+      rows: this.configRows,
+      configErrors: this.configErrors,
       error,
       message,
       unsaved: state === undefined ? false : state.unsaved,
@@ -682,41 +850,32 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
   }
 
   /**
-   * 回放一次配置改动的撤销 / 重做：把值应用到内存配置并标记该分类未保存
+   * 回放一次配置改动的撤销 / 重做：把值应用到内存配置；正在配置该素材时一并刷新行树与校验结果
    * @param data 配置改动的撤销载荷
    * @param isUndo 为 true 时应用变更前的值，为 false 时应用变更后的值
    */
   private replayConfigUndo(data: unknown, isUndo: boolean): void {
     if (!isAssetConfigUndoData(data)) return;
 
-    this.setConfigValue(data.categoryId, data.name, data.path, isUndo ? data.previous : data.next);
-  }
-
-  /**
-   * 把某素材某个配置字段改成给定值并标记该分类未保存
-   * @param categoryId 分类标识
-   * @param name 素材名
-   * @param path 配置字段路径（`['a']['b']` 形式）
-   * @param value 目标值
-   */
-  private setConfigValue(categoryId: string, name: string, path: string, value: unknown): void {
-    const state = this.states.get(categoryId);
+    const state = this.states.get(data.categoryId);
 
     if (state === undefined) return;
 
-    const index = state.entries.findIndex((entry) => entry.name === name);
+    const entry = state.entries.find((candidate) => candidate.name === data.name);
 
-    if (index === -1) return;
+    if (entry === undefined) return;
 
-    const entry = state.entries[index];
-    const config = setByFieldPath(entry.config ?? {}, path, value);
-    const entries = state.entries.slice();
+    const config = setByFieldPath(entry.config ?? {}, data.path, isUndo ? data.previous : data.next);
 
-    entries[index] = { name: entry.name, path: entry.path, config, exists: entry.exists };
-    state.entries = entries;
-    state.unsaved = true;
+    this.storeEntryConfig(data.categoryId, data.name, config);
 
-    if (categoryId === this.currentCategoryId) this.publish(AssetPanelStatus.Ready);
+    // 回放的正是当前正在配置的素材：内存配置文档、行树、校验结果一并刷新
+    if (data.categoryId === this.currentCategoryId && data.name === this.configName) {
+      this.configDocument = config;
+      this.refreshConfigView();
+    }
+
+    if (data.categoryId === this.currentCategoryId) this.publish(AssetPanelStatus.Ready);
   }
 
   /**
