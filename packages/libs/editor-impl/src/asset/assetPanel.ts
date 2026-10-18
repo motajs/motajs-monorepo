@@ -986,7 +986,11 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
     }
 
     try {
-      if (options.coverOrigin) {
+      if (targetPath === entry.path) {
+        // 目标与源同路径（源本就带目标扩展名）：就地覆盖写回，
+        // 绝不「先写后删」同一路径——那会把刚写好的产物立即删掉，造成不可恢复的数据丢失
+        await this.context.createResource(entry.path, output);
+      } else if (options.coverOrigin) {
         await this.context.createResource(targetPath, output);
         await this.context.deleteResource(entry.path);
       } else {

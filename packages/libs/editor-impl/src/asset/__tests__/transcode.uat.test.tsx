@@ -288,4 +288,41 @@ describe('素材瘦身转码编排', () => {
     expect(Array.from(await fs.readBinary('content/texture/a.png'))).toEqual([1]);
     expect(await system.undoSystem.undo()).toBe(false);
   });
+
+  // ⑧ 源文件已带目标扩展名（覆盖旧文件）：就地覆盖写回，绝不写后删同一路径（回归 CR-01 数据丢失）
+  it('源文件已是目标扩展名时原地覆盖而不删除源文件', async () => {
+    const fs = new FakeFileSystem();
+    const service = new FakeTranscodeService();
+
+    seedTexture(fs, ['a.webp']);
+    fs.seed('content/texture/a.webp', new Uint8Array([1]));
+
+    const system = await createAssetHarness(fs);
+    const panel = await openPanel(system, service);
+
+    await panel.selectCategory('texture');
+    await panel.transcodeAssets(['a.webp'], imageOptions(true));
+
+    expect(Array.from(await fs.readBinary('content/texture/a.webp'))).toEqual([1, 0x77]);
+    await expect(fs.readBinary('content/texture/a.png')).rejects.toThrow();
+    await expect(fs.readBinary('content/texture/a-origin.webp')).rejects.toThrow();
+  });
+
+  // ⑨ 源文件已带目标扩展名（不覆盖旧文件）：同样就地覆盖，不产生 origin 备份，也不删除源文件（回归 CR-01）
+  it('不覆盖且源已是目标扩展名时原地覆盖并保留源文件', async () => {
+    const fs = new FakeFileSystem();
+    const service = new FakeTranscodeService();
+
+    seedTexture(fs, ['b.webp']);
+    fs.seed('content/texture/b.webp', new Uint8Array([2]));
+
+    const system = await createAssetHarness(fs);
+    const panel = await openPanel(system, service);
+
+    await panel.selectCategory('texture');
+    await panel.transcodeAssets(['b.webp'], imageOptions(false));
+
+    expect(Array.from(await fs.readBinary('content/texture/b.webp'))).toEqual([2, 0x77]);
+    await expect(fs.readBinary('content/texture/b-origin.webp')).rejects.toThrow();
+  });
 });

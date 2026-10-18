@@ -1,8 +1,9 @@
 import { Alert, Button, Spin } from 'antd';
 import { ReactElement } from 'react';
 import { AssetCategoryKind, IAssetCategory } from '../../react';
-import { IAssetTranscodeOptions } from '../transcode/types';
-import { AssetPanelMode, AssetPanelStatus, IAssetPanelViewState, IAssetUpload } from '../types';
+import { resolveTranscodedPath } from '../model';
+import { ASSET_WEBM_EXTENSION, ASSET_WEBP_EXTENSION, IAssetTranscodeOptions } from '../transcode/types';
+import { AssetPanelMode, AssetPanelStatus, IAssetEntry, IAssetPanelViewState, IAssetUpload } from '../types';
 import { AssetConfigView } from './AssetConfigView';
 import { AssetDetail } from './AssetDetail';
 import { AssetGrid } from './AssetGrid';
@@ -95,6 +96,29 @@ function currentCategory(view: IAssetPanelViewState): IAssetCategory | undefined
   if (categoryId === undefined) return undefined;
 
   return view.categories.find((category) => category.id === categoryId);
+}
+
+/**
+ * 取某分类转码后的目标扩展名
+ * @param kind 分类的大分类
+ * @returns 图片为 `.webp`，其余为 `.webm`
+ */
+function transcodeExtension(kind: AssetCategoryKind): string {
+  return kind === AssetCategoryKind.Image ? ASSET_WEBP_EXTENSION : ASSET_WEBM_EXTENSION;
+}
+
+/**
+ * 取出真正可转码的素材名：源文件已是目标扩展名的条目转码是空操作（只会原地重编码），排除掉
+ * @param category 当前分类
+ * @param entries 当前分类的条目
+ * @returns 可提交转码的素材名
+ */
+function transcodeCandidates(category: IAssetCategory, entries: readonly IAssetEntry[]): readonly string[] {
+  const extension = transcodeExtension(category.kind);
+
+  return entries
+    .filter((entry) => resolveTranscodedPath(entry.path, extension) !== entry.path)
+    .map((entry) => entry.name);
 }
 
 /** 未接入选择回调时的缺省实现：不做任何事 */
@@ -254,7 +278,7 @@ export function AssetPanelView(props: IAssetPanelViewProps): ReactElement {
         <TranscodeModal
           open
           kind={category.kind}
-          names={state.entries.map((entry) => entry.name)}
+          names={transcodeCandidates(category, state.entries)}
           busy={state.transcoding}
           onCancel={props.onCancelTranscode ?? noopTranscodeCancel}
           onStart={props.onStartTranscode ?? noopTranscodeStart}
