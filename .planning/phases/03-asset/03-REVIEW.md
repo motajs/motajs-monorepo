@@ -269,3 +269,43 @@ The same script also asserts `sideEffects === false` while the manifest is `["./
 _Reviewed: 2026-10-18_
 _Reviewer: the agent (gsd-code-reviewer)_
 _Depth: deep_
+
+---
+
+## Fix Log (2026-10-18, `/gsd-code-review --fix`)
+
+Applied on branch `editor/core-extract` (15 fix commits + 1 docs commit). Runs executed **in the main checkout** (worktree isolation not used here: `.claude/` is not gitignored in this repo and the gates need the workspace `node_modules`).
+
+**Fixed (16 of 17):**
+
+- **CR-01** — `AssetPanel.transcodeEntry` now overwrites **in place** when the resolved target path equals the source path (never write-then-delete the same file); the transcode candidate list also excludes entries that already carry the target extension. Regression tests added (`transcode.uat.test.tsx` ⑧⑨). `c7cd933`
+- **WR-01** — replace is keyed by the selected entry (`selectedName`), not the uploaded filename. (with WR-02) `a828e99`
+- **WR-02** — oversized uploads surface a message: `onReject` is wired from `AssetFileInput` through `AssetDetail` / `AssetToolbar` to the panel. (with WR-01) `a828e99`
+- **WR-03** — `transcodeService.canTranscode` now gates the toolbar entry (probe cached per kind); when unsupported the entry is disabled and a notice explains why. `80baef2`
+- **WR-04** — `TextareaInput` measures the mounted antd textarea via a ref instead of `window.document`; no `document` dependency remains. `379a059`
+- **WR-05** — `implExports.js` updated for the `./shared` subpath and the intentional `sideEffects: ["./src/**/*.css"]`; `deferred-items.md`'s false claim corrected. `94b02d5`
+- **WR-06 / IN-07** — asset MIME derived from the extension via a single `resolveAssetMime` helper, used by both the preview and the picker. `4078530`
+- **WR-07** — names read from `.list.jsonc` are sanitized before path derivation. `db50623`
+- **WR-08** — the non-cover transcode fails instead of clobbering an existing `-origin` backup. `7451c1b`
+- **IN-01** — `setTarget` applies `assetName`. `8e63cb8`
+- **IN-02** — transcode failure text falls back to a fixed message (`ASSET_TRANSCODE_UNKNOWN_ERROR`) when the reason is missing. `fe9ce8e`
+- **IN-03** — defaults merge/copy skip `__proto__` / `constructor` / `prototype`. `8fcf269`
+- **IN-04** — `writeAssetList` throws when an `ObjectList` category lacks `listKey`. `823f81c`
+- **IN-05** — dropped the empty `IBrowserAssetTranscodeService` interface. `9920951`
+- **IN-08** — corrected the stale audio-transcode test comment. `02de062`
+
+**Deferred (1):**
+
+- **IN-06** — global `save()` writes every loaded category. Fixing it means either scoping the button to the current category (changes behaviour: other categories would never save) or relabelling it (contradicts the UI-SPEC `保存` copy). Neither is "trivial and clearly correct", so it is left as-is.
+
+**Verification:**
+
+- `pnpm --filter @motajs/editor-impl test` — **37 files / 304 tests pass** (baseline 296).
+- `pnpm --filter @motajs/editor-impl typecheck` — exit 0.
+- `coreBoundaries.js` / `coreModuleState.js` / `coreEngineNeutral.js` / `coreImportType.js` / `editorShims.js` — **all exit 0**.
+- `implExports.js` — the `./shared` and `sideEffects` failures are **resolved**; still red for pre-existing reasons only: missing `subpathStatus.json` (the `02-package-boundary-build-scaffolding` phase directory does not exist), the not-yet-created `src/code` / `src/map` / `src/shell` barrels, and the lockfile `react` / `react-dom` / `antd` duplicate realpaths (same lockfile issue as the deferred react-hooks red).
+- `prettier --check` + `eslint` clean on every changed file.
+
+_Fixed: 2026-10-18_
+_Fixer: the agent (gsd-code-fixer)_
+
