@@ -15,6 +15,11 @@ export interface IAssetDetailProps {
    * @param upload 上传的原始文件名与字节
    */
   onReplace?(upload: IAssetUpload): void;
+  /**
+   * 选中的文件被拒绝时向用户提示原因
+   * @param reason 拒绝对用户显示的原因
+   */
+  onReject?(reason: string): void;
   /** 删除当前素材 */
   onDelete?(): void;
   /** 打开当前素材的配置表单 */
@@ -76,6 +81,7 @@ export function AssetDetail(props: IAssetDetailProps): ReactElement {
           onPick={(upload): void => {
             props.onReplace?.(upload);
           }}
+          onReject={props.onReject}
         />
         <Button
           size="small"

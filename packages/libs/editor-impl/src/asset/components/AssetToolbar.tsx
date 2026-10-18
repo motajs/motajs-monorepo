@@ -23,6 +23,11 @@ export interface IAssetToolbarProps {
    * @param upload 上传的原始文件名与字节
    */
   onAddAsset?(upload: IAssetUpload): void;
+  /**
+   * 选中的文件被拒绝时向用户提示原因
+   * @param reason 拒绝对用户显示的原因
+   */
+  onReject?(reason: string): void;
 }
 
 /**
@@ -64,6 +69,7 @@ export function AssetToolbar(props: IAssetToolbarProps): ReactElement {
           onPick={(upload): void => {
             props.onAddAsset?.(upload);
           }}
+          onReject={props.onReject}
         />
       </Space>
     </div>

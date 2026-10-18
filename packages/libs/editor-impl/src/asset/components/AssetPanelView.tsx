@@ -47,6 +47,11 @@ export interface IAssetPanelViewProps {
    */
   onReplace?(upload: IAssetUpload): void;
   /**
+   * 上传的文件被拒绝时向用户提示原因
+   * @param reason 拒绝对用户显示的原因
+   */
+  onReject?(reason: string): void;
+  /**
    * 删除当前选中素材
    * @param name 目标素材名
    */
@@ -197,6 +202,7 @@ function renderContent(props: IAssetPanelViewProps, category: IAssetCategory | u
         entry={selected}
         kind={category.kind}
         onReplace={props.onReplace}
+        onReject={props.onReject}
         onDelete={(): void => {
           if (selected !== undefined) props.onDelete?.(selected.name);
         }}
@@ -237,6 +243,7 @@ export function AssetPanelView(props: IAssetPanelViewProps): ReactElement {
         onSave={props.onSave}
         onTranscode={props.onTranscode}
         onAddAsset={props.onAddAsset}
+        onReject={props.onReject}
       />
       {summary === undefined ? null : (
         <div className="asset-transcode-summary" data-test-id="asset-transcode-summary">

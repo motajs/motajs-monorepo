@@ -132,6 +132,11 @@ interface IAssetPanelContainerProps {
    */
   onReplace(upload: IAssetUpload): void;
   /**
+   * 上传的文件被拒绝时向用户提示原因
+   * @param reason 拒绝对用户显示的原因
+   */
+  onReject(reason: string): void;
+  /**
    * 删除当前选中素材
    * @param name 目标素材名
    */
@@ -176,6 +181,7 @@ function AssetPanelContainer(props: IAssetPanelContainerProps): ReactElement {
     onSave: props.onSave,
     onAddAsset: props.onAddAsset,
     onReplace: props.onReplace,
+    onReject: props.onReject,
     onDelete: props.onDelete,
     onTranscode: props.onTranscode,
     onCancelTranscode: props.onCancelTranscode,
@@ -294,7 +300,13 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
           void this.addAsset(upload);
         },
         onReplace: (upload: IAssetUpload): void => {
-          void this.replaceAsset(upload.name, upload.bytes);
+          // 按当前选中的条目替换，而不是按上传文件名——用户换一个不同名的文件就是「替换」的正常用法
+          const name = this.store.state.selectedName;
+
+          if (name !== undefined) void this.replaceAsset(name, upload.bytes);
+        },
+        onReject: (reason: string): void => {
+          this.publish(this.store.state.status, reason);
         },
         onDelete: (name: string): void => {
           void this.deleteAsset(name);
