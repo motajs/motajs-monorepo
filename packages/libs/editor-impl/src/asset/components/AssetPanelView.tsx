@@ -1,12 +1,14 @@
-import { Button, Spin } from 'antd';
+import { Alert, Button, Spin } from 'antd';
 import { ReactElement } from 'react';
 import { AssetCategoryKind, IAssetCategory } from '../../react';
+import { IAssetTranscodeOptions } from '../transcode/types';
 import { AssetPanelMode, AssetPanelStatus, IAssetPanelViewState, IAssetUpload } from '../types';
 import { AssetConfigView } from './AssetConfigView';
 import { AssetDetail } from './AssetDetail';
 import { AssetGrid } from './AssetGrid';
 import { AssetToolbar } from './AssetToolbar';
 import { CategoryNav } from './CategoryNav';
+import { TranscodeModal } from './TranscodeModal';
 
 export interface IAssetPanelViewProps {
   /** 面板视图状态，由数据层订阅后传入 */
@@ -25,6 +27,14 @@ export interface IAssetPanelViewProps {
   onSave?(): void;
   /** 打开瘦身转码入口 */
   onTranscode?(): void;
+  /** 取消并关闭瘦身转码弹窗 */
+  onCancelTranscode?(): void;
+  /**
+   * 开始批量转码
+   * @param names 选中的素材名
+   * @param options 转码参数
+   */
+  onStartTranscode?(names: readonly string[], options: IAssetTranscodeOptions): void;
   /**
    * 上传一个本地文件为当前分类新增素材
    * @param upload 上传的原始文件名与字节
@@ -98,6 +108,12 @@ function noopConfigSave(): void {}
 
 /** 未接入返回回调时的缺省实现：不做任何事 */
 function noopConfigBack(): void {}
+
+/** 未接入转码取消回调时的缺省实现：不做任何事 */
+function noopTranscodeCancel(): void {}
+
+/** 未接入转码开始回调时的缺省实现：不做任何事 */
+function noopTranscodeStart(): void {}
 
 /**
  * 渲染面板主区：加载 / 错误 / 空都给出固定呈现，就绪时渲染网格与详情
@@ -180,9 +196,15 @@ export function AssetPanelView(props: IAssetPanelViewProps): ReactElement {
     state.status === AssetPanelStatus.Ready &&
     category !== undefined &&
     (category.kind === AssetCategoryKind.Image || category.kind === AssetCategoryKind.Audio);
+  const summary = state.transcodeSummary;
 
   return (
     <div className="asset-panel" data-test-id="asset-panel" data-status={statusToken(state.status)}>
+      {state.message === undefined ? null : (
+        <div className="asset-notice" data-test-id="asset-notice">
+          {state.message}
+        </div>
+      )}
       <AssetToolbar
         title={category === undefined ? '' : category.label}
         unsaved={state.unsaved}
@@ -192,6 +214,26 @@ export function AssetPanelView(props: IAssetPanelViewProps): ReactElement {
         onTranscode={props.onTranscode}
         onAddAsset={props.onAddAsset}
       />
+      {summary === undefined ? null : (
+        <div className="asset-transcode-summary" data-test-id="asset-transcode-summary">
+          <Alert
+            type={summary.failed.length === 0 ? 'success' : 'error'}
+            showIcon
+            title={summary.failed.length === 0 ? '转码完成' : '转码失败'}
+            description={
+              summary.failed.length === 0 ? (
+                <span>{`共 ${summary.succeeded} 个素材已完成转换。`}</span>
+              ) : (
+                <ul className="asset-transcode-summary-list">
+                  {summary.failed.map((item) => (
+                    <li key={item.name}>{`${item.name}：${item.error}`}</li>
+                  ))}
+                </ul>
+              )
+            }
+          />
+        </div>
+      )}
       <div className="asset-body">
         <CategoryNav categories={state.categories} currentId={state.categoryId} onSelect={props.onSelectCategory} />
         {state.mode === AssetPanelMode.Configure ? (
@@ -208,6 +250,16 @@ export function AssetPanelView(props: IAssetPanelViewProps): ReactElement {
           renderContent(props, category)
         )}
       </div>
+      {state.transcodeOpen && category !== undefined ? (
+        <TranscodeModal
+          open
+          kind={category.kind}
+          names={state.entries.map((entry) => entry.name)}
+          busy={state.transcoding}
+          onCancel={props.onCancelTranscode ?? noopTranscodeCancel}
+          onStart={props.onStartTranscode ?? noopTranscodeStart}
+        />
+      ) : null}
     </div>
   );
 }

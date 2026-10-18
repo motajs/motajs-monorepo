@@ -7,3 +7,4 @@ export * from './AssetFileInput';
 export * from './AssetPreview';
 export * from './useAssetObjectUrl';
 export * from './CategoryNav';
+export * from './TranscodeModal';

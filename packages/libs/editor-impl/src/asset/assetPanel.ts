@@ -136,6 +136,16 @@ interface IAssetPanelContainerProps {
    * @param name 目标素材名
    */
   onDelete(name: string): void;
+  /** 打开瘦身转码弹窗 */
+  onTranscode(): void;
+  /** 取消并关闭瘦身转码弹窗 */
+  onCancelTranscode(): void;
+  /**
+   * 开始批量转码
+   * @param names 选中的素材名
+   * @param options 转码参数
+   */
+  onStartTranscode(names: readonly string[], options: IAssetTranscodeOptions): void;
   /** 打开当前选中素材的配置表单 */
   onOpenConfig(): void;
   /**
@@ -167,6 +177,9 @@ function AssetPanelContainer(props: IAssetPanelContainerProps): ReactElement {
     onAddAsset: props.onAddAsset,
     onReplace: props.onReplace,
     onDelete: props.onDelete,
+    onTranscode: props.onTranscode,
+    onCancelTranscode: props.onCancelTranscode,
+    onStartTranscode: props.onStartTranscode,
     onOpenConfig: props.onOpenConfig,
     onChange: props.onChange,
     onBack: props.onBack,
@@ -285,6 +298,11 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
         },
         onDelete: (name: string): void => {
           void this.deleteAsset(name);
+        },
+        onTranscode: (): void => this.openTranscode(),
+        onCancelTranscode: (): void => this.closeTranscode(),
+        onStartTranscode: (names: readonly string[], options: IAssetTranscodeOptions): void => {
+          void this.transcodeAssets(names, options);
         },
         onOpenConfig: (): void => {
           const name = this.store.state.selectedName;
