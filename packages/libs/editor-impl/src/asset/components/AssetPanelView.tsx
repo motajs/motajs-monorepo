@@ -1,7 +1,7 @@
 import { Button, Spin } from 'antd';
 import { ReactElement } from 'react';
 import { AssetCategoryKind, IAssetCategory } from '../../react';
-import { AssetPanelStatus, IAssetPanelViewState } from '../types';
+import { AssetPanelStatus, IAssetPanelViewState, IAssetUpload } from '../types';
 import { AssetDetail } from './AssetDetail';
 import { AssetGrid } from './AssetGrid';
 import { AssetToolbar } from './AssetToolbar';
@@ -24,12 +24,21 @@ export interface IAssetPanelViewProps {
   onSave?(): void;
   /** 打开瘦身转码入口 */
   onTranscode?(): void;
-  /** 上传一个本地文件为当前分类新增素材 */
-  onAddAsset?(): void;
-  /** 用本地文件替换当前选中素材 */
-  onReplace?(): void;
-  /** 删除当前选中素材 */
-  onDelete?(): void;
+  /**
+   * 上传一个本地文件为当前分类新增素材
+   * @param upload 上传的原始文件名与字节
+   */
+  onAddAsset?(upload: IAssetUpload): void;
+  /**
+   * 用本地文件替换当前选中素材
+   * @param upload 上传的原始文件名与字节
+   */
+  onReplace?(upload: IAssetUpload): void;
+  /**
+   * 删除当前选中素材
+   * @param name 目标素材名
+   */
+  onDelete?(name: string): void;
   /** 打开当前选中素材的配置表单 */
   onOpenConfig?(): void;
   /** 重新读取当前分类 */
@@ -130,7 +139,9 @@ function renderContent(props: IAssetPanelViewProps, category: IAssetCategory | u
         entry={selected}
         kind={category.kind}
         onReplace={props.onReplace}
-        onDelete={props.onDelete}
+        onDelete={(): void => {
+          if (selected !== undefined) props.onDelete?.(selected.name);
+        }}
         onOpenConfig={props.onOpenConfig}
         loadBytes={props.loadBytes}
       />

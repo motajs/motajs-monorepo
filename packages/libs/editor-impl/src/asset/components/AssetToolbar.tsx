@@ -1,5 +1,7 @@
 import { Button, Space } from 'antd';
 import { ReactElement } from 'react';
+import { IAssetUpload } from '../types';
+import { AssetFileInput } from './AssetFileInput';
 
 export interface IAssetToolbarProps {
   /** 左侧显示的当前分类名 */
@@ -10,12 +12,17 @@ export interface IAssetToolbarProps {
   readonly disabled: boolean;
   /** 当前分类能否转码；为 false 时禁用「瘦身转码」 */
   readonly transcodeEnabled: boolean;
+  /** 新增素材时可选的扩展名过滤，如 `.png,.jpg`；缺省不限制 */
+  readonly addAccept?: string;
   /** 把未落盘的列表与配置改动写回 */
   onSave?(): void;
   /** 打开瘦身转码入口 */
   onTranscode?(): void;
-  /** 上传一个本地文件为当前分类新增素材 */
-  onAddAsset?(): void;
+  /**
+   * 上传一个本地文件为当前分类新增素材
+   * @param upload 上传的原始文件名与字节
+   */
+  onAddAsset?(upload: IAssetUpload): void;
 }
 
 /**
@@ -48,16 +55,16 @@ export function AssetToolbar(props: IAssetToolbarProps): ReactElement {
         >
           保存
         </Button>
-        <Button
-          size="small"
-          type="primary"
-          autoInsertSpace={false}
+        <AssetFileInput
+          label="新增素材"
+          primary
+          testId="asset-toolbar-add"
+          accept={props.addAccept}
           disabled={props.disabled}
-          data-test-id="asset-toolbar-add"
-          onClick={props.onAddAsset}
-        >
-          新增素材
-        </Button>
+          onPick={(upload): void => {
+            props.onAddAsset?.(upload);
+          }}
+        />
       </Space>
     </div>
   );

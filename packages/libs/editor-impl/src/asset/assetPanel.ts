@@ -102,6 +102,21 @@ interface IAssetPanelContainerProps {
   onSelectAsset(name: string): void;
   /** 把未落盘的列表与配置改动写回 */
   onSave(): void;
+  /**
+   * 上传一个本地文件为当前分类新增素材
+   * @param upload 上传的原始文件名与字节
+   */
+  onAddAsset(upload: IAssetUpload): void;
+  /**
+   * 用本地文件替换当前选中素材
+   * @param upload 上传的原始文件名与字节
+   */
+  onReplace(upload: IAssetUpload): void;
+  /**
+   * 删除当前选中素材
+   * @param name 目标素材名
+   */
+  onDelete(name: string): void;
   /** 重新读取当前分类 */
   onRetry(): void;
 }
@@ -120,6 +135,9 @@ function AssetPanelContainer(props: IAssetPanelContainerProps): ReactElement {
     onSelectCategory: props.onSelectCategory,
     onSelectAsset: props.onSelectAsset,
     onSave: props.onSave,
+    onAddAsset: props.onAddAsset,
+    onReplace: props.onReplace,
+    onDelete: props.onDelete,
     onRetry: props.onRetry,
   });
 }
@@ -186,6 +204,15 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
         },
         onSave: (): void => {
           void this.save();
+        },
+        onAddAsset: (upload: IAssetUpload): void => {
+          void this.addAsset(upload);
+        },
+        onReplace: (upload: IAssetUpload): void => {
+          void this.replaceAsset(upload.name, upload.bytes);
+        },
+        onDelete: (name: string): void => {
+          void this.deleteAsset(name);
         },
         onRetry: (): void => {
           const categoryId = this.currentCategoryId;

@@ -1,7 +1,8 @@
-import { Button } from 'antd';
-import { ReactElement } from 'react';
+import { Button, Modal } from 'antd';
+import { ReactElement, useState } from 'react';
 import { AssetCategoryKind } from '../../react';
-import { IAssetEntry } from '../types';
+import { IAssetEntry, IAssetUpload } from '../types';
+import { AssetFileInput } from './AssetFileInput';
 import { AssetPreview } from './AssetPreview';
 
 export interface IAssetDetailProps {
@@ -9,8 +10,11 @@ export interface IAssetDetailProps {
   readonly entry?: IAssetEntry;
   /** 当前分类的大分类，决定预览形态 */
   readonly kind: AssetCategoryKind;
-  /** 用本地文件替换当前素材 */
-  onReplace?(): void;
+  /**
+   * 用本地文件替换当前素材
+   * @param upload 上传的原始文件名与字节
+   */
+  onReplace?(upload: IAssetUpload): void;
   /** 删除当前素材 */
   onDelete?(): void;
   /** 打开当前素材的配置表单 */
@@ -25,11 +29,17 @@ export interface IAssetDetailProps {
 
 /**
  * 素材详情 / 预览栏：未选中给引导文案，选中后给名称 / 路径 / 缺失提示 / 预览 / 操作行
+ *
+ * 删除前弹 antd `Modal` 二次确认（破坏性按钮标 `danger`）；替换经 `AssetFileInput` 把
+ * 上传的名字与字节交给上层；所有文本经 React 文本节点渲染。
  * @param props 详情 props
  * @returns 详情元素
  */
 export function AssetDetail(props: IAssetDetailProps): ReactElement {
   const entry = props.entry;
+  const confirmingState = useState(false);
+  const confirming = confirmingState[0];
+  const setConfirming = confirmingState[1];
 
   if (entry === undefined) {
     return (
@@ -60,16 +70,62 @@ export function AssetDetail(props: IAssetDetailProps): ReactElement {
         />
       </div>
       <div className="asset-detail-actions">
-        <Button size="small" autoInsertSpace={false} data-test-id="asset-detail-replace" onClick={props.onReplace}>
-          替换
-        </Button>
-        <Button size="small" autoInsertSpace={false} data-test-id="asset-detail-delete" onClick={props.onDelete}>
+        <AssetFileInput
+          label="替换"
+          testId="asset-detail-replace"
+          onPick={(upload): void => {
+            props.onReplace?.(upload);
+          }}
+        />
+        <Button
+          size="small"
+          autoInsertSpace={false}
+          data-test-id="asset-detail-delete"
+          onClick={(): void => setConfirming(true)}
+        >
           删除
         </Button>
         <Button size="small" autoInsertSpace={false} data-test-id="asset-detail-config" onClick={props.onOpenConfig}>
           配置
         </Button>
       </div>
+      {confirming ? (
+        <Modal
+          open
+          title="删除素材"
+          closable={false}
+          maskClosable={false}
+          keyboard={false}
+          onCancel={(): void => setConfirming(false)}
+          footer={
+            <div className="asset-detail-delete-footer">
+              <Button
+                size="small"
+                autoInsertSpace={false}
+                data-test-id="asset-delete-cancel"
+                onClick={(): void => setConfirming(false)}
+              >
+                取消
+              </Button>
+              <Button
+                size="small"
+                type="primary"
+                danger
+                autoInsertSpace={false}
+                data-test-id="asset-delete-confirm"
+                onClick={(): void => {
+                  setConfirming(false);
+                  props.onDelete?.();
+                }}
+              >
+                删除
+              </Button>
+            </div>
+          }
+        >
+          确定要删除该素材吗？此操作不可恢复。
+        </Modal>
+      ) : null}
     </div>
   );
 }
