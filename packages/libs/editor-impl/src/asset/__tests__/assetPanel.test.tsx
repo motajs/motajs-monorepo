@@ -39,7 +39,7 @@ async function openPanel(system: EditorCore): Promise<AssetPanel> {
 }
 
 /**
- * 渲染面板的占位视图并返回其容器
+ * 渲染面板视图并返回其容器
  * @param panel 素材面板实例
  * @returns 渲染容器
  */
@@ -48,7 +48,7 @@ function renderPanel(panel: AssetPanel): HTMLElement {
 }
 
 /**
- * 取占位视图当前的数据状态标记
+ * 取面板视图当前的数据状态标记
  * @param container 渲染容器
  * @returns 状态标记串；未挂载时为空串
  */
@@ -59,12 +59,12 @@ function panelStatus(container: HTMLElement): string {
 }
 
 /**
- * 取占位视图当前列出的条目测试标记（保序）
+ * 取面板视图当前列出的卡片测试标记（保序）
  * @param container 渲染容器
- * @returns 条目测试标记列表
+ * @returns 卡片测试标记列表
  */
 function entryNames(container: HTMLElement): string[] {
-  return Array.from(container.querySelectorAll('[data-test-id^="asset-entry-"]')).map(
+  return Array.from(container.querySelectorAll('button[data-test-id^="asset-card-"]')).map(
     (element) => element.getAttribute('data-test-id') ?? '',
   );
 }
@@ -76,7 +76,7 @@ function entryNames(container: HTMLElement): string[] {
  * @returns 该条目标记为存在时为 true
  */
 function entryExists(container: HTMLElement, name: string): boolean {
-  const node = container.querySelector(`[data-test-id="asset-entry-${name}"]`);
+  const node = container.querySelector(`button[data-test-id="asset-card-${name}"]`);
 
   return node !== null && node.getAttribute('data-exists') === 'true';
 }
@@ -105,7 +105,7 @@ describe('素材面板数据层', () => {
     const container = renderPanel(panel);
 
     expect(panelStatus(container)).toBe('ready');
-    expect(entryNames(container)).toEqual(['asset-entry-hero', 'asset-entry-foe']);
+    expect(entryNames(container)).toEqual(['asset-card-hero', 'asset-card-foe']);
   });
 
   // 条目已登记但字节缺失：该条 exists 为 false，其余为 true

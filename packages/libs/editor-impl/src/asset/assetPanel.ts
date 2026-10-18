@@ -1,3 +1,4 @@
+import './asset.css';
 import { Store } from '@tanstack/store';
 import { useStore } from '@tanstack/react-store';
 import { createElement, FC, ReactElement } from 'react';
@@ -11,6 +12,7 @@ import {
 import { IAssetCategory, IAssetEditorCapabilities } from '../react';
 import { parseTableText, serializeTableText, TableTextParseStatus } from '../shared/jsonc';
 import { setByFieldPath } from '../shared/schemaForm/model/fieldPath';
+import { AssetPanelView } from './components';
 import { readAssetList, resolveAssetBytePath, writeAssetList } from './model';
 import {
   AssetPanelMode,
@@ -24,7 +26,7 @@ import {
 } from './types';
 
 // 素材面板的数据层：按分类读列表与目录、把改动留在内存、点保存才写回（逐字保留 .jsonc 系统前缀），
-// 字节改动登记成带屏障标记的撤销条目。真正的三栏界面在 03-11 接上，这里先返回一个占位组件。
+// 字节改动登记成带屏障标记的撤销条目。界面由同目录的 AssetPanelView 渲染，本类只做数据与状态接线。
 
 /** 一个分类的内部状态 */
 interface IAssetPanelState {
@@ -54,12 +56,6 @@ interface IAssetConfigUndoData {
   readonly next: unknown;
 }
 
-/** 占位视图的 props */
-interface IAssetPanelViewProps {
-  /** 面板视图状态的订阅源 */
-  readonly store: Store<IAssetPanelViewState>;
-}
-
 /**
  * 判断一个未知值是否为配置改动的撤销载荷
  * @param value 待判断的值
@@ -72,55 +68,48 @@ function isAssetConfigUndoData(value: unknown): value is IAssetConfigUndoData {
   return typeof value.categoryId === 'string' && typeof value.name === 'string' && typeof value.path === 'string';
 }
 
-/**
- * 取面板数据状态对应的稳定标记串，供占位视图与测试观察
- * @param status 面板数据状态
- * @returns 状态的稳定标记串
- */
-function statusToken(status: AssetPanelStatus): string {
-  if (status === AssetPanelStatus.NoCategory) return 'no-category';
-  if (status === AssetPanelStatus.Loading) return 'loading';
-  if (status === AssetPanelStatus.Ready) return 'ready';
-  if (status === AssetPanelStatus.Empty) return 'empty';
-
-  return 'error';
+/** 面板容器组件的 props：订阅源 + 由面板类转发过来的回调 */
+interface IAssetPanelContainerProps {
+  /** 面板视图状态的订阅源 */
+  readonly store: Store<IAssetPanelViewState>;
+  /**
+   * 读取某素材字节，供预览使用
+   * @param path 素材字节文件路径
+   * @returns 字节；文件不存在或读取失败时为 undefined
+   */
+  loadBytes(path: string): Promise<Uint8Array | undefined>;
+  /**
+   * 切换当前分类
+   * @param categoryId 目标分类标识
+   */
+  onSelectCategory(categoryId: string): void;
+  /**
+   * 选中某个素材
+   * @param name 目标素材名
+   */
+  onSelectAsset(name: string): void;
+  /** 把未落盘的列表与配置改动写回 */
+  onSave(): void;
+  /** 重新读取当前分类 */
+  onRetry(): void;
 }
 
 /**
- * 把面板视图状态概括为一段文案
- * @param view 面板视图状态
- * @returns 描述当前分类与错误的文案
+ * 素材面板容器组件：订阅视图状态并渲染三栏界面
+ * @param props 容器组件 props
+ * @returns 面板视图元素
  */
-function describeAssetPanel(view: IAssetPanelViewState): string {
-  const category = view.categories.find((item) => item.id === view.categoryId);
-  const label = category === undefined ? '素材' : category.label;
-
-  if (view.error !== undefined) return `${label}：${view.error}`;
-
-  return label;
-}
-
-/**
- * 素材面板的占位视图：渲染状态标记与条目占位，03-11 会换成真正的三栏界面
- * @param props 占位视图 props
- * @returns 占位容器元素
- */
-function AssetPanelPlaceholder(props: IAssetPanelViewProps): ReactElement {
+function AssetPanelContainer(props: IAssetPanelContainerProps): ReactElement {
   const view = useStore(props.store);
-  const entries = view.entries.map((entry) =>
-    createElement(
-      'div',
-      { key: entry.name, 'data-test-id': `asset-entry-${entry.name}`, 'data-exists': String(entry.exists) },
-      entry.name,
-    ),
-  );
 
-  return createElement(
-    'div',
-    { 'data-test-id': 'asset-panel', 'data-status': statusToken(view.status) },
-    describeAssetPanel(view),
-    entries,
-  );
+  return createElement(AssetPanelView, {
+    view,
+    loadBytes: props.loadBytes,
+    onSelectCategory: props.onSelectCategory,
+    onSelectAsset: props.onSelectAsset,
+    onSave: props.onSave,
+    onRetry: props.onRetry,
+  });
 }
 
 export class AssetPanel implements IEditorPanel, IAssetPanel {
@@ -163,7 +152,35 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
       configErrors: [],
       unsaved: false,
     });
-    this.component = (): ReactElement => createElement(AssetPanelPlaceholder, { store: this.store });
+    this.component = (): ReactElement =>
+      createElement(AssetPanelContainer, {
+        store: this.store,
+        loadBytes: async (path: string): Promise<Uint8Array | undefined> => {
+          const resource = await this.context.requestResource(path);
+
+          if (resource === null) return undefined;
+
+          try {
+            return await resource.requestBinary();
+          } catch {
+            return undefined;
+          }
+        },
+        onSelectCategory: (categoryId: string): void => {
+          void this.selectCategory(categoryId);
+        },
+        onSelectAsset: (name: string): void => {
+          this.store.setState({ ...this.store.state, selectedName: name });
+        },
+        onSave: (): void => {
+          void this.save();
+        },
+        onRetry: (): void => {
+          const categoryId = this.currentCategoryId;
+
+          if (categoryId !== undefined) void this.loadCategory(categoryId);
+        },
+      });
   }
 
   async initialize(): Promise<void> {}
