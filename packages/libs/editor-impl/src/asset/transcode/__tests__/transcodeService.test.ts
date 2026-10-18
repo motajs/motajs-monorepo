@@ -24,7 +24,7 @@ describe('BrowserAssetTranscodeService 能力探测', () => {
     await expect(service.canTranscode(AssetTranscodeKind.ImageWebp)).resolves.toBe(false);
   });
 
-  // 覆盖音频转码在接入真实实现之前始终不可用
+  // 覆盖音频转码在 jsdom 下不可用：环境没有 WebCodecs，canEncode('opus') 返回 false
   it('canTranscode 对音频转码返回 false', async () => {
     await expect(service.canTranscode(AssetTranscodeKind.AudioOpus)).resolves.toBe(false);
   });
