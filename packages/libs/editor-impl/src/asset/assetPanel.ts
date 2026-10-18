@@ -34,6 +34,7 @@ import {
 } from './model';
 import { BrowserAssetTranscodeService } from './transcode';
 import {
+  ASSET_TRANSCODE_UNKNOWN_ERROR,
   ASSET_WEBM_EXTENSION,
   ASSET_WEBP_EXTENSION,
   AssetTranscodeKind,
@@ -728,7 +729,8 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
 
     this.transcodeSummary = { total: names.length, succeeded, failed };
 
-    const message = failed.length > 0 ? `转码失败：${failed[0].error}` : `转码完成，共 ${succeeded} 个`;
+    const message =
+      failed.length > 0 ? `转码失败：${failed[0].error ?? ASSET_TRANSCODE_UNKNOWN_ERROR}` : `转码完成，共 ${succeeded} 个`;
 
     this.publish(AssetPanelStatus.Ready, message);
   }

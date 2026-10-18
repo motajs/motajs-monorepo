@@ -2,7 +2,12 @@ import { Alert, Button, Spin } from 'antd';
 import { ReactElement } from 'react';
 import { AssetCategoryKind, IAssetCategory } from '../../react';
 import { resolveTranscodedPath } from '../model';
-import { ASSET_WEBM_EXTENSION, ASSET_WEBP_EXTENSION, IAssetTranscodeOptions } from '../transcode/types';
+import {
+  ASSET_TRANSCODE_UNKNOWN_ERROR,
+  ASSET_WEBM_EXTENSION,
+  ASSET_WEBP_EXTENSION,
+  IAssetTranscodeOptions,
+} from '../transcode/types';
 import { AssetPanelMode, AssetPanelStatus, IAssetEntry, IAssetPanelViewState, IAssetUpload } from '../types';
 import { AssetConfigView } from './AssetConfigView';
 import { AssetDetail } from './AssetDetail';
@@ -274,7 +279,7 @@ export function AssetPanelView(props: IAssetPanelViewProps): ReactElement {
               ) : (
                 <ul className="asset-transcode-summary-list">
                   {summary.failed.map((item) => (
-                    <li key={item.name}>{`${item.name}：${item.error}`}</li>
+                    <li key={item.name}>{`${item.name}：${item.error ?? ASSET_TRANSCODE_UNKNOWN_ERROR}`}</li>
                   ))}
                 </ul>
               )

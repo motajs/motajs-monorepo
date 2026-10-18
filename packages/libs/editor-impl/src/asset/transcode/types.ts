@@ -49,6 +49,9 @@ export const ASSET_WEBP_EXTENSION = '.webp';
 /** 音频转码后的文件扩展名 */
 export const ASSET_WEBM_EXTENSION = '.webm';
 
+/** 转码失败但没有给出原因时的兜底文案 */
+export const ASSET_TRANSCODE_UNKNOWN_ERROR = '未知错误';
+
 /** WebP 质量默认值（0–100） */
 export const ASSET_DEFAULT_WEBP_QUALITY = 80;
 
