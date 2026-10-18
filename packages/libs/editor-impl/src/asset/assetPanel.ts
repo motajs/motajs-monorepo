@@ -1,7 +1,13 @@
 import { Store } from '@tanstack/store';
 import { useStore } from '@tanstack/react-store';
 import { createElement, FC, ReactElement } from 'react';
-import { IEditorPanel, IEditorPanelContext, IEditorPanelFactoryParam, IResource, IUndoContext } from '@motajs/editor-core';
+import {
+  IEditorPanel,
+  IEditorPanelContext,
+  IEditorPanelFactoryParam,
+  IResource,
+  IUndoContext,
+} from '@motajs/editor-core';
 import { IAssetCategory, IAssetEditorCapabilities } from '../react';
 import { parseTableText, serializeTableText, TableTextParseStatus } from '../shared/jsonc';
 import { setByFieldPath } from '../shared/schemaForm/model/fieldPath';
@@ -240,33 +246,42 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
     state.token = token;
     this.publish(AssetPanelStatus.Loading);
 
-    // 资源读取失败是行为关键路径：落回固定错误态而非抛穿面板（T-03-30）
+    // 资源层读不到的文件会抛错、无法区分「不存在」与「读取失败」，故先列目录核对列表文件是否存在（缺失按空分类）
+    // 读取失败是行为关键路径：落回固定错误态而非抛穿面板（T-03-30）
     try {
-      const resource = await this.context.requestResource(category.listPath);
+      const directoryEntries = await this.context.listDirectory(category.dir);
 
       if (state.token !== token) return;
 
-      const text = await this.readListText(resource);
+      const paths = new Set<string>();
 
-      if (state.token !== token) return;
+      for (const entry of directoryEntries) paths.add(entry.path);
 
-      if (text === undefined) {
+      if (paths.has(category.listPath)) {
+        const text = await this.readListText(await this.context.requestResource(category.listPath));
+
+        if (state.token !== token) return;
+
+        if (text === undefined) {
+          state.prefix = '';
+          state.listDocument = undefined;
+          state.entries = [];
+        } else {
+          const parsed = parseTableText(text);
+
+          if (parsed.status !== TableTextParseStatus.Conforming) {
+            this.setError(categoryId, '列表文件内容无法解析。');
+            return;
+          }
+
+          state.prefix = parsed.prefix;
+          state.listDocument = parsed.value;
+          state.entries = this.buildEntries(category, readAssetList(category, parsed.value), paths);
+        }
+      } else {
         state.prefix = '';
         state.listDocument = undefined;
         state.entries = [];
-      } else {
-        const parsed = parseTableText(text);
-
-        if (parsed.status !== TableTextParseStatus.Conforming) {
-          this.setError(categoryId, '列表文件内容无法解析。');
-          return;
-        }
-
-        state.prefix = parsed.prefix;
-        state.listDocument = parsed.value;
-        state.entries = await this.buildEntries(category, readAssetList(category, parsed.value));
-
-        if (state.token !== token) return;
       }
 
       this.publish(state.entries.length === 0 ? AssetPanelStatus.Empty : AssetPanelStatus.Ready);
@@ -372,22 +387,17 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
   }
 
   /**
-   * 由列表条目与分类目录算出面板条目：逐条补上字节路径与「文件是否存在」
+   * 由列表条目与分类目录的文件集合算出面板条目：逐条补上字节路径与「文件是否存在」
    * @param category 素材分类
    * @param listEntries 列表文件里的条目
-   * @returns 面板条目；列表为空时不读目录
+   * @param paths 该分类目录下的文件路径集合
+   * @returns 面板条目
    */
-  private async buildEntries(
+  private buildEntries(
     category: IAssetCategory,
     listEntries: readonly IAssetListEntry[],
-  ): Promise<readonly IAssetEntry[]> {
-    if (listEntries.length === 0) return [];
-
-    const directoryEntries = await this.context.listDirectory(category.dir);
-    const paths = new Set<string>();
-
-    for (const entry of directoryEntries) paths.add(entry.path);
-
+    paths: ReadonlySet<string>,
+  ): readonly IAssetEntry[] {
     return listEntries.map((entry) => {
       const path = resolveAssetBytePath(category, entry.name);
 
