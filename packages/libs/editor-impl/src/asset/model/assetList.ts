@@ -8,6 +8,9 @@ import { sanitizeAssetFileName } from './assetPaths';
 /** 列表正文格式不正确时抛出的错误文案：容器形态与分类约定不符 */
 const INVALID_ASSET_LIST_MESSAGE = '素材列表格式不正确';
 
+/** `ObjectList` 分类缺少数组容器键时抛出的错误文案 */
+const MISSING_LIST_KEY_MESSAGE = '素材列表缺少容器键定义';
+
 /** `ObjectList` 条目里存文件名的默认键名 */
 const DEFAULT_SOURCE_FIELD = 'source';
 
@@ -119,9 +122,13 @@ function writeObjectList(
 ): Record<string, unknown> {
   const sourceField = category.sourceField ?? DEFAULT_SOURCE_FIELD;
   const listKey = category.listKey;
+
+  // 读侧在缺 listKey 时会抛错；写侧也必须显式失败，否则会静默写出一份没被改动的文档
+  if (listKey === undefined) throw new Error(MISSING_LIST_KEY_MESSAGE);
+
   const base: Record<string, unknown> = isRecord(previousDocument) ? { ...previousDocument } : {};
 
-  if (listKey !== undefined) base[listKey] = entries.map((entry) => entry.config ?? { [sourceField]: entry.name });
+  base[listKey] = entries.map((entry) => entry.config ?? { [sourceField]: entry.name });
 
   return base;
 }

@@ -108,6 +108,13 @@ describe('writeAssetList', () => {
 
     expect(writeAssetList(textureCategory, entries, null)).toEqual({ textures: [{ source: 'a.png' }] });
   });
+
+  // ObjectList 分类缺 listKey 时写回抛错，而不是静默写出一份未改动的文档
+  it('ObjectList 缺 listKey 时抛错', () => {
+    const missingKeyCategory: IAssetCategory = { ...textureCategory, listKey: undefined };
+
+    expect(() => writeAssetList(missingKeyCategory, [], {})).toThrow('素材列表缺少容器键定义');
+  });
 });
 
 describe('readAssetList / writeAssetList round-trip', () => {
