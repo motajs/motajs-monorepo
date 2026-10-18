@@ -55,6 +55,7 @@ catalog:
   json5: 2.2.3
   jszip: ^3.10.1
   lodash-es: ^4.17.22
+  mediabunny: 1.61.6
   memfs: ^4.51.1
   mime: ^4.1.0
   monaco-editor: 0.56.0

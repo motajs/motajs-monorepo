@@ -45,6 +45,7 @@
     "es-toolkit": "catalog:default",
     "json-schema-typed": "catalog:default",
     "json5": "catalog:",
+    "mediabunny": "catalog:default",
     "ts-pattern": "catalog:default"
   },
   "devDependencies": {
