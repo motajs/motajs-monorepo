@@ -6,9 +6,7 @@ import { AssetTranscodeKind, IAssetAudioTranscodeOptions } from './types';
 // 浏览器侧的转码实现：图片走 OffscreenCanvas 原生编码，音频走 Mediabunny 的 WebM/Opus 转码；
 // 实现不持有状态、也不在类里构造其它服务，面板只依赖 IAssetTranscodeService，测试可注入替身。
 
-export interface IBrowserAssetTranscodeService extends IAssetTranscodeService {}
-
-export class BrowserAssetTranscodeService implements IBrowserAssetTranscodeService {
+export class BrowserAssetTranscodeService implements IAssetTranscodeService {
   /**
    * 探测当前环境能否执行指定种类的转码
    * @param kind 要探测的转码种类
