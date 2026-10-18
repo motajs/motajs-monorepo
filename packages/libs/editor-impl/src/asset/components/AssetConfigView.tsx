@@ -54,7 +54,7 @@ export function AssetConfigView(props: IAssetConfigViewProps): ReactElement {
           <Alert
             type="error"
             showIcon
-            message="配置校验未通过"
+            title="配置校验未通过"
             description={
               <ul className="asset-config-error-list">
                 {props.errors.map((error) => (
