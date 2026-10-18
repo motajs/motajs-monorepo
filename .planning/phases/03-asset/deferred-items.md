@@ -20,3 +20,30 @@ Out-of-scope discoveries surfaced while executing plans. Not fixed here — logg
 - **Symptom:** on the first full-suite run, `表格 schema 模式与工具栏 > schema 目标下不显示「编辑 Schema」按钮并渲染提示条` timed out at the 5000 ms default under parallel contention (other heavy table suites ran concurrently). The second full-suite run passed 32 files / 253 tests with no failure; the file also passes in isolation (12/12).
 - **Why deferred:** the timed-out file is a table test, untouched by this plan; the failure is load-dependent, not deterministic. Same class as the flake already recorded against the editor app's `ternDeclaration.test.ts`.
 - **Verification that it is not caused by this plan:** the asset tests themselves pass in isolation and in-suite; a fresh full run is green.
+
+## From 03-17 (dev-host wiring + gate sweep)
+
+The 03-17 close-out gate sweep ran the three root commands for the first time in this phase. All three are red, and all three are outside 03-17's file scope (none of the failing files is touched by 03-17).
+
+### Root `pnpm test` red in `@motajs/react-hooks` only
+
+- **Found during:** 03-17 Task 3 sweep (`pnpm -r --no-bail run test`).
+- **Symptom:** `lib/core/common.test.tsx` and `lib/browser/serviceWorker.test.tsx` fail at import with `Incompatible React versions: react 19.2.3 / react-dom 19.3.0`; the other five tests in the package never start. Every other test package passes (file2x 14, h5animate 202, editor-core 94, packer 94, editor-impl 296, editor-dev 24).
+- **Root cause:** the committed `pnpm-lock.yaml` pins `packages/libs/react-hooks` to `react: 19.2.3` and `react-dom: 19.3.0(react@19.2.3)` — a lockfile-level mismatch (the catalog declares `react`/`react-dom` as `^19.2.3`, both satisfiable by 19.3.0).
+- **Why deferred:** fixing it needs a dependency / lockfile change (catalog pin or re-resolution), which is out of 03-17's scope and requires an explicit dependency decision.
+- **Verification that it is not caused by this plan:** `git show f49f7b5:pnpm-lock.yaml` (the base commit) already contains the same `react: 19.2.3` / `react-dom: 19.3.0(react@19.2.3)` pair for the `react-hooks` importer; 03-17 touches neither `react-hooks` nor the lockfile.
+
+### Root `pnpm typecheck` red in the legacy `@motajs/editor` app only
+
+- **Found during:** 03-17 Task 3 sweep (`pnpm typecheck`).
+- **Symptom:** `packages/apps/editor` reports many `TS18046 / TS2322 / TS7006` errors (e.g. `'content' is of type 'unknown'`) plus three `TS6133` unused-import errors it re-surfaces from `libs/editor-impl/src/table/tablePanel.ts`. `@motajs/editor-core`, `@motajs/editor-impl` and `@motajs/editor-dev` all typecheck with exit 0.
+- **Root cause:** the legacy `@motajs/editor` app does not compile since the 02.1 resource-layer refactor — recorded as known in `.planning/phases/01.1-dev-host/01.1-RESEARCH.md` ("现有 editor 无法编译（旧里程碑遗留）").
+- **Why deferred:** repairing the legacy app is far outside 03-17's scope and is a migration-phase task.
+- **Verification that it is not caused by this plan:** the failing files predate this plan (`ResourcesWorkspace/index.tsx` last changed in 05.2-03; 03-17 changes only `editor-dev` and `.planning`).
+
+### Root `pnpm lint` red with 8 prettier errors from earlier plans
+
+- **Found during:** 03-17 Task 3 sweep (`pnpm lint`).
+- **Symptom:** 8 errors (`prettier/prettier`) at `packages/libs/editor-core/src/resource/__tests__/fileIndex.test.ts` (4), `packages/libs/editor-impl/src/table/__tests__/refreshIdentity.uat.test.tsx` (1), `packages/libs/editor-impl/src/table/tablePanel.ts` (1) and `scripts/verify/coreFsSurface.js` (2).
+- **Why deferred:** all eight files come from earlier plans in this effort; 03-17 adds no lint error (its own new files pass `eslint` and `prettier --check`).
+- **Verification that it is not caused by this plan:** `pnpm exec eslint packages/apps/editor-dev/src/demo/assetDemo.ts packages/apps/editor-dev/src/main.tsx packages/apps/editor-dev/src/__tests__/devHostAsset.test.tsx` exits 0 and `prettier --write` leaves all three unchanged.
