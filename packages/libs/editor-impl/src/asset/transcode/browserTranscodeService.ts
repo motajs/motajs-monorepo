@@ -1,12 +1,10 @@
 import { IAssetTranscodeService } from '../types';
+import { canUseAudioTranscode, transcodeAudioToWebmOpus } from './audioOpus';
 import { canUseImageTranscode, transcodeImageToWebp } from './imageWebp';
-import { AssetTranscodeKind } from './types';
+import { AssetTranscodeKind, IAssetAudioTranscodeOptions } from './types';
 
-// 浏览器侧的转码实现骨架：图片走 OffscreenCanvas 原生编码，音频等 03-15 接入真实依赖后再补。
+// 浏览器侧的转码实现：图片走 OffscreenCanvas 原生编码，音频走 Mediabunny 的 WebM/Opus 转码；
 // 实现不持有状态、也不在类里构造其它服务，面板只依赖 IAssetTranscodeService，测试可注入替身。
-
-/** 音频转码尚未接入真实实现时的错误文案 */
-const AUDIO_TRANSCODE_UNSUPPORTED_MESSAGE = '当前环境不支持音频转码';
 
 export interface IBrowserAssetTranscodeService extends IAssetTranscodeService {}
 
@@ -18,6 +16,7 @@ export class BrowserAssetTranscodeService implements IBrowserAssetTranscodeServi
    */
   async canTranscode(kind: AssetTranscodeKind): Promise<boolean> {
     if (kind === AssetTranscodeKind.ImageWebp) return canUseImageTranscode();
+    if (kind === AssetTranscodeKind.AudioOpus) return canUseAudioTranscode();
 
     return false;
   }
@@ -33,10 +32,12 @@ export class BrowserAssetTranscodeService implements IBrowserAssetTranscodeServi
   }
 
   /**
-   * 把音频字节转码为 WebM 容器中的 Opus；真实实现随音频依赖在 03-15 接入
+   * 把音频字节转码为 WebM 容器中的 Opus
+   * @param bytes 原始音频字节
+   * @param options 音频转码参数（码率 / 采样率）
    * @returns 转码后的 WebM 字节
    */
-  async audioToWebmOpus(): Promise<Uint8Array> {
-    throw new Error(AUDIO_TRANSCODE_UNSUPPORTED_MESSAGE);
+  audioToWebmOpus(bytes: Uint8Array, options: IAssetAudioTranscodeOptions): Promise<Uint8Array> {
+    return transcodeAudioToWebmOpus(bytes, options);
   }
 }
