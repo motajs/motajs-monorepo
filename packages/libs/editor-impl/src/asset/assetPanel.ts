@@ -375,6 +375,7 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
 
   setTarget(target: IAssetPanelTarget): void {
     if (target.categoryId !== undefined) this.currentCategoryId = target.categoryId;
+    if (target.assetName !== undefined) this.store.setState({ ...this.store.state, selectedName: target.assetName });
   }
 
   /**
