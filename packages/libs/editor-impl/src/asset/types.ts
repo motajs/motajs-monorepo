@@ -1,4 +1,4 @@
-import { IAssetCategory } from '../react';
+import { IAssetCategory, IMultiSelectItem } from '../react';
 import { ITableRowNode, ITableSchemaNode } from '../shared/schemaForm/types';
 import { AssetTranscodeKind, IAssetAudioTranscodeOptions } from './transcode/types';
 
@@ -56,6 +56,13 @@ export interface IAssetListEntry {
   readonly config?: Record<string, unknown>;
   /** 该条目在列表原文中的序号，写回时据此保序 */
   readonly index: number;
+}
+
+export interface IAssetPickerItems {
+  /** 选择器候选项列表（图片带缩略图、音频带试听地址、动画带预览提示） */
+  readonly items: readonly IMultiSelectItem[];
+  /** 本次创建的 blob: 地址集合，供调用方在弹窗结束时回收 */
+  readonly objectUrls: readonly string[];
 }
 
 export interface IAssetSchemaResolution {

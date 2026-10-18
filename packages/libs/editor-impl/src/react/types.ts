@@ -21,6 +21,10 @@ export interface IMultiSelectItem {
   readonly label: string;
   /** 选项的缩略图地址（素材选择时使用）；无缩略图时为 undefined */
   readonly thumbnail?: string;
+  /** 选项的音频试听地址（素材选择时使用）；存在时选择器渲染内联试听 */
+  readonly audio?: string;
+  /** 选项是否有动画预览；为 true 时选择器渲染动画预览提示 */
+  readonly animation?: boolean;
 }
 
 export interface IMultiSelectOpenRequest {
