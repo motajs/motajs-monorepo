@@ -1055,6 +1055,11 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
       } else {
         const originPath = resolveOriginPath(entry.path);
 
+        // 保留文件已存在时不做移动：moveResource 会先删目标，贸然移动会覆盖掉先前的 origin 备份
+        if (paths.has(originPath)) {
+          return { name: entry.name, ok: false, error: '保留文件已存在' };
+        }
+
         await this.context.moveResource(entry.path, originPath);
         await this.context.createResource(targetPath, output);
         paths.add(originPath);

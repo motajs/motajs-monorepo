@@ -325,4 +325,28 @@ describe('素材瘦身转码编排', () => {
     expect(Array.from(await fs.readBinary('content/texture/b.webp'))).toEqual([2, 0x77]);
     await expect(fs.readBinary('content/texture/b-origin.webp')).rejects.toThrow();
   });
+
+  // ⑩ 不覆盖且 origin 文件已存在：该项失败、既有备份与源文件都不被改写（回归 WR-08）
+  it('保留文件已存在时不覆盖既有备份', async () => {
+    const fs = new FakeFileSystem();
+    const service = new FakeTranscodeService();
+
+    seedTexture(fs, ['a.png']);
+    fs.seed('content/texture/a.png', new Uint8Array([1]));
+    fs.seed('content/texture/a-origin.png', new Uint8Array([9]));
+
+    const system = await createAssetHarness(fs);
+    const panel = await openPanel(system, service);
+
+    await panel.selectCategory('texture');
+    await panel.transcodeAssets(['a.png'], imageOptions(false));
+
+    expect(Array.from(await fs.readBinary('content/texture/a.png'))).toEqual([1]);
+    expect(Array.from(await fs.readBinary('content/texture/a-origin.png'))).toEqual([9]);
+    await expect(fs.readBinary('content/texture/a.webp')).rejects.toThrow();
+
+    const container = renderPanel(panel);
+
+    expect(container.textContent).toContain('保留文件已存在');
+  });
 });
