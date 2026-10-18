@@ -5,7 +5,7 @@ import {
   ITableCapabilitiesProviderProps,
   ITableEditorCapabilities,
 } from '../capabilities';
-import { TableCapabilitiesContext } from '../capabilitiesContext';
+import { TableCapabilitiesContext, useTableCapabilities } from '../capabilitiesContext';
 import { IMultiSelectOpenRequest, IMultiSelectResult, IPointSelectOpenRequest, IPointSelectResult } from '../types';
 import { MultiSelectModal } from './MultiSelectModal';
 import { PointPickerModal } from './PointPickerModal';
@@ -17,10 +17,11 @@ type MultiSelectResolver = (result: IMultiSelectResult | null) => void;
 type PointSelectResolver = (result: IPointSelectResult | null) => void;
 
 /**
- * 能力 Provider：把注入的能力包经 Context 提供给子树，并挂载共享的通用多选 / 坐标弹窗
+ * 能力 Provider：把注入的能力包与上层能力包合并后经 Context 提供给子树，并挂载共享的通用多选 / 坐标弹窗
  *
- * 未注入多选 / 坐标打开器时，本组件以「默认走弹窗」的打开器补齐，因此表格无需宿主注入弹窗即可
- * 工作；传入的打开器优先。缺少本 Provider 时上下文为空能力包，相应动作在表格侧优雅降级。
+ * 本次未提供的字段保留上层已有的能力，因此「宿主 → 代码编辑器 Provider → 素材 Provider」这类嵌套不会
+ * 互相吞掉能力；未注入多选 / 坐标打开器时，本组件以「默认走弹窗」的打开器补齐，因此表格无需宿主注入
+ * 弹窗即可工作。缺少本 Provider 时上下文为空能力包，相应动作在表格侧优雅降级。
  * @param props Provider props，携带能力包与子树
  * @returns Provider 元素
  */
@@ -36,6 +37,7 @@ export function CapabilityProvider(props: ITableCapabilitiesProviderProps): Reac
   const pointResolver = useRef<PointSelectResolver | undefined>(undefined);
 
   const provided = props.capabilities;
+  const ambient = useTableCapabilities();
 
   const openMultiSelect: IMultiSelectOpener = {
     open: (request) =>
@@ -54,13 +56,14 @@ export function CapabilityProvider(props: ITableCapabilitiesProviderProps): Reac
   };
 
   const capabilities: ITableEditorCapabilities = {
-    codeEditor: provided?.codeEditor,
-    eventEditor: provided?.eventEditor,
-    multiSelect: provided?.multiSelect ?? openMultiSelect,
-    pointSelect: provided?.pointSelect ?? openPointSelect,
-    tablePanel: provided?.tablePanel,
-    tablePresets: provided?.tablePresets,
-    copy: provided?.copy,
+    codeEditor: provided?.codeEditor ?? ambient.codeEditor,
+    eventEditor: provided?.eventEditor ?? ambient.eventEditor,
+    multiSelect: provided?.multiSelect ?? ambient.multiSelect ?? openMultiSelect,
+    pointSelect: provided?.pointSelect ?? ambient.pointSelect ?? openPointSelect,
+    tablePanel: provided?.tablePanel ?? ambient.tablePanel,
+    tablePresets: provided?.tablePresets ?? ambient.tablePresets,
+    copy: provided?.copy ?? ambient.copy,
+    asset: provided?.asset ?? ambient.asset,
   };
 
   const handleMultiConfirm = (ids: readonly string[]): void => {

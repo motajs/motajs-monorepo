@@ -23,7 +23,7 @@ export interface IMultiSelectModalProps {
 }
 
 /**
- * 渲染弹窗主体：错误态优先于加载态，其次空态，最后缩略图多选列表
+ * 渲染弹窗主体：错误态优先于加载态，其次空态，最后候选项多选列表
  * @param props 弹窗 props
  * @param selected 当前选中的 id 列表
  * @param onToggle 切换一项选中状态的回调
@@ -64,8 +64,21 @@ function renderBody(
         <label key={item.id} className="eimodal-item" data-test-id={`multiselect-item-${item.id}`}>
           <Checkbox checked={selected.includes(item.id)} onChange={(): void => onToggle(item.id)} />
           {item.thumbnail === undefined ? null : (
-            <img className="eimodal-thumb" src={item.thumbnail} alt={item.label} />
+            <img
+              className="eimodal-thumb"
+              src={item.thumbnail}
+              alt={item.label}
+              data-test-id={`multiselect-thumb-${item.id}`}
+            />
           )}
+          {item.audio === undefined ? null : (
+            <audio className="eimodal-audio" controls src={item.audio} data-test-id={`multiselect-audio-${item.id}`} />
+          )}
+          {item.animation === true ? (
+            <span className="eimodal-anim" data-test-id={`multiselect-anim-${item.id}`}>
+              动画
+            </span>
+          ) : null}
           <span className="eimodal-label" title={item.label}>
             {item.label}
           </span>
@@ -76,7 +89,7 @@ function renderBody(
 }
 
 /**
- * 通用多选弹窗：素材选择与多选框编辑共用，候选项以缩略图多选呈现
+ * 通用多选弹窗：素材选择与多选框编辑共用，候选项按预览字段呈现缩略图 / 内联试听 / 动画提示
  *
  * 候选项列表自身滚动而确认 / 取消页脚固定；所有文本经 React 文本节点渲染，绝不注入原始 HTML。
  * @param props 弹窗 props

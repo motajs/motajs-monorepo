@@ -5,3 +5,5 @@ export * from './schemas';
 export * from './transcode';
 export * from './assetPanel';
 export * from './assetPanelType';
+export * from './picker';
+export * from './assetCapabilityProvider';

@@ -20,6 +20,17 @@
   object-fit: contain;
 }
 
+.eimodal-audio {
+  flex: 0 0 auto;
+  height: 24px;
+}
+
+.eimodal-anim {
+  flex: 0 0 auto;
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+}
+
 .eimodal-label {
   flex: 1 1 auto;
   min-width: 0;
