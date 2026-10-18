@@ -114,12 +114,7 @@ describe('刷新原地更新、不再整树重挂（P26）', () => {
   it('未受影响的行刷新后不重挂', async () => {
     const fs = new FakeFileSystem();
 
-    seed(
-      fs,
-      't',
-      { a: 'x', b: 'y' },
-      { type: 'object', properties: { a: { type: 'string' }, b: { type: 'string' } } },
-    );
+    seed(fs, 't', { a: 'x', b: 'y' }, { type: 'object', properties: { a: { type: 'string' }, b: { type: 'string' } } });
     const system = await createTableHarness(fs);
     const panels: TablePanel[] = [];
     const panel = await openTablePanel(system, panels);

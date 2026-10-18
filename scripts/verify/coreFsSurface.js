@@ -49,10 +49,7 @@ const TARGET_IDENTIFIER = 'IEditorFileSystem';
  * 驱动文件集合：core 里真正驱动注入文件系统的资源层文件，每一个都必须引用该标识符。
  * 至少包含核心驱动注入 fs 的 `resource/resourceSystem.ts`（读写 / 增删移都落到注入 fs）。
  */
-const DRIVER_FILES = [
-  `${CORE_DIR}/resource/resourceSystem.ts`,
-  `${CORE_DIR}/resource/fileIndex.ts`,
-];
+const DRIVER_FILES = [`${CORE_DIR}/resource/resourceSystem.ts`, `${CORE_DIR}/resource/fileIndex.ts`];
 
 /** 匹配标识符的词边界模式（`IEditorFileSystemLike` 式近似名不会误命中）。 */
 const REFERENCE_PATTERN = new RegExp(`\\b${TARGET_IDENTIFIER}\\b`);
@@ -235,8 +232,7 @@ function checkRealTree() {
     const hits = hitsByFile.get(driverFile) ?? 0;
     check(
       hits > 0,
-      `真实树驱动文件未引用 ${TARGET_IDENTIFIER}：${driverFile} —— ` +
-        `core 的资源层必须驱动注入的文件系统（D-06）`,
+      `真实树驱动文件未引用 ${TARGET_IDENTIFIER}：${driverFile} —— ` + `core 的资源层必须驱动注入的文件系统（D-06）`,
     );
   }
   console.log(

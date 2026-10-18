@@ -744,11 +744,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     column.emptyMode = mode;
     this.publish(columnIndex, TablePanelStatus.NoTarget, []);
 
-    if (
-      mode === TableEmptyMode.Open ||
-      mode === TableEmptyMode.Create ||
-      mode === TableEmptyMode.Delete
-    ) {
+    if (mode === TableEmptyMode.Open || mode === TableEmptyMode.Create || mode === TableEmptyMode.Delete) {
       void this.refreshPicker(columnIndex);
     }
   }

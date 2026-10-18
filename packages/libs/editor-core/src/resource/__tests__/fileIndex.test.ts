@@ -16,11 +16,23 @@ describe('FileIndex 初始化全扫', () => {
 
     await index.initialize(fs, []);
 
-    expect(index.list('').map((entry) => entry.name).sort()).toEqual(['readme.md', 'src']);
+    expect(
+      index
+        .list('')
+        .map((entry) => entry.name)
+        .sort(),
+    ).toEqual(['readme.md', 'src']);
     expect(index.has('src/main.ts')).toBe(true);
     expect(index.has('src/nested/deep.ts')).toBe(true);
-    expect(index.list('src').map((entry) => entry.name).sort()).toEqual(['main.ts', 'nested']);
-    expect(index.list('src/nested')).toEqual([{ path: 'src/nested/deep.ts', name: 'deep.ts', kind: EditorEntryKind.File }]);
+    expect(
+      index
+        .list('src')
+        .map((entry) => entry.name)
+        .sort(),
+    ).toEqual(['main.ts', 'nested']);
+    expect(index.list('src/nested')).toEqual([
+      { path: 'src/nested/deep.ts', name: 'deep.ts', kind: EditorEntryKind.File },
+    ]);
   });
 
   // 忽略模式按条目名命中（含 `*` 通配），命中即跳过对应目录 / 文件
@@ -56,7 +68,12 @@ describe('FileIndex 增量更新', () => {
     index.insert('src/new.json', EditorEntryKind.File);
 
     expect(index.has('src/new.json')).toBe(true);
-    expect(index.list('src').map((entry) => entry.name).sort()).toEqual(['main.ts', 'new.json']);
+    expect(
+      index
+        .list('src')
+        .map((entry) => entry.name)
+        .sort(),
+    ).toEqual(['main.ts', 'new.json']);
   });
 
   // remove 后条目及其子树整体消失
