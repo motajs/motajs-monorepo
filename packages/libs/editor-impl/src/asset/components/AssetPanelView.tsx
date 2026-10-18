@@ -1,7 +1,8 @@
 import { Button, Spin } from 'antd';
 import { ReactElement } from 'react';
 import { AssetCategoryKind, IAssetCategory } from '../../react';
-import { AssetPanelStatus, IAssetPanelViewState, IAssetUpload } from '../types';
+import { AssetPanelMode, AssetPanelStatus, IAssetPanelViewState, IAssetUpload } from '../types';
+import { AssetConfigView } from './AssetConfigView';
 import { AssetDetail } from './AssetDetail';
 import { AssetGrid } from './AssetGrid';
 import { AssetToolbar } from './AssetToolbar';
@@ -41,6 +42,14 @@ export interface IAssetPanelViewProps {
   onDelete?(name: string): void;
   /** 打开当前选中素材的配置表单 */
   onOpenConfig?(): void;
+  /**
+   * 配置模式下改一个字段
+   * @param path 配置字段路径
+   * @param value 目标值
+   */
+  onChange?(path: string, value: unknown): void;
+  /** 关闭配置表单、退回素材列表 */
+  onBack?(): void;
   /** 重新读取当前分类 */
   onRetry?(): void;
   /**
@@ -80,6 +89,15 @@ function currentCategory(view: IAssetPanelViewState): IAssetCategory | undefined
 
 /** 未接入选择回调时的缺省实现：不做任何事 */
 function noopSelectAsset(): void {}
+
+/** 未接入配置字段提交回调时的缺省实现：不做任何事 */
+function noopConfigChange(): void {}
+
+/** 未接入保存回调时的缺省实现：不做任何事 */
+function noopConfigSave(): void {}
+
+/** 未接入返回回调时的缺省实现：不做任何事 */
+function noopConfigBack(): void {}
 
 /**
  * 渲染面板主区：加载 / 错误 / 空都给出固定呈现，就绪时渲染网格与详情
@@ -155,19 +173,19 @@ function renderContent(props: IAssetPanelViewProps, category: IAssetCategory | u
  * @returns 面板视图元素
  */
 export function AssetPanelView(props: IAssetPanelViewProps): ReactElement {
-  const view = props.view;
-  const category = currentCategory(view);
-  const busy = view.status === AssetPanelStatus.Loading || view.status === AssetPanelStatus.NoCategory;
+  const state = props.view;
+  const category = currentCategory(state);
+  const busy = state.status === AssetPanelStatus.Loading || state.status === AssetPanelStatus.NoCategory;
   const transcodeEnabled =
-    view.status === AssetPanelStatus.Ready &&
+    state.status === AssetPanelStatus.Ready &&
     category !== undefined &&
     (category.kind === AssetCategoryKind.Image || category.kind === AssetCategoryKind.Audio);
 
   return (
-    <div className="asset-panel" data-test-id="asset-panel" data-status={statusToken(view.status)}>
+    <div className="asset-panel" data-test-id="asset-panel" data-status={statusToken(state.status)}>
       <AssetToolbar
         title={category === undefined ? '' : category.label}
-        unsaved={view.unsaved}
+        unsaved={state.unsaved}
         disabled={busy}
         transcodeEnabled={transcodeEnabled}
         onSave={props.onSave}
@@ -175,8 +193,20 @@ export function AssetPanelView(props: IAssetPanelViewProps): ReactElement {
         onAddAsset={props.onAddAsset}
       />
       <div className="asset-body">
-        <CategoryNav categories={view.categories} currentId={view.categoryId} onSelect={props.onSelectCategory} />
-        {renderContent(props, category)}
+        <CategoryNav categories={state.categories} currentId={state.categoryId} onSelect={props.onSelectCategory} />
+        {state.mode === AssetPanelMode.Configure ? (
+          <AssetConfigView
+            title={state.configName ?? ''}
+            rows={state.rows}
+            errors={state.configErrors}
+            unsaved={state.unsaved}
+            onChange={props.onChange ?? noopConfigChange}
+            onSave={props.onSave ?? noopConfigSave}
+            onBack={props.onBack ?? noopConfigBack}
+          />
+        ) : (
+          renderContent(props, category)
+        )}
       </div>
     </div>
   );

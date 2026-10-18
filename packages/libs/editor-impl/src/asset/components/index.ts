@@ -1,4 +1,5 @@
 export * from './AssetPanelView';
+export * from './AssetConfigView';
 export * from './AssetToolbar';
 export * from './AssetGrid';
 export * from './AssetDetail';

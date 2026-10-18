@@ -124,6 +124,16 @@ interface IAssetPanelContainerProps {
    * @param name 目标素材名
    */
   onDelete(name: string): void;
+  /** 打开当前选中素材的配置表单 */
+  onOpenConfig(): void;
+  /**
+   * 配置模式下改一个字段
+   * @param path 配置字段路径
+   * @param value 目标值
+   */
+  onChange(path: string, value: unknown): void;
+  /** 关闭配置表单、退回素材列表 */
+  onBack(): void;
   /** 重新读取当前分类 */
   onRetry(): void;
 }
@@ -145,6 +155,9 @@ function AssetPanelContainer(props: IAssetPanelContainerProps): ReactElement {
     onAddAsset: props.onAddAsset,
     onReplace: props.onReplace,
     onDelete: props.onDelete,
+    onOpenConfig: props.onOpenConfig,
+    onChange: props.onChange,
+    onBack: props.onBack,
     onRetry: props.onRetry,
   });
 }
@@ -242,6 +255,13 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
         onDelete: (name: string): void => {
           void this.deleteAsset(name);
         },
+        onOpenConfig: (): void => {
+          const name = this.store.state.selectedName;
+
+          if (name !== undefined) void this.openConfig(name);
+        },
+        onChange: (path: string, value: unknown): void => this.applyConfigEdit(path, value),
+        onBack: (): void => this.closeConfig(),
         onRetry: (): void => {
           const categoryId = this.currentCategoryId;
 

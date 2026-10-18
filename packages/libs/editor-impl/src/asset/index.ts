@@ -3,6 +3,7 @@ export * from './constants';
 export * from './model';
 export * from './schemas';
 export * from './transcode';
+export * from './components';
 export * from './assetPanel';
 export * from './assetPanelType';
 export * from './picker';
