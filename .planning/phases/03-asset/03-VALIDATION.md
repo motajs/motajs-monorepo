@@ -91,14 +91,21 @@ Run from the repository root on the plan's final tree.
 | Dev-host asset tests | `pnpm --filter @motajs/editor-dev test -- devHostAsset` | ✅ 1 file / 4 tests passed |
 | Workspace unit suite | `pnpm test` (`pnpm -r --no-bail run test`) | ⚠️ red in `@motajs/react-hooks` only — **pre-existing** lockfile pin react 19.2.3 vs react-dom 19.3.0 (both at the base commit `f49f7b5`); all other 6 test packages pass (file2x 14, h5animate 202, editor-core 94, packer 94, editor-impl 296, editor-dev 24) |
 | Workspace typecheck | `pnpm typecheck` | ⚠️ red in the legacy `@motajs/editor` app only — **pre-existing** (known non-compiling since the 02.1 resource-layer refactor; `@motajs/editor-core` / `editor-impl` / `editor-dev` typecheck exit 0) |
-| Workspace lint | `pnpm lint` | ⚠️ 8 prettier errors in files from earlier plans (`editor-core/src/resource/__tests__/fileIndex.test.ts`, `editor-impl/src/table/__tests__/refreshIdentity.uat.test.tsx`, `editor-impl/src/table/tablePanel.ts`, `scripts/verify/coreFsSurface.js`) — none touched by 03-17 (its own files are lint-clean) |
+| Workspace lint | `pnpm lint` | ✅ **0 errors**（原 8 条 prettier 错误已于 2026-10-18 按用户选项 A 修复，commit `ffbf259`；现存 161 条 warning 均为既有、非 error 级） |
 | Boundary gates | `node scripts/verify/coreBoundaries.js` | ✅ exit 0 |
 | Boundary gates | `node scripts/verify/coreModuleState.js` | ✅ exit 0 |
 | Boundary gates | `node scripts/verify/coreEngineNeutral.js` | ✅ exit 0 |
 | Boundary gates | `node scripts/verify/coreImportType.js` | ✅ exit 0 |
 | Boundary gates | `node scripts/verify/editorShims.js` | ✅ exit 0 |
 
-The three red root gates are outside 03-17's file scope and were logged per the executor SCOPE BOUNDARY rule (see `deferred-items.md`); this plan neither relaxed a gate nor edited those files.
+原三处 red root gate 均早于本阶段、不在 03-17 文件范围内，按 executor SCOPE BOUNDARY 规则登记（见 `deferred-items.md`）；本阶段未放宽任何门禁。
+
+**裁决（用户 2026-10-18，选项 A）：**
+- `pnpm lint` 的 8 条 prettier 错误 —— **已修**（commit `ffbf259`），现 0 error。
+- `pnpm test` 的 `@motajs/react-hooks`（锁文件 react 19.2.3 / react-dom 19.3.0 不匹配）—— **记为已知遗留**，需依赖 / 锁文件对齐决策，不在本阶段动。
+- `pnpm typecheck` 的旧 `@motajs/editor` 应用（自 02.1 起不可编译）—— **记为已知遗留**，属迁移阶段任务。
+
+本阶段自身范围（`editor-core` / `editor-impl` / `editor-dev` 三包测试 + typecheck + 五道边界门禁）全绿。
 
 ---
 

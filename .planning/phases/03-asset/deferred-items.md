@@ -41,7 +41,11 @@ The 03-17 close-out gate sweep ran the three root commands for the first time in
 - **Why deferred:** repairing the legacy app is far outside 03-17's scope and is a migration-phase task.
 - **Verification that it is not caused by this plan:** the failing files predate this plan (`ResourcesWorkspace/index.tsx` last changed in 05.2-03; 03-17 changes only `editor-dev` and `.planning`).
 
-### Root `pnpm lint` red with 8 prettier errors from earlier plans
+### Root `pnpm lint` red with 8 prettier errors from earlier plans — **RESOLVED (2026-10-18, user chose option A)**
+
+**Resolution:** the 4 files were reformatted with `pnpm exec prettier --write` (commit `ffbf259`); `pnpm lint` now reports **0 errors** (161 warnings only, all pre-existing non-error). Only this item was fixed; the two above (react-hooks lockfile mismatch, legacy `@motajs/editor` typecheck) remain known/deferred by the user's decision.
+
+
 
 - **Found during:** 03-17 Task 3 sweep (`pnpm lint`).
 - **Symptom:** 8 errors (`prettier/prettier`) at `packages/libs/editor-core/src/resource/__tests__/fileIndex.test.ts` (4), `packages/libs/editor-impl/src/table/__tests__/refreshIdentity.uat.test.tsx` (1), `packages/libs/editor-impl/src/table/tablePanel.ts` (1) and `scripts/verify/coreFsSurface.js` (2).
