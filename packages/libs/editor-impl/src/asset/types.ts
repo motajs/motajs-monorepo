@@ -58,6 +58,13 @@ export interface IAssetListEntry {
   readonly index: number;
 }
 
+export interface IAssetUpload {
+  /** 用户选中的原始文件名（尚未清洗） */
+  readonly name: string;
+  /** 用户选中的原始字节 */
+  readonly bytes: Uint8Array;
+}
+
 export interface IAssetPickerItems {
   /** 选择器候选项列表（图片带缩略图、音频带试听地址、动画带预览提示） */
   readonly items: readonly IMultiSelectItem[];

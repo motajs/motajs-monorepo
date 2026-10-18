@@ -9,11 +9,19 @@ import {
   IResource,
   IUndoContext,
 } from '@motajs/editor-core';
-import { IAssetCategory, IAssetEditorCapabilities } from '../react';
+import { AssetListFormat, IAssetCategory, IAssetEditorCapabilities } from '../react';
 import { parseTableText, serializeTableText, TableTextParseStatus } from '../shared/jsonc';
 import { setByFieldPath } from '../shared/schemaForm/model/fieldPath';
 import { AssetPanelView } from './components';
-import { readAssetList, resolveAssetBytePath, writeAssetList } from './model';
+import { ASSET_MAX_UPLOAD_BYTES } from './constants';
+import {
+  mergeAssetDefaults,
+  readAssetList,
+  resolveAssetBytePath,
+  resolveAssetName,
+  sanitizeAssetFileName,
+  writeAssetList,
+} from './model';
 import {
   AssetPanelMode,
   AssetPanelStatus,
@@ -23,10 +31,14 @@ import {
   IAssetPanel,
   IAssetPanelTarget,
   IAssetPanelViewState,
+  IAssetUpload,
 } from './types';
 
 // 素材面板的数据层：按分类读列表与目录、把改动留在内存、点保存才写回（逐字保留 .jsonc 系统前缀），
 // 字节改动登记成带屏障标记的撤销条目。界面由同目录的 AssetPanelView 渲染，本类只做数据与状态接线。
+
+/** `ObjectList` 条目里存文件名的默认键名，与列表模型保持一致 */
+const DEFAULT_SOURCE_FIELD = 'source';
 
 /** 一个分类的内部状态 */
 interface IAssetPanelState {
@@ -342,6 +354,130 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
   }
 
   /**
+   * 新增一个素材：清洗文件名、校验体积与同名，写入字节文件并往内存列表追加一条（字节改动 = 屏障）
+   * @param upload 上传的原始文件名与字节
+   */
+  async addAsset(upload: IAssetUpload): Promise<void> {
+    const category = this.currentCategory();
+
+    if (category === undefined) {
+      this.publish(AssetPanelStatus.NoCategory, '请先选择分类');
+      return;
+    }
+
+    const fileName = sanitizeAssetFileName(upload.name);
+
+    if (fileName === null) {
+      this.publish(this.store.state.status, '文件名不合法');
+      return;
+    }
+
+    if (upload.bytes.length > ASSET_MAX_UPLOAD_BYTES) {
+      this.publish(this.store.state.status, '文件过大，单个素材不能超过 32 MiB');
+      return;
+    }
+
+    const state = this.stateAt(category.id);
+    const name = resolveAssetName(category, fileName);
+
+    if (state.entries.some((entry) => entry.name === name)) {
+      this.publish(this.store.state.status, '同名素材已存在');
+      return;
+    }
+
+    const path = resolveAssetBytePath(category, name);
+
+    try {
+      await this.context.createResource(path, upload.bytes);
+    } catch {
+      this.publish(this.store.state.status, '写入失败，请重试。');
+      return;
+    }
+
+    const config = await this.buildNewEntryConfig(category, name);
+    const entries = state.entries.slice();
+
+    entries.push({ name, path, config, exists: true });
+    state.entries = entries;
+    state.unsaved = true;
+    this.publish(AssetPanelStatus.Ready, '已新增素材，请记得保存');
+    this.registerBarrier({ action: 'add', path });
+  }
+
+  /**
+   * 用新字节覆盖某素材的字节文件（字节改动 = 屏障），列表条目不写盘
+   * @param name 要替换的素材名
+   * @param bytes 替换后的字节
+   */
+  async replaceAsset(name: string, bytes: Uint8Array): Promise<void> {
+    const category = this.currentCategory();
+
+    if (category === undefined) return;
+
+    const state = this.stateAt(category.id);
+    const index = state.entries.findIndex((entry) => entry.name === name);
+
+    if (index === -1) {
+      this.publish(this.store.state.status, '素材不存在');
+      return;
+    }
+
+    if (bytes.length > ASSET_MAX_UPLOAD_BYTES) {
+      this.publish(this.store.state.status, '文件过大，单个素材不能超过 32 MiB');
+      return;
+    }
+
+    const entry = state.entries[index];
+
+    try {
+      await this.context.createResource(entry.path, bytes);
+    } catch {
+      this.publish(this.store.state.status, '写入失败，请重试。');
+      return;
+    }
+
+    // 覆盖后字节文件必定存在：把该条目的缺失标记一并纠正，免得界面继续显示缺失
+    const entries = state.entries.slice();
+
+    entries[index] = { name: entry.name, path: entry.path, config: entry.config, exists: true };
+    state.entries = entries;
+    this.registerBarrier({ action: 'replace', path: entry.path });
+    this.publish(AssetPanelStatus.Ready, '已替换素材');
+  }
+
+  /**
+   * 删除某素材：移除字节文件并从内存列表移除该条目（字节改动 = 屏障），列表只在 save() 时写盘
+   * @param name 要删除的素材名
+   */
+  async deleteAsset(name: string): Promise<void> {
+    const category = this.currentCategory();
+
+    if (category === undefined) return;
+
+    const state = this.stateAt(category.id);
+    const index = state.entries.findIndex((entry) => entry.name === name);
+
+    if (index === -1) return;
+
+    const entry = state.entries[index];
+
+    // 字节文件本就不存在时删除会抛错，但列表条目仍要移除，故把删除失败隔离成「继续删条目」
+    try {
+      await this.context.deleteResource(entry.path);
+    } catch {
+      // 文件不存在也继续
+    }
+
+    const entries = state.entries.slice();
+
+    entries.splice(index, 1);
+    state.entries = entries;
+    state.unsaved = true;
+    this.registerBarrier({ action: 'delete', path: entry.path });
+    this.publish(entries.length === 0 ? AssetPanelStatus.Empty : AssetPanelStatus.Ready, '已删除素材，请记得保存');
+  }
+
+  /**
    * 取装配方注入的分类清单
    * @returns 可用的分类清单；未注入时为空数组
    */
@@ -401,6 +537,53 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
     if (typeof content === 'string') return content;
 
     return new TextDecoder().decode(content);
+  }
+
+  /**
+   * 读取某分类的默认值文件正文，供新增条目的默认配置合并
+   * @param category 素材分类
+   * @returns defaults 文件的正文值；未配置、缺失或无法解析时为 undefined
+   */
+  private async readDefaultsValue(category: IAssetCategory): Promise<unknown> {
+    const path = category.defaultsPath;
+
+    if (path === undefined) return undefined;
+
+    // defaults 只是新增条目的可选默认值，读不到不该拦住新增：任何失败都归成「没有默认值」
+    try {
+      const resource = await this.context.requestResource(path);
+
+      if (resource === null) return undefined;
+
+      const content = await resource.request();
+
+      if (content === undefined) return undefined;
+
+      const text = typeof content === 'string' ? content : new TextDecoder().decode(content);
+      const parsed = parseTableText(text);
+
+      return parsed.status === TableTextParseStatus.Conforming ? parsed.value : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
+   * 算出新增条目的初始配置：`ObjectList` 分类把 defaults 合并进「仅含来源字段」的基底
+   * @param category 素材分类
+   * @param name 新素材名
+   * @returns 新条目配置；`StringList` 分类为 undefined
+   */
+  private async buildNewEntryConfig(
+    category: IAssetCategory,
+    name: string,
+  ): Promise<Record<string, unknown> | undefined> {
+    if (category.listFormat !== AssetListFormat.ObjectList) return undefined;
+
+    const defaults = await this.readDefaultsValue(category);
+    const sourceField = category.sourceField ?? DEFAULT_SOURCE_FIELD;
+
+    return mergeAssetDefaults(defaults, { [sourceField]: name });
   }
 
   /**
