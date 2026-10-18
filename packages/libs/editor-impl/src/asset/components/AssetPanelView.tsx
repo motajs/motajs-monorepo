@@ -1,15 +1,15 @@
 import { Button, Spin } from 'antd';
-import { ReactElement, ReactNode } from 'react';
+import { ReactElement } from 'react';
 import { AssetCategoryKind, IAssetCategory } from '../../react';
 import { AssetPanelStatus, IAssetPanelViewState } from '../types';
+import { AssetDetail } from './AssetDetail';
+import { AssetGrid } from './AssetGrid';
 import { AssetToolbar } from './AssetToolbar';
 import { CategoryNav } from './CategoryNav';
 
 export interface IAssetPanelViewProps {
   /** 面板视图状态，由数据层订阅后传入 */
   readonly view: IAssetPanelViewState;
-  /** 就绪态主区内容（素材网格与详情），由接线层注入 */
-  readonly children?: ReactNode;
   /**
    * 切换当前分类
    * @param categoryId 目标分类标识
@@ -69,8 +69,11 @@ function currentCategory(view: IAssetPanelViewState): IAssetCategory | undefined
   return view.categories.find((category) => category.id === categoryId);
 }
 
+/** 未接入选择回调时的缺省实现：不做任何事 */
+function noopSelectAsset(): void {}
+
 /**
- * 渲染面板主区：加载 / 错误 / 空都给出固定呈现，就绪时交给注入的内容
+ * 渲染面板主区：加载 / 错误 / 空都给出固定呈现，就绪时渲染网格与详情
  * @param props 面板视图 props
  * @param category 当前分类；未命中时为 undefined
  * @returns 主区元素
@@ -114,7 +117,25 @@ function renderContent(props: IAssetPanelViewProps, category: IAssetCategory | u
     );
   }
 
-  return <div className="asset-content">{props.children}</div>;
+  const selected = view.entries.find((entry) => entry.name === view.selectedName);
+
+  return (
+    <div className="asset-content">
+      <AssetGrid
+        entries={view.entries}
+        selectedName={view.selectedName}
+        onSelect={props.onSelectAsset ?? noopSelectAsset}
+      />
+      <AssetDetail
+        entry={selected}
+        kind={category.kind}
+        onReplace={props.onReplace}
+        onDelete={props.onDelete}
+        onOpenConfig={props.onOpenConfig}
+        loadBytes={props.loadBytes}
+      />
+    </div>
+  );
 }
 
 /**
