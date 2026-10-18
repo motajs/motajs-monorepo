@@ -6,10 +6,10 @@
  *
  * 断言的是三类「只在被人 import 时才炸」的事实，而不是重述清单文本：
  *   1. PKG-01 结构：`packages/libs/editor-impl/package.json` 的 private/type/sideEffects 取值、
- *      恰好七个 exports subpath、每个 exports 目标在磁盘上真实存在、且都在 subpathStatus.json 里登记；
+ *      恰好八个 exports subpath、每个 exports 目标在磁盘上真实存在、且都在 subpathStatus.json 里登记；
  *      scripts 恰好是 typecheck + test，没有 build——一个指向不存在文件的 exports 是长期潜伏的隐性 bug；
  *      `.` 汇总资源层与编辑层的全部公开名（`resources+edit+table-exports`），`./react` 携带探针，
- *      其余五个能力 barrel 是 `empty-barrel`；
+ *      `./shared` 汇总中立共享件，其余能力 barrel 是 `empty-barrel`；
  *   2. PKG-02 声明：peerDependencies 恰好是点名的九个名字且全部 catalog:default，
  *      @douyinfe/semi-ui 被标记为 optional，每个 peer 在 pnpm-workspace.yaml 的 catalog 里都有真实条目；
  *      且 `dependencies` 含 `@motajs/editor-core: "workspace:*"`（单向依赖：impl → core）；
@@ -41,8 +41,8 @@ const SUBPATH_STATUS_PATH = path.join(
   'subpathStatus.json',
 );
 
-/** editor-impl 固定的七个 subpath。 */
-const EXPECTED_SUBPATHS = ['.', './code', './table', './map', './asset', './shell', './react'];
+/** editor-impl 固定的八个 subpath。 */
+const EXPECTED_SUBPATHS = ['.', './code', './table', './shared', './map', './asset', './shell', './react'];
 
 /** PKG-02 点名的九个 peer（React/ReactDOM + 七个单例库）。 */
 const EXPECTED_PEERS = [
@@ -73,12 +73,16 @@ const PROBE_SUBPATH = './react';
 const SUBPATH_CONTENT = {
   '.': 'resources+edit+table-exports',
   './table': 'table-exports',
+  './shared': 'shared-exports',
   './react': 'probe',
 };
 const DEFAULT_SUBPATH_CONTENT = 'empty-barrel';
 
 /** PKG-01 允许的两个脚本：没有 build（noEmit 纯源码库，D-08）。 */
 const EXPECTED_SCRIPTS = { typecheck: 'tsc -b', test: 'vitest run' };
+
+/** sideEffects 只放行本地 CSS：样式表必须被保留，其余模块保持无副作用（Phase 3 起有意为之）。 */
+const EXPECTED_SIDE_EFFECTS = ['./src/**/*.css'];
 
 /** 单向依赖断言：editor-impl 必须声明它依赖底层。 */
 const REQUIRED_DEPENDENCY = { name: '@motajs/editor-core', specifier: 'workspace:*' };
@@ -144,15 +148,15 @@ function checkStructure(manifest, status) {
   check(manifest.private === true, `package.json 的 private 应为 true，实际是 ${JSON.stringify(manifest.private)}`);
   check(manifest.type === 'module', `package.json 的 type 应为 "module"，实际是 ${JSON.stringify(manifest.type)}`);
   check(
-    manifest.sideEffects === false,
-    `package.json 的 sideEffects 应为 false，实际是 ${JSON.stringify(manifest.sideEffects)}`,
+    JSON.stringify(manifest.sideEffects) === JSON.stringify(EXPECTED_SIDE_EFFECTS),
+    `package.json 的 sideEffects 应为 ${JSON.stringify(EXPECTED_SIDE_EFFECTS)}，实际是 ${JSON.stringify(manifest.sideEffects)}`,
   );
 
   const exportsMap = manifest.exports || {};
   const exportKeys = Object.keys(exportsMap);
   if (!sortedEqual(exportKeys, EXPECTED_SUBPATHS)) {
     failures.push(
-      `exports 的 subpath 应为七个 [${EXPECTED_SUBPATHS.join('、')}]，实际是 [${exportKeys.join('、')}]（${describeSetDiff(exportKeys, EXPECTED_SUBPATHS)}）`,
+      `exports 的 subpath 应为八个 [${EXPECTED_SUBPATHS.join('、')}]，实际是 [${exportKeys.join('、')}]（${describeSetDiff(exportKeys, EXPECTED_SUBPATHS)}）`,
     );
   }
   for (const subpath of EXPECTED_SUBPATHS) {
@@ -190,7 +194,7 @@ function checkStructure(manifest, status) {
   const statusKeys = Object.keys(statusSubpaths);
   if (!sortedEqual(statusKeys, EXPECTED_SUBPATHS)) {
     failures.push(
-      `subpathStatus.json 的 editor-impl subpaths 应为七个 [${EXPECTED_SUBPATHS.join('、')}]，实际是 [${statusKeys.join('、')}]（${describeSetDiff(statusKeys, EXPECTED_SUBPATHS)}）`,
+      `subpathStatus.json 的 editor-impl subpaths 应为八个 [${EXPECTED_SUBPATHS.join('、')}]，实际是 [${statusKeys.join('、')}]（${describeSetDiff(statusKeys, EXPECTED_SUBPATHS)}）`,
     );
   }
   for (const subpath of EXPECTED_SUBPATHS) {
@@ -318,7 +322,7 @@ function main() {
     for (const failure of failures) console.error(`implExports: ${failure}`);
     process.exit(1);
   }
-  console.log('implExports: 全部断言通过（7 subpaths、9 peers、8 singletons 单副本）');
+  console.log('implExports: 全部断言通过（8 subpaths、9 peers、8 singletons 单副本）');
 }
 
 main();
