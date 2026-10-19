@@ -9,7 +9,7 @@ import {
   Quality,
   WebMOutputFormat,
 } from 'mediabunny';
-import { IAssetAudioTranscodeOptions } from './types';
+import { IAssetAudioSourceInfo, IAssetAudioTranscodeOptions } from './types';
 
 // 音频转 WebM/Opus：经 Mediabunny 的公共 API 解码 / 编码 / 封装，全程本地执行、不发网络请求；
 // 环境缺少 Opus 编码能力时先探测再抛可读错误，绝不静默产出空字节。
@@ -33,6 +33,18 @@ export async function canUseAudioTranscode(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/**
+ * 读源音频的采样率与码率
+ * @param bytes 原始音频字节
+ * @returns 源音频可读到的采样率与码率；读不到时为 undefined
+ */
+export async function probeAudioSource(bytes: Uint8Array): Promise<IAssetAudioSourceInfo | undefined> {
+  // 真实探测在 03-25 落地，本计划先直通返回「读不到」
+  void bytes;
+
+  return Promise.resolve(undefined);
 }
 
 /**

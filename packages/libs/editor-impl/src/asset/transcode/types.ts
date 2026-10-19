@@ -12,6 +12,13 @@ export interface IAssetAudioTranscodeOptions {
   readonly sampleRate: number;
 }
 
+export interface IAssetAudioSourceInfo {
+  /** 源音频采样率（Hz）；读不到时为 undefined */
+  readonly sampleRate?: number;
+  /** 源音频码率（bps）；读不到时为 undefined */
+  readonly bitrate?: number;
+}
+
 export interface IAssetTranscodeOptions {
   /** WebP 质量（0–100） */
   readonly quality: number;
@@ -52,13 +59,13 @@ export const ASSET_WEBM_EXTENSION = '.webm';
 /** 转码失败但没有给出原因时的兜底文案 */
 export const ASSET_TRANSCODE_UNKNOWN_ERROR = '未知错误';
 
-/** WebP 质量默认值（0–100） */
-export const ASSET_DEFAULT_WEBP_QUALITY = 80;
+/** WebP 质量默认值（0–100），图片转码默认取最高品质 */
+export const ASSET_DEFAULT_WEBP_QUALITY = 100;
 
-/** Opus 码率默认值（bps） */
-export const ASSET_DEFAULT_OPUS_BITRATE = 96000;
+/** Opus 码率回退值（bps），读不到源音频码率时使用 */
+export const ASSET_DEFAULT_OPUS_BITRATE = 128000;
 
-/** Opus 采样率默认值（Hz） */
+/** Opus 采样率回退值（Hz），读不到源音频采样率时使用 */
 export const ASSET_DEFAULT_OPUS_SAMPLE_RATE = 48000;
 
 /** 图片转码前的输出格式说明 */
