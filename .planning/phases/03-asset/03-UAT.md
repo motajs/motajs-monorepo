@@ -1,36 +1,58 @@
 ---
+status: testing
 phase: 03-asset
-status: pending
-created: "2026-10-18"
+source: [03-17-SUMMARY.md, 03-11-SUMMARY.md, 03-16-SUMMARY.md, 03-15-SUMMARY.md, 03-09-SUMMARY.md]
+started: "2026-10-18T00:00:00Z"
+updated: "2026-10-18T01:00:00Z"
 ---
 
-# Phase 03 — UAT (human verification)
+## Current Test
 
-> Everything that can be proven without a real browser is VERIFIED (`03-VERIFICATION.md`, 12/14 must-haves).
-> These items are inherently human/browser checks. Run them in the **dev host** (03-17 wired it):
-> `pnpm --filter @motajs/editor-dev dev`, open the 素材管理器 panel.
+number: 2
+name: 音频 → WebM/Opus（真实浏览器）
+expected: |
+  音频分类里转码生成 .webm（容器内 Opus），能播放；不支持 WebCodecs 的浏览器里入口禁用并给出提示（不静默失败）
+awaiting: user response
 
-## UAT-1 — 图片 → WebP（真实浏览器）
+## Tests
 
-- **Requirement:** ASSET-01 / D-19
-- **Why manual:** jsdom has no `OffscreenCanvas` / `createImageBitmap`; the encoder cannot be exercised in unit tests.
-- **Steps:** 打开图片分类 → 选中一个 `.png` 素材 → 工具栏「瘦身转码」→ 勾「覆盖旧文件」（默认勾选）→ 二次确认 → 开始转换。
-- **Expected:** 生成 `.webp`，体积下降、浏览器能正常显示；勾选时原文件被替换、列表条目改名同步；不勾时旧文件保留为 `{file}-origin.{ext}`。
+### 1. 图片 → WebP（真实浏览器）
+expected: 图片分类里转码生成 .webp，体积下降、能显示；覆盖时替换原文件、不覆盖时旧文件改名 -origin
+result: issue
+reported: "素材管理页面中，所有素材都无法预览（是否为预期？）。选中素材后右侧正常出现工具栏；点击「配置」后表格页面占满整个面板，但仍能看见背后的素材管理页面，且提示「配置校验未通过」，无法返回上一级，无法点击瘦身转码，除输入框外所有按钮等可交互组件都无法交互。期望：点击配置后，中间的素材列表栏被替换为表格组件并保存；左侧的素材类型切换可读取该保存状态来决定打开素材界面还是某个素材的配置界面。"
+severity: blocker
 
-## UAT-2 — 音频 → WebM/Opus（真实浏览器）
+### 2. 音频 → WebM/Opus（真实浏览器）
+expected: 音频分类里转码生成 .webm（容器内 Opus），能播放；不支持 WebCodecs 的浏览器里入口禁用并给出提示（不静默失败）
+result: [pending]
 
-- **Requirement:** ASSET-01 / D-20
-- **Why manual:** needs WebCodecs (`AudioEncoder` opus) + Mediabunny; jsdom only covers the capability-probe / failure paths.
-- **Steps:** 打开音频分类 → 选中一个音频素材 → 「瘦身转码」→（可调码率/采样率）→ 开始转换。
-- **Expected:** 生成 `.webm`（容器内 Opus），能在浏览器 / 播放器里正常播放；不支持 WebCodecs 的浏览器里入口**禁用并给出提示**，不静默失败。
+### 3. 素材面板与现状的视觉 / 行为对齐
+expected: 布局 / 配色 / 文案 / 交互观感与现有 @motajs/editor 的素材界面一致；浏览 / 上传新增 / 替换 / 删除 / 配置 / 保存 流程顺畅
+result: [pending]
 
-## UAT-3 — 画面与行为与现状一致（视觉对齐）
+## Summary
 
-- **Requirement:** ROADMAP SC4「素材相关画面与行为与现状一致」
-- **Why manual:** inherently a human visual judgement.
-- **Steps:** 对照现有 `@motajs/editor` 的素材界面，走一遍 浏览 / 上传新增 / 替换 / 删除 / 配置 / 保存 的流程。
-- **Expected:** 布局、配色、文案、交互观感与现状一致（本文档与 `03-UI-SPEC.md` 所约定）。
+total: 3
+passed: 0
+issues: 1
+pending: 2
+skipped: 0
 
----
+## Gaps
 
-**Approval:** pending
+- gap_id: G-03-1
+  truth: "点击某个素材的「配置」后，应在【中间素材列表栏的位置】用表格组件替换该栏（左侧分类导航仍可用），并能「← 返回素材列表」；不应整面板覆盖、不应残留背后面板、不应出现无法返回/无法操作的状态"
+  status: failed
+  reason: "User reported: 点击配置后表格占满整个面板、背后仍见素材管理页面、提示「配置校验未通过」、无法返回上一级、除输入框外所有可交互组件都点不动"
+  severity: blocker
+  test: 1
+  artifacts: []
+  missing: []
+- gap_id: G-03-2
+  truth: "素材面板中【所有分类】的素材都能正常预览（图片显示缩略图/大图、音频可试听、动画有预览、字体有样例）"
+  status: failed
+  reason: "User reported: 所有素材都无法预览（图片/音频/动画/字体皆无）——需区分是演示数据问题还是预览组件 bug"
+  severity: major
+  test: 1
+  artifacts: []
+  missing: []
