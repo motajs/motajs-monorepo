@@ -41,6 +41,32 @@
   min-height: 0;
 }
 
+.asset-config-view {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.asset-config-breadcrumb {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--editor-border, #d0d7de);
+}
+
+.asset-config-errors {
+  flex: 0 0 auto;
+  padding: 8px;
+}
+
+.asset-config-body {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
 .asset-nav {
   flex: 0 0 184px;
   width: 184px;
