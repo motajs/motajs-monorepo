@@ -1,13 +1,8 @@
-import { Alert, Button, Spin } from 'antd';
+import { Button, Spin } from 'antd';
 import { ReactElement } from 'react';
 import { AssetCategoryKind, IAssetCategory } from '../../react';
 import { resolveTranscodedPath } from '../model';
-import {
-  ASSET_TRANSCODE_UNKNOWN_ERROR,
-  ASSET_WEBM_EXTENSION,
-  ASSET_WEBP_EXTENSION,
-  IAssetTranscodeOptions,
-} from '../transcode/types';
+import { ASSET_WEBM_EXTENSION, ASSET_WEBP_EXTENSION, IAssetTranscodeOptions } from '../transcode/types';
 import { AssetPanelMode, AssetPanelStatus, IAssetEntry, IAssetPanelViewState, IAssetUpload } from '../types';
 import { AssetConfigView } from './AssetConfigView';
 import { AssetDetail } from './AssetDetail';
@@ -245,15 +240,9 @@ export function AssetPanelView(props: IAssetPanelViewProps): ReactElement {
     category !== undefined && transcodeSupported && state.status === AssetPanelStatus.Ready && !state.transcodeCapable
       ? transcodeUnsupportedMessage(category)
       : undefined;
-  const summary = state.transcodeSummary;
 
   return (
     <div className="asset-panel" data-test-id="asset-panel" data-status={statusToken(state.status)}>
-      {state.message === undefined ? null : (
-        <div className="asset-notice" data-test-id="asset-notice">
-          {state.message}
-        </div>
-      )}
       <AssetToolbar
         title={category === undefined ? '' : category.label}
         unsaved={state.unsaved}
@@ -267,26 +256,6 @@ export function AssetPanelView(props: IAssetPanelViewProps): ReactElement {
       {transcodeNotice === undefined ? null : (
         <div className="asset-notice" data-test-id="asset-transcode-notice">
           {transcodeNotice}
-        </div>
-      )}
-      {summary === undefined ? null : (
-        <div className="asset-transcode-summary" data-test-id="asset-transcode-summary">
-          <Alert
-            type={summary.failed.length === 0 ? 'success' : 'error'}
-            showIcon
-            title={summary.failed.length === 0 ? '转码完成' : '转码失败'}
-            description={
-              summary.failed.length === 0 ? (
-                <span>{`共 ${summary.succeeded} 个素材已完成转换。`}</span>
-              ) : (
-                <ul className="asset-transcode-summary-list">
-                  {summary.failed.map((item) => (
-                    <li key={item.name}>{`${item.name}：${item.error ?? ASSET_TRANSCODE_UNKNOWN_ERROR}`}</li>
-                  ))}
-                </ul>
-              )
-            }
-          />
         </div>
       )}
       <div className="asset-body">

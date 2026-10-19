@@ -1,4 +1,5 @@
 import './asset.css';
+import { message as antdMessage } from 'antd';
 import { Store } from '@tanstack/store';
 import { useStore } from '@tanstack/react-store';
 import { get } from 'es-toolkit/compat';
@@ -40,7 +41,6 @@ import {
   AssetTranscodeKind,
   IAssetTranscodeItemResult,
   IAssetTranscodeOptions,
-  IAssetTranscodeSummary,
 } from './transcode/types';
 import {
   AssetPanelMode,
@@ -255,9 +255,6 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
 
   /** 是否正在批量转码 */
   private transcoding = false;
-
-  /** 最近一次批量转码的汇总；未转码时为 undefined */
-  private transcodeSummary: IAssetTranscodeSummary | undefined;
 
   /** 转码服务；缺省为浏览器实现，装配方可注入替身 */
   private readonly transcodeService: IAssetTranscodeService;
@@ -659,7 +656,7 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
   }
 
   /**
-   * 关闭瘦身转码弹窗；最近一次转码的汇总保留在界面上
+   * 关闭瘦身转码弹窗；转码结果由全局提示呈现
    */
   closeTranscode(): void {
     this.transcodeOpen = false;
@@ -727,14 +724,13 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
 
     if (succeeded > 0) state.unsaved = true;
 
-    this.transcodeSummary = { total: names.length, succeeded, failed };
+    if (failed.length > 0) {
+      antdMessage.error(`转码失败：${failed[0].error ?? ASSET_TRANSCODE_UNKNOWN_ERROR}`);
+    } else {
+      antdMessage.success(`转码完成，共 ${succeeded} 个`);
+    }
 
-    const message =
-      failed.length > 0
-        ? `转码失败：${failed[0].error ?? ASSET_TRANSCODE_UNKNOWN_ERROR}`
-        : `转码完成，共 ${succeeded} 个`;
-
-    this.publish(AssetPanelStatus.Ready, message);
+    this.publish(AssetPanelStatus.Ready);
   }
 
   /**
@@ -873,8 +869,8 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
       this.transcodeCapability.set(kind, this.transcodeCapable);
     }
 
-    // 只刷新能力位：沿用当前状态与提示，免得能力探测把刚发布的操作结果冲掉
-    this.publish(this.store.state.status, this.store.state.message, this.store.state.error);
+    // 只刷新能力位：沿用当前状态与错误，免得能力探测把刚发布的状态冲掉
+    this.publish(this.store.state.status, undefined, this.store.state.error);
   }
 
   /**
@@ -1115,10 +1111,12 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
   /**
    * 把当前分类状态合并进视图订阅源
    * @param status 面板数据状态
-   * @param message 操作结果提示
+   * @param notice 操作结果提示；提供时改为经 antd `message.info` 全局提示，不再写进视图状态
    * @param error 错误提示文案
    */
-  private publish(status: AssetPanelStatus, message?: string, error?: string): void {
+  private publish(status: AssetPanelStatus, notice?: string, error?: string): void {
+    if (notice !== undefined) antdMessage.info(notice);
+
     const state = this.currentCategoryId === undefined ? undefined : this.states.get(this.currentCategoryId);
     const previous = this.store.state;
 
@@ -1133,12 +1131,10 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
       rows: this.configRows,
       configErrors: this.configErrors,
       error,
-      message,
       unsaved: state === undefined ? false : state.unsaved,
       transcodeOpen: this.transcodeOpen,
       transcoding: this.transcoding,
       transcodeCapable: this.transcodeCapable,
-      transcodeSummary: this.transcodeSummary,
     });
   }
 

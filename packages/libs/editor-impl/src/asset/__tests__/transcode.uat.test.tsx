@@ -1,15 +1,18 @@
 import { cleanup, configure, render } from '@testing-library/react';
 import { EditorCore } from '@motajs/editor-core';
+import { message } from 'antd';
 import { createElement } from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ASSET_PANEL_TYPE_ID, AssetPanel, IAssetTranscodeOptions, IAssetTranscodeService } from '..';
 import { ASSET_TEST_CATEGORIES, createAssetHarness, FakeFileSystem, listText } from './fixtures';
 
 configure({ testIdAttribute: 'data-test-id' });
 
-// 每个用例结束后卸载已挂载的组件，避免 DOM 在用例之间累积
+// 每个用例结束后卸载已挂载的组件、销毁全局提示并还原 spy，避免弹层与调用记录跨用例残留
 afterEach(() => {
   cleanup();
+  message.destroy();
+  vi.restoreAllMocks();
 });
 
 // 转码编排集成用例：用一个假转码服务驱动 AssetPanel.transcodeAssets，
@@ -194,17 +197,18 @@ describe('素材瘦身转码编排', () => {
 
     const system = await createAssetHarness(fs);
     const panel = await openPanel(system, service);
+    const errors = vi.spyOn(message, 'error');
 
     await panel.selectCategory('texture');
     await panel.transcodeAssets(['a.png'], imageOptions(true));
 
     expect(Array.from(await fs.readBinary('content/texture/a.png'))).toEqual([1]);
     expect(Array.from(await fs.readBinary('content/texture/a.webp'))).toEqual([9]);
+    expect(errors).toHaveBeenCalledWith(expect.stringContaining('目标文件已存在'));
 
     const container = renderPanel(panel);
 
-    expect(container.querySelector('[data-test-id="asset-transcode-summary"]')).not.toBeNull();
-    expect(container.textContent).toContain('目标文件已存在');
+    expect(container.querySelector('[data-test-id="asset-transcode-summary"]')).toBeNull();
   });
 
   // ④ 单项失败不中断：让第二条抛错，第一条仍成功，汇总里只有一条失败
@@ -220,17 +224,14 @@ describe('素材瘦身转码编排', () => {
 
     const system = await createAssetHarness(fs);
     const panel = await openPanel(system, service);
+    const errors = vi.spyOn(message, 'error');
 
     await panel.selectCategory('texture');
     await panel.transcodeAssets(['a.png', 'b.png'], imageOptions(true));
 
     expect(Array.from(await fs.readBinary('content/texture/a.webp'))).toEqual([1, 0x77]);
     await expect(fs.readBinary('content/texture/b.webp')).rejects.toThrow();
-
-    const container = renderPanel(panel);
-
-    expect(container.textContent).toContain('b.png');
-    expect(container.textContent).toContain('假转码失败');
+    expect(errors).toHaveBeenCalledWith(expect.stringContaining('假转码失败'));
   });
 
   // ⑤ 转码改字节 = 不可撤销：撤销被屏障挡住，返回 false
@@ -261,13 +262,17 @@ describe('素材瘦身转码编排', () => {
 
     const system = await createAssetHarness(fs);
     const panel = await openPanel(system, service);
+    const successes = vi.spyOn(message, 'success');
 
     await panel.selectCategory('texture');
     await panel.transcodeAssets(['a.png', 'b.png'], imageOptions(true));
 
+    expect(successes).toHaveBeenCalledWith('转码完成，共 2 个');
+
     const container = renderPanel(panel);
 
-    expect(container.querySelector('[data-test-id="asset-notice"]')?.textContent).toBe('转码完成，共 2 个');
+    expect(container.querySelector('[data-test-id="asset-notice"]')).toBeNull();
+    expect(container.querySelector('[data-test-id="asset-transcode-summary"]')).toBeNull();
   });
 
   // ⑦ 空选择：不写任何文件、不登记屏障
@@ -337,6 +342,7 @@ describe('素材瘦身转码编排', () => {
 
     const system = await createAssetHarness(fs);
     const panel = await openPanel(system, service);
+    const errors = vi.spyOn(message, 'error');
 
     await panel.selectCategory('texture');
     await panel.transcodeAssets(['a.png'], imageOptions(false));
@@ -344,9 +350,10 @@ describe('素材瘦身转码编排', () => {
     expect(Array.from(await fs.readBinary('content/texture/a.png'))).toEqual([1]);
     expect(Array.from(await fs.readBinary('content/texture/a-origin.png'))).toEqual([9]);
     await expect(fs.readBinary('content/texture/a.webp')).rejects.toThrow();
+    expect(errors).toHaveBeenCalledWith(expect.stringContaining('保留文件已存在'));
 
     const container = renderPanel(panel);
 
-    expect(container.textContent).toContain('保留文件已存在');
+    expect(container.textContent).not.toContain('保留文件已存在');
   });
 });
