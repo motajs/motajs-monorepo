@@ -207,7 +207,15 @@ function renderValueControl(row: ITableRowNode, disabled: boolean, onChange: (va
     const kind = inferControlKind(config);
 
     if (kind === TableControlKind.Select) {
-      return <SelectInput value={row.value} options={config.enum ?? []} disabled={disabled} onChange={onChange} />;
+      return (
+        <SelectInput
+          value={row.value}
+          options={config.enum ?? []}
+          titles={config['x-enum-titles']}
+          disabled={disabled}
+          onChange={onChange}
+        />
+      );
     }
 
     if (kind === TableControlKind.Checkbox) {
