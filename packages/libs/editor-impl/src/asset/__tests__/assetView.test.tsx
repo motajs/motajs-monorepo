@@ -352,6 +352,41 @@ describe('素材面板视图', () => {
     expect(container.querySelector('audio')).toBeNull();
   });
 
+  // 卡片尺寸：默认按 116 渲染网格列宽，卡片高度与缩略图尺寸也按该比例给出
+  it('默认渲染的卡片尺寸是 116', () => {
+    const view = makeView({ entries: [entry('hero.png', true)] });
+    const { container } = renderView(view);
+    const grid = container.querySelector('[data-test-id="asset-grid"]');
+    const card = container.querySelector('[data-test-id="asset-card-hero.png"]');
+    const thumb = card?.querySelector('.asset-card-thumb');
+
+    expect(grid?.getAttribute('data-card-size')).toBe('116');
+    expect(grid?.getAttribute('style')).toContain('116px');
+    expect(card?.getAttribute('style')).toContain('112px');
+    expect(thumb?.getAttribute('style')).toContain('64px');
+  });
+
+  // 卡片尺寸：在「图标大小」滑块上按右方向键，网格列宽、卡片高度与缩略图一起变大
+  // （rc-slider 先把 116 对齐到 96 + 8n 的 120，再前进一格，因此一次右移得到 128）
+  it('拖动图标大小滑块后卡片与缩略图一起变大', () => {
+    const view = makeView({ entries: [entry('hero.png', true)] });
+    const { container } = renderView(view);
+    const handle = container.querySelector('[data-test-id="asset-toolbar-card-size"] [role="slider"]');
+
+    expect(handle).not.toBeNull();
+
+    fireEvent.keyDown(handle!, { key: 'ArrowRight', keyCode: 39, which: 39 });
+
+    const grid = container.querySelector('[data-test-id="asset-grid"]');
+    const card = container.querySelector('[data-test-id="asset-card-hero.png"]');
+    const thumb = card?.querySelector('.asset-card-thumb');
+
+    expect(grid?.getAttribute('data-card-size')).toBe('128');
+    expect(grid?.getAttribute('style')).toContain('128px');
+    expect(card?.getAttribute('style')).toContain('124px');
+    expect(thumb?.getAttribute('style')).toContain('71px');
+  });
+
   // 详情预览：选中字体后样例文字用素材字体渲染，@font-face 指向同一个 blob 地址
   it('选中字体后详情用素材字体渲染样例', async () => {
     const view = makeView({

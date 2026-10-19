@@ -1,6 +1,7 @@
 import { Button, Spin } from 'antd';
-import { ReactElement } from 'react';
+import { ReactElement, useState } from 'react';
 import { AssetCategoryKind, IAssetCategory } from '../../react';
+import { DEFAULT_ASSET_CARD_WIDTH } from '../constants';
 import { resolveTranscodedPath } from '../model';
 import { ASSET_WEBM_EXTENSION, ASSET_WEBP_EXTENSION, IAssetTranscodeOptions } from '../transcode/types';
 import { AssetPanelMode, AssetPanelStatus, IAssetEntry, IAssetPanelViewState, IAssetUpload } from '../types';
@@ -146,9 +147,14 @@ function noopTranscodeStart(): void {}
  * 渲染面板主区：加载 / 错误 / 空都给出固定呈现，就绪时渲染网格与详情
  * @param props 面板视图 props
  * @param category 当前分类；未命中时为 undefined
+ * @param cardWidth 卡片框宽度（px）
  * @returns 主区元素
  */
-function renderContent(props: IAssetPanelViewProps, category: IAssetCategory | undefined): ReactElement {
+function renderContent(
+  props: IAssetPanelViewProps,
+  category: IAssetCategory | undefined,
+  cardWidth: number,
+): ReactElement {
   const view = props.view;
 
   if (view.status === AssetPanelStatus.Loading) {
@@ -194,6 +200,7 @@ function renderContent(props: IAssetPanelViewProps, category: IAssetCategory | u
       <AssetGrid
         entries={view.entries}
         kind={category.kind}
+        cardWidth={cardWidth}
         selectedName={view.selectedName}
         onSelect={props.onSelectAsset ?? noopSelectAsset}
         loadBytes={props.loadBytes}
@@ -229,6 +236,7 @@ function transcodeUnsupportedMessage(category: IAssetCategory): string {
  */
 export function AssetPanelView(props: IAssetPanelViewProps): ReactElement {
   const state = props.view;
+  const cardWidthState = useState<number>(DEFAULT_ASSET_CARD_WIDTH);
   const category = currentCategory(state);
   const busy = state.status === AssetPanelStatus.Loading || state.status === AssetPanelStatus.NoCategory;
   const transcodeSupported =
@@ -243,6 +251,8 @@ export function AssetPanelView(props: IAssetPanelViewProps): ReactElement {
     <div className="asset-panel" data-test-id="asset-panel" data-status={statusToken(state.status)}>
       <AssetToolbar
         title={category === undefined ? '' : category.label}
+        cardWidth={cardWidthState[0]}
+        onCardWidthChange={cardWidthState[1]}
         unsaved={state.unsaved}
         disabled={busy}
         transcodeEnabled={transcodeEnabled}
@@ -269,7 +279,7 @@ export function AssetPanelView(props: IAssetPanelViewProps): ReactElement {
             onBack={props.onBack ?? noopConfigBack}
           />
         ) : (
-          renderContent(props, category)
+          renderContent(props, category, cardWidthState[0])
         )}
       </div>
       {state.transcodeOpen && category !== undefined ? (

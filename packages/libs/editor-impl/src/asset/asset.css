@@ -35,6 +35,25 @@
   white-space: nowrap;
 }
 
+.asset-toolbar-size {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.asset-toolbar-size-label {
+  color: var(--editor-muted, #656d76);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.asset-toolbar-size-slider {
+  width: 120px;
+  margin: 0;
+}
+
 .asset-body {
   display: flex;
   flex: 1 1 auto;
