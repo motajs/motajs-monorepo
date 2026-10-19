@@ -1,6 +1,7 @@
 import { ReactElement } from 'react';
 import { AssetCategoryKind } from '../../react';
 import { resolveAssetMime } from '../model';
+import { AssetFontSample } from './AssetFontSample';
 import { useAssetObjectUrl } from './useAssetObjectUrl';
 
 export interface IAssetPreviewProps {
@@ -43,7 +44,7 @@ export function AssetPreview(props: IAssetPreviewProps): ReactElement {
   }
 
   if (kind === AssetCategoryKind.Font) {
-    return <div className="asset-preview-font">魔塔 Mota 0123456789</div>;
+    return <AssetFontSample path={props.path} url={url} text="魔塔 Mota 0123456789" className="asset-preview-font" />;
   }
 
   return <div className="asset-preview-animation">动画预览</div>;

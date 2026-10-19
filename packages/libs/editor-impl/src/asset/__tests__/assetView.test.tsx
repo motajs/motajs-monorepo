@@ -329,4 +329,48 @@ describe('素材面板视图', () => {
     expect(thumb?.querySelector('.asset-card-preview-missing')).not.toBeNull();
     expect(thumb?.textContent).toBe('');
   });
+
+  // 详情预览：选中音频后出现可播放的 <audio controls>，地址来自读到的字节
+  it('选中音频后详情出现可播放的播放器', async () => {
+    const view = makeView({
+      categoryId: 'audio',
+      entries: [entryIn('content/audio', 'bgm.wav', true)],
+      selectedName: 'bgm.wav',
+    });
+    const { container } = renderViewWithBytes(view, sampleBytes);
+
+    await waitFor(() => {
+      expect(container.querySelector('audio[controls]')?.getAttribute('src')).toBe('blob:test');
+    });
+  });
+
+  // 详情预览：未选中素材时详情只有引导文案，不挂载播放器
+  it('未选中素材时详情不含播放器', () => {
+    const view = makeView({ categoryId: 'audio', entries: [entryIn('content/audio', 'bgm.wav', true)] });
+    const { container } = renderViewWithBytes(view, sampleBytes);
+
+    expect(container.querySelector('audio')).toBeNull();
+  });
+
+  // 详情预览：选中字体后样例文字用素材字体渲染，@font-face 指向同一个 blob 地址
+  it('选中字体后详情用素材字体渲染样例', async () => {
+    const view = makeView({
+      categoryId: 'font',
+      entries: [entryIn('content/font', 'sample.ttf', true)],
+      selectedName: 'sample.ttf',
+    });
+    const { container } = renderViewWithBytes(view, sampleBytes);
+
+    expect(container.querySelector('.asset-detail [data-test-id="asset-font-sample"]')?.textContent).toBe(
+      '魔塔 Mota 0123456789',
+    );
+
+    await waitFor(() => {
+      const faces = Array.from(container.querySelectorAll('[data-test-id="asset-font-face"]'));
+
+      expect(
+        faces.some((face) => face.textContent?.includes('@font-face') && face.textContent.includes('blob:test')),
+      ).toBe(true);
+    });
+  });
 });
