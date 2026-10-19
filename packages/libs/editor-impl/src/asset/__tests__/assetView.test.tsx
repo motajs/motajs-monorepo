@@ -1,9 +1,14 @@
-import { cleanup, configure, fireEvent, render } from '@testing-library/react';
+import { cleanup, configure, fireEvent, render, waitFor } from '@testing-library/react';
 import { createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AssetCategoryKind, AssetListFormat, IAssetCategory } from '../../react';
 import { AssetPanelView } from '../components';
 import { AssetPanelMode, AssetPanelStatus, IAssetEntry, IAssetPanelViewState } from '../types';
+
+// jsdom 没有实现 `URL.createObjectURL`，预览组件却要在挂载后靠它把字节变成地址；这里只补这两个静态方法，
+// 不整体替换 `URL` 构造器，避免影响其它依赖 `URL` 的代码
+Object.defineProperty(URL, 'createObjectURL', { value: vi.fn((): string => 'blob:test'), configurable: true });
+Object.defineProperty(URL, 'revokeObjectURL', { value: vi.fn(), configurable: true });
 
 configure({ testIdAttribute: 'data-test-id' });
 
@@ -12,7 +17,7 @@ afterEach(() => {
   cleanup();
 });
 
-/** 视图测试沿用的一份分类清单：图片（对象数组）与动画（字符串数组），够覆盖转码开关该用哪一档 */
+/** 视图测试沿用的一份分类清单：图片（对象数组）、音频 / 动画 / 字体，够覆盖转码开关该用哪一档与四类预览 */
 const VIEW_CATEGORIES: readonly IAssetCategory[] = [
   {
     id: 'texture',
@@ -24,6 +29,15 @@ const VIEW_CATEGORIES: readonly IAssetCategory[] = [
     listKey: 'textures',
   },
   {
+    id: 'audio',
+    label: '音频',
+    kind: AssetCategoryKind.Audio,
+    dir: 'content/audio',
+    listPath: 'content/audio/.list.jsonc',
+    listFormat: AssetListFormat.StringList,
+    extension: '.wav',
+  },
+  {
     id: 'animation',
     label: '动画',
     kind: AssetCategoryKind.Animation,
@@ -31,6 +45,14 @@ const VIEW_CATEGORIES: readonly IAssetCategory[] = [
     listPath: 'content/animation/.list.jsonc',
     listFormat: AssetListFormat.StringList,
     extension: '.anim',
+  },
+  {
+    id: 'font',
+    label: '字体',
+    kind: AssetCategoryKind.Font,
+    dir: 'content/font',
+    listPath: 'content/font/.list.jsonc',
+    listFormat: AssetListFormat.StringList,
   },
 ];
 
@@ -42,6 +64,17 @@ const VIEW_CATEGORIES: readonly IAssetCategory[] = [
  */
 function entry(name: string, exists: boolean): IAssetEntry {
   return { name, path: `content/texture/${name}`, exists };
+}
+
+/**
+ * 造一条指定目录下的素材条目
+ * @param dir 素材字节所在目录
+ * @param name 素材名
+ * @param exists 字节文件是否存在
+ * @returns 素材条目
+ */
+function entryIn(dir: string, name: string, exists: boolean): IAssetEntry {
+  return { name, path: `${dir}/${name}`, exists };
 }
 
 /**
@@ -86,6 +119,30 @@ function noopSelect(): void {}
  */
 function renderView(view: IAssetPanelViewState, onRetry?: () => void): ReturnType<typeof render> {
   return render(createElement(AssetPanelView, { view, loadBytes: noBytes, onSelectCategory: noopSelect, onRetry }));
+}
+
+/**
+ * 渲染视图并注入自定义的字节读取回调
+ * @param view 要渲染的面板视图状态
+ * @param loadBytes 按路径读取字节的回调
+ * @returns 渲染结果
+ */
+function renderViewWithBytes(
+  view: IAssetPanelViewState,
+  loadBytes: (path: string) => Promise<Uint8Array | undefined>,
+): ReturnType<typeof render> {
+  return render(createElement(AssetPanelView, { view, loadBytes, onSelectCategory: noopSelect }));
+}
+
+/** 预览用例的假字节：内容无关紧要，只表示「读到了字节」 */
+const SAMPLE_BYTES = new Uint8Array([1, 2, 3, 4]);
+
+/**
+ * 读数即返回固定字节的读取器
+ * @returns 固定字节
+ */
+function sampleBytes(): Promise<Uint8Array | undefined> {
+  return Promise.resolve(SAMPLE_BYTES);
 }
 
 describe('素材面板视图', () => {
@@ -216,5 +273,60 @@ describe('素材面板视图', () => {
     const { container } = renderView(view);
 
     expect(container.textContent).toContain('尚无可用分类');
+  });
+
+  // 图片卡片：读到的字节被转成 blob 地址后直接作为缩略图显示
+  it('图片卡片在字节可用时渲染预览图', async () => {
+    const view = makeView({ entries: [entry('hero.png', true)] });
+    const { container } = renderViewWithBytes(view, sampleBytes);
+
+    await waitFor(() => {
+      expect(container.querySelector('[data-test-id="asset-card-preview-image"]')?.getAttribute('src')).toBe(
+        'blob:test',
+      );
+    });
+  });
+
+  // 音频卡片：只画固定波形图标，绝不为卡片预览读取字节
+  it('音频卡片渲染波形图标且不读字节', () => {
+    const loadBytes = vi.fn(sampleBytes);
+    const view = makeView({ categoryId: 'audio', entries: [entryIn('content/audio', 'bgm.wav', true)] });
+    const { container } = renderViewWithBytes(view, loadBytes);
+
+    expect(container.querySelector('[data-test-id="asset-card-preview-audio"]')).not.toBeNull();
+    expect(loadBytes).not.toHaveBeenCalled();
+  });
+
+  // 动画卡片：暂时只显示占位文字
+  it('动画卡片渲染占位', () => {
+    const view = makeView({ categoryId: 'animation', entries: [entryIn('content/animation', 'sample.anim', true)] });
+    const { container } = renderViewWithBytes(view, sampleBytes);
+
+    expect(container.querySelector('[data-test-id="asset-card-preview-animation"]')?.textContent).toBe('动画');
+  });
+
+  // 字体卡片：用素材字体写「ABC」，并通过 @font-face 指向 blob 地址
+  it('字体卡片用素材字体写 ABC', async () => {
+    const view = makeView({ categoryId: 'font', entries: [entryIn('content/font', 'sample.ttf', true)] });
+    const { container } = renderViewWithBytes(view, sampleBytes);
+
+    expect(container.querySelector('[data-test-id="asset-card-preview-font"]')?.textContent).toBe('ABC');
+
+    await waitFor(() => {
+      const face = container.querySelector('[data-test-id="asset-font-face"]');
+
+      expect(face?.textContent).toContain('@font-face');
+      expect(face?.textContent).toContain('blob:test');
+    });
+  });
+
+  // 缺失卡片：缩略图里只留空占位，不重复写「缺失」（文案由右上角徽标呈现）
+  it('缺失卡片缩略图是空占位且不含缺失文字', () => {
+    const view = makeView({ entries: [entry('ghost.png', false)] });
+    const { container } = renderView(view);
+    const thumb = container.querySelector('[data-test-id="asset-card-ghost.png"] .asset-card-thumb');
+
+    expect(thumb?.querySelector('.asset-card-preview-missing')).not.toBeNull();
+    expect(thumb?.textContent).toBe('');
   });
 });

@@ -1,9 +1,13 @@
 import { ReactElement } from 'react';
+import { AssetCategoryKind } from '../../react';
 import { IAssetEntry } from '../types';
+import { AssetCardPreview } from './AssetCardPreview';
 
 export interface IAssetGridProps {
   /** 当前分类下的素材条目，按列表顺序渲染 */
   readonly entries: readonly IAssetEntry[];
+  /** 当前分类的大分类，决定卡片预览形态 */
+  readonly kind: AssetCategoryKind;
   /** 当前选中的素材名；未选中时为 undefined */
   readonly selectedName?: string;
   /**
@@ -11,6 +15,12 @@ export interface IAssetGridProps {
    * @param name 目标素材名
    */
   onSelect(name: string): void;
+  /**
+   * 读取某素材字节，供卡片预览使用
+   * @param path 素材字节文件路径
+   * @returns 字节；文件不存在或读取失败时为 undefined
+   */
+  loadBytes(path: string): Promise<Uint8Array | undefined>;
 }
 
 /**
@@ -48,7 +58,9 @@ export function AssetGrid(props: IAssetGridProps): ReactElement {
           data-exists={String(entry.exists)}
           onClick={(): void => props.onSelect(entry.name)}
         >
-          <span className="asset-card-thumb">{entry.exists ? null : '缺失'}</span>
+          <span className="asset-card-thumb">
+            <AssetCardPreview kind={props.kind} path={entry.path} exists={entry.exists} loadBytes={props.loadBytes} />
+          </span>
           <span className="asset-card-name">{entry.name}</span>
           {entry.exists ? null : (
             <span className="asset-card-missing" data-test-id={`asset-card-missing-${entry.name}`}>

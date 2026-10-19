@@ -200,8 +200,10 @@ function renderContent(props: IAssetPanelViewProps, category: IAssetCategory | u
     <div className="asset-content">
       <AssetGrid
         entries={view.entries}
+        kind={category.kind}
         selectedName={view.selectedName}
         onSelect={props.onSelectAsset ?? noopSelectAsset}
+        loadBytes={props.loadBytes}
       />
       <AssetDetail
         entry={selected}

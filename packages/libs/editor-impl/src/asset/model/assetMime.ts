@@ -9,8 +9,11 @@ const FALLBACK_IMAGE_MIME = 'image/png';
 /** 无法从扩展名判断时的音频兜底 MIME */
 const FALLBACK_AUDIO_MIME = 'audio/mpeg';
 
-/** 非图片 / 音频分类的兜底 MIME */
+/** 非图片 / 音频 / 字体分类的兜底 MIME */
 const FALLBACK_BINARY_MIME = 'application/octet-stream';
+
+/** 无法从扩展名判断时的字体兜底 MIME */
+const FALLBACK_FONT_MIME = 'font/ttf';
 
 /**
  * 取路径末段的小写扩展名（含前导点）
@@ -58,6 +61,19 @@ function audioMimeOf(extension: string): string {
 }
 
 /**
+ * 由字体扩展名推断 MIME 类型
+ * @param extension 小写扩展名（含前导点）
+ * @returns 对应的字体 MIME；无法识别时为兜底 MIME
+ */
+function fontMimeOf(extension: string): string {
+  if (extension === '.otf') return 'font/otf';
+  if (extension === '.woff') return 'font/woff';
+  if (extension === '.woff2') return 'font/woff2';
+
+  return FALLBACK_FONT_MIME;
+}
+
+/**
  * 由素材字节文件路径与分类推断字节的 MIME 类型
  * @param path 素材字节文件路径
  * @param kind 素材的大分类
@@ -68,6 +84,7 @@ export function resolveAssetMime(path: string, kind: AssetCategoryKind): string 
 
   if (kind === AssetCategoryKind.Image) return imageMimeOf(extension);
   if (kind === AssetCategoryKind.Audio) return audioMimeOf(extension);
+  if (kind === AssetCategoryKind.Font) return fontMimeOf(extension);
 
   return FALLBACK_BINARY_MIME;
 }
