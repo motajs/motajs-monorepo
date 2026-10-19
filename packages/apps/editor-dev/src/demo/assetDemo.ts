@@ -8,6 +8,7 @@ import {
   IAssetEditorCapabilities,
 } from '@motajs/editor-impl/react';
 import { SYSTEM_PREFIX_END_MARKER } from '@motajs/editor-impl/shared';
+import DEMO_FONT_DATA_URL from '../../../editor/src/assets/FiraCode.ttf?inline';
 
 // 开发宿主的素材演示数据与注册函数：给素材面板注入四个分类（图片 / 音频 / 动画 / 字体）与一批可浏览、
 // 可编辑、可转码的示例文件，并在顶层把素材面板类型注册进 core、订阅「无法撤销」提示。本文件只服务开发
@@ -21,9 +22,34 @@ interface IAssetDemoFile {
   readonly content: string | Uint8Array;
 }
 
-/** 1×1 透明 PNG 的 base64 常量，经解码后作为图片分类的演示字节 */
-const DEMO_PNG_BASE64: string =
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+/** hero.png 的 base64：16×16 彩色棋盘 RGBA PNG，用作看得见的演示图片 */
+const DEMO_HERO_PNG_BASE64: string =
+  'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAALElEQVR4nGO4/erff2QsVv4fBROSZxgGBpCqAV1+OBgw8LEw8AYMfCwMuAEApzsmrhAADF0AAAAASUVORK5CYII=';
+
+/** tile.png 的 base64：另一张 16×16 彩色棋盘，内容与 hero 不同，便于分辨 */
+const DEMO_TILE_PNG_BASE64: string =
+  'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAK0lEQVR4nGP4/+nFfxRc5YqKCcgzDAcDSNSALj8sDBj4WBh4AwY+FgbaAADMEUqucDL8wQAAAABJRU5ErkJggg==';
+
+/** 演示 WAV 的采样率（Hz） */
+const DEMO_WAV_SAMPLE_RATE = 16000;
+
+/** 演示 WAV 的采样数：16 kHz 下正好 0.4 秒 */
+const DEMO_WAV_SAMPLE_COUNT = 6400;
+
+/** 演示 WAV 的正弦波频率（Hz），取标准音 A4，浏览器里能听清 */
+const DEMO_WAV_FREQUENCY = 440;
+
+/** 演示 WAV 的振幅（相对满量程），留足余量避免削波 */
+const DEMO_WAV_AMPLITUDE = 0.25;
+
+/** 演示 WAV 首尾淡入淡出的时长（秒），避免起止处爆音 */
+const DEMO_WAV_FADE_SECONDS = 0.02;
+
+/** 16 位采样的满量程 */
+const DEMO_WAV_FULL_SCALE = 32767;
+
+/** 演示字体数据地址里 base64 正文之前的 `data:` 前缀分隔符 */
+const DATA_URL_SEPARATOR = ',';
 
 /** 演示图片分类的两个素材名（与列表文件登记的来源字段一致） */
 const DEMO_TEXTURE_NAMES: readonly string[] = ['hero.png', 'tile.png'];
@@ -95,11 +121,12 @@ function decodeBase64(text: string): Uint8Array {
 }
 
 /**
- * 造一份 1×1 PNG 字节，作为图片分类的演示素材
- * @returns 解码后的 PNG 字节
+ * 造一份 16×16 彩色棋盘 PNG 字节，作为图片分类的演示素材
+ * @param name 演示图片的素材名
+ * @returns 解码后的 PNG 字节（两张演示图内容不同）
  */
-function createDemoPng(): Uint8Array {
-  return decodeBase64(DEMO_PNG_BASE64);
+function createDemoPng(name: string): Uint8Array {
+  return decodeBase64(name === DEMO_TEXTURE_NAMES[1] ? DEMO_TILE_PNG_BASE64 : DEMO_HERO_PNG_BASE64);
 }
 
 /**
@@ -113,15 +140,17 @@ function writeAscii(view: DataView, offset: number, text: string): void {
 }
 
 /**
- * 由代码合成一段最小 PCM WAV：44 字节 RIFF 头 + 0.1 秒 16 位静音采样，供音频分类的转码演示
- * @returns 可被音频解码器读取的 WAV 字节
+ * 由代码合成一段 0.4 秒 440 Hz 正弦波 PCM WAV：44 字节 RIFF 头 + 16 位单声道采样，
+ * 首尾各做短淡入淡出，供音频分类的播放与转码演示
+ * @returns 可被音频解码器读取、且真的听得到声音的 WAV 字节
  */
 function createDemoWav(): Uint8Array {
-  const sampleRate = 8000;
+  const sampleRate = DEMO_WAV_SAMPLE_RATE;
   const bitsPerSample = 16;
   const bytesPerSample = bitsPerSample / 8;
-  const sampleCount = 800;
+  const sampleCount = DEMO_WAV_SAMPLE_COUNT;
   const dataSize = sampleCount * bytesPerSample;
+  const fadeSamples = sampleRate * DEMO_WAV_FADE_SECONDS;
   const buffer = new ArrayBuffer(44 + dataSize);
   const view = new DataView(buffer);
 
@@ -139,16 +168,25 @@ function createDemoWav(): Uint8Array {
   writeAscii(view, 36, 'data');
   view.setUint32(40, dataSize, true);
 
-  // 采样区默认即为全零（ArrayBuffer 零初始化），可直接表示静音
+  for (let index = 0; index < sampleCount; index += 1) {
+    const envelope = Math.max(0, Math.min(1, index / fadeSamples, (sampleCount - 1 - index) / fadeSamples));
+    const phase = (2 * Math.PI * DEMO_WAV_FREQUENCY * index) / sampleRate;
+    const sample = Math.round(Math.sin(phase) * DEMO_WAV_AMPLITUDE * envelope * DEMO_WAV_FULL_SCALE);
+
+    view.setInt16(44 + index * bytesPerSample, sample, true);
+  }
+
   return new Uint8Array(buffer);
 }
 
 /**
- * 造一份占位字体字节：仅让字体分类有一条可浏览的素材，并非真正的字体文件
- * @returns 占位字体字节
+ * 取工作区已有的 Fira Code 字体字节，作为字体分类的演示字体
+ * @returns 从 `?inline` 数据地址里解码出的真实字体字节
  */
 function createDemoFont(): Uint8Array {
-  return new Uint8Array([0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+  const separator = DEMO_FONT_DATA_URL.indexOf(DATA_URL_SEPARATOR);
+
+  return decodeBase64(DEMO_FONT_DATA_URL.slice(separator + 1));
 }
 
 /**
@@ -160,7 +198,7 @@ function createListText(document: unknown): string {
   return `${SYSTEM_PREFIX_END_MARKER}\n${JSON.stringify(document, null, 2)}`;
 }
 
-/** 开发宿主要 seed 进内存后端的全部演示素材文件：四个分类的列表文件与示例字节（两张 1×1 PNG、一个合成 WAV、一个空 .anim、一个占位 .ttf） */
+/** 开发宿主要 seed 进内存后端的全部演示素材文件：四个分类的列表文件与示例字节（两张 16×16 彩色 PNG、一段有声音的 WAV、一个空 .anim、一份真实的 Fira Code 字体） */
 export const ASSET_DEMO_FILES: readonly IAssetDemoFile[] = [
   {
     path: 'content/texture/.list.jsonc',
@@ -169,8 +207,8 @@ export const ASSET_DEMO_FILES: readonly IAssetDemoFile[] = [
   { path: 'content/audio/.list.jsonc', content: createListText({ audios: [{ source: DEMO_AUDIO_NAME, type: 0 }] }) },
   { path: 'content/animation/.list.jsonc', content: createListText([DEMO_ANIMATION_NAME]) },
   { path: 'content/font/.list.jsonc', content: createListText([DEMO_FONT_NAME]) },
-  { path: `content/texture/${DEMO_TEXTURE_NAMES[0]}`, content: createDemoPng() },
-  { path: `content/texture/${DEMO_TEXTURE_NAMES[1]}`, content: createDemoPng() },
+  { path: `content/texture/${DEMO_TEXTURE_NAMES[0]}`, content: createDemoPng(DEMO_TEXTURE_NAMES[0]) },
+  { path: `content/texture/${DEMO_TEXTURE_NAMES[1]}`, content: createDemoPng(DEMO_TEXTURE_NAMES[1]) },
   { path: `content/audio/${DEMO_AUDIO_NAME}`, content: createDemoWav() },
   { path: `content/animation/${DEMO_ANIMATION_NAME}.anim`, content: new Uint8Array(0) },
   { path: `content/font/${DEMO_FONT_NAME}`, content: createDemoFont() },

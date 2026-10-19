@@ -3,13 +3,18 @@ import { EditorCore, IUndoable } from '@motajs/editor-core';
 import { AssetCapabilityProvider } from '@motajs/editor-impl/asset';
 import { useTableCapabilities } from '@motajs/editor-impl/react';
 import { createElement, ReactElement } from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryBackend } from '../backend/memoryBackend';
 import { ASSET_DEMO_CATEGORIES, ASSET_DEMO_FILES, registerAssetDemo } from '../demo/assetDemo';
 import { DevCodeEditorProvider } from '../demo/devCodeEditor';
 import { createTablePanelOpener, TABLE_PRESETS } from '../demo/tableDemo';
 
 configure({ testIdAttribute: 'data-test-id' });
+
+// jsdom 没有实现 `URL.createObjectURL`，卡片与详情预览却要靠它把字节变成地址；只补这两个静态方法，
+// 不整体替换 `URL` 构造器
+Object.defineProperty(URL, 'createObjectURL', { value: vi.fn((): string => 'blob:test'), configurable: true });
+Object.defineProperty(URL, 'revokeObjectURL', { value: vi.fn(), configurable: true });
 
 // 每个用例结束后卸载已挂载的组件，避免 DOM 在用例之间累积
 afterEach(() => {
@@ -49,6 +54,41 @@ function cardTestIds(container: HTMLElement): string[] {
   return Array.from(container.querySelectorAll('[data-test-id^="asset-card-"]')).map(
     (element) => element.getAttribute('data-test-id') ?? '',
   );
+}
+
+/**
+ * 取演示文件里的原始字节
+ * @param suffix 文件路径后缀，如 `.png`
+ * @returns 该文件的字节
+ */
+function demoBytes(suffix: string): Uint8Array {
+  const file = ASSET_DEMO_FILES.find((item) => item.path.endsWith(suffix));
+  const content = file?.content;
+
+  if (!(content instanceof Uint8Array)) throw new Error(`演示文件缺少字节：${suffix}`);
+
+  return content;
+}
+
+/**
+ * 按大端读取 32 位无符号整数
+ * @param bytes 字节序列
+ * @param offset 起始偏移
+ * @returns 读到的整数
+ */
+function readUint32BE(bytes: Uint8Array, offset: number): number {
+  return ((bytes[offset] << 24) | (bytes[offset + 1] << 16) | (bytes[offset + 2] << 8) | bytes[offset + 3]) >>> 0;
+}
+
+/**
+ * 把一段字节按 ASCII 还原成文本
+ * @param bytes 字节序列
+ * @param start 起始偏移
+ * @param end 结束偏移（不含）
+ * @returns 还原出的文本
+ */
+function asciiOf(bytes: Uint8Array, start: number, end: number): string {
+  return String.fromCharCode(...bytes.slice(start, end));
 }
 
 describe('开发宿主素材接入', () => {
@@ -162,6 +202,58 @@ describe('开发宿主素材接入', () => {
 
     await waitFor(() => {
       expect(container.querySelector('[data-test-id="asset-config-view"]')).toBeNull();
+    });
+  });
+
+  // 演示字节本身：图片是大于 1×1 的 PNG、WAV 不是静音、字体是真实字体而不是占位
+  it('演示字节是看得见、听得到、能加载的样本', () => {
+    const png = demoBytes('.png');
+
+    expect(Array.from(png.slice(0, 8))).toEqual([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    expect(readUint32BE(png, 16)).toBeGreaterThan(1);
+    expect(readUint32BE(png, 20)).toBeGreaterThan(1);
+
+    const wav = demoBytes('.wav');
+
+    expect(asciiOf(wav, 0, 4)).toBe('RIFF');
+    expect(asciiOf(wav, 8, 12)).toBe('WAVE');
+    expect(wav.slice(44).some((byte) => byte !== 0)).toBe(true);
+
+    const font = demoBytes('.ttf');
+
+    expect(font.length).toBeGreaterThan(10000);
+    expect(Array.from(font.slice(0, 4))).toEqual([0, 1, 0, 0]);
+  });
+
+  // 宿主里真的显示预览：图片有缩略图、音频有波形图标、字体卡片用素材字体写 ABC
+  it('宿主里图片、音频、字体三类卡片都显示预览', async () => {
+    const core = await createHost();
+    const tabId = core.shellSystem.listTabs()[0].id;
+
+    await act(async () => {
+      await core.shellSystem.openPanelInTab(tabId, 'asset');
+    });
+
+    const { container } = render(createElement(core.shellSystem.render()));
+
+    await waitFor(() => {
+      expect(container.querySelector('[data-test-id="asset-card-preview-image"]')?.getAttribute('src')).toBe(
+        'blob:test',
+      );
+    });
+
+    fireEvent.click(container.querySelector('[data-test-id="asset-category-audio"]')!);
+
+    await waitFor(() => {
+      expect(container.querySelector('[data-test-id="asset-card-bgm.wav"]')).not.toBeNull();
+    });
+
+    expect(container.querySelector('[data-test-id="asset-card-preview-audio"]')).not.toBeNull();
+
+    fireEvent.click(container.querySelector('[data-test-id="asset-category-font"]')!);
+
+    await waitFor(() => {
+      expect(container.querySelector('[data-test-id="asset-card-preview-font"]')?.textContent).toBe('ABC');
     });
   });
 });
