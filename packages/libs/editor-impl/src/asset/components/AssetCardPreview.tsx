@@ -85,7 +85,15 @@ function AssetCardImage(props: IAssetCardBytesProps): ReactElement | null {
 
   if (url === undefined) return null;
 
-  return <img data-test-id="asset-card-preview-image" alt="" loading="lazy" src={url} />;
+  return (
+    <img
+      data-test-id="asset-card-preview-image"
+      alt=""
+      loading="lazy"
+      src={url}
+      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+    />
+  );
 }
 
 /**

@@ -387,6 +387,35 @@ describe('素材面板视图', () => {
     expect(thumb?.getAttribute('style')).toContain('71px');
   });
 
+  // 图片缩略图：按百分比填满缩略图区，并在卡片变大后继续填满（G-03-7）
+  it('图片预览按百分比填满缩略图并随滑块放大', async () => {
+    const view = makeView({ entries: [entry('hero.png', true)] });
+    const { container } = renderViewWithBytes(view, sampleBytes);
+
+    await waitFor(() => {
+      expect(container.querySelector('[data-test-id="asset-card-preview-image"]')?.getAttribute('src')).toBe(
+        'blob:test',
+      );
+    });
+
+    const image = container.querySelector<HTMLImageElement>('[data-test-id="asset-card-preview-image"]');
+
+    expect(image?.style.width).toBe('100%');
+    expect(image?.style.height).toBe('100%');
+    expect(image?.style.objectFit).toBe('contain');
+
+    const handle = container.querySelector('[data-test-id="asset-toolbar-card-size"] [role="slider"]');
+
+    fireEvent.keyDown(handle!, { key: 'ArrowRight', keyCode: 39, which: 39 });
+
+    const thumb = container.querySelector<HTMLElement>('[data-test-id="asset-card-hero.png"] .asset-card-thumb');
+    const resized = container.querySelector<HTMLImageElement>('[data-test-id="asset-card-preview-image"]');
+
+    expect(thumb?.getAttribute('style')).toContain('71px');
+    expect(resized?.style.width).toBe('100%');
+    expect(resized?.style.height).toBe('100%');
+  });
+
   // 详情预览：选中字体后样例文字用素材字体渲染，@font-face 指向同一个 blob 地址
   it('选中字体后详情用素材字体渲染样例', async () => {
     const view = makeView({
