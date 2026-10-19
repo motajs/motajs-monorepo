@@ -42,16 +42,20 @@ skipped: 0
 
 - gap_id: G-03-1
   truth: "点击某个素材的「配置」后，应在【中间素材列表栏的位置】用表格组件替换该栏（左侧分类导航仍可用），并能「← 返回素材列表」；不应整面板覆盖、不应残留背后面板、不应出现无法返回/无法操作的状态"
-  status: failed
+  status: resolved
+  resolved_by: 03-18-PLAN.md
+  resolved_at: 2026-10-18
   reason: "User reported: 点击配置后表格占满整个面板、背后仍见素材管理页面、提示「配置校验未通过」、无法返回上一级、除输入框外所有可交互组件都点不动"
   severity: blocker
   test: 1
   artifacts: []
   missing: []
 - gap_id: G-03-2
-  truth: "素材面板中【所有分类】的素材都能正常预览（图片显示缩略图/大图、音频可试听、动画有预览、字体有样例）"
-  status: failed
-  reason: "User reported: 所有素材都无法预览（图片/音频/动画/字体皆无）——需区分是演示数据问题还是预览组件 bug"
+  truth: "素材网格卡片的『预览图』按分类呈现——图片：图片本身；音频：固定波形图标；动画：暂不做（占位）；字体：用该字体渲染『ABC』。音频在右侧详情/配置栏点击后预览播放（<audio controls>）。演示数据须为可见样例（可看见的小图 / 可播放的 WAV / 真字体）"
+  status: resolved
+  resolved_by: 03-19-PLAN.md
+  resolved_at: 2026-10-18
+  reason: "User reported: 所有素材都无法预览；随后给出设计方向：图片用图片本身、音频用固定波形图标、动画暂不做、字体用该字体写 ABC 作为卡片预览图；音频点击后在右侧配置栏预览播放"
   severity: major
   test: 1
   artifacts: []
