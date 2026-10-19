@@ -1,5 +1,6 @@
 import { Select } from 'antd';
 import { ReactElement } from 'react';
+import { IEnumTitleMap } from '../../types';
 
 export interface ISelectInputProps {
   /** 当前值 */
@@ -10,6 +11,8 @@ export interface ISelectInputProps {
   readonly onChange: (value: unknown) => void;
   /** 是否禁用 */
   readonly disabled?: boolean;
+  /** 枚举值 → 显示标签的映射；缺省时显示原值 */
+  readonly titles?: IEnumTitleMap;
 }
 
 /**
