@@ -60,3 +60,35 @@ skipped: 0
   test: 1
   artifacts: []
   missing: []
+- gap_id: G-03-3
+  truth: "瘦身转码弹窗：素材列表【竖向】排列、过长时自身滚动并加滚动条；区域之间加分割线，整体不挤；确认开始后在弹窗上显示「正在转码」，完成只用全局 antd message 提示；转码前说明输出格式（图片→webp、音频→webm 容器的 opus）；去掉会顶下内容的顶部提示行；去掉无法关闭、转码成功后一直存在的绿色背景提示"
+  status: failed
+  reason: "User reported: 转码弹窗素材列表横着排应竖排+滚动、Modal 太挤要加分割线、成功后顶部多出一行提示（顶下内容）要删、绿色背景提示无法关闭且常驻要删、转码中应在 Modal 上显示、完成用 antd message 全局提示、要说明转成什么格式"
+  severity: major
+  test: 2
+  artifacts: []
+  missing: []
+- gap_id: G-03-4
+  truth: "演示数据与网格：内置三四十个图片素材（含长方形等多样尺寸）以方便测试滚动等边界；提供一个 slider 调节预览图标大小（直接调整个素材卡片框的大小）"
+  status: failed
+  reason: "User reported: 素材数量太少不好测滚动；建议加三四十个内置图片素材；图片不要只加正方形，加些长方形；加 slider 调节预览图标大小（调整个框）"
+  severity: major
+  test: 2
+  artifacts: []
+  missing: []
+- gap_id: G-03-5
+  truth: "转码默认参数：图片（WebP）默认品质 100；音频（Opus）默认使用源音频原本的采样率与码率（能读到时），读不到则回退 128 kbps + 48000Hz"
+  status: failed
+  reason: "User reported: webp 默认品质设 100；opus 默认用音频原本采样率与码率，读不到再用 128k + 48000"
+  severity: minor
+  test: 2
+  artifacts: []
+  missing: []
+- gap_id: G-03-6
+  truth: "配置表单的枚举下拉显示【字符串标签】而非裸数字（如 read→整图/网格/…、usage→常规图/图块/图块集），但写回仍存数字；标签由 schema 携带、引擎按标签渲染选项"
+  status: failed
+  reason: "User asked: 能不能把数字枚举显示为字符串的选择栏（下拉现在是 0 1 2 3），实际存储仍为数字——如果可以最好这么做"
+  severity: major
+  test: 1
+  artifacts: []
+  missing: []
