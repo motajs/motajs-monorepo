@@ -100,3 +100,27 @@ skipped: 0
   test: 1
   artifacts: []
   missing: []
+- gap_id: G-03-7
+  truth: "拖动「图标大小」滑块时，素材卡片框变大，卡片内的图片预览（缩略图）也要跟着变大（不只是框变大、图不变）"
+  status: failed
+  reason: "User reported: 调整图标大小时，图片的预览图没有变大，预期变大"
+  severity: major
+  test: 1
+  artifacts: []
+  missing: []
+- gap_id: G-03-8
+  truth: "图片类素材在右侧详情/配置栏显示图片的尺寸（宽 × 高）"
+  status: failed
+  reason: "User requested: 图片可以在右侧栏显示图片尺寸"
+  severity: minor
+  test: 1
+  artifacts: []
+  missing: []
+- gap_id: G-03-9
+  truth: "转码过程足够慢以至于能看见「正在转码」状态（可放两张超大图片，如 32768×32768，用于观察 busy 态）"
+  status: failed
+  reason: "User reported: 转码太快无法判断有没有显示「正在转码」；影响不大，若要修可放两张超大图片"
+  severity: minor
+  test: 2
+  artifacts: []
+  missing: []
