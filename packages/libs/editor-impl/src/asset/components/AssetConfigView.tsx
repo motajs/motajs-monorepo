@@ -52,9 +52,9 @@ export function AssetConfigView(props: IAssetConfigViewProps): ReactElement {
       {props.errors.length === 0 ? null : (
         <div className="asset-config-errors" data-test-id="asset-config-errors">
           <Alert
-            type="error"
+            type="warning"
             showIcon
-            title="配置校验未通过"
+            title="配置尚有未填项"
             description={
               <ul className="asset-config-error-list">
                 {props.errors.map((error) => (

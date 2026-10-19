@@ -164,9 +164,9 @@ function createListText(document: unknown): string {
 export const ASSET_DEMO_FILES: readonly IAssetDemoFile[] = [
   {
     path: 'content/texture/.list.jsonc',
-    content: createListText({ textures: DEMO_TEXTURE_NAMES.map((source) => ({ source })) }),
+    content: createListText({ textures: DEMO_TEXTURE_NAMES.map((source) => ({ source, read: 0, usage: 0 })) }),
   },
-  { path: 'content/audio/.list.jsonc', content: createListText({ audios: [{ source: DEMO_AUDIO_NAME }] }) },
+  { path: 'content/audio/.list.jsonc', content: createListText({ audios: [{ source: DEMO_AUDIO_NAME, type: 0 }] }) },
   { path: 'content/animation/.list.jsonc', content: createListText([DEMO_ANIMATION_NAME]) },
   { path: 'content/font/.list.jsonc', content: createListText([DEMO_FONT_NAME]) },
   { path: `content/texture/${DEMO_TEXTURE_NAMES[0]}`, content: createDemoPng() },

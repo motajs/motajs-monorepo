@@ -1,4 +1,4 @@
-import { act, cleanup, configure, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, configure, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { EditorCore, IUndoable } from '@motajs/editor-core';
 import { AssetCapabilityProvider } from '@motajs/editor-impl/asset';
 import { useTableCapabilities } from '@motajs/editor-impl/react';
@@ -126,5 +126,42 @@ describe('开发宿主素材接入', () => {
 
     expect(result).toBe(false);
     expect(blocked).toBe(1);
+  });
+
+  // 打开配置：配置视图出现、校验提醒不出现、分类导航仍在；点其它分类退回浏览态
+  it('打开配置无校验提醒且分类导航可退回浏览态', async () => {
+    const core = await createHost();
+    const tabId = core.shellSystem.listTabs()[0].id;
+
+    await act(async () => {
+      await core.shellSystem.openPanelInTab(tabId, 'asset');
+    });
+
+    const { container } = render(createElement(core.shellSystem.render()));
+
+    await waitFor(() => {
+      expect(container.querySelector('[data-test-id="asset-card-hero.png"]')).not.toBeNull();
+    });
+
+    fireEvent.click(container.querySelector('[data-test-id="asset-card-hero.png"]')!);
+
+    await waitFor(() => {
+      expect(container.querySelector('[data-test-id="asset-detail-config"]')).not.toBeNull();
+    });
+
+    fireEvent.click(container.querySelector('[data-test-id="asset-detail-config"]')!);
+
+    await waitFor(() => {
+      expect(container.querySelector('[data-test-id="asset-config-view"]')).not.toBeNull();
+    });
+
+    expect(container.querySelector('[data-test-id="asset-config-errors"]')).toBeNull();
+    expect(container.querySelector('[data-test-id="asset-category-texture"]')).not.toBeNull();
+
+    fireEvent.click(container.querySelector('[data-test-id="asset-category-animation"]')!);
+
+    await waitFor(() => {
+      expect(container.querySelector('[data-test-id="asset-config-view"]')).toBeNull();
+    });
   });
 });
