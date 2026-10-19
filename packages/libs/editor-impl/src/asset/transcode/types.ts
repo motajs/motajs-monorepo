@@ -60,3 +60,12 @@ export const ASSET_DEFAULT_OPUS_BITRATE = 96000;
 
 /** Opus 采样率默认值（Hz） */
 export const ASSET_DEFAULT_OPUS_SAMPLE_RATE = 48000;
+
+/** 图片转码前的输出格式说明 */
+export const ASSET_TRANSCODE_IMAGE_FORMAT_HINT = '输出格式：WebP（.webp）';
+
+/** 音频转码前的输出格式说明 */
+export const ASSET_TRANSCODE_AUDIO_FORMAT_HINT = '输出格式：WebM 容器中的 Opus（.webm）';
+
+/** 转码进行中在弹窗上显示的状态文案 */
+export const ASSET_TRANSCODE_BUSY_TEXT = '正在转码…';

@@ -5,11 +5,14 @@ import {
   ASSET_DEFAULT_OPUS_BITRATE,
   ASSET_DEFAULT_OPUS_SAMPLE_RATE,
   ASSET_DEFAULT_WEBP_QUALITY,
+  ASSET_TRANSCODE_AUDIO_FORMAT_HINT,
+  ASSET_TRANSCODE_BUSY_TEXT,
+  ASSET_TRANSCODE_IMAGE_FORMAT_HINT,
   IAssetTranscodeOptions,
 } from '../transcode/types';
 
-// 瘦身转码弹窗：批量选素材（全选 / 全不选）、按分类调参数（图片 WebP 质量；音频码率 / 采样率）、
-// 「覆盖旧文件」默认勾选并在覆盖前做破坏性二次确认；转换进行中显示进度并禁用开始。
+// 瘦身转码弹窗：正文按「输出格式 / 素材选择 / 参数 / 覆盖选项」分区，素材列表竖向排列并在过长时自己滚动；
+// 「覆盖旧文件」默认勾选并在覆盖前做破坏性二次确认；转换进行中显示「正在转码…」并禁用开始与取消。
 
 export interface ITranscodeModalProps {
   /** 是否打开弹窗 */
@@ -74,10 +77,19 @@ export function TranscodeModal(props: ITranscodeModalProps): ReactElement {
       <Modal
         open={props.open}
         title="瘦身转码"
+        width={720}
+        closable={!props.busy}
+        maskClosable={!props.busy}
         onCancel={props.onCancel}
         footer={
           <div className="asset-transcode-footer">
-            <Button size="small" autoInsertSpace={false} data-test-id="asset-transcode-cancel" onClick={props.onCancel}>
+            <Button
+              size="small"
+              autoInsertSpace={false}
+              disabled={props.busy}
+              data-test-id="asset-transcode-cancel"
+              onClick={props.onCancel}
+            >
               取消
             </Button>
             <Button
@@ -94,90 +106,106 @@ export function TranscodeModal(props: ITranscodeModalProps): ReactElement {
         }
       >
         <div className="asset-transcode-body">
-          <div className="asset-transcode-select-actions">
-            <Button
-              size="small"
-              autoInsertSpace={false}
-              data-test-id="asset-transcode-select-all"
-              onClick={(): void => setSelected([...props.names])}
-            >
-              全选
-            </Button>
-            <Button
-              size="small"
-              autoInsertSpace={false}
-              data-test-id="asset-transcode-select-none"
-              onClick={(): void => setSelected([])}
-            >
-              全不选
-            </Button>
+          <div className="asset-transcode-section">
+            <div className="asset-transcode-format" data-test-id="asset-transcode-format">
+              {props.kind === AssetCategoryKind.Image
+                ? ASSET_TRANSCODE_IMAGE_FORMAT_HINT
+                : ASSET_TRANSCODE_AUDIO_FORMAT_HINT}
+            </div>
           </div>
-          {props.names.length === 0 ? (
-            <div className="asset-transcode-empty" data-test-id="asset-transcode-empty">
-              当前分类下没有可转码的素材。
+          <div className="asset-transcode-section">
+            <div className="asset-transcode-select-actions">
+              <Button
+                size="small"
+                autoInsertSpace={false}
+                data-test-id="asset-transcode-select-all"
+                onClick={(): void => setSelected([...props.names])}
+              >
+                全选
+              </Button>
+              <Button
+                size="small"
+                autoInsertSpace={false}
+                data-test-id="asset-transcode-select-none"
+                onClick={(): void => setSelected([])}
+              >
+                全不选
+              </Button>
             </div>
-          ) : (
-            <div className="asset-transcode-list" data-test-id="asset-transcode-list">
-              {props.names.map((name) => (
-                <label key={name} className="asset-transcode-item">
-                  <Checkbox
-                    checked={selected.includes(name)}
-                    data-test-id={`asset-transcode-item-${name}`}
-                    onChange={(): void => toggleItem(name)}
-                  />
-                  <span className="asset-transcode-name" title={name}>
-                    {name}
-                  </span>
-                </label>
-              ))}
-            </div>
-          )}
-          <div className="asset-transcode-params">
-            {props.kind === AssetCategoryKind.Image ? (
-              <label className="asset-transcode-param">
-                <span>WebP 质量</span>
-                <InputNumber
-                  min={0}
-                  max={100}
-                  value={qualityState[0]}
-                  data-test-id="asset-transcode-quality"
-                  onChange={(value): void => qualityState[1](value ?? ASSET_DEFAULT_WEBP_QUALITY)}
-                />
-              </label>
+            {props.names.length === 0 ? (
+              <div className="asset-transcode-empty" data-test-id="asset-transcode-empty">
+                当前分类下没有可转码的素材。
+              </div>
             ) : (
-              <>
-                <label className="asset-transcode-param">
-                  <span>码率</span>
-                  <InputNumber
-                    min={1}
-                    value={bitrateState[0]}
-                    data-test-id="asset-transcode-bitrate"
-                    onChange={(value): void => bitrateState[1](value ?? ASSET_DEFAULT_OPUS_BITRATE)}
-                  />
-                </label>
-                <label className="asset-transcode-param">
-                  <span>采样率</span>
-                  <InputNumber
-                    min={1}
-                    value={sampleRateState[0]}
-                    data-test-id="asset-transcode-sample-rate"
-                    onChange={(value): void => sampleRateState[1](value ?? ASSET_DEFAULT_OPUS_SAMPLE_RATE)}
-                  />
-                </label>
-              </>
+              <div className="asset-transcode-list" data-test-id="asset-transcode-list">
+                {props.names.map((name) => (
+                  <label key={name} className="asset-transcode-item">
+                    <Checkbox
+                      checked={selected.includes(name)}
+                      data-test-id={`asset-transcode-item-${name}`}
+                      onChange={(): void => toggleItem(name)}
+                    />
+                    <span className="asset-transcode-name" title={name}>
+                      {name}
+                    </span>
+                  </label>
+                ))}
+              </div>
             )}
           </div>
-          <label className="asset-transcode-cover">
-            <Checkbox
-              checked={cover}
-              data-test-id="asset-transcode-cover"
-              onChange={(event): void => setCover(event.target.checked)}
-            />
-            <span>覆盖旧文件</span>
-          </label>
+          <div className="asset-transcode-section">
+            <div className="asset-transcode-params">
+              {props.kind === AssetCategoryKind.Image ? (
+                <label className="asset-transcode-param">
+                  <span>WebP 质量</span>
+                  <InputNumber
+                    min={0}
+                    max={100}
+                    value={qualityState[0]}
+                    data-test-id="asset-transcode-quality"
+                    onChange={(value): void => qualityState[1](value ?? ASSET_DEFAULT_WEBP_QUALITY)}
+                  />
+                </label>
+              ) : (
+                <>
+                  <label className="asset-transcode-param">
+                    <span>码率</span>
+                    <InputNumber
+                      min={1}
+                      addonAfter="bps"
+                      value={bitrateState[0]}
+                      data-test-id="asset-transcode-bitrate"
+                      onChange={(value): void => bitrateState[1](value ?? ASSET_DEFAULT_OPUS_BITRATE)}
+                    />
+                  </label>
+                  <label className="asset-transcode-param">
+                    <span>采样率</span>
+                    <InputNumber
+                      min={1}
+                      addonAfter="Hz"
+                      value={sampleRateState[0]}
+                      data-test-id="asset-transcode-sample-rate"
+                      onChange={(value): void => sampleRateState[1](value ?? ASSET_DEFAULT_OPUS_SAMPLE_RATE)}
+                    />
+                  </label>
+                </>
+              )}
+            </div>
+          </div>
+          <div className="asset-transcode-section">
+            <label className="asset-transcode-cover">
+              <Checkbox
+                checked={cover}
+                data-test-id="asset-transcode-cover"
+                onChange={(event): void => setCover(event.target.checked)}
+              />
+              <span>覆盖旧文件</span>
+            </label>
+          </div>
           {props.busy ? (
-            <div className="asset-transcode-busy" data-test-id="asset-transcode-busy">
+            <div className="asset-transcode-section asset-transcode-busy" data-test-id="asset-transcode-busy">
               <Spin size="small" />
+              <span>{ASSET_TRANSCODE_BUSY_TEXT}</span>
             </div>
           ) : null}
         </div>
