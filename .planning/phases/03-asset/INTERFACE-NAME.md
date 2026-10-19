@@ -326,6 +326,95 @@
 
 ---
 
+## Plan 03-20 — 枚举标签接口：schema 扩展键与下拉 props（G-03-6 第一步）
+
+**要做什么：** 让 schema 能携带「枚举值 → 中文标签」的映射，并让枚举下拉先接受这个映射；本计划只定契约，不改变任何现有渲染结果（缺省时下拉仍显示原值）。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `IEnumTitleMap` | interface（`shared/schemaForm/types.ts`） | 枚举值到显示标签的映射；键是枚举值的字符串形式（数字 `0` → `"0"`，字符串原样），值是给人看的标签 |
+| `ITableSchemaNode['x-enum-titles']` | 可选扩展键 `IEnumTitleMap` | 沿用 `x-editor` / `x-control` / `x-order` 的扩展键约定；缺省时行为不变（向后兼容表格既有 schema） |
+| `ISelectInputProps.titles` | 可选成员 `IEnumTitleMap` | 把标签映射交给下拉控件；本计划只声明并保证不传时行为不变，渲染映射在 03-21 落地 |
+
+---
+
+## Plan 03-21 — 枚举标签渲染与内置素材标签（G-03-6 第二步）
+
+**要做什么：** 下拉按标签显示、提交时仍写回原值（数字仍是数字）；内置图片 / 音频 schema 补上中文标签，配置表单不再显示裸数字。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `IMG_ASSET_READ_TITLES` / `IMG_ASSET_USAGE_TITLES` / `AUDIO_ASSET_TYPE_TITLES` | 常量（`asset/schemas/builtInSchemas.ts` 模块内） | 图片读取方式 / 图片用途 / 音频类型三组枚举标签，供对应字段的 `x-enum-titles` 引用 |
+| `selectInput.test.tsx` | 新增测试文件（`shared/schemaForm/__tests__/`） | 钉住「有标签时显示标签、无标签时显示原值、选中后提交的是原值」三条回归 |
+
+> 给出的标签：读取方式 `0 整图 / 1 网格 / 2 逐行动画 / 3 逐列动画 / 4 扫描动画`；用途 `0 常规图 / 1 图块 / 2 图块集`；音频类型 `0 背景音乐 / 1 音效`。
+
+---
+
+## Plan 03-22 — 转码弹窗版面与全局结果提示（G-03-3）
+
+**要做什么：** 转码弹窗的素材列表竖排并在过长时自己滚动，区域之间加分割线、整体不再挤；去掉面板顶部会顶下内容的提示行和常驻绿色提示；转码中在弹窗上写「正在转码」，完成后只用全局 antd `message` 提示，并说明输出格式。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `AssetPanel.publish` | 方法（语义变更） | 第二个参数由「写进视图状态、在面板顶部渲染」改为「直接走 antd `message.info` 全局提示」；视图状态不再保存这行文字 |
+| `IAssetPanelViewState.message` | 移除的成员 | 顶部提示行的数据来源；移除后顶部不再为任何操作结果顶出一行 |
+| `IAssetPanelViewState.transcodeSummary` | 移除的成员 | 转码完成后常驻的绿色 `Alert` 的数据来源；结果改由全局 `message` 呈现 |
+| `ASSET_TRANSCODE_IMAGE_FORMAT_HINT` | 常量（`asset/transcode/types.ts`） | 图片转码前的输出格式说明：WebP（`.webp`） |
+| `ASSET_TRANSCODE_AUDIO_FORMAT_HINT` | 常量（`asset/transcode/types.ts`） | 音频转码前的输出格式说明：WebM 容器中的 Opus（`.webm`） |
+| `ASSET_TRANSCODE_BUSY_TEXT` | 常量（`asset/transcode/types.ts`） | 转码进行中在弹窗上显示的「正在转码…」 |
+| `.asset-transcode-section` / `.asset-transcode-format` | 新增 CSS 类 | 弹窗分区与分区之间的分割线；输出格式说明文字 |
+| `.asset-transcode-list` / `.asset-transcode-item` / `.asset-transcode-name` | 既有类名（补样式） | 素材列表竖向排列、每项一行、过长时列表自身滚动并出现滚动条 |
+| `.asset-transcode-params` / `.asset-transcode-param` / `.asset-transcode-cover` / `.asset-transcode-busy` | 既有类名（补样式） | 参数区、覆盖勾选与「正在转码」行的间距，避免整体拥挤 |
+
+---
+
+## Plan 03-23 — 演示图片数量与尺寸、卡片大小滑块（G-03-4）
+
+**要做什么：** 内置三四十张可见图片（含长方形）方便测滚动与边界；工具栏加一个滑块，直接改变每张素材卡片框（及缩略图）的大小。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `DEMO_TEXTURE_COUNT` | 常量 `36`（开发宿主） | 内置图片素材的数量，测试据此断言「三四十张」 |
+| `DEMO_TEXTURE_SPECS` | 常量（开发宿主） | 36 张演示图的宽高与色相，含多组长方形，覆盖滚动与不同比例 |
+| `IAssetDemoTextureSpec` | interface（开发宿主模块内） | 一张演示图的描述：名字 / 宽 / 高 / 调色板序号；`DEMO_TEXTURE_SPECS` 的元素类型 |
+| `createDemoPng` | 既有函数（签名变更） | 由「按文件名返回固定 base64」改为「按 `IAssetDemoTextureSpec` 现场编码 PNG」 |
+| `encodePng` / `crc32` / `adler32` / `createPngChunk` | 模块内私有函数（开发宿主） | 生成浏览器可解码的 PNG 字节（8 位 RGBA、无压缩 deflate 块） |
+| `DEFAULT_ASSET_CARD_WIDTH` | 常量 `116`（`asset/constants.ts`） | 卡片框宽度滑块默认值（与现有设计一致） |
+| `ASSET_CARD_MIN_WIDTH` / `ASSET_CARD_MAX_WIDTH` / `ASSET_CARD_WIDTH_STEP` | 常量 `96` / `240` / `8`（`asset/constants.ts`） | 滑块的范围与步长 |
+| `IAssetToolbarProps.cardWidth` / `IAssetToolbarProps.onCardWidthChange` | 新增成员 | 工具栏接收当前卡片宽度并回传滑块变化 |
+| `IAssetGridProps.cardWidth` | 新增成员 | 网格按该宽度决定列宽、卡片高度与缩略图尺寸 |
+| `.asset-toolbar-size` / `.asset-toolbar-size-slider` | 新增 CSS 类 | 工具栏里滑块与「图标大小」标签的布局 |
+
+---
+
+## Plan 03-24 — 音频源参数探测契约与转码默认值（G-03-5 第一步）
+
+**要做什么：** 为「读源音频原本的采样率 / 码率」定义契约与入口，并把默认值改成 WebP 品质 100、Opus 码率 128 kbps；本计划只给直通实现（返回「读不到」）。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `IAssetAudioSourceInfo` | interface（`asset/transcode/types.ts`） | 源音频可读到的采样率（Hz）与码率（bps）；两项都可能缺省（读不到） |
+| `probeAudioSource` | 函数（`asset/transcode/audioOpus.ts`） | 读源音频元数据；本计划直通返回 `undefined`（等于「读不到」），03-25 实现真实探测 |
+| `ITranscodeModalProps.entries` | 成员（替换 `names`） | 弹窗改收完整条目（名字 + 字节路径），才能按路径读字节做探测 |
+| `ITranscodeModalProps.loadBytes` | 新增成员 | 按路径读字节的回调（由面板视图提供），供 03-25 探测源参数 |
+| `ASSET_DEFAULT_WEBP_QUALITY` | 常量值 `80` → `100` | 图片转码默认品质改为最高 |
+| `ASSET_DEFAULT_OPUS_BITRATE` | 常量值 `96000` → `128000` | 读不到源码率时的回退值改为 128 kbps |
+
+---
+
+## Plan 03-25 — 读源音频参数并作为默认值（G-03-5 第二步）
+
+**要做什么：** 打开音频转码弹窗时读第一条选中素材的采样率 / 码率，能读到就作为默认值；读不到或用户已经改过就保留回退值，不覆盖用户输入。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `probeAudioSource` | 函数实现（`asset/transcode/audioOpus.ts`） | 用 Mediabunny 读主音轨的采样率 / 码率；无音轨、解析失败或数值非法时返回 `undefined`，绝不抛出 |
+| `audioProbe.test.ts` | 新增测试文件（`asset/transcode/__tests__/`，Node 环境） | 钉住「WAV 能读到 16000 Hz」与「无效字节返回 undefined」两条回归 |
+| `transcodeModal.test.tsx` 的探测用例 | 测试（既有新文件） | 钉住「探测结果成为默认值」「探测不到时回退 128000 / 48000」「用户改过的不被覆盖」 |
+
+---
+
 ## 待确认的偏离与口径（请一并过目）
 
 1. **legacy 内置 Schema 由宿主注入，不写进 `editor-impl/src`。** D-08 要求内置两套（legacy + 新引擎），但 `coreEngineNeutral.js` 把 `tower` 等引擎专有词在两包 `src` 里当作违规（连注释也算），legacy 字段名必然含这些词。故包内只放**新引擎**那套内置 schema；legacy 那套由装配方经 `IAssetCategory.schema` 注入，门禁不破、能力仍是引擎无关的。
@@ -334,5 +423,5 @@
 4. **`table/types.ts` 保留一行选择性类型再导出**（`export type { … } from '../shared/schemaForm/types'`），沿用该文件已有的 `export type { ITablePreset }` 写法，避免改动表格与开发宿主的既有导入。这是本阶段唯一保留的「转发」，属于对风格规则的有意例外。
 5. **转码换扩展名并同步改列表文件名。** 图片 `a.png` → `a.webp`、音频 `a.mp3` → `a.webm`；「不覆盖」时旧文件改名 `a-origin.png` / `a-origin.mp3`。理由：把 WebM 字节塞进 `.mp3` 会让按扩展名取 MIME 的宿主 / 引擎读错。
 6. **字节改动立即落盘，列表 / 配置改动手动保存。** 未保存时列表里没有新条目，刷新后不显示（文件仍在，只是没登记）。
-7. **默认值：** WebP 质量 80；Opus 96 kbps / 48 kHz；单文件上传上限 32 MiB。
+7. **默认值（2026-10-19 UAT 修订）：** WebP 质量 **100**；Opus 音频默认取源音频原本的采样率与码率（能读到时），读不到回退 **128 kbps / 48 kHz**；单文件上传上限 32 MiB。
 8. **「无法撤销」提示由装配方订阅 `onUndoBlocked` 呈现**（文案常量在 `asset`）。core 不承载界面文案，能力层也不掌控全局快捷键。
