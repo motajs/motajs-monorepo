@@ -148,7 +148,7 @@ describe('素材配置编辑与撤销', () => {
 
     const changed = renderPanel(panel);
 
-    expect(fieldValue(changed, 'read')).toBe('2');
+    expect(fieldValue(changed, 'read')).toBe('逐行动画');
     expect(isDisabled(saveButton(changed))).toBe(false);
 
     cleanup();
@@ -157,7 +157,7 @@ describe('素材配置编辑与撤销', () => {
 
     const reverted = renderPanel(panel);
 
-    expect(fieldValue(reverted, 'read')).toBe('0');
+    expect(fieldValue(reverted, 'read')).toBe('整图');
   });
 
   // ③ 撤销后紧接着重做 → 配置回到新值
@@ -178,7 +178,7 @@ describe('素材配置编辑与撤销', () => {
 
     const container = renderPanel(panel);
 
-    expect(fieldValue(container, 'read')).toBe('2');
+    expect(fieldValue(container, 'read')).toBe('逐行动画');
   });
 
   // ④ 配置改动后再做字节改动（屏障）：撤销返回 false，且配置停在改动后的状态，没有被继续回退
@@ -199,7 +199,7 @@ describe('素材配置编辑与撤销', () => {
 
     const container = renderPanel(panel);
 
-    expect(fieldValue(container, 'read')).toBe('2');
+    expect(fieldValue(container, 'read')).toBe('逐行动画');
   });
 
   // ⑤ 工程内 schema 覆盖内置：种入含 customNote 的 .schema.jsonc 后，行树出现该字段（工程优先）

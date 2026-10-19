@@ -1,9 +1,31 @@
 import { AssetCategoryKind } from '../../react';
-import { ITableSchemaNode } from '../../shared/schemaForm/types';
+import { IEnumTitleMap, ITableSchemaNode } from '../../shared/schemaForm/types';
 
 // 内置的「新引擎」分类 schema：图片按读取方式与用途区分，音频按类型区分；动画 / 字体留空对象 schema，
 // 落回表格引擎既有的「尚未定义任何字段。」空态。legacy 那套引擎专有 schema 由装配方经 `IAssetCategory.schema`
 // 注入，不写在这里（引擎专有词不得出现在包内源码）。
+
+/** 图片读取方式的显示标签 */
+const IMG_ASSET_READ_TITLES: IEnumTitleMap = Object.freeze({
+  '0': '整图',
+  '1': '网格',
+  '2': '逐行动画',
+  '3': '逐列动画',
+  '4': '扫描动画',
+});
+
+/** 图片用途的显示标签 */
+const IMG_ASSET_USAGE_TITLES: IEnumTitleMap = Object.freeze({
+  '0': '常规图',
+  '1': '图块',
+  '2': '图块集',
+});
+
+/** 音频类型的显示标签 */
+const AUDIO_ASSET_TYPE_TITLES: IEnumTitleMap = Object.freeze({
+  '0': '背景音乐',
+  '1': '音效',
+});
 
 /** 图片分类的内置 schema */
 const IMAGE_ASSET_SCHEMA = Object.freeze<ITableSchemaNode>({
@@ -13,12 +35,14 @@ const IMAGE_ASSET_SCHEMA = Object.freeze<ITableSchemaNode>({
     read: {
       type: 'number',
       enum: [0, 1, 2, 3, 4],
-      description: '读取方式：0=整图 1=网格 2=逐行动画 3=逐列动画 4=扫描动画',
+      'x-enum-titles': IMG_ASSET_READ_TITLES,
+      description: '读取方式',
     },
     usage: {
       type: 'number',
       enum: [0, 1, 2],
-      description: '用途：0=普通图片 1=单图块 2=图集',
+      'x-enum-titles': IMG_ASSET_USAGE_TITLES,
+      description: '用途',
     },
     grid: { type: 'array', items: { type: 'number' }, description: '网格单元宽高' },
     tiles: { type: 'array', items: { type: 'number' }, description: '图块序号列表' },
@@ -30,7 +54,12 @@ const IMAGE_ASSET_SCHEMA = Object.freeze<ITableSchemaNode>({
 const AUDIO_ASSET_SCHEMA = Object.freeze<ITableSchemaNode>({
   type: 'object',
   properties: {
-    type: { type: 'number', enum: [0, 1], description: '音频类型：0=背景音乐 1=音效' },
+    type: {
+      type: 'number',
+      enum: [0, 1],
+      'x-enum-titles': AUDIO_ASSET_TYPE_TITLES,
+      description: '音频类型',
+    },
     source: { type: 'string', description: '音频文件名' },
   },
   required: ['type', 'source'],

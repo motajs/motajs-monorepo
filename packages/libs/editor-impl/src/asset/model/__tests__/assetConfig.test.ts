@@ -170,6 +170,35 @@ describe('getBuiltInAssetSchema', () => {
     expect(schema.required).toEqual(['source', 'read', 'usage']);
   });
 
+  // 图片读取方式带 5 个中文标签，枚举值仍是数字
+  it('图片读取方式带完整标签', () => {
+    const schema = getBuiltInAssetSchema(AssetCategoryKind.Image);
+    const read = schema.properties!.read!;
+
+    expect(read.enum).toEqual([0, 1, 2, 3, 4]);
+    expect(read['x-enum-titles']).toEqual({
+      '0': '整图',
+      '1': '网格',
+      '2': '逐行动画',
+      '3': '逐列动画',
+      '4': '扫描动画',
+    });
+  });
+
+  // 图片用途的中文标签与枚举数字一一对应
+  it('图片用途带中文标签', () => {
+    const schema = getBuiltInAssetSchema(AssetCategoryKind.Image);
+
+    expect(schema.properties!.usage!['x-enum-titles']).toEqual({ '0': '常规图', '1': '图块', '2': '图块集' });
+  });
+
+  // 音频类型的中文标签与枚举数字一一对应
+  it('音频类型带中文标签', () => {
+    const schema = getBuiltInAssetSchema(AssetCategoryKind.Audio);
+
+    expect(schema.properties!.type!['x-enum-titles']).toEqual({ '0': '背景音乐', '1': '音效' });
+  });
+
   // 音频内置 schema 用类型字段区分背景音乐与音效
   it('音频 schema 含类型字段', () => {
     const schema = getBuiltInAssetSchema(AssetCategoryKind.Audio);
