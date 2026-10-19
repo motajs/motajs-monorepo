@@ -283,6 +283,12 @@
   white-space: nowrap;
 }
 
+.asset-detail-size {
+  color: var(--editor-muted, #656d76);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
 .asset-detail-hint {
   padding: 8px;
   border-radius: 4px;

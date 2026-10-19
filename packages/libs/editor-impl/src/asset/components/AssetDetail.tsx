@@ -3,6 +3,7 @@ import { ReactElement, useState } from 'react';
 import { AssetCategoryKind } from '../../react';
 import { IAssetEntry, IAssetUpload } from '../types';
 import { AssetFileInput } from './AssetFileInput';
+import { AssetImageSize } from './AssetImageSize';
 import { AssetPreview } from './AssetPreview';
 
 export interface IAssetDetailProps {
@@ -62,6 +63,9 @@ export function AssetDetail(props: IAssetDetailProps): ReactElement {
       <div className="asset-detail-path" title={entry.path}>
         {entry.path}
       </div>
+      {props.kind === AssetCategoryKind.Image && entry.exists ? (
+        <AssetImageSize key={entry.path} path={entry.path} loadBytes={props.loadBytes} />
+      ) : null}
       {entry.exists ? null : (
         <div className="asset-detail-hint" data-test-id="asset-detail-missing">
           文件已登记，但工程目录中不存在。
