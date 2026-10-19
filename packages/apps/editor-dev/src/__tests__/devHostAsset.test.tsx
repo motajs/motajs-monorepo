@@ -14,6 +14,7 @@ import {
   DEMO_TEXTURE_COUNT,
   createLargeAssetDemoFiles,
   registerAssetDemo,
+  seedAssetDemo,
 } from '../demo/assetDemo';
 import { DevCodeEditorProvider } from '../demo/devCodeEditor';
 import { createTablePanelOpener, TABLE_PRESETS } from '../demo/tableDemo';
@@ -36,6 +37,18 @@ async function createHost(): Promise<EditorCore> {
   const backend = new MemoryBackend();
 
   for (const file of ASSET_DEMO_FILES) backend.seed(file.path, file.content);
+  registerAssetDemo(core);
+
+  await core.initialize({ fs: backend, maxUndoStep: backend.maxUndoStep });
+  return core;
+}
+
+// 装配带超大演示图的宿主：seed 与 main.tsx 共用同一个 helper，只是把尺寸改小到 64×64
+async function createHostWithLargeDemo(): Promise<EditorCore> {
+  const core = new EditorCore();
+  const backend = new MemoryBackend();
+
+  await seedAssetDemo(backend, { width: 64, height: 64 });
   registerAssetDemo(core);
 
   await core.initialize({ fs: backend, maxUndoStep: backend.maxUndoStep });
@@ -361,5 +374,27 @@ describe('开发宿主素材接入', () => {
     expect(DEMO_LARGE_TEXTURE_HEIGHT).toBe(4096);
     expect(DEMO_LARGE_TEXTURE_SPECS.length).toBe(2);
     expect(textureBytes().length).toBe(DEMO_TEXTURE_COUNT);
+  });
+
+  // 启动 seed 大图后图片分类读出 38 条，末尾两张是 huge 图，前两张顺序不变
+  it('接入超大演示图后图片分类读出 38 条', async () => {
+    const core = await createHostWithLargeDemo();
+    const tabId = core.shellSystem.listTabs()[0].id;
+
+    await act(async () => {
+      await core.shellSystem.openPanelInTab(tabId, 'asset');
+    });
+
+    const { container } = render(createElement(core.shellSystem.render()));
+
+    await waitFor(() => {
+      const ids = cardTestIds(container);
+
+      expect(ids.length).toBe(DEMO_TEXTURE_COUNT + DEMO_LARGE_TEXTURE_SPECS.length);
+      expect(ids.slice(0, 2)).toEqual(['asset-card-hero.png', 'asset-card-tile.png']);
+    });
+
+    expect(container.querySelector('[data-test-id="asset-card-huge-01.png"]')).not.toBeNull();
+    expect(container.querySelector('[data-test-id="asset-card-huge-02.png"]')).not.toBeNull();
   });
 });

@@ -8,6 +8,7 @@ import {
   IAssetEditorCapabilities,
 } from '@motajs/editor-impl/react';
 import { SYSTEM_PREFIX_END_MARKER } from '@motajs/editor-impl/shared';
+import { IMemoryBackend } from '../backend/types';
 import DEMO_FONT_DATA_URL from '../../../editor/src/assets/FiraCode.ttf?inline';
 
 // 开发宿主的素材演示数据与注册函数：给素材面板注入四个分类（图片 / 音频 / 动画 / 字体）与一批可浏览、
@@ -32,6 +33,14 @@ interface IAssetDemoTextureSpec {
   readonly height: number;
   /** 调色板序号，决定棋盘格的两种颜色 */
   readonly palette: number;
+}
+
+/** 演示大图的尺寸：测试可传入小尺寸以避开 4096² 的缓冲 */
+interface IAssetDemoLargeSize {
+  /** 图片宽度（像素） */
+  readonly width: number;
+  /** 图片高度（像素） */
+  readonly height: number;
 }
 
 /** 内置图片素材的数量：三四十张用来压测网格滚动与不同宽高比 */
@@ -603,6 +612,20 @@ export async function createLargeAssetDemoFiles(
   }
 
   return files;
+}
+
+/**
+ * 把开发宿主的演示素材 seed 进内存后端：先放 36 张小图集合，再用压缩大图覆盖同路径的图片列表
+ * @param backend 开发宿主的内存后端
+ * @param largeSize 超大演示图的尺寸；省略时用默认的 4096²，测试传小尺寸以避开超大缓冲
+ */
+export async function seedAssetDemo(backend: IMemoryBackend, largeSize?: IAssetDemoLargeSize): Promise<void> {
+  const width = largeSize !== undefined ? largeSize.width : DEMO_LARGE_TEXTURE_WIDTH;
+  const height = largeSize !== undefined ? largeSize.height : DEMO_LARGE_TEXTURE_HEIGHT;
+
+  for (const file of ASSET_DEMO_FILES) backend.seed(file.path, file.content);
+
+  for (const file of await createLargeAssetDemoFiles(width, height)) backend.seed(file.path, file.content);
 }
 
 /**
