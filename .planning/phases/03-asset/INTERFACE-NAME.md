@@ -294,6 +294,38 @@
 
 ---
 
+## Plan 03-18 — 配置模式只占中间区域（G-03-1）
+
+**要做什么：** 点「配置」后，配置表格只替换中间的素材区、左侧分类导航仍可见可点；「← 返回素材列表」能退回；演示素材打开配置时不再一进来就报校验失败。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `assetConfigLayout.test.tsx` | 测试文件 | 钉住「配置表格的定位祖先就是配置区」「分类导航与返回按钮仍可用」两条回归 |
+| `.asset-config-view` / `.asset-config-body` / `.asset-config-breadcrumb` / `.asset-config-errors` | 既有 CSS 类名（补样式） | 配置区的纵向布局；`.asset-config-body` 作为表格绝对定位的**有界祖先**，让表格只在配置区内铺满 |
+| 文案「配置尚有未填项」 | 界面文案（替换「配置校验未通过」） | 校验不通过时不再读成「坏掉了」，改为非阻断的提醒；缺项列表与 `data-test-id="asset-config-errors"` 保持不变 |
+
+---
+
+## Plan 03-19 — 素材预览（G-03-2）
+
+**要做什么：** 卡片按分类显示预览（图片本身 / 音频波形图标 / 动画占位 / 字体写「ABC」），右侧详情能看图、听音频、看字体样例；演示数据换成看得见、听得见、真能加载的样本。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `AssetCardPreview` | 组件 | 卡片缩略图按大分类分流：图片读字节出图、音频固定波形图标、动画占位、字体渲染「ABC」 |
+| `IAssetCardPreviewProps` | interface | 卡片预览的 props（分类 / 路径 / 文件是否存在 / 读字节回调） |
+| `AssetFontSample` | 组件 | 用给定 `blob:` 地址为字体写一段样例文字（卡片用「ABC」，详情用「魔塔 Mota 0123456789」） |
+| `IAssetFontSampleProps` | interface | 字体样例的 props（字体 `blob:` 地址 / 文本 / 类名） |
+| `IAssetGridProps.kind` / `IAssetGridProps.loadBytes` | 新增成员 | 网格需要知道当前分类（决定预览形态）并能按路径读字节 |
+| `resolveAssetMime`（扩展） | 既有函数 | 字体分类返回真实字体 MIME（`.ttf` / `.otf` / `.woff` / `.woff2`），不再落到 `application/octet-stream` |
+| `.asset-card-preview*` | 新增 CSS 类名 | 卡片内图片 / 波形图标 / 动画占位 / 字体样例的尺寸与居中 |
+| `DEMO_FONT_DATA_URL` | 常量（开发宿主） | 以 `?inline` 引入工作区已有的 Fira Code 字体数据地址，供演示字节解码 |
+| `createDemoFont`（改写） | 既有函数 | 由占位 8 字节改为上面那份真实字体的字节 |
+
+> `AssetCardPreview.tsx` 内部的 `AssetCardImage` / `AssetCardFont` 只在本文件使用、不导出，故不进入对外命名表。
+
+---
+
 ## 待确认的偏离与口径（请一并过目）
 
 1. **legacy 内置 Schema 由宿主注入，不写进 `editor-impl/src`。** D-08 要求内置两套（legacy + 新引擎），但 `coreEngineNeutral.js` 把 `tower` 等引擎专有词在两包 `src` 里当作违规（连注释也算），legacy 字段名必然含这些词。故包内只放**新引擎**那套内置 schema；legacy 那套由装配方经 `IAssetCategory.schema` 注入，门禁不破、能力仍是引擎无关的。
