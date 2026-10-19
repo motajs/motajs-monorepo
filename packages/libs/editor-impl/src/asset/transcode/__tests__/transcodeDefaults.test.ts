@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { probeAudioSource } from '../audioOpus';
-import {
-  ASSET_DEFAULT_OPUS_BITRATE,
-  ASSET_DEFAULT_OPUS_SAMPLE_RATE,
-  ASSET_DEFAULT_WEBP_QUALITY,
-} from '../types';
+import { ASSET_DEFAULT_OPUS_BITRATE, ASSET_DEFAULT_OPUS_SAMPLE_RATE, ASSET_DEFAULT_WEBP_QUALITY } from '../types';
 
 describe('转码默认值', () => {
   // 覆盖图片转码默认品质按用户要求改为最高
