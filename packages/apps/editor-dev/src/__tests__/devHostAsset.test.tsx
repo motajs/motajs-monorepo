@@ -5,7 +5,16 @@ import { useTableCapabilities } from '@motajs/editor-impl/react';
 import { createElement, ReactElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryBackend } from '../backend/memoryBackend';
-import { ASSET_DEMO_CATEGORIES, ASSET_DEMO_FILES, DEMO_TEXTURE_COUNT, registerAssetDemo } from '../demo/assetDemo';
+import {
+  ASSET_DEMO_CATEGORIES,
+  ASSET_DEMO_FILES,
+  DEMO_LARGE_TEXTURE_HEIGHT,
+  DEMO_LARGE_TEXTURE_SPECS,
+  DEMO_LARGE_TEXTURE_WIDTH,
+  DEMO_TEXTURE_COUNT,
+  createLargeAssetDemoFiles,
+  registerAssetDemo,
+} from '../demo/assetDemo';
 import { DevCodeEditorProvider } from '../demo/devCodeEditor';
 import { createTablePanelOpener, TABLE_PRESETS } from '../demo/tableDemo';
 
@@ -58,13 +67,13 @@ function cardTestIds(container: HTMLElement): string[] {
 
 // 取出全部演示图片的字节（只挑 `content/texture` 下的 `.png`）
 function textureBytes(): readonly Uint8Array[] {
-  return ASSET_DEMO_FILES.filter(
-    (item) => item.path.startsWith('content/texture/') && item.path.endsWith('.png'),
-  ).map((item) => {
-    if (!(item.content instanceof Uint8Array)) throw new Error(`演示图片缺少字节：${item.path}`);
+  return ASSET_DEMO_FILES.filter((item) => item.path.startsWith('content/texture/') && item.path.endsWith('.png')).map(
+    (item) => {
+      if (!(item.content instanceof Uint8Array)) throw new Error(`演示图片缺少字节：${item.path}`);
 
-    return item.content;
-  });
+      return item.content;
+    },
+  );
 }
 
 // 读出图片列表文件里登记的素材条目数（跳过系统前缀行后按 JSON 解析）
@@ -305,5 +314,52 @@ describe('开发宿主素材接入', () => {
     await waitFor(() => {
       expect(container.querySelector('[data-test-id="asset-card-preview-font"]')?.textContent).toBe('ABC');
     });
+  });
+
+  // 超大演示图：默认 4096²，测试传 64×64 避开超大缓冲；列表在原 36 张之后追加两张
+  it('超大演示图按尺寸生成并登记进图片列表', async () => {
+    const pngSignature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+    const files = await createLargeAssetDemoFiles(64, 64);
+    const listFile = files.find((item) => item.path === 'content/texture/.list.jsonc');
+    const listContent = listFile?.content;
+
+    expect(files.length).toBe(DEMO_LARGE_TEXTURE_SPECS.length + 1);
+    expect(typeof listContent).toBe('string');
+
+    if (typeof listContent !== 'string') throw new Error('大图列表缺少正文');
+
+    const parsed: unknown = JSON.parse(listContent.slice(listContent.indexOf('\n') + 1));
+
+    if (typeof parsed !== 'object' || parsed === null) throw new Error('大图列表不是对象');
+
+    const textures = Reflect.get(parsed, 'textures');
+
+    if (!Array.isArray(textures)) throw new Error('大图列表缺少 textures');
+
+    expect(textures.length).toBe(DEMO_TEXTURE_COUNT + DEMO_LARGE_TEXTURE_SPECS.length);
+    expect(
+      textures
+        .slice(-2)
+        .map((item: unknown): unknown =>
+          typeof item === 'object' && item !== null ? Reflect.get(item, 'source') : undefined,
+        ),
+    ).toEqual(['huge-01.png', 'huge-02.png']);
+
+    const pngFiles = files.filter((item) => item.path.endsWith('.png'));
+
+    expect(pngFiles.length).toBe(2);
+
+    for (const file of pngFiles) {
+      if (!(file.content instanceof Uint8Array)) throw new Error(`大图缺少字节：${file.path}`);
+
+      expect(Array.from(file.content.slice(0, 8))).toEqual(pngSignature);
+      expect(readUint32BE(file.content, 16)).toBe(64);
+      expect(readUint32BE(file.content, 20)).toBe(64);
+    }
+
+    expect(DEMO_LARGE_TEXTURE_WIDTH).toBe(4096);
+    expect(DEMO_LARGE_TEXTURE_HEIGHT).toBe(4096);
+    expect(DEMO_LARGE_TEXTURE_SPECS.length).toBe(2);
+    expect(textureBytes().length).toBe(DEMO_TEXTURE_COUNT);
   });
 });

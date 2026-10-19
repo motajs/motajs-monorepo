@@ -15,7 +15,7 @@ import DEMO_FONT_DATA_URL from '../../../editor/src/assets/FiraCode.ttf?inline';
 // 宿主、不进入产品路径，也不改动 editor-core / editor-impl 的任何契约；模块顶层不产生任何副作用。
 
 /** 一个演示素材文件：要 seed 进内存后端的路径与内容 */
-interface IAssetDemoFile {
+export interface IAssetDemoFile {
   /** seed 的目标路径 */
   readonly path: string;
   /** seed 的内容：文本或原始字节 */
@@ -75,6 +75,18 @@ export const DEMO_TEXTURE_SPECS: readonly IAssetDemoTextureSpec[] = Object.freez
   { name: 'tex-34.png', width: 80, height: 60, palette: 33 },
   { name: 'tex-35.png', width: 60, height: 80, palette: 34 },
   { name: 'tex-36.png', width: 128, height: 32, palette: 35 },
+]);
+
+/** 两张超大演示图的宽度（像素）：4096 足以让转码占用可感知的时间，单个 RGBA 缓冲约 64 MiB */
+export const DEMO_LARGE_TEXTURE_WIDTH = 4096;
+
+/** 两张超大演示图的高度（像素）：与宽度相同，避免出现 8192² 那种约 268 MiB 的单缓冲 */
+export const DEMO_LARGE_TEXTURE_HEIGHT = 4096;
+
+/** 两张超大演示图的素材名与配色：排在 36 张小图之后，用于观察转码时的「正在转码」状态 */
+export const DEMO_LARGE_TEXTURE_SPECS: readonly IAssetDemoTextureSpec[] = Object.freeze([
+  { name: 'huge-01.png', width: DEMO_LARGE_TEXTURE_WIDTH, height: DEMO_LARGE_TEXTURE_HEIGHT, palette: 36 },
+  { name: 'huge-02.png', width: DEMO_LARGE_TEXTURE_WIDTH, height: DEMO_LARGE_TEXTURE_HEIGHT, palette: 37 },
 ]);
 
 /** 演示图片分类的全部素材名（与列表文件登记的来源字段一致） */
@@ -322,21 +334,20 @@ function createZlibStream(data: Uint8Array): Uint8Array {
  * @returns 打包成 24 位的 RGB 值
  */
 function paletteColor(palette: number, variant: number): number {
-  const red = PALETTE_CHANNEL_BASE + (palette * 37 + variant * PALETTE_VARIANT_SPAN) % PALETTE_CHANNEL_SPAN;
-  const green = PALETTE_CHANNEL_BASE + (palette * 53 + variant * PALETTE_VARIANT_SPAN + 40) % PALETTE_CHANNEL_SPAN;
-  const blue = PALETTE_CHANNEL_BASE + (palette * 71 + variant * PALETTE_VARIANT_SPAN + 80) % PALETTE_CHANNEL_SPAN;
+  const red = PALETTE_CHANNEL_BASE + ((palette * 37 + variant * PALETTE_VARIANT_SPAN) % PALETTE_CHANNEL_SPAN);
+  const green = PALETTE_CHANNEL_BASE + ((palette * 53 + variant * PALETTE_VARIANT_SPAN + 40) % PALETTE_CHANNEL_SPAN);
+  const blue = PALETTE_CHANNEL_BASE + ((palette * 71 + variant * PALETTE_VARIANT_SPAN + 80) % PALETTE_CHANNEL_SPAN);
 
   return (red << COLOR_SHIFT_RED) | (green << COLOR_SHIFT_GREEN) | (blue << COLOR_SHIFT_BLUE);
 }
 
 /**
- * 用 8 位 RGBA 与 8×8 棋盘格现场编码一张可被浏览器解码的 PNG
+ * 生成 PNG 的 IHDR 块数据：宽、高、位深、颜色类型与三个保留字节
  * @param width 图片宽度（像素）
  * @param height 图片高度（像素）
- * @param palette 调色板序号，决定两种棋盘颜色
- * @returns 完整的 PNG 字节
+ * @returns 13 字节的 IHDR 数据
  */
-function encodePng(width: number, height: number, palette: number): Uint8Array {
+function createIhdrData(width: number, height: number): Uint8Array {
   const header = new Uint8Array(13);
   const headerView = new DataView(header.buffer);
 
@@ -348,6 +359,17 @@ function encodePng(width: number, height: number, palette: number): Uint8Array {
   header[11] = 0;
   header[12] = 0;
 
+  return header;
+}
+
+/**
+ * 生成 PNG 的扫描行缓冲：8 位 RGBA、每行首字节滤波 0、8×8 棋盘格、完全不透明
+ * @param width 图片宽度（像素）
+ * @param height 图片高度（像素）
+ * @param palette 调色板序号，决定两种棋盘颜色
+ * @returns 未压缩的扫描行字节
+ */
+function createPngPixels(width: number, height: number, palette: number): Uint8Array {
   const baseColor = paletteColor(palette, 0);
   const checkerColor = paletteColor(palette, 1);
   const rowLength = width * PNG_BYTES_PER_PIXEL + 1;
@@ -370,10 +392,70 @@ function encodePng(width: number, height: number, palette: number): Uint8Array {
     }
   }
 
+  return pixels;
+}
+
+/**
+ * 用 8 位 RGBA 与 8×8 棋盘格现场编码一张可被浏览器解码的 PNG
+ * @param width 图片宽度（像素）
+ * @param height 图片高度（像素）
+ * @param palette 调色板序号，决定两种棋盘颜色
+ * @returns 完整的 PNG 字节
+ */
+function encodePng(width: number, height: number, palette: number): Uint8Array {
   const signature = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
   const chunks = [
-    createPngChunk('IHDR', header),
-    createPngChunk('IDAT', createZlibStream(pixels)),
+    createPngChunk('IHDR', createIhdrData(width, height)),
+    createPngChunk('IDAT', createZlibStream(createPngPixels(width, height, palette))),
+    createPngChunk('IEND', new Uint8Array(0)),
+  ];
+  const totalLength = signature.length + chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+  const png = new Uint8Array(totalLength);
+  let pngOffset = signature.length;
+
+  png.set(signature, 0);
+
+  for (const chunk of chunks) {
+    png.set(chunk, pngOffset);
+    pngOffset += chunk.length;
+  }
+
+  return png;
+}
+
+/**
+ * 用 `CompressionStream('deflate')` 压缩扫描行数据；缺少该 API 时回退到 stored deflate。
+ * 输入字节直接入流、不再 `slice()`，避免整份像素缓冲被复制一份。
+ * @param data 未压缩的扫描行数据
+ * @returns 合法的 zlib 流字节
+ */
+async function compressZlibStream(data: Uint8Array): Promise<Uint8Array> {
+  if (typeof CompressionStream === 'undefined' || typeof Blob.prototype.stream !== 'function') {
+    return createZlibStream(data);
+  }
+
+  const stream = new ReadableStream({
+    start(controller): void {
+      controller.enqueue(data);
+      controller.close();
+    },
+  }).pipeThrough(new CompressionStream('deflate'));
+
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+/**
+ * 与 `encodePng` 输出同一种 PNG，但用 `CompressionStream` 压缩 IDAT，供超大演示图控制内存
+ * @param width 图片宽度（像素）
+ * @param height 图片高度（像素）
+ * @param palette 调色板序号，决定两种棋盘颜色
+ * @returns 完整的 PNG 字节
+ */
+async function encodePngCompressed(width: number, height: number, palette: number): Promise<Uint8Array> {
+  const signature = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  const chunks = [
+    createPngChunk('IHDR', createIhdrData(width, height)),
+    createPngChunk('IDAT', await compressZlibStream(createPngPixels(width, height, palette))),
     createPngChunk('IEND', new Uint8Array(0)),
   ];
   const totalLength = signature.length + chunks.reduce((sum, chunk) => sum + chunk.length, 0);
@@ -488,6 +570,40 @@ export const ASSET_DEMO_FILES: readonly IAssetDemoFile[] = [
   { path: `content/animation/${DEMO_ANIMATION_NAME}.anim`, content: new Uint8Array(0) },
   { path: `content/font/${DEMO_FONT_NAME}`, content: createDemoFont() },
 ];
+
+/**
+ * 生成两张超大演示 PNG，并附一份把它们追加到 36 张之后的图片列表（同路径覆盖小图列表）
+ * @param width 超大演示图的宽度；测试可传入小尺寸以避开 4096² 的缓冲
+ * @param height 超大演示图的高度；测试可传入小尺寸以避开 4096² 的缓冲
+ * @returns 一份列表文件 + 两张压缩 PNG 的演示文件数组
+ */
+export async function createLargeAssetDemoFiles(
+  width: number = DEMO_LARGE_TEXTURE_WIDTH,
+  height: number = DEMO_LARGE_TEXTURE_HEIGHT,
+): Promise<readonly IAssetDemoFile[]> {
+  const names = [...DEMO_TEXTURE_NAMES, ...DEMO_LARGE_TEXTURE_SPECS.map((spec) => spec.name)];
+  const files: IAssetDemoFile[] = [
+    {
+      path: 'content/texture/.list.jsonc',
+      content: createListText({
+        textures: names.map((source, index) => ({
+          source,
+          read: index % 5,
+          usage: index % 3,
+        })),
+      }),
+    },
+  ];
+
+  for (const spec of DEMO_LARGE_TEXTURE_SPECS) {
+    files.push({
+      path: `content/texture/${spec.name}`,
+      content: await encodePngCompressed(width, height, spec.palette),
+    });
+  }
+
+  return files;
+}
 
 /**
  * 注册开发宿主的素材面板类型并订阅「无法撤销」提示
