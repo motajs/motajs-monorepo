@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { AssetCategoryKind } from '../../react';
 import assetCss from '../asset.css?inline';
 import { TranscodeModal } from '../components/TranscodeModal';
+import { IAssetEntry } from '../types';
 
 configure({ testIdAttribute: 'data-test-id' });
 
@@ -21,6 +22,20 @@ function noopCancel(): void {}
 /** 未接入开始回调时的缺省实现：不做任何事 */
 function noopStart(): void {}
 
+/** 未接入读字节回调时的缺省实现：一律返回 undefined */
+function noopLoadBytes(): Promise<Uint8Array | undefined> {
+  return Promise.resolve(undefined);
+}
+
+/**
+ * 把素材名列表转成弹窗所需的条目
+ * @param names 素材名列表
+ * @returns 条目列表，路径按图片分类约定拼接
+ */
+function entriesOf(names: readonly string[]): readonly IAssetEntry[] {
+  return names.map((name) => ({ name, path: `content/texture/${name}`, exists: true }));
+}
+
 /**
  * 渲染转码弹窗
  * @param kind 分类的大分类
@@ -31,7 +46,8 @@ function renderModal(kind: AssetCategoryKind, busy: boolean): void {
     createElement(TranscodeModal, {
       open: true,
       kind,
-      names: ['a.png'],
+      entries: entriesOf(['a.png']),
+      loadBytes: noopLoadBytes,
       busy,
       onCancel: noopCancel,
       onStart: noopStart,

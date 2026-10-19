@@ -10,6 +10,7 @@ import {
   ASSET_TRANSCODE_IMAGE_FORMAT_HINT,
   IAssetTranscodeOptions,
 } from '../transcode/types';
+import { IAssetEntry } from '../types';
 
 // 瘦身转码弹窗：正文按「输出格式 / 素材选择 / 参数 / 覆盖选项」分区，素材列表竖向排列并在过长时自己滚动；
 // 「覆盖旧文件」默认勾选并在覆盖前做破坏性二次确认；转换进行中显示「正在转码…」并禁用开始与取消。
@@ -19,10 +20,16 @@ export interface ITranscodeModalProps {
   readonly open: boolean;
   /** 当前分类的大分类，决定参数区 */
   readonly kind: AssetCategoryKind;
-  /** 当前分类下可选的素材名 */
-  readonly names: readonly string[];
+  /** 当前分类下可选的素材条目 */
+  readonly entries: readonly IAssetEntry[];
   /** 是否正在批量转码 */
   readonly busy: boolean;
+  /**
+   * 按素材字节路径读字节，供探测源音频参数使用
+   * @param path 素材字节文件路径
+   * @returns 字节；读取失败时为 undefined
+   */
+  loadBytes(path: string): Promise<Uint8Array | undefined>;
   /** 取消并关闭弹窗 */
   onCancel(): void;
   /**
@@ -39,7 +46,8 @@ export interface ITranscodeModalProps {
  * @returns 转码弹窗元素
  */
 export function TranscodeModal(props: ITranscodeModalProps): ReactElement {
-  const selectedState = useState<readonly string[]>(() => [...props.names]);
+  const names = props.entries.map((entry) => entry.name);
+  const selectedState = useState<readonly string[]>(() => [...names]);
   const selected = selectedState[0];
   const setSelected = selectedState[1];
 
@@ -119,7 +127,7 @@ export function TranscodeModal(props: ITranscodeModalProps): ReactElement {
                 size="small"
                 autoInsertSpace={false}
                 data-test-id="asset-transcode-select-all"
-                onClick={(): void => setSelected([...props.names])}
+                onClick={(): void => setSelected([...names])}
               >
                 全选
               </Button>
@@ -132,13 +140,13 @@ export function TranscodeModal(props: ITranscodeModalProps): ReactElement {
                 全不选
               </Button>
             </div>
-            {props.names.length === 0 ? (
+            {names.length === 0 ? (
               <div className="asset-transcode-empty" data-test-id="asset-transcode-empty">
                 当前分类下没有可转码的素材。
               </div>
             ) : (
               <div className="asset-transcode-list" data-test-id="asset-transcode-list">
-                {props.names.map((name) => (
+                {names.map((name) => (
                   <label key={name} className="asset-transcode-item">
                     <Checkbox
                       checked={selected.includes(name)}

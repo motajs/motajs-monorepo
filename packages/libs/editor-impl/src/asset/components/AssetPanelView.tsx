@@ -113,17 +113,15 @@ function transcodeExtension(kind: AssetCategoryKind): string {
 }
 
 /**
- * 取出真正可转码的素材名：源文件已是目标扩展名的条目转码是空操作（只会原地重编码），排除掉
+ * 取出真正可转码的素材条目：源文件已是目标扩展名的条目转码是空操作（只会原地重编码），排除掉
  * @param category 当前分类
  * @param entries 当前分类的条目
- * @returns 可提交转码的素材名
+ * @returns 可提交转码的素材条目
  */
-function transcodeCandidates(category: IAssetCategory, entries: readonly IAssetEntry[]): readonly string[] {
+function transcodeCandidates(category: IAssetCategory, entries: readonly IAssetEntry[]): readonly IAssetEntry[] {
   const extension = transcodeExtension(category.kind);
 
-  return entries
-    .filter((entry) => resolveTranscodedPath(entry.path, extension) !== entry.path)
-    .map((entry) => entry.name);
+  return entries.filter((entry) => resolveTranscodedPath(entry.path, extension) !== entry.path);
 }
 
 /** 未接入选择回调时的缺省实现：不做任何事 */
@@ -278,7 +276,8 @@ export function AssetPanelView(props: IAssetPanelViewProps): ReactElement {
         <TranscodeModal
           open
           kind={category.kind}
-          names={transcodeCandidates(category, state.entries)}
+          entries={transcodeCandidates(category, state.entries)}
+          loadBytes={props.loadBytes}
           busy={state.transcoding}
           onCancel={props.onCancelTranscode ?? noopTranscodeCancel}
           onStart={props.onStartTranscode ?? noopTranscodeStart}
