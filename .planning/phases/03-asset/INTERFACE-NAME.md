@@ -415,6 +415,36 @@
 
 ---
 
+## Plan 03-26 — 缩略图随卡片缩放 + 详情栏图片尺寸（G-03-7 / G-03-8）
+
+**要做什么：** 让卡片里的图片本身跟着「图标大小」滑块缩放，并在图片详情里显示宽 × 高；尺寸用纯字节头解析，不碰 DOM。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `IAssetImageDimensions` | interface（`asset/model/imageSize.ts`） | 从图片字节头解析出的像素尺寸，含只读 `width` / `height` |
+| `readImageDimensions` | 函数（`asset/model/imageSize.ts`） | 纯字节解析 PNG / GIF / JPEG / BMP / WebP 的宽高；格式不支持、字节不足或尺寸非法时返回 `undefined`，不抛错、不分配像素数组 |
+| `AssetImageSize` | 组件（`asset/components/AssetImageSize.tsx`） | 详情栏里的「宽 × 高」一行；按素材路径读字节并解析，没有尺寸时什么也不渲染 |
+| `IAssetImageSizeProps` | interface（`asset/components/AssetImageSize.tsx`） | 尺寸行组件的 props：素材路径 + 按路径读字节的回调 |
+| `.asset-detail-size` | 新增 CSS 类 | 详情栏尺寸行的 muted / 12px / 等宽数字样式 |
+| `imageSize.test.ts` / `assetDetailSize.test.tsx` | 新增测试文件 | 分别钉住「各格式头解析与坏字节」和「图片显示尺寸、其它分类 / 缺失不显示」 |
+
+---
+
+## Plan 03-27 — 开发宿主加入两张 4096² 演示大图（G-03-9）
+
+**要做什么：** 生成两张足够大的演示图，让图片转码的「正在转码」状态肉眼可见；用压缩 PNG 控制内存，绝不生成 32768²。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `IAssetDemoFile` | 既有 interface（改为导出，开发宿主） | 一条要 seed 的演示文件：路径 + 文本 / 字节；供新增的大图生成函数作为返回元素类型 |
+| `DEMO_LARGE_TEXTURE_WIDTH` / `DEMO_LARGE_TEXTURE_HEIGHT` | 常量 `4096`（开发宿主） | 两张超大演示图的宽高；选 4096 是因为 32768² 的 RGBA 约 4 GiB、8192² 的单缓冲约 268 MiB，都会 OOM |
+| `DEMO_LARGE_TEXTURE_SPECS` | 常量（开发宿主） | 两张超大图的名字 `huge-01.png` / `huge-02.png` 与调色板序号 |
+| `createLargeAssetDemoFiles` | 函数（开发宿主，返回 Promise） | 串行生成两张压缩 PNG，并返回一份把小图列表覆盖成 38 条的演示文件数组；尺寸参数可被测试改小 |
+| `createPngPixels` / `createIhdrData` | 模块内私有函数（开发宿主） | 把 PNG 像素缓冲与 IHDR 数据的生成从 `encodePng` 中抽出，供同步 / 压缩两条编码路径复用 |
+| `compressZlibStream` / `encodePngCompressed` | 模块内私有函数（开发宿主） | 用 `CompressionStream('deflate')` 生成 PNG 的 IDAT；缺少该 API 时回退到现有 stored deflate |
+
+---
+
 ## 待确认的偏离与口径（请一并过目）
 
 1. **legacy 内置 Schema 由宿主注入，不写进 `editor-impl/src`。** D-08 要求内置两套（legacy + 新引擎），但 `coreEngineNeutral.js` 把 `tower` 等引擎专有词在两包 `src` 里当作违规（连注释也算），legacy 字段名必然含这些词。故包内只放**新引擎**那套内置 schema；legacy 那套由装配方经 `IAssetCategory.schema` 注入，门禁不破、能力仍是引擎无关的。
