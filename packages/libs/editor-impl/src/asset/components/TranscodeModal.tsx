@@ -1,6 +1,7 @@
 import { Button, Checkbox, InputNumber, Modal, Spin } from 'antd';
-import { ReactElement, useState } from 'react';
+import { ReactElement, useEffect, useRef, useState } from 'react';
 import { AssetCategoryKind } from '../../react';
+import { probeAudioSource } from '../transcode/audioOpus';
 import {
   ASSET_DEFAULT_OPUS_BITRATE,
   ASSET_DEFAULT_OPUS_SAMPLE_RATE,
@@ -56,11 +57,44 @@ export function TranscodeModal(props: ITranscodeModalProps): ReactElement {
   const sampleRateState = useState(ASSET_DEFAULT_OPUS_SAMPLE_RATE);
   const coverState = useState(true);
   const confirmingState = useState(false);
+  const bitrateTouchedRef = useRef(false);
+  const sampleRateTouchedRef = useRef(false);
+  const loadBytesRef = useRef(props.loadBytes);
+  loadBytesRef.current = props.loadBytes;
 
   const cover = coverState[0];
   const setCover = coverState[1];
   const confirming = confirmingState[0];
   const setConfirming = confirmingState[1];
+
+  const firstSelected = props.entries.find((entry) => selected.includes(entry.name));
+  const probePath =
+    props.kind === AssetCategoryKind.Audio && firstSelected !== undefined ? firstSelected.path : undefined;
+
+  useEffect((): (() => void) => {
+    if (probePath === undefined) return (): void => undefined;
+
+    let cancelled = false;
+
+    Promise.resolve()
+      .then(() => loadBytesRef.current(probePath))
+      .then((bytes) => {
+        if (bytes === undefined || cancelled) return undefined;
+
+        return probeAudioSource(bytes);
+      })
+      .then((info) => {
+        if (info === undefined || cancelled) return;
+
+        if (!bitrateTouchedRef.current && info.bitrate !== undefined) bitrateState[1](info.bitrate);
+        if (!sampleRateTouchedRef.current && info.sampleRate !== undefined) sampleRateState[1](info.sampleRate);
+      })
+      .catch(() => undefined);
+
+    return (): void => {
+      cancelled = true;
+    };
+  }, [probePath]);
 
   const toggleItem = (name: string): void => {
     setSelected(selected.includes(name) ? selected.filter((member) => member !== name) : [...selected, name]);
@@ -183,7 +217,10 @@ export function TranscodeModal(props: ITranscodeModalProps): ReactElement {
                       addonAfter="bps"
                       value={bitrateState[0]}
                       data-test-id="asset-transcode-bitrate"
-                      onChange={(value): void => bitrateState[1](value ?? ASSET_DEFAULT_OPUS_BITRATE)}
+                      onChange={(value): void => {
+                        bitrateTouchedRef.current = true;
+                        bitrateState[1](value ?? ASSET_DEFAULT_OPUS_BITRATE);
+                      }}
                     />
                   </label>
                   <label className="asset-transcode-param">
@@ -193,7 +230,10 @@ export function TranscodeModal(props: ITranscodeModalProps): ReactElement {
                       addonAfter="Hz"
                       value={sampleRateState[0]}
                       data-test-id="asset-transcode-sample-rate"
-                      onChange={(value): void => sampleRateState[1](value ?? ASSET_DEFAULT_OPUS_SAMPLE_RATE)}
+                      onChange={(value): void => {
+                        sampleRateTouchedRef.current = true;
+                        sampleRateState[1](value ?? ASSET_DEFAULT_OPUS_SAMPLE_RATE);
+                      }}
                     />
                   </label>
                 </>
