@@ -44,10 +44,17 @@ export interface ITableSchemaNode extends JSONSchema.Interface {
   readonly 'x-control'?: TableControlKind;
   /** 同级字段的呈现顺序提示（列出子属性名）；据此新增行可插在双击行之后，而不依赖对象键顺序 */
   readonly 'x-order'?: readonly string[];
+  /** 枚举值到显示标签的映射（`x-enum-titles` 扩展键）；缺省时下拉仍显示原值，行为与新增前一致 */
+  readonly 'x-enum-titles'?: IEnumTitleMap;
   /** 嵌套对象的字段 schema，递归为同样的节点类型 */
   readonly properties?: Record<string, ITableSchemaNode>;
   /** 数组元素的 schema，递归为同样的节点类型 */
   readonly items?: ITableSchemaNode;
+}
+
+export interface IEnumTitleMap {
+  /** 键是枚举值的字符串形式（数字 `0` 写成 `"0"`，字符串原样），值是人看的标签 */
+  readonly [value: string]: string;
 }
 
 export interface ITableRowNode {
