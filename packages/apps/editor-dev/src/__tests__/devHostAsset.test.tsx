@@ -5,7 +5,7 @@ import { useTableCapabilities } from '@motajs/editor-impl/react';
 import { createElement, ReactElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryBackend } from '../backend/memoryBackend';
-import { ASSET_DEMO_CATEGORIES, ASSET_DEMO_FILES, registerAssetDemo } from '../demo/assetDemo';
+import { ASSET_DEMO_CATEGORIES, ASSET_DEMO_FILES, DEMO_TEXTURE_COUNT, registerAssetDemo } from '../demo/assetDemo';
 import { DevCodeEditorProvider } from '../demo/devCodeEditor';
 import { createTablePanelOpener, TABLE_PRESETS } from '../demo/tableDemo';
 
@@ -49,11 +49,40 @@ function CapabilityProbe(): ReactElement {
   );
 }
 
-// 取面板当前渲染出的素材卡片测试标记（保序）
+// 取面板当前渲染出的素材卡片测试标记（保序；只数卡片按钮，排除预览 / 缺失标记等内部节点）
 function cardTestIds(container: HTMLElement): string[] {
-  return Array.from(container.querySelectorAll('[data-test-id^="asset-card-"]')).map(
+  return Array.from(container.querySelectorAll('button[data-test-id^="asset-card-"]')).map(
     (element) => element.getAttribute('data-test-id') ?? '',
   );
+}
+
+// 取出全部演示图片的字节（只挑 `content/texture` 下的 `.png`）
+function textureBytes(): readonly Uint8Array[] {
+  return ASSET_DEMO_FILES.filter(
+    (item) => item.path.startsWith('content/texture/') && item.path.endsWith('.png'),
+  ).map((item) => {
+    if (!(item.content instanceof Uint8Array)) throw new Error(`演示图片缺少字节：${item.path}`);
+
+    return item.content;
+  });
+}
+
+// 读出图片列表文件里登记的素材条目数（跳过系统前缀行后按 JSON 解析）
+function textureListCount(): number {
+  const file = ASSET_DEMO_FILES.find((item) => item.path === 'content/texture/.list.jsonc');
+  const content = file?.content;
+
+  if (typeof content !== 'string') throw new Error('演示列表缺少正文');
+
+  const parsed: unknown = JSON.parse(content.slice(content.indexOf('\n') + 1));
+
+  if (typeof parsed !== 'object' || parsed === null) throw new Error('演示列表不是对象');
+
+  const textures = Reflect.get(parsed, 'textures');
+
+  if (!Array.isArray(textures)) throw new Error('演示列表缺少 textures');
+
+  return textures.length;
 }
 
 /**
@@ -104,8 +133,8 @@ describe('开发宿主素材接入', () => {
     expect(container.querySelector('[data-test-id="asset-panel"]')).not.toBeNull();
   });
 
-  // 切入素材面板后，默认的图片分类读出两条演示素材（DOM 卡片为 hero.png 与 tile.png）
-  it('切入后图片分类读出两条演示素材', async () => {
+  // 切入素材面板后，默认的图片分类读出全部 36 条演示素材，前两张仍是 hero.png / tile.png
+  it('切入后图片分类读出 36 条演示素材', async () => {
     const core = await createHost();
     const tabId = core.shellSystem.listTabs()[0].id;
 
@@ -116,7 +145,10 @@ describe('开发宿主素材接入', () => {
     const { container } = render(createElement(core.shellSystem.render()));
 
     await waitFor(() => {
-      expect(cardTestIds(container)).toEqual(['asset-card-hero.png', 'asset-card-tile.png']);
+      const ids = cardTestIds(container);
+
+      expect(ids.length).toBe(DEMO_TEXTURE_COUNT);
+      expect(ids.slice(0, 2)).toEqual(['asset-card-hero.png', 'asset-card-tile.png']);
     });
   });
 
@@ -205,13 +237,31 @@ describe('开发宿主素材接入', () => {
     });
   });
 
-  // 演示字节本身：图片是大于 1×1 的 PNG、WAV 不是静音、字体是真实字体而不是占位
+  // 演示字节本身：36 张可解码 PNG（含多种宽高比与长方形）、WAV 不是静音、字体是真实字体而不是占位
   it('演示字节是看得见、听得到、能加载的样本', () => {
-    const png = demoBytes('.png');
+    const pngSignature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+    const images = textureBytes();
+    const ratios = new Set<string>();
+    let hasRectangle = false;
 
-    expect(Array.from(png.slice(0, 8))).toEqual([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-    expect(readUint32BE(png, 16)).toBeGreaterThan(1);
-    expect(readUint32BE(png, 20)).toBeGreaterThan(1);
+    expect(images.length).toBeGreaterThanOrEqual(30);
+
+    for (const png of images) {
+      expect(Array.from(png.slice(0, 8))).toEqual(pngSignature);
+
+      const width = readUint32BE(png, 16);
+      const height = readUint32BE(png, 20);
+
+      expect(width).toBeGreaterThan(0);
+      expect(height).toBeGreaterThan(0);
+      ratios.add(`${width}:${height}`);
+
+      if (width !== height) hasRectangle = true;
+    }
+
+    expect(ratios.size).toBeGreaterThanOrEqual(3);
+    expect(hasRectangle).toBe(true);
+    expect(textureListCount()).toBe(images.length);
 
     const wav = demoBytes('.wav');
 

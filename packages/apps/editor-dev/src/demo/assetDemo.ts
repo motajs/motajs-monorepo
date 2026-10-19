@@ -22,13 +22,63 @@ interface IAssetDemoFile {
   readonly content: string | Uint8Array;
 }
 
-/** hero.png 的 base64：16×16 彩色棋盘 RGBA PNG，用作看得见的演示图片 */
-const DEMO_HERO_PNG_BASE64: string =
-  'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAALElEQVR4nGO4/erff2QsVv4fBROSZxgGBpCqAV1+OBgw8LEw8AYMfCwMuAEApzsmrhAADF0AAAAASUVORK5CYII=';
+/** 一张演示图片的描述：名字、像素尺寸与调色板序号 */
+interface IAssetDemoTextureSpec {
+  /** 演示图片的素材名，如 `hero.png` */
+  readonly name: string;
+  /** 图片宽度（像素） */
+  readonly width: number;
+  /** 图片高度（像素） */
+  readonly height: number;
+  /** 调色板序号，决定棋盘格的两种颜色 */
+  readonly palette: number;
+}
 
-/** tile.png 的 base64：另一张 16×16 彩色棋盘，内容与 hero 不同，便于分辨 */
-const DEMO_TILE_PNG_BASE64: string =
-  'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAK0lEQVR4nGP4/+nFfxRc5YqKCcgzDAcDSNSALj8sDBj4WBh4AwY+FgbaAADMEUqucDL8wQAAAABJRU5ErkJggg==';
+/** 内置图片素材的数量：三四十张用来压测网格滚动与不同宽高比 */
+export const DEMO_TEXTURE_COUNT = 36;
+
+/** 内置图片素材的尺寸与配色：前两张沿用 hero / tile，其余覆盖多组长方形与正方形 */
+export const DEMO_TEXTURE_SPECS: readonly IAssetDemoTextureSpec[] = Object.freeze([
+  { name: 'hero.png', width: 16, height: 16, palette: 0 },
+  { name: 'tile.png', width: 16, height: 16, palette: 1 },
+  { name: 'tex-03.png', width: 64, height: 32, palette: 2 },
+  { name: 'tex-04.png', width: 32, height: 64, palette: 3 },
+  { name: 'tex-05.png', width: 48, height: 24, palette: 4 },
+  { name: 'tex-06.png', width: 80, height: 40, palette: 5 },
+  { name: 'tex-07.png', width: 96, height: 48, palette: 6 },
+  { name: 'tex-08.png', width: 120, height: 40, palette: 7 },
+  { name: 'tex-09.png', width: 160, height: 48, palette: 8 },
+  { name: 'tex-10.png', width: 128, height: 64, palette: 9 },
+  { name: 'tex-11.png', width: 144, height: 48, palette: 10 },
+  { name: 'tex-12.png', width: 104, height: 52, palette: 11 },
+  { name: 'tex-13.png', width: 60, height: 100, palette: 12 },
+  { name: 'tex-14.png', width: 100, height: 60, palette: 13 },
+  { name: 'tex-15.png', width: 32, height: 32, palette: 14 },
+  { name: 'tex-16.png', width: 48, height: 48, palette: 15 },
+  { name: 'tex-17.png', width: 64, height: 64, palette: 16 },
+  { name: 'tex-18.png', width: 96, height: 96, palette: 17 },
+  { name: 'tex-19.png', width: 160, height: 160, palette: 18 },
+  { name: 'tex-20.png', width: 24, height: 48, palette: 19 },
+  { name: 'tex-21.png', width: 40, height: 80, palette: 20 },
+  { name: 'tex-22.png', width: 56, height: 112, palette: 21 },
+  { name: 'tex-23.png', width: 72, height: 36, palette: 22 },
+  { name: 'tex-24.png', width: 88, height: 44, palette: 23 },
+  { name: 'tex-25.png', width: 112, height: 56, palette: 24 },
+  { name: 'tex-26.png', width: 136, height: 68, palette: 25 },
+  { name: 'tex-27.png', width: 152, height: 76, palette: 26 },
+  { name: 'tex-28.png', width: 36, height: 72, palette: 27 },
+  { name: 'tex-29.png', width: 44, height: 88, palette: 28 },
+  { name: 'tex-30.png', width: 52, height: 104, palette: 29 },
+  { name: 'tex-31.png', width: 68, height: 136, palette: 30 },
+  { name: 'tex-32.png', width: 76, height: 152, palette: 31 },
+  { name: 'tex-33.png', width: 20, height: 20, palette: 32 },
+  { name: 'tex-34.png', width: 80, height: 60, palette: 33 },
+  { name: 'tex-35.png', width: 60, height: 80, palette: 34 },
+  { name: 'tex-36.png', width: 128, height: 32, palette: 35 },
+]);
+
+/** 演示图片分类的全部素材名（与列表文件登记的来源字段一致） */
+const DEMO_TEXTURE_NAMES: readonly string[] = DEMO_TEXTURE_SPECS.map((spec) => spec.name);
 
 /** 演示 WAV 的采样率（Hz） */
 const DEMO_WAV_SAMPLE_RATE = 16000;
@@ -51,9 +101,6 @@ const DEMO_WAV_FULL_SCALE = 32767;
 /** 演示字体数据地址里 base64 正文之前的 `data:` 前缀分隔符 */
 const DATA_URL_SEPARATOR = ',';
 
-/** 演示图片分类的两个素材名（与列表文件登记的来源字段一致） */
-const DEMO_TEXTURE_NAMES: readonly string[] = ['hero.png', 'tile.png'];
-
 /** 演示音频分类的素材名 */
 const DEMO_AUDIO_NAME: string = 'bgm.wav';
 
@@ -62,6 +109,59 @@ const DEMO_ANIMATION_NAME: string = 'sample';
 
 /** 演示字体分类的素材名（字符串列表的分类名即完整文件名） */
 const DEMO_FONT_NAME: string = 'sample.ttf';
+
+/** PNG 每个像素的字节数：8 位 RGBA */
+const PNG_BYTES_PER_PIXEL = 4;
+
+/** PNG 位深：8 位 */
+const PNG_BIT_DEPTH = 8;
+
+/** PNG 颜色类型：真彩色带 alpha */
+const PNG_COLOR_TYPE_RGBA = 6;
+
+/** PNG 扫描行的滤波类型：不滤波 */
+const PNG_FILTER_NONE = 0;
+
+/** 棋盘格边长（像素）：像素按 8×8 的格子交替两种颜色 */
+const PNG_CHECKER_SIZE = 8;
+
+/** 完全不透明的 alpha 值 */
+const PNG_ALPHA_OPAQUE = 255;
+
+/** 单个 stored deflate 块能容纳的最大字节数 */
+const DEFLATE_STORED_MAX = 65535;
+
+/** zlib 头的压缩方法 / 标志字节：32K 窗口、无预置字典、最快压缩级 */
+const ZLIB_HEADER = Object.freeze([0x78, 0x01]);
+
+/** Adler-32 的模数 */
+const ADLER_MODULUS = 65521;
+
+/** CRC-32 的多项式（反射形式） */
+const CRC_POLYNOMIAL = 0xedb88320;
+
+/** CRC-32 的初值 / 终值掩码 */
+const CRC_MASK = 0xffffffff;
+
+/** 一个 32 位掩码的位宽 */
+const BITS_PER_BYTE = 8;
+
+/** 颜色通道的位移量：红 / 绿 / 蓝 */
+const COLOR_SHIFT_RED = 16;
+const COLOR_SHIFT_GREEN = 8;
+const COLOR_SHIFT_BLUE = 0;
+
+/** 调色板的通道取值范围（0–255） */
+const COLOR_CHANNEL_MAX = 255;
+
+/** 调色板每个通道的基础偏移，保证两种颜色都足够亮、肉眼可见 */
+const PALETTE_CHANNEL_BASE = 32;
+
+/** 调色板每个通道的步进，令相邻序号的颜色明显不同 */
+const PALETTE_CHANNEL_SPAN = 96;
+
+/** 两种棋盘色之间的通道差，令同一张图里的格子有对比 */
+const PALETTE_VARIANT_SPAN = 64;
 
 /** 开发宿主的四个素材分类：图片 / 音频为对象数组（listKey 分别为 textures / audios），动画 / 字体为字符串数组 */
 export const ASSET_DEMO_CATEGORIES: readonly IAssetCategory[] = [
@@ -121,12 +221,182 @@ function decodeBase64(text: string): Uint8Array {
 }
 
 /**
- * 造一份 16×16 彩色棋盘 PNG 字节，作为图片分类的演示素材
- * @param name 演示图片的素材名
- * @returns 解码后的 PNG 字节（两张演示图内容不同）
+ * 计算一段字节的 CRC-32 校验值（PNG 每个块尾部都要带）
+ * @param bytes 参与校验的字节（块类型 + 块数据）
+ * @returns 32 位无符号校验值
  */
-function createDemoPng(name: string): Uint8Array {
-  return decodeBase64(name === DEMO_TEXTURE_NAMES[1] ? DEMO_TILE_PNG_BASE64 : DEMO_HERO_PNG_BASE64);
+function crc32(bytes: Uint8Array): number {
+  let crc = CRC_MASK;
+
+  for (let index = 0; index < bytes.length; index += 1) {
+    crc ^= bytes[index];
+
+    for (let bit = 0; bit < BITS_PER_BYTE; bit += 1) {
+      const mask = -(crc & 1) & CRC_MASK;
+      crc = (crc >>> 1) ^ (CRC_POLYNOMIAL & mask);
+    }
+  }
+
+  return (crc ^ CRC_MASK) >>> 0;
+}
+
+/**
+ * 计算一段字节的 Adler-32 校验值（zlib 流尾部要带）
+ * @param bytes 参与校验的字节（未压缩扫描行数据）
+ * @returns 32 位无符号校验值
+ */
+function adler32(bytes: Uint8Array): number {
+  let low = 1;
+  let high = 0;
+
+  for (let index = 0; index < bytes.length; index += 1) {
+    low = (low + bytes[index]) % ADLER_MODULUS;
+    high = (high + low) % ADLER_MODULUS;
+  }
+
+  return ((high << 16) | low) >>> 0;
+}
+
+/**
+ * 拼装一个 PNG 块：长度 + 类型 + 数据 + CRC
+ * @param type 四个 ASCII 字符的块类型
+ * @param data 块数据
+ * @returns 完整的块字节
+ */
+function createPngChunk(type: string, data: Uint8Array): Uint8Array {
+  const chunk = new Uint8Array(12 + data.length);
+  const view = new DataView(chunk.buffer);
+
+  view.setUint32(0, data.length, false);
+
+  for (let index = 0; index < type.length; index += 1) chunk[4 + index] = type.charCodeAt(index);
+
+  chunk.set(data, 8);
+  view.setUint32(8 + data.length, crc32(chunk.subarray(4, 8 + data.length)), false);
+
+  return chunk;
+}
+
+/**
+ * 把未压缩数据包成合法的 zlib 流：头 + 若干 stored deflate 块 + Adler-32
+ * @param data 未压缩数据（PNG 扫描行）
+ * @returns 合法的 zlib 流字节
+ */
+function createZlibStream(data: Uint8Array): Uint8Array {
+  const blockCount = Math.max(1, Math.ceil(data.length / DEFLATE_STORED_MAX));
+  const stream = new Uint8Array(2 + data.length + blockCount * 5 + 4);
+
+  stream[0] = ZLIB_HEADER[0];
+  stream[1] = ZLIB_HEADER[1];
+
+  let offset = 2;
+
+  for (let index = 0; index < blockCount; index += 1) {
+    const start = index * DEFLATE_STORED_MAX;
+    const length = Math.min(DEFLATE_STORED_MAX, data.length - start);
+    const inverse = ~length & 0xffff;
+
+    stream[offset] = index === blockCount - 1 ? 0x01 : 0x00;
+    stream[offset + 1] = length & 0xff;
+    stream[offset + 2] = (length >>> 8) & 0xff;
+    stream[offset + 3] = inverse & 0xff;
+    stream[offset + 4] = (inverse >>> 8) & 0xff;
+    stream.set(data.subarray(start, start + length), offset + 5);
+    offset += 5 + length;
+  }
+
+  const checksum = adler32(data);
+
+  stream[offset] = (checksum >>> 24) & 0xff;
+  stream[offset + 1] = (checksum >>> 16) & 0xff;
+  stream[offset + 2] = (checksum >>> 8) & 0xff;
+  stream[offset + 3] = checksum & 0xff;
+
+  return stream;
+}
+
+/**
+ * 由调色板序号与棋盘色变体算出一个 0xRRGGBB 颜色
+ * @param palette 调色板序号
+ * @param variant 变体：0 为底色、1 为棋盘亮色
+ * @returns 打包成 24 位的 RGB 值
+ */
+function paletteColor(palette: number, variant: number): number {
+  const red = PALETTE_CHANNEL_BASE + (palette * 37 + variant * PALETTE_VARIANT_SPAN) % PALETTE_CHANNEL_SPAN;
+  const green = PALETTE_CHANNEL_BASE + (palette * 53 + variant * PALETTE_VARIANT_SPAN + 40) % PALETTE_CHANNEL_SPAN;
+  const blue = PALETTE_CHANNEL_BASE + (palette * 71 + variant * PALETTE_VARIANT_SPAN + 80) % PALETTE_CHANNEL_SPAN;
+
+  return (red << COLOR_SHIFT_RED) | (green << COLOR_SHIFT_GREEN) | (blue << COLOR_SHIFT_BLUE);
+}
+
+/**
+ * 用 8 位 RGBA 与 8×8 棋盘格现场编码一张可被浏览器解码的 PNG
+ * @param width 图片宽度（像素）
+ * @param height 图片高度（像素）
+ * @param palette 调色板序号，决定两种棋盘颜色
+ * @returns 完整的 PNG 字节
+ */
+function encodePng(width: number, height: number, palette: number): Uint8Array {
+  const header = new Uint8Array(13);
+  const headerView = new DataView(header.buffer);
+
+  headerView.setUint32(0, width, false);
+  headerView.setUint32(4, height, false);
+  header[8] = PNG_BIT_DEPTH;
+  header[9] = PNG_COLOR_TYPE_RGBA;
+  header[10] = 0;
+  header[11] = 0;
+  header[12] = 0;
+
+  const baseColor = paletteColor(palette, 0);
+  const checkerColor = paletteColor(palette, 1);
+  const rowLength = width * PNG_BYTES_PER_PIXEL + 1;
+  const pixels = new Uint8Array(rowLength * height);
+  let offset = 0;
+
+  for (let y = 0; y < height; y += 1) {
+    pixels[offset] = PNG_FILTER_NONE;
+    offset += 1;
+
+    for (let x = 0; x < width; x += 1) {
+      const checkerIndex = Math.floor(x / PNG_CHECKER_SIZE) + Math.floor(y / PNG_CHECKER_SIZE);
+      const color = checkerIndex % 2 === 0 ? baseColor : checkerColor;
+
+      pixels[offset] = (color >> COLOR_SHIFT_RED) & COLOR_CHANNEL_MAX;
+      pixels[offset + 1] = (color >> COLOR_SHIFT_GREEN) & COLOR_CHANNEL_MAX;
+      pixels[offset + 2] = (color >> COLOR_SHIFT_BLUE) & COLOR_CHANNEL_MAX;
+      pixels[offset + 3] = PNG_ALPHA_OPAQUE;
+      offset += PNG_BYTES_PER_PIXEL;
+    }
+  }
+
+  const signature = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  const chunks = [
+    createPngChunk('IHDR', header),
+    createPngChunk('IDAT', createZlibStream(pixels)),
+    createPngChunk('IEND', new Uint8Array(0)),
+  ];
+  const totalLength = signature.length + chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+  const png = new Uint8Array(totalLength);
+  let pngOffset = signature.length;
+
+  png.set(signature, 0);
+
+  for (const chunk of chunks) {
+    png.set(chunk, pngOffset);
+    pngOffset += chunk.length;
+  }
+
+  return png;
+}
+
+/**
+ * 按描述现场生成一张演示 PNG
+ * @param spec 演示图片的描述（名字 / 宽高 / 调色板）
+ * @returns 解码后的 PNG 字节
+ */
+function createDemoPng(spec: IAssetDemoTextureSpec): Uint8Array {
+  return encodePng(spec.width, spec.height, spec.palette);
 }
 
 /**
@@ -198,17 +468,22 @@ function createListText(document: unknown): string {
   return `${SYSTEM_PREFIX_END_MARKER}\n${JSON.stringify(document, null, 2)}`;
 }
 
-/** 开发宿主要 seed 进内存后端的全部演示素材文件：四个分类的列表文件与示例字节（两张 16×16 彩色 PNG、一段有声音的 WAV、一个空 .anim、一份真实的 Fira Code 字体） */
+/** 开发宿主要 seed 进内存后端的全部演示素材文件：四个分类的列表文件与示例字节（36 张多尺寸彩色 PNG、一段有声音的 WAV、一个空 .anim、一份真实的 Fira Code 字体） */
 export const ASSET_DEMO_FILES: readonly IAssetDemoFile[] = [
   {
     path: 'content/texture/.list.jsonc',
-    content: createListText({ textures: DEMO_TEXTURE_NAMES.map((source) => ({ source, read: 0, usage: 0 })) }),
+    content: createListText({
+      textures: DEMO_TEXTURE_NAMES.map((source, index) => ({
+        source,
+        read: index % 5,
+        usage: index % 3,
+      })),
+    }),
   },
   { path: 'content/audio/.list.jsonc', content: createListText({ audios: [{ source: DEMO_AUDIO_NAME, type: 0 }] }) },
   { path: 'content/animation/.list.jsonc', content: createListText([DEMO_ANIMATION_NAME]) },
   { path: 'content/font/.list.jsonc', content: createListText([DEMO_FONT_NAME]) },
-  { path: `content/texture/${DEMO_TEXTURE_NAMES[0]}`, content: createDemoPng(DEMO_TEXTURE_NAMES[0]) },
-  { path: `content/texture/${DEMO_TEXTURE_NAMES[1]}`, content: createDemoPng(DEMO_TEXTURE_NAMES[1]) },
+  ...DEMO_TEXTURE_SPECS.map((spec) => ({ path: `content/texture/${spec.name}`, content: createDemoPng(spec) })),
   { path: `content/audio/${DEMO_AUDIO_NAME}`, content: createDemoWav() },
   { path: `content/animation/${DEMO_ANIMATION_NAME}.anim`, content: new Uint8Array(0) },
   { path: `content/font/${DEMO_FONT_NAME}`, content: createDemoFont() },
