@@ -48,6 +48,8 @@ function installResizeObserver(): void {
 }
 
 function installWindowInnerWidth(): void {
+  if (typeof window === 'undefined') return;
+
   // jsdom 缺省 innerWidth 为 1024，会让表格面板缺省铺出多栏、打破以单栏为前提的既有用例；
   // 归零后 resolveColumnCount 保底 1 栏，等价于改造前未桩 clientWidth 时的单栏缺省。
   Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 0 });

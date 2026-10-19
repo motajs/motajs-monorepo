@@ -23,6 +23,26 @@ const AUDIO_TRANSCODE_INVALID_MESSAGE = '无法转码：环境不支持 Opus';
 /** 转码没有产出任何字节时的错误文案 */
 const AUDIO_TRANSCODE_EMPTY_OUTPUT_MESSAGE = '无法转码：转码未产出数据';
 
+/** 读取一个可能为空的数值的回调 */
+type NumberProbe = () => Promise<number | null> | number | null;
+
+/**
+ * 读取一个数值，只有有限正数才算读到
+ * @param probe 读取数值的回调
+ * @returns 有限正数；读不到或数值非法时为 undefined
+ */
+async function readPositiveNumber(probe: NumberProbe): Promise<number | undefined> {
+  try {
+    const value = await probe();
+
+    if (typeof value === 'number' && Number.isFinite(value) && value > 0) return value;
+
+    return undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * 判断当前环境能否把音频转码为 WebM 容器中的 Opus
  * @returns 环境支持 Opus 编码时为 true
@@ -41,10 +61,28 @@ export async function canUseAudioTranscode(): Promise<boolean> {
  * @returns 源音频可读到的采样率与码率；读不到时为 undefined
  */
 export async function probeAudioSource(bytes: Uint8Array): Promise<IAssetAudioSourceInfo | undefined> {
-  // 真实探测在 03-25 落地，本计划先直通返回「读不到」
-  void bytes;
+  try {
+    const input = new Input({ source: new BlobSource(new Blob([bytes.slice()])), formats: ALL_FORMATS });
 
-  return Promise.resolve(undefined);
+    try {
+      const track = await input.getPrimaryAudioTrack();
+      if (!track) return undefined;
+
+      const sampleRate = await readPositiveNumber(() => track.getSampleRate());
+      const bitrate = await readPositiveNumber(() => track.getBitrate());
+      if (sampleRate === undefined && bitrate === undefined) return undefined;
+
+      return { sampleRate, bitrate };
+    } finally {
+      try {
+        input.dispose();
+      } catch {
+        // 释放失败不影响已经读到的元数据
+      }
+    }
+  } catch {
+    return undefined;
+  }
 }
 
 /**
