@@ -604,7 +604,13 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
     // 覆盖后字节文件必定存在：把该条目的缺失标记一并纠正，免得界面继续显示缺失
     const entries = state.entries.slice();
 
-    entries[index] = { name: entry.name, path: entry.path, config: entry.config, exists: true };
+    entries[index] = {
+      name: entry.name,
+      path: entry.path,
+      config: entry.config,
+      exists: true,
+      byteVersion: (entry.byteVersion ?? 0) + 1,
+    };
     state.entries = entries;
     this.registerBarrier({ action: 'replace', path: entry.path });
     this.publish(AssetPanelStatus.Ready, '已替换素材');
@@ -714,7 +720,13 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
       const renamed = renameAssetListEntry(category, { name: entry.name, config: entry.config, index }, newName);
       const entries = state.entries.slice();
 
-      entries[index] = { name: renamed.name, path: result.outputPath, config: renamed.config, exists: true };
+      entries[index] = {
+        name: renamed.name,
+        path: result.outputPath,
+        config: renamed.config,
+        exists: true,
+        byteVersion: (entry.byteVersion ?? 0) + 1,
+      };
       state.entries = entries;
       this.registerBarrier({ action: 'transcode', path: result.outputPath });
     }
@@ -959,7 +971,7 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
     const entry = state.entries[index];
     const entries = state.entries.slice();
 
-    entries[index] = { name: entry.name, path: entry.path, config, exists: entry.exists };
+    entries[index] = { name: entry.name, path: entry.path, config, exists: entry.exists, byteVersion: entry.byteVersion };
     state.entries = entries;
     state.unsaved = true;
   }
