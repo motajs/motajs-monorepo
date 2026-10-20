@@ -313,8 +313,8 @@ describe('素材瘦身转码编排', () => {
     await expect(fs.readBinary('content/texture/a-origin.webp')).rejects.toThrow();
   });
 
-  // ⑨ 源文件已带目标扩展名（不覆盖旧文件）：同样就地覆盖，不产生 origin 备份，也不删除源文件（回归 CR-01）
-  it('不覆盖且源已是目标扩展名时原地覆盖并保留源文件', async () => {
+  // ⑨ 源文件已带目标扩展名（不覆盖旧文件）：源字节备份到 origin、原路径写入新字节、列表名不变（回归 G-03-12）
+  it('不覆盖且源已是目标扩展名时先备份 origin 再写回原路径', async () => {
     const fs = new FakeFileSystem();
     const service = new FakeTranscodeService();
 
@@ -327,8 +327,12 @@ describe('素材瘦身转码编排', () => {
     await panel.selectCategory('texture');
     await panel.transcodeAssets(['b.webp'], imageOptions(false));
 
+    expect(Array.from(await fs.readBinary('content/texture/b-origin.webp'))).toEqual([2]);
     expect(Array.from(await fs.readBinary('content/texture/b.webp'))).toEqual([2, 0x77]);
-    await expect(fs.readBinary('content/texture/b-origin.webp')).rejects.toThrow();
+
+    const container = renderPanel(panel);
+
+    expect(entryNames(container)).toEqual(['asset-card-b.webp']);
   });
 
   // ⑩ 不覆盖且 origin 文件已存在：该项失败、既有备份与源文件都不被改写（回归 WR-08）
@@ -355,5 +359,26 @@ describe('素材瘦身转码编排', () => {
     const container = renderPanel(panel);
 
     expect(container.textContent).not.toContain('保留文件已存在');
+  });
+
+  // ⑪ 同路径 + 不覆盖 + origin 已存在：该项失败，源文件与既有备份都不被改写（回归 G-03-12）
+  it('同路径且保留文件已存在时不改写源文件与既有备份', async () => {
+    const fs = new FakeFileSystem();
+    const service = new FakeTranscodeService();
+
+    seedTexture(fs, ['a.webp']);
+    fs.seed('content/texture/a.webp', new Uint8Array([1]));
+    fs.seed('content/texture/a-origin.webp', new Uint8Array([9]));
+
+    const system = await createAssetHarness(fs);
+    const panel = await openPanel(system, service);
+    const errors = vi.spyOn(message, 'error');
+
+    await panel.selectCategory('texture');
+    await panel.transcodeAssets(['a.webp'], imageOptions(false));
+
+    expect(Array.from(await fs.readBinary('content/texture/a.webp'))).toEqual([1]);
+    expect(Array.from(await fs.readBinary('content/texture/a-origin.webp'))).toEqual([9]);
+    expect(errors).toHaveBeenCalledWith(expect.stringContaining('保留文件已存在'));
   });
 });
