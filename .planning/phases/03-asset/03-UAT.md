@@ -152,7 +152,9 @@ skipped: 0
   missing: []
 - gap_id: G-03-12
   truth: "不勾「覆盖旧文件」时，源文件绝不能被覆盖/替换：源应保留为 `{file}-origin.{ext}`；即使源已是目标扩展名，也必须先备份为 `{file}-origin.{ext}` 再写新文件"
-  status: failed
+  status: resolved
+  resolved_by: 03-30-PLAN.md
+  resolved_at: 2026-10-20
   reason: "User reported: 不勾替换源文件依然会替换掉源文件。代码缺陷：`targetPath === entry.path` 分支无视 `coverOrigin`，已就地覆盖"
   severity: blocker
   test: 1
@@ -160,7 +162,9 @@ skipped: 0
   missing: []
 - gap_id: G-03-13
   truth: "素材在右侧详情栏显示文件大小（人类可读，如 12.3 KB），以便确认转码后体积变小"
-  status: failed
+  status: resolved
+  resolved_by: 03-31-PLAN.md
+  resolved_at: 2026-10-20
   reason: "User requested: 现在没有显示大小的地方，不能确认大小变小；建议跟图片尺寸一样在右侧显示"
   severity: minor
   test: 1
