@@ -445,6 +445,33 @@
 
 ---
 
+## Plan 03-28 — 替换字节后预览立即刷新（G-03-10）
+
+**要做什么：** 替换一个素材的文件后，卡片缩略图、右侧预览与图片尺寸要立刻显示新内容，而不是等用户切走再切回。计划给每个素材记一个「字节版本号」，字节被覆盖时加一，预览看到版本变化就重新读取。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `IAssetEntry.byteVersion` | 新增可选只读成员（`asset/types.ts`） | 素材字节的版本号；同一路径的字节每被覆盖一次加一（替换 / 原地转码），加载得到的条目缺省视为 0。预览组件把它作为 effect 依赖，从而在替换后重新读取字节 |
+| `useAssetObjectUrl` | 函数签名变更（新增第三个参数 `byteVersion`） | 把「字节版本」纳入 effect 依赖；版本变化时回收旧的 `blob:` 地址并重新读取字节。缺省值为 0，未更新的调用点行为不变 |
+| `IAssetCardPreviewProps.byteVersion` | 新增成员 | 卡片缩略图接收条目的字节版本 |
+| `IAssetPreviewProps.byteVersion` | 新增成员 | 详情预览接收条目的字节版本 |
+| `IAssetImageSizeProps.byteVersion` | 新增成员 | 尺寸行接收条目的字节版本，版本变化时重新解析宽高 |
+| `IAssetCardBytesProps.byteVersion` | 新增成员（组件内私有 interface） | 卡片内图片 / 字体两个子预览共用的字节版本入参 |
+| `assetReplaceRefresh.test.tsx` | 新增测试文件（`asset/__tests__/`） | 回归：同路径替换后，卡片 `src`、详情预览 `src` 与尺寸行立即更新，且不依赖切换选中 |
+
+---
+
+## Plan 03-29 — 非法工程 schema 的可见错误态（G-03-11）
+
+**要做什么：** 工程里的 `.schema.jsonc` 写坏时，点「配置」目前毫无反应。计划把数据层已经记录的错误文案显示成面板内的一条错误条，面板保持打开、其它操作照常。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `.asset-panel-error` | 新增 CSS 类（`asset/asset.css`） | 工具栏与三栏主体之间的错误条容器；复用面板已有的边框 / 危险色变量 |
+| `asset-panel-error` | 新增 `data-test-id` | 供测试定位「配置无法解析」的可见错误条 |
+
+---
+
 ## 待确认的偏离与口径（请一并过目）
 
 1. **legacy 内置 Schema 由宿主注入，不写进 `editor-impl/src`。** D-08 要求内置两套（legacy + 新引擎），但 `coreEngineNeutral.js` 把 `tower` 等引擎专有词在两包 `src` 里当作违规（连注释也算），legacy 字段名必然含这些词。故包内只放**新引擎**那套内置 schema；legacy 那套由装配方经 `IAssetCategory.schema` 注入，门禁不破、能力仍是引擎无关的。
