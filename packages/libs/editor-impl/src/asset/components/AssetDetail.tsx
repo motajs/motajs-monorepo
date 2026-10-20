@@ -2,8 +2,8 @@ import { Button, Modal } from 'antd';
 import { ReactElement, useState } from 'react';
 import { AssetCategoryKind } from '../../react';
 import { IAssetEntry, IAssetUpload } from '../types';
+import { AssetFileInfo } from './AssetFileInfo';
 import { AssetFileInput } from './AssetFileInput';
-import { AssetImageSize } from './AssetImageSize';
 import { AssetPreview } from './AssetPreview';
 
 export interface IAssetDetailProps {
@@ -63,9 +63,10 @@ export function AssetDetail(props: IAssetDetailProps): ReactElement {
       <div className="asset-detail-path" title={entry.path}>
         {entry.path}
       </div>
-      {props.kind === AssetCategoryKind.Image && entry.exists ? (
-        <AssetImageSize
+      {entry.exists ? (
+        <AssetFileInfo
           key={entry.path}
+          kind={props.kind}
           path={entry.path}
           byteVersion={entry.byteVersion ?? 0}
           loadBytes={props.loadBytes}

@@ -6,7 +6,7 @@ export * from './AssetFontSample';
 export * from './AssetGrid';
 export * from './AssetDetail';
 export * from './AssetFileInput';
-export * from './AssetImageSize';
+export * from './AssetFileInfo';
 export * from './AssetPreview';
 export * from './useAssetObjectUrl';
 export * from './CategoryNav';

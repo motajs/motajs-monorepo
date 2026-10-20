@@ -292,7 +292,8 @@
   white-space: nowrap;
 }
 
-.asset-detail-size {
+.asset-detail-size,
+.asset-detail-bytes {
   color: var(--editor-muted, #656d76);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
