@@ -23,7 +23,7 @@
 | `IMapTileGroup` | interface | 宿主算好的一个图块分组：标识、名称、图片相对路径、图集列数、图块列表 |
 | `IMapTileEntry` | interface | 一个图块：格子里的编号、图集内列 / 行（多格图案按它查表，不靠编号连续）、像素裁切、名称、通行属性 |
 | `IMapTileCrop` | interface | 源图片上的像素裁切矩形（`x` / `y` / `width` / `height`） |
-| `IMapTilePass` | interface | 一个图块的通行属性：可离开方向、可进入方向、是否只在事件层生效 |
+| `IMapTilePass` | interface | 一个图块的通行属性，字段固定为 `out`（可离开方向）/ `in`（可进入方向）/ `onlyEventLayer`（是否只在事件层生效）；两个方向字段都是 `IMapDirections` |
 | `IMapDirections` | interface | 四个方向的布尔值（`up` / `right` / `down` / `left`）；**不是**引擎位掩码 |
 | `IMapSize` | interface | 宽高（格子数） |
 | `IMapSizeLimit` | interface | 宿主注入的地图尺寸上限（`maxWidth` / `maxHeight`） |
@@ -48,6 +48,7 @@
 | `MapBrushMode` | `const enum` | 画笔模式：线 / 矩形 / 填充 |
 | `MapUndoType` | `const enum` | 撤销记录种类：格子 / 属性 / 屏障 |
 | `MapPaletteKind` | `const enum` | 调色板选中种类：空（擦除）/ 图块 / 最近使用 |
+| `MapDialogKind` | `const enum` | 面板当前打开的受控弹窗：无 / 新建地图 / 新增图层 / 未保存确认（`None` / `New` / `Layer` / `Unsaved`）；最近使用清空确认由调色板自己持有，不进面板状态 |
 | `IMapBrushPattern` | interface | 笔刷图案：宽高 + 行主序编号（0 表示空），多格选择与「空」共用这个形状 |
 | `IMapPaletteSelection` | interface | 当前调色板选中：种类 + 图案 + 主图块编号（用于最近使用） |
 | `IMapRect` | interface | 格子矩形（`x` / `y` / `width` / `height`） |
@@ -58,11 +59,11 @@
 | `IMapCellsUndoData` | interface | 格子撤销载荷：地图标识 + 图层标识 + 净变化列表 |
 | `IMapPropertyUndoData` | interface | 属性撤销载荷：地图标识 + 字段路径 + 旧值 + 新值 |
 | `IMapRenderModel` | interface | 一帧要画什么（纯数据）：画布尺寸、格子、网格线、通行度标记、框选、预览、悬停 |
-| `IMapRenderCell` | interface | 一个要画的图块：稳定 key、图片路径、裁切、目标像素矩形、透明度、是否缺图 |
+| `IMapRenderCell` | interface | 一个要画的格子：稳定 key、目标像素矩形、透明度、是否缺图，以及**可选**的图片路径与裁切（`imagePath?` / `crop?` 同时缺省 = 空格子，画棋盘格底；`missing = true` 且无图 = 目录里查不到的编号） |
 | `IMapRenderGridLine` | interface | 一条网格线（`x` / `y` / `length` / `vertical`） |
 | `IMapPassMark` | interface | 一个格子上的通行度标记：坐标、不可通行方向、是否降级为红点 |
 | `IMapPreview` | interface | 绘制预览：覆盖的格子矩形 + 图案尺寸 |
-| `IMapPanelViewState` | interface | 面板视图状态（清单 / 文档 / 当前层 / 调色板 / 最近 / 画笔 / 开关 / 选区 / 剪贴板 / 脏 / 保存 / 对话框） |
+| `IMapPanelViewState` | interface | 面板视图状态（清单 / 文档 / 当前层 / 调色板 / 最近 / 画笔 / 开关 / 选区 / 剪贴板 / 脏 / 保存 / 对话框）；必须含 `paletteSelection`、`recentTiles`、`recentStatus`、`dialog`（`MapDialogKind`）、`dialogError`、`paletteVersion`（图块图片重试计数，递增即重新取字节） |
 | `MAP_PANEL_TYPE_ID` | 常量 `'map'` | 面板类型标识；装配方引用它而不各写字符串 |
 | `MAP_CELL_SIZE` | 常量 `32` | 一格 32px（像素画基准，不缩放） |
 | `MAP_DEFAULT_WIDTH` / `MAP_DEFAULT_HEIGHT` | 常量 `32` | 新建地图的默认宽 / 高 |
@@ -87,9 +88,23 @@
 |------|------|------|
 | `IEditorPanel.onBeforeClose` | 可选方法 `(): Promise<boolean>` | 用户主动关闭承载此面板的标签时询问面板；`true` = 允许关闭，`false` = 取消。**one-way 决策**，见下方 Plan 04-02 决议 |
 | `ITableGridProps.formMode` | 可选成员 `boolean` | `true` 时只渲染字段行与值控件，不渲染表格工具栏与 Schema 横幅；供地图属性抽屉复用同一套表单（D-15 / UI-SPEC F11） |
-| `ShellSystem.closeTab` | 方法（行为扩展，Plan 04-07 之外的 core 改动在 04-14 之前完成） | 关闭前先激活目标标签、再调用 `onBeforeClose`；内部释放路径（`dispose` / `unregisterPanelType` / `closePanelInstance`）不询问 |
+| `ShellSystem.closeTab` | 方法（行为扩展，实现在 Plan 04-15） | 关闭前先激活目标标签、再调用 `onBeforeClose`；内部释放路径（`dispose` / `unregisterPanelType` / `closePanelInstance`）不询问 |
 
-> 备选名（若用户不同意）：`formMode` → `showToolbar?: boolean`；`onBeforeClose` → `beforeClose?`。改名只影响本表与两个实现计划。
+> 备选名（若用户不同意）：`formMode` → `showToolbar?: boolean`；`onBeforeClose` → `beforeClose?`。改名只影响本表与三个实现计划。
+
+---
+
+## Plan 04-15 — 内核行为：关闭标签前先问一句（接口确认之后）
+
+**要做什么：** 只实现 Plan 04-02 已声明的关闭前钩子在外壳里的调用时序：用户点 ✕ 时先激活目标标签、再问 `IEditorPanel.onBeforeClose`，回答「不能关」就什么都不做；释放路径永不询问。本计划**不改任何接口签名**，只补行为与一条 core 测试。
+
+> 为什么单独一个计划：项目规则「先接口、后实现」不允许同一个计划里既声明接口又写它的实现。接口与 `checkpoint:decision` 留在 04-02，行为在这里落地。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `ShellSystem.closeTab` 的询问时序 | 实现（`shellSystem.ts` 内） | 命中实现钩子的标签：先 `activateTab` → `await onBeforeClose()`；`false` 立即返回不释放；钩子抛错记日志并按「取消关闭」处理 |
+| `shell.beforeCloseFailed` | 日志键（`logger` 调用参数） | 钩子抛错时记录一条日志；不新增日志基建，只沿用既有键风格 |
+| `src/shell/__tests__/shellClose.test.ts` | 文件 | 覆盖允许 / 取消 / 后台标签先激活 / 抛错取消 / 未实现钩子直关 / 释放路径不询问 |
 
 ---
 
@@ -210,8 +225,9 @@
 
 | 名称 | 种类 | 用途 |
 |------|------|------|
-| `MapPanel.createMap` | 方法 | 调宿主 `createMap`；成功后打开新文档（当前层 = 初始图层、视口回左上角）并登记屏障 |
-| `MapPanel.addLayer` | 方法 | 调宿主 `addLayer`；成功后新层成为当前层并登记屏障 |
+| `MapPanel.openDialog` / `MapPanel.closeDialog` | 方法 | 打开 / 关闭受控弹窗，唯一写 `MapDialogKind` 的入口；关闭会清 `dialogError`，提交中不允许关闭 |
+| `MapPanel.createMap` | 方法（宿主无 `createMap` 时不执行任何动作并给提示） | 调宿主 `createMap`；成功后打开新文档（当前层 = 初始图层、视口回左上角）并登记屏障 |
+| `MapPanel.addLayer` | 方法（宿主无 `addLayer` 时同上） | 调宿主 `addLayer`；成功后新层成为当前层并登记屏障 |
 | `MapPanel.requestUnsavedDecision` | 方法 | 有未保存改动时给出「保存并继续 / 放弃 / 取消」三选一的结果（供切图 / 新建 / 加层 / 关闭标签共用） |
 | `MapPanel.requestDiscard` | 方法 | 放弃内存改动、回到最近基线，并登记屏障 |
 | `MapPanel.loadRecentTiles` | 方法 | 读项目内约定文件并规范化；文件缺失 / 损坏按空列表处理 |
@@ -252,6 +268,8 @@
 | `src/map/map.css` | 文件 | 面板唯一样式表：类前缀 `emap-`，消费 `--editor-*`（带 fallback）与 `--emap-*` |
 | `src/map/components/MapToolbar.tsx` | 文件 | 两行工具栏：地图切换 / 新建地图 / 未保存标记 / 地图属性 / 保存地图；图层段 / 新增图层 / 画笔段 / 通行度 / 大地图 / 四向移动 / 窄面板「视图」下拉 |
 | `MapToolbar` | 组件 | 纯 DOM + antd；<900px 时把低频动作收进「视图」下拉 |
+| `MapToolbar` 的 `showEditRow` | prop `boolean` | 为 `false`（地图还没打开过）时整个第 2 行不渲染；由 `MapPanelView` 从面板状态推导 |
+| `MapEmptyState` 的 `canCreateMap` | prop `boolean` | 为 `false`（宿主没注入 `createMap`）时两个「新建地图」按钮都禁用并给 tooltip |
 | `src/map/components/MapEmptyState.tsx` | 文件 | 首次打开的四态：清单加载 / 清单失败 / 无地图 / 未打开 + 内联清单 |
 | `MapEmptyState` | 组件 | 有地图未打开时渲染可滚动的地图名按钮列表 + 固定「新建地图」主按钮 |
 | `src/map/components/MapStatusBar.tsx` | 文件 | 画布下方 24px 状态条：坐标 / 选区 / 地图 / 图层 / 模式 |
@@ -265,13 +283,17 @@
 
 ## Plan 04-11 — 视图：图块调色板（多格框选 / 最近使用 / 缺图）
 
-**要做什么：** 左侧 240px 调色板：固定擦除格、最近使用分区、分组折叠网格、同组内多格框选与尺寸提示、缺图占位与提示。
+**要做什么：** 左侧 240px 调色板：固定擦除格、最近使用分区、分组折叠网格、同组内多格框选与尺寸提示、缺图占位与提示；并把调色板真正挂进面板视图（替换 04-10 的占位容器），由面板注入分组图片 blob URL、最近使用列表与选择回调。
 
 | 名称 | 种类 | 用途 |
 |------|------|------|
 | `src/map/components/MapPalette.tsx` | 文件 | 调色板：擦除格 / 最近使用 / 分组折叠 / 网格 / 多格框选 |
 | `MapPalette` | 组件 | 每个图块是真实 `<button>`；缺图时棋盘格 + 角标「!」并保留可选可画 |
-| `MapPanel.selectPalette` | 方法 | 设定当前选中（空 / 图块 / 最近使用），必要时把画笔尺寸重置为 1×1 |
+| `MapPalette` 的 `onRetryImages` | prop `(): void` | 「图块加载失败」时点「重试」的回调；由 `MapPanelView` 接到 `MapPanel.reloadTileImages` |
+| `MapPanelView` 的调色板 props | props | `tileGroups`（来自文档目录）、`loadTileBytes`（面板注入的取字节）、`paletteSelection`、`paletteVersion`、`recentTiles`、`recentStatus`、`onSelectPattern`、`onRetryImages`、`onClearRecent` |
+| `MapPanel.selectPalette` | 方法 | 设定当前选中（空 / 图块 / 最近使用），必要时把画笔尺寸重置为 1×1；调色板的每次选择都经它写进视图状态 |
+| `MapPanel.reloadTileImages` | 方法 | 「图块加载失败」时的重试入口：`paletteVersion + 1`、重新发布视图状态；不读图片、不改文档、不置脏 |
+| `useMapTileGroupUrls` | hook（`useMapObjectUrl.ts` 内） | 一次为一组图片路径取字节、生成 blob URL，返回「分组 → URL」与「分组 → 加载状态」；卸载 / 版本变化时 revoke。用单次 `useEffect` 而不是在循环里调 hook（Hooks 规则） |
 | `src/map/components/dialogs/MapRecentClearDialog.tsx` | 文件 | 「清除最近使用的图块？」确认弹窗 |
 | `MapRecentClearDialog` | 组件 | 破坏性按钮「清除记录」+「取消」 |
 | `data-test-id`（调色板） | 约定 | `map-palette` / `map-tile-{编号}` / `map-palette-group-{序号}` / `map-recent-{编号}` / `map-palette-empty` / `map-palette-retry` |
@@ -303,7 +325,7 @@
 | 名称 | 种类 | 用途 |
 |------|------|------|
 | `src/backend/mapFiles.ts` | 文件（`editor-dev`） | 宿主适配器：把演示用的地图形状翻成中立文档，保存时把几何写回并**保留事件与额外字段** |
-| `IMapFileRecord` | interface | 演示宿主里一份地图文件的内存形状（宽 / 扁平图层 / 图层别名 / 事件 / 额外字段） |
+| `IMapFileRecord` | interface | 演示宿主里一份地图文件的内存形状（宽 / 扁平图层 / 图层别名 / 属性表 / 事件 / 额外字段）；属性表与几何在同一个文件里，保存几何时必须原样保留 |
 | `toMapDocument` | 函数 | 演示形状 → 中立文档（扁平层切成 `[y][x]`；缺名层回退「图层 {N}」） |
 | `applyMapDataSection` | 函数 | 中立文档的数据域 → 写回演示形状（保留事件与额外字段） |
 | `createMapCapabilities` | 函数 | 把内存后端包装成 `IMapEditorCapabilities` |

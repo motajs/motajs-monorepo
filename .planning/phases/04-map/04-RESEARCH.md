@@ -1201,81 +1201,83 @@ export interface IEditorPanel extends IUndoable {
 | A14 | 本阶段不调用事件保存接口；`saveMapData` 的宿主实现负责保留事件与其它未展示字段。 | Pattern 3 / OQ 7 | 若宿主实现只写几何、不保留事件，保存会丢事件；必须在宿主适配器测试里断言保留。 |
 | A15 | 地图属性走独立的 `readProperties` / `saveMapProperties`（不在中立文档里），以支撑抽屉独立的加载 / 失败状态。 | Pattern 3 / OQ 3 | 若属性放进文档，抽屉的“属性加载中 / 失败”状态会退化成“地图加载中 / 失败”。 |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-### 1. 关闭标签前的未保存拦截需要 `editor-core` 新钩子（必须由用户确认）
+> **全部已定稿，不再有待定项。** 下面 13 条的最终口径写进 `.planning/phases/04-map/INTERFACE-NAME.md` §开放问题决议（OQ1…OQ12 + 两项规划裁定），实施计划按这些口径执行。每条标题后的 `(RESOLVED: …)` 指明该条落在哪个计划 / 哪条决议；下面的 `Recommendation` 保留作为当时的推理记录，不是待定建议。
+
+### 1. 关闭标签前的未保存拦截需要 `editor-core` 新钩子（必须由用户确认）— RESOLVED: OQ1 / Plan 04-02 的 `checkpoint:decision` + Plan 04-15
 
 - **What we know:** `IEditorPanel` 没有关闭前钩子；`ShellSystem.closeTab` 直接 `leaveActiveInstance` → `closePanelInstance` → `dispose`，无法取消。`[VERIFIED: packages/libs/editor-core/src/panel/types.ts:49-101; packages/libs/editor-core/src/shell/shellSystem.ts:590-623]` UI-SPEC 要求关闭标签时弹「有未保存的改动」。`[VERIFIED: .planning/phases/04-map/04-UI-SPEC.md:559-566]`
 - **What's unclear:** 钩子名字 / 返回语义 / 后台标签是否先激活 / 钩子抛错时是否允许关闭 / `unregisterPanelType` 与 `dispose` 是否跳过。
 - **Recommendation:** 增加可选 `IEditorPanel.onBeforeClose?(): Promise<boolean>`（`true` = 允许关闭，`false` = 取消）；只在用户主动关闭标签时调用；调用前若目标不是活动标签，先 `activateTab`；`closePanelInstance` / `dispose` / `unregisterPanelType` 走不询问的内部路径；钩子抛错时记录日志并**取消关闭**（数据安全优先），但面板实现内部必须自己 catch，避免真的抛。名字与语义写入 `INTERFACE-NAME.md` 确认。
 
-### 2. 图块目录状态：D-02 与 UI-SPEC 的口径冲突
+### 2. 图块目录状态：D-02 与 UI-SPEC 的口径冲突 — RESOLVED: OQ2（目录在文档内；加载 / 失败指图片字节；全部失败仍可落笔）/ Plan 04-11
 
 - **What we know:** D-02 明确「中立文档自足：图层 + 图块目录 + 通行性显示数据」；UI-SPEC 又要求调色板有独立的「图块目录加载 / 失败 / 空」状态。`[VERIFIED: .planning/phases/04-map/04-CONTEXT.md:42; .planning/phases/04-map/04-UI-SPEC.md:586]`
 - **What's unclear:** 是“目录元数据随文档到达，加载 / 失败指图片字节”，还是“目录本身走独立通道”。
 - **Recommendation:** 保留 D-02（目录在文档内），把调色板状态解释为**图片字节**状态：目录有分组但图片还在读 → 「正在加载图块…」；全部分组图片失败 → 「图块加载失败」+ 重试；目录零分组 → 「暂无可用的图块」。单张图失败只做占位，不阻断按编号绘制（UI-SPEC 也要求缺图仍可选可画）。**注意**：UI-SPEC 的状态表把「图块目录失败」写成“不能落笔”，而同一份规范又说“图片缺失但编号有效仍算可用”；两者只在“全部图片失败”时冲突。推荐“显示错误条 + 仍可落笔（占位）”，因为编号与目录都在；如果用户坚持“全部失败即禁用画笔”，把这条写入 `INTERFACE-NAME.md` 并实现一个明确的禁用条件。无论哪种，都不需要改 D-02。
 
-### 3. 地图属性：独立读取 / 保存，还是放进中立文档？
+### 3. 地图属性：独立读取 / 保存，还是放进中立文档？ — RESOLVED: OQ3（独立域）/ Plan 04-09
 
 - **What we know:** D-01 列出的文档内容不含属性；D-04 要求属性作为独立域整表保存；UI-SPEC 又给了抽屉独立的「正在加载地图属性… / 地图属性加载失败」状态。`[VERIFIED: .planning/phases/04-map/04-CONTEXT.md:41,44; .planning/phases/04-map/04-UI-SPEC.md:523-528]`
 - **What's unclear:** 属性值从哪里来。
 - **Recommendation:** 独立 `IMapEditorCapabilities.readProperties(mapId): Promise<Record<string, unknown>>` + `IMapEditorCapabilities.saveMapProperties(mapId, properties): Promise<void>` + 静态注入 `IMapEditorCapabilities.propertiesSchema`。文档只装几何与图块目录；属性加载 / 失败状态天然成立；属性保存是独立域。确认字段名与“缺省 schema 时按钮禁用”的行为。
 
-### 4. 「新增图层」是否触发未保存拦截？
+### 4. 「新增图层」是否触发未保存拦截？ — RESOLVED: OQ4（触发）/ Plan 04-08
 
 - **What we know:** D-05 规定宿主执行加层并返回更新后的文档；UI-SPEC 的未保存触发列表只列了切换地图、新建地图、关闭标签。`[VERIFIED: .planning/phases/04-map/04-CONTEXT.md:45; .planning/phases/04-map/04-UI-SPEC.md:559-561]`
 - **What's unclear:** 有未保存改动时加层，返回的文档会覆盖内存改动；要不要先保存 / 放弃 / 取消。
 - **Recommendation:** 把「新增图层」加入触发列表（A8）。这是对 UI-SPEC F8 的**扩展**，需要用户确认；不确认的话，至少要在计划里明确“加层会丢弃未保存改动”的风险。
 
-### 5. 图层合成：所有层都画（非当前层变淡）还是只画当前层？
+### 5. 图层合成：所有层都画（非当前层变淡）还是只画当前层？ — RESOLVED: OQ5（全画，非当前层 0.3）/ Plan 04-03
 
 - **What we know:** 旧编辑器渲染所有层，非当前层 alpha 0.3（`layerAlpha`）；UI-SPEC 没有明说层合成规则，只说“图层切换”和“编辑即时反映”。`[VERIFIED: packages/apps/editor/src/MapEditor/rendering/MapPixiRenderer.tsx:435-438]`
 - **What's unclear:** 用户期望“查看层”是隔离还是叠加。
 - **Recommendation:** 默认沿用旧编辑器：所有层按宿主顺序绘制，非当前层 alpha 0.3；当前层全不透明。把这条写入 `INTERFACE-NAME.md` / 计划，避免实现时各写各的。
 
-### 6. 最近使用偏好文件的路径 / 格式 / 上限
+### 6. 最近使用偏好文件的路径 / 格式 / 上限 — RESOLVED: OQ6（`.editor/map-recent-tiles.json`、`{ tiles }`、上限 24、宿主可覆盖）/ Plan 04-08
 
 - **What we know:** D-11 要求项目内约定文件、跨会话、不用 localStorage；UI-SPEC 建议上限 24，只存 1×1 图块，单独分区。`[VERIFIED: .planning/phases/04-map/04-CONTEXT.md:54; .planning/phases/04-map/04-UI-SPEC.md:416,432-435]`
 - **What's unclear:** 具体路径 / 字段名 / 是否允许宿主覆盖 / 文件不存在时是否创建。
 - **Recommendation:** `.editor/map-recent-tiles.json`，`{ "tiles": number[] }`，上限 24，缺失按空列表，首次落笔成功后创建；允许宿主用 `recentTilesPath?` 覆盖。路径 / 字段名写入 `INTERFACE-NAME.md` 确认。注意：写新文件会进入项目目录，用户需要知道这一点。
 
-### 7. 事件域接口：本阶段声明但不调用，还是留给 Phase 6？
+### 7. 事件域接口：本阶段声明但不调用，还是留给 Phase 6？ — RESOLVED: OQ7（本阶段不声明；宿主保存时保留）/ Plan 04-08 + 04-13
 
 - **What we know:** D-04 说保存接口按地图数据 / 地图属性 / 事件三块拆分；D-22 说本阶段完全不碰事件，宿主保存时保留。`[VERIFIED: .planning/phases/04-map/04-CONTEXT.md:44,74]`
 - **What's unclear:** 现在是否要声明一个没有任何调用点的 `saveEvents`。
 - **Recommendation:** 本阶段**不声明**未使用的事件接口；`saveMapData` 的宿主实现负责保留事件。等 Phase 6 有了事件模型再声明 `saveEvents`。这是对 D-04 的“按域拆分”的阶段性解释，需要用户确认；如果用户要求现在就有三块接口，再加一个本阶段不调用的可选成员，但不要把 `unknown` 形状当成已定契约。
 
-### 8. 标签标题是否显示地图名？
+### 8. 标签标题是否显示地图名？ — RESOLVED: OQ8（不实现动态标题）/ Plan 04-04
 
 - **What we know:** `IEditorPanel.getTitle?()` 已存在；外壳只在自身快照变化时解析标签名，不订阅面板 Store。`[VERIFIED: packages/libs/editor-core/src/panel/types.ts:53-57; packages/libs/editor-core/src/shell/shellSystem.ts:135-155]`
 - **What's unclear:** 用户是否在意切图后标签名立即更新。
 - **Recommendation:** 本阶段**不实现动态标题**，面板类型名用「地图编辑器」；如果用户要求标签显示地图名，再增加一个外壳通知 API（例如面板主动 `notifyTitleChanged`），但这会扩大 core 接口，不建议在本阶段做。
 
-### 9. 组内缺格时多格图案怎么处理？
+### 9. 组内缺格时多格图案怎么处理？ — RESOLVED: OQ9（图案缺格按 0）/ Plan 04-05
 
 - **What we know:** 宿主按 `column` / `row` 给图块；多格选择是矩形。`[VERIFIED: .planning/phases/04-map/04-UI-SPEC.md:425-429]`
 - **What's unclear:** 宿主是否保证分组是完整矩形；缺格是跳过还是写 0。
 - **Recommendation:** 在能力契约里要求“分组是完整矩形”；若仍缺格，图案格按 `0`（空）处理，并在实现里用占位而不是崩溃。写入 Assumptions / INTERFACE-NAME。
 
-### 10. 图块图片：路径 + 资源层，还是宿主注入 URL / 字节？
+### 10. 图块图片：路径 + 资源层，还是宿主注入 URL / 字节？ — RESOLVED: OQ10（路径 + 资源层，生成 blob URL）/ Plan 04-04 + 04-11
 
 - **What we know:** CONTEXT 把这件事列为 Discretion；`IResource.requestBinary` 与素材面板的 `loadBytes` 已经证明路径方案可行。`[VERIFIED: .planning/phases/04-map/04-CONTEXT.md:87; packages/libs/editor-core/src/resource/types.ts:29-33]`
 - **What's unclear:** 宿主的图片是否都在项目资源路径下（新引擎 `content/texture/...` 是；旧编辑器 `project/materials/...` 也是）。
 - **Recommendation:** 路径 + 资源层（A4）。宿主只需要给相对项目根的 `imagePath`；面板负责读取 / blob URL / 纹理。若未来有宿主只能给 URL，再加一个可选 `resolveImageUrl?` 能力，不要本阶段就引入。
 
-### 11. 绘制预览：覆盖层还是真实图块？
+### 11. 绘制预览：覆盖层还是真实图块？ — RESOLVED: OQ11（覆盖层）/ Plan 04-12
 
 - **What we know:** UI-SPEC 描述的是“目标格 35% 透明填充 + 1px 描边”；旧编辑器用 `createPaintPreviewFloor` 把真实图块画进预览。`[VERIFIED: .planning/phases/04-map/04-UI-SPEC.md:458; packages/apps/editor/src/MapEditor/utils/paintPreview.ts:56-79]`
 - **What's unclear:** 用户是否要求“所见即所得”的图案预览。
 - **Recommendation:** 按 UI-SPEC 的覆盖层实现（更便宜、不会因为预览克隆整图）；如果用户要求真实图案，再把 renderModel 加一层 `previewCells`，但仍不要修改文档。
 
-### 12. 大地图性能阈值
+### 12. 大地图性能阈值 — RESOLVED: OQ12（可见格 / 大地图整图 + 图元上限 12000 / 格边长 < 16px 转红点）/ Plan 04-03 + 04-12
 
 - **What we know:** 普通模式旧编辑器只画可见格；大地图模式旧编辑器也逐格建 Sprite。`[VERIFIED: packages/apps/editor/src/MapEditor/rendering/MapPixiRenderer.tsx:398-433]`
 - **What's unclear:** 宿主最大地图尺寸、可接受帧率、是否需要 `RenderTexture`。
 - **Recommendation:** 先用“普通模式可见格 + 大地图模式全图但限制精灵数”的简单方案；在开发宿主放一张大于视口的地图（如 40×26）实测；若卡顿再引入 `RenderTexture` / 只画当前层。阈值作为实现常量，不写进对外契约。
 
-### 13. 地图清单呈现与切换方式
+### 13. 地图清单呈现与切换方式 — RESOLVED: 规划裁定第一条（空态内联清单 + 工具栏 Select，同面板切换）/ Plan 04-10
 
 - **What we know:** UI-SPEC F1 默认“空态内联清单 + 工具栏 Select”；CONTEXT 把呈现形式列为 Discretion。`[VERIFIED: .planning/phases/04-map/04-UI-SPEC.md:795]`
 - **What's unclear:** 用户是否想要“每张地图一个标签页”。
