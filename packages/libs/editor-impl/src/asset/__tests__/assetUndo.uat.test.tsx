@@ -1,4 +1,4 @@
-import { cleanup, configure, render } from '@testing-library/react';
+import { act, cleanup, configure, render } from '@testing-library/react';
 import { EditorCore } from '@motajs/editor-core';
 import { createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -223,8 +223,8 @@ describe('素材配置编辑与撤销', () => {
     expect(container.querySelector('[data-test-id="table-row-customNote"]')).not.toBeNull();
   });
 
-  // ⑥ 工程内 schema 非法 → 发布错误且模式仍是浏览态（不进入配置视图）
-  it('非法工程 schema 时保持浏览态', async () => {
+  // ⑥ 工程内 schema 非法 → 面板内出现可见错误条且模式仍是浏览态（不进入配置视图），重新加载分类后错误条消失
+  it('非法工程 schema 时显示错误条并保持浏览态', async () => {
     const fs = new FakeFileSystem();
 
     fs.seed('content/texture/.list.jsonc', listText({ textures: [{ source: 'hero.png', read: 0, usage: 0 }] }));
@@ -237,9 +237,21 @@ describe('素材配置编辑与撤销', () => {
     await panel.openConfig('hero.png');
 
     const container = renderPanel(panel);
+    const bar = container.querySelector('[data-test-id="asset-panel-error"]');
 
     expect(container.querySelector('[data-test-id="asset-config-view"]')).toBeNull();
     expect(container.querySelector('[data-test-id="asset-panel"]')?.getAttribute('data-status')).toBe('ready');
+    expect(bar?.textContent).toContain('该素材的配置无法解析');
+    // 面板仍可继续浏览：分类导航与素材网格都在
+    expect(container.querySelector('[data-test-id="asset-category-texture"]')).not.toBeNull();
+    expect(container.querySelector('[data-test-id="asset-grid"]')).not.toBeNull();
+
+    // 重新加载分类后错误条消失，说明错误不是永久粘住的
+    await act(async () => {
+      await panel.selectCategory('texture');
+    });
+
+    expect(container.querySelector('[data-test-id="asset-panel-error"]')).toBeNull();
   });
 
   // ⑦ 配置改动后保存 → 列表正文含新值，且首行仍是系统前缀标记行

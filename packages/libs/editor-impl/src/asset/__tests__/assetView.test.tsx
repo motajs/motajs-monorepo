@@ -209,6 +209,32 @@ describe('素材面板视图', () => {
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
 
+  // 面板级错误条：就绪态下把 state.error 渲染成可见错误条，不切换成整屏错误态
+  it('就绪态显示面板级错误条', () => {
+    const view = makeView({ error: '该素材的配置无法解析' });
+    const { container } = renderView(view);
+    const bar = container.querySelector('[data-test-id="asset-panel-error"]');
+
+    expect(bar?.textContent).toBe('该素材的配置无法解析');
+    expect(container.querySelector('[data-test-id="asset-panel"]')?.getAttribute('data-status')).toBe('ready');
+    expect(container.querySelector('[data-test-id="asset-state-error"]')).toBeNull();
+  });
+
+  // 没有 error 时不渲染错误条
+  it('无错误时不渲染错误条', () => {
+    const { container } = renderView(makeView({}));
+
+    expect(container.querySelector('[data-test-id="asset-panel-error"]')).toBeNull();
+  });
+
+  // 整屏错误态已经表达了错误，不再重复渲染错误条
+  it('整屏错误态不重复渲染错误条', () => {
+    const { container } = renderView(makeView({ status: AssetPanelStatus.Error, error: 'x' }));
+
+    expect(container.querySelector('[data-test-id="asset-state-error"]')).not.toBeNull();
+    expect(container.querySelector('[data-test-id="asset-panel-error"]')).toBeNull();
+  });
+
   // 未选中：详情栏显示「选择一个素材查看详情」
   it('未选中详情显示引导文案', () => {
     const view = makeView({ entries: [entry('hero', true)] });
