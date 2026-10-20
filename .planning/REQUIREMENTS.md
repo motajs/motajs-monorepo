@@ -25,7 +25,7 @@
 
 ### ASSET（素材）
 
-- [ ] **ASSET-01**: 用户可管理素材（图片 / 动画 / 材质）
+- [x] **ASSET-01**: 用户可管理素材（图片 / 动画 / 材质）
 
 ### MAP（地图）
 
@@ -58,7 +58,7 @@
 | CORE-01 | Phase 1 | Complete | Phase 2.1 修订：已废止原文「接口只声明、不落地实现」的表述；现为 core 的资源系统驱动注入的文件系统 |
 | DEVHOST-01 | Phase 1.1 | Complete | |
 | TABLE-01 | Phase 2 | Complete | Phase 2.1 扩展：新增「打开（预设表 + 目录树）/ 新建 / 删除」表格文件 |
-| ASSET-01 | Phase 3 | Pending | |
+| ASSET-01 | Phase 3 | Complete | |
 | MAP-01 | Phase 4 | Pending | |
 | CODE-01 | Phase 5 | Pending | |
 | EVENT-01 | Phase 6 | Pending | |
