@@ -1,41 +1,37 @@
 ---
-status: testing
+status: complete
 phase: 03-asset
 source: [03-17-SUMMARY.md, 03-11-SUMMARY.md, 03-16-SUMMARY.md, 03-15-SUMMARY.md, 03-09-SUMMARY.md]
 started: "2026-10-18T00:00:00Z"
-updated: "2026-10-20T00:00:00Z"
+updated: "2026-10-20T03:00:00Z"
 ---
 
-> 更正：此前误把「针对个别修复（G-03-1…G-03-11）的复测通过」当成整阶段 UAT 完成。正式 UAT 的 3 项仍需你逐项确认，下面已全部恢复为 pending。
+> 正式 UAT 的 3 项已由用户逐项确认通过（用户 2026-10-20 回复 pass）。
 
 ## Current Test
 
-number: 1
-name: 图片 → WebP（真实浏览器）
-expected: |
-  图片分类里转码生成 .webp，体积下降、能显示；覆盖时替换原文件、不覆盖时旧文件改名 -origin
-awaiting: user response
+[testing complete]
 
 ## Tests
 
 ### 1. 图片 → WebP（真实浏览器）
 expected: 图片分类里转码生成 .webp，体积下降、能显示；覆盖时替换原文件、不覆盖时旧文件改名 -origin
-result: [pending]
+result: pass
 
 ### 2. 音频 → WebM/Opus（真实浏览器）
 expected: 音频分类里转码生成 .webm（容器内 Opus），能播放；不支持 WebCodecs 的浏览器里入口禁用并给出提示（不静默失败）
-result: [pending]
+result: pass
 
 ### 3. 素材面板与现状的视觉 / 行为对齐
 expected: 布局 / 配色 / 文案 / 交互观感与现有 @motajs/editor 的素材界面一致；浏览 / 上传新增 / 替换 / 删除 / 配置 / 保存 流程顺畅
-result: [pending]
+result: pass
 
 ## Summary
 
 total: 3
-passed: 0
+passed: 3
 issues: 0
-pending: 3
+pending: 0
 skipped: 0
 
 ## Gaps
