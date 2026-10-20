@@ -472,6 +472,38 @@
 
 ---
 
+## Plan 03-30 — 同路径转码也遵守「覆盖旧文件」（G-03-12）
+
+**要做什么：** 不勾「覆盖旧文件」时，即使源文件已经是目标扩展名（如 `.webp`），也先把源改名为 `{file}-origin.{ext}` 备份，再把新字节写回原路径；勾选覆盖时才就地替换。只改数据层的写回分支，不新增对外名称。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `AssetPanel.transcodeEntry` | 私有方法（行为变更） | `targetPath === entry.path` 时按 `options.coverOrigin` 分流：覆盖 = 就地写回；不覆盖 = 先 `moveResource` 到 origin、再写回原路径；origin 已存在则整项失败 |
+
+> 本计划不引入新导出名；`transcode.uat.test.tsx` 的用例 ⑨ 由「同路径也原地覆盖」改为「同路径不覆盖必须先备份」。
+
+---
+
+## Plan 03-31 — 详情栏显示文件大小（G-03-13）
+
+**要做什么：** 在右侧详情里补一行人类可读的文件大小（如 `12.3 KB`），对图片 / 音频 / 动画 / 字体都显示；图片尺寸行保留。大小与尺寸共用同一次字节读取，因此把 03-26 的独立 `AssetImageSize` 合并进新的文件信息组件。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `src/asset/model/byteSize.ts` | 新增文件 | 文件大小格式化的纯函数落点（不碰 DOM、不做本地化） |
+| `formatAssetFileSize` | 函数（`asset/model/byteSize.ts`） | 字节数 → 人类可读字符串；1024 进制，B / KB / MB / GB，非 B 单位保留一位小数；负数与非有限值按 0 处理 |
+| `AssetFileInfo` | 组件（`asset/components/AssetFileInfo.tsx`） | 详情栏的文件信息：读一次字节，渲染文件大小行；图片额外渲染宽 × 高；字节缺失 / 读取失败时两行都不渲染 |
+| `IAssetFileInfoProps` | interface（`AssetFileInfo.tsx`） | 文件信息组件的 props：大分类 / 素材路径 / 字节版本 / 按路径读字节的回调 |
+| `.asset-detail-bytes` | 新增 CSS 类（`asset/asset.css`） | 文件大小行的样式；与 `.asset-detail-size` 共用同一条 muted / 12px / 等宽数字规则 |
+| `asset-detail-bytes` | 新增 `data-test-id` | 供测试定位文件大小行 |
+| `assetDetailBytes.test.tsx` | 新增测试文件（`asset/__tests__/`） | 钉住「四个分类显示大小」「只有图片有尺寸」「缺失 / 坏字节不显示」「版本变化后刷新」「大小与尺寸只读一次」 |
+| `byteSize.test.ts` | 新增测试文件（`asset/model/__tests__/`） | 钉住各单位的格式化结果与非法输入的兜底 |
+| `AssetImageSize` / `IAssetImageSizeProps` | 移除（并入 `AssetFileInfo`） | 原组件自行读字节、只产出尺寸；现在读取与尺寸解析都并入 `AssetFileInfo`，避免同一份字节为大小和尺寸读两遍 |
+
+> `AssetImageSize.tsx` 删除后，`components/index.ts` 改导出 `./AssetFileInfo`；`readImageDimensions` 与 `imageSize` 模型不变。
+
+---
+
 ## 待确认的偏离与口径（请一并过目）
 
 1. **legacy 内置 Schema 由宿主注入，不写进 `editor-impl/src`。** D-08 要求内置两套（legacy + 新引擎），但 `coreEngineNeutral.js` 把 `tower` 等引擎专有词在两包 `src` 里当作违规（连注释也算），legacy 字段名必然含这些词。故包内只放**新引擎**那套内置 schema；legacy 那套由装配方经 `IAssetCategory.schema` 注入，门禁不破、能力仍是引擎无关的。
