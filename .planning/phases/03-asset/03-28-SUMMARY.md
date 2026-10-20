@@ -155,3 +155,9 @@ None - no external service configuration required.
 ---
 *Phase: 03-asset*
 *Completed: 2026-10-20*
+
+## Self-Check: PASSED
+
+- 文件存在：`packages/libs/editor-impl/src/asset/types.ts`、`useAssetObjectUrl.ts`、`assetPanel.ts`、`AssetGrid.tsx`、`AssetCardPreview.tsx`、`AssetDetail.tsx`、`AssetPreview.tsx`、`AssetImageSize.tsx`、`assetReplaceRefresh.test.tsx`
+- 提交存在：`4271185`、`ef7053c`、`753f043`、`1cfa738`、`da32b59`
+- 未修改 `STATE.md` 与 `ROADMAP.md`（由编排器负责）
