@@ -6,6 +6,8 @@ import { IAssetImageDimensions, readImageDimensions } from '../model';
 export interface IAssetImageSizeProps {
   /** 素材字节文件的资源路径 */
   readonly path: string;
+  /** 素材字节的版本号，变化时重新解析尺寸 */
+  readonly byteVersion: number;
   /**
    * 读取某素材字节
    * @param path 素材字节文件路径
@@ -17,7 +19,7 @@ export interface IAssetImageSizeProps {
 /**
  * 素材详情里的「宽 × 高」一行
  *
- * 只在解析出合法尺寸时渲染；切换素材时把上次结果清掉，避免旧尺寸残留。
+ * 只在解析出合法尺寸时渲染；切换素材或字节版本变化时把上次结果清掉，避免旧尺寸残留。
  * @param props 尺寸行 props
  * @returns 尺寸文本元素；没有可用尺寸时为 null
  */
@@ -45,7 +47,7 @@ export function AssetImageSize(props: IAssetImageSizeProps): ReactElement | null
     return (): void => {
       cancelled = true;
     };
-  }, [props.path, setDimensions]);
+  }, [props.path, props.byteVersion, setDimensions]);
 
   if (dimensions === undefined) return null;
 

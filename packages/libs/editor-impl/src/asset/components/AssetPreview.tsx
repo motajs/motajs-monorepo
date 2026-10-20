@@ -9,6 +9,8 @@ export interface IAssetPreviewProps {
   readonly kind: AssetCategoryKind;
   /** 素材字节文件的资源路径，用于推断字节的真实 MIME */
   readonly path: string;
+  /** 素材字节的版本号，变化时重新读取字节 */
+  readonly byteVersion: number;
   /** 延迟读取素材字节的回调 */
   loadBytes: () => Promise<Uint8Array | undefined>;
 }
@@ -24,7 +26,7 @@ export interface IAssetPreviewProps {
 export function AssetPreview(props: IAssetPreviewProps): ReactElement {
   const kind = props.kind;
   const mime = resolveAssetMime(props.path, kind);
-  const url = useAssetObjectUrl(props.loadBytes, mime);
+  const url = useAssetObjectUrl(props.loadBytes, mime, props.byteVersion);
   const missing: ReactElement = (
     <div className="asset-preview-missing" data-test-id="asset-preview-missing">
       预览不可用

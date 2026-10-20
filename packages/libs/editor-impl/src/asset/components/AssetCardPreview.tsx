@@ -11,6 +11,8 @@ export interface IAssetCardPreviewProps {
   readonly path: string;
   /** 该素材的字节文件是否存在 */
   readonly exists: boolean;
+  /** 素材字节的版本号，变化时重新读取字节 */
+  readonly byteVersion: number;
   /**
    * 读取某素材字节
    * @param path 素材字节文件路径
@@ -23,6 +25,8 @@ export interface IAssetCardPreviewProps {
 interface IAssetCardBytesProps {
   /** 素材字节文件的资源路径 */
   readonly path: string;
+  /** 素材字节的版本号，变化时重新读取字节 */
+  readonly byteVersion: number;
   /**
    * 读取某素材字节
    * @param path 素材字节文件路径
@@ -81,7 +85,11 @@ function AssetCardWaveform(): ReactElement {
  */
 function AssetCardImage(props: IAssetCardBytesProps): ReactElement | null {
   const mime = resolveAssetMime(props.path, AssetCategoryKind.Image);
-  const url = useAssetObjectUrl((): Promise<Uint8Array | undefined> => props.loadBytes(props.path), mime);
+  const url = useAssetObjectUrl(
+    (): Promise<Uint8Array | undefined> => props.loadBytes(props.path),
+    mime,
+    props.byteVersion,
+  );
 
   if (url === undefined) return null;
 
@@ -103,7 +111,11 @@ function AssetCardImage(props: IAssetCardBytesProps): ReactElement | null {
  */
 function AssetCardFont(props: IAssetCardBytesProps): ReactElement {
   const mime = resolveAssetMime(props.path, AssetCategoryKind.Font);
-  const url = useAssetObjectUrl((): Promise<Uint8Array | undefined> => props.loadBytes(props.path), mime);
+  const url = useAssetObjectUrl(
+    (): Promise<Uint8Array | undefined> => props.loadBytes(props.path),
+    mime,
+    props.byteVersion,
+  );
 
   return <AssetFontSample path={props.path} url={url} text="ABC" />;
 }
@@ -120,7 +132,7 @@ export function AssetCardPreview(props: IAssetCardPreviewProps): ReactElement | 
   if (!props.exists) return <span className="asset-card-preview-missing" />;
 
   if (props.kind === AssetCategoryKind.Image) {
-    return <AssetCardImage path={props.path} loadBytes={props.loadBytes} />;
+    return <AssetCardImage path={props.path} byteVersion={props.byteVersion} loadBytes={props.loadBytes} />;
   }
 
   if (props.kind === AssetCategoryKind.Audio) return <AssetCardWaveform />;
@@ -128,7 +140,7 @@ export function AssetCardPreview(props: IAssetCardPreviewProps): ReactElement | 
   if (props.kind === AssetCategoryKind.Font) {
     return (
       <span className="asset-card-preview-font" data-test-id="asset-card-preview-font">
-        <AssetCardFont path={props.path} loadBytes={props.loadBytes} />
+        <AssetCardFont path={props.path} byteVersion={props.byteVersion} loadBytes={props.loadBytes} />
       </span>
     );
   }

@@ -64,7 +64,12 @@ export function AssetDetail(props: IAssetDetailProps): ReactElement {
         {entry.path}
       </div>
       {props.kind === AssetCategoryKind.Image && entry.exists ? (
-        <AssetImageSize key={entry.path} path={entry.path} loadBytes={props.loadBytes} />
+        <AssetImageSize
+          key={entry.path}
+          path={entry.path}
+          byteVersion={entry.byteVersion ?? 0}
+          loadBytes={props.loadBytes}
+        />
       ) : null}
       {entry.exists ? null : (
         <div className="asset-detail-hint" data-test-id="asset-detail-missing">
@@ -76,6 +81,7 @@ export function AssetDetail(props: IAssetDetailProps): ReactElement {
           key={entry.path}
           kind={props.kind}
           path={entry.path}
+          byteVersion={entry.byteVersion ?? 0}
           loadBytes={(): Promise<Uint8Array | undefined> => props.loadBytes(entry.path)}
         />
       </div>

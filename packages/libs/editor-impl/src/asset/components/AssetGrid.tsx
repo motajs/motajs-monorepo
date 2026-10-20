@@ -82,7 +82,13 @@ export function AssetGrid(props: IAssetGridProps): ReactElement {
               height: Math.round(props.cardWidth * THUMB_HEIGHT_RATIO),
             }}
           >
-            <AssetCardPreview kind={props.kind} path={entry.path} exists={entry.exists} loadBytes={props.loadBytes} />
+            <AssetCardPreview
+              kind={props.kind}
+              path={entry.path}
+              exists={entry.exists}
+              byteVersion={entry.byteVersion ?? 0}
+              loadBytes={props.loadBytes}
+            />
           </span>
           <span className="asset-card-name">{entry.name}</span>
           {entry.exists ? null : (
