@@ -246,6 +246,7 @@ export function AssetPanelView(props: IAssetPanelViewProps): ReactElement {
     category !== undefined && transcodeSupported && state.status === AssetPanelStatus.Ready && !state.transcodeCapable
       ? transcodeUnsupportedMessage(category)
       : undefined;
+  const panelError = state.error !== undefined && state.status !== AssetPanelStatus.Error ? state.error : undefined;
 
   return (
     <div className="asset-panel" data-test-id="asset-panel" data-status={statusToken(state.status)}>
@@ -261,6 +262,11 @@ export function AssetPanelView(props: IAssetPanelViewProps): ReactElement {
         onAddAsset={props.onAddAsset}
         onReject={props.onReject}
       />
+      {panelError === undefined ? null : (
+        <div className="asset-panel-error" data-test-id="asset-panel-error" role="alert">
+          {panelError}
+        </div>
+      )}
       {transcodeNotice === undefined ? null : (
         <div className="asset-notice" data-test-id="asset-transcode-notice">
           {transcodeNotice}

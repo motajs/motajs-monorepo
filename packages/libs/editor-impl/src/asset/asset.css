@@ -54,6 +54,15 @@
   margin: 0;
 }
 
+.asset-panel-error {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--editor-border, #d0d7de);
+  background: var(--easset-missing-bg);
+  color: var(--easset-danger-fg);
+  font-size: 12px;
+}
+
 .asset-body {
   display: flex;
   flex: 1 1 auto;
