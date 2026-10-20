@@ -128,7 +128,9 @@ skipped: 0
   missing: []
 - gap_id: G-03-10
   truth: "替换某个素材的字节后，卡片预览、详情预览、图片尺寸都应、【立即】显示新内容（无需切走再切回）"
-  status: failed
+  status: resolved
+  resolved_by: 03-28-PLAN.md
+  resolved_at: 2026-10-18
   reason: "Verifier: `useAssetObjectUrl` 只在 `mime` 变化时重读字节；替换后路径与组件 key 未变，故仍是旧 blob。需要字节版本/刷新信号 + 回归测试"
   severity: major
   test: 1
@@ -136,7 +138,9 @@ skipped: 0
   missing: []
 - gap_id: G-03-11
   truth: "工程内 `.schema.jsonc` 非法时，配置入口应给出可见的错误态（而不是点了像没反应）；不得静默回退"
-  status: failed
+  status: resolved
+  resolved_by: 03-29-PLAN.md
+  resolved_at: 2026-10-18
   reason: "Verifier: `openConfig` 把错误写进 `view.error`，但 `AssetPanelView` 不读该字段；面板仍是 ready，用户看不到任何提示"
   severity: major
   test: 1
