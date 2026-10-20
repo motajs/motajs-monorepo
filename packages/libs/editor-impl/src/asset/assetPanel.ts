@@ -1065,9 +1065,22 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
 
     try {
       if (targetPath === entry.path) {
-        // 目标与源同路径（源本就带目标扩展名）：就地覆盖写回，
-        // 绝不「先写后删」同一路径——那会把刚写好的产物立即删掉，造成不可恢复的数据丢失
-        await this.context.createResource(entry.path, output);
+        // 同一路径：覆盖 = 就地写回；不覆盖 = 先把源改名为 origin，再把新字节写回原路径；
+        // 绝不先写后删同一路径——那会把刚写好的产物立即删掉，造成不可恢复的数据丢失
+        if (options.coverOrigin) {
+          await this.context.createResource(entry.path, output);
+        } else {
+          const originPath = resolveOriginPath(entry.path);
+
+          // 保留文件已存在时不做移动：moveResource 会先删目标，贸然移动会覆盖掉先前的 origin 备份
+          if (paths.has(originPath)) {
+            return { name: entry.name, ok: false, error: '保留文件已存在' };
+          }
+
+          await this.context.moveResource(entry.path, originPath);
+          await this.context.createResource(entry.path, output);
+          paths.add(originPath);
+        }
       } else if (options.coverOrigin) {
         await this.context.createResource(targetPath, output);
         await this.context.deleteResource(entry.path);
