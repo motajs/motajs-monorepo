@@ -971,7 +971,13 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
     const entry = state.entries[index];
     const entries = state.entries.slice();
 
-    entries[index] = { name: entry.name, path: entry.path, config, exists: entry.exists, byteVersion: entry.byteVersion };
+    entries[index] = {
+      name: entry.name,
+      path: entry.path,
+      config,
+      exists: entry.exists,
+      byteVersion: entry.byteVersion,
+    };
     state.entries = entries;
     state.unsaved = true;
   }
