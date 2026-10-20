@@ -12,7 +12,7 @@ last_activity_desc: Phase 3 complete, transitioned to Phase 4
 state_head: 002bb16dc9283b84488f7fee290ec15c7da19c5e
 progress:
   total_phases: 8
-  completed_phases: 1
+  completed_phases: 5
   total_plans: 97
   completed_plans: 97
 milestone_name: editor-core 空壳 + editor-impl 重做
