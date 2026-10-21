@@ -4,3 +4,7 @@ export * from './geometry';
 export * from './brush';
 export * from './fill';
 export * from './clipboard';
+export * from './passability';
+export * from './recentTiles';
+export * from './dirty';
+export * from './validation';
