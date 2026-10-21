@@ -5,16 +5,16 @@ current_phase: 4
 current_phase_name: 地图编辑
 current_plan: 7
 status: executing
-stopped_at: Completed 04-04-PLAN.md
-last_updated: "2026-10-21T09:14:21.633Z"
+stopped_at: Completed 04-15-PLAN.md
+last_updated: "2026-10-21T09:38:15.317Z"
 last_activity: 2026-10-21
 last_activity_desc: Phase 3 complete, transitioned to Phase 4
-state_head: 1eef3ca85b68f4a7d053e7bf6016941ed7902e17
+state_head: 8e36bcf2e6ca6d2c844f2e43adedce693a6490d0
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 120
-  completed_plans: 108
+  completed_plans: 110
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -130,6 +130,7 @@ Progress: [██████████] 100%
 | Phase 04 P05 | 14 min | 3 tasks | 9 files |
 | Phase 04-map P06 | 7min | 3 tasks | 9 files |
 | Phase 4 P04 | 11 min | 2 tasks | 8 files |
+| Phase 04 P15 | 16 min | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -296,6 +297,8 @@ Recent decisions affecting current work:
 - [Phase 4]: 图案平铺按图案宽高取模、相位由锚点决定（矩形传角点、填充传点击格），不依赖编号连续
 - [Phase 4]: 04-04: MapPanel.setMap 按 IMapPanel 接口收 IMapPanelTarget（计划正文写 mapId 字符串，接口优先），mapPanelType 传 { mapId }
 - [Phase 4]: 04-04: 渲染模型只在 MapPanelView 现算，MapPanel 只保存文档与视图状态；图块图片经 useMapObjectUrl 在 view 侧生成 blob 地址，MapSurface 只建纹理
+- [Phase 04]: 04-15: 询问只出现在 ShellSystem.closeTab，真正移除标签只在私有 ShellSystem.discardTab；wasActive 在 discardTab 开头重算，因此后台标签为询问被激活后同意关闭仍会切到相邻标签
+- [Phase 04]: 04-15: ShellSystem.unregisterPanelType 改走非询问的 ShellSystem.discardTab（不再调 closeTab），注销带未保存面板的类型不弹框也不留悬空标签；dispose / closePanelInstance 从不调用 onBeforeClose
 
 ### Pending Todos
 
@@ -322,6 +325,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-21T09:13:42.382Z
-Stopped at: Completed 04-04-PLAN.md
+Last session: 2026-10-21T09:37:52.080Z
+Stopped at: Completed 04-15-PLAN.md
 Resume file: None
