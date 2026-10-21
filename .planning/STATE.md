@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: 4
 current_phase_name: 地图编辑
-current_plan: 7
+current_plan: 8
 status: executing
-stopped_at: Completed 04-15-PLAN.md
-last_updated: "2026-10-21T09:38:15.317Z"
+stopped_at: Completed 04-07-PLAN.md
+last_updated: "2026-10-21T10:25:30.255Z"
 last_activity: 2026-10-21
 last_activity_desc: Phase 3 complete, transitioned to Phase 4
-state_head: 8e36bcf2e6ca6d2c844f2e43adedce693a6490d0
+state_head: 8264cbb4b1293132406be8e106cfed38a49872d0
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 120
-  completed_plans: 110
+  completed_plans: 111
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 4 (地图编辑) — EXECUTING
-Current Plan: 7
+Current Plan: 8
 Total Plans in Phase: 16
 Status: Ready to execute
 Last activity: 2026-10-21 — 04-01 complete (naming report + map domain types)
@@ -131,6 +131,7 @@ Progress: [██████████] 100%
 | Phase 04-map P06 | 7min | 3 tasks | 9 files |
 | Phase 4 P04 | 11 min | 2 tasks | 8 files |
 | Phase 04 P15 | 16 min | 1 tasks | 2 files |
+| Phase 4 P07 | 15min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -299,6 +300,9 @@ Recent decisions affecting current work:
 - [Phase 4]: 04-04: 渲染模型只在 MapPanelView 现算，MapPanel 只保存文档与视图状态；图块图片经 useMapObjectUrl 在 view 侧生成 blob 地址，MapSurface 只建纹理
 - [Phase 04]: 04-15: 询问只出现在 ShellSystem.closeTab，真正移除标签只在私有 ShellSystem.discardTab；wasActive 在 discardTab 开头重算，因此后台标签为询问被激活后同意关闭仍会切到相邻标签
 - [Phase 04]: 04-15: ShellSystem.unregisterPanelType 改走非询问的 ShellSystem.discardTab（不再调 closeTab），注销带未保存面板的类型不弹框也不留悬空标签；dispose / closePanelInstance 从不调用 onBeforeClose
+- [Phase 4]: 04-07: MapPanel.save 先取文档快照再 await 宿主，成功后把快照设为基线——保存期间的编辑仍然算脏
+- [Phase 4]: 04-07: 未保存状态始终由「当前内容 vs 基线」比较得出，撤销 / 重做 / 保存后都重算
+- [Phase 4]: 04-07: 切图成功登记一条 MapUndoType.Barrier；撤销载荷 mapId 与当前地图不同即忽略
 
 ### Pending Todos
 
@@ -325,6 +329,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-21T09:37:52.080Z
-Stopped at: Completed 04-15-PLAN.md
+Last session: 2026-10-21T10:25:10.256Z
+Stopped at: Completed 04-07-PLAN.md
 Resume file: None
