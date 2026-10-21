@@ -9,6 +9,7 @@ import {
   IMapSummary,
   MapPanelStatus,
   MapUndoType,
+  MapUnsavedChoice,
 } from '../types';
 import { createMapDocument, createMapHarness, FakeFileSystem } from './fixtures';
 
@@ -331,7 +332,11 @@ describe('地图面板：清单 / 打开 / 切换', () => {
     const { panel } = await openMapPanel(createCapabilities());
 
     panel.commitCells('layer-base', [{ x: 0, y: 0, value: 1 }]);
-    await panel.openMap('m2');
+
+    const switching = panel.openMap('m2');
+
+    await panel.resolveUnsavedDecision(MapUnsavedChoice.Discard);
+    await switching;
 
     const before = viewState(panel).document;
 
