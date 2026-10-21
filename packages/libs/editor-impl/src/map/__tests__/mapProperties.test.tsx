@@ -1,8 +1,10 @@
-import { cleanup, configure } from '@testing-library/react';
+import { cleanup, configure, fireEvent, render, screen } from '@testing-library/react';
 import { EditorCore, IEditorPanel, IEditorPanelFactoryParam } from '@motajs/editor-core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createMapPanelType, MAP_PANEL_TYPE_ID, MapPanel } from '..';
+import { MapPropertiesDrawer, IMapPropertiesDrawerProps } from '../components/MapPropertiesDrawer';
 import { TablePanelStatus } from '../../shared/schemaForm/components/TableGrid';
+import { buildTableTree } from '../../shared/schemaForm/model/traversal';
 import { ITableRowNode, ITableSchemaNode, TableExternalEditor } from '../../shared/schemaForm/types';
 import { IMapDataSection, IMapDocument, IMapEditorCapabilities, IMapPanelViewState, IMapSummary } from '../types';
 import { createMapDocument, createMapHarness, FakeFileSystem } from './fixtures';
@@ -320,5 +322,121 @@ describe('地图面板：属性域', () => {
     expect(viewState(panel).propertiesOpen).toBe(true);
     expect(panel['properties'].name).toBe('b');
     expect(findRow(propertyRows(panel), "['name']")?.value).toBe('b');
+  });
+});
+
+/**
+ * 造一份属性抽屉的完整 props，可按用例覆盖个别字段
+ * @param overrides 覆盖的 props
+ * @returns 抽屉 props
+ */
+function createDrawerProps(overrides: Partial<IMapPropertiesDrawerProps> = {}): IMapPropertiesDrawerProps {
+  return {
+    open: true,
+    status: TablePanelStatus.Ready,
+    rows: buildTableTree(PROPERTY_SCHEMA, { name: 'a', level: 1 }),
+    onChange: (): void => {},
+    onRetry: (): void => {},
+    onClose: (): void => {},
+    ...overrides,
+  };
+}
+
+/**
+ * 按受控组件渲染属性抽屉
+ * @param overrides 覆盖的 props
+ * @returns 渲染结果
+ */
+function renderDrawer(overrides: Partial<IMapPropertiesDrawerProps> = {}): ReturnType<typeof render> {
+  return render(<MapPropertiesDrawer {...createDrawerProps(overrides)} />);
+}
+
+describe('地图属性抽屉', () => {
+  // 打开时出现抽屉与正文容器，两行字段真的渲染在 DOM 里
+  it('打开时渲染抽屉、正文容器与两行字段', () => {
+    renderDrawer();
+    const drawer = screen.getByTestId('map-properties-drawer');
+
+    expect(drawer.querySelector('.emap-properties-body')).not.toBeNull();
+    expect(screen.getByText('地图属性')).not.toBeNull();
+    expect(screen.getByText('name')).not.toBeNull();
+    expect(screen.getByText('level')).not.toBeNull();
+  });
+
+  // 抽屉里没有第二个保存入口，也没有表格专属动作
+  it('抽屉内没有保存按钮与表格专属动作', () => {
+    renderDrawer();
+
+    expect(screen.queryByText('保存')).toBeNull();
+    expect(screen.queryByTestId('table-more')).toBeNull();
+    expect(screen.queryByTestId('table-edit-schema')).toBeNull();
+    expect(screen.queryByTestId('table-open-code')).toBeNull();
+    expect(screen.queryByTestId('table-close-column')).toBeNull();
+  });
+
+  // 加载中：转圈 + 「正在加载地图属性…」
+  it('加载中显示正在加载地图属性…', () => {
+    renderDrawer({ status: TablePanelStatus.Loading, rows: [] });
+
+    expect(screen.getByText('正在加载地图属性…')).not.toBeNull();
+  });
+
+  // 失败：破坏性标题 + 说明 + 重试，抽屉不关闭，重试交回面板
+  it('加载失败显示两句错误且抽屉仍在', () => {
+    const onRetry = vi.fn();
+
+    renderDrawer({ status: TablePanelStatus.Error, rows: [], error: '属性文件损坏', onRetry });
+
+    expect(screen.getByText('地图属性加载失败')).not.toBeNull();
+    expect(screen.getByText('请稍后重试。')).not.toBeNull();
+    expect(screen.getByTestId('map-properties-drawer')).not.toBeNull();
+
+    fireEvent.click(screen.getByText('重试'));
+
+    expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
+  // 改一个字段后关掉再打开：值仍是内存里的新值（抽屉只是视图）
+  it('关闭再打开后显示内存里的新值', async () => {
+    const { panel } = await openMapPanel(createPropertyCapabilities());
+
+    await panel.openProperties();
+
+    const props = (): IMapPropertiesDrawerProps =>
+      createDrawerProps({
+        status: panel['propertiesStatus'],
+        rows: propertyRows(panel),
+        onChange: (path: readonly (string | number)[], value: unknown): void => panel.commitProperty(path, value),
+      });
+    const { rerender } = render(<MapPropertiesDrawer {...props()} />);
+    const textarea = screen.getByTestId('table-input-name').querySelector('textarea');
+
+    fireEvent.change(textarea as HTMLTextAreaElement, { target: { value: '"b"' } });
+    fireEvent.blur(textarea as HTMLTextAreaElement);
+
+    expect(panel['properties'].name).toBe('b');
+
+    rerender(<MapPropertiesDrawer {...props()} open={false} />);
+
+    expect(screen.queryByTestId('map-properties-drawer')).toBeNull();
+
+    rerender(<MapPropertiesDrawer {...props()} open />);
+
+    expect(screen.getByDisplayValue('"b"')).not.toBeNull();
+  });
+
+  // 关闭按钮只上报 onClose 一次；open 为假时正文容器不在 DOM
+  it('关闭按钮上报 onClose 且关闭后正文容器消失', () => {
+    const onClose = vi.fn();
+    const { rerender } = renderDrawer({ onClose });
+    const wrapper = screen.getByTestId('map-properties-drawer').closest('.ant-drawer-content-wrapper');
+
+    fireEvent.click(wrapper?.querySelector('.ant-drawer-close') as Element);
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+
+    rerender(<MapPropertiesDrawer {...createDrawerProps({ open: false, onClose })} />);
+
+    expect(screen.queryByTestId('map-properties-drawer')).toBeNull();
   });
 });
