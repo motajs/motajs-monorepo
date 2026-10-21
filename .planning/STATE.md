@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: 4
 current_phase_name: 地图编辑
-current_plan: 12
+current_plan: 13
 status: executing
-stopped_at: Completed 04-11-PLAN.md
-last_updated: "2026-10-21T12:49:07.787Z"
+stopped_at: Completed 04-16-PLAN.md
+last_updated: "2026-10-21T13:14:32.525Z"
 last_activity: 2026-10-21
 last_activity_desc: Phase 3 complete, transitioned to Phase 4
-state_head: c580654b83e4429b0bccf1a3e7b254292679e635
+state_head: 78c2a5b017dccec1cba4f5a1f32fdd5c1c3bd64a
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 121
-  completed_plans: 117
+  completed_plans: 118
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 4 (地图编辑) — EXECUTING
-Current Plan: 12
+Current Plan: 13
 Total Plans in Phase: 16
 Status: Ready to execute
 Last activity: 2026-10-21 — 04-01 complete (naming report + map domain types)
@@ -136,6 +136,7 @@ Progress: [██████████] 100%
 | Phase 4 P09 | 30min | 3 tasks | 5 files |
 | Phase 4 P10 | 32 min | 3 tasks | 8 files |
 | Phase 4 P11 | 27 min | 3 tasks | 6 files |
+| Phase 04-map P16 | 14 min | 1 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -316,6 +317,8 @@ Recent decisions affecting current work:
 - [Phase 4]: 04-11: MapPalette 只吃 props（分组 + groupUrls/groupStatus + 最近使用 + 选中），选中由面板持有；框选用网格 pointermove 的 target dataset 夹取到起点分组，不用 pointer capture（capture 会让兄弟图块的 hover 事件不触发）
 - [Phase 4]: 04-11: 只有目录 0 个图块才不给可选项；图片缺失/加载失败仍可选可画，落笔闸门始终只在 MapPanel.commitCells 的 isTileCatalogEmpty
 - [Phase 4]: 04-11: MapRecentClearDialog 关闭时返回 null（antd Modal 会把隐藏内容留在 DOM），沿用 04-10 的弹窗卸载约定
+- [Phase 4]: 04-16: palette values are read from the panel store inside MapPanelView instead of snapshot props, so selection and retry never go stale
+- [Phase 4]: 04-16: group images are deduped by imagePath and blob URLs are revoked on unmount or paletteVersion change
 
 ### Pending Todos
 
@@ -342,6 +345,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-21T12:48:51.357Z
-Stopped at: Completed 04-11-PLAN.md
+Last session: 2026-10-21T13:14:31.904Z
+Stopped at: Completed 04-16-PLAN.md
 Resume file: None
