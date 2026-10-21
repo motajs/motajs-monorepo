@@ -29,7 +29,7 @@
 
 ### MAP（地图）
 
-- [ ] **MAP-01**: 用户可编辑地图（层 / 块 / 通行性）
+- [ ] **MAP-01**: 用户可编辑地图（层 / 块）；通行性以**只读**叠加层显示（新引擎由图块属性决定，地图上不可单独编辑；2026-10-20 按用户决定修订，见 `04-CONTEXT.md` D-13 / D-23）
 
 ### CODE（代码）
 
@@ -59,6 +59,6 @@
 | DEVHOST-01 | Phase 1.1 | Complete | |
 | TABLE-01 | Phase 2 | Complete | Phase 2.1 扩展：新增「打开（预设表 + 目录树）/ 新建 / 删除」表格文件 |
 | ASSET-01 | Phase 3 | Complete | |
-| MAP-01 | Phase 4 | Pending | |
+| MAP-01 | Phase 4 | Pending | 通行性按用户决定改为只读显示（`04-CONTEXT.md` D-13 / D-23） |
 | CODE-01 | Phase 5 | Pending | |
 | EVENT-01 | Phase 6 | Pending | |
