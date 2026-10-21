@@ -177,7 +177,19 @@ describe('地图面板：清单 / 打开 / 切换', () => {
   it('切图时立即清空旧内容并重置图层与视口', async () => {
     const deferred = createDeferred<IMapDocument>();
     const mapTwo = createEmptyDocument('m2', {
-      layers: [{ id: 'layer-two', name: '第二层', zIndex: 0, isEventLayer: false, cells: [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]] }],
+      layers: [
+        {
+          id: 'layer-two',
+          name: '第二层',
+          zIndex: 0,
+          isEventLayer: false,
+          cells: [
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+          ],
+        },
+      ],
     });
     const openMap = vi.fn(async (mapId: string): Promise<IMapDocument> => {
       return mapId === 'm2' ? deferred.promise : createEmptyDocument(mapId);
