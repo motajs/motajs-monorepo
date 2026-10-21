@@ -233,6 +233,131 @@
   outline-offset: -2px;
 }
 
+.emap-canvas.is-paintable {
+  cursor: crosshair;
+}
+
+.emap-canvas.is-readonly {
+  cursor: default;
+}
+
+.emap-canvas.is-empty-layer {
+  background-color: var(--emap-empty-a, #ffffff);
+  background-image:
+    linear-gradient(45deg, var(--emap-empty-b, #f5f6f8) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--emap-empty-b, #f5f6f8) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--emap-empty-b, #f5f6f8) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--emap-empty-b, #f5f6f8) 75%);
+  background-position:
+    0 0,
+    0 4px,
+    4px -4px,
+    -4px 0;
+  background-size: 8px 8px;
+}
+
+.emap-canvas > .emap-canvas-state {
+  position: absolute;
+  inset: 0;
+}
+
+.emap-ruler {
+  position: absolute;
+  overflow: hidden;
+  color: var(--editor-muted, #656d76);
+  background: var(--editor-bg, #f5f6f8);
+  pointer-events: none;
+  user-select: none;
+}
+
+.emap-ruler-top {
+  top: -20px;
+  left: 0;
+  width: 100%;
+  border-bottom: 1px solid var(--editor-border, #d0d7de);
+}
+
+.emap-ruler-left {
+  top: 0;
+  left: -20px;
+  height: 100%;
+  border-right: 1px solid var(--editor-border, #d0d7de);
+}
+
+.emap-ruler-tick {
+  position: absolute;
+  font-size: 9px;
+  line-height: 10px;
+  white-space: nowrap;
+}
+
+.emap-ruler-top .emap-ruler-tick {
+  top: 5px;
+  transform: translateX(2px);
+}
+
+.emap-ruler-left .emap-ruler-tick {
+  left: 3px;
+  transform: translateY(-5px);
+}
+
+.emap-ruler-tick.is-active {
+  color: var(--editor-accent, #1677ff);
+}
+
+.emap-menu {
+  position: fixed;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  border: 1px solid var(--editor-border, #d0d7de);
+  border-radius: 4px;
+  background: var(--editor-surface, #ffffff);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.emap-menu-item {
+  height: 32px;
+  padding: 0 8px;
+  overflow: hidden;
+  border: none;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--editor-fg, #202124);
+  font-size: 13px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.emap-menu-item:hover:not(:disabled) {
+  background: var(--editor-selected, #dbeafe);
+}
+
+.emap-menu-item:disabled {
+  color: var(--editor-muted, #656d76);
+  cursor: default;
+}
+
+.emap-menu-item:focus-visible {
+  outline: 2px solid var(--editor-accent, #1677ff);
+  outline-offset: -2px;
+}
+
+.emap-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  border: 0;
+  white-space: nowrap;
+}
+
 .emap-canvas-empty-layer {
   position: absolute;
   inset: 20px 0 0 20px;

@@ -1,7 +1,7 @@
 import { Application, Container, Graphics, Rectangle, Sprite, Texture } from 'pixi.js';
 import { ReactElement, useEffect, useRef, useState } from 'react';
 import { MAP_CELL_SIZE } from '../constants';
-import { IMapPassMark, IMapRect, IMapRenderCell, IMapRenderModel } from '../types';
+import { IMapCellPosition, IMapPassMark, IMapRect, IMapRenderCell, IMapRenderModel } from '../types';
 import { useMapObjectUrl } from './useMapObjectUrl';
 
 // 唯一 import pixi.js 的文件：把渲染模型画成占位格 / 图块 / 网格 / 通行度标记。
@@ -61,14 +61,38 @@ const GRID_ALPHA = 0.16;
 /** 通行度标记颜色 */
 const PASS_COLOR = 0xd9363e;
 
+/** 通行度标记的白半透明衬底 */
+const PASS_CHIP = 0xffffff;
+
+/** 通行度箭头 / 衬底半径（像素） */
+const PASS_RADIUS = 5;
+
+/** 通行度降级为红点时的半径（像素） */
+const PASS_DOT_RADIUS = 2;
+
 /** 框选边框颜色 */
 const SELECTION_COLOR = 0x2f6fed;
+
+/** 框选填充不透明度 */
+const SELECTION_FILL_ALPHA = 0.12;
+
+/** 框选虚线的一段长度（像素） */
+const SELECTION_DASH = 6;
+
+/** 框选虚线的间隔长度（像素） */
+const SELECTION_GAP = 4;
 
 /** 绘制预览边框颜色 */
 const PREVIEW_COLOR = 0x6f4bd8;
 
-/** 悬停边框颜色 */
+/** 绘制预览填充不透明度 */
+const PREVIEW_FILL_ALPHA = 0.35;
+
+/** 悬停轮廓颜色 */
 const HOVER_COLOR = 0x2a2f3a;
+
+/** 悬停轮廓不透明度 */
+const HOVER_ALPHA = 0.4;
 
 /**
  * 没有字节读取回调时使用的空实现
@@ -191,7 +215,7 @@ function createCellSprite(texture: Texture, cell: IMapRenderCell, frames: Textur
 }
 
 /**
- * 画网格线
+ * 画网格线；叠加层不拦指针
  * @param scene 场景容器
  * @param model 渲染模型
  */
@@ -200,6 +224,7 @@ function drawGrid(scene: Container, model: IMapRenderModel): void {
 
   const grid = new Graphics();
 
+  grid.eventMode = 'none';
   grid.setStrokeStyle({ color: GRID_COLOR, alpha: GRID_ALPHA, width: 1 });
 
   for (const line of model.gridLines) {
@@ -217,21 +242,50 @@ function drawGrid(scene: Container, model: IMapRenderModel): void {
 }
 
 /**
- * 在一个通行度标记上画出被阻挡方向的短角标
+ * 画一枚指向「不能走」方向的红色箭头
+ * @param graphics 目标图形
+ * @param x 箭头中心的像素横坐标
+ * @param y 箭头中心的像素纵坐标
+ * @param dx 方向的横向分量（-1 / 0 / 1）
+ * @param dy 方向的纵向分量（-1 / 0 / 1）
+ */
+function drawPassArrow(graphics: Graphics, x: number, y: number, dx: number, dy: number): void {
+  const tipX = x + dx * PASS_RADIUS;
+  const tipY = y + dy * PASS_RADIUS;
+  const baseX = x - dx * 2;
+  const baseY = y - dy * 2;
+  const wingX = -dy * 4;
+  const wingY = dx * 4;
+
+  graphics.moveTo(tipX, tipY);
+  graphics.lineTo(baseX + wingX, baseY + wingY);
+  graphics.lineTo(baseX - wingX, baseY - wingY);
+  graphics.fill({ color: PASS_COLOR });
+}
+
+/**
+ * 画一个通行度标记：白色半透明衬底 + 每个被阻挡方向的红色箭头；大地图缩小后降级为红点
  * @param graphics 目标图形
  * @param mark 通行度标记
  * @param x 标记中心的像素横坐标
  * @param y 标记中心的像素纵坐标
  */
-function drawBlockedDirections(graphics: Graphics, mark: IMapPassMark, x: number, y: number): void {
-  if (mark.blocked.up) graphics.rect(x - 1, y - 7, 2, 3).fill({ color: PASS_COLOR });
-  if (mark.blocked.right) graphics.rect(x + 4, y - 1, 3, 2).fill({ color: PASS_COLOR });
-  if (mark.blocked.down) graphics.rect(x - 1, y + 4, 2, 3).fill({ color: PASS_COLOR });
-  if (mark.blocked.left) graphics.rect(x - 7, y - 1, 3, 2).fill({ color: PASS_COLOR });
+function drawPassMark(graphics: Graphics, mark: IMapPassMark, x: number, y: number): void {
+  if (mark.dot) {
+    graphics.circle(x, y, PASS_DOT_RADIUS).fill({ color: PASS_COLOR });
+    return;
+  }
+
+  graphics.circle(x, y, PASS_RADIUS).fill({ color: PASS_CHIP, alpha: 0.9 });
+
+  if (mark.blocked.up) drawPassArrow(graphics, x, y, 0, -1);
+  if (mark.blocked.right) drawPassArrow(graphics, x, y, 1, 0);
+  if (mark.blocked.down) drawPassArrow(graphics, x, y, 0, 1);
+  if (mark.blocked.left) drawPassArrow(graphics, x, y, -1, 0);
 }
 
 /**
- * 画通行度标记：大地图缩小后降级为红点，否则是红点加被阻挡方向的角标
+ * 画通行度叠加层
  * @param scene 场景容器
  * @param model 渲染模型
  */
@@ -240,41 +294,123 @@ function drawPassMarks(scene: Container, model: IMapRenderModel): void {
 
   const graphics = new Graphics();
 
+  graphics.eventMode = 'none';
+
   for (const mark of model.passMarks) {
     const x = mark.x * MAP_CELL_SIZE + MAP_CELL_SIZE / 2;
     const y = mark.y * MAP_CELL_SIZE + MAP_CELL_SIZE / 2;
-    const radius = mark.dot ? 2 : 4;
 
-    graphics.circle(x, y, radius).fill({ color: PASS_COLOR });
-
-    if (!mark.dot) drawBlockedDirections(graphics, mark, x, y);
+    drawPassMark(graphics, mark, x, y);
   }
 
   scene.addChild(graphics);
 }
 
 /**
- * 按格子矩形画一个边框
- * @param scene 场景容器
- * @param rect 格子矩形
- * @param color 边框颜色
+ * 在一条水平边上补虚线
+ * @param graphics 目标图形
+ * @param from 起点横坐标
+ * @param to 终点横坐标
+ * @param y 该边的纵坐标
  */
-function drawBorder(scene: Container, rect: IMapRect, color: number): void {
+function drawDashedHorizontal(graphics: Graphics, from: number, to: number, y: number): void {
+  for (let x = from; x < to; x += SELECTION_DASH + SELECTION_GAP) {
+    const end = Math.min(x + SELECTION_DASH, to);
+
+    graphics.moveTo(x, y);
+    graphics.lineTo(end, y);
+  }
+}
+
+/**
+ * 在一条竖直边上补虚线
+ * @param graphics 目标图形
+ * @param from 起点纵坐标
+ * @param to 终点纵坐标
+ * @param x 该边的横坐标
+ */
+function drawDashedVertical(graphics: Graphics, from: number, to: number, x: number): void {
+  for (let y = from; y < to; y += SELECTION_DASH + SELECTION_GAP) {
+    const end = Math.min(y + SELECTION_DASH, to);
+
+    graphics.moveTo(x, y);
+    graphics.lineTo(x, end);
+  }
+}
+
+/**
+ * 把格子矩形换算成像素矩形
+ * @param rect 格子矩形
+ * @returns 像素矩形
+ */
+function toPixelRect(rect: IMapRect): IMapRect {
+  return {
+    x: rect.x * MAP_CELL_SIZE,
+    y: rect.y * MAP_CELL_SIZE,
+    width: rect.width * MAP_CELL_SIZE,
+    height: rect.height * MAP_CELL_SIZE,
+  };
+}
+
+/**
+ * 画框选：12% 填充 + 1px 虚线边框
+ * @param scene 场景容器
+ * @param rect 框选矩形（格子）
+ */
+function drawSelection(scene: Container, rect: IMapRect): void {
+  const pixel = toPixelRect(rect);
+  const fill = new Graphics();
   const border = new Graphics();
 
-  border.setStrokeStyle({ color, alpha: 1, width: 2 });
-  border.rect(
-    rect.x * MAP_CELL_SIZE + 1,
-    rect.y * MAP_CELL_SIZE + 1,
-    rect.width * MAP_CELL_SIZE - 2,
-    rect.height * MAP_CELL_SIZE - 2,
-  );
+  fill.eventMode = 'none';
+  fill.rect(pixel.x, pixel.y, pixel.width, pixel.height).fill({ color: SELECTION_COLOR, alpha: SELECTION_FILL_ALPHA });
+
+  border.eventMode = 'none';
+  border.setStrokeStyle({ color: SELECTION_COLOR, alpha: 1, width: 1 });
+  drawDashedHorizontal(border, pixel.x + 0.5, pixel.x + pixel.width - 0.5, pixel.y + 0.5);
+  drawDashedHorizontal(border, pixel.x + 0.5, pixel.x + pixel.width - 0.5, pixel.y + pixel.height - 0.5);
+  drawDashedVertical(border, pixel.y + 0.5, pixel.y + pixel.height - 0.5, pixel.x + 0.5);
+  drawDashedVertical(border, pixel.y + 0.5, pixel.y + pixel.height - 0.5, pixel.x + pixel.width - 0.5);
   border.stroke();
+
+  scene.addChild(fill);
   scene.addChild(border);
 }
 
 /**
- * 把一帧渲染模型画进场景：先画格子，再叠加网格、通行度标记与各种边框
+ * 画绘制预览：35% 填充 + 1px 描边，尺寸等于笔刷图案
+ * @param scene 场景容器
+ * @param rect 预览矩形（格子）
+ */
+function drawPreview(scene: Container, rect: IMapRect): void {
+  const pixel = toPixelRect(rect);
+  const preview = new Graphics();
+
+  preview.eventMode = 'none';
+  preview.rect(pixel.x, pixel.y, pixel.width, pixel.height).fill({ color: PREVIEW_COLOR, alpha: PREVIEW_FILL_ALPHA });
+  preview.setStrokeStyle({ color: PREVIEW_COLOR, alpha: 1, width: 1 });
+  preview.rect(pixel.x + 0.5, pixel.y + 0.5, pixel.width - 1, pixel.height - 1);
+  preview.stroke();
+  scene.addChild(preview);
+}
+
+/**
+ * 画悬停格轮廓：1px、40% accent
+ * @param scene 场景容器
+ * @param position 悬停格
+ */
+function drawHover(scene: Container, position: IMapCellPosition): void {
+  const hover = new Graphics();
+
+  hover.eventMode = 'none';
+  hover.setStrokeStyle({ color: HOVER_COLOR, alpha: HOVER_ALPHA, width: 1 });
+  hover.rect(position.x * MAP_CELL_SIZE + 0.5, position.y * MAP_CELL_SIZE + 0.5, MAP_CELL_SIZE - 1, MAP_CELL_SIZE - 1);
+  hover.stroke();
+  scene.addChild(hover);
+}
+
+/**
+ * 把一帧渲染模型画进场景：先画格子，再叠加网格、通行度标记、框选、预览与悬停轮廓
  * @param scene 场景容器
  * @param model 渲染模型
  * @param textures 按图片路径缓存的图集纹理
@@ -290,10 +426,9 @@ function drawModel(scene: Container, model: IMapRenderModel, textures: Map<strin
   drawGrid(scene, model);
   drawPassMarks(scene, model);
 
-  if (model.selection !== undefined) drawBorder(scene, model.selection, SELECTION_COLOR);
-  if (model.preview !== undefined) drawBorder(scene, model.preview.rect, PREVIEW_COLOR);
-  if (model.hover !== undefined)
-    drawBorder(scene, { x: model.hover.x, y: model.hover.y, width: 1, height: 1 }, HOVER_COLOR);
+  if (model.selection !== undefined) drawSelection(scene, model.selection);
+  if (model.preview !== undefined) drawPreview(scene, model.preview.rect);
+  if (model.hover !== undefined) drawHover(scene, model.hover);
 }
 
 /**
@@ -379,6 +514,7 @@ export function MapSurface(props: IMapSurfaceProps): ReactElement {
 
         const scene = new Container();
 
+        scene.eventMode = 'none';
         app.stage.addChild(scene);
         appRef.current = app;
         sceneRef.current = scene;
