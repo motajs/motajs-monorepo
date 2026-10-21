@@ -514,3 +514,123 @@
 6. **字节改动立即落盘，列表 / 配置改动手动保存。** 未保存时列表里没有新条目，刷新后不显示（文件仍在，只是没登记）。
 7. **默认值（2026-10-19 UAT 修订）：** WebP 质量 **100**；Opus 音频默认取源音频原本的采样率与码率（能读到时），读不到回退 **128 kbps / 48 kHz**；单文件上传上限 32 MiB。
 8. **「无法撤销」提示由装配方订阅 `onUndoBlocked` 呈现**（文案常量在 `asset`）。core 不承载界面文案，能力层也不掌控全局快捷键。
+
+---
+
+# 追加批次（2026-10-20，**待用户确认**）
+
+> 本批接在 03-31 之后，编号 03-32…03-37。以下每个 Plan 一节，**全部为待确认状态**：确认后再落进代码。
+> 已确认的 03-01…03-31 各节一个字未改；本节只新增名称。
+
+## Plan 03-32 — 追加批次契约：登记标记 + 转码预设（仅类型 / 常量 / 默认值）**待用户确认**
+
+**要做什么：** 给每条素材加一个「是否已登记进 `.list.jsonc`」的必填标记；把转码参数从裸数字升级成三档固定预设 + 一个自定义档，并补三段界面说明文案；图片默认档定为无损压缩（质量 100，不下调）。本计划不碰界面、不碰扫描。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `IAssetEntry.registered` | interface 成员，**必填**只读 `boolean` | 该素材是否已登记进 `.list.jsonc`；false = 文件只在分类目录里、不进游戏。必填是为了让「写回只写已登记」有一个不靠缺省值的判据 |
+| `AssetImagePreset` | `const enum`（`VolumeFirst` / `Standard` / `Lossless` / `Custom`） | 图片转码档位：体积优先 / 常规压缩 / 无损压缩 / 自定义参数 |
+| `AssetAudioPreset` | `const enum`（`SmallestSize` / `VolumeFirst` / `Standard` / `Custom`） | 音频转码档位：最小体积 / 体积优先 / 常规压缩 / 自定义参数 |
+| `IAssetImagePresetOption` | interface（`transcode/types.ts`） | 一档图片预设：`id` / `label` / `quality` / `summary`（`summary` 是给人看的一句「WebP 质量 100」） |
+| `IAssetAudioPresetOption` | interface（同文件） | 一档音频预设：`id` / `label` / `bitrateKbps` / `sampleRateKHz` / `summary`；**数值用 kbps / kHz** |
+| `IAssetAudioCustomOptions` | interface（同文件） | 自定义档的入参：`bitrateKbps` / `sampleRateKHz`，供 03-35 的换算函数使用 |
+| `src/asset/transcode/presets.ts` | 新增文件 | 预设表、默认档、自定义档标签、三段说明文案的落点 |
+| `ASSET_IMAGE_PRESETS` | 常量（三项） | `体积优先 80` / `常规压缩 92` / `无损压缩 100` |
+| `ASSET_AUDIO_PRESETS` | 常量（三项） | `最小体积 64 kbps + 44.1 kHz` / `体积优先 92 kbps + 48 kHz` / `常规压缩 128 kbps + 48 kHz` |
+| `ASSET_DEFAULT_IMAGE_PRESET` / `ASSET_DEFAULT_AUDIO_PRESET` | 常量 | 图片默认 `Lossless`（无损压缩 100）、音频默认 `Standard`（常规压缩 128 kbps + 48 kHz）；弹窗从这里取默认档，不自己写死 |
+| `ASSET_TRANSCODE_CUSTOM_LABEL` | 常量 `'自定义参数'` | 第四个档位的显示名 |
+| `ASSET_TRANSCODE_QUALITY_NOTE` | 常量 | 取舍说明：「质量 / 码率越低，文件越小，但图片会更模糊、声音会更差。」 |
+| `ASSET_TRANSCODE_PIXEL_ART_NOTE` | 常量 | 像素风说明：「像素风素材压缩后会明显发糊：素材图建议用「无损压缩」，常规非像素风图片用「常规压缩」通常够用。」（默认档就是无损，说明与默认一致） |
+| `ASSET_TRANSCODE_KEEP_ORIGIN_HINT` | 常量 | 不覆盖时的改名提示：「不覆盖旧文件时，源文件会被重命名为「{name}-origin{.ext}」保留，不会被删除。」 |
+
+## Plan 03-33 — 未登记扫描与注册 / 注销数据动作 **待用户确认**
+
+**要做什么：** 找出「分类目录里有、但 `.list.jsonc` 里没有」的文件，把它们变成面板条目；给面板加「注册到游戏」与「注销」两个只改列表的数据动作；保存时只写已登记条目。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `src/asset/model/assetScan.ts` | 新增文件 | 扫描规则的落点（纯函数，只按名字判断，不读文件内容） |
+| `isAssetOriginFileName` | 函数 | 判断一个文件名是否是 `-origin` 备份（去扩展名后以 `-origin` 结尾） |
+| `collectUnregisteredAssetNames` | 函数（`category` + 目录项 + 已登记名字 → 未登记素材名） | 去重、升序；排除隐藏文件、列表 / schema / defaults 文件、`-origin` 备份、目录、已登记名字，以及「名字反推路径对不上」的文件（如动画分类里的 `.png`） |
+| `AssetPanel.registerAsset` | 方法（`async`） | 把未登记条目变成已登记：配置来自 defaults 合并、标记未保存；不写盘 |
+| `AssetPanel.unregisterAsset` | 方法（`async`） | 把已登记条目变成未登记并清空配置；**不删除、不移动任何文件**；正在配置该素材时先退回浏览态 |
+| `AssetPanel.loadCategory` | 方法（行为变更） | 已登记条目之后追加未登记条目（列表文件缺失时同样扫描） |
+| `AssetPanel.toListEntries` | 私有方法（行为变更） | 只转换 `registered === true` 的条目，并按过滤后顺序重算 `index` |
+| `assetScan.test.ts` | 新增测试文件（`asset/model/__tests__/`） | 扫描规则八条回归 |
+| `assetRegistration.test.tsx` | 新增测试文件（`asset/__tests__/`） | 注册 / 注销 / 写回过滤 / 注销时的配置态退出的数据层回归 |
+
+## Plan 03-34 — 未登记黄卡与注册 / 注销界面 **待用户确认**
+
+**要做什么：** 未登记素材的缩略图底色变黄；详情栏按状态给「注册到游戏」或「注销」；注销要连点两次确认；「删除」的文案改成明确说会移除文件并指向「注销」。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `is-unregistered` | 新增 CSS 类（`AssetGrid` 卡片根节点） | 未登记卡片的标记类；`entry.registered === false` 时追加 |
+| `data-registered` | 新增卡片属性 | `"true"` / `"false"`，供测试与样式之外的程序化判断 |
+| `--easset-unregistered-bg` / `--easset-unregistered-fg` | 新增 CSS 变量（`#fffbe6` / `#ad8b00`） | 未登记缩略图的黄色底色与配套的深黄文字色 |
+| `.asset-card.is-unregistered .asset-card-thumb` | 新增 CSS 规则 | 只把**缩略图**底色染黄，卡片其余部分保持原样 |
+| `IAssetDetailProps.onRegister` / `IAssetDetailProps.onUnregister` | 新增可选成员 | 详情栏把「注册到游戏」/「注销」交给上层 |
+| `IAssetPanelViewProps.onRegister` / `IAssetPanelViewProps.onUnregister` | 新增可选成员 | 视图层透传（都带当前选中素材名） |
+| `IAssetPanelContainerProps.onRegister` / `IAssetPanelContainerProps.onUnregister` | 新增成员（模块内） | 容器层接到 `AssetPanel.registerAsset` / `AssetPanel.unregisterAsset` |
+| `AssetDetail` 的两步注销状态 | 组件内私有 `useState<number>` | 0 = 未打开、1 = 第一个说明框、2 = 第二个确认框；只有第二次确认才调用 `onUnregister` |
+| `ASSET_DELETE_CONFIRM_TEXT` | 常量（`asset/constants.ts`） | 删除弹窗文案：明确会移除文件，并提示只想不进游戏请用「注销」 |
+| `ASSET_UNREGISTER_CONFIRM_TEXT` | 常量 | 第一个注销说明框：只移除登记与配置、文件保留 |
+| `ASSET_UNREGISTER_FINAL_CONFIRM_TEXT` | 常量 | 第二个确认框：配置将永久丢失 |
+| `asset-detail-register` / `asset-detail-unregister` | 新增 `data-test-id` | 详情栏两个互斥按钮 |
+| `asset-unregister-next` / `asset-unregister-cancel` / `asset-unregister-final-confirm` / `asset-unregister-final-cancel` | 新增 `data-test-id` | 两步注销的四个按钮 |
+| `assetUnregistered.uat.test.tsx` | 新增测试文件（`asset/__tests__/`） | 黄卡 → 注册 → 保存 → 注销（两次）→ 保存 → 文件的六条界面回归 |
+
+## Plan 03-35 — 转码预设界面与说明 **待用户确认**
+
+**要做什么：** 弹窗改成选档位（图片默认为无损压缩，音频默认为常规压缩）；只有自定义档才出现数字输入框；音频单位用 kbps / kHz；补上取舍说明、像素风说明与不覆盖时的改名提示；点开始时把档位换算回内部契约。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `src/asset/transcode/units.ts` | 新增文件 | 界面边界的单位换算落点 |
+| `kbpsToBps` / `khzToHz` | 函数 | kbps → bps、kHz → Hz（四舍五入到整数） |
+| `bpsToKbps` / `hzToKHz` | 函数 | 反向换算，供探测结果预填自定义输入框 |
+| `resolveImagePresetQuality` | 函数（`transcode/presets.ts`） | 档位 + 自定义质量 → 0–100 的质量（自定义先四舍五入再夹紧） |
+| `resolveAudioPresetOptions` | 函数（同文件） | 档位 + 自定义 kbps/kHz → `IAssetAudioTranscodeOptions`（bps / Hz） |
+| `asset-transcode-image-preset` / `asset-transcode-audio-preset` | 新增 `data-test-id` | 两组档位选择器（antd `Segmented`，不接受泛型时用 `Radio.Group`） |
+| `asset-transcode-effective` | 新增 `data-test-id` | 当前档位实际会用的参数（默认图片档显示 `WebP 质量 100`，音频默认档显示 `128 kbps + 48 kHz`） |
+| `asset-transcode-quality-note` / `asset-transcode-pixel-art-note` | 新增 `data-test-id` | 取舍说明（两种分类都显示）与像素风说明（只在图片分类显示） |
+| `asset-transcode-origin-hint` / `asset-transcode-origin-example` | 新增 `data-test-id` | 不覆盖时的改名提示与当前选中文件的具体例子（`hero.png → hero-origin.png`） |
+| `.asset-transcode-preset` / `.asset-transcode-effective` / `.asset-transcode-note` | 新增 CSS 类 | 档位行、实际参数行与说明文字的排版 |
+| `transcodePresets.test.ts` | 新增测试文件（`transcode/__tests__/`） | 换算与档位解析七条单测 |
+| `transcodeModal.test.tsx`（重写） | 既有测试文件 | 保留四条版面用例；三条探测用例改为「自定义档」语义；新增档位 / 单位 / 说明 / 转换参数用例 |
+
+## Plan 03-36 — 开发宿主新增素材顶层整合 **待用户确认**
+
+**要做什么：** 在开发宿主里点真实文件选择框新增一张图，保存，再重新切入 / 换核心重开，证明「界面 → 数据层 → 文件」整条链路通。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `devHostAssetAdd.test.tsx` | 新增测试文件（`apps/editor-dev/src/__tests__/`） | 新增素材的五条顶层集成用例（含「预置未登记样本可见」） |
+| `createHost` / `createHostWithUnregistered` / `openAssetPanel` / `pickFile` / `addAndSave` | 测试文件内私有 helper | 装配宿主（含预置未登记样本的变体）、经外壳打开面板、经真实 `asset-toolbar-add-input` 选文件、新增并保存 |
+| `DEMO_UNREGISTERED_TEXTURE_NAME` | 常量 `'unregistered.png'`（`demo/assetDemo.ts`） | 开发宿主预置的未登记样本文件名；它只在分类目录里、不在 `.list.jsonc` 里，供人工验收直接使用 |
+| `createUnregisteredAssetDemoFiles` | 函数（`demo/assetDemo.ts`） | 造出那一张 48×48 的样本字节（复用文件内的 `encodePng`） |
+| `seedUnregisteredAssetDemo` | 函数（`demo/assetDemo.ts`，`IMemoryBackend` 入参） | 把样本写进注入的内存后端；只由 `main.tsx` 与本计划的测试调用，**不进** `ASSET_DEMO_FILES`（否则既有 36 / 38 条计数断言会失效） |
+
+> 本计划除了测试，只额外改开发宿主的演示数据与入口（`assetDemo.ts` + `main.tsx`），目的是让「未登记素材」在宿主启动时就有一个现成样本；不改 `editor-core` / `editor-impl` 的任何行为。
+
+## Plan 03-37 — 人工验收：新增素材链路 + 注册 / 注销 **待用户确认**
+
+**要做什么：** 在真实浏览器里把两条流程各走一遍，把结论写进 `03-UAT.md`（Tests 4 / 5）；失败则登记新缺口。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| Tests 4「新增素材链路（开发宿主）」 | `03-UAT.md` 条目 | 选文件 → 卡片 → 保存 → 关闭重开面板 / 切走分类再切回仍在（同一会话内；不要求刷新） |
+| Tests 5「未登记素材的注册与注销」 | 同上 | 宿主预置的 `unregistered.png` 黄卡 → 注册 → 保存 → 注销（两次）→ 保存 → 配置消失且回黄卡、文件保留 |
+| `G-03-14` / `G-03-15` | 缺口条目（仅失败时） | 分别对应新增链路与注册 / 注销的失败现象 |
+
+---
+
+## 追加批次需要一并确认的口径（**待用户确认**）
+
+1. **`IAssetEntry.registered` 设为必填。** 会顺带改 5 处条目构造点与 4 个既有测试的条目字面量（只补字段、不改断言）。理由是「写回只写已登记」不能靠缺省值兜底。
+2. **音频自定义采样率用 kHz 小数表达**（如 `44.1`），换算时 `Math.round(khz * 1000)` 得 `44100`；内部契约仍是 Hz。
+3. **未登记候选多一条「名字反推路径必须一致」规则。** 例如动画分类只认 `.anim`，目录里的 `.png` 不会变成未登记素材——否则登记进动画列表会写出对不上的条目。
+4. **源音频探测改为只预填「自定义」的两个输入框，不再改预设档。** 03-25 的「探测结果成为默认参数」在预设档位下没有位置；能力保留，落点变成自定义档的初值。
+5. **未登记素材不进转码候选。** 它们还没进游戏，转码只会制造一个改名的未登记文件。
+6. **注销两个弹窗的文案与按钮**：第一个「取消 / 继续」，第二个「取消 / 确认注销」；两个弹窗都禁用遮罩与 ESC 关闭。
+7. **默认档（2026-10-20 复核修订）：图片默认无损压缩（质量 100），不改成 92。** 无损 WebP 本身已经压得够小，而本工程的素材以像素风为主、有损压缩会明显发糊；「常规压缩 92」「体积优先 80」仍保留为可选项。音频默认仍是常规压缩（128 kbps + 48 kHz）。
