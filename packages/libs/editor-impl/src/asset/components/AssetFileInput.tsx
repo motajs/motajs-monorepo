@@ -33,12 +33,12 @@ export interface IAssetFileInputProps {
  */
 async function handleFileChange(event: ChangeEvent<HTMLInputElement>, props: IAssetFileInputProps): Promise<void> {
   const files = event.target.files;
+  const file = !files || files.length === 0 ? undefined : files[0];
 
-  // 选完立即清空，允许重复选中同一个文件
+  // 必须先取文件再清空：真实浏览器里置空 value 会让同一个 FileList 一起变空。
+  // 清空仍然保留，允许再次选中同一个文件。
   event.target.value = '';
-  if (!files || files.length === 0) return;
-
-  const file = files[0];
+  if (file === undefined) return;
 
   if (file.size > ASSET_MAX_UPLOAD_BYTES) {
     if (props.onReject !== undefined) props.onReject('文件过大，单个素材不能超过 32 MiB');

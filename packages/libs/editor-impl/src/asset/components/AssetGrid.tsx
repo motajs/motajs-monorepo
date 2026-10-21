@@ -93,6 +93,11 @@ export function AssetGrid(props: IAssetGridProps): ReactElement {
             />
           </span>
           <span className="asset-card-name">{entry.name}</span>
+          {entry.registered ? null : (
+            <span className="asset-card-unregistered" data-test-id={`asset-card-unregistered-${entry.name}`}>
+              未登记
+            </span>
+          )}
           {entry.exists ? null : (
             <span className="asset-card-missing" data-test-id={`asset-card-missing-${entry.name}`}>
               缺失

@@ -130,4 +130,32 @@ describe('collectUnregisteredAssetNames', () => {
       collectUnregisteredAssetNames(FONT_CATEGORY, backward, []),
     );
   });
+
+  // 白名单外的文本 / Markdown 不进候选；`.svg` 不在 §G 清单里，故不收（既定取舍，不是遗漏）
+  it('非素材后缀不进候选', () => {
+    const entries = entriesOf('content/texture', ['readme.txt', 'notes.md', 'icon.svg', 'hero.png']);
+
+    expect(collectUnregisteredAssetNames(TEXTURE_CATEGORY, entries, [])).toEqual(['hero.png']);
+  });
+
+  // 音频目录的 `.oga` 同样不在白名单里，故不收（`resolveAssetMime` 认得它，但本批按清单收窄）
+  it('音频目录的 .oga 不进候选', () => {
+    const entries = entriesOf('content/audio', ['loop.oga', 'bgm.mp3']);
+
+    expect(collectUnregisteredAssetNames(AUDIO_CATEGORY, entries, [])).toEqual(['bgm.mp3']);
+  });
+
+  // 没有后缀的文件不进候选：已登记的无后缀素材注销后会从卡片列表消失（字节文件仍在），本批接受
+  it('没有后缀的文件不进候选', () => {
+    const entries = entriesOf('content/font', ['Badge', 'sample.ttf']);
+
+    expect(collectUnregisteredAssetNames(FONT_CATEGORY, entries, [])).toEqual(['sample.ttf']);
+  });
+
+  // 后缀比较大小写不敏感：`.PNG` 仍算图片候选
+  it('大写后缀仍进候选', () => {
+    const entries = entriesOf('content/texture', ['hero.PNG']);
+
+    expect(collectUnregisteredAssetNames(TEXTURE_CATEGORY, entries, [])).toEqual(['hero.PNG']);
+  });
 });

@@ -3,6 +3,11 @@ import { ReactElement, useState } from 'react';
 import { AssetCategoryKind, IAssetCategory } from '../../react';
 import { DEFAULT_ASSET_CARD_WIDTH } from '../constants';
 import { resolveTranscodedPath } from '../model';
+import {
+  isAssetFileAccepted,
+  resolveAssetFileExtensions,
+  unsupportedAssetExtensionMessage,
+} from '../model/internal/assetFileTypes';
 import { ASSET_WEBM_EXTENSION, ASSET_WEBP_EXTENSION, IAssetTranscodeOptions } from '../transcode/types';
 import { AssetPanelMode, AssetPanelStatus, IAssetEntry, IAssetPanelViewState, IAssetUpload } from '../types';
 import { AssetConfigView } from './AssetConfigView';
@@ -135,6 +140,30 @@ function transcodeCandidates(category: IAssetCategory, entries: readonly IAssetE
   return entries.filter((entry) => entry.registered && resolveTranscodedPath(entry.path, extension) !== entry.path);
 }
 
+/**
+ * 取当前分类的文件选择框提示串
+ * @param category 当前分类；未命中时为 undefined
+ * @returns 逗号连接的后缀清单；无分类时为 undefined（此时选择框不限制类型）
+ */
+function acceptHintOf(category: IAssetCategory | undefined): string | undefined {
+  if (category === undefined) return undefined;
+
+  return resolveAssetFileExtensions(category).join(',');
+}
+
+/**
+ * 按当前分类的后缀白名单校验一次上传
+ * @param category 当前分类；未命中时为 undefined
+ * @param upload 上传的原始文件名与字节
+ * @returns 通过校验时为 undefined；否则为给用户看的拒绝原因
+ */
+function uploadRejection(category: IAssetCategory | undefined, upload: IAssetUpload): string | undefined {
+  if (category === undefined) return undefined;
+  if (isAssetFileAccepted(category, upload.name)) return undefined;
+
+  return unsupportedAssetExtensionMessage(resolveAssetFileExtensions(category));
+}
+
 /** 未接入选择回调时的缺省实现：不做任何事 */
 function noopSelectAsset(): void {}
 
@@ -218,7 +247,16 @@ function renderContent(
       <AssetDetail
         entry={selected}
         kind={category.kind}
-        onReplace={props.onReplace}
+        onReplace={(upload): void => {
+          const rejection = uploadRejection(category, upload);
+
+          if (rejection !== undefined) {
+            props.onReject?.(rejection);
+            return;
+          }
+
+          props.onReplace?.(upload);
+        }}
         onReject={props.onReject}
         onDelete={(): void => {
           if (selected !== undefined) props.onDelete?.(selected.name);
@@ -275,7 +313,17 @@ export function AssetPanelView(props: IAssetPanelViewProps): ReactElement {
         transcodeEnabled={transcodeEnabled}
         onSave={props.onSave}
         onTranscode={props.onTranscode}
-        onAddAsset={props.onAddAsset}
+        addAccept={acceptHintOf(category)}
+        onAddAsset={(upload): void => {
+          const rejection = uploadRejection(category, upload);
+
+          if (rejection !== undefined) {
+            props.onReject?.(rejection);
+            return;
+          }
+
+          props.onAddAsset?.(upload);
+        }}
         onReject={props.onReject}
       />
       {panelError === undefined ? null : (

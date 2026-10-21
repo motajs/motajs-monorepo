@@ -263,4 +263,31 @@ describe('未登记素材的界面', () => {
 
     expect(Array.from(bytes)).toEqual([1]);
   });
+
+  // ⑧ 未登记卡片带卡级「未登记」徽标，且徽标在缩略图之外，不会被不透明图片盖住
+  it('未登记卡片带缩略图之外的未登记徽标', async () => {
+    const opened = await openTexturePanel();
+    const container = renderPanel(opened.panel);
+    const badge = container.querySelector('[data-test-id="asset-card-unregistered-extra.png"]');
+
+    expect(badge?.textContent).toBe('未登记');
+    expect(container.querySelector('.asset-card-thumb [data-test-id^="asset-card-unregistered"]')).toBeNull();
+  });
+
+  // ⑨ 卡片自身有深黄边框与 2px 内描边；用内阴影而不是加粗边框，卡片外框尺寸不变
+  it('未登记卡片规则含内描边与深黄变量', () => {
+    const rule = ruleBody(assetCss, '.asset-card.is-unregistered');
+
+    expect(rule).toContain('box-shadow');
+    expect(rule).toContain('inset 0 0 0 2px');
+    expect(rule).toContain('var(--easset-unregistered-strong)');
+    expect(rule).not.toContain('border-width');
+  });
+
+  // ⑩ 徽标样式用同一份深黄
+  it('未登记徽标样式用深黄变量', () => {
+    const rule = ruleBody(assetCss, '.asset-card-unregistered');
+
+    expect(rule).toContain('var(--easset-unregistered-strong)');
+  });
 });

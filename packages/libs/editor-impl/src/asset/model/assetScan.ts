@@ -1,5 +1,6 @@
 import { EditorEntryKind, IFileEntry } from '@motajs/editor-core';
 import { IAssetCategory } from '../../react';
+import { isAssetFileAccepted } from './internal/assetFileTypes';
 import {
   ASSET_ORIGIN_SUFFIX,
   ASSET_SCHEMA_FILE_NAME,
@@ -9,7 +10,10 @@ import {
 } from './assetPaths';
 
 // 未登记素材的扫描规则：只看分类目录的直接文件，只按名字判断，不读文件内容。
-// 目录里那些不属于素材的文件（隐藏文件、列表 / schema / defaults、`-origin` 备份）都在这里统一排除。
+// 目录里那些不属于素材的文件（隐藏文件、列表 / schema / defaults、`-origin` 备份）都在这里统一排除；
+// 非素材类型的文件（后缀不在分类白名单里的 `.txt` / `.md` / `.svg` / `.oga`、没有后缀的文件）也不进候选。
+// 收窄是既定取舍：`.svg` / `.oga` 虽然 `resolveAssetMime` 认得，但不在白名单里，因此不再算未登记候选；
+// 无后缀文件同样不算候选，副作用是已登记的无后缀素材「注销」后会从卡片列表消失（字节文件仍在分类目录里）。
 
 /**
  * 取路径的最后一段名
@@ -59,6 +63,7 @@ export function collectUnregisteredAssetNames(
     if (entry.name === defaultsFileName) continue;
     if (isAssetOriginFileName(entry.name)) continue;
     if (sanitizeAssetFileName(entry.name) === null) continue;
+    if (!isAssetFileAccepted(category, entry.name)) continue;
 
     const name = resolveAssetName(category, entry.name);
 

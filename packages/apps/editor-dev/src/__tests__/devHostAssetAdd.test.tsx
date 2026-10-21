@@ -131,12 +131,35 @@ function cardCount(container: HTMLElement): number {
 }
 
 /**
+ * 把隐藏的文件选择框换成真实浏览器语义：`files` 返回同一个数组，`value` 被置空时把该数组就地清空
+ * @param input 文件选择框
+ * @param files 本次选择得到的文件列表（与 `files` 返回的是同一个数组）
+ */
+function installLiveFileList(input: HTMLInputElement, files: File[]): void {
+  let value = '';
+
+  Object.defineProperty(input, 'files', {
+    configurable: true,
+    get: (): File[] => files,
+  });
+  Object.defineProperty(input, 'value', {
+    configurable: true,
+    get: (): string => value,
+    set: (next: string): void => {
+      value = next;
+      if (next === '') files.length = 0;
+    },
+  });
+}
+
+/**
  * 经工具栏真实的文件选择框选一个本地文件
  * @param container 渲染容器
  * @param fileName 选中的文件名
+ * @param type 选中文件的 MIME 类型
  */
-function pickFile(container: HTMLElement, fileName: string): void {
-  const input = container.querySelector('[data-test-id="asset-toolbar-add-input"]');
+function pickFile(container: HTMLElement, fileName: string, type = 'image/png'): void {
+  const input = container.querySelector<HTMLInputElement>('[data-test-id="asset-toolbar-add-input"]');
 
   if (input === null) throw new Error('未找到工具栏的文件选择框');
 
@@ -145,7 +168,7 @@ function pickFile(container: HTMLElement, fileName: string): void {
 
   bytes.set(source);
 
-  const file = new File([bytes], fileName, { type: 'image/png' });
+  const file = new File([bytes], fileName, { type });
 
   // jsdom 的 File 若缺少 `arrayBuffer`，就补一个同义方法，返回与选中字节完全一致的缓冲
   if (typeof file.arrayBuffer !== 'function') {
@@ -155,7 +178,8 @@ function pickFile(container: HTMLElement, fileName: string): void {
     });
   }
 
-  fireEvent.change(input, { target: { files: [file] } });
+  installLiveFileList(input, [file]);
+  fireEvent.change(input);
 }
 
 /**
@@ -287,5 +311,26 @@ describe('开发宿主新增素材', () => {
     expect(card.getAttribute('data-registered')).toBe('false');
     expect(card.classList.contains('is-unregistered')).toBe(true);
     expect(cardCount(container)).toBe(DEMO_TEXTURE_COUNT + 1);
+  });
+
+  // 白名单外的类型不产生卡片，并在界面上给出「不支持的素材格式」提示
+  it('选中 .txt 不产生卡片并提示不支持', async () => {
+    const { core } = await createHost();
+    const container = await openAssetPanel(core);
+
+    await waitFor((): void => {
+      expect(cardOf(container, 'hero.png')).not.toBeNull();
+    });
+
+    const before = cardCount(container);
+
+    pickFile(container, 'notes.txt', 'text/plain');
+
+    await waitFor((): void => {
+      expect(document.body.textContent).toContain('不支持的素材格式');
+    });
+
+    expect(cardCount(container)).toBe(before);
+    expect(cardOf(container, 'notes.txt')).toBeNull();
   });
 });

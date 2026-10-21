@@ -3,7 +3,7 @@ import { createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AssetCategoryKind, AssetListFormat, IAssetCategory } from '../../react';
 import { AssetPanelView } from '../components';
-import { AssetPanelMode, AssetPanelStatus, IAssetEntry, IAssetPanelViewState } from '../types';
+import { AssetPanelMode, AssetPanelStatus, IAssetEntry, IAssetPanelViewState, IAssetUpload } from '../types';
 
 // jsdom 没有实现 `URL.createObjectURL`，预览组件却要在挂载后靠它把字节变成地址；这里只补这两个静态方法，
 // 不整体替换 `URL` 构造器，避免影响其它依赖 `URL` 的代码
@@ -132,6 +132,78 @@ function renderViewWithBytes(
   loadBytes: (path: string) => Promise<Uint8Array | undefined>,
 ): ReturnType<typeof render> {
   return render(createElement(AssetPanelView, { view, loadBytes, onSelectCategory: noopSelect }));
+}
+
+/** 上传相关的一组回调 */
+interface IUploadHandlers {
+  /** 通过白名单校验后的新增回调 */
+  readonly onAddAsset: (upload: IAssetUpload) => void;
+  /** 被白名单拒绝时的提示回调 */
+  readonly onReject: (reason: string) => void;
+}
+
+/**
+ * 把隐藏的文件选择框换成真实浏览器语义：`files` 返回同一个数组，`value` 被置空时把该数组就地清空
+ * @param input 文件选择框
+ * @param files 本次选择得到的文件列表（与 `files` 返回的是同一个数组）
+ */
+function installLiveFileList(input: HTMLInputElement, files: File[]): void {
+  let value = '';
+
+  Object.defineProperty(input, 'files', {
+    configurable: true,
+    get: (): File[] => files,
+  });
+  Object.defineProperty(input, 'value', {
+    configurable: true,
+    get: (): string => value,
+    set: (next: string): void => {
+      value = next;
+      if (next === '') files.length = 0;
+    },
+  });
+}
+
+/**
+ * 造一个带字节的文件；jsdom 的 File 若缺少 `arrayBuffer` 就补一个同义方法
+ * @param name 文件名
+ * @param bytes 文件字节
+ * @param type MIME 类型
+ * @returns 文件对象
+ */
+function createFile(name: string, bytes: Uint8Array, type: string): File {
+  const copy = new Uint8Array(bytes.length);
+
+  copy.set(bytes);
+
+  const file = new File([copy], name, { type });
+
+  if (typeof file.arrayBuffer !== 'function') {
+    Object.defineProperty(file, 'arrayBuffer', {
+      configurable: true,
+      value: async (): Promise<ArrayBuffer> => copy.buffer,
+    });
+  }
+
+  return file;
+}
+
+/**
+ * 渲染视图并注入新增 / 拒绝回调
+ * @param view 要渲染的面板视图状态
+ * @param handlers 上传相关的一组回调
+ * @returns 渲染结果
+ */
+function renderViewWithUpload(view: IAssetPanelViewState, handlers: IUploadHandlers): ReturnType<typeof render> {
+  return render(
+    createElement(AssetPanelView, {
+      view,
+      loadBytes: noBytes,
+      onSelectCategory: noopSelect,
+      onAddAsset: handlers.onAddAsset,
+      onReject: handlers.onReject,
+    }),
+  );
 }
 
 /** 预览用例的假字节：内容无关紧要，只表示「读到了字节」 */
@@ -462,5 +534,43 @@ describe('素材面板视图', () => {
         faces.some((face) => face.textContent?.includes('@font-face') && face.textContent.includes('blob:test')),
       ).toBe(true);
     });
+  });
+
+  // 新增入口的选择框提示按当前分类的白名单后缀给出，不再是什么文件都能选
+  it('新增入口 accept 是当前分类的白名单后缀', () => {
+    const { container } = renderView(makeView({}));
+    const accept = container.querySelector('[data-test-id="asset-toolbar-add-input"]')?.getAttribute('accept') ?? '';
+
+    expect(accept).toContain('.png');
+    expect(accept).not.toContain('.txt');
+  });
+
+  // 白名单外的文件被拒绝：onReject 拿到明确文案，新增回调一次都不调用
+  it('白名单外的文件走拒绝提示且不新增', async () => {
+    const onAddAsset = vi.fn();
+    const onReject = vi.fn();
+    const { container } = renderViewWithUpload(makeView({}), { onAddAsset, onReject });
+    const input = container.querySelector<HTMLInputElement>('[data-test-id="asset-toolbar-add-input"]');
+
+    if (input === null) throw new Error('未找到新增入口的文件选择框');
+
+    installLiveFileList(input, [createFile('readme.txt', new Uint8Array([1]), 'text/plain')]);
+    fireEvent.change(input);
+
+    await waitFor((): void => {
+      expect(onReject).toHaveBeenCalledTimes(1);
+    });
+
+    expect(String(onReject.mock.calls[0][0])).toContain('不支持的素材格式');
+    expect(onAddAsset).not.toHaveBeenCalled();
+  });
+
+  // 替换入口的提示由 AssetDetail 按 kind 自己算，与工具栏的大类清单一致
+  it('替换入口 accept 是该大分类的内置清单', () => {
+    const view = makeView({ entries: [entry('hero.png', true)], selectedName: 'hero.png' });
+    const { container } = renderView(view);
+    const accept = container.querySelector('[data-test-id="asset-detail-replace-input"]')?.getAttribute('accept');
+
+    expect(accept).toBe('.png,.jpg,.jpeg,.webp,.gif,.bmp');
   });
 });

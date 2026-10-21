@@ -6,6 +6,7 @@ import {
   ASSET_UNREGISTER_CONFIRM_TEXT,
   ASSET_UNREGISTER_FINAL_CONFIRM_TEXT,
 } from '../constants';
+import { resolveKindFileExtensions } from '../model/internal/assetFileTypes';
 import { IAssetEntry, IAssetUpload } from '../types';
 import { AssetFileInfo } from './AssetFileInfo';
 import { AssetFileInput } from './AssetFileInput';
@@ -103,6 +104,7 @@ export function AssetDetail(props: IAssetDetailProps): ReactElement {
         <AssetFileInput
           label="替换"
           testId="asset-detail-replace"
+          accept={resolveKindFileExtensions(props.kind).join(',')}
           onPick={(upload): void => {
             props.onReplace?.(upload);
           }}

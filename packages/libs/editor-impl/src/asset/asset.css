@@ -5,6 +5,7 @@
   --easset-danger-fg: #d4380d;
   --easset-unregistered-bg: #fffbe6;
   --easset-unregistered-fg: #ad8b00;
+  --easset-unregistered-strong: #7a5d00;
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -193,6 +194,11 @@
   color: var(--easset-missing-fg);
 }
 
+.asset-card.is-unregistered {
+  border-color: var(--easset-unregistered-strong);
+  box-shadow: inset 0 0 0 2px var(--easset-unregistered-strong);
+}
+
 .asset-card:focus-visible {
   outline: 2px solid var(--editor-accent, #1677ff);
 }
@@ -263,6 +269,17 @@
   padding: 0 4px;
   border-radius: 4px;
   background: var(--easset-missing-fg);
+  color: #ffffff;
+  font-size: 12px;
+}
+
+.asset-card-unregistered {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: var(--easset-unregistered-strong);
   color: #ffffff;
   font-size: 12px;
 }
