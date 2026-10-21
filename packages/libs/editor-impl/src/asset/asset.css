@@ -6,6 +6,10 @@
   --easset-unregistered-bg: #fffbe6;
   --easset-unregistered-fg: #ad8b00;
   --easset-unregistered-strong: #7a5d00;
+  /* 未落盘提示：只给工具栏保存按钮用，含义是「有东西没保存」而不是「危险操作」 */
+  --easset-unsaved-bg: #fff1b8;
+  --easset-unsaved-border: #d48806;
+  --easset-unsaved-fg: #7a4f01;
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -55,6 +59,14 @@
 .asset-toolbar-size-slider {
   width: 120px;
   margin: 0;
+}
+
+.asset-panel .asset-toolbar-save.is-unsaved,
+.asset-panel .asset-toolbar-save.is-unsaved:hover,
+.asset-panel .asset-toolbar-save.is-unsaved:focus {
+  border-color: var(--easset-unsaved-border);
+  background: var(--easset-unsaved-bg);
+  color: var(--easset-unsaved-fg);
 }
 
 .asset-panel-error {

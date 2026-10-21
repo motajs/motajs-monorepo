@@ -3,6 +3,7 @@ import { createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AssetCategoryKind, AssetListFormat, IAssetCategory } from '../../react';
 import { AssetPanelView } from '../components';
+import assetCss from '../asset.css?inline';
 import { AssetPanelMode, AssetPanelStatus, IAssetEntry, IAssetPanelViewState, IAssetUpload } from '../types';
 
 // jsdom 没有实现 `URL.createObjectURL`，预览组件却要在挂载后靠它把字节变成地址；这里只补这两个静态方法，
@@ -134,6 +135,25 @@ function renderViewWithBytes(
   return render(createElement(AssetPanelView, { view, loadBytes, onSelectCategory: noopSelect }));
 }
 
+/**
+ * 从样式文本里取出某个选择器所在规则的正文
+ * @param css 样式全文
+ * @param selector 选择器
+ * @returns 规则块正文；未找到时为空串
+ */
+function ruleBody(css: string, selector: string): string {
+  const start = css.indexOf(selector);
+
+  if (start === -1) return '';
+
+  const open = css.indexOf('{', start);
+  const end = css.indexOf('}', open);
+
+  if (open === -1 || end === -1) return '';
+
+  return css.slice(open, end);
+}
+
 /** 上传相关的一组回调 */
 interface IUploadHandlers {
   /** 通过白名单校验后的新增回调 */
@@ -255,6 +275,37 @@ describe('素材面板视图', () => {
     expect(container.textContent).toContain('正在加载素材…');
     expect(container.querySelector('[data-test-id="asset-toolbar-save"]')?.hasAttribute('disabled')).toBe(true);
     expect(container.querySelector('[data-test-id="asset-toolbar-add"]')?.hasAttribute('disabled')).toBe(true);
+  });
+
+  // 有未保存改动：保存按钮带 is-unsaved 状态类，并且是可点的（黄色 = 有东西没保存）
+  it('有未保存改动时保存按钮带 is-unsaved 且可点', () => {
+    const { container } = renderView(makeView({ unsaved: true }));
+    const button = container.querySelector('[data-test-id="asset-toolbar-save"]');
+
+    expect(button?.classList.contains('is-unsaved')).toBe(true);
+    expect(button?.hasAttribute('disabled')).toBe(false);
+  });
+
+  // 没有未保存改动：保存按钮不带 is-unsaved，仍是普通禁用态（黄色与禁用是两件事）
+  it('没有未保存改动时保存按钮不黄且禁用', () => {
+    const { container } = renderView(makeView({ unsaved: false }));
+    const button = container.querySelector('[data-test-id="asset-toolbar-save"]');
+
+    expect(button?.classList.contains('is-unsaved')).toBe(false);
+    expect(button?.hasAttribute('disabled')).toBe(true);
+  });
+
+  // 黄色样式确实落地：三个颜色变量有定义，未保存规则体引用了它们
+  it('未保存样式规则使用三个颜色变量', () => {
+    const rule = ruleBody(assetCss, '.asset-panel .asset-toolbar-save.is-unsaved');
+    const variables = ruleBody(assetCss, '.asset-panel');
+
+    expect(rule).toContain('--easset-unsaved-bg');
+    expect(rule).toContain('--easset-unsaved-border');
+    expect(rule).toContain('--easset-unsaved-fg');
+    expect(variables).toContain('--easset-unsaved-bg');
+    expect(variables).toContain('--easset-unsaved-border');
+    expect(variables).toContain('--easset-unsaved-fg');
   });
 
   // 空态：显示标题与上传引导两句文案

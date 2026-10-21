@@ -44,6 +44,7 @@ export interface IAssetToolbarProps {
  * @returns 工具栏元素
  */
 export function AssetToolbar(props: IAssetToolbarProps): ReactElement {
+  // 黄色只表示有东西没保存；没有改动时仍是普通禁用态（§J）
   return (
     <div className="asset-toolbar" data-test-id="asset-toolbar">
       <span className="asset-toolbar-title" title={props.title}>
@@ -71,6 +72,7 @@ export function AssetToolbar(props: IAssetToolbarProps): ReactElement {
           瘦身转码
         </Button>
         <Button
+          className={props.unsaved ? 'asset-toolbar-save is-unsaved' : 'asset-toolbar-save'}
           size="small"
           autoInsertSpace={false}
           disabled={!props.unsaved || props.disabled}

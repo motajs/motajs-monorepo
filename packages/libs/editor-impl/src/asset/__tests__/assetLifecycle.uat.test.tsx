@@ -93,8 +93,8 @@ function isDisabled(element: Element | null): boolean {
 }
 
 describe('素材字节生命周期', () => {
-  // ① 新增一张图片：字节文件立即落盘、内存条目多一条、该分类标记未保存
-  it('新增素材立即写入字节并追加内存条目', async () => {
+  // ① 新增一张图片：字节文件立即落盘、内存条目多一条、并自动写回列表（保存按钮回到禁用态）
+  it('新增素材立即写入字节、追加内存条目并自动写回列表', async () => {
     const fs = new FakeFileSystem();
 
     fs.seed('content/texture/.list.jsonc', listText({ textures: [] }));
@@ -108,11 +108,12 @@ describe('素材字节生命周期', () => {
     const bytes = await fs.readBinary('content/texture/hero.png');
 
     expect(Array.from(bytes)).toEqual([1, 2, 3]);
+    expect(await fs.readFile('content/texture/.list.jsonc')).toContain('"source": "hero.png"');
 
     const container = renderPanel(panel);
 
     expect(entryNames(container)).toEqual(['asset-card-hero.png']);
-    expect(isDisabled(saveButton(container))).toBe(false);
+    expect(isDisabled(saveButton(container))).toBe(true);
   });
 
   // ② 新增后保存：列表正文含新名字，且系统前缀逐字保留在首行

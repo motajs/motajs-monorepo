@@ -13,8 +13,8 @@ import {
   seedUnregisteredAssetDemo,
 } from '../demo/assetDemo';
 
-// 开发宿主「新增素材」的顶层集成验证：经外壳打开素材面板、用工具栏真实的文件选择框选一个文件、
-// 点真实的保存按钮，再用注入的内存文件系统证明「界面 → 数据层 → 文件」这条链路贯通。
+// 开发宿主「新增素材」的顶层集成验证：经外壳打开素材面板、用工具栏真实的文件选择框选一个文件，
+// 再用注入的内存文件系统证明「界面 → 数据层 → 文件」这条链路贯通（新增现在当场自动落盘，不再点保存）。
 // 本文件不改 editor-impl 的任何行为，也不把浏览器刷新当作验收条件：内存后端刷新即重新 seed，
 // 「重新切入」只用外壳的关闭标签页 / 新开标签页，以及同一个内存文件系统上的第二个核心。
 // jsdom 没有实现 `URL.createObjectURL`，卡片与详情预览却要靠它把字节变成地址；只补这两个静态方法，
@@ -183,11 +183,11 @@ function pickFile(container: HTMLElement, fileName: string, type = 'image/png'):
 }
 
 /**
- * 选一个文件、等新卡片出现、点保存并等列表真的落盘
+ * 选一个文件、等新卡片出现，并等列表真的自动落盘
  * @param container 渲染容器
  * @param backend 注入的内存后端
  */
-async function addAndSave(container: HTMLElement, backend: MemoryBackend): Promise<void> {
+async function addAssetFile(container: HTMLElement, backend: MemoryBackend): Promise<void> {
   await waitFor((): void => {
     expect(cardOf(container, 'hero.png')).not.toBeNull();
   });
@@ -197,12 +197,6 @@ async function addAndSave(container: HTMLElement, backend: MemoryBackend): Promi
   await waitFor((): void => {
     expect(cardOf(container, PICKED_TEXTURE_NAME)).not.toBeNull();
   });
-
-  const saveButton = container.querySelector('[data-test-id="asset-toolbar-save"]');
-
-  if (saveButton === null) throw new Error('未找到保存按钮');
-
-  fireEvent.click(saveButton);
 
   await waitFor(async (): Promise<void> => {
     const text = await backend.readFile(TEXTURE_LIST_PATH);
@@ -234,12 +228,12 @@ describe('开发宿主新增素材', () => {
     expect(cardCount(container)).toBe(before + 1);
   });
 
-  // 点保存后列表含新名字、系统前缀逐字不变，字节文件与选中的文件完全一致
-  it('保存后列表含新名字且系统前缀不变', async () => {
+  // 新增后自动落盘：列表含新名字、系统前缀逐字不变，字节文件与选中的文件完全一致
+  it('新增后自动落盘且系统前缀不变', async () => {
     const { core, backend } = await createHost();
     const container = await openAssetPanel(core);
 
-    await addAndSave(container, backend);
+    await addAssetFile(container, backend);
 
     const text = await backend.readFile(TEXTURE_LIST_PATH);
     const written = Array.from(await backend.readBinary(`content/texture/${PICKED_TEXTURE_NAME}`));
@@ -257,7 +251,7 @@ describe('开发宿主新增素材', () => {
     const container = await openAssetPanel(core);
     const tabId = core.shellSystem.listTabs()[0].id;
 
-    await addAndSave(container, backend);
+    await addAssetFile(container, backend);
 
     await act(async (): Promise<void> => {
       await core.shellSystem.closeTab(tabId);
@@ -281,7 +275,7 @@ describe('开发宿主新增素材', () => {
     const { core, backend } = await createHost();
     const container = await openAssetPanel(core);
 
-    await addAndSave(container, backend);
+    await addAssetFile(container, backend);
 
     const second = new EditorCore();
 

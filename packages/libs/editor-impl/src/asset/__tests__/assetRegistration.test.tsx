@@ -130,7 +130,7 @@ describe('未登记素材的注册与注销', () => {
     expect(body).not.toContain('extra.png');
   });
 
-  // ② 注册未登记文件：该分类标记未保存，保存后名字进列表
+  // ② 注册后自动落盘：保存按钮回到禁用态，列表已含该名字
   it('注册后标记未保存且保存写进列表', async () => {
     const fs = new FakeFileSystem();
 
@@ -145,8 +145,9 @@ describe('未登记素材的注册与注销', () => {
 
     const container = renderPanel(panel);
 
-    expect(isDisabled(saveButton(container))).toBe(false);
+    expect(isDisabled(saveButton(container))).toBe(true);
     expect(entryNames(container)).toEqual(['asset-card-extra.png']);
+    expect(await readListBody(system, 'content/texture/.list.jsonc')).toContain('"source": "extra.png"');
 
     await panel.save();
 

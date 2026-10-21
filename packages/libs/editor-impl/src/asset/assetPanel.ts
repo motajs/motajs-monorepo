@@ -72,6 +72,8 @@ interface IAssetPanelState {
   entries: readonly IAssetEntry[];
   /** 该分类是否有未落盘的列表 / 配置改动 */
   unsaved: boolean;
+  /** 该分类是否已经成功读过一次；只有读过的分类才允许写盘，否则空内存会把整份列表覆盖掉 */
+  loaded: boolean;
   /** 该分类最近一次加载的请求序号，用于丢弃过期结果 */
   token: number;
 }
@@ -415,7 +417,11 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
     await this.loadCategory(categoryId);
   }
 
-  async onSwitchOut(): Promise<void> {}
+  async onSwitchOut(): Promise<void> {
+    // 面板失去当前状态时把各分类未落盘的改动统一写盘，避免「切走就丢」；没读过的分类由
+    // AssetPanel.writeCategory 的守卫挡掉，写失败由它保留未保存标记并提示（§J）
+    await this.save();
+  }
 
   async onFocus(): Promise<void> {}
 
@@ -511,6 +517,7 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
       );
 
       state.entries = [...registeredEntries, ...unregisteredEntries];
+      state.loaded = true;
       this.publish(state.entries.length === 0 ? AssetPanelStatus.Empty : AssetPanelStatus.Ready);
     } catch {
       if (state.token !== token) return;
@@ -521,6 +528,7 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
 
   async save(): Promise<void> {
     const ids = [...this.states.keys()];
+    let written = false;
 
     for (const categoryId of ids) {
       const state = this.states.get(categoryId);
@@ -531,8 +539,11 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
 
       if (category === undefined) continue;
 
-      await this.writeCategory(categoryId, category, state);
+      // 被守卫跳过与写盘失败都返回 false，因此「什么都没写却弹已保存」不可能出现
+      if (await this.writeCategory(categoryId, category, state)) written = true;
     }
+
+    if (written) antdMessage.success('已保存');
   }
 
   /**
@@ -552,7 +563,8 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
   }
 
   /**
-   * 新增一个素材：清洗文件名、校验体积与同名，写入字节文件并往内存列表追加一条（字节改动 = 屏障）
+   * 新增一个素材：清洗文件名、校验体积与同名，写入字节文件、往内存列表追加一条（字节改动 = 屏障），
+   * 并当场把当前分类写盘
    * @param upload 上传的原始文件名与字节
    */
   async addAsset(upload: IAssetUpload): Promise<void> {
@@ -598,8 +610,9 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
     entries.push({ name, path, config, exists: true, registered: true });
     state.entries = entries;
     state.unsaved = true;
-    this.publish(AssetPanelStatus.Ready, '已新增素材，请记得保存');
     this.registerBarrier({ action: 'add', path });
+    // 新增就是「想让它进游戏」：当场把当前分类写盘，第二块面板才可能立刻看到它已登记（§J）
+    await this.writeCategory(category.id, category, state, '已新增素材并保存');
   }
 
   /**
@@ -683,7 +696,7 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
   }
 
   /**
-   * 把一个未登记素材登记进内存列表：配置按 defaults 合并，标记未保存（仍走手动保存）
+   * 把一个未登记素材登记进内存列表（配置按 defaults 合并），并当场把当前分类写盘
    * @param name 要登记的素材名
    */
   async registerAsset(name: string): Promise<void> {
@@ -713,7 +726,8 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
     };
     state.entries = entries;
     state.unsaved = true;
-    this.publish(AssetPanelStatus.Ready, '已注册素材，请记得保存');
+    // 注册同样当场写盘：用户点「注册到游戏」就是要它进列表，不该再要求按一次保存（§J）
+    await this.writeCategory(category.id, category, state, '已注册素材并保存');
   }
 
   /**
@@ -963,7 +977,14 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
 
     if (existing !== undefined) return existing;
 
-    const created: IAssetPanelState = { listDocument: undefined, prefix: '', entries: [], unsaved: false, token: 0 };
+    const created: IAssetPanelState = {
+      listDocument: undefined,
+      prefix: '',
+      entries: [],
+      unsaved: false,
+      loaded: false,
+      token: 0,
+    };
 
     this.states.set(categoryId, created);
 
@@ -1316,12 +1337,30 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
   }
 
   /**
-   * 写回某分类的列表资源并把失败隔离成提示
+   * 写回某分类的列表资源并把失败隔离成提示；这是全仓唯一的写盘点，`loaded` 守卫也放在这里，
+   * 自动保存（新增 / 注册）、手动保存、切出写盘三条路径因此共用同一条守卫
    * @param categoryId 分类标识
    * @param category 素材分类
    * @param state 该分类的内部状态
+   * @param successNotice 写成功后的提示文案；不传只刷新状态、不弹提示
+   * @returns 是否真的把列表写到了磁盘；被守卫跳过与写盘失败都是 false
    */
-  private async writeCategory(categoryId: string, category: IAssetCategory, state: IAssetPanelState): Promise<void> {
+  private async writeCategory(
+    categoryId: string,
+    category: IAssetCategory,
+    state: IAssetPanelState,
+    successNotice?: string,
+  ): Promise<boolean> {
+    // 没成功读过的分类，内存不能代表磁盘：此时写盘会把整份列表覆盖成一条或空表（T-03-39-02）
+    if (!state.loaded) {
+      const guardText = '分类尚未读取，未写入列表，请关闭并重新打开面板后重试。';
+
+      antdMessage.error(guardText);
+      if (categoryId === this.currentCategoryId) this.publish(this.store.state.status, undefined, guardText);
+
+      return false;
+    }
+
     const document = writeAssetList(category, this.toListEntries(state.entries), state.listDocument);
     const text = serializeTableText(document, state.prefix);
 
@@ -1335,10 +1374,24 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
       state.listDocument = document;
 
       if (categoryId === this.currentCategoryId) {
-        this.publish(state.entries.length === 0 ? AssetPanelStatus.Empty : AssetPanelStatus.Ready, '已保存');
+        this.publish(state.entries.length === 0 ? AssetPanelStatus.Empty : AssetPanelStatus.Ready, successNotice);
       }
+
+      return true;
     } catch {
-      if (categoryId === this.currentCategoryId) this.publish(AssetPanelStatus.Ready, '写入失败，请重试。');
+      // 切出时写的是别的分类，用户同样得知道没存上：全局提示不分当前分类
+      const failureText = '保存失败，改动仍未落盘，请重试。';
+
+      antdMessage.error(failureText);
+      if (categoryId === this.currentCategoryId) {
+        this.publish(
+          state.entries.length === 0 ? AssetPanelStatus.Empty : AssetPanelStatus.Ready,
+          undefined,
+          failureText,
+        );
+      }
+
+      return false;
     }
   }
 }
