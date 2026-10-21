@@ -634,3 +634,51 @@
 5. **未登记素材不进转码候选。** 它们还没进游戏，转码只会制造一个改名的未登记文件。
 6. **注销两个弹窗的文案与按钮**：第一个「取消 / 继续」，第二个「取消 / 确认注销」；两个弹窗都禁用遮罩与 ESC 关闭。
 7. **默认档（2026-10-20 复核修订）：图片默认无损压缩（质量 100），不改成 92。** 无损 WebP 本身已经压得够小，而本工程的素材以像素风为主、有损压缩会明显发糊；「常规压缩 92」「体积优先 80」仍保留为可选项。音频默认仍是常规压缩（128 kbps + 48 kHz）。
+
+---
+
+# UAT 追加修复（2026-10-21，**待用户确认**）
+
+> 本节接在 03-37 之后，编号 03-38。只新增名称，已确认的 03-01…03-37 各节一个字未改。
+> 本批**纯实现、零公开接口变更**：`IAssetCategory` / `IAssetDetailProps` / `IAssetFileInputProps` 一个都不动，后缀白名单只是面板内置默认值（`03-CONTEXT.md` §G）。
+> 下表里标「包内私有」的名称都落在 **`asset/model/internal/`**——这个子目录**没有 `index.ts`**，`model/index.ts` / `asset/index.ts` 也不转发它，所以只被同包文件直接 import，既不构成公开契约，也没有给「桶文件必须导出该文件夹全部导出项」开例外，不需要先走一份纯接口计划。
+
+## Plan 03-38 — 选文件顺序 + 分类后缀白名单 + 未登记黄卡可见 **待用户确认**
+
+**要做什么：** 修「选完文件没反应」（顺序）、给面板内置一份常见后缀白名单（新增 / 替换 / 未登记扫描三处同一套判断）、把未登记的黄色从缩略图底色挪到卡片边框与内描边上并加一个「未登记」标记。注册后「配置不符合该分类的字段定义」按 §I 明确不做。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `src/asset/model/internal/assetFileTypes.ts` | 新增文件（`asset/model/internal/`，**包内私有、无桶**） | 后缀白名单的唯一落点：四类内置清单、判定函数、拒绝文案。纯常量 + 裸函数，无状态；放在没有 `index.ts` 的子目录，不被 `model/index.ts` 转发 |
+| `ASSET_IMAGE_FILE_EXTENSIONS` | 常量（`readonly string[]`，**包内私有**） | 图片分类的默认可选后缀：`.png` / `.jpg` / `.jpeg` / `.webp` / `.gif` / `.bmp` |
+| `ASSET_AUDIO_FILE_EXTENSIONS` | 常量（同类型，**包内私有**） | 音频分类的默认可选后缀：`.mp3` / `.wav` / `.flac` / `.ogg` / `.m4a` / `.aac` / `.opus` / `.webm` |
+| `ASSET_ANIMATION_FILE_EXTENSIONS` | 常量（同类型，**包内私有**） | 动画分类的默认可选后缀：`.anim` |
+| `ASSET_FONT_FILE_EXTENSIONS` | 常量（同类型，**包内私有**） | 字体分类的默认可选后缀：`.ttf` / `.otf` / `.woff` / `.woff2` |
+| `resolveAssetFileExtensions` | 函数（`category` → 后缀数组，**包内私有**） | 当前分类能收哪些后缀：分类自带 `extension` 时**只**返回它，否则转调 `resolveKindFileExtensions`。新增入口与扫描共用 |
+| `resolveKindFileExtensions` | 函数（`AssetCategoryKind` → 后缀数组，**包内私有**） | 只按大分类给内置清单。给「手上只有 `kind`、没有分类对象」的 `AssetDetail` 用来自算替换入口的 `accept` 提示，避免为一个提示串新增 props |
+| `isAssetFileAccepted` | 函数（`category` + 文件名 → boolean，**包内私有**） | 某个文件名是否属于当前分类：取最后一个点后的后缀、转小写后比对；没有点或点在第 0 位时为 false（`.gitignore` 不算素材） |
+| `ASSET_UNSUPPORTED_EXTENSION_PREFIX` | 常量（**包内私有**） | 拒绝文案的前半句：「不支持的素材格式，当前分类只接受：」 |
+| `unsupportedAssetExtensionMessage` | 函数（后缀数组 → 文案，**包内私有**） | 拼出给用户看的完整拒绝文案（前缀 + 后缀用「、」连接），由视图交给 `onReject` |
+| `assetFileInput.test.tsx` | 新增测试文件（`asset/__tests__/`） | 文件选择顺序的回归：用「活文件列表」替身让清空 `value` 真的把列表清空，钉死「先取文件、后清空」 |
+| `installLiveFileList` | 测试文件内私有 helper（两个测试文件各一份同义实现） | 把隐藏的文件选择框换成真实浏览器语义：`files` 返回同一个数组，`value` 被置空时把该数组就地清空 |
+| `assetFileTypes.test.ts` | 新增测试文件（`asset/model/__tests__/`） | 四类默认表、`extension` 优先、大小写不敏感、无后缀拒绝、拒绝文案 |
+| `--easset-unregistered-strong` | 新增 CSS 变量（`#7a5d00`） | 未登记的深黄色：用于卡片边框、内描边与徽标底色。现有 `--easset-unregistered-fg`（`#ad8b00`）配白字对比度不足，故单独加一个更深的色 |
+| `.asset-card.is-unregistered` | 新增 CSS 规则（同名类 03-34 已有，本计划补规则） | 卡片自身的可见标记：`border-color` + `box-shadow: inset 0 0 0 2px`，用内阴影避免加粗边框导致卡片尺寸跳动 |
+| `.asset-card-unregistered` | 新增 CSS 类（卡片内的标记节点） | 「未登记」三个字的徽标样式：绝对定位左上角、深黄底、白字、12px |
+| `asset-card-unregistered-{name}` | 新增 `data-test-id` | 某张未登记卡片上的标记节点，供测试断言「标记不在缩略图内部、不会被图片盖住」 |
+
+> 本表**没有**新增任何 interface 成员：`IAssetDetailProps` 保持原样（不加 `replaceAccept`），`AssetDetail` 用自己已有的 `kind` 推出替换入口的提示串；`IAssetCategory` 也不加字段。
+
+### 口径（请一并确认，**待用户确认**）
+
+1. **`extension` 优先是「只认它」而不是「再加一个」。** 这与 `collectUnregisteredAssetNames` 里既有的「名字反推路径必须逐字相等」一致：声明了 `.anim` 的分类不会收 `.png`。当前只有动画分类声明了 `extension`，图片 / 音频不受影响。
+2. **后缀比较大小写不敏感，名字保留原样。** `.PNG` 会被接受，登记名仍是用户选中的原文件名。
+3. **校验点只放三个界面入口（工具栏新增、详情栏替换、未登记扫描），不在 `AssetPanel.addAsset` / `AssetPanel.replaceAsset` 再加一道。** 理由是「什么类型能进这个分类」属于输入策略，不是数据格式不变量；数据层再加一道会产生第二套错误文案，且会挡住宿主 / 测试的程序化调用。若以后要防程序化调用，另起计划给数据层加错误码，不复用界面文案。
+4. **拒绝文案放在 `asset/model/internal/assetFileTypes.ts`，不搬进 `asset/constants.ts`。** 它由后缀表拼出来，和后缀表同源才不会改了一处忘了另一处。
+5. **黄色用「卡片边框 + 内描边 + 卡级徽标」三件套，徽标必须在缩略图之外。** 底色与内阴影都可能被不透明的 `<img>` 盖住，只有卡片级、绝对定位的节点一定画在图片上面。
+6. **徽标文案就是「未登记」。** 放左上角，缺失徽标（`asset-card-missing`）仍在右上角，两者不会重叠。
+7. **替换入口的提示由 `AssetDetail` 自己按 `kind` 算，不加 props。** 工具栏沿用 03-11 就有、一直没接线的 `addAccept`（不改名、不删除）；注释 1 里「分类用 `extension` 收窄」时，替换入口的提示会比最终判定宽一档（显示该大类全部后缀），选中后仍由视图按分类拒绝并给出精确清单——只影响选择体验，不影响正确性。
+8. **收窄是明确的取舍，不是遗漏。** `.svg`（图片）与 `.oga`（音频）虽然 `resolveAssetMime` 认得，但不在 §G 的建议清单里，因此不再算未登记候选；无后缀文件一律不算候选。副作用：已登记的无后缀素材被「注销」后会从卡片列表消失（字节文件仍在）。若要保住这两类，需要另开计划并先与你确认，不能在本批偷偷加回去。
+9. **白名单模块放 `model/internal/` 而不是 `model/`：这是为了同时满足两条项目规则。** `model/` 是有桶的受管目录，规则要求「桶文件一律 `export *`、该文件夹的导出项都要导出」；而白名单必须保持私有。直接放 `model/` 就只有「违反桶规则」或「给桶文件开一个不导出某项的例外」两条路——全仓库目前没有这种例外，不开先例。放进**没有 `index.ts` 的子目录**（`model/internal/`，与既有的 `model/__tests__/` 同为无桶子目录）后：桶规则不适用于它，`model/index.ts` / `asset/index.ts` 也不引用它，公开面保持不变。**不要**在 `model/internal/` 里新建 `index.ts`。
+10. **判定只写一次，提示分两处。** 「能不能收」是 `isAssetFileAccepted` 一个谓词（新增、替换、扫描三处都调它）；「选择框提示串」是纯 UI 便利：新增由 `AssetPanelView` 按分类算，替换由 `AssetDetail` 按 `kind` 算。不要为了复用提示串而给 `AssetDetail` 加 props。
+
