@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: 4
 current_phase_name: 地图编辑
-current_plan: 9
+current_plan: 10
 status: executing
-stopped_at: Completed 04-08-PLAN.md
-last_updated: "2026-10-21T11:04:32.157Z"
+stopped_at: Completed 04-09-PLAN.md
+last_updated: "2026-10-21T12:12:14.494Z"
 last_activity: 2026-10-21
 last_activity_desc: Phase 3 complete, transitioned to Phase 4
-state_head: 2e5dd0ed0edf72845739ab370c0306523d789270
+state_head: 85879c1f4eb8912a9da1c432c4106bdc07e46ba1
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 121
-  completed_plans: 113
+  completed_plans: 115
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 4 (地图编辑) — EXECUTING
-Current Plan: 9
+Current Plan: 10
 Total Plans in Phase: 16
 Status: Ready to execute
 Last activity: 2026-10-21 — 04-01 complete (naming report + map domain types)
@@ -133,6 +133,7 @@ Progress: [██████████] 100%
 | Phase 04 P15 | 16 min | 1 tasks | 2 files |
 | Phase 4 P07 | 15min | 3 tasks | 3 files |
 | Phase 04-map P08 | 55min | 3 tasks | 7 files |
+| Phase 4 P09 | 30min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -307,6 +308,8 @@ Recent decisions affecting current work:
 - [Phase 4]: 04-08: 四个丢改动入口共用 MapPanel.requestUnsavedDecision；三个弹窗按钮只把 MapUnsavedChoice 交给 MapPanel.resolveUnsavedDecision，失败时不继续原操作
 - [Phase 4]: 04-08: 宿主新建 / 加层成功后立即 captureBaseline 并登记屏障；宿主加层接口只收地图标识，新层名由面板在返回文档的末层补写
 - [Phase 4]: 04-08: 最近使用读写经资源层；读取带序号，落笔 / 清除推进序号以丢弃晚到的旧读取，写失败静默降级
+- [Phase 4]: 表单模式只藏表格工具栏与 Schema 横幅，字段行与校验一行不改 — 表格整包测试作为回归闸门，属性表单与表格表单共用同一套控件与字段路径
+- [Phase 4]: 地图属性按域保存：一次字段提交一条撤销，保存整份属性表 — 与地图数据域一致，宿主收整表便于自行校验；只有脏了才打扰宿主
 
 ### Pending Todos
 
@@ -333,6 +336,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-21T11:04:31.627Z
-Stopped at: Completed 04-08-PLAN.md
+Last session: 2026-10-21T12:12:13.927Z
+Stopped at: Completed 04-09-PLAN.md
 Resume file: None
