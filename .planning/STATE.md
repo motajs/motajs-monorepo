@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: 4
 current_phase_name: 地图编辑
-current_plan: 14
+current_plan: 15
 status: executing
-stopped_at: Completed 04-12-PLAN.md
-last_updated: "2026-10-21T14:26:07.037Z"
+stopped_at: Completed 04-13-PLAN.md
+last_updated: "2026-10-21T16:42:09.942Z"
 last_activity: 2026-10-21
 last_activity_desc: Phase 3 complete, transitioned to Phase 4
-state_head: 651baec9c2a755c8a5671507cf9ddfeae10f7668
+state_head: 4560be1e285a167da570a092a90a573e5b73df83
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 121
-  completed_plans: 119
+  completed_plans: 120
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 4 (地图编辑) — EXECUTING
-Current Plan: 14
+Current Plan: 15
 Total Plans in Phase: 16
 Status: Ready to execute
 Last activity: 2026-10-21 — 04-01 complete (naming report + map domain types)
@@ -138,6 +138,7 @@ Progress: [██████████] 100%
 | Phase 4 P11 | 27 min | 3 tasks | 6 files |
 | Phase 04-map P16 | 14 min | 1 tasks | 4 files |
 | Phase 04 P12 | 63 min | 3 tasks | 8 files |
+| Phase 04 P13 | 1h 45m | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -322,6 +323,8 @@ Recent decisions affecting current work:
 - [Phase 4]: 04-16: group images are deduped by imagePath and blob URLs are revoked on unmount or paletteVersion change
 - [Phase 4]: 画布把本地 selection/preview/hover 补进视图算好的渲染模型；状态条搬进 MapCanvas 直接读本地状态
 - [Phase 4]: 大地图进入时存视口、退出时还原；图块目录为空时 canPaint + commitCells 双层守卫
+- [Phase 4]: 演示地图不存 height，由各层完整行数的最小值推导；参差层补 0 / 截断
+- [Phase 4]: 图层名由 addLayer 默认名 + 保存时面板当前名覆盖，两处都落盘
 
 ### Pending Todos
 
@@ -348,6 +351,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-21T14:26:06.503Z
-Stopped at: Completed 04-12-PLAN.md
+Last session: 2026-10-21T16:42:09.482Z
+Stopped at: Completed 04-13-PLAN.md
 Resume file: None
