@@ -542,6 +542,7 @@ export const TableGrid = memo(function TableGrid(props: ITableGridProps): ReactE
   const setMode = modeState[1];
   const capabilities = useTableCapabilities();
   const schemaMode = props.schemaMode ?? false;
+  const formMode = props.formMode ?? false;
   const loading = props.status === TablePanelStatus.Loading;
   const failed = props.status === TablePanelStatus.Error;
   const rows = useMemo((): ReactElement[] => {
@@ -556,29 +557,32 @@ export const TableGrid = memo(function TableGrid(props: ITableGridProps): ReactE
 
     return renderRows(props.rows, context, 0);
   }, [props.rows, mode, schemaMode, props.onChange, props.onAdd, props.onDelete, props.onOpenExternalEditor]);
-  const toolbar = createElement(TableToolbar, {
-    mode,
-    onModeChange: setMode,
-    title: props.title,
-    showSchemaButton: !schemaMode && !failed,
-    schemaButtonEnabled: capabilities.tablePanel !== undefined && !loading,
-    onOpenSchema: (): void => {
-      const opener = capabilities.tablePanel;
+  // 表单模式只呈现字段行与值控件：表格专属的工具栏与 Schema 横幅一概不构造
+  const toolbar = formMode
+    ? null
+    : createElement(TableToolbar, {
+        mode,
+        onModeChange: setMode,
+        title: props.title,
+        showSchemaButton: !schemaMode && !failed,
+        schemaButtonEnabled: capabilities.tablePanel !== undefined && !loading,
+        onOpenSchema: (): void => {
+          const opener = capabilities.tablePanel;
 
-      if (opener !== undefined) props.onOpenSchema?.(opener);
-    },
-    codeButtonEnabled: capabilities.codeEditor !== undefined,
-    onOpenInCodeEditor: (): void => {
-      const opener = capabilities.codeEditor;
+          if (opener !== undefined) props.onOpenSchema?.(opener);
+        },
+        codeButtonEnabled: capabilities.codeEditor !== undefined,
+        onOpenInCodeEditor: (): void => {
+          const opener = capabilities.codeEditor;
 
-      if (opener !== undefined) props.onOpenInCodeEditor?.(opener);
-    },
-    onCloseColumn: props.onCloseColumn,
-    closeButtonEnabled: props.onCloseColumn !== undefined && props.status !== TablePanelStatus.NoTarget,
-    unsaved: props.unsaved,
-    onSave: props.onSave,
-  });
-  const banner = schemaMode ? createElement(SchemaBanner, {}) : null;
+          if (opener !== undefined) props.onOpenInCodeEditor?.(opener);
+        },
+        onCloseColumn: props.onCloseColumn,
+        closeButtonEnabled: props.onCloseColumn !== undefined && props.status !== TablePanelStatus.NoTarget,
+        unsaved: props.unsaved,
+        onSave: props.onSave,
+      });
+  const banner = schemaMode && !formMode ? createElement(SchemaBanner, {}) : null;
   const notice = renderNotice(props);
 
   if (props.status !== TablePanelStatus.Ready) {
