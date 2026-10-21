@@ -486,7 +486,7 @@ export class ShellSystem implements IShellSystem {
 
     const tabIds = this.tabs.filter((tab) => tab.typeId === typeId).map((tab) => tab.id);
 
-    for (const tabId of tabIds) await this.closeTab(tabId);
+    for (const tabId of tabIds) await this.discardTab(tabId);
 
     const leftover = [...this.instanceTypes.entries()].filter((entry) => entry[1] === typeId).map((entry) => entry[0]);
 
@@ -596,30 +596,30 @@ export class ShellSystem implements IShellSystem {
     }
 
     const tab = this.tabs[index];
-    const wasActive = this.activeTabId === tabId;
 
     if (tab.instanceId !== null) {
-      if (wasActive) this.leaveActiveInstance(tab.instanceId);
-      await this.closePanelInstance(tab.instanceId);
+      const instanceId = tab.instanceId;
+      const instance = this.instances.get(instanceId);
+
+      if (instance !== undefined && instance.onBeforeClose !== undefined) {
+        // 询问前先把目标标签切成活动标签：面板的未保存对话框需要挂在自己的 DOM 上才可能 settle
+        if (this.activeTabId !== tabId) this.activateTab(tabId);
+
+        let allowed = false;
+
+        try {
+          allowed = await instance.onBeforeClose();
+        } catch {
+          // 钩子自身出错时按「取消关闭」处理：数据安全优先，绝不把异常抛给点击关闭的人
+          logger.error('shell.beforeCloseFailed', this.instanceTypes.get(instanceId) ?? '');
+          return;
+        }
+
+        if (!allowed) return;
+      }
     }
 
-    this.tabs.splice(index, 1);
-
-    if (this.tabs.length === 0) {
-      this.openBlankTab();
-      return;
-    }
-
-    if (!wasActive) {
-      this.notify();
-      return;
-    }
-
-    const neighborIndex = index - 1 >= 0 ? index - 1 : index;
-
-    this.activeTabId = this.tabs[neighborIndex].id;
-    this.notify();
-    this.syncActiveInstance();
+    await this.discardTab(tabId);
   }
 
   activateTab(tabId: string): void {
@@ -752,6 +752,48 @@ export class ShellSystem implements IShellSystem {
     const activeTab = this.tabs.find((tab) => tab.id === this.activeTabId);
 
     return activeTab === undefined ? null : activeTab.instanceId;
+  }
+
+  /**
+   * 释放实例、移除标签并按需切邻，全程不询问面板：这是唯一真正移除标签的一段逻辑，
+   * `ShellSystem.closeTab` 在用户询问通过后复用它，`ShellSystem.unregisterPanelType` 直接复用它，
+   * 因此注销类型与释放 core 永远拿不到 `IEditorPanel.onBeforeClose`
+   * @param tabId 要移除的标签 id
+   */
+  private async discardTab(tabId: string): Promise<void> {
+    const index = this.tabs.findIndex((tab) => tab.id === tabId);
+
+    if (index === -1) {
+      logger.error('shell.tabNotFound', tabId);
+      return;
+    }
+
+    const tab = this.tabs[index];
+    // 必须在这里重新判定：为询问而激活过的后台标签，调用方手里的旧值仍是「非活动」，会跳过切邻
+    const wasActive = this.activeTabId === tabId;
+
+    if (tab.instanceId !== null) {
+      if (wasActive) this.leaveActiveInstance(tab.instanceId);
+      await this.closePanelInstance(tab.instanceId);
+    }
+
+    this.tabs.splice(index, 1);
+
+    if (this.tabs.length === 0) {
+      this.openBlankTab();
+      return;
+    }
+
+    if (!wasActive) {
+      this.notify();
+      return;
+    }
+
+    const neighborIndex = index - 1 >= 0 ? index - 1 : index;
+
+    this.activeTabId = this.tabs[neighborIndex].id;
+    this.notify();
+    this.syncActiveInstance();
   }
 
   /**
