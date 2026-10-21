@@ -638,6 +638,8 @@ export class MapPanel implements IEditorPanel, IMapPanel {
       this.targetMapId = document.id;
       this.captureBaseline();
       this.registerBarrier({ action: MapBarrierAction.Create, mapId: document.id });
+      this.creating = false;
+      this.closeDialog();
       this.publish({
         status: MapPanelStatus.Ready,
         document,
@@ -648,8 +650,6 @@ export class MapPanel implements IEditorPanel, IMapPanel {
         preview: undefined,
         hover: undefined,
         unsaved: false,
-        dialog: MapDialogKind.None,
-        dialogError: undefined,
         notice: `已创建地图「${name}」`,
         error: undefined,
       });
@@ -711,13 +711,13 @@ export class MapPanel implements IEditorPanel, IMapPanel {
       this.currentLayerId = lastLayer?.id;
       this.captureBaseline();
       this.registerBarrier({ action: MapBarrierAction.AddLayer, mapId: named.id });
+      this.creating = false;
+      this.closeDialog();
       this.publish({
         status: MapPanelStatus.Ready,
         document: named,
         currentLayerId: this.currentLayerId,
         unsaved: false,
-        dialog: MapDialogKind.None,
-        dialogError: undefined,
         notice: `已新增图层「${name}」`,
         error: undefined,
       });
