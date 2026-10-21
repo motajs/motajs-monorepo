@@ -2,7 +2,14 @@ import { cleanup, configure } from '@testing-library/react';
 import { EditorCore, IEditorPanel, IEditorPanelFactoryParam } from '@motajs/editor-core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createMapPanelType, MAP_PANEL_TYPE_ID, MapPanel } from '..';
-import { IMapDocument, IMapEditorCapabilities, IMapPanelViewState, IMapSummary, MapPanelStatus } from '../types';
+import {
+  IMapDocument,
+  IMapEditorCapabilities,
+  IMapPanelViewState,
+  IMapSummary,
+  MapPanelStatus,
+  MapUndoType,
+} from '../types';
 import { createMapDocument, createMapHarness, FakeFileSystem } from './fixtures';
 
 configure({ testIdAttribute: 'data-test-id' });
@@ -252,5 +259,108 @@ describe('地图面板：清单 / 打开 / 切换', () => {
 
     expect(panel.isDirty()).toBe(false);
     expect(viewState(panel).unsaved).toBe(false);
+  });
+
+  // 一笔连续画三格只登记一条撤销记录，不按格拆成三条
+  it('一笔连续三格只产生一条撤销记录', async () => {
+    const { system, panel } = await openMapPanel(createCapabilities());
+    const addUndo = vi.spyOn(system.undoSystem, 'addUndoContext');
+
+    panel.commitCells('layer-base', [
+      { x: 0, y: 0, value: 1 },
+      { x: 1, y: 0, value: 2 },
+      { x: 2, y: 0, value: 3 },
+    ]);
+
+    expect(addUndo).toHaveBeenCalledTimes(1);
+    expect(viewState(panel).document?.layers[0].cells[0].slice(0, 3)).toEqual([1, 2, 3]);
+  });
+
+  // 撤销把一笔里的三格都改回原值，并按基线重算：回到刚打开的状态即变干净
+  it('撤销三格后全部回原值且未保存消失', async () => {
+    const { system, panel } = await openMapPanel(createCapabilities());
+
+    panel.commitCells('layer-base', [
+      { x: 0, y: 0, value: 1 },
+      { x: 1, y: 0, value: 2 },
+      { x: 2, y: 0, value: 3 },
+    ]);
+
+    expect(panel.isDirty()).toBe(true);
+
+    const undone = await system.undoSystem.undo();
+
+    expect(undone).toBe(true);
+    expect(viewState(panel).document?.layers[0].cells[0].slice(0, 3)).toEqual([0, 0, 0]);
+    expect(panel.isDirty()).toBe(false);
+  });
+
+  // 重做又把三格写回去，未保存按基线重新出现
+  it('重做把三格写回并重新算脏', async () => {
+    const { system, panel } = await openMapPanel(createCapabilities());
+
+    panel.commitCells('layer-base', [
+      { x: 0, y: 0, value: 1 },
+      { x: 1, y: 0, value: 2 },
+      { x: 2, y: 0, value: 3 },
+    ]);
+
+    await system.undoSystem.undo();
+
+    const redone = await system.undoSystem.redo();
+
+    expect(redone).toBe(true);
+    expect(viewState(panel).document?.layers[0].cells[0].slice(0, 3)).toEqual([1, 2, 3]);
+    expect(panel.isDirty()).toBe(true);
+  });
+
+  // 撤销载荷的地图标识与当前地图不一致时直接忽略，绝不把上一张图的格子套到新图上
+  it('跨地图的撤销记录不修改当前地图', async () => {
+    const { panel } = await openMapPanel(createCapabilities());
+
+    panel.commitCells('layer-base', [{ x: 0, y: 0, value: 1 }]);
+    await panel.openMap('m2');
+
+    const before = viewState(panel).document;
+
+    await panel.undo({
+      type: MapUndoType.Cells,
+      data: {
+        mapId: 'm1',
+        layerId: 'layer-base',
+        changes: [{ x: 0, y: 0, before: 0, after: 1 }],
+      },
+    });
+
+    expect(viewState(panel).document).toEqual(before);
+  });
+
+  // 切图成功后撤销栈顶是屏障：撤销返回 false，且不会调用面板自己的撤销实现
+  it('切图后的屏障挡住撤销', async () => {
+    const { system, panel } = await openMapPanel(createCapabilities());
+    const undoSpy = vi.spyOn(panel, 'undo');
+
+    await panel.openMap('m2');
+
+    const undone = await system.undoSystem.undo();
+
+    expect(undone).toBe(false);
+    expect(undoSpy).not.toHaveBeenCalled();
+  });
+
+  // 同一笔里重复落同一格时按净变化去重，撤销只回到这笔开始前的值
+  it('同一笔重复落同一格时撤销回到原始值', async () => {
+    const { system, panel } = await openMapPanel(createCapabilities());
+
+    panel.commitCells('layer-base', [
+      { x: 0, y: 0, value: 1 },
+      { x: 0, y: 0, value: 2 },
+    ]);
+
+    expect(viewState(panel).document?.layers[0].cells[0][0]).toBe(2);
+
+    await system.undoSystem.undo();
+
+    expect(viewState(panel).document?.layers[0].cells[0][0]).toBe(0);
   });
 });
