@@ -8,6 +8,7 @@ import { ASSET_DEMO_CATEGORIES, registerAssetDemo, seedAssetDemo, seedUnregister
 import { DevCodeEditorProvider } from './demo/devCodeEditor';
 import { registerDevMenu } from './demo/devMenu';
 import { DEMO_PANEL_TYPE, DEMO_SAMPLE_CONTENT, DEMO_SAMPLE_PATH } from './demo/demoPanel';
+import { registerMapDemo, seedMapDemo } from './demo/mapDemo';
 import {
   createTablePanelOpener,
   TABLE_DEMO_COMMENTED_DATA,
@@ -36,10 +37,12 @@ backend.seed(TABLE_DEMO_COMMENTED_DATA_PATH, TABLE_DEMO_COMMENTED_DATA);
 backend.seed(TABLE_DEMO_COMMENTED_SCHEMA_PATH, TABLE_DEMO_SAMPLE_SCHEMA);
 await seedAssetDemo(backend);
 seedUnregisteredAssetDemo(backend);
+await seedMapDemo(backend);
 core.shellSystem.registerPanelType(DEMO_PANEL_TYPE);
 core.shellSystem.registerPanelType(tablePanelType);
 registerDevMenu(core);
 registerAssetDemo(core);
+registerMapDemo(core, backend);
 
 await core.initialize({ fs: backend, maxUndoStep: backend.maxUndoStep, ignore: ['node_modules', '.git'] });
 
