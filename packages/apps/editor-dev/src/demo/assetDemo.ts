@@ -580,6 +580,40 @@ export const ASSET_DEMO_FILES: readonly IAssetDemoFile[] = [
   { path: `content/font/${DEMO_FONT_NAME}`, content: createDemoFont() },
 ];
 
+/** 开发宿主预置的未登记样本文件名：只在图片目录里、不在 `.list.jsonc` 里，供人工验收直接使用 */
+export const DEMO_UNREGISTERED_TEXTURE_NAME: string = 'unregistered.png';
+
+/** 预置未登记样本的像素边长：48×48 已能看清棋盘格，又不会拖慢宿主启动 */
+const DEMO_UNREGISTERED_TEXTURE_SIZE = 48;
+
+/** 预置未登记样本的调色板序号：排在 36 张小图与 2 张大图之后，颜色与它们都不同 */
+const DEMO_UNREGISTERED_TEXTURE_PALETTE = 38;
+
+/**
+ * 造出预置的未登记样本文件：一张 48×48 的演示 PNG，只写进图片目录、不写进列表
+ * @returns 只含这一张图片的演示文件数组
+ */
+export function createUnregisteredAssetDemoFiles(): readonly IAssetDemoFile[] {
+  return [
+    {
+      path: `content/texture/${DEMO_UNREGISTERED_TEXTURE_NAME}`,
+      content: encodePng(
+        DEMO_UNREGISTERED_TEXTURE_SIZE,
+        DEMO_UNREGISTERED_TEXTURE_SIZE,
+        DEMO_UNREGISTERED_TEXTURE_PALETTE,
+      ),
+    },
+  ];
+}
+
+/**
+ * 把预置的未登记样本写进注入的文件系统：只写字节文件，列表里没有它
+ * @param backend 开发宿主的内存后端
+ */
+export function seedUnregisteredAssetDemo(backend: IMemoryBackend): void {
+  for (const file of createUnregisteredAssetDemoFiles()) backend.seed(file.path, file.content);
+}
+
 /**
  * 生成两张超大演示 PNG，并附一份把它们追加到 36 张之后的图片列表（同路径覆盖小图列表）
  * @param width 超大演示图的宽度；测试可传入小尺寸以避开 4096² 的缓冲
