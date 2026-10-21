@@ -1,12 +1,13 @@
 ---
-status: complete
+status: partial
 phase: 03-asset
 source: [03-17-SUMMARY.md, 03-11-SUMMARY.md, 03-16-SUMMARY.md, 03-15-SUMMARY.md, 03-09-SUMMARY.md]
 started: "2026-10-18T00:00:00Z"
-updated: "2026-10-20T03:00:00Z"
+updated: "2026-10-21T00:00:00Z"
 ---
 
 > 正式 UAT 的 3 项已由用户逐项确认通过（用户 2026-10-20 回复 pass）。
+> 2026-10-21 追加的第 4、5 项人工验收未通过，已登记为两条新的 open 缺口；其中「注册后提示配置不符合字段定义」用户决定暂不解决。
 
 ## Current Test
 
@@ -26,11 +27,19 @@ result: pass
 expected: 布局 / 配色 / 文案 / 交互观感与现有 @motajs/editor 的素材界面一致；浏览 / 上传新增 / 替换 / 删除 / 配置 / 保存 流程顺畅
 result: pass
 
+### 4. 新增素材链路（开发宿主）
+expected: 经工具栏选本地文件后新卡片出现；保存后 `.list.jsonc` 含新名字；关闭并重新打开面板 / 切走分类再切回后卡片仍在（同一会话内，不要求刷新）
+result: fail
+
+### 5. 未登记素材的注册与注销
+expected: 宿主预置的 `unregistered.png` 显示为黄色未登记卡片；注册后保存进清单；注销需两次确认、保存后配置消失且回到黄色、文件保留
+result: fail
+
 ## Summary
 
-total: 3
+total: 5
 passed: 3
-issues: 0
+issues: 2
 pending: 0
 skipped: 0
 
@@ -164,5 +173,25 @@ skipped: 0
   reason: "User requested: 现在没有显示大小的地方，不能确认大小变小；建议跟图片尺寸一样在右侧显示"
   severity: minor
   test: 1
+  artifacts: []
+  missing: []
+- gap_id: G-03-14
+  truth: "开发宿主里经工具栏「新增素材」选中本地图片或音频后，网格应出现新卡片；保存后 `.list.jsonc` 含新名字，并在关闭重开面板 / 切走分类再切回后仍在（同一会话内）"
+  status: open
+  resolved_by:
+  resolved_at:
+  reason: "User reported: 新增图片无效——新增后没有新增卡片，.jpg / .png 都无法新增；音频 .flac / .wav / .mp3 也无法新增。用户建议面板内置常见后缀白名单，不要什么文件都能选。"
+  severity: blocker
+  test: 4
+  artifacts: []
+  missing: []
+- gap_id: G-03-15
+  truth: "未登记素材的缩略图用明显黄色背景标出；注册后进入配置时应符合该分类的字段定义；注销需两次确认、只删登记与配置、保留文件"
+  status: open
+  resolved_by:
+  resolved_at:
+  reason: "User reported: 未登记内容选中后能正确显示「注册到游戏」，但卡片没有黄色背景；注册后进入时提示「配置不符合该分类的字段定义」。用户明确表示配置校验问题先不解决，后续再考虑方案；黄色背景未生效需要修。"
+  severity: major
+  test: 5
   artifacts: []
   missing: []
