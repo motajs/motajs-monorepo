@@ -35,7 +35,7 @@ export interface IAssetGridProps {
 }
 
 /**
- * 取一张卡片应带的类名：基础类 + 选中 / 缺失标记
+ * 取一张卡片应带的类名：基础类 + 选中 / 缺失 / 未登记标记
  * @param entry 该卡片对应的素材条目
  * @param selectedName 当前选中的素材名
  * @returns 卡片类名
@@ -45,12 +45,13 @@ function cardClassName(entry: IAssetEntry, selectedName?: string): string {
 
   if (entry.name === selectedName) names.push('is-selected');
   if (!entry.exists) names.push('is-missing');
+  if (!entry.registered) names.push('is-unregistered');
 
   return names.join(' ');
 }
 
 /**
- * 素材卡片网格：自适应列的卡片列表，选中带 `is-selected`、字节缺失带 `is-missing`
+ * 素材卡片网格：自适应列的卡片列表，选中带 `is-selected`、字节缺失带 `is-missing`、未登记带 `is-unregistered`
  *
  * 卡片是真实可聚焦的 `<button>`，支持 Enter / Space 选中；名称单行省略并把全名放进 `title`。
  * @param props 网格 props
@@ -72,6 +73,7 @@ export function AssetGrid(props: IAssetGridProps): ReactElement {
           title={entry.name}
           data-test-id={`asset-card-${entry.name}`}
           data-exists={String(entry.exists)}
+          data-registered={String(entry.registered)}
           style={{ height: Math.round(props.cardWidth * CARD_HEIGHT_RATIO) }}
           onClick={(): void => props.onSelect(entry.name)}
         >

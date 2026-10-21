@@ -1,6 +1,11 @@
 import { Button, Modal } from 'antd';
 import { ReactElement, useState } from 'react';
 import { AssetCategoryKind } from '../../react';
+import {
+  ASSET_DELETE_CONFIRM_TEXT,
+  ASSET_UNREGISTER_CONFIRM_TEXT,
+  ASSET_UNREGISTER_FINAL_CONFIRM_TEXT,
+} from '../constants';
 import { IAssetEntry, IAssetUpload } from '../types';
 import { AssetFileInfo } from './AssetFileInfo';
 import { AssetFileInput } from './AssetFileInput';
@@ -25,6 +30,10 @@ export interface IAssetDetailProps {
   onDelete?(): void;
   /** 打开当前素材的配置表单 */
   onOpenConfig?(): void;
+  /** 把当前未登记素材登记进列表 */
+  onRegister?(): void;
+  /** 注销当前已登记素材（只改列表与配置，不删文件） */
+  onUnregister?(): void;
   /**
    * 读取某素材字节，供预览使用
    * @param path 素材字节文件路径
@@ -37,7 +46,8 @@ export interface IAssetDetailProps {
  * 素材详情 / 预览栏：未选中给引导文案，选中后给名称 / 路径 / 缺失提示 / 预览 / 操作行
  *
  * 删除前弹 antd `Modal` 二次确认（破坏性按钮标 `danger`）；替换经 `AssetFileInput` 把
- * 上传的名字与字节交给上层；所有文本经 React 文本节点渲染。
+ * 上传的名字与字节交给上层；未登记素材给「注册到游戏」，已登记素材给「注销」并需连点两次确认；
+ * 所有文本经 React 文本节点渲染。
  * @param props 详情 props
  * @returns 详情元素
  */
@@ -46,6 +56,9 @@ export function AssetDetail(props: IAssetDetailProps): ReactElement {
   const confirmingState = useState(false);
   const confirming = confirmingState[0];
   const setConfirming = confirmingState[1];
+  const unregisterStepState = useState<number>(0);
+  const unregisterStep = unregisterStepState[0];
+  const setUnregisterStep = unregisterStepState[1];
 
   if (entry === undefined) {
     return (
@@ -103,10 +116,101 @@ export function AssetDetail(props: IAssetDetailProps): ReactElement {
         >
           删除
         </Button>
-        <Button size="small" autoInsertSpace={false} data-test-id="asset-detail-config" onClick={props.onOpenConfig}>
-          配置
-        </Button>
+        {entry.registered ? (
+          <Button size="small" autoInsertSpace={false} data-test-id="asset-detail-config" onClick={props.onOpenConfig}>
+            配置
+          </Button>
+        ) : null}
+        {entry.registered ? (
+          <Button
+            size="small"
+            autoInsertSpace={false}
+            data-test-id="asset-detail-unregister"
+            onClick={(): void => setUnregisterStep(1)}
+          >
+            注销
+          </Button>
+        ) : (
+          <Button
+            size="small"
+            autoInsertSpace={false}
+            data-test-id="asset-detail-register"
+            onClick={(): void => props.onRegister?.()}
+          >
+            注册到游戏
+          </Button>
+        )}
       </div>
+      {unregisterStep === 1 ? (
+        <Modal
+          open
+          title="注销素材"
+          closable={false}
+          maskClosable={false}
+          keyboard={false}
+          onCancel={(): void => setUnregisterStep(0)}
+          footer={
+            <div className="asset-detail-delete-footer">
+              <Button
+                size="small"
+                autoInsertSpace={false}
+                data-test-id="asset-unregister-cancel"
+                onClick={(): void => setUnregisterStep(0)}
+              >
+                取消
+              </Button>
+              <Button
+                size="small"
+                type="primary"
+                autoInsertSpace={false}
+                data-test-id="asset-unregister-next"
+                onClick={(): void => setUnregisterStep(2)}
+              >
+                继续
+              </Button>
+            </div>
+          }
+        >
+          {ASSET_UNREGISTER_CONFIRM_TEXT}
+        </Modal>
+      ) : null}
+      {unregisterStep === 2 ? (
+        <Modal
+          open
+          title="再次确认注销"
+          closable={false}
+          maskClosable={false}
+          keyboard={false}
+          onCancel={(): void => setUnregisterStep(0)}
+          footer={
+            <div className="asset-detail-delete-footer">
+              <Button
+                size="small"
+                autoInsertSpace={false}
+                data-test-id="asset-unregister-final-cancel"
+                onClick={(): void => setUnregisterStep(0)}
+              >
+                取消
+              </Button>
+              <Button
+                size="small"
+                type="primary"
+                danger
+                autoInsertSpace={false}
+                data-test-id="asset-unregister-final-confirm"
+                onClick={(): void => {
+                  setUnregisterStep(0);
+                  props.onUnregister?.();
+                }}
+              >
+                确认注销
+              </Button>
+            </div>
+          }
+        >
+          {ASSET_UNREGISTER_FINAL_CONFIRM_TEXT}
+        </Modal>
+      ) : null}
       {confirming ? (
         <Modal
           open
@@ -141,7 +245,7 @@ export function AssetDetail(props: IAssetDetailProps): ReactElement {
             </div>
           }
         >
-          确定要删除该素材吗？此操作不可恢复。
+          {ASSET_DELETE_CONFIRM_TEXT}
         </Modal>
       ) : null}
     </div>

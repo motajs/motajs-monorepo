@@ -60,6 +60,16 @@ export interface IAssetPanelViewProps {
   /** 打开当前选中素材的配置表单 */
   onOpenConfig?(): void;
   /**
+   * 把当前选中的未登记素材登记进列表
+   * @param name 目标素材名
+   */
+  onRegister?(name: string): void;
+  /**
+   * 注销当前选中的已登记素材（只改列表与配置，不删文件）
+   * @param name 目标素材名
+   */
+  onUnregister?(name: string): void;
+  /**
    * 配置模式下改一个字段
    * @param path 配置字段路径
    * @param value 目标值
@@ -114,7 +124,7 @@ function transcodeExtension(kind: AssetCategoryKind): string {
 }
 
 /**
- * 取出真正可转码的素材条目：源文件已是目标扩展名的条目转码是空操作（只会原地重编码），排除掉
+ * 取出真正可转码的素材条目：未登记的条目还没进游戏，源文件已是目标扩展名的条目转码是空操作，一并排除
  * @param category 当前分类
  * @param entries 当前分类的条目
  * @returns 可提交转码的素材条目
@@ -122,7 +132,7 @@ function transcodeExtension(kind: AssetCategoryKind): string {
 function transcodeCandidates(category: IAssetCategory, entries: readonly IAssetEntry[]): readonly IAssetEntry[] {
   const extension = transcodeExtension(category.kind);
 
-  return entries.filter((entry) => resolveTranscodedPath(entry.path, extension) !== entry.path);
+  return entries.filter((entry) => entry.registered && resolveTranscodedPath(entry.path, extension) !== entry.path);
 }
 
 /** 未接入选择回调时的缺省实现：不做任何事 */
@@ -214,6 +224,12 @@ function renderContent(
           if (selected !== undefined) props.onDelete?.(selected.name);
         }}
         onOpenConfig={props.onOpenConfig}
+        onRegister={(): void => {
+          if (selected !== undefined) props.onRegister?.(selected.name);
+        }}
+        onUnregister={(): void => {
+          if (selected !== undefined) props.onUnregister?.(selected.name);
+        }}
         loadBytes={props.loadBytes}
       />
     </div>

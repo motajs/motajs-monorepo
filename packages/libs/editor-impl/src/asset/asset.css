@@ -3,6 +3,8 @@
   --easset-missing-fg: #d4380d;
   --easset-logical-fg: #1677ff;
   --easset-danger-fg: #d4380d;
+  --easset-unregistered-bg: #fffbe6;
+  --easset-unregistered-fg: #ad8b00;
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -214,6 +216,10 @@
   height: 100%;
   object-fit: contain;
   image-rendering: pixelated;
+}
+
+.asset-card.is-unregistered .asset-card-thumb {
+  background: var(--easset-unregistered-bg);
 }
 
 .asset-card-preview-icon {

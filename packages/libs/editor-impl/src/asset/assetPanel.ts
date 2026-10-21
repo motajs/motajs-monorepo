@@ -169,6 +169,16 @@ interface IAssetPanelContainerProps {
   /** 打开当前选中素材的配置表单 */
   onOpenConfig(): void;
   /**
+   * 把当前选中的未登记素材登记进列表
+   * @param name 目标素材名
+   */
+  onRegister(name: string): void;
+  /**
+   * 注销当前选中的已登记素材（只改列表与配置，不删文件）
+   * @param name 目标素材名
+   */
+  onUnregister(name: string): void;
+  /**
    * 配置模式下改一个字段
    * @param path 配置字段路径
    * @param value 目标值
@@ -202,6 +212,8 @@ function AssetPanelContainer(props: IAssetPanelContainerProps): ReactElement {
     onCancelTranscode: props.onCancelTranscode,
     onStartTranscode: props.onStartTranscode,
     onOpenConfig: props.onOpenConfig,
+    onRegister: props.onRegister,
+    onUnregister: props.onUnregister,
     onChange: props.onChange,
     onBack: props.onBack,
     onRetry: props.onRetry,
@@ -343,6 +355,12 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
           const name = this.store.state.selectedName;
 
           if (name !== undefined) void this.openConfig(name);
+        },
+        onRegister: (name: string): void => {
+          void this.registerAsset(name);
+        },
+        onUnregister: (name: string): void => {
+          void this.unregisterAsset(name);
         },
         onChange: (path: string, value: unknown): void => this.applyConfigEdit(path, value),
         onBack: (): void => this.closeConfig(),
