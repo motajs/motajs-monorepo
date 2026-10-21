@@ -682,3 +682,50 @@
 9. **白名单模块放 `model/internal/` 而不是 `model/`：这是为了同时满足两条项目规则。** `model/` 是有桶的受管目录，规则要求「桶文件一律 `export *`、该文件夹的导出项都要导出」；而白名单必须保持私有。直接放 `model/` 就只有「违反桶规则」或「给桶文件开一个不导出某项的例外」两条路——全仓库目前没有这种例外，不开先例。放进**没有 `index.ts` 的子目录**（`model/internal/`，与既有的 `model/__tests__/` 同为无桶子目录）后：桶规则不适用于它，`model/index.ts` / `asset/index.ts` 也不引用它，公开面保持不变。**不要**在 `model/internal/` 里新建 `index.ts`。
 10. **判定只写一次，提示分两处。** 「能不能收」是 `isAssetFileAccepted` 一个谓词（新增、替换、扫描三处都调它）；「选择框提示串」是纯 UI 便利：新增由 `AssetPanelView` 按分类算，替换由 `AssetDetail` 按 `kind` 算。不要为了复用提示串而给 `AssetDetail` 加 props。
 
+---
+
+# 保存模型修订（2026-10-21 第二轮 UAT，**待用户确认**）
+
+> 本节接在 03-38 之后，编号 03-39。只新增名称，已确认的 03-01…03-38 各节一个字未改。
+> 本批**纯实现、零公开接口变更**：`IAssetPanel` / `IAssetPanelViewState` / `IAssetPanelViewProps` / `IAssetToolbarProps` / `IAssetCategory` 一个都不动。新增的只有一个**包内私有**状态字段、一个既有私有方法的新参数与返回值变更，以及若干 CSS 变量与类名，所以不需要先走一份纯接口计划。
+
+## Plan 03-39 — 新增 / 注册自动保存 + 切出写盘 + 保存按钮变黄 **待用户确认**
+
+**要做什么：** 用户点「新增素材」或「注册到游戏」时当场把当前分类的 `.list.jsonc` 写盘（第二块面板立刻看到已登记）；面板切出（`onSwitchOut`）时把所有还没落盘的分类一起写盘；有未保存改动时把工具栏「保存」按钮染成黄色；注销 / 删除 / 转码仍按手动保存；写盘失败时保留未保存标记并报错。随后按新口径重走两条人工验收并收口 `03-UAT.md`。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `IAssetPanelState.loaded` | 新增字段（`assetPanel.ts` 内**包内私有**接口） | 「该分类是否已经成功读过一次」。守卫的唯一依据：没读过、或读失败（`AssetPanel.setError` 清空 `entries`）时，内存不能代表磁盘，写盘会把整份列表覆盖成一条或空表 |
+| `AssetPanel.autoSaveCategory` | ~~新增私有方法~~ **取消（不会出现在代码里）** | 最初设想在自动保存处加一层包装，后改为「两个调用点各自 `await AssetPanel.writeCategory(...)`」，并把守卫收进 `writeCategory`——少一层间接，守卫只剩一处。保留这一行只为说明它**不会**被实现 |
+| `AssetPanel.writeCategory` | 既有私有方法，签名与职责变更 | 新增第 4 个可选参数 `successNotice`（成功提示文案），返回值从 `void` 变成 `Promise<boolean>`（写成功与否）；**`loaded` 守卫落在它开头**——它是唯一写盘点，自动保存 / 手动保存 / 切出写盘三条路径都经由它。全仓只有 `AssetPanel.save`、`AssetPanel.addAsset`、`AssetPanel.registerAsset` 三个调用点 |
+| `successNotice` | `AssetPanel.writeCategory` 的第 4 个参数名 | 写成功后给用户的提示；不传就只刷新状态（让保存按钮从黄回到禁用），不弹提示 |
+| `AssetPanel.onSwitchOut` | 既有方法，实现变更（空实现 → `await this.save()`） | 面板失去当前状态时写盘全部分类的未落盘改动；不新写一套遍历，没读过的分类由 `AssetPanel.writeCategory` 的守卫挡掉 |
+| `AssetPanel.save` | 既有方法，实现变更 | 循环里只收集成功与否，结束后最多弹一次「已保存」；写盘失败或被守卫跳过都不弹成功 |
+| `已新增素材并保存` | 提示文案（`AssetPanel.addAsset`） | 替换原来的「已新增素材，请记得保存」——现在不需要用户再点保存 |
+| `已注册素材并保存` | 提示文案（`AssetPanel.registerAsset`） | 替换原来的「已注册素材，请记得保存」 |
+| `已保存` | 提示文案（`AssetPanel.save`） | 手动保存 / 切出写盘成功后统一一条，不再按分类连弹 |
+| `保存失败，改动仍未落盘，请重试。` | 提示文案（`AssetPanel.writeCategory` 的写盘失败分支） | 自动保存与手动保存共用；无论失败的是不是当前分类都要弹全局错误，当前分类再写进面板错误条 |
+| `分类尚未读取，未写入列表，请重新加载后重试。` | 提示文案（`AssetPanel.writeCategory` 的 `loaded` 守卫分支） | 没成功读过的分类不写盘时的说明；用全局提示是因为读失败会停在整屏错误态，面板内的错误条会被整屏态吸收 |
+| `--easset-unsaved-bg` | 新增 CSS 变量（`#fff1b8`） | 未保存提示的按钮底色 |
+| `--easset-unsaved-border` | 新增 CSS 变量（`#d48806`） | 未保存提示的按钮描边色 |
+| `--easset-unsaved-fg` | 新增 CSS 变量（`#7a4f01`） | 未保存提示的按钮文字色（深黄，配浅黄底可读） |
+| `.asset-toolbar-save` | 新增 CSS 类名（工具栏保存按钮的基础类名） | 给保存按钮一个稳定钩子，不必依赖 antd 生成的哈希类名 |
+| `is-unsaved` | 新增状态类名（叠加在 `.asset-toolbar-save` 上） | 有未落盘改动时按钮变黄；没有时不加这个类、按钮仍是普通禁用态 |
+| `.asset-panel .asset-toolbar-save.is-unsaved` | 新增 CSS 规则（含 `:hover` / `:focus` 变体） | 用 `.asset-panel` 前缀压过 antd 按钮自身样式优先级；不用 `!important`（黄色只在按钮可点时出现，不与 antd 禁用态竞争） |
+| `assetAutoSave.test.tsx` | 新增测试文件（`asset/__tests__/`） | 七条回归：新增 / 注册自动落盘、第二面板看到已登记（各一条）、切出写盘、写盘失败保留未保存、注销不写盘、读失败（`loaded` 为 false）后新增与切出都不写盘 |
+| `registerAssetPanel` / `openPanelTab` / `openAnotherPanel` | 测试文件内私有 helper | 注册面板类型并把实例收进数组、在首个标签打开、用 `openBlankTab` 再开一块面板（即「第二个面板实例」） |
+| `cardOf` / `registeredOf` / `isDisabled` / `listBody` | 测试文件内私有 helper | 取卡片节点、读卡片的 `data-registered`、判断禁用态、读列表文件正文 |
+| `03-38-SUMMARY.md` 台账核对 | 只读核对（不新增、不改写） | 用户已补好这份台账（任务 1–2 完成、第 3 项由 03-39 接替、缺口仍 open、没有 `status` 字段也没有 `resolved_by`）；03-39 只核对口径，不代写、不加 status、不允许把缺口写成 resolved |
+| `03-VALIDATION.md` ASSET-01 行 | 修改（`.planning/phases/03-asset/`） | 「Add (upload) → unsaved until 保存」改为「新增 / 注册立即自动写回；注销 / 删除 / 转码 manual-until-save，切出面板一并写盘」，自动命令补上 `assetAutoSave.test.tsx` |
+
+> 本表**没有**新增任何 interface 成员：`IAssetToolbarProps.unsaved` 早就存在、一直是保存按钮的禁用依据，本计划只是让同一个字段再决定类名；`IAssetPanelViewState.unsaved` 也一样。
+
+### 口径（请一并确认，**待用户确认**）
+
+1. **自动保存写的是「当前分类的整份列表」，不是「只追加一条」。** 因此同一分类里那些仍按手动保存的动作（注销 / 删除 / 转码）如果随后遇上一次自动写盘，它们的改动会一并落盘。这是「整份文件」的语义，不表示它们变成了自动保存——测试与 UAT 都按这个口径描述。
+2. **`loaded` 守卫必须放在 `AssetPanel.writeCategory`（唯一写盘点），不是放在自动保存的分支里。** 分类没读过（或读失败把 `entries` 清空）时，内存不是磁盘的代表，写盘会把工程里的登记整份覆盖掉；守卫收在写盘点后，`AssetPanel.addAsset` / `AssetPanel.registerAsset` 的自动保存、`AssetPanel.save` 的手动保存、`AssetPanel.onSwitchOut` 的切出写盘三条路径一并受保护。被守卫跳过时用全局提示说「分类尚未读取，未写入列表，请重新加载后重试。」（读失败会停在整屏错误态，面板内的错误条会被整屏态吸收）。
+3. **自动保存失败时不弹成功、也不清未保存标记。** 失败文案统一成一句「保存失败，改动仍未落盘，请重试。」；失败的不是当前分类时也要给全局提示（切出写盘正是这种情况）。
+4. **黄色只管工具栏那个保存按钮，不动配置视图里共用的保存按钮。** 后者来自 `shared/schemaForm/components/TableGrid`，是与 Phase 2 表格能力共用的组件，改它会波及表格面板；工具栏按钮在浏览态与配置态都可见，已经覆盖两种模式。
+5. **「第二个面板看到已登记」必须来自磁盘。** 不允许把面板状态提到模块级单例来共享内存；测试里让第二块面板重新 `onSwitchIn` → 从磁盘读，并同时断言列表文件正文。
+6. **`03-38-SUMMARY.md` 归用户维护，本计划只核对。** 该文件已由用户补好（任务 1–2 完成、第 3 项由 03-39 接替、缺口仍 open），它没有 `status` 字段——不要替它加，更不要改成 `halted`：03-39 的 `depends_on` 指名 03-38，halted 会让 03-39 被自动判成 blocked。若核对时发现它把缺口写成了 resolved，停下来报告，不要自己重写。
+
