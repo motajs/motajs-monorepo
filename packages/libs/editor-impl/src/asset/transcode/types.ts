@@ -5,6 +5,59 @@ export const enum AssetTranscodeKind {
   AudioOpus,
 }
 
+export const enum AssetImagePreset {
+  /** 体积优先档，质量 80 */
+  VolumeFirst,
+  /** 常规压缩档，质量 92 */
+  Standard,
+  /** 无损压缩档，质量 100 */
+  Lossless,
+  /** 自定义参数档 */
+  Custom,
+}
+
+export const enum AssetAudioPreset {
+  /** 最小体积档，64 kbps + 44.1 kHz */
+  SmallestSize,
+  /** 体积优先档，92 kbps + 48 kHz */
+  VolumeFirst,
+  /** 常规压缩档，128 kbps + 48 kHz */
+  Standard,
+  /** 自定义参数档 */
+  Custom,
+}
+
+export interface IAssetImagePresetOption {
+  /** 预设档位标识 */
+  readonly id: AssetImagePreset;
+  /** 档位显示名，如「无损压缩 100」 */
+  readonly label: string;
+  /** WebP 质量（0–100） */
+  readonly quality: number;
+  /** 给人看的一句说明，如「WebP 质量 100」 */
+  readonly summary: string;
+}
+
+export interface IAssetAudioPresetOption {
+  /** 预设档位标识 */
+  readonly id: AssetAudioPreset;
+  /** 档位显示名，如「常规压缩 128 kbps + 48 kHz」 */
+  readonly label: string;
+  /** Opus 目标码率（kbps） */
+  readonly bitrateKbps: number;
+  /** Opus 目标采样率（kHz） */
+  readonly sampleRateKHz: number;
+  /** 给人看的一句说明，与档位显示名同文案 */
+  readonly summary: string;
+}
+
+export interface IAssetAudioCustomOptions {
+  /** 自定义档的 Opus 目标码率（kbps） */
+  readonly bitrateKbps: number;
+  /** 自定义档的 Opus 目标采样率（kHz） */
+  readonly sampleRateKHz: number;
+}
+
 export interface IAssetAudioTranscodeOptions {
   /** Opus 目标码率（bps） */
   readonly bitrate: number;

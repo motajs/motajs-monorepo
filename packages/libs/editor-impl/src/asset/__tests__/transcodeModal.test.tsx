@@ -51,7 +51,7 @@ function nonEmptyLoadBytes(): Promise<Uint8Array | undefined> {
  * @returns 条目列表，路径按图片分类约定拼接
  */
 function entriesOf(names: readonly string[]): readonly IAssetEntry[] {
-  return names.map((name) => ({ name, path: `content/texture/${name}`, exists: true }));
+  return names.map((name) => ({ name, path: `content/texture/${name}`, exists: true, registered: true }));
 }
 
 /**

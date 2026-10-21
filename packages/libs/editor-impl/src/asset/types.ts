@@ -47,6 +47,8 @@ export interface IAssetEntry {
   readonly config?: Record<string, unknown>;
   /** 字节文件是否真的存在于分类目录 */
   readonly exists: boolean;
+  /** 该素材是否已登记进 `.list.jsonc`；为 false 表示文件只在分类目录里、不进游戏 */
+  readonly registered: boolean;
   /** 素材字节的版本号：同一路径的字节每被覆盖一次加一，加载得到的条目为 undefined 时按 0 处理，预览组件据此重新读取 */
   readonly byteVersion?: number;
 }

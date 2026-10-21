@@ -562,7 +562,7 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
     const config = await this.buildNewEntryConfig(category, name);
     const entries = state.entries.slice();
 
-    entries.push({ name, path, config, exists: true });
+    entries.push({ name, path, config, exists: true, registered: true });
     state.entries = entries;
     state.unsaved = true;
     this.publish(AssetPanelStatus.Ready, '已新增素材，请记得保存');
@@ -609,6 +609,7 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
       path: entry.path,
       config: entry.config,
       exists: true,
+      registered: entry.registered,
       byteVersion: (entry.byteVersion ?? 0) + 1,
     };
     state.entries = entries;
@@ -725,6 +726,7 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
         path: result.outputPath,
         config: renamed.config,
         exists: true,
+        registered: entry.registered,
         byteVersion: (entry.byteVersion ?? 0) + 1,
       };
       state.entries = entries;
@@ -976,6 +978,7 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
       path: entry.path,
       config,
       exists: entry.exists,
+      registered: entry.registered,
       byteVersion: entry.byteVersion,
     };
     state.entries = entries;
@@ -1121,7 +1124,7 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
     return listEntries.map((entry) => {
       const path = resolveAssetBytePath(category, entry.name);
 
-      return { name: entry.name, path, config: entry.config, exists: paths.has(path) };
+      return { name: entry.name, path, config: entry.config, exists: paths.has(path), registered: true };
     });
   }
 

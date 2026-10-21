@@ -17,18 +17,19 @@ afterEach(() => {
 });
 
 /** 192×128 的图片素材 */
-const HERO_ENTRY: IAssetEntry = { name: 'hero.png', path: 'content/texture/hero.png', exists: true };
+const HERO_ENTRY: IAssetEntry = { name: 'hero.png', path: 'content/texture/hero.png', exists: true, registered: true };
 
 /** 同一素材，字节已被替换过一次 */
 const HERO_REPLACED_ENTRY: IAssetEntry = {
   name: 'hero.png',
   path: 'content/texture/hero.png',
   exists: true,
+  registered: true,
   byteVersion: 1,
 };
 
 /** 一段音频素材 */
-const AUDIO_ENTRY: IAssetEntry = { name: 'bgm.wav', path: 'content/audio/bgm.wav', exists: true };
+const AUDIO_ENTRY: IAssetEntry = { name: 'bgm.wav', path: 'content/audio/bgm.wav', exists: true, registered: true };
 
 /**
  * 造一段带 PNG 签名与 `IHDR` 块头的字节

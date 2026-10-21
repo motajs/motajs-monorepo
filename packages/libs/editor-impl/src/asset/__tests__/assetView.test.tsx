@@ -63,7 +63,7 @@ const VIEW_CATEGORIES: readonly IAssetCategory[] = [
  * @returns 素材条目
  */
 function entry(name: string, exists: boolean): IAssetEntry {
-  return { name, path: `content/texture/${name}`, exists };
+  return { name, path: `content/texture/${name}`, exists, registered: true };
 }
 
 /**
@@ -74,7 +74,7 @@ function entry(name: string, exists: boolean): IAssetEntry {
  * @returns 素材条目
  */
 function entryIn(dir: string, name: string, exists: boolean): IAssetEntry {
-  return { name, path: `${dir}/${name}`, exists };
+  return { name, path: `${dir}/${name}`, exists, registered: true };
 }
 
 /**
