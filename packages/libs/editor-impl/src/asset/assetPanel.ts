@@ -20,6 +20,7 @@ import { AssetPanelView } from './components';
 import { ASSET_MAX_UPLOAD_BYTES } from './constants';
 import {
   collectRequiredPaths,
+  collectUnregisteredAssetNames,
   mergeAssetDefaults,
   readAssetList,
   renameAssetListEntry,
@@ -451,6 +452,8 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
 
       for (const entry of directoryEntries) paths.add(entry.path);
 
+      let listEntries: readonly IAssetListEntry[] = [];
+
       if (paths.has(category.listPath)) {
         const text = await this.readListText(await this.context.requestResource(category.listPath));
 
@@ -459,7 +462,6 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
         if (text === undefined) {
           state.prefix = '';
           state.listDocument = undefined;
-          state.entries = [];
         } else {
           const parsed = parseTableText(text);
 
@@ -470,14 +472,27 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
 
           state.prefix = parsed.prefix;
           state.listDocument = parsed.value;
-          state.entries = this.buildEntries(category, readAssetList(category, parsed.value), paths);
+          listEntries = readAssetList(category, parsed.value);
         }
       } else {
         state.prefix = '';
         state.listDocument = undefined;
-        state.entries = [];
       }
 
+      // 已登记条目在前、未登记条目在后：列表文件缺失或为空时同样要扫描，否则界面永远看不到目录里的游离文件
+      const registeredEntries = this.buildEntries(category, listEntries, paths);
+      const registeredNames = registeredEntries.map((entry) => entry.name);
+      const unregisteredEntries = collectUnregisteredAssetNames(category, directoryEntries, registeredNames).map(
+        (name) => ({
+          name,
+          path: resolveAssetBytePath(category, name),
+          config: undefined,
+          exists: true,
+          registered: false,
+        }),
+      );
+
+      state.entries = [...registeredEntries, ...unregisteredEntries];
       this.publish(state.entries.length === 0 ? AssetPanelStatus.Empty : AssetPanelStatus.Ready);
     } catch {
       if (state.token !== token) return;
@@ -647,6 +662,76 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
     state.unsaved = true;
     this.registerBarrier({ action: 'delete', path: entry.path });
     this.publish(entries.length === 0 ? AssetPanelStatus.Empty : AssetPanelStatus.Ready, '已删除素材，请记得保存');
+  }
+
+  /**
+   * 把一个未登记素材登记进内存列表：配置按 defaults 合并，标记未保存（仍走手动保存）
+   * @param name 要登记的素材名
+   */
+  async registerAsset(name: string): Promise<void> {
+    const category = this.currentCategory();
+
+    if (category === undefined) return;
+
+    const state = this.stateAt(category.id);
+    const index = state.entries.findIndex((entry) => entry.name === name);
+
+    if (index === -1) return;
+
+    const entry = state.entries[index];
+
+    if (entry.registered) return;
+
+    const config = await this.buildNewEntryConfig(category, name);
+    const entries = state.entries.slice();
+
+    entries[index] = {
+      name: entry.name,
+      path: entry.path,
+      config,
+      exists: entry.exists,
+      registered: true,
+      byteVersion: entry.byteVersion,
+    };
+    state.entries = entries;
+    state.unsaved = true;
+    this.publish(AssetPanelStatus.Ready, '已注册素材，请记得保存');
+  }
+
+  /**
+   * 把一个已登记素材改回未登记并清空配置；不删除、不移动任何字节文件，仍走手动保存
+   * @param name 要注销的素材名
+   */
+  async unregisterAsset(name: string): Promise<void> {
+    const category = this.currentCategory();
+
+    if (category === undefined) return;
+
+    const state = this.stateAt(category.id);
+    const index = state.entries.findIndex((entry) => entry.name === name);
+
+    if (index === -1) return;
+
+    const entry = state.entries[index];
+
+    if (!entry.registered) return;
+
+    // 正在配置这个素材时先退回浏览态，否则配置表单会停在一条已经没有配置的条目上
+    if (this.configName === name) this.closeConfig();
+
+    const entries = state.entries.slice();
+
+    entries[index] = {
+      name: entry.name,
+      path: entry.path,
+      config: undefined,
+      exists: entry.exists,
+      registered: false,
+      byteVersion: entry.byteVersion,
+    };
+    state.entries = entries;
+    state.unsaved = true;
+    this.publish(AssetPanelStatus.Ready, '已注销素材，请记得保存');
   }
 
   /**
@@ -1173,12 +1258,14 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
   }
 
   /**
-   * 把条目的内存表示还原成列表条目（写回用；顺序即数组顺序）
+   * 把条目的内存表示还原成列表条目（写回用；只写已登记条目，按过滤后的顺序重排序号）
    * @param entries 面板条目
    * @returns 列表文件条目
    */
   private toListEntries(entries: readonly IAssetEntry[]): readonly IAssetListEntry[] {
-    return entries.map((entry, index) => ({ name: entry.name, config: entry.config, index }));
+    const registered = entries.filter((entry) => entry.registered === true);
+
+    return registered.map((entry, index) => ({ name: entry.name, config: entry.config, index }));
   }
 
   /**
