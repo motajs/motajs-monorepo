@@ -44,7 +44,7 @@ created: "2026-10-17"
 | Req ID | Behavior | Test Type | Automated Command | File Exists | Status |
 |--------|----------|-----------|-------------------|-------------|--------|
 | ASSET-01 | List a category (list file + directory scan) renders grid populated / empty / loading / error / partial | integration (jsdom, `FakeFileSystem`) | `vitest run src/asset/__tests__/assetPanel.test.tsx` | ✅ | ✅ |
-| ASSET-01 | Add (upload) a file → new byte resource + list entry appended; unsaved until 保存 | integration | `vitest run src/asset/__tests__/assetLifecycle.uat.test.tsx` | ✅ | ✅ |
+| ASSET-01 | Add / register → 字节或登记生效并**立即自动写回**当前分类 `.list.jsonc`（不再等「保存」）；unregister / delete / transcode 仍 manual-until-save，但切出面板会一并写盘 | integration | `vitest run src/asset/__tests__/assetLifecycle.uat.test.tsx src/asset/__tests__/assetAutoSave.test.tsx` | ✅ | ✅ |
 | ASSET-01 | Replace bytes / delete (byte + list entry) with confirm | integration | `vitest run src/asset/__tests__/assetLifecycle.uat.test.tsx` | ✅ | ✅ |
 | ASSET-01 | Save writes list with verbatim `.jsonc` prefix; reload still shows changes | unit + integration | `vitest run src/shared/jsonc/__tests__` + lifecycle | ✅ | ✅ |
 | ASSET-01 | Config form edits undoable; byte changes are a barrier (undo returns `false`, no chain-skip) | integration | `vitest run src/asset/__tests__/assetUndo.uat.test.tsx` | ✅ | ✅ |
