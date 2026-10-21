@@ -17,7 +17,7 @@ affects: [04-10, 04-11, 04-13, 04-15]
 actuals:
   tokens: 19520
   tasks: 3
-  commits: 1
+  commits: 2
   plan_head_before: 7c9ce2521a9a3a2940d64bac4c59fe74d36d2af3
 tech-stack:
   added: []
@@ -104,11 +104,12 @@ status: complete
 
 ## Task Commits
 
-三个任务的改动集中在同两个文件（`mapPanel.ts` 与测试），无法在不拆散文件的前提下逐个提交，故合并为一条原子提交：
+三个任务的改动集中在同两个文件（`mapPanel.ts` 与测试），无法在不拆散文件的前提下逐个提交，故合并为一条原子提交；之后补一条收口弹窗写入入口的小重构：
 
 1. **Task 1-3：弹窗 + 未保存闸门 + 最近使用** - `2e5dd0e` (feat)
+2. **收口：成功关闭弹窗统一走 `MapPanel.closeDialog`** - `5031451` (refactor)
 
-**Plan metadata:** 本条 SUMMARY 提交见下一条 docs 提交。
+**Plan metadata:** `65416d0` (docs: complete plan，随后随本 SUMMARY 修订再提交一次)。
 
 ## Files Created/Modified
 
@@ -178,7 +179,7 @@ None - 没有外部服务配置。
 ## Self-Check: PASSED
 
 - 5 个新增文件与 2 个修改文件均存在于磁盘
-- 提交 `2e5dd0e` 在 `git log` 中可见
+- 提交 `2e5dd0e` 与 `5031451` 在 `git log` 中可见
 - `pnpm --filter @motajs/editor-impl exec vitest run src/map/__tests__/mapDialogs.test.tsx`：36 passed
 - `pnpm --filter @motajs/editor-impl exec vitest run src/map`：187 passed
 - `pnpm --filter @motajs/editor-impl exec vitest run`：625 passed
