@@ -382,7 +382,7 @@ Plans:
   3. 用户可查看**只读**的通行性叠加层；新引擎通行性由图块属性决定，地图上不可单独编辑（2026-10-20 按用户决定修订，见 `04-CONTEXT.md` D-13 / D-23）。
   4. 地图编辑经统一命令 / 撤销路径，可撤销、可重做。
 
-**Plans:** 1/16 plans executed
+**Plans:** 2/16 plans executed
 Plans:
 
 **Wave 1 — 命名与地图域接口（仅类型，无实现）**
@@ -391,7 +391,7 @@ Plans:
 
 **Wave 2 — 跨包接口声明 + 纯模型底座**
 
-- [ ] 04-02-PLAN.md — 跨包可选成员：`IEditorPanel.onBeforeClose` + `ITableGridProps.formMode`（只声明，行为在 04-15；依赖 04-01）
+- [x] 04-02-PLAN.md — 跨包可选成员：`IEditorPanel.onBeforeClose` + `ITableGridProps.formMode`（只声明，行为在 04-15；依赖 04-01）
 - [ ] 04-03-PLAN.md — 地图测试夹具 + 文档校验 / 不可变写入 + 纯渲染模型（依赖 04-01）
 
 **Wave 3 — Tracer / 笔刷几何 / 关闭前询问行为**
@@ -482,6 +482,6 @@ Phases execute in numeric order: 1 → 1.1 → 2 → 2.1 → 3 → 4 → 5 → 6
 | 2. 表格编辑 | 33/33 | Complete | 2026-10-15 |
 | 2.1. 资源层重构与表格文件管理 (INSERTED) | 26/26 | Complete    | 2026-10-17 |
 | 3. 素材管理 | 31/31 | Complete    | 2026-10-20 |
-| 4. 地图编辑 | 1/16 | In Progress|  |
+| 4. 地图编辑 | 2/16 | In Progress|  |
 | 5. 代码编辑 | 0/TBD | Not started | - |
 | 6. 事件编辑器 | 0/TBD | Not started | - |
