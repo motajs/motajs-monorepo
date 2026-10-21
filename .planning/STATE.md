@@ -3,13 +3,13 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: 4
 current_phase_name: 地图编辑
-current_plan: 6
+current_plan: 7
 status: executing
-stopped_at: Completed 04-06-PLAN.md
-last_updated: "2026-10-21T08:42:55.360Z"
+stopped_at: Completed 04-04-PLAN.md
+last_updated: "2026-10-21T09:14:21.633Z"
 last_activity: 2026-10-21
 last_activity_desc: Phase 3 complete, transitioned to Phase 4
-state_head: b9de6a8e13b2d98f888b257e5addc8de801fdfb4
+state_head: 1eef3ca85b68f4a7d053e7bf6016941ed7902e17
 progress:
   total_phases: 8
   completed_phases: 0
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 4 (地图编辑) — EXECUTING
-Current Plan: 6
+Current Plan: 7
 Total Plans in Phase: 16
 Status: Ready to execute
 Last activity: 2026-10-21 — 04-01 complete (naming report + map domain types)
@@ -129,6 +129,7 @@ Progress: [██████████] 100%
 | Phase 4 P02 | 2 min | 2 tasks | 2 files |
 | Phase 04 P05 | 14 min | 3 tasks | 9 files |
 | Phase 04-map P06 | 7min | 3 tasks | 9 files |
+| Phase 4 P04 | 11 min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -293,6 +294,8 @@ Recent decisions affecting current work:
 - [Phase 4]: IEditorPanel.onBeforeClose 语义按用户确认定稿：true 允许关闭 / false 取消；仅用户主动点 ✕ 时询问，先激活目标标签；释放编辑器、注销类型、内部关闭实例永不询问 — one-way 跨包接口，行为由 04-15 落地
 - [Phase 4]: 地图写路径统一形状：线 / 矩形 / 填充 / 擦除 / 粘贴 / 清空都输出 IPaintWrite[]，越界裁剪只由 clampRectToMap 负责
 - [Phase 4]: 图案平铺按图案宽高取模、相位由锚点决定（矩形传角点、填充传点击格），不依赖编号连续
+- [Phase 4]: 04-04: MapPanel.setMap 按 IMapPanel 接口收 IMapPanelTarget（计划正文写 mapId 字符串，接口优先），mapPanelType 传 { mapId }
+- [Phase 4]: 04-04: 渲染模型只在 MapPanelView 现算，MapPanel 只保存文档与视图状态；图块图片经 useMapObjectUrl 在 view 侧生成 blob 地址，MapSurface 只建纹理
 
 ### Pending Todos
 
@@ -319,6 +322,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-21T08:42:54.130Z
-Stopped at: Completed 04-06-PLAN.md
+Last session: 2026-10-21T09:13:42.382Z
+Stopped at: Completed 04-04-PLAN.md
 Resume file: None
