@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: 4
 current_phase_name: 地图编辑
-current_plan: 13
+current_plan: 14
 status: executing
-stopped_at: Completed 04-16-PLAN.md
-last_updated: "2026-10-21T13:14:32.525Z"
+stopped_at: Completed 04-12-PLAN.md
+last_updated: "2026-10-21T14:26:07.037Z"
 last_activity: 2026-10-21
 last_activity_desc: Phase 3 complete, transitioned to Phase 4
-state_head: 78c2a5b017dccec1cba4f5a1f32fdd5c1c3bd64a
+state_head: 651baec9c2a755c8a5671507cf9ddfeae10f7668
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 121
-  completed_plans: 118
+  completed_plans: 119
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 4 (地图编辑) — EXECUTING
-Current Plan: 13
+Current Plan: 14
 Total Plans in Phase: 16
 Status: Ready to execute
 Last activity: 2026-10-21 — 04-01 complete (naming report + map domain types)
@@ -137,6 +137,7 @@ Progress: [██████████] 100%
 | Phase 4 P10 | 32 min | 3 tasks | 8 files |
 | Phase 4 P11 | 27 min | 3 tasks | 6 files |
 | Phase 04-map P16 | 14 min | 1 tasks | 4 files |
+| Phase 04 P12 | 63 min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -319,6 +320,8 @@ Recent decisions affecting current work:
 - [Phase 4]: 04-11: MapRecentClearDialog 关闭时返回 null（antd Modal 会把隐藏内容留在 DOM），沿用 04-10 的弹窗卸载约定
 - [Phase 4]: 04-16: palette values are read from the panel store inside MapPanelView instead of snapshot props, so selection and retry never go stale
 - [Phase 4]: 04-16: group images are deduped by imagePath and blob URLs are revoked on unmount or paletteVersion change
+- [Phase 4]: 画布把本地 selection/preview/hover 补进视图算好的渲染模型；状态条搬进 MapCanvas 直接读本地状态
+- [Phase 4]: 大地图进入时存视口、退出时还原；图块目录为空时 canPaint + commitCells 双层守卫
 
 ### Pending Todos
 
@@ -345,6 +348,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-21T13:14:31.904Z
-Stopped at: Completed 04-16-PLAN.md
+Last session: 2026-10-21T14:26:06.503Z
+Stopped at: Completed 04-12-PLAN.md
 Resume file: None
