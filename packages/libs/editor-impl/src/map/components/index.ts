@@ -3,3 +3,4 @@ export * from './MapToolbar';
 export * from './MapEmptyState';
 export * from './MapStatusBar';
 export * from './MapSurface';
+export * from './MapPalette';

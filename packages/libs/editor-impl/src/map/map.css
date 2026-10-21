@@ -392,3 +392,289 @@
   height: 100%;
   min-height: 0;
 }
+
+/* ==================== 图块调色板 ==================== */
+
+.emap-palette {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  color: var(--editor-fg, #202124);
+  background: var(--editor-surface, #ffffff);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.emap-palette-erase-row {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  padding: 8px;
+  border-bottom: 1px solid var(--editor-border, #d0d7de);
+}
+
+.emap-palette-erase {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--editor-border, #d0d7de);
+  border-radius: 2px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.emap-palette-erase:hover,
+.emap-palette-erase.is-selected {
+  box-shadow: 0 0 0 1px var(--editor-accent, #1677ff);
+}
+
+.emap-palette-erase.is-selected {
+  box-shadow:
+    0 0 0 2px var(--editor-accent, #1677ff),
+    inset 0 0 0 1px #ffffff;
+}
+
+.emap-palette-erase:focus-visible {
+  outline: 2px solid var(--editor-accent, #1677ff);
+  outline-offset: 1px;
+}
+
+.emap-palette-erase-mark {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  stroke: var(--emap-missing-fg, #d4380d);
+  stroke-width: 2;
+}
+
+.emap-palette-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.emap-palette-empty {
+  padding: 16px 8px;
+  color: var(--editor-muted, #656d76);
+  font-size: 12px;
+  text-align: center;
+}
+
+.emap-palette-section-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.emap-palette-recent {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--editor-border, #d0d7de);
+}
+
+.emap-palette-recent-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px 4px;
+}
+
+.emap-palette-clear {
+  padding: 0 2px;
+  font-size: 12px;
+}
+
+.emap-palette-recent-grid {
+  display: grid;
+  gap: 4px;
+  justify-content: start;
+  padding: 0 8px;
+  overflow-y: auto;
+}
+
+.emap-palette-recent-empty,
+.emap-palette-recent-muted {
+  padding: 0 8px;
+  color: var(--editor-muted, #656d76);
+  font-size: 12px;
+  text-align: left;
+}
+
+.emap-palette-group {
+  border-bottom: 1px solid var(--editor-border, #d0d7de);
+}
+
+.emap-palette-group-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  height: 32px;
+  padding: 0 8px;
+  border: none;
+  border-bottom: 1px solid var(--editor-border, #d0d7de);
+  background: var(--editor-toolbar-bg, #ffffff);
+  color: var(--editor-fg, #202124);
+  text-align: left;
+  cursor: pointer;
+}
+
+.emap-palette-group-head:focus-visible {
+  outline: 2px solid var(--editor-accent, #1677ff);
+  outline-offset: -2px;
+}
+
+.emap-palette-group-arrow {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  stroke: var(--editor-muted, #656d76);
+  stroke-width: 1.5;
+  fill: none;
+}
+
+.emap-palette-group-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.emap-palette-group-count {
+  flex: 0 0 auto;
+  color: var(--editor-muted, #656d76);
+  font-size: 12px;
+}
+
+.emap-palette-group-empty {
+  padding: 8px;
+  color: var(--editor-muted, #656d76);
+  font-size: 12px;
+}
+
+.emap-palette-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 32px);
+  gap: 4px;
+  justify-content: start;
+  padding: 8px;
+}
+
+.emap-palette-cell {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--editor-grid, #d8dee4);
+  border-radius: 2px;
+  background-color: var(--editor-bg, #f5f6f8);
+  background-repeat: no-repeat;
+  background-size: auto;
+  image-rendering: pixelated;
+  cursor: pointer;
+}
+
+.emap-palette-cell:hover {
+  box-shadow: 0 0 0 1px var(--editor-accent, #1677ff);
+}
+
+.emap-palette-cell.is-selected {
+  box-shadow:
+    0 0 0 2px var(--editor-accent, #1677ff),
+    inset 0 0 0 1px #ffffff;
+}
+
+.emap-palette-cell:focus-visible {
+  outline: 2px solid var(--editor-accent, #1677ff);
+  outline-offset: 1px;
+}
+
+.emap-palette-cell.is-missing {
+  background-image: none;
+}
+
+.emap-palette-checker,
+.emap-palette-cell.is-missing {
+  background-image:
+    linear-gradient(45deg, var(--emap-empty-b, #f5f6f8) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--emap-empty-b, #f5f6f8) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--emap-empty-b, #f5f6f8) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--emap-empty-b, #f5f6f8) 75%);
+  background-color: var(--emap-empty-a, #ffffff);
+  background-position:
+    0 0,
+    0 4px,
+    4px -4px,
+    -4px 0;
+  background-size: 8px 8px;
+}
+
+.emap-palette-checker {
+  position: absolute;
+  inset: 0;
+}
+
+.emap-palette-missing-mark {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 0 2px;
+  background: var(--emap-missing-bg, #fff2e8);
+  color: var(--emap-missing-fg, #d4380d);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 14px;
+  pointer-events: none;
+}
+
+.emap-palette-select-rect {
+  position: absolute;
+  z-index: 2;
+  border: 1px dashed var(--emap-marquee-border, #1677ff);
+  background: var(--emap-marquee-fill, rgba(22, 119, 255, 0.12));
+  pointer-events: none;
+}
+
+.emap-palette-select-size {
+  position: absolute;
+  right: -1px;
+  bottom: -18px;
+  padding: 0 4px;
+  border-radius: 2px;
+  background: var(--editor-surface, #ffffff);
+  color: var(--editor-muted, #656d76);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.emap-palette-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px 8px;
+  color: var(--editor-muted, #656d76);
+  font-size: 12px;
+  text-align: center;
+}
+
+.emap-palette-state.is-error .emap-palette-state-title {
+  color: var(--emap-danger-fg, #d00);
+  font-size: 14px;
+  font-weight: 600;
+}
