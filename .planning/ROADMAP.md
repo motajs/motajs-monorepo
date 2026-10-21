@@ -382,12 +382,12 @@ Plans:
   3. 用户可查看**只读**的通行性叠加层；新引擎通行性由图块属性决定，地图上不可单独编辑（2026-10-20 按用户决定修订，见 `04-CONTEXT.md` D-13 / D-23）。
   4. 地图编辑经统一命令 / 撤销路径，可撤销、可重做。
 
-**Plans:** 16 plans
+**Plans:** 1/16 plans executed
 Plans:
 
 **Wave 1 — 命名与地图域接口（仅类型，无实现）**
 
-- [ ] 04-01-PLAN.md — 命名报告 `INTERFACE-NAME.md` + 地图域类型 / 常量（先确认命名，再落声明）
+- [x] 04-01-PLAN.md — 命名报告 `INTERFACE-NAME.md` + 地图域类型 / 常量（先确认命名，再落声明）
 
 **Wave 2 — 跨包接口声明 + 纯模型底座**
 
@@ -482,6 +482,6 @@ Phases execute in numeric order: 1 → 1.1 → 2 → 2.1 → 3 → 4 → 5 → 6
 | 2. 表格编辑 | 33/33 | Complete | 2026-10-15 |
 | 2.1. 资源层重构与表格文件管理 (INSERTED) | 26/26 | Complete    | 2026-10-17 |
 | 3. 素材管理 | 31/31 | Complete    | 2026-10-20 |
-| 4. 地图编辑 | 0/16 | Not started | - |
+| 4. 地图编辑 | 1/16 | In Progress|  |
 | 5. 代码编辑 | 0/TBD | Not started | - |
 | 6. 事件编辑器 | 0/TBD | Not started | - |
