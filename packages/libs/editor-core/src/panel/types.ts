@@ -57,6 +57,16 @@ export interface IEditorPanel extends IUndoable {
   getTitle?(): string | undefined;
 
   /**
+   * 当用户主动关闭承载此面板的标签时，外壳在释放面板实例前询问是否允许关闭
+   *
+   * 返回 `true` 表示允许关闭；返回 `false` 表示取消关闭，标签保留且实例不释放。
+   * 外壳在询问前会先把目标标签切换为活动标签；钩子抛错时外壳记录日志并按取消关闭处理。
+   * 释放整个编辑器、注销面板类型、内部关闭面板实例等路径不会调用此方法。
+   * @returns 允许关闭时为 true，取消关闭时为 false
+   */
+  onBeforeClose?(): Promise<boolean>;
+
+  /**
    * 初始化此编辑器面板
    */
   initialize(): Promise<void>;

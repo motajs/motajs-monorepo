@@ -80,6 +80,8 @@ export interface ITableGridProps {
   readonly unsaved?: boolean;
   /** 保存本栏未落盘改动的回调 */
   readonly onSave?: () => void;
+  /** 表单模式：为 true 时只渲染字段行与值控件，不渲染表格工具栏与 Schema 横幅；缺省为 false，既有调用点不受影响 */
+  readonly formMode?: boolean;
 }
 
 interface IRowRenderContext {
