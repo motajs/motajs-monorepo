@@ -23,7 +23,7 @@
 | `src/map/constants.ts` | 文件 | 面板级裸常量（格子边长、默认尺寸、最近使用路径与上限、文案） |
 | `src/map/index.ts` | 桶文件 | `@motajs/editor-impl/map` 子路径入口；本计划只导出类型与常量 |
 | `IMapDocument` | interface | 宿主解析好的**整份中立地图文档**：标识、显示名、宽高、图层、图块目录。面板只认这份东西，不认识文件格式与路径 |
-| `IMapLayer` | interface | 一个命名图层：标识、显示名、是否事件层（只影响通行度显示）、`[y][x]` 数字格子 |
+| `IMapLayer` | interface | 一个命名图层：标识、显示名、`zIndex`（宿主给定顺序，越小越靠下）、是否事件层（只影响通行度显示）、`[y][x]` 数字格子 |
 | `IMapTileGroup` | interface | 宿主算好的一个图块分组：标识、名称、图片相对路径、图集列数、图块列表 |
 | `IMapTileEntry` | interface | 一个图块：格子里的编号、图集内列 / 行（多格图案按它查表，不靠编号连续）、像素裁切、名称、通行属性 |
 | `IMapTileCrop` | interface | 源图片上的像素裁切矩形（`x` / `y` / `width` / `height`） |
@@ -70,7 +70,7 @@
 | `IMapRenderGridLine` | interface | 一条网格线（`x` / `y` / `length` / `vertical`） |
 | `IMapPassMark` | interface | 一个格子上的通行度标记：坐标、不可通行方向、是否降级为红点 |
 | `IMapPreview` | interface | 绘制预览：覆盖的格子矩形 + 图案尺寸 |
-| `IMapPanelViewState` | interface | 面板视图状态（清单 / 文档 / 当前层 / 调色板 / 最近 / 画笔 / 开关 / 选区 / 剪贴板 / 脏 / 保存 / 对话框）；必须含 `paletteSelection`、`recentTiles`、`recentStatus`、`dialog`（`MapDialogKind`）、`dialogError`、`paletteVersion`（图块图片重试计数，递增即重新取字节）、`propertiesOpen`（地图属性抽屉是否打开）、`passMarks`（面板算好的通行度标记，供渲染模型消费）。**这些字段一律由本计划一次声明**，后续计划只读写、不再改 `types.ts` |
+| `IMapPanelViewState` | interface | 面板视图状态（清单 / 文档 / 当前层 / 调色板 / 最近 / 画笔 / 开关 / 选区 / 剪贴板 / 脏 / 保存 / 对话框）；必须含 `paletteSelection`、`recentTiles`、`recentStatus`、`dialog`（`MapDialogKind`）、`dialogError`、`paletteVersion`（图块图片重试计数，递增即重新取字节）、`propertiesOpen`（地图属性抽屉是否打开）、`passMarks`（面板算好的通行度标记，供渲染模型消费）、`aboveLayerOpacity`（高于当前层的图层统一不透明度，0..1）。**这些字段一律由本计划一次声明**，后续计划只读写、不再改 `types.ts` |
 | `MAP_PANEL_TYPE_ID` | 常量 `'map'` | 面板类型标识；装配方引用它而不各写字符串 |
 | `MAP_CELL_SIZE` | 常量 `32` | 一格 32px（像素画基准，不缩放） |
 | `MAP_DEFAULT_WIDTH` / `MAP_DEFAULT_HEIGHT` | 常量 `32` | 新建地图的默认宽 / 高 |
@@ -80,6 +80,7 @@
 | `MAP_RECENT_TILES_LIMIT` | 常量 `24` | 最近使用条目上限 |
 | `MAP_BIG_MAP_DOT_CELL` | 常量 `16` | 大地图模式下格边长小于该值时，通行度改用红点 |
 | `MAP_BIG_MAP_MAX_SPRITES` | 常量 `12000` | 大地图模式一次最多构建的图元数（性能阈值，实现常量，不进对外契约） |
+| `MAP_ABOVE_LAYER_DEFAULT_OPACITY` | 常量 `0.3` | 高于当前图层的图层统一不透明度的默认值（滑块初值） |
 | `MAP_SAVED_MESSAGE` | 常量 `'已保存'` | 保存成功后提示行文案 |
 | `MAP_UNDO_BLOCKED_MESSAGE` | 常量 `'无法撤销'` | 撤销命中屏障时的提示文案（地图能力自持一份，不 import 其它能力） |
 
@@ -299,6 +300,8 @@
 | `MapToolbar` 的 `layers` / `currentLayerId` | props | 文档图层与当前层；第 2 行图层 `Segmented` 的选项与选中值来源 |
 | `MapToolbar` 的 `canCreateMap` / `canAddLayer` / `canOpenProperties` | props | 宿主是否注入了对应能力；为 `false` 时对应按钮禁用并给 tooltip（绝不点成空操作） |
 | `MapToolbar` 的 `brushMode` / `passabilityVisible` / `bigMap` | props | 线 / 矩形 / 填充、是否显示通行度、是否大地图；全部是受控值 |
+| `MapToolbar` 的 `aboveLayerOpacity` / `onAboveLayerOpacityChange` | props `number` / 回调 | 高于当前层的图层统一不透明度（0..1，滑块）；当前层已是最上层时滑块禁用 |
+| `MapPanel.setAboveLayerOpacity` | 方法 | 记录滑块值并刷新渲染；不置脏、不进撤销 |
 | `MapToolbar` 的 `onSelectMap` / `onOpenCreate` / `onOpenAddLayer` | props | 切地图 / 打开新建弹窗 / 打开新增图层弹窗；后两个只调 `MapPanel.openDialog` |
 | `MapToolbar` 的 `onOpenProperties` / `onSave` / `onRetry` | props | 打开地图属性 / 手动保存 / 重试（保存失败或清单失败共用）；`onOpenProperties` 只调面板的 `MapPanel.openProperties` |
 | `MapToolbar` 的 `onSelectLayer` / `onSelectBrushMode` | props | 切当前层 / 切画笔模式；切层交给 `MapPanel.selectLayer` |
@@ -368,7 +371,7 @@
 | `MapContextMenu` | 组件 | `role="menu"` / `role="menuitem"`，打开聚焦第一项，方向键 / Enter / Escape，边缘夹取 |
 | `MapSurface` 的叠加层 | 实现 | 网格线、悬停轮廓、绘制预览、框选矩形、通行度箭头 / 红点 |
 | `MapPanel.copyRegion` / `MapPanel.pasteAt` / `MapPanel.clearRegion` | 方法 | 复制 / 粘贴 / 清空；各记一条撤销（复制不记） |
-| `MapPanel.moveViewport` | 方法 | 视口移动 1 格 / 1 屏（大地图模式下无效） |
+| `MapPanel.moveViewport` | 方法 | 视口移动 1 格 / 1 屏；大地图下同样可用（滚轮上下、Shift+滚轮左右移动视角） |
 | `MapPanel.selectLayer` | 方法 | 切换当前图层：取消进行中的笔画、清选区与预览；保留剪贴板与调色板选择，不置脏、不记撤销 |
 | `MapPanel.setPassabilityVisible` / `MapPanel.setBigMap` | 方法 | 只读通行度开关 / 大地图开关；都不置脏、不进撤销 |
 | `MapCanvas` 内部的 `MapStatusBar` | 实现 | 状态条的坐标 / 选区两段改由画布本地的指针 / 框选状态喂；其余段（地图 / 图层 / 模式）仍由 props 传入。`MapPanelView` 不再直接渲染状态条 |
@@ -420,14 +423,14 @@
 | OQ2 | 图块目录状态：D-02 与 UI-SPEC 的口径冲突 | **保留 D-02**：目录随文档到达。调色板的「加载 / 失败」指**图片字节**状态；全部分组图片失败 → 显示「图块加载失败」+ 重试，但**仍可落笔**（编号有效，画布用占位格）；目录零分组 → 「暂无可用的图块」并禁用落笔 | 不新增第二条数据通道；单张图失败只影响该图块，不把整张地图判成加载失败（Pitfall 13） |
 | OQ3 | 地图属性放文档里还是独立域 | 独立域：`readProperties` / `saveMapProperties` + 静态 `propertiesSchema`。文档只装几何与图块目录 | 抽屉需要独立的「加载 / 失败」状态；属性保存是 D-04 明确的一个独立域 |
 | OQ4 | 「新增图层」是否触发未保存拦截 | **触发**（与切图 / 新建 / 关闭标签一致）。这是对 UI-SPEC F8 触发列表的扩展 | 宿主加层会返回整份新文档，内存里未保存的笔画会被覆盖（Pitfall 17）。不拦截 = 静默丢数据 |
-| OQ5 | 图层合成：全画还是只画当前层 | 全画：按宿主给定顺序逐层绘制，非当前层透明度 0.3，当前层 1.0 | 沿用旧编辑器的可观察行为；当前层仍然突出 |
+| OQ5 | 图层合成：全画还是只画当前层 | 按宿主给定顺序（zIndex）逐层绘制：**zIndex 低于当前选中层的正常绘制（不透明度 1）**；**高于当前选中层的用一个滑块统一调整不透明度**，默认 0.3；当前层始终 1.0。新增 `aboveLayerOpacity` / `MapPanel.setAboveLayerOpacity` / `MAP_ABOVE_LAYER_DEFAULT_OPACITY`。 | 用户 2026-10-21 指定：下层保持可读，上层可调透明以看清当前层；单一滑块避免每层一个控件 |
 | OQ6 | 最近使用文件的路径 / 格式 / 上限 | `.editor/map-recent-tiles.json`，`{ "tiles": number[] }`，上限 24，只存 1×1 主图块；缺失 / 损坏按空列表；首次落笔成功后才创建；宿主可用 `recentTilesPath` 覆盖；失败静默降级 | 写新文件会进入项目目录，用户需知晓（见本文末确认项） |
 | OQ7 | 事件域接口：现在声明还是留给 Phase 6 | **本阶段不声明**事件保存接口（没有调用点的接口就是未定契约）。`saveMapData` 的宿主实现负责在写回时保留事件与额外字段 | D-04 的「按域拆分」在事件域上由 Phase 6 补齐；本阶段用开发宿主集成测试断言「保存后事件仍在」来守住数据不丢 |
 | OQ8 | 标签标题是否显示地图名 | 不实现动态标题：面板类型名「地图编辑器」；不实现 `getTitle` | 外壳只在自身快照变化时重算标签名，切图后标签名会停在旧值（Pitfall 20）；要修就得扩 core 接口，本阶段不做 |
 | OQ9 | 组内缺格时多格图案怎么处理 | 能力契约要求「分组是完整矩形」；若仍缺格，图案格按 0（空）写入，用占位而不是崩溃 | 与 A10 一致；不让一次选择产生大量意外空格而无声 |
 | OQ10 | 图块图片：路径 + 资源层，还是宿主给 URL / 字节 | 路径 + 资源层：宿主只给相对项目根的 `imagePath`，面板经 `IEditorPanelContext.requestResource(...).requestBinary()` 取字节，再生成 blob URL / 纹理 | 与素材面板同款；面板不触达真实文件系统。未来若出现只能给 URL 的宿主，再加可选 `resolveImageUrl?` |
 | OQ11 | 绘制预览：覆盖层还是真实图块 | 覆盖层：目标格 35% 透明填充 + 1px 描边，不克隆文档、不在预览里画真实图块 | 更便宜；克隆整图会在拖动时产生几 MB 垃圾（Pitfall 6） |
-| OQ12 | 大地图性能阈值 | 普通模式只构建**可见格**；大地图模式整图适配一屏，格边长 < 16px 时通行度改红点，一次构建的图元数上限 12000；超过时只画当前层 | 阈值是实现常量、不进对外契约；开发宿主放一张大于视口的地图实测 |
+| OQ12 | 大地图性能阈值 | 普通模式只构建**可见格**；大地图模式整图适配一屏，格边长 < 16px 时通行度改红点，一次构建的图元数上限 12000；超过时只画当前层。**大地图下允许移动视角：滚轮上下移动、Shift+滚轮左右移动**（复用 `MapPanel.moveViewport`），退出后回到进入前视口。 | 阈值是实现常量、不进对外契约；用户 2026-10-21 明确要求大地图仍可用滚轮移动；开发宿主放一张大于视口的地图实测 |
 
 **另有两项由规划阶段自行裁定（CONTEXT 的 Discretion）：**
 
@@ -439,9 +442,19 @@
 ## 范围修订记录（必须随计划一起读）
 
 1. **通行性改为只读**（CONTEXT D-13 / D-23）。ROADMAP Phase 4 第 3 条与 REQUIREMENTS `MAP-01` 原文含「编辑通行性」，本阶段按用户指示正式修订为**只读查看通行度叠加层**。本文件与全部计划**不得**出现通行性编辑入口。
-   - **待办（不由本阶段改动）：** `.planning/ROADMAP.md` Phase 4 第 3 条与 `.planning/REQUIREMENTS.md` 的 `MAP-01` 需要一句修订说明（例如「通行性只读，见 04-CONTEXT D-13/D-23」）。规划阶段只记录，不代改。
+   - **已完成（2026-10-21）：** 按用户指示，`.planning/ROADMAP.md` Phase 4 第 3 条与 `.planning/REQUIREMENTS.md` 的 `MAP-01` 已补上修订说明（通行性只读，见 04-CONTEXT D-13/D-23）。
 2. **范围扩大**（同类修订的补入项）：新建地图（D-05）、新增图层（D-05 / D-07）、地图属性表单（D-15）、区域复制粘贴（D-20）、最近使用图块（D-11）都在本阶段内。
 3. **仍然不做**（D-24）：点事件的显示 / 绑定 / 编辑、图块属性编辑、图层重命名 / 排序 / 删除 / 设置面板、事件叠加与右键事件项、插件机制。
+
+---
+
+## 执行协作规则（2026-10-21）
+
+阶段三的新增计划会与本阶段并行执行。为了不互相覆盖：
+
+1. **只提交自己负责的文件**；其他文件一律不动，也不代为整理。
+2. **修改前先检查工作树**：对每个要改的文件跑 `git status --porcelain -- <path>`；只要输出非空（已有未提交改动），**立即阻断执行**并向用户报告，不得覆盖、不得 stash、不得代提交。
+3. 这条规则高于「继续执行」的默认行为；阻断后等用户明确指示再继续。
 
 ---
 
@@ -453,6 +466,7 @@
 4. **（costly）最近使用文件**：会在项目里新建 `.editor/map-recent-tiles.json`；路径 / 字段名 / 上限 24。
 5. **（costly）保存只交几何 + 属性两个域**：事件与额外字段由宿主保留，本阶段不声明事件接口（OQ7）。
 6. **（reversible）通行度只读口径**：只画「不可通行」方向；`onlyEventLayer` 图块只在事件层参与。
-7. **（reversible）UI 口径**：图层全画 + 非当前层 0.3；绘制预览为覆盖层；大地图整图适配；新增图层也弹未保存确认。
+7. **（reversible）UI 口径**：图层按 zIndex 绘制，低于当前层正常、高于当前层用滑块统一调不透明度（默认 0.3；`aboveLayerOpacity` / `MapPanel.setAboveLayerOpacity` / `MAP_ABOVE_LAYER_DEFAULT_OPACITY`）；绘制预览为覆盖层；大地图整图适配，滚轮上下 / Shift+滚轮左右移动视角；新增图层也弹未保存确认。
+8. **（流程硬规则）工作树冲突阻断**：任何要修改的文件若在 git 工作树已有未提交改动，立即停止执行并报告，不得覆盖或代提交；只提交本计划负责的文件。阶段三的新增计划会并行执行，其他文件一律不动。
 
 > 若以上任一项需要修改，请直接指出条目编号（例如「OQ4 改成不拦截」），本文件与对应计划会先改再执行。
