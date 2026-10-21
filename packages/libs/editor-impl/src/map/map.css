@@ -1,0 +1,394 @@
+.emap-panel {
+  --emap-marquee-border: #1677ff;
+  --emap-marquee-fill: rgba(22, 119, 255, 0.12);
+  --emap-preview-fill: rgba(22, 119, 255, 0.35);
+  --emap-hover-outline: rgba(22, 119, 255, 0.4);
+  --emap-grid-line: rgba(0, 0, 0, 0.08);
+  --emap-pass-blocked: #e60012;
+  --emap-pass-chip: rgba(255, 255, 255, 0.9);
+  --emap-danger-fg: #d00;
+  --emap-missing-bg: #fff2e8;
+  --emap-missing-fg: #d4380d;
+  --emap-empty-a: var(--editor-surface, #ffffff);
+  --emap-empty-b: var(--editor-bg, #f5f6f8);
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  color: var(--editor-fg, #202124);
+  background: var(--editor-surface, #ffffff);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.emap-toolbar {
+  display: flex;
+  flex: 0 0 64px;
+  flex-direction: column;
+  height: 64px;
+  border-bottom: 1px solid var(--editor-border, #d0d7de);
+  background: var(--editor-toolbar-bg, #ffffff);
+}
+
+.emap-toolbar-row {
+  display: flex;
+  flex: 0 0 32px;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: 32px;
+  padding: 0 8px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.emap-toolbar-row + .emap-toolbar-row {
+  border-top: 1px solid var(--editor-border, #d0d7de);
+}
+
+.emap-toolbar-label {
+  flex: 0 0 auto;
+  color: var(--editor-muted, #656d76);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.emap-toolbar-map-select {
+  flex: 0 1 240px;
+  min-width: 160px;
+  max-width: 240px;
+}
+
+.emap-toolbar-map-name {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+.emap-toolbar-spacer {
+  flex: 1 1 auto;
+  min-width: 8px;
+}
+
+.emap-toolbar-unsaved {
+  flex: 0 0 auto;
+  color: var(--editor-muted, #656d76);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.emap-toolbar-layers {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  scrollbar-width: none;
+}
+
+.emap-toolbar-layers::-webkit-scrollbar {
+  display: none;
+}
+
+.emap-toolbar-layers-empty {
+  color: var(--editor-muted, #656d76);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.emap-layer-option {
+  display: inline-block;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+.emap-toolbar-group {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+}
+
+.emap-opacity {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.emap-opacity-label {
+  color: var(--editor-muted, #656d76);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.emap-opacity-slider {
+  width: 96px;
+  margin: 0;
+}
+
+.emap-tooltip-wrap {
+  display: inline-flex;
+}
+
+.emap-bigmap.is-active,
+.emap-bigmap.is-active:hover,
+.emap-bigmap.is-active:focus {
+  border-color: var(--editor-accent, #1677ff);
+  color: var(--editor-accent, #1677ff);
+}
+
+.emap-viewport-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+}
+
+.emap-view-menu-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--editor-border, #d0d7de);
+  border-radius: 4px;
+  background: var(--editor-surface, #ffffff);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.emap-notice {
+  display: flex;
+  flex: 0 0 24px;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: 24px;
+  padding: 0 8px;
+  overflow: hidden;
+  border-top: 1px solid var(--editor-border, #d0d7de);
+  color: var(--editor-muted, #656d76);
+  background: var(--editor-toolbar-bg, #ffffff);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.emap-notice.is-error {
+  color: var(--emap-danger-fg);
+}
+
+.emap-notice-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.emap-body {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+.emap-canvas-area {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.emap-canvas-scroll {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  padding: 20px 0 0 20px;
+  overflow: auto;
+  background: var(--editor-bg, #f5f6f8);
+}
+
+.emap-canvas {
+  position: relative;
+  line-height: 0;
+  outline: none;
+}
+
+.emap-canvas:focus-visible {
+  outline: 2px solid var(--editor-accent, #1677ff);
+  outline-offset: -2px;
+}
+
+.emap-canvas-empty-layer {
+  position: absolute;
+  inset: 20px 0 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--editor-muted, #656d76);
+  font-size: 12px;
+  line-height: 1.4;
+  pointer-events: none;
+}
+
+.emap-canvas-state {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 0;
+  padding: 24px;
+  color: var(--editor-muted, #656d76);
+  text-align: center;
+}
+
+.emap-state-title {
+  color: var(--editor-fg, #202124);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.emap-canvas-state.is-error .emap-state-title {
+  color: var(--emap-danger-fg);
+}
+
+.emap-state-body {
+  font-size: 12px;
+}
+
+.emap-palette-slot {
+  flex: 0 0 240px;
+  width: 240px;
+  min-height: 0;
+  overflow: hidden;
+  border-left: 1px solid var(--editor-border, #d0d7de);
+  background: var(--editor-surface, #ffffff);
+}
+
+.emap-status {
+  display: flex;
+  flex: 0 0 24px;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: 24px;
+  padding: 0 8px;
+  overflow: hidden;
+  border-top: 1px solid var(--editor-border, #d0d7de);
+  color: var(--editor-muted, #656d76);
+  background: var(--editor-toolbar-bg, #ffffff);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.emap-status-item {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.emap-status-num {
+  font-variant-numeric: tabular-nums;
+}
+
+.emap-empty {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 0;
+  padding: 24px;
+  overflow: hidden;
+  color: var(--editor-muted, #656d76);
+  text-align: center;
+}
+
+.emap-empty-title {
+  color: var(--editor-fg, #202124);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.emap-empty.is-error .emap-empty-title {
+  color: var(--emap-danger-fg);
+}
+
+.emap-empty-body {
+  font-size: 12px;
+}
+
+.emap-empty-list {
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
+  align-self: stretch;
+  width: 100%;
+  max-width: 360px;
+  max-height: 240px;
+  margin: 8px auto 0;
+  overflow-y: auto;
+  border: 1px solid var(--editor-border, #d0d7de);
+  border-radius: 4px;
+  background: var(--editor-surface, #ffffff);
+}
+
+.emap-empty-item {
+  display: block;
+  flex: 0 0 32px;
+  width: 100%;
+  height: 32px;
+  padding: 0 8px;
+  overflow: hidden;
+  border: none;
+  border-bottom: 1px solid var(--editor-grid, #d8dee4);
+  background: transparent;
+  color: var(--editor-fg, #202124);
+  font-size: 13px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.emap-empty-item:last-child {
+  border-bottom: none;
+}
+
+.emap-empty-item:hover {
+  background: var(--editor-selected, #dbeafe);
+}
+
+.emap-empty-item:focus-visible {
+  outline: 2px solid var(--editor-accent, #1677ff);
+  outline-offset: -2px;
+}
+
+.emap-empty-create {
+  flex: 0 0 auto;
+  margin-top: 8px;
+}
+
+.emap-properties-body {
+  position: relative;
+  height: 100%;
+  min-height: 0;
+}
