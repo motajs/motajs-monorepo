@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: 4
 current_phase_name: 地图编辑
-current_plan: 4
+current_plan: 5
 status: executing
-stopped_at: Completed 04-02-PLAN.md
-last_updated: "2026-10-21T08:19:18.562Z"
+stopped_at: Completed 04-05-PLAN.md
+last_updated: "2026-10-21T08:32:23.160Z"
 last_activity: 2026-10-21
 last_activity_desc: Phase 3 complete, transitioned to Phase 4
-state_head: 55bbd11f7689c0a94d5895eaa921d1ad39f08892
+state_head: efd176cbab4e3c6bf01ff375269f992dc3807589
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 120
-  completed_plans: 106
+  completed_plans: 107
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 4 (地图编辑) — EXECUTING
-Current Plan: 4
+Current Plan: 5
 Total Plans in Phase: 16
 Status: Ready to execute
 Last activity: 2026-10-21 — 04-01 complete (naming report + map domain types)
@@ -127,6 +127,7 @@ Progress: [██████████] 100%
 | Phase 02.1 P25 | 13 min | 3 tasks | 5 files |
 | Phase 02.1 P26 | 17 | 3 tasks | 5 files |
 | Phase 4 P02 | 2 min | 2 tasks | 2 files |
+| Phase 04 P05 | 14 min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -289,6 +290,8 @@ Recent decisions affecting current work:
 - [Phase 02.1]: DevCodeEditorProvider 复用既有 ICodeEditorOpener / ITableCapabilitiesProviderProps，类型面零新增；用 JSX（antd Modal 的 data-test-id 无法经 createElement 表达）
 - [Phase 02.1]: 缺口收口 G-02.1-5：把 TableCreateForm 的确认入口移到新建视图顶部（Fragment 子元素顺序 control, location, error），配两层可失败 DOM 顺序断言；不改任何对外契约。
 - [Phase 4]: IEditorPanel.onBeforeClose 语义按用户确认定稿：true 允许关闭 / false 取消；仅用户主动点 ✕ 时询问，先激活目标标签；释放编辑器、注销类型、内部关闭实例永不询问 — one-way 跨包接口，行为由 04-15 落地
+- [Phase 4]: 地图写路径统一形状：线 / 矩形 / 填充 / 擦除 / 粘贴 / 清空都输出 IPaintWrite[]，越界裁剪只由 clampRectToMap 负责
+- [Phase 4]: 图案平铺按图案宽高取模、相位由锚点决定（矩形传角点、填充传点击格），不依赖编号连续
 
 ### Pending Todos
 
@@ -315,6 +318,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-21T07:26:59.024Z
-Stopped at: Completed 04-02-PLAN.md
+Last session: 2026-10-21T08:32:01.446Z
+Stopped at: Completed 04-05-PLAN.md
 Resume file: None
