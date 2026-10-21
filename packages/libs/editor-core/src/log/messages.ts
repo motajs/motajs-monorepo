@@ -17,4 +17,5 @@ export const messages: LogMessages = Object.freeze({
   'shell.tabNotFound': 'Tab not found: $1',
   'shell.duplicateMenuItem': 'Duplicate menu item identifier: $1',
   'shell.callbackFailed': 'Panel callback failed: $1',
+  'shell.beforeCloseFailed': 'Panel close hook failed: $1',
 });
