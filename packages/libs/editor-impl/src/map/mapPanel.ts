@@ -1,4 +1,5 @@
 import { Store } from '@tanstack/store';
+import { isEqual } from 'es-toolkit';
 import { createElement, FC, ReactElement } from 'react';
 import { IEditorPanel, IEditorPanelContext, IEditorPanelFactoryParam, IUndoContext } from '@motajs/editor-core';
 import {
@@ -9,6 +10,10 @@ import {
   MAP_SAVED_MESSAGE,
 } from './constants';
 import { parseTableText, serializeTableText } from '../shared/jsonc/tableText';
+import { TablePanelStatus } from '../shared/schemaForm/components/TableGrid';
+import { setByFieldPath } from '../shared/schemaForm/model/fieldPath';
+import { buildTableTree } from '../shared/schemaForm/model/traversal';
+import { ITableRowNode, ITableSchemaNode } from '../shared/schemaForm/types';
 import { MapPanelView } from './components/MapPanelView';
 import { isMapDataDirty, isMapPropertiesDirty } from './model/dirty';
 import {
@@ -30,6 +35,7 @@ import {
   IMapPanel,
   IMapPanelTarget,
   IMapPanelViewState,
+  IMapPropertyUndoData,
   MapBrushMode,
   MapDialogKind,
   MapImageStatus,
@@ -210,6 +216,91 @@ function cloneProperties(properties: Record<string, unknown>): Record<string, un
   return result;
 }
 
+/** 允许删除外部编辑器标记的 schema 形状；只用于剥键，不对外暴露 */
+interface IMutableSchemaNode {
+  /** 该字段使用的外部编辑器（`x-editor` 扩展键） */
+  'x-editor'?: unknown;
+}
+
+/**
+ * 把字段路径段数组拼成表格引擎认识的路径字符串
+ * @param path 字段路径段数组
+ * @returns 形如 `['a']['b']` 的字段路径字符串；空数组时为空串
+ */
+function toFieldPathText(path: readonly (string | number)[]): string {
+  return path.map((segment) => `['${String(segment)}']`).join('');
+}
+
+/**
+ * 按字段路径从属性表里读一个值；只认自有属性，绝不顺着原型链读取
+ * @param properties 属性表
+ * @param path 字段路径段数组
+ * @returns 该字段的当前值；路径为空或不存在时为 undefined
+ */
+function readPropertyValue(properties: Record<string, unknown>, path: readonly (string | number)[]): unknown {
+  let current: unknown = properties;
+
+  for (const segment of path) {
+    if (typeof current !== 'object' || current === null) return undefined;
+
+    const key = String(segment);
+
+    if (!Object.prototype.hasOwnProperty.call(current, key)) return undefined;
+
+    current = (current as Record<string, unknown>)[key];
+  }
+
+  return current;
+}
+
+/**
+ * 递归复制一层 schema 的字段表，并逐项剥掉外部编辑器标记
+ * @param properties 该层 schema 声明的字段表
+ * @returns 不含 `x-editor` 的字段表；入参缺省时返回 undefined
+ */
+function stripExternalEditorMap(
+  properties: Record<string, ITableSchemaNode> | undefined,
+): Record<string, ITableSchemaNode> | undefined {
+  if (properties === undefined) return undefined;
+
+  const result: Record<string, ITableSchemaNode> = {};
+
+  for (const key of Object.keys(properties)) result[key] = stripExternalEditors(properties[key]);
+
+  return result;
+}
+
+/**
+ * 深拷贝一份 schema 并剥掉 `x-editor`：属性表单没有外部编辑器能力，留着只会渲染出点不动的「编辑」
+ * @param schema 宿主注入的 schema 节点
+ * @returns 不含 `x-editor` 的等价 schema 副本
+ */
+function stripExternalEditors(schema: ITableSchemaNode): ITableSchemaNode {
+  const next: ITableSchemaNode = {
+    ...schema,
+    properties: stripExternalEditorMap(schema.properties),
+    items: schema.items === undefined ? undefined : stripExternalEditors(schema.items),
+  };
+
+  delete (next as IMutableSchemaNode)['x-editor'];
+
+  return next;
+}
+
+/**
+ * 判断撤销载荷是否为属性字段改动：地图标识为字符串、路径为字符串 / 数字数组，且带前后值
+ * @param value 撤销记录携带的载荷
+ * @returns 形状符合属性改动时为 true
+ */
+function isMapPropertyUndoData(value: unknown): value is IMapPropertyUndoData {
+  if (typeof value !== 'object' || value === null) return false;
+  if (!('mapId' in value) || typeof value.mapId !== 'string') return false;
+  if (!('path' in value) || !Array.isArray(value.path)) return false;
+  if (!value.path.every((segment: unknown) => typeof segment === 'string' || typeof segment === 'number')) return false;
+
+  return 'before' in value && 'after' in value;
+}
+
 export class MapPanel implements IEditorPanel, IMapPanel {
   /** 面板实例标识符，取自 core 生成的实例 id */
   readonly id: string;
@@ -246,6 +337,21 @@ export class MapPanel implements IEditorPanel, IMapPanel {
 
   /** 最近一次已保存或刚打开时的属性表快照；没有打开地图时为 undefined */
   private propertiesBaseline?: Record<string, unknown>;
+
+  /** 属性域的加载状态；`TablePanelStatus.NoTarget` 表示尚未读取（入口据此禁用） */
+  private propertiesStatus: TablePanelStatus = TablePanelStatus.NoTarget;
+
+  /** 属性域读取失败的原因；没有失败时为 undefined */
+  private propertiesError?: string;
+
+  /** 属性表单的行树；尚未读取、读取失败或没有字段时为空数组 */
+  private propertyRows: readonly ITableRowNode[] = [];
+
+  /** 剥掉外部编辑器标记后的 schema 副本，供字段提交后重建行树 */
+  private propertySchema?: ITableSchemaNode;
+
+  /** 属性读取请求的序号，用来丢弃晚到的在途结果 */
+  private propertiesToken: number = 0;
 
   /** 打开 / 刷新请求的序号，用来丢弃晚到的在途结果 */
   private loadToken: number = 0;
@@ -376,6 +482,42 @@ export class MapPanel implements IEditorPanel, IMapPanel {
     this.document = next;
     this.refreshUnsaved();
     this.publish({ document: next, notice: undefined, error: undefined });
+  }
+
+  /**
+   * 把一条属性撤销记录应用回当前属性表；载荷的地图标识不等于当前地图时直接返回，绝不串图
+   * @param context 撤销记录
+   * @param reverse 为 true 时回退（撤销），为 false 时重放（重做）
+   */
+  private applyPropertyUndo(context: IUndoContext<unknown>, reverse: boolean): void {
+    if (context.type !== MapUndoType.Property) return;
+
+    const data = context.data;
+
+    if (!isMapPropertyUndoData(data)) return;
+
+    const document = this.document;
+
+    if (document === undefined || data.mapId !== document.id) return;
+
+    const value = reverse ? data.before : data.after;
+
+    this.properties = setByFieldPath(this.properties, toFieldPathText(data.path), value);
+    this.refreshPropertyRows();
+    this.refreshUnsaved();
+  }
+
+  /**
+   * 把属性域恢复到「尚未读取」：切图 / 新建地图后必须重来，否则会把上一张图的属性留在内存里
+   */
+  private resetProperties(): void {
+    this.propertiesToken += 1;
+    this.properties = {};
+    this.propertiesBaseline = undefined;
+    this.propertiesStatus = TablePanelStatus.NoTarget;
+    this.propertiesError = undefined;
+    this.propertyRows = [];
+    this.propertySchema = undefined;
   }
 
   /**
@@ -557,6 +699,7 @@ export class MapPanel implements IEditorPanel, IMapPanel {
       hover: undefined,
     });
     this.refreshUnsaved();
+    this.refreshPropertyRows();
     this.registerBarrier({ action: MapBarrierAction.Discard, mapId: this.document?.id ?? '' });
   }
 
@@ -633,8 +776,7 @@ export class MapPanel implements IEditorPanel, IMapPanel {
       this.document = document;
       this.currentLayerId = document.layers[0]?.id;
       this.paletteSelection = selectFirstTile(document);
-      this.properties = {};
-      this.propertiesBaseline = undefined;
+      this.resetProperties();
       this.targetMapId = document.id;
       this.captureBaseline();
       this.registerBarrier({ action: MapBarrierAction.Create, mapId: document.id });
@@ -853,8 +995,7 @@ export class MapPanel implements IEditorPanel, IMapPanel {
     this.document = undefined;
     this.currentLayerId = undefined;
     this.dataBaseline = undefined;
-    this.properties = {};
-    this.propertiesBaseline = undefined;
+    this.resetProperties();
     this.publish({
       status: MapPanelStatus.Loading,
       document: undefined,
@@ -989,7 +1130,136 @@ export class MapPanel implements IEditorPanel, IMapPanel {
   }
 
   /**
-   * 手动保存有改动的域：先取快照再等宿主，成功后把「发出去的快照」设为基线
+   * 读取整份地图属性表并构建属性表单的行树
+   *
+   * 宿主没有注入属性 schema 或没有注入读取能力时保持「尚未读取」，不发任何请求；schema 先剥掉
+   * 外部编辑器标记再交给表单引擎，避免出现点不动的「编辑」按钮。读取失败只落错误态，不动地图。
+   */
+  async loadProperties(): Promise<void> {
+    const document = this.document;
+    const schema = this.capabilities.propertiesSchema;
+    const readProperties = this.capabilities.readProperties;
+
+    if (document === undefined || schema === undefined || readProperties === undefined) return;
+
+    const token = ++this.propertiesToken;
+
+    this.propertiesStatus = TablePanelStatus.Loading;
+    this.propertiesError = undefined;
+    this.propertyRows = [];
+
+    try {
+      const properties = await readProperties(document.id);
+
+      if (token !== this.propertiesToken) return;
+
+      const stripped = stripExternalEditors(schema);
+      const table = isPlainRecord(properties) ? properties : {};
+
+      this.propertySchema = stripped;
+      this.properties = table;
+      this.propertiesBaseline = cloneProperties(table);
+      this.propertyRows = buildTableTree(stripped, table);
+      this.propertiesStatus = this.propertyRows.length === 0 ? TablePanelStatus.EmptySchema : TablePanelStatus.Ready;
+      this.refreshUnsaved();
+    } catch (error) {
+      if (token !== this.propertiesToken) return;
+
+      this.propertiesStatus = TablePanelStatus.Error;
+      this.propertiesError = toErrorMessage(error);
+    }
+  }
+
+  /**
+   * 用当前属性表重建行树；字段提交、撤销 / 重做与放弃改动之后都要调用
+   */
+  refreshPropertyRows(): void {
+    const schema = this.propertySchema;
+
+    if (schema === undefined) {
+      this.propertyRows = [];
+      return;
+    }
+
+    this.propertyRows = buildTableTree(schema, this.properties);
+
+    if (this.propertiesStatus === TablePanelStatus.Ready || this.propertiesStatus === TablePanelStatus.EmptySchema) {
+      this.propertiesStatus = this.propertyRows.length === 0 ? TablePanelStatus.EmptySchema : TablePanelStatus.Ready;
+    }
+  }
+
+  /**
+   * 提交一个属性字段：写进内存、记一条可逆撤销、重建行树并置「未保存」
+   *
+   * 路径经过 `setByFieldPath` 写入，落不进去（含危险段）或值与旧值相同时什么都不做。
+   * @param path 字段路径段数组
+   * @param value 新值
+   */
+  commitProperty(path: readonly (string | number)[], value: unknown): void {
+    const document = this.document;
+
+    if (document === undefined) return;
+
+    const previous = readPropertyValue(this.properties, path);
+    const next = setByFieldPath(this.properties, toFieldPathText(path), value);
+    const applied = readPropertyValue(next, path);
+
+    if (isEqual(previous, value)) return;
+    if (!isEqual(applied, value)) return;
+
+    this.properties = next;
+    this.context.addUndoContext(this, {
+      type: MapUndoType.Property,
+      data: { mapId: document.id, path, before: previous, after: value } satisfies IMapPropertyUndoData,
+    });
+    this.refreshPropertyRows();
+    this.publish({ unsaved: this.computeUnsaved(), notice: undefined, error: undefined });
+  }
+
+  /**
+   * 把整份属性表交给宿主；属性域不脏时不打扰宿主
+   * @returns 属性域已保存（或本来就不脏）时为 true；没有文档或宿主没有保存能力时为 false
+   */
+  async saveProperties(): Promise<boolean> {
+    const document = this.document;
+    const saveMapProperties = this.capabilities.saveMapProperties;
+
+    if (document === undefined || saveMapProperties === undefined) return false;
+    if (!isMapPropertiesDirty(this.properties, this.propertiesBaseline)) return true;
+
+    const snapshot = cloneProperties(this.properties);
+
+    await saveMapProperties(document.id, snapshot);
+    this.propertiesBaseline = snapshot;
+    return true;
+  }
+
+  /**
+   * 「地图属性」入口的承接方法：打开抽屉，并在属性域尚未读取时读一次宿主
+   *
+   * 已经读过就只开抽屉、不重读，保住用户还没保存的属性改动；没有 schema 或读取能力时不开抽屉。
+   */
+  async openProperties(): Promise<void> {
+    const document = this.document;
+
+    if (document === undefined) return;
+    if (this.capabilities.propertiesSchema === undefined) return;
+    if (this.capabilities.readProperties === undefined) return;
+
+    this.publish({ propertiesOpen: true });
+
+    if (this.propertiesStatus === TablePanelStatus.NoTarget) await this.loadProperties();
+  }
+
+  /**
+   * 关闭属性抽屉：只关抽屉，不写盘、不丢内存改动、不登记撤销
+   */
+  closeProperties(): void {
+    this.publish({ propertiesOpen: false });
+  }
+
+  /**
+   * 手动保存有改动的域：数据域与属性域各自判断脏、各自取快照，任一块失败都保留对应脏标记
    *
    * 保存期间允许继续编辑；保存完成后按基线重算，所以期间的新改动仍然算脏。
    * @returns 全部保存成功时为 true；没有文档、正在保存或宿主报错时为 false
@@ -1002,8 +1272,9 @@ export class MapPanel implements IEditorPanel, IMapPanel {
     if (document === undefined) return false;
 
     const dataDirty = isMapDataDirty(document, this.dataBaseline);
+    const propertiesDirty = isMapPropertiesDirty(this.properties, this.propertiesBaseline);
 
-    if (!dataDirty) {
+    if (!dataDirty && !propertiesDirty) {
       this.refreshUnsaved();
       return true;
     }
@@ -1013,13 +1284,22 @@ export class MapPanel implements IEditorPanel, IMapPanel {
     this.publish({ saving: true, error: undefined, notice: undefined });
 
     try {
-      await this.capabilities.saveMapData({
-        id: snapshot.id,
-        width: snapshot.width,
-        height: snapshot.height,
-        layers: snapshot.layers,
-      });
-      this.dataBaseline = snapshot;
+      if (dataDirty) {
+        await this.capabilities.saveMapData({
+          id: snapshot.id,
+          width: snapshot.width,
+          height: snapshot.height,
+          layers: snapshot.layers,
+        });
+        this.dataBaseline = snapshot;
+      }
+
+      if (propertiesDirty && !(await this.saveProperties())) {
+        this.refreshUnsaved();
+        this.publish({ error: '当前项目不支持保存地图属性。' });
+        return false;
+      }
+
       this.refreshUnsaved();
       this.publish({ notice: MAP_SAVED_MESSAGE, error: undefined });
       return true;
@@ -1034,10 +1314,12 @@ export class MapPanel implements IEditorPanel, IMapPanel {
 
   async undo(context: IUndoContext<unknown>): Promise<void> {
     this.applyCellUndo(context, true);
+    this.applyPropertyUndo(context, true);
   }
 
   async redo(context: IUndoContext<unknown>): Promise<void> {
     this.applyCellUndo(context, false);
+    this.applyPropertyUndo(context, false);
   }
 
   async initialize(): Promise<void> {}
@@ -1048,8 +1330,7 @@ export class MapPanel implements IEditorPanel, IMapPanel {
     this.document = undefined;
     this.currentLayerId = undefined;
     this.dataBaseline = undefined;
-    this.properties = {};
-    this.propertiesBaseline = undefined;
+    this.resetProperties();
   }
 
   async onFocus(): Promise<void> {}
