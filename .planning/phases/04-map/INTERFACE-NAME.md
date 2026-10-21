@@ -335,7 +335,7 @@
 | `MapPalette` 的 `groupUrls` / `groupStatus` | props | 分组标识 → blob URL、分组标识 → `MapImageStatus`；由挂载方（04-16 的视图 hook）提供，组件自己不读文件、不读字节 |
 | `src/map/components/dialogs/MapRecentClearDialog.tsx` | 文件 | 「清除最近使用的图块？」确认弹窗 |
 | `MapRecentClearDialog` | 组件 | 破坏性按钮「清除记录」+「取消」 |
-| `data-test-id`（调色板） | 约定 | `map-palette` / `map-tile-{编号}` / `map-palette-group-{序号}` / `map-recent-{编号}` / `map-palette-empty` / `map-palette-retry` |
+| `data-test-id`（调色板） | 约定 | `map-palette` / `map-tile-{编号}` / `map-palette-group-{序号}` / `map-recent-{编号}` / `map-palette-empty` / `map-palette-retry` / `map-recent-clear-dialog`（清除最近使用确认弹窗） |
 
 ---
 
