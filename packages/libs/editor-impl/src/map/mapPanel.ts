@@ -397,17 +397,8 @@ export class MapPanel implements IEditorPanel, IMapPanel {
     this.component = (): ReactElement =>
       createElement(MapPanelView, {
         store: this.store,
-        loadBytes: async (path: string): Promise<Uint8Array | undefined> => {
-          const resource = await this.context.requestResource(path);
-
-          if (resource === null) return undefined;
-
-          try {
-            return await resource.requestBinary();
-          } catch {
-            return undefined;
-          }
-        },
+        loadBytes: (path: string): Promise<Uint8Array | undefined> => this.readBytes(path),
+        loadTileBytes: (path: string): Promise<Uint8Array | undefined> => this.readBytes(path),
         onPaintCell: (position): void => {
           const layerId = this.currentLayerId;
 
@@ -417,13 +408,67 @@ export class MapPanel implements IEditorPanel, IMapPanel {
 
           this.commitCells(layerId, [{ x: position.x, y: position.y, value }]);
         },
+        onSelectPattern: (selection): void => this.selectPalette(selection),
+        onRetryImages: (): void => this.reloadTileImages(),
+        onClearRecent: (): void => {
+          void this.clearRecentTiles();
+        },
         onSave: (): void => {
           void this.save();
         },
         onRetry: (): void => {
-          if (this.targetMapId !== undefined) void this.openMap(this.targetMapId);
+          if (this.targetMapId !== undefined) {
+            void this.openMap(this.targetMapId);
+            return;
+          }
+
+          void this.loadSummaries();
+        },
+        canCreateMap: this.capabilities.createMap !== undefined,
+        canAddLayer: this.capabilities.addLayer !== undefined,
+        canOpenProperties:
+          this.capabilities.propertiesSchema !== undefined && this.capabilities.readProperties !== undefined,
+        maxMapSize: this.capabilities.maxMapSize,
+        onSelectMap: (mapId): void => {
+          void this.openMap(mapId);
+        },
+        onOpenDialog: (kind): void => this.openDialog(kind),
+        onCloseDialog: (): void => this.closeDialog(),
+        onOpenProperties: (): void => {
+          void this.openProperties();
+        },
+        onCloseProperties: (): void => this.closeProperties(),
+        onAboveLayerOpacityChange: (value): void => this.setAboveLayerOpacity(value),
+        onCreateMap: (request): Promise<void> => this.createMap(request),
+        onAddLayer: (layerName): Promise<void> => this.addLayer(layerName),
+        onUnsavedDecision: (choice): void => {
+          void this.resolveUnsavedDecision(choice);
+        },
+        propertiesStatus: this.propertiesStatus,
+        propertyRows: this.propertyRows,
+        propertiesError: this.propertiesError,
+        onPropertyChange: (path, value): void => this.commitProperty(path, value),
+        onPropertiesRetry: (): void => {
+          void this.loadProperties();
         },
       });
+  }
+
+  /**
+   * 经资源层读取一个项目内文件的原始字节
+   * @param path 文件的项目内相对路径
+   * @returns 文件的原始字节；资源不存在或读取失败时为 undefined
+   */
+  private async readBytes(path: string): Promise<Uint8Array | undefined> {
+    const resource = await this.context.requestResource(path);
+
+    if (resource === null) return undefined;
+
+    try {
+      return await resource.requestBinary();
+    } catch {
+      return undefined;
+    }
   }
 
   /**
@@ -934,6 +979,34 @@ export class MapPanel implements IEditorPanel, IMapPanel {
     this.recentToken += 1;
     this.publish({ recentTiles: [] });
     await this.writeRecentTiles();
+  }
+
+  /**
+   * 设定当前调色板选中；选择「空」时图案固定为 1×1 全 0
+   *
+   * 只改视图状态：不动文档、不置脏、不登记撤销。
+   * @param selection 调色板交上来的选中
+   */
+  selectPalette(selection: IMapPaletteSelection): void {
+    this.paletteSelection = selection.kind === MapPaletteKind.Empty ? createEmptyPaletteSelection() : selection;
+    this.publish({ paletteSelection: this.paletteSelection });
+  }
+
+  /**
+   * 「图块加载失败」的重试入口：只递增图片版本，视图据此重新读取字节
+   *
+   * 不读图片、不改文档、不置脏、不登记撤销。
+   */
+  reloadTileImages(): void {
+    this.publish({ paletteVersion: this.store.state.paletteVersion + 1 });
+  }
+
+  /**
+   * 记录高于当前层的图层不透明度并刷新渲染；不置脏、不进撤销
+   * @param value 新的不透明度，超出 0..1 时夹取
+   */
+  setAboveLayerOpacity(value: number): void {
+    this.publish({ aboveLayerOpacity: Math.min(1, Math.max(0, value)) });
   }
 
   render(): FC {

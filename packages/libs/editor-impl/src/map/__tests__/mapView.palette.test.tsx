@@ -1,19 +1,49 @@
-import { cleanup, configure, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { act, cleanup, configure, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { EditorCore, IEditorPanel, IEditorPanelFactoryParam } from '@motajs/editor-core';
+import { createElement } from 'react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createMapPanelType, MAP_PANEL_TYPE_ID, MapPanel } from '..';
 import { MapPalette, IMapPaletteProps } from '../components/MapPalette';
+import { IMapPanelViewProps, MapPanelView } from '../components/MapPanelView';
 import {
+  IMapDataSection,
   IMapDirections,
+  IMapDocument,
+  IMapEditorCapabilities,
   IMapPaletteSelection,
+  IMapRenderModel,
+  IMapSummary,
   IMapTileEntry,
   IMapTileGroup,
+  MapDialogKind,
   MapImageStatus,
   MapPaletteKind,
 } from '../types';
+import { createMapDocument, createMapHarness, FakeFileSystem } from './fixtures';
+
+vi.mock('../components/MapSurface', async () => {
+  const { createElement: createMockElement } = await import('react');
+
+  return {
+    MapSurface: (props: { model: IMapRenderModel }): ReturnType<typeof createMockElement> =>
+      createMockElement('div', {
+        'data-test-id': 'map-surface-stub',
+        'data-cell-count': String(props.model.cells.length),
+      }),
+  };
+});
 
 configure({ testIdAttribute: 'data-test-id' });
 
+// jsdom 不实现 blob 地址，这里用可断言的替身；每个用例前重设实现，避免用例之间互相影响
+const createObjectUrl = vi.fn((_blob: Blob): string => 'blob:map-palette');
+const revokeObjectUrl = vi.fn((_url: string): void => {});
+
+Object.defineProperty(URL, 'createObjectURL', { configurable: true, writable: true, value: createObjectUrl });
+Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, writable: true, value: revokeObjectUrl });
+
 // 图块调色板：三段结构、缺图占位、同组多格框选与最近使用分区。
-// 组件只接 props，全部用例直接按受控 props 渲染；图片地址用假 blob 串，不做真实 I/O。
+// 前 23 条直接按受控 props 渲染组件；后半段经真实面板视图验证挂载、选择接线与重试。
 
 /**
  * 造一份四方向都可通行的通行属性
@@ -178,6 +208,13 @@ function dragBetween(fromTestId: string, toTestId: string): void {
   fireEvent.pointerMove(screen.getByTestId(toTestId));
   fireEvent.pointerUp(screen.getByTestId(toTestId));
 }
+
+beforeEach(() => {
+  Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 1200 });
+  createObjectUrl.mockClear();
+  createObjectUrl.mockImplementation((_blob: Blob): string => 'blob:map-palette');
+  revokeObjectUrl.mockClear();
+});
 
 afterEach(() => {
   cleanup();
@@ -516,5 +553,280 @@ describe('调色板最近使用', () => {
     render(<MapPalette {...createPaletteProps({ groups: [createWideGroup()] })} />);
 
     expect(screen.getByTestId<HTMLButtonElement>('map-recent-clear').disabled).toBe(true);
+  });
+});
+
+interface IPalettePanelHarness {
+  /** 已初始化的编辑器核心 */
+  readonly system: EditorCore;
+  /** 被捕获的地图面板实例 */
+  readonly panel: MapPanel;
+}
+
+/**
+ * 造一份默认可用、可按用例覆盖个别能力的地图能力注入面
+ * @param document 打开时返回的文档
+ * @param overrides 覆盖的能力实现
+ * @returns 地图能力注入面
+ */
+function createPanelCapabilities(
+  document: IMapDocument,
+  overrides: Partial<IMapEditorCapabilities> = {},
+): IMapEditorCapabilities {
+  return {
+    listMaps: async (): Promise<readonly IMapSummary[]> => [{ id: document.id, name: document.name }],
+    openMap: async (): Promise<IMapDocument> => document,
+    saveMapData: async (_data: IMapDataSection): Promise<void> => {},
+    ...overrides,
+  };
+}
+
+/**
+ * 装配核心、注册带实例捕获的地图面板类型，并按打开参数打开首张地图
+ * @param capabilities 地图能力注入面
+ * @param fs 内存文件系统替身
+ * @returns 核心与面板实例
+ */
+async function openPalettePanel(
+  capabilities: IMapEditorCapabilities,
+  fs: FakeFileSystem = new FakeFileSystem(),
+): Promise<IPalettePanelHarness> {
+  const system = await createMapHarness(fs);
+  const panels: MapPanel[] = [];
+  const type = createMapPanelType(capabilities);
+
+  system.shellSystem.registerPanelType({
+    id: type.id,
+    name: type.name,
+    icon: type.icon,
+    create: (param: IEditorPanelFactoryParam): IEditorPanel => {
+      const panel = type.create(param);
+
+      if (panel instanceof MapPanel) panels.push(panel);
+      return panel;
+    },
+  });
+
+  const tabId = system.shellSystem.listTabs()[0].id;
+
+  await act(async () => {
+    await system.shellSystem.openPanelInTab(tabId, MAP_PANEL_TYPE_ID, { target: { mapId: 'm1' } });
+  });
+  await act(async () => {});
+
+  return { system, panel: panels[0] };
+}
+
+/**
+ * 用真实面板的订阅源渲染面板视图，并把调色板回调接到面板方法
+ * @param harness 核心与面板实例
+ * @param overrides 覆盖的视图 props
+ */
+function renderPanelView(harness: IPalettePanelHarness, overrides: Partial<IMapPanelViewProps> = {}): void {
+  const panel = harness.panel;
+
+  render(
+    <MapPanelView
+      store={panel['store']}
+      onPaintCell={(): void => {}}
+      onSave={(): void => {
+        void panel.save();
+      }}
+      onRetry={(): void => {}}
+      onSelectPattern={(selection): void => panel.selectPalette(selection)}
+      onRetryImages={(): void => panel.reloadTileImages()}
+      onClearRecent={(): void => {
+        void panel.clearRecentTiles();
+      }}
+      {...overrides}
+    />,
+  );
+}
+
+/**
+ * 造一张图块目录为空、格子全 0 的地图
+ * @returns 没有图块目录的中立文档
+ */
+function createEmptyCatalogDocument(): IMapDocument {
+  const base = createMapDocument({ id: 'm1', name: '地图一', tileGroups: [] });
+  const layers = base.layers.map((layer) => ({
+    ...layer,
+    cells: layer.cells.map((row) => row.map(() => 0)),
+  }));
+
+  return { ...base, layers };
+}
+
+/**
+ * 造一个能读出字节的取图回调
+ * @returns 固定返回 PNG 头的取字节函数
+ */
+function createImageLoader(): (path: string) => Promise<Uint8Array | undefined> {
+  return async (_path: string): Promise<Uint8Array | undefined> => Uint8Array.of(137, 80, 78, 71);
+}
+
+describe('地图面板里的图块调色板', () => {
+  // 真实面板渲染后出现调色板、占位容器消失；两个分组共用一张图时只生成一个 blob 地址
+  it('调色板挂进面板且同一图片路径只读取一次', async () => {
+    const first = createSquareGroup('group-a', '分组 A');
+    const second = {
+      ...createSquareGroup('group-b', '分组 B'),
+      imagePath: first.imagePath,
+      tiles: [createTile(5, 0, 0)],
+    };
+    const document = createMapDocument({ id: 'm1', name: '地图一', tileGroups: [first, second] });
+    const fs = new FakeFileSystem();
+
+    fs.seed(first.imagePath, Uint8Array.of(137, 80, 78, 71));
+
+    const harness = await openPalettePanel(createPanelCapabilities(document), fs);
+
+    render(createElement(harness.system.shellSystem.render()));
+
+    await waitFor(() => expect(screen.getByTestId('map-tile-1')).not.toBeNull());
+
+    expect(screen.getByTestId('map-palette')).not.toBeNull();
+    expect(screen.queryByTestId('map-palette-slot')).toBeNull();
+    expect(screen.getByTestId('map-canvas')).not.toBeNull();
+    expect(screen.getByTestId('map-tile-5')).not.toBeNull();
+    expect(createObjectUrl).toHaveBeenCalledTimes(1);
+  });
+
+  // 点图块：面板状态里的选中变成该图块，调色板按同一份状态点亮
+  it('点图块把 1×1 选中写进面板状态', async () => {
+    const harness = await openPalettePanel(createPanelCapabilities(createMapDocument()));
+
+    renderPanelView(harness, { loadTileBytes: createImageLoader() });
+
+    await waitFor(() => expect(screen.getByTestId('map-tile-1')).not.toBeNull());
+
+    fireEvent.click(screen.getByTestId('map-tile-1'));
+
+    expect(harness.panel['store'].state.paletteSelection).toEqual(createTileSelection(1));
+    expect(screen.getByTestId('map-tile-1').getAttribute('aria-pressed')).toBe('true');
+  });
+
+  // 点最近使用：选中种类为最近使用，图案仍是 1×1
+  it('点最近使用的图块得到最近使用种类', async () => {
+    const harness = await openPalettePanel(createPanelCapabilities(createMapDocument()));
+
+    harness.panel['store'].setState({
+      ...harness.panel['store'].state,
+      recentTiles: [5],
+      recentStatus: MapImageStatus.Ready,
+    });
+
+    renderPanelView(harness, { loadTileBytes: createImageLoader() });
+
+    await waitFor(() => expect(screen.getByTestId('map-recent-5')).not.toBeNull());
+
+    fireEvent.click(screen.getByTestId('map-recent-5'));
+
+    expect(harness.panel['store'].state.paletteSelection).toEqual({
+      kind: MapPaletteKind.Recent,
+      pattern: { width: 1, height: 1, tiles: [5] },
+      primaryTileNumber: 5,
+    });
+  });
+
+  // 点擦除格：选中种类为空，图案固定 1×1 全 0
+  it('点擦除格得到 1×1 全 0 的空选中', async () => {
+    const harness = await openPalettePanel(createPanelCapabilities(createMapDocument()));
+
+    renderPanelView(harness, { loadTileBytes: createImageLoader() });
+
+    await waitFor(() => expect(screen.getByTestId('map-palette')).not.toBeNull());
+
+    fireEvent.click(screen.getByTestId('map-palette-erase'));
+
+    expect(harness.panel['store'].state.paletteSelection).toEqual({
+      kind: MapPaletteKind.Empty,
+      pattern: { width: 1, height: 1, tiles: [0] },
+      primaryTileNumber: 0,
+    });
+  });
+
+  // 图块目录为空：调色板显示空态、画布仍在，落笔不改文档也不登记撤销
+  it('图块目录为空时调色板显示空态且落笔无效', async () => {
+    const harness = await openPalettePanel(createPanelCapabilities(createEmptyCatalogDocument()));
+    const addUndo = vi.spyOn(harness.system.undoSystem, 'addUndoContext');
+    const before = harness.panel['store'].state.document;
+
+    renderPanelView(harness, { loadTileBytes: createImageLoader() });
+
+    await waitFor(() => expect(screen.getByTestId('map-palette-empty')).not.toBeNull());
+
+    expect(screen.getByTestId('map-palette-empty').textContent).toBe('暂无可用的图块');
+    expect(screen.getByTestId('map-canvas')).not.toBeNull();
+
+    harness.panel.commitCells('layer-base', [{ x: 0, y: 0, value: 1 }]);
+
+    expect(harness.panel['store'].state.document).toBe(before);
+    expect(addUndo).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('map-unsaved')).toBeNull();
+  });
+
+  // 全部分组图片失败：显示失败态；点重试重新取字节、递增图片版本，文档与脏标记不变
+  it('图片全失败时重试只重取字节且不改文档', async () => {
+    const harness = await openPalettePanel(createPanelCapabilities(createMapDocument()));
+    const loader = vi.fn(async (_path: string): Promise<Uint8Array | undefined> => undefined);
+    const before = harness.panel['store'].state.document;
+
+    renderPanelView(harness, {
+      loadTileBytes: (path): Promise<Uint8Array | undefined> => loader(path),
+    });
+
+    await waitFor(() => expect(screen.getByTestId('map-palette-error')).not.toBeNull());
+
+    const initialCalls = loader.mock.calls.length;
+
+    expect(initialCalls).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByTestId('map-palette-retry'));
+
+    await waitFor(() => expect(loader.mock.calls.length).toBeGreaterThan(initialCalls));
+
+    expect(harness.panel['store'].state.paletteVersion).toBe(1);
+    expect(harness.panel['store'].state.unsaved).toBe(false);
+    expect(harness.panel['store'].state.document).toBe(before);
+    expect(screen.queryByTestId('map-unsaved')).toBeNull();
+  });
+
+  // 点「清除记录」：确认弹窗随调色板一起挂载出来
+  it('点清除记录弹出确认弹窗', async () => {
+    const harness = await openPalettePanel(createPanelCapabilities(createMapDocument()));
+
+    harness.panel['store'].setState({
+      ...harness.panel['store'].state,
+      recentTiles: [1],
+      recentStatus: MapImageStatus.Ready,
+    });
+
+    renderPanelView(harness, { loadTileBytes: createImageLoader() });
+
+    await waitFor(() => expect(screen.getByTestId('map-recent-clear')).not.toBeNull());
+
+    fireEvent.click(screen.getByTestId('map-recent-clear'));
+
+    await waitFor(() => expect(screen.getByTestId('map-recent-clear-dialog')).not.toBeNull());
+  });
+
+  // 工具栏不是摆设：点「新建地图」经真实面板打开受控弹窗
+  it('点工具栏新建地图经真实面板打开弹窗', async () => {
+    const document = createMapDocument({ id: 'm1', name: '地图一' });
+    const capabilities = createPanelCapabilities(document, {
+      createMap: async (): Promise<IMapDocument> => document,
+    });
+    const harness = await openPalettePanel(capabilities);
+
+    render(createElement(harness.system.shellSystem.render()));
+
+    await waitFor(() => expect(screen.getByTestId('map-toolbar')).not.toBeNull());
+
+    fireEvent.click(screen.getByTestId('map-new'));
+
+    await waitFor(() => expect(screen.getByTestId('map-new-dialog')).not.toBeNull());
+
+    expect(harness.panel['store'].state.dialog).toBe(MapDialogKind.New);
   });
 });

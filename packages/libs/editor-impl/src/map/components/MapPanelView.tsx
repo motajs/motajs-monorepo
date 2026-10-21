@@ -12,20 +12,25 @@ import {
   IMapCreateRequest,
   IMapDocument,
   IMapLayer,
+  IMapPaletteSelection,
   IMapPanelViewState,
   IMapSizeLimit,
+  IMapTileGroup,
   IMapViewport,
   MapBrushMode,
   MapDialogKind,
+  MapImageStatus,
   MapPanelStatus,
   MapUnsavedChoice,
 } from '../types';
 import { MapLayerDialog, MapNewDialog, MapUnsavedDialog } from './dialogs';
 import { MapEmptyState } from './MapEmptyState';
+import { MapPalette } from './MapPalette';
 import { MapPropertiesDrawer } from './MapPropertiesDrawer';
 import { MapStatusBar } from './MapStatusBar';
 import { MapSurface } from './MapSurface';
 import { MapToolbar } from './MapToolbar';
+import { IMapTileGroupUrls, useMapTileGroupUrls } from './useMapObjectUrl';
 
 // 地图面板的装配层：工具栏 / 主体 / 保存提示行 / 弹窗 / 属性抽屉都在这里按视图状态装配。
 // 本视图只接 props，不 import 面板类；渲染模型在这里每次渲染时现算，再交给 MapSurface 消费。
@@ -48,6 +53,21 @@ export interface IMapPanelViewProps {
    * @returns 字节；读取失败时为 undefined
    */
   loadBytes?(path: string): Promise<Uint8Array | undefined>;
+  /**
+   * 读取图块图片的字节，供调色板分组图使用
+   * @param path 图片相对项目根的路径
+   * @returns 字节；读取失败时为 undefined
+   */
+  loadTileBytes?(path: string): Promise<Uint8Array | undefined>;
+  /**
+   * 提交一次调色板选择
+   * @param selection 新的选中
+   */
+  onSelectPattern?(selection: IMapPaletteSelection): void;
+  /** 请求重新读取图块图片；只改图片版本，不改文档 */
+  onRetryImages?(): void;
+  /** 确认清除最近使用记录 */
+  onClearRecent?(): void;
   /** 宿主是否注入新建地图能力；缺省视为没有 */
   readonly canCreateMap?: boolean;
   /** 宿主是否注入新增图层能力；缺省视为没有 */
@@ -146,6 +166,8 @@ interface IMapPanelBodyProps {
   readonly narrow: boolean;
   /** 画布是否已经初始化失败 */
   readonly surfaceError: boolean;
+  /** 分组图片地址与读取状态 */
+  readonly groupImages: IMapTileGroupUrls;
   /** 画布初始化失败时回调 */
   onSurfaceError(): void;
 }
@@ -197,6 +219,34 @@ function statusToken(status: MapPanelStatus): string {
   if (status === MapPanelStatus.Loading || status === MapPanelStatus.ListLoading) return 'loading';
 
   return 'not-opened';
+}
+
+/**
+ * 把各分组的图片状态归纳成一个整体状态：全部失败才算失败，还有分组在读取就算读取中
+ * @param groups 当前文档的图块分组
+ * @param status 分组标识 → 图片读取状态
+ * @returns 调色板要显示的整体图片状态
+ */
+function resolvePaletteImageStatus(
+  groups: readonly IMapTileGroup[],
+  status: Readonly<Record<string, MapImageStatus>>,
+): MapImageStatus {
+  if (groups.length === 0) return MapImageStatus.Ready;
+
+  let hasLoading = false;
+  let allError = true;
+
+  for (const group of groups) {
+    const current = status[group.id] ?? MapImageStatus.Loading;
+
+    if (current === MapImageStatus.Loading) hasLoading = true;
+    if (current !== MapImageStatus.Error) allError = false;
+  }
+
+  if (allError) return MapImageStatus.Error;
+  if (hasLoading) return MapImageStatus.Loading;
+
+  return MapImageStatus.Ready;
 }
 
 /**
@@ -296,7 +346,7 @@ function renderErrorBody(error: string | undefined, onRetry: () => void): ReactE
 }
 
 /**
- * 渲染就绪态的画布区与调色板占位；渲染模型在这里现算，MapSurface 只消费
+ * 渲染就绪态的画布区与图块调色板；渲染模型在这里现算，MapSurface 只消费
  * @param input 主体渲染输入
  * @returns 就绪态主体元素
  */
@@ -378,7 +428,20 @@ function renderReadyBody(input: IMapPanelBodyProps): ReactElement {
           narrow={input.narrow}
         />
       </div>
-      <div className="emap-palette-slot" data-test-id="map-palette-slot" />
+      <div className="emap-palette-slot">
+        <MapPalette
+          groups={document.tileGroups}
+          groupUrls={input.groupImages.urls}
+          groupStatus={input.groupImages.status}
+          imageStatus={resolvePaletteImageStatus(document.tileGroups, input.groupImages.status)}
+          selection={view.paletteSelection}
+          recentTiles={view.recentTiles}
+          recentStatus={view.recentStatus}
+          onSelectPattern={input.props.onSelectPattern ?? noop}
+          onRetryImages={input.props.onRetryImages ?? noop}
+          onClearRecent={input.props.onClearRecent ?? noop}
+        />
+      </div>
     </div>
   );
 }
@@ -459,6 +522,8 @@ export function MapPanelView(props: IMapPanelViewProps): ReactElement {
   const currentMapId = document?.id;
   const layers = document?.layers ?? [];
   const layerNames = layers.map((layer, index) => resolveLayerName(layer, index));
+  const tileGroups = document?.tileGroups;
+  const groupImages = useMapTileGroupUrls(tileGroups, props.loadTileBytes, view.paletteVersion);
 
   return (
     <div className="emap-panel" data-test-id="map-panel" data-status={statusToken(view.status)}>
@@ -541,6 +606,7 @@ export function MapPanelView(props: IMapPanelViewProps): ReactElement {
         view={view}
         narrow={narrow}
         surfaceError={surfaceError}
+        groupImages={groupImages}
         onSurfaceError={(): void => setSurfaceError(true)}
       />
       {renderNotice({ view, onRetry: props.onSave })}
