@@ -4,6 +4,7 @@ import { createElement, FC, ReactElement } from 'react';
 import { IEditorPanel, IEditorPanelContext, IEditorPanelFactoryParam, IUndoContext } from '@motajs/editor-core';
 import {
   MAP_ABOVE_LAYER_DEFAULT_OPACITY,
+  MAP_CELL_SIZE,
   MAP_RECENT_TILES_KEY,
   MAP_RECENT_TILES_LIMIT,
   MAP_RECENT_TILES_PATH,
@@ -15,6 +16,7 @@ import { setByFieldPath } from '../shared/schemaForm/model/fieldPath';
 import { buildTableTree } from '../shared/schemaForm/model/traversal';
 import { ITableRowNode, ITableSchemaNode } from '../shared/schemaForm/types';
 import { MapPanelView } from './components/MapPanelView';
+import { buildClearWrites, buildPasteWrites, copyMapRegion } from './model/clipboard';
 import { isMapDataDirty, isMapPropertiesDirty } from './model/dirty';
 import {
   applyCellChanges,
@@ -24,18 +26,24 @@ import {
   isTileCatalogEmpty,
 } from './model/document';
 import { normalizeRecentTiles, updateRecentTiles } from './model/recentTiles';
+import { computePassabilityMarks } from './model/passability';
 import { validateLayerName, validateMapName, validateMapSize } from './model/validation';
 import {
   IMapCellChange,
+  IMapCellPosition,
   IMapCellsUndoData,
   IMapCreateRequest,
   IMapDocument,
   IMapEditorCapabilities,
+  IMapLayer,
   IMapPaletteSelection,
   IMapPanel,
   IMapPanelTarget,
   IMapPanelViewState,
   IMapPropertyUndoData,
+  IMapRect,
+  IMapTileEntry,
+  IMapViewport,
   MapBrushMode,
   MapDialogKind,
   MapImageStatus,
@@ -371,6 +379,9 @@ export class MapPanel implements IEditorPanel, IMapPanel {
   /** 最近使用读取的序号，用来丢弃晚到的结果，避免刚画的一笔被早先的读取覆盖 */
   private recentToken: number = 0;
 
+  /** 进入大地图之前的视口；不在大地图时为 undefined */
+  private preBigMapViewport?: IMapViewport;
+
   constructor(param: IEditorPanelFactoryParam, capabilities: IMapEditorCapabilities) {
     this.id = param.instanceId;
     this.context = param.context;
@@ -439,6 +450,20 @@ export class MapPanel implements IEditorPanel, IMapPanel {
         },
         onCloseProperties: (): void => this.closeProperties(),
         onAboveLayerOpacityChange: (value): void => this.setAboveLayerOpacity(value),
+        onCommitCells: (writes): void => {
+          const layerId = this.currentLayerId;
+
+          if (layerId === undefined) return;
+
+          this.commitCells(layerId, writes);
+        },
+        onCopyRegion: (rect): void => this.copyRegion(rect),
+        onPasteAt: (position): void => this.pasteAt(position),
+        onClearRegion: (rect): void => this.clearRegion(rect),
+        onSelectLayer: (layerId): void => this.selectLayer(layerId),
+        onTogglePassability: (value): void => this.setPassabilityVisible(value),
+        onToggleBigMap: (value): void => this.setBigMap(value),
+        onMoveViewport: (dx, dy, byScreen): void => this.moveViewport(dx, dy, byScreen),
         onCreateMap: (request): Promise<void> => this.createMap(request),
         onAddLayer: (layerName): Promise<void> => this.addLayer(layerName),
         onUnsavedDecision: (choice): void => {
@@ -526,6 +551,7 @@ export class MapPanel implements IEditorPanel, IMapPanel {
 
     this.document = next;
     this.refreshUnsaved();
+    this.refreshPassMarks();
     this.publish({ document: next, notice: undefined, error: undefined });
   }
 
@@ -588,6 +614,7 @@ export class MapPanel implements IEditorPanel, IMapPanel {
         unsaved: false,
         error: undefined,
       });
+      this.refreshPassMarks();
       void this.loadRecentTiles();
     } catch {
       return;
@@ -745,6 +772,7 @@ export class MapPanel implements IEditorPanel, IMapPanel {
     });
     this.refreshUnsaved();
     this.refreshPropertyRows();
+    this.refreshPassMarks();
     this.registerBarrier({ action: MapBarrierAction.Discard, mapId: this.document?.id ?? '' });
   }
 
@@ -840,6 +868,7 @@ export class MapPanel implements IEditorPanel, IMapPanel {
         notice: `已创建地图「${name}」`,
         error: undefined,
       });
+      this.refreshPassMarks();
       void this.loadRecentTiles();
       await this.loadSummaries();
     } catch (error) {
@@ -908,6 +937,7 @@ export class MapPanel implements IEditorPanel, IMapPanel {
         notice: `已新增图层「${name}」`,
         error: undefined,
       });
+      this.refreshPassMarks();
     } catch (error) {
       if (token === this.loadToken) this.publish({ dialogError: toErrorMessage(error) });
     } finally {
@@ -1009,6 +1039,167 @@ export class MapPanel implements IEditorPanel, IMapPanel {
     this.publish({ aboveLayerOpacity: Math.min(1, Math.max(0, value)) });
   }
 
+  /**
+   * 按当前文档、当前层与开关重算只读通行度标记；关闭时发布空数组
+   *
+   * 标记由面板算好再交给渲染模型消费；本方法只改视图状态，不置脏、不进撤销。
+   */
+  private refreshPassMarks(): void {
+    const document = this.document;
+    const layerId = this.currentLayerId;
+
+    if (!this.store.state.passabilityVisible || document === undefined || layerId === undefined) {
+      this.publish({ passMarks: [] });
+      return;
+    }
+
+    const index: Map<number, IMapTileEntry> = new Map();
+
+    for (const group of document.tileGroups) {
+      for (const tile of group.tiles) index.set(tile.number, tile);
+    }
+
+    this.publish({ passMarks: computePassabilityMarks(document, layerId, index) });
+  }
+
+  /**
+   * 按图层标识找当前打开文档里的图层
+   * @param layerId 图层标识
+   * @returns 找到的图层；没有文档或图层不存在时为 undefined
+   */
+  private findLayer(layerId: string): IMapLayer | undefined {
+    return this.document?.layers.find((layer) => layer.id === layerId);
+  }
+
+  /**
+   * 把一块区域复制进面板内部剪贴板；不置脏、不进撤销
+   * @param rect 要复制的矩形（格子），越界部分由模型层裁剪
+   */
+  copyRegion(rect: IMapRect): void {
+    const layerId = this.currentLayerId;
+    const document = this.document;
+
+    if (document === undefined || layerId === undefined) return;
+
+    const layer = this.findLayer(layerId);
+
+    if (layer === undefined) return;
+
+    const clipboard = copyMapRegion(layer.cells, rect, { width: document.width, height: document.height });
+    const single = clipboard.width === 1 && clipboard.height === 1;
+    const notice = single ? '已复制 1 格' : `已复制区域（${clipboard.width} × ${clipboard.height}）`;
+
+    this.publish({ clipboard, notice });
+  }
+
+  /**
+   * 以给定格为左上角粘贴内部剪贴板；越界格裁剪，整次粘贴只登记一条撤销
+   * @param position 粘贴位置的左上角格子
+   */
+  pasteAt(position: IMapCellPosition): void {
+    const clipboard = this.store.state.clipboard;
+    const layerId = this.currentLayerId;
+    const document = this.document;
+
+    if (document === undefined || layerId === undefined || clipboard === undefined) {
+      this.publish({ notice: '没有可粘贴的内容' });
+      return;
+    }
+
+    const result = buildPasteWrites(clipboard, position, { width: document.width, height: document.height });
+
+    if (result.writes.length === 0) {
+      this.publish({ notice: '没有可粘贴的内容' });
+      return;
+    }
+
+    this.commitCells(layerId, result.writes);
+
+    const pasted = `已粘贴区域（${clipboard.width} × ${clipboard.height}）`;
+
+    this.publish({ notice: result.clipped > 0 ? `${pasted}；超出地图的 ${result.clipped} 格已裁剪` : pasted });
+  }
+
+  /**
+   * 清空一块区域；整次清空只登记一条撤销
+   * @param rect 要清空的矩形（格子），越界部分由模型层裁剪
+   */
+  clearRegion(rect: IMapRect): void {
+    const layerId = this.currentLayerId;
+    const document = this.document;
+
+    if (document === undefined || layerId === undefined) return;
+
+    const writes = buildClearWrites(rect, { width: document.width, height: document.height });
+
+    this.commitCells(layerId, writes);
+    this.publish({ notice: '已清空选区' });
+  }
+
+  /**
+   * 按格或按屏移动视口；大地图下同样生效，到边界不报错
+   * @param dx 水平方向移动的格数
+   * @param dy 垂直方向移动的格数
+   * @param byScreen 为 true 时按一屏移动
+   */
+  moveViewport(dx: number, dy: number, byScreen: boolean): void {
+    const document = this.document;
+
+    if (document === undefined) return;
+
+    const screenX = Math.max(1, Math.floor(window.innerWidth / MAP_CELL_SIZE));
+    const screenY = Math.max(1, Math.floor(window.innerHeight / MAP_CELL_SIZE));
+    const stepX = byScreen ? screenX : 1;
+    const stepY = byScreen ? screenY : 1;
+    const maxLeft = Math.max(0, document.width - 1);
+    const maxTop = Math.max(0, document.height - 1);
+    const viewport = this.store.state.viewport;
+    const left = Math.min(maxLeft, Math.max(0, viewport.left + dx * stepX));
+    const top = Math.min(maxTop, Math.max(0, viewport.top + dy * stepY));
+
+    this.publish({ viewport: { left, top } });
+  }
+
+  /**
+   * 切换当前图层：取消进行中的笔画、清除框选与预览，保留剪贴板与调色板选择
+   * @param layerId 目标图层标识
+   */
+  selectLayer(layerId: string): void {
+    if (this.findLayer(layerId) === undefined) return;
+
+    this.currentLayerId = layerId;
+    this.publish({ currentLayerId: layerId, selection: undefined, preview: undefined, hover: undefined });
+    this.refreshPassMarks();
+  }
+
+  /**
+   * 开关只读通行度叠加层；只改视图状态，不置脏、不进撤销
+   * @param value 为 true 时显示
+   */
+  setPassabilityVisible(value: boolean): void {
+    this.publish({ passabilityVisible: value });
+    this.refreshPassMarks();
+  }
+
+  /**
+   * 开关大地图：进入前记住视口，退出时还原；只改视图状态，不置脏、不进撤销
+   * @param value 为 true 时进入大地图
+   */
+  setBigMap(value: boolean): void {
+    if (this.store.state.bigMap === value) return;
+
+    if (value) {
+      this.preBigMapViewport = this.store.state.viewport;
+      this.publish({ bigMap: true });
+      return;
+    }
+
+    const viewport = this.preBigMapViewport ?? { left: 0, top: 0 };
+
+    this.preBigMapViewport = undefined;
+    this.publish({ bigMap: false, viewport });
+  }
+
   render(): FC {
     return this.component;
   }
@@ -1068,6 +1259,7 @@ export class MapPanel implements IEditorPanel, IMapPanel {
     this.document = undefined;
     this.currentLayerId = undefined;
     this.dataBaseline = undefined;
+    this.preBigMapViewport = undefined;
     this.resetProperties();
     this.publish({
       status: MapPanelStatus.Loading,
@@ -1108,6 +1300,7 @@ export class MapPanel implements IEditorPanel, IMapPanel {
         error: undefined,
         notice: undefined,
       });
+      this.refreshPassMarks();
       void this.loadRecentTiles();
 
       if (previousMapId !== undefined && previousMapId !== mapId) {
@@ -1198,6 +1391,7 @@ export class MapPanel implements IEditorPanel, IMapPanel {
       notice: undefined,
       error: undefined,
     });
+    this.refreshPassMarks();
 
     if (recordsRecent) void this.writeRecentTiles();
   }

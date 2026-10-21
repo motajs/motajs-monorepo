@@ -6,6 +6,7 @@ import { ReactElement, useEffect, useState } from 'react';
 import { TablePanelStatus } from '../../shared/schemaForm/components/TableGrid';
 import { ITableRowNode } from '../../shared/schemaForm/types';
 import { MAP_CELL_SIZE } from '../constants';
+import { IPaintWrite, isTileCatalogEmpty } from '../model/document';
 import { buildMapRenderModel } from '../model/renderModel';
 import {
   IMapCellPosition,
@@ -14,6 +15,7 @@ import {
   IMapLayer,
   IMapPaletteSelection,
   IMapPanelViewState,
+  IMapRect,
   IMapSizeLimit,
   IMapTileGroup,
   IMapViewport,
@@ -23,12 +25,11 @@ import {
   MapPanelStatus,
   MapUnsavedChoice,
 } from '../types';
+import { MapCanvas } from './MapCanvas';
 import { MapLayerDialog, MapNewDialog, MapUnsavedDialog } from './dialogs';
 import { MapEmptyState } from './MapEmptyState';
 import { MapPalette } from './MapPalette';
 import { MapPropertiesDrawer } from './MapPropertiesDrawer';
-import { MapStatusBar } from './MapStatusBar';
-import { MapSurface } from './MapSurface';
 import { MapToolbar } from './MapToolbar';
 import { IMapTileGroupUrls, useMapTileGroupUrls } from './useMapObjectUrl';
 
@@ -39,10 +40,30 @@ export interface IMapPanelViewProps {
   /** 面板视图状态的订阅源 */
   readonly store: Store<IMapPanelViewState>;
   /**
-   * 在某个格子上落下一笔
+   * 在某个格子上落下一笔（单格入口；画布的手势提交走 `onCommitCells`）
    * @param position 目标格子坐标
    */
-  onPaintCell(position: IMapCellPosition): void;
+  onPaintCell?(position: IMapCellPosition): void;
+  /**
+   * 提交一笔画布写入
+   * @param writes 这一笔依次落下的写入
+   */
+  onCommitCells?(writes: readonly IPaintWrite[]): void;
+  /**
+   * 复制一块区域
+   * @param rect 要复制的矩形
+   */
+  onCopyRegion?(rect: IMapRect): void;
+  /**
+   * 以指针格为左上角粘贴
+   * @param position 粘贴位置的左上角格子
+   */
+  onPasteAt?(position: IMapCellPosition): void;
+  /**
+   * 清空一块选区
+   * @param rect 要清空的矩形
+   */
+  onClearRegion?(rect: IMapRect): void;
   /** 把内存改动保存回宿主 */
   onSave(): void;
   /** 重新打开当前地图 */
@@ -164,12 +185,8 @@ interface IMapPanelBodyProps {
   readonly view: IMapPanelViewState;
   /** 是否为窄布局 */
   readonly narrow: boolean;
-  /** 画布是否已经初始化失败 */
-  readonly surfaceError: boolean;
   /** 分组图片地址与读取状态 */
   readonly groupImages: IMapTileGroupUrls;
-  /** 画布初始化失败时回调 */
-  onSurfaceError(): void;
 }
 
 interface IMapNoticeProps {
@@ -250,30 +267,6 @@ function resolvePaletteImageStatus(
 }
 
 /**
- * 把指针位置换算成地图格子坐标；落在地图外时返回 undefined
- * @param clientX 指针在视口中的横坐标
- * @param clientY 指针在视口中的纵坐标
- * @param rect 画布容器的定位矩形
- * @param document 当前地图文档
- * @param viewport 视口左上角所在的格子坐标
- * @returns 格子坐标；越界时为 undefined
- */
-function resolvePointerCell(
-  clientX: number,
-  clientY: number,
-  rect: DOMRect,
-  document: IMapDocument,
-  viewport: IMapViewport,
-): IMapCellPosition | undefined {
-  const x = Math.floor((clientX - rect.left) / MAP_CELL_SIZE) + viewport.left;
-  const y = Math.floor((clientY - rect.top) / MAP_CELL_SIZE) + viewport.top;
-
-  if (x < 0 || y < 0 || x >= document.width || y >= document.height) return undefined;
-
-  return { x, y };
-}
-
-/**
  * 订阅窗口宽度是否小于 900px；卸载时移除监听
  * @returns 当前是否为窄布局
  */
@@ -346,7 +339,7 @@ function renderErrorBody(error: string | undefined, onRetry: () => void): ReactE
 }
 
 /**
- * 渲染就绪态的画布区与图块调色板；渲染模型在这里现算，MapSurface 只消费
+ * 渲染就绪态的画布区与图块调色板；渲染模型在这里现算，画布只把本地叠加状态补进模型交给 Pixi 表面
  * @param input 主体渲染输入
  * @returns 就绪态主体元素
  */
@@ -366,68 +359,51 @@ function renderReadyBody(input: IMapPanelBodyProps): ReactElement {
     viewport: view.viewport,
     bigMap: view.bigMap,
     passMarks: view.passMarks,
-    selection: view.selection,
-    preview: view.preview,
-    hover: view.hover,
   });
   const layerName = resolveCurrentLayerName(document, view.currentLayerId);
-  const cursor = view.hover ?? { x: view.viewport.left, y: view.viewport.top };
+  const moveViewport = (dx: number, dy: number, byScreen: boolean): void => {
+    if (input.props.onMoveViewport !== undefined) {
+      input.props.onMoveViewport(dx, dy, byScreen);
+      return;
+    }
+
+    input.props.store.setState({
+      ...input.props.store.state,
+      viewport: resolveMovedViewport(input.props.store.state, dx, dy, byScreen),
+    });
+  };
+  const toggleBigMap = (value: boolean): void => {
+    if (input.props.onToggleBigMap !== undefined) {
+      input.props.onToggleBigMap(value);
+      return;
+    }
+
+    input.props.store.setState({ ...input.props.store.state, bigMap: value });
+  };
 
   return (
     <div className="emap-body">
-      <div className="emap-canvas-area">
-        <div className="emap-canvas-scroll">
-          {document.layers.length === 0 ? (
-            <div className="emap-canvas-empty-layer" data-test-id="map-empty-layer">
-              该地图没有图层
-            </div>
-          ) : null}
-          {input.surfaceError ? (
-            <div className="emap-canvas-state is-error" data-test-id="map-canvas-error">
-              <div className="emap-state-title">画布初始化失败</div>
-              <div className="emap-state-body">请检查浏览器是否支持 WebGL。</div>
-            </div>
-          ) : (
-            <div
-              className="emap-canvas"
-              data-test-id="map-canvas"
-              tabIndex={0}
-              aria-label="地图画布：左键绘制，右键框选，Ctrl+C / Ctrl+V 复制粘贴"
-              style={{ position: 'relative', width, height, lineHeight: 0 }}
-              onPointerDown={(event): void => {
-                if (event.button !== 0) return;
-
-                event.currentTarget.setPointerCapture?.(event.pointerId);
-
-                const position = resolvePointerCell(
-                  event.clientX,
-                  event.clientY,
-                  event.currentTarget.getBoundingClientRect(),
-                  document,
-                  view.viewport,
-                );
-
-                if (position !== undefined) input.props.onPaintCell(position);
-              }}
-            >
-              <MapSurface
-                model={model}
-                loadBytes={input.props.loadBytes}
-                imageVersion={view.paletteVersion}
-                onError={input.onSurfaceError}
-              />
-            </div>
-          )}
-        </div>
-        <MapStatusBar
-          cursor={cursor}
-          selection={view.selection}
-          mapSize={{ width: document.width, height: document.height }}
-          layerName={layerName}
-          bigMap={view.bigMap}
-          narrow={input.narrow}
-        />
-      </div>
+      <MapCanvas
+        document={document}
+        model={model}
+        currentLayerId={view.currentLayerId ?? ''}
+        viewport={view.viewport}
+        bigMap={view.bigMap}
+        brushMode={view.brushMode}
+        pattern={view.paletteSelection.pattern}
+        clipboard={view.clipboard}
+        canPaint={!isTileCatalogEmpty(document)}
+        layerName={layerName}
+        narrow={input.narrow}
+        imageVersion={view.paletteVersion}
+        loadBytes={input.props.loadBytes}
+        onCommitCells={input.props.onCommitCells ?? noop}
+        onCopyRegion={input.props.onCopyRegion ?? noop}
+        onPasteAt={input.props.onPasteAt ?? noop}
+        onClearRegion={input.props.onClearRegion ?? noop}
+        onMoveViewport={moveViewport}
+        onToggleBigMap={toggleBigMap}
+      />
       <div className="emap-palette-slot">
         <MapPalette
           groups={document.tileGroups}
@@ -511,9 +487,6 @@ function renderNotice(props: IMapNoticeProps): ReactElement {
 export function MapPanelView(props: IMapPanelViewProps): ReactElement {
   const view = useStore(props.store);
   const narrow = useNarrowLayout();
-  const surfaceErrorState = useState(false);
-  const surfaceError = surfaceErrorState[0];
-  const setSurfaceError = surfaceErrorState[1];
   const document = view.document;
   const showEditRow =
     view.status === MapPanelStatus.Loading ||
@@ -601,14 +574,7 @@ export function MapPanelView(props: IMapPanelViewProps): ReactElement {
           });
         }}
       />
-      <MapPanelBody
-        props={props}
-        view={view}
-        narrow={narrow}
-        surfaceError={surfaceError}
-        groupImages={groupImages}
-        onSurfaceError={(): void => setSurfaceError(true)}
-      />
+      <MapPanelBody props={props} view={view} narrow={narrow} groupImages={groupImages} />
       {renderNotice({ view, onRetry: props.onSave })}
       {view.dialog === MapDialogKind.New ? (
         <MapNewDialog
