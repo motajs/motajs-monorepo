@@ -1,7 +1,20 @@
-import { Button, Checkbox, InputNumber, Modal, Spin } from 'antd';
+import { Button, Checkbox, InputNumber, Modal, Segmented, Spin } from 'antd';
 import { ReactElement, useEffect, useRef, useState } from 'react';
 import { AssetCategoryKind } from '../../react';
+import { resolveOriginPath } from '../model/assetPaths';
 import { probeAudioSource } from '../transcode/audioOpus';
+import {
+  ASSET_AUDIO_PRESETS,
+  ASSET_DEFAULT_AUDIO_PRESET,
+  ASSET_DEFAULT_IMAGE_PRESET,
+  ASSET_IMAGE_PRESETS,
+  ASSET_TRANSCODE_CUSTOM_LABEL,
+  ASSET_TRANSCODE_KEEP_ORIGIN_HINT,
+  ASSET_TRANSCODE_PIXEL_ART_NOTE,
+  ASSET_TRANSCODE_QUALITY_NOTE,
+  resolveAudioPresetOptions,
+  resolveImagePresetQuality,
+} from '../transcode/presets';
 import {
   ASSET_DEFAULT_OPUS_BITRATE,
   ASSET_DEFAULT_OPUS_SAMPLE_RATE,
@@ -9,12 +22,16 @@ import {
   ASSET_TRANSCODE_AUDIO_FORMAT_HINT,
   ASSET_TRANSCODE_BUSY_TEXT,
   ASSET_TRANSCODE_IMAGE_FORMAT_HINT,
+  AssetAudioPreset,
+  AssetImagePreset,
   IAssetTranscodeOptions,
 } from '../transcode/types';
+import { bpsToKbps, hzToKHz } from '../transcode/units';
 import { IAssetEntry } from '../types';
 
-// 瘦身转码弹窗：正文按「输出格式 / 素材选择 / 参数 / 覆盖选项」分区，素材列表竖向排列并在过长时自己滚动；
-// 「覆盖旧文件」默认勾选并在覆盖前做破坏性二次确认；转换进行中显示「正在转码…」并禁用开始与取消。
+// 瘦身转码弹窗：正文按「输出格式 / 素材选择 / 档位与说明 / 覆盖选项」分区，素材列表竖向排列并在过长时自己滚动；
+// 只有「自定义参数」档才出现数字输入框，单位是 kbps / kHz；「覆盖旧文件」默认勾选并在覆盖前做破坏性二次确认；
+// 不勾选覆盖时写明源文件会改名为 `-origin` 保留并给出当前选中文件的例子。
 
 export interface ITranscodeModalProps {
   /** 是否打开弹窗 */
@@ -42,7 +59,38 @@ export interface ITranscodeModalProps {
 }
 
 /**
- * 瘦身转码弹窗：素材多选 + 分类参数 + 覆盖勾选（默认勾选）+ 破坏性二次确认 + 进度
+ * 取图片档位用人话写的实际参数
+ * @param preset 当前选中的图片档位
+ * @param customQuality 自定义档填写的质量
+ * @returns 例如「WebP 质量 100」；档位不在预设表里时为空串
+ */
+function imageEffectiveText(preset: AssetImagePreset, customQuality: number): string {
+  if (preset === AssetImagePreset.Custom) return `WebP 质量 ${customQuality}`;
+
+  const option = ASSET_IMAGE_PRESETS.find((item) => item.id === preset);
+
+  return option === undefined ? '' : option.summary;
+}
+
+/**
+ * 取音频档位用人话写的实际参数
+ * @param preset 当前选中的音频档位
+ * @param customBitrateKbps 自定义档填写的码率（kbps）
+ * @param customSampleRateKHz 自定义档填写的采样率（kHz）
+ * @returns 例如「128 kbps + 48 kHz」；档位不在预设表里时为空串
+ */
+function audioEffectiveText(preset: AssetAudioPreset, customBitrateKbps: number, customSampleRateKHz: number): string {
+  if (preset === AssetAudioPreset.Custom) return `${customBitrateKbps} kbps + ${customSampleRateKHz} kHz`;
+
+  const option = ASSET_AUDIO_PRESETS.find((item) => item.id === preset);
+
+  if (option === undefined) return '';
+
+  return `${option.bitrateKbps} kbps + ${option.sampleRateKHz} kHz`;
+}
+
+/**
+ * 瘦身转码弹窗：素材多选 + 档位预设 + 自定义参数 + 说明文案 + 覆盖勾选（默认勾选）+ 破坏性二次确认 + 进度
  * @param props 弹窗 props
  * @returns 转码弹窗元素
  */
@@ -52,9 +100,11 @@ export function TranscodeModal(props: ITranscodeModalProps): ReactElement {
   const selected = selectedState[0];
   const setSelected = selectedState[1];
 
-  const qualityState = useState(ASSET_DEFAULT_WEBP_QUALITY);
-  const bitrateState = useState(ASSET_DEFAULT_OPUS_BITRATE);
-  const sampleRateState = useState(ASSET_DEFAULT_OPUS_SAMPLE_RATE);
+  const imagePresetState = useState<AssetImagePreset>(ASSET_DEFAULT_IMAGE_PRESET);
+  const customQualityState = useState(ASSET_DEFAULT_WEBP_QUALITY);
+  const audioPresetState = useState<AssetAudioPreset>(ASSET_DEFAULT_AUDIO_PRESET);
+  const customBitrateState = useState(bpsToKbps(ASSET_DEFAULT_OPUS_BITRATE));
+  const customSampleRateState = useState(hzToKHz(ASSET_DEFAULT_OPUS_SAMPLE_RATE));
   const coverState = useState(true);
   const confirmingState = useState(false);
   const bitrateTouchedRef = useRef(false);
@@ -62,14 +112,38 @@ export function TranscodeModal(props: ITranscodeModalProps): ReactElement {
   const loadBytesRef = useRef(props.loadBytes);
   loadBytesRef.current = props.loadBytes;
 
+  const imagePreset = imagePresetState[0];
+  const setImagePreset = imagePresetState[1];
+  const customQuality = customQualityState[0];
+  const setCustomQuality = customQualityState[1];
+  const audioPreset = audioPresetState[0];
+  const setAudioPreset = audioPresetState[1];
+  const customBitrate = customBitrateState[0];
+  const setCustomBitrate = customBitrateState[1];
+  const customSampleRate = customSampleRateState[0];
+  const setCustomSampleRate = customSampleRateState[1];
   const cover = coverState[0];
   const setCover = coverState[1];
   const confirming = confirmingState[0];
   const setConfirming = confirmingState[1];
 
+  const isImage = props.kind === AssetCategoryKind.Image;
+  const imagePresetOptions = [
+    ...ASSET_IMAGE_PRESETS.map((item) => ({ label: item.label, value: item.id })),
+    { label: ASSET_TRANSCODE_CUSTOM_LABEL, value: AssetImagePreset.Custom },
+  ];
+  const audioPresetOptions = [
+    ...ASSET_AUDIO_PRESETS.map((item) => ({ label: item.label, value: item.id })),
+    { label: ASSET_TRANSCODE_CUSTOM_LABEL, value: AssetAudioPreset.Custom },
+  ];
+  const effectiveText = isImage
+    ? imageEffectiveText(imagePreset, customQuality)
+    : audioEffectiveText(audioPreset, customBitrate, customSampleRate);
+  const showQualityInput = isImage && imagePreset === AssetImagePreset.Custom;
+  const showAudioInputs = !isImage && audioPreset === AssetAudioPreset.Custom;
+
   const firstSelected = props.entries.find((entry) => selected.includes(entry.name));
-  const probePath =
-    props.kind === AssetCategoryKind.Audio && firstSelected !== undefined ? firstSelected.path : undefined;
+  const probePath = !isImage && firstSelected !== undefined ? firstSelected.path : undefined;
 
   useEffect((): (() => void) => {
     if (probePath === undefined) return (): void => undefined;
@@ -86,8 +160,12 @@ export function TranscodeModal(props: ITranscodeModalProps): ReactElement {
       .then((info) => {
         if (info === undefined || cancelled) return;
 
-        if (!bitrateTouchedRef.current && info.bitrate !== undefined) bitrateState[1](info.bitrate);
-        if (!sampleRateTouchedRef.current && info.sampleRate !== undefined) sampleRateState[1](info.sampleRate);
+        if (!bitrateTouchedRef.current && info.bitrate !== undefined) {
+          customBitrateState[1](bpsToKbps(info.bitrate));
+        }
+        if (!sampleRateTouchedRef.current && info.sampleRate !== undefined) {
+          customSampleRateState[1](hzToKHz(info.sampleRate));
+        }
       })
       .catch(() => undefined);
 
@@ -101,10 +179,15 @@ export function TranscodeModal(props: ITranscodeModalProps): ReactElement {
   };
 
   const start = (): void => {
+    const audioOptions = resolveAudioPresetOptions(audioPreset, {
+      bitrateKbps: customBitrate,
+      sampleRateKHz: customSampleRate,
+    });
+
     props.onStart(selected, {
-      quality: qualityState[0],
-      bitrate: bitrateState[0],
-      sampleRate: sampleRateState[0],
+      quality: resolveImagePresetQuality(imagePreset, customQuality),
+      bitrate: audioOptions.bitrate,
+      sampleRate: audioOptions.sampleRate,
       coverOrigin: cover,
     });
   };
@@ -150,9 +233,7 @@ export function TranscodeModal(props: ITranscodeModalProps): ReactElement {
         <div className="asset-transcode-body">
           <div className="asset-transcode-section">
             <div className="asset-transcode-format" data-test-id="asset-transcode-format">
-              {props.kind === AssetCategoryKind.Image
-                ? ASSET_TRANSCODE_IMAGE_FORMAT_HINT
-                : ASSET_TRANSCODE_AUDIO_FORMAT_HINT}
+              {isImage ? ASSET_TRANSCODE_IMAGE_FORMAT_HINT : ASSET_TRANSCODE_AUDIO_FORMAT_HINT}
             </div>
           </div>
           <div className="asset-transcode-section">
@@ -196,49 +277,80 @@ export function TranscodeModal(props: ITranscodeModalProps): ReactElement {
             )}
           </div>
           <div className="asset-transcode-section">
-            <div className="asset-transcode-params">
-              {props.kind === AssetCategoryKind.Image ? (
+            <div className="asset-transcode-preset">
+              {isImage ? (
+                <Segmented<AssetImagePreset>
+                  data-test-id="asset-transcode-image-preset"
+                  value={imagePreset}
+                  options={imagePresetOptions}
+                  onChange={setImagePreset}
+                />
+              ) : (
+                <Segmented<AssetAudioPreset>
+                  data-test-id="asset-transcode-audio-preset"
+                  value={audioPreset}
+                  options={audioPresetOptions}
+                  onChange={setAudioPreset}
+                />
+              )}
+            </div>
+            <div className="asset-transcode-effective" data-test-id="asset-transcode-effective">
+              {effectiveText}
+            </div>
+            {showQualityInput ? (
+              <div className="asset-transcode-params">
                 <label className="asset-transcode-param">
                   <span>WebP 质量</span>
                   <InputNumber
                     min={0}
                     max={100}
-                    value={qualityState[0]}
+                    value={customQuality}
                     data-test-id="asset-transcode-quality"
-                    onChange={(value): void => qualityState[1](value ?? ASSET_DEFAULT_WEBP_QUALITY)}
+                    onChange={(value): void => setCustomQuality(value ?? ASSET_DEFAULT_WEBP_QUALITY)}
                   />
                 </label>
-              ) : (
-                <>
-                  <label className="asset-transcode-param">
-                    <span>码率</span>
-                    <InputNumber
-                      min={1}
-                      addonAfter="bps"
-                      value={bitrateState[0]}
-                      data-test-id="asset-transcode-bitrate"
-                      onChange={(value): void => {
-                        bitrateTouchedRef.current = true;
-                        bitrateState[1](value ?? ASSET_DEFAULT_OPUS_BITRATE);
-                      }}
-                    />
-                  </label>
-                  <label className="asset-transcode-param">
-                    <span>采样率</span>
-                    <InputNumber
-                      min={1}
-                      addonAfter="Hz"
-                      value={sampleRateState[0]}
-                      data-test-id="asset-transcode-sample-rate"
-                      onChange={(value): void => {
-                        sampleRateTouchedRef.current = true;
-                        sampleRateState[1](value ?? ASSET_DEFAULT_OPUS_SAMPLE_RATE);
-                      }}
-                    />
-                  </label>
-                </>
-              )}
+              </div>
+            ) : null}
+            {showAudioInputs ? (
+              <div className="asset-transcode-params">
+                <label className="asset-transcode-param">
+                  <span>码率</span>
+                  <InputNumber
+                    min={1}
+                    addonAfter="kbps"
+                    value={customBitrate}
+                    data-test-id="asset-transcode-bitrate"
+                    onChange={(value): void => {
+                      bitrateTouchedRef.current = true;
+                      setCustomBitrate(value ?? bpsToKbps(ASSET_DEFAULT_OPUS_BITRATE));
+                    }}
+                  />
+                </label>
+                <label className="asset-transcode-param">
+                  <span>采样率</span>
+                  <InputNumber
+                    min={1}
+                    step={0.1}
+                    precision={1}
+                    addonAfter="kHz"
+                    value={customSampleRate}
+                    data-test-id="asset-transcode-sample-rate"
+                    onChange={(value): void => {
+                      sampleRateTouchedRef.current = true;
+                      setCustomSampleRate(value ?? hzToKHz(ASSET_DEFAULT_OPUS_SAMPLE_RATE));
+                    }}
+                  />
+                </label>
+              </div>
+            ) : null}
+            <div className="asset-transcode-note" data-test-id="asset-transcode-quality-note">
+              {ASSET_TRANSCODE_QUALITY_NOTE}
             </div>
+            {isImage ? (
+              <div className="asset-transcode-note" data-test-id="asset-transcode-pixel-art-note">
+                {ASSET_TRANSCODE_PIXEL_ART_NOTE}
+              </div>
+            ) : null}
           </div>
           <div className="asset-transcode-section">
             <label className="asset-transcode-cover">
@@ -249,6 +361,16 @@ export function TranscodeModal(props: ITranscodeModalProps): ReactElement {
               />
               <span>覆盖旧文件</span>
             </label>
+            {cover ? null : (
+              <div className="asset-transcode-note" data-test-id="asset-transcode-origin-hint">
+                {ASSET_TRANSCODE_KEEP_ORIGIN_HINT}
+              </div>
+            )}
+            {cover || firstSelected === undefined ? null : (
+              <div className="asset-transcode-note" data-test-id="asset-transcode-origin-example">
+                例如 {firstSelected.path} → {resolveOriginPath(firstSelected.path)}
+              </div>
+            )}
           </div>
           {props.busy ? (
             <div className="asset-transcode-section asset-transcode-busy" data-test-id="asset-transcode-busy">

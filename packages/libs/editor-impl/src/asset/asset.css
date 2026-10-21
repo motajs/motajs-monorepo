@@ -445,6 +445,24 @@
   gap: 8px;
 }
 
+.asset-transcode-preset {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.asset-transcode-effective {
+  color: var(--editor-muted, #656d76);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.asset-transcode-note {
+  color: var(--editor-muted, #656d76);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
 .asset-transcode-params {
   display: flex;
   flex-wrap: wrap;

@@ -3,7 +3,7 @@ import { createElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AssetCategoryKind } from '../../react';
 import { probeAudioSource } from '../transcode/audioOpus';
-import { IAssetAudioSourceInfo } from '../transcode/types';
+import { IAssetAudioSourceInfo, IAssetTranscodeOptions } from '../transcode/types';
 import assetCss from '../asset.css?inline';
 import { TranscodeModal } from '../components/TranscodeModal';
 import { IAssetEntry } from '../types';
@@ -12,12 +12,15 @@ vi.mock('../transcode/audioOpus', () => ({ probeAudioSource: vi.fn() }));
 
 configure({ testIdAttribute: 'data-test-id' });
 
-// 转码弹窗用例：版面（输出格式说明、竖向自滚动列表、分割线、转码中状态）与
-// 音频源参数探测（成为默认值 / 读不到回退 / 不覆盖用户输入 / 图片不探测）。
+// 转码弹窗用例：版面（输出格式说明、竖向自滚动列表、分割线、转码中状态）、档位预设与自定义输入框、
+// 界面单位（kbps / kHz）、实际参数与说明文案、不覆盖时的改名提示，以及开始转换时换算出的内部参数。
 // 弹窗挂在 body 上，查找一律走 screen，不使用全局 document（editor-impl 全树禁用 document）。
 
 /** 按素材字节路径读字节的回调 */
 type LoadBytes = (path: string) => Promise<Uint8Array | undefined>;
+
+/** 开始转换回调 */
+type StartHandler = (names: readonly string[], options: IAssetTranscodeOptions) => void;
 
 // 每个用例结束后卸载已挂载的组件，避免弹层在用例之间残留
 afterEach(() => {
@@ -59,8 +62,14 @@ function entriesOf(names: readonly string[]): readonly IAssetEntry[] {
  * @param kind 分类的大分类
  * @param busy 是否正在转码
  * @param loadBytes 按路径读字节的回调
+ * @param onStart 开始转换回调
  */
-function renderModal(kind: AssetCategoryKind, busy: boolean, loadBytes: LoadBytes = noopLoadBytes): void {
+function renderModal(
+  kind: AssetCategoryKind,
+  busy: boolean,
+  loadBytes: LoadBytes = noopLoadBytes,
+  onStart: StartHandler = noopStart,
+): void {
   render(
     createElement(TranscodeModal, {
       open: true,
@@ -69,7 +78,7 @@ function renderModal(kind: AssetCategoryKind, busy: boolean, loadBytes: LoadByte
       loadBytes,
       busy,
       onCancel: noopCancel,
-      onStart: noopStart,
+      onStart,
     }),
   );
 }
@@ -83,6 +92,28 @@ function inputValue(testId: string): string {
   const input = screen.getByTestId(testId);
 
   return input instanceof HTMLInputElement ? input.value : '';
+}
+
+/**
+ * 按选项文字选中一个档位
+ * @param label 档位显示名
+ */
+function choosePreset(label: string): void {
+  fireEvent.click(screen.getByText(label));
+}
+
+/**
+ * 读取「本档实际参数」的文案
+ * @returns 实际参数文案
+ */
+function effectiveText(): string {
+  return screen.getByTestId('asset-transcode-effective').textContent ?? '';
+}
+
+/** 点开始转换，并在「覆盖旧文件」的二次确认里确认 */
+function startAndConfirm(): void {
+  fireEvent.click(screen.getByTestId('asset-transcode-start'));
+  fireEvent.click(screen.getByTestId('asset-transcode-confirm'));
 }
 
 /**
@@ -145,18 +176,111 @@ describe('转码弹窗版面', () => {
   });
 });
 
-describe('音频转码默认参数探测', () => {
-  // 音频条目默认全选：第一条选中素材的源参数成为码率与采样率默认值
-  it('探测结果成为音频默认参数', async () => {
+describe('图片档位预设', () => {
+  // 图片默认档是无损压缩：实际参数为 100，且没有质量输入框
+  it('图片默认档为无损压缩且不显示质量输入框', () => {
+    renderModal(AssetCategoryKind.Image, false);
+
+    expect(effectiveText()).toBe('WebP 质量 100');
+    expect(screen.queryByTestId('asset-transcode-quality')).toBeNull();
+  });
+
+  // 切档后实际参数跟着变；只有自定义档出现输入框，且初值沿用默认质量
+  it('切换图片档位时实际参数跟着变，自定义档才出现输入框', () => {
+    renderModal(AssetCategoryKind.Image, false);
+
+    choosePreset('常规压缩 92');
+    expect(effectiveText()).toBe('WebP 质量 92');
+
+    choosePreset('体积优先 80');
+    expect(effectiveText()).toBe('WebP 质量 80');
+
+    choosePreset('自定义参数');
+    expect(inputValue('asset-transcode-quality')).toBe('100');
+
+    fireEvent.change(screen.getByTestId('asset-transcode-quality'), { target: { value: '85' } });
+    expect(effectiveText()).toBe('WebP 质量 85');
+  });
+
+  // 开始转换时把档位换算成质量：默认 100、常规压缩 92、自定义 85
+  it('开始转换时按档位给出图片质量', () => {
+    const options: IAssetTranscodeOptions[] = [];
+
+    renderModal(AssetCategoryKind.Image, false, noopLoadBytes, (_names, value): void => {
+      options.push(value);
+    });
+
+    startAndConfirm();
+    expect(options[0].quality).toBe(100);
+
+    choosePreset('常规压缩 92');
+    startAndConfirm();
+    expect(options[1].quality).toBe(92);
+
+    choosePreset('自定义参数');
+    fireEvent.change(screen.getByTestId('asset-transcode-quality'), { target: { value: '85' } });
+    startAndConfirm();
+    expect(options[2].quality).toBe(85);
+  });
+});
+
+describe('音频档位预设', () => {
+  // 音频默认档是常规压缩：实际参数为 128 kbps + 48 kHz，且没有码率 / 采样率输入框
+  it('音频默认档为常规压缩且不显示码率与采样率输入框', () => {
+    renderModal(AssetCategoryKind.Audio, false);
+
+    expect(effectiveText()).toBe('128 kbps + 48 kHz');
+    expect(screen.queryByTestId('asset-transcode-bitrate')).toBeNull();
+    expect(screen.queryByTestId('asset-transcode-sample-rate')).toBeNull();
+  });
+
+  // 切到自定义档才出现两个输入框，单位是 kbps / kHz
+  it('音频自定义档出现码率与采样率输入框且单位是 kbps / kHz', () => {
+    renderModal(AssetCategoryKind.Audio, false);
+
+    choosePreset('自定义参数');
+
+    expect(screen.getByTestId('asset-transcode-bitrate')).toBeDefined();
+    expect(screen.getByTestId('asset-transcode-sample-rate')).toBeDefined();
+    expect(screen.getByText('kbps')).toBeDefined();
+    expect(screen.getByText('kHz')).toBeDefined();
+  });
+
+  // 开始转换时把 kbps / kHz 换算成 bps / Hz：64 kbps + 44.1 kHz → 64000 + 44100
+  it('音频自定义参数开始转换时换算成 64000 bps 与 44100 Hz', () => {
+    const options: IAssetTranscodeOptions[] = [];
+
+    renderModal(AssetCategoryKind.Audio, false, noopLoadBytes, (_names, value): void => {
+      options.push(value);
+    });
+
+    choosePreset('自定义参数');
+    fireEvent.change(screen.getByTestId('asset-transcode-bitrate'), { target: { value: '64' } });
+    fireEvent.change(screen.getByTestId('asset-transcode-sample-rate'), { target: { value: '44.1' } });
+
+    startAndConfirm();
+
+    expect(options[0].bitrate).toBe(64000);
+    expect(options[0].sampleRate).toBe(44100);
+    expect(options[0].coverOrigin).toBe(true);
+  });
+});
+
+describe('音频源参数探测', () => {
+  // 探测到的源参数只用来预填自定义输入框：192000 bps / 16000 Hz → 192 kbps / 16 kHz
+  it('探测结果预填自定义输入框', async () => {
     vi.mocked(probeAudioSource).mockResolvedValue({ sampleRate: 16000, bitrate: 192000 });
 
     renderModal(AssetCategoryKind.Audio, false, nonEmptyLoadBytes);
 
     await waitFor((): void => {
-      expect(inputValue('asset-transcode-sample-rate')).toBe('16000');
+      expect(probeAudioSource).toHaveBeenCalledTimes(1);
     });
 
-    expect(inputValue('asset-transcode-bitrate')).toBe('192000');
+    choosePreset('自定义参数');
+
+    expect(Number(inputValue('asset-transcode-bitrate'))).toBe(192);
+    expect(Number(inputValue('asset-transcode-sample-rate'))).toBe(16);
   });
 
   // 读不到源参数时保留 128 kbps / 48 kHz 回退值
@@ -169,14 +293,16 @@ describe('音频转码默认参数探测', () => {
       expect(probeAudioSource).toHaveBeenCalledTimes(1);
     });
 
+    choosePreset('自定义参数');
+
     await act(async (): Promise<void> => {});
 
-    expect(inputValue('asset-transcode-bitrate')).toBe('128000');
-    expect(inputValue('asset-transcode-sample-rate')).toBe('48000');
+    expect(Number(inputValue('asset-transcode-bitrate'))).toBe(128);
+    expect(Number(inputValue('asset-transcode-sample-rate'))).toBe(48);
   });
 
-  // 用户先改过码率：探测结果晚到时不能覆盖用户输入
-  it('用户改过的码率不被异步探测覆盖', async () => {
+  // 用户先改过自定义码率：探测结果晚到时不能覆盖用户输入
+  it('用户改过的自定义码率不被异步探测覆盖', async () => {
     let resolveProbe: (info: IAssetAudioSourceInfo | undefined) => void = (): void => undefined;
     const pending = new Promise<IAssetAudioSourceInfo | undefined>((resolve) => {
       resolveProbe = resolve;
@@ -190,12 +316,52 @@ describe('音频转码默认参数探测', () => {
       expect(probeAudioSource).toHaveBeenCalledTimes(1);
     });
 
-    fireEvent.change(screen.getByTestId('asset-transcode-bitrate'), { target: { value: '64000' } });
+    choosePreset('自定义参数');
+    fireEvent.change(screen.getByTestId('asset-transcode-bitrate'), { target: { value: '64' } });
 
-    expect(inputValue('asset-transcode-bitrate')).toBe('64000');
+    expect(Number(inputValue('asset-transcode-bitrate'))).toBe(64);
 
     await act(async (): Promise<void> => resolveProbe({ bitrate: 192000 }));
 
-    expect(inputValue('asset-transcode-bitrate')).toBe('64000');
+    expect(Number(inputValue('asset-transcode-bitrate'))).toBe(64);
+  });
+});
+
+describe('说明与保留提示', () => {
+  // 取舍说明两种分类都显示
+  it('图片与音频都显示取舍说明', () => {
+    renderModal(AssetCategoryKind.Image, false);
+    expect(screen.getByTestId('asset-transcode-quality-note').textContent).toContain('越小');
+
+    cleanup();
+
+    renderModal(AssetCategoryKind.Audio, false);
+    expect(screen.getByTestId('asset-transcode-quality-note').textContent).toContain('越小');
+  });
+
+  // 像素风说明只在图片分类出现，并且明确提到「无损」
+  it('像素风说明只在图片分类出现且提到无损', () => {
+    renderModal(AssetCategoryKind.Image, false);
+
+    expect(screen.getByTestId('asset-transcode-pixel-art-note').textContent).toContain('无损');
+
+    cleanup();
+
+    renderModal(AssetCategoryKind.Audio, false);
+
+    expect(screen.queryByTestId('asset-transcode-pixel-art-note')).toBeNull();
+  });
+
+  // 取消勾选覆盖时才出现改名提示与当前选中文件的例子；勾选时两者都不出现
+  it('不勾覆盖时显示改名提示与具体例子', () => {
+    renderModal(AssetCategoryKind.Image, false);
+
+    expect(screen.queryByTestId('asset-transcode-origin-hint')).toBeNull();
+    expect(screen.queryByTestId('asset-transcode-origin-example')).toBeNull();
+
+    fireEvent.click(screen.getByTestId('asset-transcode-cover'));
+
+    expect(screen.getByTestId('asset-transcode-origin-hint').textContent).toContain('-origin');
+    expect(screen.getByTestId('asset-transcode-origin-example').textContent).toContain('a-origin.png');
   });
 });
