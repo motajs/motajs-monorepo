@@ -413,6 +413,22 @@
 
 ---
 
+## Plan 04-17 — 属性抽屉视图状态修复（回归修复）
+
+**要做什么：** 把「属性加载状态 / 属性行树 / 属性读取错误」这三份原来只在构造视图时传一次的数据，改由面板发布进视图状态——地图属性抽屉第一次打开就能看到字段，不再依赖外壳重新渲染。
+
+**命名说明：** 本计划**不引入任何新名字**。三个字段名与它们原来作为视图 props 时的名字完全相同，改的只是归属（props → 视图状态）；同时删除视图 props 上的同名三项，避免「一份在 props、一份在视图状态」的双来源。因此无需用户重新确认命名，只需确认「归属改成视图状态」这个方向。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `IMapPanelViewState.propertiesStatus` | 接口成员（新增，名字沿用） | 属性域的加载状态（尚未读取 / 加载中 / 就绪 / 空 schema / 失败）；抽屉据此显示占位、表单或错误态。原 `IMapPanelViewProps.propertiesStatus` 删除 |
+| `IMapPanelViewState.propertyRows` | 接口成员（新增，名字沿用） | 属性表单的行树；抽屉把它交给表格组件渲染。原 `IMapPanelViewProps.propertyRows` 删除 |
+| `IMapPanelViewState.propertiesError` | 接口成员（新增，可选，名字沿用） | 属性读取失败的原因，无错误时 `undefined`。原 `IMapPanelViewProps.propertiesError` 删除 |
+
+> 补充口径：这三个成员由 `MapPanel` 在「store 初始化 / 加载开始 / 加载成功 / 加载失败 / `MapPanel.resetProperties` / `MapPanel.refreshPropertyRows`」六处发布；`MapPanelView` 只经 `useStore` 读，不再接受这三个 props。回归证据是 `mapProperties.test.tsx` 里一条不调用 `ShellSystem.activateTab` 的面板级用例。
+
+---
+
 ## 开放问题决议（12 项，均在本文定稿）
 
 > 研究文件 §Open Questions 提出 12 个待定问题。下面逐条给出**本阶段的执行口径**。它们不是新决策，而是把 CONTEXT 的 D-01…D-24 落到可执行的一侧。
