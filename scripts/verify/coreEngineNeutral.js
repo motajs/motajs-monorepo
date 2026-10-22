@@ -39,8 +39,14 @@ import process from 'node:process';
 
 const REPO_ROOT = path.resolve(import.meta.dirname, '..', '..');
 
-/** 扫描范围根（D-12）：扫描底层与默认实现两个包的生产源码（合并后仍 ≥ 下界），排除测试树。 */
-const CORE_LIBS = ['packages/libs/editor-core/src', 'packages/libs/editor-impl/src'];
+/**
+ * 扫描范围根（D-12）：只扫描底层 `editor-core` 的生产源码，排除测试树。
+ *
+ * `editor-impl` 是魔塔编辑器的默认实现，本来就应该使用 `tower` / `floor` / `autotile` 等
+ * 领域词汇，因此不在这条「引擎无关」门禁的范围内；它仍受 `coreModuleState` /
+ * `coreImportType` / `coreBoundaries` 等结构门禁约束。
+ */
+const CORE_LIBS = ['packages/libs/editor-core/src'];
 const CORE_LIB_ABS = CORE_LIBS.map((lib) => path.join(REPO_ROOT, lib));
 
 /** 完整术语表（PORT-06 + PORT-07 词汇半边），匹配大小写敏感。 */
@@ -64,7 +70,7 @@ const FLOOR_EXEMPT_PRECEDING_CHAR = '.';
  * 真实树非空转底线：core 生产源码文件数的保守下界。它比 `> 0` 更紧——若范围被静默削弱（glob 写错、
  * 排除规则被放大），扫描数会塌到下界以下；刻意不写死精确值，core 增长时不会误红。
  */
-const MIN_EXPECTED_SOURCES = 12;
+const MIN_EXPECTED_SOURCES = 20;
 
 /** 两极性 fixture 的路径（脚本创建、脚本删除，绝不入库）；落在底层（editor-core）。 */
 const PROBE_FIXTURE_PATH = `${CORE_LIBS[0]}/__engineNeutralProbe__.ts`;
@@ -192,7 +198,7 @@ function collectSources(dir) {
   return results;
 }
 
-/** 合并两个包的 src 生产源码（逐包 collectSources 后拼接，保持确定性排序）。 */
+/** 合并扫描范围内的 src 生产源码（collectSources 后保持确定性排序）。 */
 function collectAllSources() {
   return CORE_LIB_ABS.flatMap((dir) => collectSources(dir)).sort((left, right) =>
     left.relPath.localeCompare(right.relPath),
