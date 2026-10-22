@@ -1,5 +1,6 @@
-import { cleanup, configure, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, configure, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { EditorCore, IEditorPanel, IEditorPanelFactoryParam } from '@motajs/editor-core';
+import { createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createMapPanelType, MAP_PANEL_TYPE_ID, MapPanel } from '..';
 import { MapPropertiesDrawer, IMapPropertiesDrawerProps } from '../components/MapPropertiesDrawer';
@@ -8,6 +9,15 @@ import { buildTableTree } from '../../shared/schemaForm/model/traversal';
 import { ITableRowNode, ITableSchemaNode, TableExternalEditor } from '../../shared/schemaForm/types';
 import { IMapDataSection, IMapDocument, IMapEditorCapabilities, IMapPanelViewState, IMapSummary } from '../types';
 import { createMapDocument, createMapHarness, FakeFileSystem } from './fixtures';
+
+vi.mock('../components/MapSurface', async () => {
+  const { createElement: createMockElement } = await import('react');
+
+  return {
+    MapSurface: (): ReturnType<typeof createMockElement> =>
+      createMockElement('div', { 'data-test-id': 'map-surface-stub' }),
+  };
+});
 
 configure({ testIdAttribute: 'data-test-id' });
 
@@ -322,6 +332,25 @@ describe('地图面板：属性域', () => {
     expect(viewState(panel).propertiesOpen).toBe(true);
     expect(panel['properties'].name).toBe('b');
     expect(findRow(propertyRows(panel), "['name']")?.value).toBe('b');
+  });
+
+  // 面板级回归：只渲染面板自己的组件、点一次「地图属性」，字段就该出现——不经过外壳重渲染
+  it('属性抽屉首次打开即显示字段（不依赖外壳重渲染）', async () => {
+    const { system, panel } = await openMapPanel(createPropertyCapabilities());
+    const activateTab = vi.spyOn(system.shellSystem, 'activateTab');
+
+    render(createElement(panel.render()));
+
+    act(() => {
+      fireEvent.click(screen.getByTestId('map-properties'));
+    });
+
+    await waitFor(() => expect(screen.getByTestId('map-properties-drawer')).not.toBeNull());
+    await waitFor(() => expect(screen.getByTestId('table-input-name')).not.toBeNull());
+
+    expect(screen.getByTestId('table-input-level')).not.toBeNull();
+    expect(screen.queryByTestId('map-properties-error')).toBeNull();
+    expect(activateTab).toHaveBeenCalledTimes(0);
   });
 });
 
