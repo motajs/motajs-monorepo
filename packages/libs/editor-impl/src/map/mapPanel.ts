@@ -397,6 +397,9 @@ export class MapPanel implements IEditorPanel, IMapPanel {
       dialog: MapDialogKind.None,
       paletteVersion: 0,
       propertiesOpen: false,
+      propertiesStatus: TablePanelStatus.NoTarget,
+      propertyRows: [],
+      propertiesError: undefined,
       passMarks: [],
       aboveLayerOpacity: MAP_ABOVE_LAYER_DEFAULT_OPACITY,
       passabilityVisible: false,
@@ -469,9 +472,6 @@ export class MapPanel implements IEditorPanel, IMapPanel {
         onUnsavedDecision: (choice): void => {
           void this.resolveUnsavedDecision(choice);
         },
-        propertiesStatus: this.propertiesStatus,
-        propertyRows: this.propertyRows,
-        propertiesError: this.propertiesError,
         onPropertyChange: (path, value): void => this.commitProperty(path, value),
         onPropertiesRetry: (): void => {
           void this.loadProperties();
@@ -589,6 +589,7 @@ export class MapPanel implements IEditorPanel, IMapPanel {
     this.propertiesError = undefined;
     this.propertyRows = [];
     this.propertySchema = undefined;
+    this.publish({ propertiesStatus: TablePanelStatus.NoTarget, propertyRows: [], propertiesError: undefined });
   }
 
   /**
@@ -1414,6 +1415,7 @@ export class MapPanel implements IEditorPanel, IMapPanel {
     this.propertiesStatus = TablePanelStatus.Loading;
     this.propertiesError = undefined;
     this.propertyRows = [];
+    this.publish({ propertiesStatus: TablePanelStatus.Loading, propertyRows: [], propertiesError: undefined });
 
     try {
       const properties = await readProperties(document.id);
@@ -1428,12 +1430,18 @@ export class MapPanel implements IEditorPanel, IMapPanel {
       this.propertiesBaseline = cloneProperties(table);
       this.propertyRows = buildTableTree(stripped, table);
       this.propertiesStatus = this.propertyRows.length === 0 ? TablePanelStatus.EmptySchema : TablePanelStatus.Ready;
+      this.publish({
+        propertiesStatus: this.propertiesStatus,
+        propertyRows: this.propertyRows,
+        propertiesError: undefined,
+      });
       this.refreshUnsaved();
     } catch (error) {
       if (token !== this.propertiesToken) return;
 
       this.propertiesStatus = TablePanelStatus.Error;
       this.propertiesError = toErrorMessage(error);
+      this.publish({ propertiesStatus: this.propertiesStatus, propertyRows: [], propertiesError: this.propertiesError });
     }
   }
 
@@ -1445,6 +1453,7 @@ export class MapPanel implements IEditorPanel, IMapPanel {
 
     if (schema === undefined) {
       this.propertyRows = [];
+      this.publish({ propertyRows: [] });
       return;
     }
 
@@ -1453,6 +1462,8 @@ export class MapPanel implements IEditorPanel, IMapPanel {
     if (this.propertiesStatus === TablePanelStatus.Ready || this.propertiesStatus === TablePanelStatus.EmptySchema) {
       this.propertiesStatus = this.propertyRows.length === 0 ? TablePanelStatus.EmptySchema : TablePanelStatus.Ready;
     }
+
+    this.publish({ propertyRows: this.propertyRows, propertiesStatus: this.propertiesStatus });
   }
 
   /**

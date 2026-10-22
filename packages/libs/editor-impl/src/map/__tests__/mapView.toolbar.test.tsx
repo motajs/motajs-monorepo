@@ -110,6 +110,8 @@ function createViewState(overrides: Partial<IMapPanelViewState> = {}): IMapPanel
     dialog: MapDialogKind.None,
     paletteVersion: 0,
     propertiesOpen: false,
+    propertiesStatus: TablePanelStatus.NoTarget,
+    propertyRows: [],
     passMarks: [],
     aboveLayerOpacity: 0.3,
     passabilityVisible: false,
@@ -489,14 +491,18 @@ describe('地图面板视图装配', () => {
   it('属性抽屉按视图状态打开并带正文容器', () => {
     const onCloseProperties = vi.fn();
     const rows = buildTableTree(PROPERTY_SCHEMA, { name: 'a' });
-    const store = new Store<IMapPanelViewState>(createViewState({ propertiesOpen: true }));
+    const store = new Store<IMapPanelViewState>(
+      createViewState({
+        propertiesOpen: true,
+        propertiesStatus: TablePanelStatus.Ready,
+        propertyRows: rows,
+      }),
+    );
 
     render(
       <MapPanelView
         {...createViewProps(store, {
           canOpenProperties: true,
-          propertiesStatus: TablePanelStatus.Ready,
-          propertyRows: rows,
           onCloseProperties,
         })}
       />,

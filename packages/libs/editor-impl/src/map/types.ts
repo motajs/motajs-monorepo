@@ -1,4 +1,5 @@
-import { ITableSchemaNode } from '../shared/schemaForm/types';
+import { TablePanelStatus } from '../shared/schemaForm/components/TableGrid';
+import { ITableRowNode, ITableSchemaNode } from '../shared/schemaForm/types';
 
 // 地图能力的类型集中地：中立文档 / 图块目录 / 宿主注入面 / 面板状态 / 撤销载荷 / 渲染模型。
 // 本文件只有声明，没有任何逻辑；实现由后续计划补齐。
@@ -480,6 +481,12 @@ export interface IMapPanelViewState {
   readonly paletteVersion: number;
   /** 地图属性抽屉是否打开 */
   readonly propertiesOpen: boolean;
+  /** 属性域的加载状态；`TablePanelStatus.NoTarget` 表示尚未读取 */
+  readonly propertiesStatus: TablePanelStatus;
+  /** 属性表单的行树；尚未读取、读取失败或没有字段时为空数组 */
+  readonly propertyRows: readonly ITableRowNode[];
+  /** 属性域读取失败的原因；没有失败时为 undefined */
+  readonly propertiesError?: string;
   /** 面板算好的通行度标记，渲染模型只消费 */
   readonly passMarks: readonly IMapPassMark[];
   /** 高于当前层的图层统一不透明度，0..1 */

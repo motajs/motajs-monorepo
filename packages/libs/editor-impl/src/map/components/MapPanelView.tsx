@@ -3,8 +3,6 @@ import { useStore } from '@tanstack/react-store';
 import { Store } from '@tanstack/store';
 import { Button, Spin } from 'antd';
 import { ReactElement, useEffect, useState } from 'react';
-import { TablePanelStatus } from '../../shared/schemaForm/components/TableGrid';
-import { ITableRowNode } from '../../shared/schemaForm/types';
 import { MAP_CELL_SIZE } from '../constants';
 import { IPaintWrite, isTileCatalogEmpty } from '../model/document';
 import { buildMapRenderModel } from '../model/renderModel';
@@ -162,12 +160,6 @@ export interface IMapPanelViewProps {
    * @param choice 用户按下的按钮
    */
   onUnsavedDecision?(choice: MapUnsavedChoice): void;
-  /** 属性域的加载状态 */
-  readonly propertiesStatus?: TablePanelStatus;
-  /** 属性表单的行树 */
-  readonly propertyRows?: readonly ITableRowNode[];
-  /** 属性加载失败的原因 */
-  readonly propertiesError?: string;
   /**
    * 提交一个属性字段
    * @param path 字段路径段数组
@@ -610,9 +602,9 @@ export function MapPanelView(props: IMapPanelViewProps): ReactElement {
       ) : null}
       <MapPropertiesDrawer
         open={view.propertiesOpen}
-        status={props.propertiesStatus ?? TablePanelStatus.NoTarget}
-        rows={props.propertyRows ?? []}
-        error={props.propertiesError}
+        status={view.propertiesStatus}
+        rows={view.propertyRows}
+        error={view.propertiesError}
         onChange={props.onPropertyChange ?? noop}
         onRetry={props.onPropertiesRetry ?? noop}
         onClose={props.onCloseProperties ?? noop}
