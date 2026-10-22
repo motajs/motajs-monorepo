@@ -1,20 +1,19 @@
 ---
 gsd_state_version: "1.0"
 milestone: v1.0
-current_phase: 4
-current_phase_name: 地图编辑
-current_plan: 15
-status: executing
+current_phase: "4.1"
+current_plan: Not started
+status: planning
 stopped_at: Completed 04-13-PLAN.md
-last_updated: "2026-10-21T16:42:09.942Z"
+last_updated: "2026-10-22T10:57:04.305Z"
 last_activity: 2026-10-21
 last_activity_desc: Phase 3 complete, transitioned to Phase 4
-state_head: 4560be1e285a167da570a092a90a573e5b73df83
+state_head: 6825ad761704aec36858151354bf2293c0fc9d56
 progress:
-  total_phases: 8
+  total_phases: 9
   completed_phases: 0
-  total_plans: 121
-  completed_plans: 120
+  total_plans: 122
+  completed_plans: 121
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -25,14 +24,14 @@ milestone_name: editor-core 空壳 + editor-impl 重做
 See: .planning/PROJECT.md (updated 2026-10-09)
 
 **Core value:** 把编辑器内核与引擎细节彻底解耦——`editor-core` 只给接口、`editor-impl` 写默认实现，让新旧引擎共用同一套编辑能力，第三方可高自由度定制。
-**Current focus:** Phase 02.1 — 资源层重构与表格文件管理
+**Current focus:** Phase 4.1 — map-render-layout
 
 ## Current Position
 
-Phase: 4 (地图编辑) — EXECUTING
-Current Plan: 15
-Total Plans in Phase: 16
-Status: Ready to execute
+Phase: 4.1
+Current Plan: Not started
+Total Plans in Phase: 0
+Status: Planning
 Last activity: 2026-10-21 — 04-01 complete (naming report + map domain types)
 
 Progress: [██████████] 100%
@@ -340,6 +339,7 @@ None yet.
 - Phase 1 edited: renamed phase 1 to 编辑器外壳 (shell-focused)
 - Phase 1.1 inserted after Phase 1: 编辑器开发宿主（最小可运行整合，用于验证 editor-core/editor-impl） (URGENT)
 - Phase 02.1 inserted after Phase 2: 资源层重构与表格文件管理 (URGENT)
+- Phase 4.1 inserted after Phase 4: 地图渲染与布局重做 (URGENT)
 
 ## Deferred Items
 
