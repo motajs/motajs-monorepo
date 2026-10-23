@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.1"
 current_phase_name: 地图渲染与布局重做
-current_plan: 5
+current_plan: 6
 status: executing
-stopped_at: Completed 04.1-04-PLAN.md
-last_updated: "2026-10-23T14:36:42.923Z"
+stopped_at: Completed 04.1-05-PLAN.md
+last_updated: "2026-10-23T15:16:11.308Z"
 last_activity: 2026-10-23
 last_activity_desc: Phase 3 complete, transitioned to Phase 4
-state_head: 271f1b19b40991eaf5c65e49063dd70eb40e85dc
+state_head: edfe54400e4a6e7674a22cc53343bf9991ecfd73
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 138
-  completed_plans: 125
+  completed_plans: 126
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 04.1 (地图渲染与布局重做) — EXECUTING
-Current Plan: 5
+Current Plan: 6
 Total Plans in Phase: 16
 Status: Ready to execute
 Last activity: 2026-10-23 — 04.1-01 complete (naming report + pure declarations)
@@ -143,6 +143,7 @@ Progress: [██████████] 100%
 | Phase 04.1 P02 | 13 | 2 tasks | 8 files |
 | Phase 04.1 P03 | 14 | 2 tasks | 4 files |
 | Phase 04.1 P04 | 12 min | 2 tasks | 4 files |
+| Phase 04.1 P05 | 30 min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -345,6 +346,11 @@ Recent decisions affecting current work:
 - [Phase 04.1]: 视口格数要求正整数，2.5 这类小数退回默认 13 而不是向下取整：半格视口没有语义，静默取整会让宿主误以为注入生效
 - [Phase 04.1]: 右栏基准宽度非正时回退到 MAP_PALETTE_BASE_WIDTH：宿主传 0 时按缺省算，而不是被夹成 160 最小宽
 - [Phase 04.1]: 两个新模块都不加入 model/index.ts 桶，沿用 04.1-02 / 03 的做法，桶的统一整理留给 Plan 15
+- [Phase 04.1]: 04.1-05: 最近使用复用 recentTiles 的 normalizeRecentTiles 而不是抄一遍：两个调用方必须给出完全相同的列表，抄一份就多一处会漂的实现
+- [Phase 04.1]: 04.1-05: 次数表超过 MAP_FREQUENT_LIMIT 时保留次数最高的 200 条，与写盘裁剪同一口径，结果与文件里键的排列无关
+- [Phase 04.1]: 04.1-05: favoriteNumbers 由调用方传入，模型不认识 Tileset 分类：分类规则只存在于目录侧，避免复制两份
+- [Phase 04.1]: 04.1-05: 写回容器用 Object.create(null) 且只写 recent / frequent / favorites 三个白名单字段，杜绝原型污染与原样回写
+- [Phase 04.1]: 04.1-05: 迁移 migrateRecentTiles 是只读纯函数，旧文件 map-recent-tiles.json 不删除，清理由宿主决定
 
 ### Pending Todos
 
@@ -372,6 +378,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-23T14:36:42.216Z
-Stopped at: Completed 04.1-04-PLAN.md
+Last session: 2026-10-23T15:16:10.663Z
+Stopped at: Completed 04.1-05-PLAN.md
 Resume file: None
