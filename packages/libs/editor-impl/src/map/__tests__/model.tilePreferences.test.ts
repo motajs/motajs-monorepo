@@ -54,12 +54,7 @@ describe('normalizeTilePreferences 的最近使用', () => {
 
   // 同一编号只留第一次出现的位置
   it('recent 去重并保持顺序', () => {
-    const preferences = normalizeTilePreferences(
-      { recent: [3, 1, 3, 2, 1] },
-      KNOWN_NUMBERS,
-      FAVORITE_NUMBERS,
-      24,
-    );
+    const preferences = normalizeTilePreferences({ recent: [3, 1, 3, 2, 1] }, KNOWN_NUMBERS, FAVORITE_NUMBERS, 24);
 
     expect(preferences.recent).toEqual([3, 1, 2]);
   });
@@ -82,19 +77,14 @@ describe('normalizeTilePreferences 的最近使用', () => {
 describe('normalizeTilePreferences 的使用次数表', () => {
   // JSON 里的数字字符串键被读成数字键
   it('数字字符串键转成数字键', () => {
-    const preferences = normalizeTilePreferences(
-      { frequent: { '12': 3 } },
-      KNOWN_NUMBERS,
-      FAVORITE_NUMBERS,
-      24,
-    );
+    const preferences = normalizeTilePreferences({ frequent: { '12': 3 } }, KNOWN_NUMBERS, FAVORITE_NUMBERS, 24);
 
     expect([...preferences.frequent.entries()]).toEqual([[12, 3]]);
   });
 
-  // 原型相关键与非数字键一律丢弃
-  it('原型相关键与非数字键被丢弃', () => {
-    const raw = JSON.parse('{"frequent":{"__proto__":9,"constructor":4,"abc":2,"12":3}}');
+  // 原型相关键与非十进制写法（`0x10` / `1e1`）一律丢弃：`Number()` 会把它们读成合法编号
+  it('原型相关键与非十进制键被丢弃', () => {
+    const raw = JSON.parse('{"frequent":{"__proto__":9,"constructor":4,"abc":2,"0x10":5,"1e1":6,"12":3}}');
     const preferences = normalizeTilePreferences(raw, KNOWN_NUMBERS, FAVORITE_NUMBERS, 24);
 
     expect([...preferences.frequent.entries()]).toEqual([[12, 3]]);
