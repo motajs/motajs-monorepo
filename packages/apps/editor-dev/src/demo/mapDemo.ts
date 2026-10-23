@@ -543,7 +543,19 @@ const DEMO_WIDE_WIDTH = 40;
 /** 大地图的高度 */
 const DEMO_WIDE_HEIGHT = 26;
 
-/** 演示地图记录：一张小图（两层）与一张大图（一层），都带非空格子与要保留的事件 / 额外字段 */
+/** 细节图的宽度（格子数）：16×14，用来观察大 / 小素材在 48×48 格里的留空 */
+const DEMO_DETAIL_WIDTH = 16;
+
+/** 细节图的高度 */
+const DEMO_DETAIL_HEIGHT = 14;
+
+/** 细节图的格子边长（像素）：与素材源尺寸不同，才能看出 contain 的留空 */
+const DEMO_DETAIL_CELL_SIZE = 48;
+
+/** 巨型地图的边长（格子数）：256×256，用来验收大地图缩略 */
+const DEMO_HUGE_SIZE = 256;
+
+/** 演示地图记录：小图、大图、细节图与巨型地图，都带非空格子与要保留的事件 / 额外字段 */
 export const MAP_DEMO_MAPS: readonly IMapFileRecord[] = [
   {
     id: 'small',
@@ -554,8 +566,11 @@ export const MAP_DEMO_MAPS: readonly IMapFileRecord[] = [
         const border = x === 0 || y === 0 || x === DEMO_SMALL_WIDTH - 1 || y === DEMO_SMALL_HEIGHT - 1;
 
         if (border) return 2;
+        if ((x === 1 && y === 1) || (x === 6 && y === 4)) return 10;
+        if (x >= 4 && x <= 6 && y >= 2 && y <= 3) return 90;
+        if (x >= 1 && x <= 2 && y >= 2 && y <= 3) return 91;
 
-        return (x + y) % 3 === 0 ? 3 : 1;
+        return 1;
       }),
       1: createLayer(DEMO_SMALL_WIDTH, DEMO_SMALL_HEIGHT, (x, y) =>
         (x === 3 && y === 2) || (x === 4 && y === 3) ? 5 : 0,
@@ -585,6 +600,49 @@ export const MAP_DEMO_MAPS: readonly IMapFileRecord[] = [
     properties: { name: '大平原', initialGold: 120 },
     events: { '20,13': { type: 'trigger', script: 'onEnter' } },
     extra: { note: '大地图：验收视口移动', order: 2 },
+    cellWidth: DEMO_MAP_CELL_SIZE,
+    cellHeight: DEMO_MAP_CELL_SIZE,
+  },
+  {
+    id: 'detail',
+    name: '细节图',
+    width: DEMO_DETAIL_WIDTH,
+    layers: {
+      0: createLayer(DEMO_DETAIL_WIDTH, DEMO_DETAIL_HEIGHT, (x, y) => {
+        const border = x === 0 || y === 0 || x === DEMO_DETAIL_WIDTH - 1 || y === DEMO_DETAIL_HEIGHT - 1;
+
+        if (border) return 2;
+        if (y === 1 && x === 1) return 20;
+        if (y === 1 && x === 2) return 21;
+        if (y === 3 && x >= 1 && x <= 8) return 29 + x;
+
+        return (x + y) % 5 === 0 ? 4 : 1;
+      }),
+    },
+    layerNames: { 0: '地面层' },
+    properties: { name: '细节图', initialGold: 0 },
+    events: {},
+    extra: { note: '大素材 96×64 缩成 48×32、上下各留 8px；小素材 16×16 原尺寸居中', order: 3 },
+    cellWidth: DEMO_DETAIL_CELL_SIZE,
+    cellHeight: DEMO_DETAIL_CELL_SIZE,
+  },
+  {
+    id: 'huge',
+    name: '巨型地图',
+    width: DEMO_HUGE_SIZE,
+    layers: {
+      0: createLayer(DEMO_HUGE_SIZE, DEMO_HUGE_SIZE, (x, y) => {
+        const border = x === 0 || y === 0 || x === DEMO_HUGE_SIZE - 1 || y === DEMO_HUGE_SIZE - 1;
+
+        if (border) return 2;
+
+        return (x * 5 + y * 7) % 11 === 0 ? 4 : 1;
+      }),
+    },
+    layerNames: { 0: '地面层' },
+    properties: { name: '巨型地图', initialGold: 0 },
+    events: {},
+    extra: { note: '256×256：验收大地图缩略与一屏看全', order: 4 },
     cellWidth: DEMO_MAP_CELL_SIZE,
     cellHeight: DEMO_MAP_CELL_SIZE,
   },

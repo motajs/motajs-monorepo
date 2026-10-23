@@ -2,6 +2,7 @@ import { EditorCore } from '@motajs/editor-core';
 import { readImageDimensions } from '@motajs/editor-impl/asset';
 import { IMapTileGroup, MapAutotileType, MapTextureReadType, MapTileCategory } from '@motajs/editor-impl/map';
 import { describe, expect, it } from 'vitest';
+import { IMapFileRecord, toMapDocument } from '../backend/mapFiles';
 import { MemoryBackend } from '../backend/memoryBackend';
 import {
   buildDemoTileCatalog,
@@ -14,6 +15,7 @@ import {
   encodeDemoSmallTileAtlas,
   encodeDemoTileAtlas,
   encodeDemoTilesetAtlas,
+  MAP_DEMO_MAPS,
   registerMapDemo,
   seedMapDemo,
 } from '../demo/mapDemo';
@@ -84,6 +86,19 @@ function positions(group: IMapTileGroup): readonly (readonly number[])[] {
  */
 function numbers(group: IMapTileGroup): readonly number[] {
   return group.tiles.map((tile) => tile.number);
+}
+
+/**
+ * 按标识找演示地图记录
+ * @param mapId 地图标识
+ * @returns 演示记录
+ */
+function findRecord(mapId: string): IMapFileRecord {
+  const record = MAP_DEMO_MAPS.find((candidate) => candidate.id === mapId);
+
+  if (record === undefined) throw new Error(`演示地图缺失：${mapId}`);
+
+  return record;
 }
 
 describe('开发宿主演示图集与图块目录', () => {
@@ -291,5 +306,63 @@ describe('开发宿主演示图集与图块目录', () => {
 
     expect(await backend.readFile('content/map/texture/.list.jsonc')).toBe(DEMO_TEXTURE_LIST_TEXT);
     expect(await backend.readFile('content/map/tiles.jsonc')).toBe(DEMO_TILE_TABLE_TEXT);
+  });
+});
+
+describe('开发宿主演示地图记录', () => {
+  // 演示项目里有一张真正的 256×256 地图，图层长度是 65536
+  it('存在 256×256 地图且图层长度完整', () => {
+    const record = findRecord('huge');
+    const document = toMapDocument(record, []);
+
+    expect(record.width).toBe(256);
+    expect(record.layers[0]).toHaveLength(65536);
+    expect(document.width).toBe(256);
+    expect(document.height).toBe(256);
+  });
+
+  // 细节图是 48×48 格，图上同时有大素材（20 / 21）与小素材（30..37）
+  it('细节图是 48×48 格且含大 / 小素材', () => {
+    const record = findRecord('detail');
+    const cells = record.layers[0];
+
+    expect(record.cellWidth).toBe(48);
+    expect(record.cellHeight).toBe(48);
+    expect(record.width).toBe(16);
+    expect(record.layers[0]).toHaveLength(16 * 14);
+
+    expect(cells[1 * 16 + 1]).toBe(20);
+    expect(cells[1 * 16 + 2]).toBe(21);
+
+    for (let x = 1; x <= 8; x += 1) expect(cells[3 * 16 + x]).toBe(29 + x);
+  });
+
+  // 小营地第 0 层直接放着 4 帧动画与两种自动元件的成片区域
+  it('小营地第 0 层含动画与两种自动元件', () => {
+    const record = findRecord('small');
+    const cells = record.layers[0];
+
+    expect(cells[1 * 8 + 1]).toBe(10);
+    expect(cells[4 * 8 + 6]).toBe(10);
+
+    for (const [x, y] of [
+      [4, 2],
+      [5, 2],
+      [6, 2],
+      [4, 3],
+      [5, 3],
+      [6, 3],
+    ]) {
+      expect(cells[y * 8 + x]).toBe(90);
+    }
+
+    for (const [x, y] of [
+      [1, 2],
+      [2, 2],
+      [1, 3],
+      [2, 3],
+    ]) {
+      expect(cells[y * 8 + x]).toBe(91);
+    }
   });
 });

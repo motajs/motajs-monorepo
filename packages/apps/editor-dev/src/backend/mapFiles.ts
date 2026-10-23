@@ -8,6 +8,7 @@ import {
   IMapSizeLimit,
   IMapSummary,
   IMapTileGroup,
+  MAP_CELL_SIZE,
 } from '@motajs/editor-impl/map';
 import { ITableSchemaNode, parseTableText, serializeTableText } from '@motajs/editor-impl/shared';
 
@@ -57,8 +58,6 @@ export interface IMapCapabilityOptions {
   readonly propertiesSchema?: ITableSchemaNode;
   /** 地图尺寸上限；缺省表示不限制 */
   readonly maxMapSize?: IMapSizeLimit;
-  /** 最近使用文件的项目内路径覆盖；缺省用面板自己的约定 */
-  readonly recentTilesPath?: string;
 }
 
 /**
@@ -203,6 +202,19 @@ function readObjectField(value: unknown): Record<string, unknown> {
 }
 
 /**
+ * 读一个格子尺寸字段：只接受正整数，其余回退默认边长
+ * @param value 待读取的值
+ * @returns 可用的格子尺寸（像素）
+ */
+function readCellSize(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return MAP_CELL_SIZE;
+
+  const size = Math.trunc(value);
+
+  return size > 0 ? size : MAP_CELL_SIZE;
+}
+
+/**
  * 把一份解析出来的文件内容收成合法记录，字段缺失时给出可用缺省
  * @param value 解析出的值
  * @param path 文件路径，仅用于错误文案
@@ -224,6 +236,8 @@ function normalizeRecord(value: unknown, path: string): IMapFileRecord {
     properties: readObjectField(value.properties),
     events: readObjectField(value.events),
     extra: readObjectField(value.extra),
+    cellWidth: readCellSize(value.cellWidth),
+    cellHeight: readCellSize(value.cellHeight),
   };
 }
 
@@ -529,7 +543,16 @@ export function toMapDocument(record: IMapFileRecord, tileGroups: readonly IMapT
     };
   });
 
-  return { id: record.id, name: record.name, width: record.width, height, layers, tileGroups };
+  return {
+    id: record.id,
+    name: record.name,
+    width: record.width,
+    height,
+    layers,
+    tileGroups,
+    cellWidth: readCellSize(record.cellWidth),
+    cellHeight: readCellSize(record.cellHeight),
+  };
 }
 
 /**
@@ -563,17 +586,14 @@ export function applyMapDataSection(record: IMapFileRecord, section: IMapDataSec
  * @param properties 面板交回的整份属性表
  * @returns 写回后的新记录
  */
-export function applyMapPropertiesSection(
-  record: IMapFileRecord,
-  properties: Record<string, unknown>,
-): IMapFileRecord {
+export function applyMapPropertiesSection(record: IMapFileRecord, properties: Record<string, unknown>): IMapFileRecord {
   return { ...record, properties: cloneRecord(properties) };
 }
 
 /**
  * 造一份开发宿主用的地图能力：全部读写都经注入的内存后端，图块目录只从选项进来
  * @param backend 宿主注入的文件系统
- * @param options 图块目录与可选的属性 schema / 尺寸上限 / 最近使用路径
+ * @param options 图块目录与可选的属性 schema / 尺寸上限
  * @returns 地图能力注入面
  */
 export function createMapCapabilities(
@@ -650,6 +670,5 @@ export function createMapCapabilities(
     saveMapProperties,
     propertiesSchema: options.propertiesSchema,
     maxMapSize: options.maxMapSize,
-    recentTilesPath: options.recentTilesPath,
   };
 }

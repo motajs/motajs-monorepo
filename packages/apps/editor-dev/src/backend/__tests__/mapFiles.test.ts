@@ -148,7 +148,15 @@ describe('演示宿主地图适配器', () => {
     const record = createRecord();
     const document = toMapDocument(record, TEST_TILE_GROUPS);
     const layers = document.layers.map((layer, index) =>
-      index === 0 ? { ...layer, cells: [[0, 0, 0], [0, 0, 0]] } : layer,
+      index === 0
+        ? {
+            ...layer,
+            cells: [
+              [0, 0, 0],
+              [0, 0, 0],
+            ],
+          }
+        : layer,
     );
     const next = applyMapDataSection(record, { ...toSection(document), layers });
 
@@ -328,5 +336,40 @@ describe('演示宿主地图适配器', () => {
 
     expect(saved.properties.initialGold).toBe(10);
     expect(next.properties.initialGold).toBe(0);
+  });
+
+  // 记录上的格子尺寸会带进中立文档，保存几何域时不会丢
+  it('格子尺寸带进文档且保存几何域后仍在', async () => {
+    const backend = new MemoryBackend();
+    const record = createRecord({ cellWidth: 48, cellHeight: 24 });
+
+    await seedProject(backend, [record]);
+
+    const capabilities = createMapCapabilities(backend, { tileGroups: TEST_TILE_GROUPS });
+    const opened = await capabilities.openMap('m1');
+
+    expect(opened.cellWidth).toBe(48);
+    expect(opened.cellHeight).toBe(24);
+
+    await capabilities.saveMapData({ ...toSection(opened), width: 3 });
+
+    const saved = await readRecord(backend, 'm1');
+
+    expect(saved.cellWidth).toBe(48);
+    expect(saved.cellHeight).toBe(24);
+
+    const reopened = await capabilities.openMap('m1');
+
+    expect(reopened.cellWidth).toBe(48);
+    expect(reopened.cellHeight).toBe(24);
+  });
+
+  // 非法格子尺寸回退到缺省 32
+  it('非法格子尺寸回退到 32', () => {
+    const record = createRecord({ cellWidth: 0, cellHeight: Number.NaN });
+    const document = toMapDocument(record, TEST_TILE_GROUPS);
+
+    expect(document.cellWidth).toBe(32);
+    expect(document.cellHeight).toBe(32);
   });
 });
