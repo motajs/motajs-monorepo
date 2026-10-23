@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.1"
 current_phase_name: 地图渲染与布局重做
-current_plan: 6
+current_plan: 7
 status: executing
-stopped_at: Completed 04.1-05-PLAN.md
-last_updated: "2026-10-23T15:16:11.308Z"
+stopped_at: Completed 04.1-06-PLAN.md
+last_updated: "2026-10-23T15:54:07.267Z"
 last_activity: 2026-10-23
 last_activity_desc: Phase 3 complete, transitioned to Phase 4
-state_head: edfe54400e4a6e7674a22cc53343bf9991ecfd73
+state_head: 0353ceb06c7d5133fca43c58600e6274c28373e2
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 138
-  completed_plans: 126
+  completed_plans: 127
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 04.1 (地图渲染与布局重做) — EXECUTING
-Current Plan: 6
+Current Plan: 7
 Total Plans in Phase: 16
 Status: Ready to execute
 Last activity: 2026-10-23 — 04.1-01 complete (naming report + pure declarations)
@@ -144,6 +144,7 @@ Progress: [██████████] 100%
 | Phase 04.1 P03 | 14 | 2 tasks | 4 files |
 | Phase 04.1 P04 | 12 min | 2 tasks | 4 files |
 | Phase 04.1 P05 | 30 min | 2 tasks | 2 files |
+| Phase 04.1 P06 | 22min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -351,6 +352,11 @@ Recent decisions affecting current work:
 - [Phase 04.1]: 04.1-05: favoriteNumbers 由调用方传入，模型不认识 Tileset 分类：分类规则只存在于目录侧，避免复制两份
 - [Phase 04.1]: 04.1-05: 写回容器用 Object.create(null) 且只写 recent / frequent / favorites 三个白名单字段，杜绝原型污染与原样回写
 - [Phase 04.1]: 04.1-05: 迁移 migrateRecentTiles 是只读纯函数，旧文件 map-recent-tiles.json 不删除，清理由宿主决定
+- [Phase 04.1]: 04.1-06: 普通素材编号只来自纹理清单的 map 数组，autotile / tileset 才用 identifier 与 tilesetBase 枚举——read 只决定帧怎么排，不改变编号来源
+- [Phase 04.1]: 04.1-06: Tileset 与自动元件的 read 固定为 Grid；Full 会把整张图集当成一格，逐格编号与单帧回退都会失效
+- [Phase 04.1]: 04.1-06: 演示大素材做成 192×64 而不是 64×64——96×64 在 48×48 格里 contain 成 48×32、上下各留 8px，留空才可观察
+- [Phase 04.1]: 04.1-06: 演示引擎文本落在 content/map/texture/.list.jsonc 与 content/map/tiles.jsonc——content/texture/.list.jsonc 已被素材面板占用，覆盖会破坏素材演示
+- [Phase 04.1]: 04.1-06: 删除 IMapCapabilityOptions.recentTilesPath——偏好路径唯一由 MAP_TILE_PREFS_PATH 决定，面板回退值与原注入值相同，行为不变
 
 ### Pending Todos
 
@@ -378,6 +384,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-23T15:16:10.663Z
-Stopped at: Completed 04.1-05-PLAN.md
+Last session: 2026-10-23T15:54:06.612Z
+Stopped at: Completed 04.1-06-PLAN.md
 Resume file: None
