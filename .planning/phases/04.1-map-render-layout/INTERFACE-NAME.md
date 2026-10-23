@@ -19,15 +19,17 @@
 | Tileset 每格编号从哪来 | **宿主把每个格子枚举进目录**（`{ number, column, row }`）；编辑器不引入引擎的编号公式。 |
 | `.editor` 目录谁创建 | **保持现状**：由宿主 / 资源层负责，写失败静默降级。**不给 `IEditorPanelContext` 增加 `makeDirectory`。** |
 
-### 2. 过渡期类型策略（D-31 修订：全部声明在 Plan 01，收紧在 Plan 15）
+### 2. 过渡期类型策略（P-01，规划器提案：全部声明在 Plan 01，收紧在 Plan 15）
+
+> **P-01 不是 CONTEXT.md 的锁定决策。** `04.1-CONTEXT.md` 只锁定 D-01…D-29；这条过渡策略是规划阶段提出的执行口径，需要在下面的「需要用户确认的清单」里一并确认。
 
 本阶段要改的是**已有的数据契约**，而 Phase 4 的代码与测试已经在用它。为了满足「先接口、后实现」同时保证每个计划结束时整包仍然可编译，策略是：
 
-- **Plan 01 一次性声明本阶段全部新增成员**：新枚举 / 新接口 / 新字段 / 组件 props / 视图状态字段一律先声明为**可选**，`IMapTileEntry.crop` 暂时保留。
+- **Plan 01 一次性声明本阶段全部新增成员**：新枚举 / 新接口 / 新字段 / 组件 props / 视图状态字段一律先声明为**可选**，`IMapTileEntry.crop` 暂时保留。所谓「全部」包括：`types.ts` 里的数据接口与**七个跨计划接口**（`IMapLayoutOptions`、`IMapZoomSliderProps`、`IMapMaterialPanelProps`、`IMapCategoryNavProps`、`IMapTilesetPickerProps`、`IMapBottomTabsProps`、`IMapFavoriteBarProps`）；`model/renderModel.ts` 里的 `IMapRenderView.zoom` 与 `ITileImage.srcWidth/srcHeight`；三个既有组件 props 的新成员；宿主侧的 `ITileCatalogSource`（`apps/editor-dev/src/backend/types.ts`）。
 - **Plan 02–14 只赋值与消费**，任何实现计划都**不得**新增接口成员；消费者按「字段缺省时的默认值」工作（缺省格尺寸为 `MAP_CELL_SIZE`，缺省读取方式为 `Grid`，缺省帧数为 1，缺省帧速为 300，缺省视口 13×13）。
 - **Plan 15 是独立的接口终态计划**：删除 `IMapTileEntry.crop`，把 `IMapDocument.cellWidth/cellHeight`、`IMapTileGroup.category/read/cellWidth/cellHeight/frames`、`IMapRenderModel.cellWidth/cellHeight/viewport`、`IMapPanelViewState` 的 9 个新字段改为必填，并只做「按编译错误机械对齐生产者」。
 
-**因此：Plan 08 / Plan 02 / Plan 14 都不再拥有任何接口声明职责。** 若某个实现计划发现还缺字段，必须回到 Plan 01 补声明（并在本文件登记），而不是就地新增。
+**因此：Plan 02 / 04 / 06 / 07 / 08 / 11 / 12 / 13 / 14 都不再拥有任何接口声明职责。** 若某个实现计划发现还缺字段，必须回到 Plan 01 补声明（并在本文件登记），而不是就地新增。
 
 这条策略是**可逆的**（只影响类型宽松度），但它决定了「接口声明只出现在 Plan 01、收紧只出现在 Plan 15」。
 
@@ -64,6 +66,16 @@
 | `IMapTilePreferences` | interface | `.editor` 偏好：`recent`（最近）/ `frequent`（次数表）/ `favorites`（9 格收藏） |
 | `IMapAutotileQuarters` | interface | 自动拼接一格要画的四个半格矩形：`lt` / `rt` / `rb` / `lb` |
 | `IMapLayout` | interface | 布局结果：视口格数 / 缩放后的格像素 / 画布像素尺寸 / 右栏宽度 |
+| `IMapLayoutOptions` | interface（Plan 01 声明，Plan 04 只 import） | 布局输入：缩放、宿主覆盖的视口格数、右栏基准宽度；放在 `types.ts` 而不是 `model/layout.ts`，符合「对外接口归该层 types.ts」 |
+| `IMapZoomSliderProps` | interface（Plan 01 声明，Plan 11 只 import） | 缩放滑块 props：当前值、是否禁用、松手后的发布回调 |
+| `IMapMaterialPanelProps` | interface（Plan 01 声明，Plan 12 创建组件、Plan 13 接右键收藏） | 右侧素材区 props：目录、图片地址与状态、当前分类、选中、帧数开关、各回调；**含可选 `onFavoriteTile`** |
+| `IMapCategoryNavProps` | interface（Plan 01 声明，Plan 12 只 import） | 竖排分类导航 props：当前分类、Tileset 是否展开、选择分类 / 切换 Tileset 的回调 |
+| `IMapTilesetPickerProps` | interface（Plan 01 声明，Plan 12 只 import） | Tileset 选择器 props：Tileset 组、图片地址与状态、选中、选择图案 / 重试图片 |
+| `IMapBottomTabsProps` | interface（Plan 01 声明，Plan 13 只 import） | 底部三页 props：当前页签、三份编号、图片地址与状态、选中、切页 / 选图案 |
+| `IMapFavoriteBarProps` | interface（Plan 01 声明，Plan 13 只 import） | 收藏栏 props：9 格收藏、当前选中、图片地址、选中 / 排序回调与排序禁用位 |
+| `IMapRenderView.zoom` | 字段（可选；Plan 01 在 `model/renderModel.ts` 声明，Plan 07 消费） | 缩放倍率；渲染模型据此把文档格尺寸换成像素 |
+| `ITileImage.srcWidth` / `.srcHeight` | 字段（可选；Plan 01 在 `model/renderModel.ts` 声明，Plan 02 只赋值） | 图块素材的单格源像素尺寸，contain 与帧矩形都要用 |
+| `ITileCatalogSource` | interface（Plan 01 在 `apps/editor-dev/src/backend/types.ts` 声明，Plan 06 只 import） | 宿主目录解析输入：纹理清单文本、图块表文本、图片尺寸表、自动拼接连接表、Tileset 编号起点 |
 | `IMapDocument.cellWidth` / `.cellHeight` | 字段（可选，Plan 15 收紧） | 每张地图自己的格子尺寸（D-04）；缺省按 `MAP_CELL_SIZE` |
 | `IMapTileGroup.category` | 字段（可选） | 这个素材组属于六类中的哪一类 |
 | `IMapTileGroup.read` | 字段（可选） | 这个素材组的读取方式 |
@@ -155,7 +167,7 @@
 | `src/map/model/thumbnail.ts` | 文件 | 大地图缩略描述 |
 | `buildThumbnail` | 自由函数 | 由文档尺寸、画布尺寸与缩略上限算出纹理尺寸 / 缩放 / 居中偏移；**不输出逐格格子** |
 | `src/map/model/layout.ts` | 文件 | 视口 / 缩放 / 栏宽的纯计算 |
-| `IMapLayoutOptions` | interface | 布局输入：缩放、宿主覆盖的视口格数、右栏基准宽度 |
+| `IMapLayoutOptions` | interface（Plan 01 已声明，本计划只 import） | 布局输入：缩放、宿主覆盖的视口格数、右栏基准宽度 |
 | `resolveMapLayout` | 自由函数 | 由文档与选项算出 `IMapLayout`（`paletteWidth = clamp(base / zoom, min, max)`） |
 | `src/map/__tests__/model.thumbnail.test.ts` | 文件 | 256×256 不产生逐格格子、与视口 / 选区无关、超过纹理上限时的降采样 |
 | `src/map/__tests__/model.layout.test.ts` | 文件 | 13×13、长方形、缩放夹取、栏宽夹取、不依赖 `window.innerWidth` |
@@ -186,7 +198,7 @@
 |------|------|------|
 | `packages/apps/editor-dev/src/backend/tileCatalog.ts` | 文件 | 宿主适配器：读纹理清单 + 图块表，生成中立图块目录 |
 | `buildTileCatalog` | 自由函数 | 由纹理清单文本、图块表文本、图片尺寸查询与连接规则生成 `readonly IMapTileGroup[]` |
-| `ITileCatalogSource` | interface | 解析输入：两份文本 + 读图片尺寸的函数 + 自动拼接连接表 |
+| `ITileCatalogSource` | interface（Plan 01 在 `apps/editor-dev/src/backend/types.ts` 声明，本计划只 import） | 解析输入：两份文本 + 读图片尺寸的函数 + 自动拼接连接表 |
 | `encodeDemoTileAtlas` / `encodeDemoAnimateAtlas` / `encodeDemoAutotileBigAtlas` / `encodeDemoAutotileSmallAtlas` / `encodeDemoTilesetAtlas` | 自由函数（演示） | 在 `mapDemo.ts` 内编码五张真实 PNG：128×64 地形、128×32 动画（4 帧）、192×128 与 128×96 自动元件（各 2 帧）、128×64 Tileset（算法与 `assetDemo.ts` 同形，**不修改** `assetDemo.ts`） |
 | `DEMO_TEXTURE_LIST_TEXT` / `DEMO_TILE_TABLE_TEXT` | 常量 | 演示用的引擎格式文本（`.list.jsonc` / `tile.jsonc` 形状），供 `buildTileCatalog` 解析 |
 | `buildDemoTileCatalog` | 自由函数（演示） | 把演示图集尺寸 + 两份文本 + 连接规则交给 `buildTileCatalog`，返回六类目录 |
@@ -201,9 +213,8 @@
 
 | 名称 | 种类 | 用途 |
 |------|------|------|
-| `IMapRenderView.zoom` | 字段 | 缩放倍率；渲染模型据此把文档格尺寸换成像素 |
-| `IMapRenderView.previewCells` | 字段 | 线模式下要预览的整条路径格子 |
-| `IMapRenderModel.previewCells` | 字段 | 透传给画布的整条路径 |
+| `IMapRenderView.zoom` | 字段（Plan 01 已声明，本计划只读） | 缩放倍率；渲染模型据此把文档格尺寸换成像素 |
+| `IMapRenderModel.previewCells` | 字段（Plan 01 已声明；本计划输出空数组，Plan 09 的画布在本地覆盖成整条路径） | 整条路径要预览的格子；生产者在 Plan 09，不在视图参数里 |
 | `IMapRenderModel.viewport` | 字段 | 透传视口左上角；画布据此把叠加层从文档坐标换算到画布坐标 |
 | `IMapRenderModel.thumbnail` | 字段 | 大地图模式下替代逐格 `cells` 的缩略描述 |
 | `IMapRenderCell.frameColumns` | 字段 | `ScanAnimate` 用：一行有多少格，帧号才能换算行列 |
@@ -274,7 +285,7 @@
 | 名称 | 种类 | 用途 |
 |------|------|------|
 | `src/map/components/MapZoomSlider.tsx` | 文件 | 50–200% 缩放滑块（本地 state 驱动拇指，`onChangeComplete` 才发布） |
-| `IMapZoomSliderProps` | interface | 滑块的 props：当前值、禁用、发布回调 |
+| `IMapZoomSliderProps` | interface（Plan 01 已声明，本计划只 import） | 滑块的 props：当前值、禁用、发布回调 |
 | `IMapPanelViewProps.onSetZoom` | 方法成员（Plan 01 声明） | 视图把缩放值交给面板；本计划只接线 |
 | `IMapPanelViewProps.cellFrameSpeed` | 字段（Plan 01 声明） | 宿主帧速，视图原样下传给画布 |
 | `.emap-main` | CSS 类 | 左列：工具栏 + 地图 + 底部三页 |
@@ -292,11 +303,11 @@
 | 名称 | 种类 | 用途 |
 |------|------|------|
 | `src/map/components/MapMaterialPanel.tsx` | 文件 | 右侧素材区容器：按当前分类渲染素材网格、缺图占位、重试入口 |
-| `IMapMaterialPanelProps` | interface | 素材区 props：目录、图片地址 / 状态、当前分类、选中、帧数开关、回调 |
+| `IMapMaterialPanelProps` | interface（Plan 01 已声明，本计划只 import 并创建组件） | 素材区 props：目录、图片地址 / 状态、当前分类、选中、帧数开关、回调 |
 | `src/map/components/MapCategoryNav.tsx` | 文件 | 竖排五类导航（Terrains / Enemy / Npc / Item / Autotile）+ Tileset 单独开关 |
-| `IMapCategoryNavProps` | interface | 导航 props：当前分类、Tileset 是否展开、回调 |
+| `IMapCategoryNavProps` | interface（Plan 01 已声明，本计划只 import） | 导航 props：当前分类、Tileset 是否展开、回调 |
 | `src/map/components/MapTilesetPicker.tsx` | 文件 | Tileset 整图 + 分割线 + 单格 / 框选多格 → 图案 |
-| `IMapTilesetPickerProps` | interface | Tileset 选择器 props：Tileset 组、图片地址 / 状态、选中、回调 |
+| `IMapTilesetPickerProps` | interface（Plan 01 已声明，本计划只 import） | Tileset 选择器 props：Tileset 组、图片地址 / 状态、选中、回调 |
 | `.emap-category-nav` / `.emap-category-item` | CSS 类 | 竖排分类 |
 | `.emap-tileset` / `.emap-tileset-grid` | CSS 类 | Tileset 整图与分格层 |
 | `.emap-tile-frames` | CSS 类 | 帧数角标 |
@@ -316,11 +327,11 @@
 | 名称 | 种类 | 用途 |
 |------|------|------|
 | `src/map/components/MapBottomTabs.tsx` | 文件 | 底部三页容器：页签切换 + 当前页的编号网格 |
-| `IMapBottomTabsProps` | interface | 三页 props：当前页签、三份编号、图片地址 / 状态、选中、回调 |
+| `IMapBottomTabsProps` | interface（Plan 01 已声明，本计划只 import） | 三页 props：当前页签、三份编号、图片地址 / 状态、选中、回调 |
 | `src/map/components/MapFavoriteBar.tsx` | 文件 | 1 个擦除格 + 9 个收藏格；拖拽 / 上下按钮排序 |
-| `IMapFavoriteBarProps` | interface | 收藏栏 props：收藏数组、当前选中、切图、排序、选中回调 |
+| `IMapFavoriteBarProps` | interface（Plan 01 已声明，本计划只 import） | 收藏栏 props：收藏数组、当前选中、切图、排序、选中回调 |
 | `MapPanel.addFavorite` | 方法 | 右键把普通图块放进第一个空收藏位；已收藏则忽略；满了替换第 9 位 |
-| `IMapMaterialPanelProps.onFavoriteTile` | 方法成员 | 素材区把「右键某个图块」这件事上报给面板 |
+| `IMapMaterialPanelProps.onFavoriteTile` | 方法成员（`IMapMaterialPanelProps` 由 Plan 01 在 `types.ts` 声明，本计划只接线） | 素材区把「右键某个图块」这件事上报给面板 |
 | `.emap-bottom` / `.emap-bottom-tab` | CSS 类 | 底部区域与页签 |
 | `.emap-favorite` / `.emap-favorite-slot` | CSS 类 | 收藏栏与单格 |
 | `map-bottom-tab-recent` / `-frequent` / `-favorites` | `data-test-id` | 三个页签 |
@@ -388,6 +399,6 @@
 
 1. **中立图块目录的最终形状**（`IMapTileGroup` 的 `category/read/cellWidth/cellHeight/frames/autotile/tileset`，`IMapTileEntry` 删除 `crop`）—— **one-way**：这是宿主与编辑器的数据契约，改形状要迁移每个宿主实现。
 2. **`.editor/map-tiles.json` 的路径与字段**（`recent` / `frequent` / `favorites`，`favorites` 固定 9 格、`1` 键为擦除）—— **costly**：文件一旦写入用户项目，改路径 / 字段要迁移。
-3. **接口归属与收紧节奏**（原 D-31，修订后待确认）—— **reversible**：全部新成员只在 Plan 01 声明（可选），实现计划只消费，Plan 15 单列收紧；决定计划顺序，不影响运行时行为。
+3. **接口归属与收紧节奏**（策略编号 **P-01**，规划器提案、不在 CONTEXT.md 的 D-01…D-29 里）—— **reversible**：全部新成员只在 Plan 01 声明（可选），实现计划只消费，Plan 15 单列收紧；决定计划顺序，不影响运行时行为。
 4. **布局常量**（13×13 默认视口、50–200% 缩放、右栏基准 / 最小 / 最大宽度）—— **costly**：会被面板、画布、素材区共同消费。
 5. **全部新增命名**（文件 / 类型 / 方法 / 常量 / CSS 类 / `data-test-id`）—— **reversible**：改名只需同步本文件与计划。
