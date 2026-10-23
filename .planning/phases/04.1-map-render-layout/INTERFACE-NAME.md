@@ -26,10 +26,10 @@
 本阶段要改的是**已有的数据契约**，而 Phase 4 的代码与测试已经在用它。为了满足「先接口、后实现」同时保证每个计划结束时整包仍然可编译，策略是：
 
 - **Plan 01 一次性声明本阶段全部新增成员**：新枚举 / 新接口 / 新字段 / 组件 props / 视图状态字段一律先声明为**可选**，`IMapTileEntry.crop` 暂时保留。所谓「全部」包括：`types.ts` 里的数据接口与**七个跨计划接口**（`IMapLayoutOptions`、`IMapZoomSliderProps`、`IMapMaterialPanelProps`（含 `tilesetOpen`）、`IMapCategoryNavProps`、`IMapTilesetPickerProps`、`IMapBottomTabsProps`（含 `groups`）、`IMapFavoriteBarProps`（含 `groups`））；`model/renderModel.ts` 里的 `IMapRenderView.zoom` 与 `ITileImage.srcWidth/srcHeight`；**四个**既有组件 props 的新成员（含工具栏的 `IMapToolbarProps.zoom` / `.onSetZoom`）；宿主侧的 `ITileCatalogSource` 与 `IMapDemoOverrides`（`apps/editor-dev/src/backend/types.ts`）。
-- **Plan 02–14 只赋值与消费**，任何实现计划都**不得**新增接口成员；消费者按「字段缺省时的默认值」工作（缺省格尺寸为 `MAP_CELL_SIZE`，缺省读取方式为 `Grid`，缺省帧数为 1，缺省帧速为 300，缺省视口 13×13）。
+- **Plan 02–13 只赋值与消费**，任何实现计划都**不得**新增接口成员；消费者按「字段缺省时的默认值」工作（缺省格尺寸为 `MAP_CELL_SIZE`，缺省读取方式为 `Grid`，缺省帧数为 1，缺省帧速为 300，缺省视口 13×13）。
 - **Plan 15 是独立的接口终态计划**：删除 `IMapTileEntry.crop`，把 `IMapDocument.cellWidth/cellHeight`、`IMapTileGroup.category/read/cellWidth/cellHeight/frames`、`IMapRenderModel.cellWidth/cellHeight/viewport`、`IMapPanelViewState` 的 9 个新字段改为必填，并只做「按编译错误机械对齐生产者」。
 
-**因此：Plan 02 / 04 / 06 / 07 / 08 / 11 / 12 / 13 / 14 都不再拥有任何接口声明职责。** 若某个实现计划发现还缺字段，必须回到 Plan 01 补声明（并在本文件登记），而不是就地新增。
+**因此：Plan 02 / 04 / 06 / 07 / 08 / 11 / 12 / 13 都不再拥有任何接口声明职责。** 若某个实现计划发现还缺字段，必须回到 Plan 01 补声明（并在本文件登记），而不是就地新增。
 
 这条策略是**可逆的**（只影响类型宽松度），但它决定了「接口声明只出现在 Plan 01、收紧只出现在 Plan 15」。
 
@@ -70,6 +70,7 @@
 | `IMapZoomSliderProps` | interface（Plan 01 声明，Plan 11 只 import） | 缩放滑块 props：当前值、是否禁用、松手后的发布回调 |
 | `IMapMaterialPanelProps` | interface（Plan 01 声明，Plan 12 创建组件、Plan 13 接右键收藏） | 右侧素材区 props：目录、图片地址与状态、当前分类、`tilesetOpen`（是否切到 Tileset 单独视图）、选中、`showFrameCount` / `onToggleFrameCount`（「显示帧数」勾选框）、`onSelectPattern`、各回调；**含可选 `onFavoriteTile`** |
 | `IMapMaterialPanelProps.tilesetOpen` | 字段（可选；Plan 01 声明，Plan 12 只读） | 素材区是否显示 Tileset 单独视图（由 `view.tilesetOpen` 传入）；缺省 false |
+| `IMapMaterialPanelProps.onFavoriteTile` | 方法成员（可选；Plan 01 声明，Plan 13 只接线） | 素材区把「右键某个普通图块」上报给面板收藏；Tileset 不触发，因为 D-19 只允许收藏普通图块 |
 | `IMapCategoryNavProps` | interface（Plan 01 声明，Plan 12 只 import） | 竖排分类导航 props：当前分类、Tileset 是否展开、选择分类 / 切换 Tileset 的回调 |
 | `IMapTilesetPickerProps` | interface（Plan 01 声明，Plan 12 只 import） | Tileset 选择器 props：Tileset 组、图片地址与状态、选中、选择图案 / 重试图片 |
 | `IMapBottomTabsProps` | interface（Plan 01 声明，Plan 13 只 import） | 底部三页 props：当前页签、三份编号、**`groups`（编号 → 素材组的查表来源）**、图片地址与状态、选中、切页 / 选图案 |
@@ -235,9 +236,9 @@
 |------|------|------|
 | `IMapRenderView.zoom` | 字段（Plan 01 已声明；Plan 02 在 `buildMapRenderModel` 里乘一次，本计划只沿用其结果） | 缩放倍率；格度量已由 `buildMapRenderModel` 换算成像素，本计划不得再乘一次 |
 | `IMapRenderModel.previewCells` | 字段（Plan 01 已声明；本计划输出空数组，Plan 09 的画布在本地覆盖成整条路径） | 整条路径要预览的格子；生产者在 Plan 09，不在视图参数里 |
-| `IMapRenderModel.viewport` | 字段 | 透传视口左上角；画布据此把叠加层从文档坐标换算到画布坐标 |
-| `IMapRenderModel.thumbnail` | 字段 | 大地图模式下替代逐格 `cells` 的缩略描述 |
-| `IMapRenderCell.frameColumns` | 字段 | `ScanAnimate` 用：一行有多少格，帧号才能换算行列 |
+| `IMapRenderModel.viewport` | 字段（Plan 01 已声明为可选；本计划只赋值） | 透传视口左上角；画布据此把叠加层从文档坐标换算到画布坐标 |
+| `IMapRenderModel.thumbnail` | 字段（Plan 01 已声明为可选；本计划只赋值） | 大地图模式下替代逐格 `cells` 的缩略描述 |
+| `IMapRenderCell.frameColumns` | 字段（Plan 01 已声明为可选；本计划只赋值） | `ScanAnimate` 用：一行有多少格，帧号才能换算行列 |
 | `src/map/__tests__/model.renderModel.test.ts` | 文件（改造） | 格尺寸 / 动画 / 自动拼接 / 缩略 / 整条路径的断言 |
 
 ---
