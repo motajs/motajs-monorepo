@@ -25,7 +25,7 @@
 
 本阶段要改的是**已有的数据契约**，而 Phase 4 的代码与测试已经在用它。为了满足「先接口、后实现」同时保证每个计划结束时整包仍然可编译，策略是：
 
-- **Plan 01 一次性声明本阶段全部新增成员**：新枚举 / 新接口 / 新字段 / 组件 props / 视图状态字段一律先声明为**可选**，`IMapTileEntry.crop` 暂时保留。所谓「全部」包括：`types.ts` 里的数据接口与**七个跨计划接口**（`IMapLayoutOptions`、`IMapZoomSliderProps`、`IMapMaterialPanelProps`（含 `tilesetOpen`）、`IMapCategoryNavProps`、`IMapTilesetPickerProps`、`IMapBottomTabsProps`（含 `groups`）、`IMapFavoriteBarProps`（含 `groups`））；`model/renderModel.ts` 里的 `IMapRenderView.zoom` 与 `ITileImage.srcWidth/srcHeight`；三个既有组件 props 的新成员；宿主侧的 `ITileCatalogSource` 与 `IMapDemoOverrides`（`apps/editor-dev/src/backend/types.ts`）。
+- **Plan 01 一次性声明本阶段全部新增成员**：新枚举 / 新接口 / 新字段 / 组件 props / 视图状态字段一律先声明为**可选**，`IMapTileEntry.crop` 暂时保留。所谓「全部」包括：`types.ts` 里的数据接口与**七个跨计划接口**（`IMapLayoutOptions`、`IMapZoomSliderProps`、`IMapMaterialPanelProps`（含 `tilesetOpen`）、`IMapCategoryNavProps`、`IMapTilesetPickerProps`、`IMapBottomTabsProps`（含 `groups`）、`IMapFavoriteBarProps`（含 `groups`））；`model/renderModel.ts` 里的 `IMapRenderView.zoom` 与 `ITileImage.srcWidth/srcHeight`；**四个**既有组件 props 的新成员（含工具栏的 `IMapToolbarProps.zoom` / `.onSetZoom`）；宿主侧的 `ITileCatalogSource` 与 `IMapDemoOverrides`（`apps/editor-dev/src/backend/types.ts`）。
 - **Plan 02–14 只赋值与消费**，任何实现计划都**不得**新增接口成员；消费者按「字段缺省时的默认值」工作（缺省格尺寸为 `MAP_CELL_SIZE`，缺省读取方式为 `Grid`，缺省帧数为 1，缺省帧速为 300，缺省视口 13×13）。
 - **Plan 15 是独立的接口终态计划**：删除 `IMapTileEntry.crop`，把 `IMapDocument.cellWidth/cellHeight`、`IMapTileGroup.category/read/cellWidth/cellHeight/frames`、`IMapRenderModel.cellWidth/cellHeight/viewport`、`IMapPanelViewState` 的 9 个新字段改为必填，并只做「按编译错误机械对齐生产者」。
 
@@ -64,7 +64,7 @@
 | `IMapCanvasBounds` | interface | 画布容器的左上角 `left` / `top`；指针换算用，替代内联对象类型 |
 | `IMapThumbnail` | interface | 大地图缩略纹理的描述：纹理尺寸 / 缩放 / 偏移；重建时机由视图判定，不放进这个纯描述 |
 | `IMapTilePreferences` | interface | `.editor` 偏好：`recent`（有序编号列表 `readonly number[]`）/ `favorites`（9 格收藏，同样是有序编号列表 `readonly number[]`）/ `frequent`（唯一的次数表 `ReadonlyMap<number, number>`）；与 `IMapPanelViewState.recentTiles` 同型，可直接赋值 |
-| `IMapAutotileQuarters` | interface | 自动拼接一格要画的四个半格矩形：`lt` / `rt` / `rb` / `lb` |
+| `IMapAutotileQuarters` | interface | 自动拼接一格要画的四个象限矩形（每块取源图单格的一半，分别铺到目标格的左上 / 右上 / 右下 / 左下）：`lt` / `rt` / `rb` / `lb` |
 | `IMapLayout` | interface | 布局结果：视口格数 / 缩放后的格像素 / 画布像素尺寸 / 右栏宽度 |
 | `IMapLayoutOptions` | interface（Plan 01 声明，Plan 04 只 import） | 布局输入：缩放、宿主覆盖的视口格数、右栏基准宽度；放在 `types.ts` 而不是 `model/layout.ts`，符合「对外接口归该层 types.ts」 |
 | `IMapZoomSliderProps` | interface（Plan 01 声明，Plan 11 只 import） | 缩放滑块 props：当前值、是否禁用、松手后的发布回调 |
@@ -168,7 +168,7 @@
 | `resolveFrameTickAt` | 自由函数 | 由累计毫秒与帧速算出全局帧号 `floor(elapsed / speed)`；默认 300ms 与宿主覆盖（150ms）都在它的单元测试里钉住 |
 | `src/map/model/autotile.ts` | 文件 | 8 方向连接 + 3×4 / 2×3 四分之一块矩形 |
 | `computeAutotileConnection` | 自由函数 | 由同层格子值与宿主注入的连接集合算出 8 位连接数（地图外视为已连接，逐字复刻引擎掩码） |
-| `resolveAutotileQuarters` | 自由函数 | 由自动拼接类型与连接数算出 `lt` / `rt` / `rb` / `lb` 四个半格矩形 |
+| `resolveAutotileQuarters` | 自由函数 | 由自动拼接类型与连接数算出 `lt` / `rt` / `rb` / `lb` 四个象限矩形（每块取源图单格的一半） |
 | `src/map/__tests__/model.tileFrame.test.ts` | 文件 | 五种读取方式 × 帧数 / 帧矩形 / 帧轴 / 255 上限 / `defaultFrame` 优先 |
 | `src/map/__tests__/model.autotile.test.ts` | 文件 | 连接位、边缘掩码、两种形状、四块矩形、动画帧 |
 
@@ -288,7 +288,7 @@
 
 ## Plan 10 — Pixi 渲染（G-04-2）
 
-**要做什么：** 画布按模型里的度量画，不再到处写死 32；动画只在动画格上换帧；自动拼接用 4 个半格拼；大地图只画一张缩略纹理；通行度改成四个不同颜色的箭头；线模式把整条路径画出来。
+**要做什么：** 画布按模型里的度量画，不再到处写死 32；动画只在动画格上换帧；自动拼接用 4 块拼（源图单格取一半、铺到目标格的四个象限）；大地图只画一张缩略纹理；通行度改成四个不同颜色的箭头；线模式把整条路径画出来。
 
 | 名称 | 种类 | 用途 |
 |------|------|------|
