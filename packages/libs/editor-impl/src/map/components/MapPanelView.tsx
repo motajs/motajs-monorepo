@@ -3,7 +3,7 @@ import { useStore } from '@tanstack/react-store';
 import { Store } from '@tanstack/store';
 import { Button, Spin } from 'antd';
 import { ReactElement, useEffect, useState } from 'react';
-import { MAP_CELL_SIZE } from '../constants';
+import { MAP_CELL_SIZE, MAP_ZOOM_DEFAULT } from '../constants';
 import { IPaintWrite, isTileCatalogEmpty } from '../model/document';
 import { buildMapRenderModel } from '../model/renderModel';
 import {
@@ -392,8 +392,9 @@ function renderReadyBody(input: IMapPanelBodyProps): ReactElement {
 
   if (document === undefined) return renderLoadingBody();
 
-  const width = document.width * MAP_CELL_SIZE;
-  const height = document.height * MAP_CELL_SIZE;
+  // 画布尺寸由文档格尺寸与缩放算出；缩放经 `zoom` 交给渲染模型，两者必须是同一份值
+  const width = document.width * (document.cellWidth ?? MAP_CELL_SIZE) * (view.zoom ?? MAP_ZOOM_DEFAULT);
+  const height = document.height * (document.cellHeight ?? MAP_CELL_SIZE) * (view.zoom ?? MAP_ZOOM_DEFAULT);
   const model = buildMapRenderModel(document, {
     width,
     height,
@@ -401,6 +402,7 @@ function renderReadyBody(input: IMapPanelBodyProps): ReactElement {
     aboveLayerOpacity: view.aboveLayerOpacity,
     viewport: view.viewport,
     bigMap: view.bigMap,
+    zoom: view.zoom ?? MAP_ZOOM_DEFAULT,
     passMarks: view.passMarks,
   });
   const layerName = resolveCurrentLayerName(document, view.currentLayerId);

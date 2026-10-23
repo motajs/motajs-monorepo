@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { IMapDocument, IMapLayer, IMapPreview, IMapRect } from '../types';
-import { createMapDocument, createWideMapDocument } from './fixtures';
+import { createMapDocument, createSizedTileGroup, createWideMapDocument } from './fixtures';
 import { IMapRenderView, buildMapRenderModel } from '../model/renderModel';
 
 /**
@@ -213,5 +213,56 @@ describe('buildMapRenderModel 大地图模式', () => {
 
     expect(model.cells).toHaveLength(7200);
     expect(model.cells.every((cell) => cell.key.startsWith('layer-wide:'))).toBe(true);
+  });
+});
+
+describe('buildMapRenderModel 格度量', () => {
+  // 文档自带 48 × 24 格：模型带这对度量，64 × 64 素材 contain 到 24 × 24 并水平居中
+  it('按文档格尺寸给出度量与 contain 目标矩形', () => {
+    const document = createMapDocument({
+      cellWidth: 48,
+      cellHeight: 24,
+      tileGroups: [createSizedTileGroup({ cellWidth: 64, cellHeight: 64 })],
+    });
+    const model = buildMapRenderModel(document, createView({ width: 192, height: 72 }));
+    const first = model.cells[0];
+
+    expect(model.cellWidth).toBe(48);
+    expect(model.cellHeight).toBe(24);
+    expect({ x: first.x, y: first.y, width: first.width, height: first.height }).toEqual({
+      x: 12,
+      y: 0,
+      width: 24,
+      height: 24,
+    });
+  });
+
+  // 缩放只在模型顶部乘一次：32 的文档格在 150% 下是 48，素材同步缩到 48 × 48
+  it('把缩放乘进模型度量', () => {
+    const document = createMapDocument({ tileGroups: [createSizedTileGroup({ cellWidth: 64, cellHeight: 64 })] });
+    const model = buildMapRenderModel(document, createView({ width: 192, height: 144, zoom: 1.5 }));
+    const first = model.cells[0];
+
+    expect(model.cellWidth).toBe(48);
+    expect(model.cellHeight).toBe(48);
+    expect({ x: first.x, y: first.y, width: first.width, height: first.height }).toEqual({
+      x: 0,
+      y: 0,
+      width: 48,
+      height: 48,
+    });
+  });
+
+  // 大地图也给出格度量：模型上报文档格 × 缩放，整图适配的缩略尺寸只用于画格子
+  it('大地图模式也给出格度量', () => {
+    const document = createWideMapDocument(100, 50);
+    const model = buildMapRenderModel(
+      document,
+      createView({ width: 400, height: 400, currentLayerId: 'layer-wide', bigMap: true, zoom: 2 }),
+    );
+
+    expect(model.cellWidth).toBe(64);
+    expect(model.cellHeight).toBe(64);
+    expect(model.cells[0].width).toBe(4);
   });
 });

@@ -1,5 +1,14 @@
 import { EditorCore, EditorEntryKind, IEditorDirectoryEntry, IEditorFileSystem } from '@motajs/editor-core';
-import { IMapDirections, IMapDocument, IMapLayer, IMapTileEntry, IMapTileGroup } from '../types';
+import { MAP_CELL_SIZE } from '../constants';
+import {
+  IMapDirections,
+  IMapDocument,
+  IMapLayer,
+  IMapTileEntry,
+  IMapTileGroup,
+  MapTextureReadType,
+  MapTileCategory,
+} from '../types';
 
 // 地图测试共享的测试替身与样例构造器。
 // FakeFileSystem 与表格 / 素材侧的同类替身同形（按路径存内容、文本 / 二进制、越界抛错），但按「能力互不依赖」
@@ -263,6 +272,36 @@ function createBlockedDirections(): IMapDirections {
 }
 
 /**
+ * 造一个指定素材格尺寸的图块条目；裁切矩形按「列 / 行 × 素材格尺寸」推导
+ * @param number 图块编号
+ * @param column 图集列号
+ * @param row 图集行号
+ * @param cellWidth 素材单格的源像素宽
+ * @param cellHeight 素材单格的源像素高
+ * @param blocked 为 true 时该图块四方向都不可通行
+ * @returns 图块条目
+ */
+function createSizedTileEntry(
+  number: number,
+  column: number,
+  row: number,
+  cellWidth: number,
+  cellHeight: number,
+  blocked: boolean = false,
+): IMapTileEntry {
+  const directions = blocked ? createBlockedDirections() : createOpenDirections();
+
+  return {
+    number,
+    column,
+    row,
+    crop: { x: column * cellWidth, y: row * cellHeight, width: cellWidth, height: cellHeight },
+    name: `图块 ${number}`,
+    pass: { out: directions, in: createOpenDirections(), onlyEventLayer: false },
+  };
+}
+
+/**
  * 造一个图块条目；裁切矩形按「列 / 行 × 32 像素」推导，方便测试直接断言
  * @param number 图块编号
  * @param column 图集列号
@@ -271,16 +310,7 @@ function createBlockedDirections(): IMapDirections {
  * @returns 图块条目
  */
 function createTileEntry(number: number, column: number, row: number, blocked: boolean = false): IMapTileEntry {
-  const directions = blocked ? createBlockedDirections() : createOpenDirections();
-
-  return {
-    number,
-    column,
-    row,
-    crop: { x: column * 32, y: row * 32, width: 32, height: 32 },
-    name: `图块 ${number}`,
-    pass: { out: directions, in: createOpenDirections(), onlyEventLayer: false },
-  };
+  return createSizedTileEntry(number, column, row, MAP_CELL_SIZE, MAP_CELL_SIZE, blocked);
 }
 
 /**
@@ -296,7 +326,51 @@ export function createTileGroup(overrides: Partial<IMapTileGroup> = {}): IMapTil
     createTileEntry(4, 1, 1, true),
   ];
 
-  return { id: 'group-tiles', name: '图块分组', imagePath: 'content/map/tiles.png', columns: 2, tiles, ...overrides };
+  return {
+    id: 'group-tiles',
+    name: '图块分组',
+    imagePath: 'content/map/tiles.png',
+    columns: 2,
+    tiles,
+    category: MapTileCategory.Terrain,
+    read: MapTextureReadType.Grid,
+    cellWidth: MAP_CELL_SIZE,
+    cellHeight: MAP_CELL_SIZE,
+    frames: 1,
+    ...overrides,
+  };
+}
+
+/**
+ * 造一个可指定素材格尺寸的 2 列 × 2 行图块分组，用于 64 × 64 素材或非正方形格子的用例
+ *
+ * 图块条目的裁切矩形与分组的 `cellWidth` / `cellHeight` 保持一致；不传时按 `MAP_CELL_SIZE` 处理。
+ * @param overrides 覆盖分组字段（如 cellWidth / cellHeight / id）
+ * @returns 合法的图块分组
+ */
+export function createSizedTileGroup(overrides: Partial<IMapTileGroup> = {}): IMapTileGroup {
+  const cellWidth = overrides.cellWidth ?? MAP_CELL_SIZE;
+  const cellHeight = overrides.cellHeight ?? MAP_CELL_SIZE;
+  const tiles: readonly IMapTileEntry[] = [
+    createSizedTileEntry(1, 0, 0, cellWidth, cellHeight),
+    createSizedTileEntry(2, 1, 0, cellWidth, cellHeight),
+    createSizedTileEntry(3, 0, 1, cellWidth, cellHeight),
+    createSizedTileEntry(4, 1, 1, cellWidth, cellHeight, true),
+  ];
+
+  return {
+    id: 'group-sized',
+    name: '尺寸分组',
+    imagePath: 'content/map/tiles-sized.png',
+    columns: 2,
+    tiles,
+    category: MapTileCategory.Terrain,
+    read: MapTextureReadType.Grid,
+    cellWidth,
+    cellHeight,
+    frames: 1,
+    ...overrides,
+  };
 }
 
 /**
@@ -349,6 +423,8 @@ export function createMapDocument(overrides: Partial<IMapDocument> = {}): IMapDo
     height: 3,
     layers: [baseLayer, upperLayer],
     tileGroups: [firstGroup, secondGroup],
+    cellWidth: MAP_CELL_SIZE,
+    cellHeight: MAP_CELL_SIZE,
     ...overrides,
   };
 }

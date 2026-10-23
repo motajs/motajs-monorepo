@@ -1,11 +1,13 @@
 import { KeyboardEvent, PointerEvent, ReactElement, WheelEvent, useEffect, useId, useRef, useState } from 'react';
 import { MAP_CELL_SIZE } from '../constants';
 import { buildFillWrites, buildRectWrites, buildStrokeWrites } from '../model/brush';
+import { resolveCellMetrics, resolvePointerCell } from '../model/cellMetrics';
 import { IPaintWrite } from '../model/document';
 import { fillConnectedPositions } from '../model/fill';
 import { clampRectToMap, normalizeRect, walkOrthogonalPath } from '../model/geometry';
 import {
   IMapBrushPattern,
+  IMapCellMetrics,
   IMapCellPosition,
   IMapClipboard,
   IMapDocument,
@@ -46,16 +48,6 @@ interface IMapMenuState {
   readonly x: number;
   /** 指针在视口中的纵坐标 */
   readonly y: number;
-}
-
-/** 一格在画布上的像素尺寸与左上角偏移 */
-interface IMapCellMetrics {
-  /** 格边长（像素） */
-  readonly size: number;
-  /** 第一格左上角的横向偏移（像素） */
-  readonly left: number;
-  /** 第一格左上角的纵向偏移（像素） */
-  readonly top: number;
 }
 
 /** 方向键 / WASD 对应的视口位移 */
@@ -156,28 +148,6 @@ const RULER_LABEL_STEP = 5;
 const CANVAS_HINT_ID_PREFIX = 'emap-canvas-hint';
 
 /**
- * 把指针位置按格边长与视口偏移换算成格子坐标；不做地图范围夹取
- * @param clientX 指针在视口中的横坐标
- * @param clientY 指针在视口中的纵坐标
- * @param rect 画布容器的定位矩形
- * @param viewport 视口左上角所在的格子坐标
- * @param metrics 格边长与偏移
- * @returns 指针所在的格子坐标（可能越界）
- */
-function resolvePointerPosition(
-  clientX: number,
-  clientY: number,
-  rect: DOMRect,
-  viewport: IMapViewport,
-  metrics: IMapCellMetrics,
-): IMapCellPosition {
-  const x = Math.floor((clientX - rect.left - metrics.left) / metrics.size) + viewport.left;
-  const y = Math.floor((clientY - rect.top - metrics.top) / metrics.size) + viewport.top;
-
-  return { x, y };
-}
-
-/**
  * 判断格子是否落在地图范围内
  * @param document 中立文档
  * @param position 格子坐标
@@ -190,21 +160,32 @@ function isPositionInside(document: IMapDocument, position: IMapCellPosition): b
 }
 
 /**
- * 算这一帧的格边长与左上角偏移：普通模式固定 32px，大地图按整图适配缩放并居中
+ * 算这一帧的格尺寸与第一格原点：普通模式取模型里的缩放后格尺寸，大地图按整图适配缩放并居中
  * @param document 中立文档
- * @param model 渲染模型（提供画布尺寸）
+ * @param model 渲染模型（提供画布尺寸与格尺寸）
  * @param bigMap 是否处于大地图模式
- * @returns 格边长与偏移
+ * @returns 格尺寸与第一格原点
  */
-function resolveCellMetrics(document: IMapDocument, model: IMapRenderModel, bigMap: boolean): IMapCellMetrics {
-  if (!bigMap) return { size: MAP_CELL_SIZE, left: 0, top: 0 };
-  if (document.width <= 0 || document.height <= 0) return { size: MAP_CELL_SIZE, left: 0, top: 0 };
+function buildCanvasCellMetrics(document: IMapDocument, model: IMapRenderModel, bigMap: boolean): IMapCellMetrics {
+  if (!bigMap) {
+    const cellWidth = model.cellWidth ?? document.cellWidth ?? MAP_CELL_SIZE;
+    const cellHeight = model.cellHeight ?? document.cellHeight ?? MAP_CELL_SIZE;
+
+    return resolveCellMetrics(cellWidth, cellHeight, 0, 0);
+  }
+
+  if (document.width <= 0 || document.height <= 0) return resolveCellMetrics(MAP_CELL_SIZE, MAP_CELL_SIZE, 0, 0);
 
   const size = Math.min(model.width / document.width, model.height / document.height);
 
-  if (!(size > 0)) return { size: MAP_CELL_SIZE, left: 0, top: 0 };
+  if (!(size > 0)) return resolveCellMetrics(MAP_CELL_SIZE, MAP_CELL_SIZE, 0, 0);
 
-  return { size, left: (model.width - document.width * size) / 2, top: (model.height - document.height * size) / 2 };
+  return resolveCellMetrics(
+    size,
+    size,
+    (model.width - document.width * size) / 2,
+    (model.height - document.height * size) / 2,
+  );
 }
 
 /**
@@ -292,6 +273,9 @@ export function MapCanvas(props: IMapCanvasProps): ReactElement {
     setMenu(undefined);
   }, [document.id, props.currentLayerId]);
 
+  // 命中换算的视口：大地图缩略从 (0,0) 起画，必须用零视口；普通模式才叠加面板视口
+  const pointerViewport: IMapViewport = props.bigMap ? { left: 0, top: 0 } : props.viewport;
+
   /**
    * 取消进行中的手势，不提交、不登记撤销
    */
@@ -322,7 +306,7 @@ export function MapCanvas(props: IMapCanvasProps): ReactElement {
       return;
     }
 
-    const position = pointerRef.current ?? { x: props.viewport.left, y: props.viewport.top };
+    const position = pointerRef.current ?? { x: pointerViewport.left, y: pointerViewport.top };
 
     props.onCopyRegion({ x: position.x, y: position.y, width: 1, height: 1 });
   };
@@ -331,7 +315,7 @@ export function MapCanvas(props: IMapCanvasProps): ReactElement {
    * 以指针格为左上角粘贴
    */
   const pasteOnCanvas = (): void => {
-    const position = pointerRef.current ?? { x: props.viewport.left, y: props.viewport.top };
+    const position = pointerRef.current ?? { x: pointerViewport.left, y: pointerViewport.top };
 
     props.onPasteAt(position);
   };
@@ -407,12 +391,13 @@ export function MapCanvas(props: IMapCanvasProps): ReactElement {
         return;
       }
 
-      const position = resolvePointerPosition(
+      const rect = target.getBoundingClientRect();
+      const position = resolvePointerCell(
         event.clientX,
         event.clientY,
-        target.getBoundingClientRect(),
-        props.viewport,
-        resolveCellMetrics(document, props.model, props.bigMap),
+        { left: rect.left, top: rect.top },
+        buildCanvasCellMetrics(document, props.model, props.bigMap),
+        pointerViewport,
       );
 
       if (!isPositionInside(document, position)) return;
@@ -429,12 +414,13 @@ export function MapCanvas(props: IMapCanvasProps): ReactElement {
 
     setMenu(undefined);
 
-    const position = resolvePointerPosition(
+    const rect = target.getBoundingClientRect();
+    const position = resolvePointerCell(
       event.clientX,
       event.clientY,
-      target.getBoundingClientRect(),
-      props.viewport,
-      resolveCellMetrics(document, props.model, props.bigMap),
+      { left: rect.left, top: rect.top },
+      buildCanvasCellMetrics(document, props.model, props.bigMap),
+      pointerViewport,
     );
 
     if (!isPositionInside(document, position)) return;
@@ -450,12 +436,13 @@ export function MapCanvas(props: IMapCanvasProps): ReactElement {
    * @param event 指针移动事件
    */
   const handlePointerMove = (event: PointerEvent<HTMLDivElement>): void => {
-    const position = resolvePointerPosition(
+    const rect = event.currentTarget.getBoundingClientRect();
+    const position = resolvePointerCell(
       event.clientX,
       event.clientY,
-      event.currentTarget.getBoundingClientRect(),
-      props.viewport,
-      resolveCellMetrics(document, props.model, props.bigMap),
+      { left: rect.left, top: rect.top },
+      buildCanvasCellMetrics(document, props.model, props.bigMap),
+      pointerViewport,
     );
     const inside = isPositionInside(document, position);
 
@@ -616,9 +603,9 @@ export function MapCanvas(props: IMapCanvasProps): ReactElement {
     setMenu(undefined);
   };
 
-  const metrics = resolveCellMetrics(document, props.model, props.bigMap);
-  const width = document.width * MAP_CELL_SIZE;
-  const height = document.height * MAP_CELL_SIZE;
+  const metrics = buildCanvasCellMetrics(document, props.model, props.bigMap);
+  const width = document.width * (props.model.cellWidth ?? document.cellWidth ?? MAP_CELL_SIZE);
+  const height = document.height * (props.model.cellHeight ?? document.cellHeight ?? MAP_CELL_SIZE);
   const renderModel: IMapRenderModel = { ...props.model, selection, preview, hover };
   const canvasClass = [
     'emap-canvas',
@@ -650,10 +637,10 @@ export function MapCanvas(props: IMapCanvasProps): ReactElement {
           {props.bigMap ? null : (
             <>
               <div className="emap-ruler emap-ruler-top" data-test-id="map-ruler-top" style={{ height: RULER_SIZE }}>
-                {renderTicks(document.width, props.viewport.left, metrics.size, hover?.x, true)}
+                {renderTicks(document.width, props.viewport.left, metrics.cellWidth, hover?.x, true)}
               </div>
               <div className="emap-ruler emap-ruler-left" data-test-id="map-ruler-left" style={{ width: RULER_SIZE }}>
-                {renderTicks(document.height, props.viewport.top, metrics.size, hover?.y, false)}
+                {renderTicks(document.height, props.viewport.top, metrics.cellHeight, hover?.y, false)}
               </div>
             </>
           )}
