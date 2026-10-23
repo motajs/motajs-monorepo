@@ -6,7 +6,7 @@ import { createElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { IMapFileRecord, mapFilePath } from '../backend/mapFiles';
 import { MemoryBackend } from '../backend/memoryBackend';
-import { MAP_DEMO_MAPS, MAP_DEMO_TILES, registerMapDemo, seedMapDemo } from '../demo/mapDemo';
+import { buildDemoTileCatalog, MAP_DEMO_MAPS, registerMapDemo, seedMapDemo } from '../demo/mapDemo';
 
 // 开发宿主地图端到端：注册 → 打开 → 画 / 擦 / 切层 → 加层 → 改属性 → 保存 → 关闭重开。
 // Pixi 表面按相对模块标识替换成空壳，jsdom 里不初始化 WebGL；其余全部是真实装配（真实面板、真实内存后端）。
@@ -466,7 +466,7 @@ describe('开发宿主地图端到端', () => {
     expect(groups.length).toBeGreaterThanOrEqual(2);
 
     const numbers: Set<number> = new Set(
-      MAP_DEMO_TILES.flatMap((group) => group.tiles.map((tile) => tile.number)),
+      buildDemoTileCatalog().flatMap((group) => group.tiles.map((tile) => tile.number)),
     );
     const tiles = Array.from(container.querySelectorAll('[data-test-id^="map-tile-"]'));
 

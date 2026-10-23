@@ -42,7 +42,13 @@ core.shellSystem.registerPanelType(DEMO_PANEL_TYPE);
 core.shellSystem.registerPanelType(tablePanelType);
 registerDevMenu(core);
 registerAssetDemo(core);
-registerMapDemo(core, backend);
+registerMapDemo(
+  core,
+  backend,
+  new URLSearchParams(window.location.search).get('mapViewport') === 'wide'
+    ? { viewportColumns: 15, viewportRows: 9, frameSpeed: 150 }
+    : undefined,
+);
 
 await core.initialize({ fs: backend, maxUndoStep: backend.maxUndoStep, ignore: ['node_modules', '.git'] });
 
