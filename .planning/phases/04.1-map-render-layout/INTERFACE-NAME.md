@@ -221,6 +221,7 @@
 | `registerMapDemo` | 既有函数（第三参数新增） | 注册演示宿主；第三个可选参数使用 `IMapDemoOverrides`（视口格数 / 动画帧速），不写内联对象类型 |
 | `IMapDemoOverrides` | interface（Plan 01 在 `apps/editor-dev/src/backend/types.ts` 声明，本计划只 import） | `registerMapDemo` 的覆盖参数形状：`viewportColumns?` / `viewportRows?` / `frameSpeed?` |
 | `IMapFileRecord.cellWidth` / `.cellHeight` | 字段（可选；Plan 01 已在 `apps/editor-dev/src/backend/mapFiles.ts` 的接口块声明，本计划只赋值与校验） | 每张地图文件自己的格子尺寸（缺省 32）；本计划给演示记录填值、`toMapDocument` 带进 `IMapDocument`，非法值回退 32，**不重复声明** |
+| `IMapCapabilityOptions.recentTilesPath` | 字段 **删除**（Plan 06 在 `apps/editor-dev/src/backend/mapFiles.ts` 删除） | 开发宿主不再能覆盖偏好文件路径；路径唯一由 `MAP_TILE_PREFS_PATH` 决定，否则新格式会被写进旧文件名，迁移时又被当成空数据 |
 | `packages/apps/editor-dev/src/backend/__tests__/tileCatalog.test.ts` | 文件 | 分类映射、读取方式、帧数、自动拼接连接、Tileset 逐格编号、畸形数据 |
 | `packages/apps/editor-dev/src/__tests__/mapDemo.test.ts` | 文件 | G-04-1 收口：**七张**图集尺寸（128×64 / 128×32 / 192×128 / 128×96 / 128×64 / 192×64 / 64×32）、所有裁切在图内、六类齐全、动画 4 帧、Tileset 8 格且 `read` 为 `Grid`、大素材每格 96×64、小素材每格 16×16、256×256 地图存在 |
 
@@ -261,7 +262,7 @@
 | `MapPanel.toggleFrameCount` | 方法 | 开关帧数角标 |
 | `MapPanel.selectFavoriteSlot` | 方法 | 选中收藏格；参数是 **0..9**：`0` = 擦除（数字键 `1`），`1..9` = 第 1..9 个收藏位（数字键 `2..9` 对应 `1..8`、`0` 对应 `9`） |
 | `MapPanel.reorderFavorites` | 方法 | 收藏排序落盘 |
-| `mapPanel.ts` 的 `createElement(MapPanelView, …)` 绑定 | 文件内改动（不是新接口成员） | 把 7 个视图回调一次性绑到 `MapPanel.setZoom` / `MapPanel.setBottomTab` / `MapPanel.selectCategory` / `MapPanel.toggleTileset` / `MapPanel.toggleFrameCount` / `MapPanel.selectFavoriteSlot` / `MapPanel.reorderFavorites`；这是「面板方法 → 视图 props」的唯一绑定点，Plan 11 / 12 / 13 只往子组件透传 |
+| `mapPanel.ts` 的 `createElement(MapPanelView, …)` 绑定 | 文件内改动（不是新接口成员） | 本计划一次性绑 **7 个**视图回调：`MapPanel.setZoom` / `MapPanel.setBottomTab` / `MapPanel.selectCategory` / `MapPanel.toggleTileset` / `MapPanel.toggleFrameCount` / `MapPanel.selectFavoriteSlot` / `MapPanel.reorderFavorites`；这是这批「面板方法 → 视图 props」的唯一绑定点。**另外两条绑定不在本计划**：Plan 09 在同一处追加 `onSetViewport`（滚动回报）、Plan 13 追加 `onFavoriteTile`（右键收藏），它们同样只在 `mapPanel.ts` 绑定；Plan 11 / 12 / 13 其余部分只往子组件透传 |
 
 ---
 
@@ -280,6 +281,7 @@
 | `MapPanel.moveViewport` | **删除** | 旧的四向 / 方向键移动入口，D-13 要求删除 |
 | `IMapToolbarProps.onMoveViewport` | 成员 **删除** | 工具栏四向按钮的唯一消费入口；与 `MapViewportButtons` 同批删除，否则 props 删了而组件还要求它，typecheck 会断 |
 | `IMapCanvasProps.onMoveViewport` | 成员 **删除** | 画布原本用它驱动四向按钮 / 方向键的视口移动；视口改由滚动条回报后不再需要 |
+| `IMapPanelViewProps.onMoveViewport` | 成员 **删除** | 视图层不再转发旧的视口移动入口；与上面三条同批删除 |
 | `MapViewportButtons` | **删除（本计划）** | 工具栏四向按钮组件（D-13）；Plan 11 只挂缩放滑块，不再回头删它 |
 | `packages/libs/editor-impl/src/map/__tests__/mapView.toolbar.test.tsx` | 文件（改造） | 删除四向按钮用例；Plan 11 在这里补滑块用例 |
 | `buildStrokeWrites` | 已有函数（复用） | 由手势路径算出这一笔的写入；预览取它的去重格子集合 |
@@ -391,6 +393,7 @@
 | 名称 | 种类 | 用途 |
 |------|------|------|
 | `IMapTileEntry.crop` | **删除** | 裁切改由素材规则现算（D-02 终态） |
+| `IMapEditorCapabilities.recentTilesPath` | **删除** | 宿主能力不再暴露偏好文件路径；Plan 06 已停止产出、Plan 08 已停止读取，本计划删掉最后残留字段（路径只有 `MAP_TILE_PREFS_PATH`） |
 | `IMapDocument.cellWidth` / `.cellHeight` | 字段（收紧为必填） | 每张地图必须声明格子尺寸 |
 | `IMapTileGroup.category` / `.read` / `.cellWidth` / `.cellHeight` / `.frames` | 字段（收紧为必填） | 素材组必须声明规则 |
 | `IMapRenderModel.cellWidth` / `.cellHeight` / `.viewport` | 字段（收紧为必填） | 渲染模型必须自带度量与视口 |
