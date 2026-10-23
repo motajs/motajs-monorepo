@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.1"
 current_phase_name: 地图渲染与布局重做
-current_plan: 4
+current_plan: 5
 status: executing
-stopped_at: Completed 04.1-03-PLAN.md
-last_updated: "2026-10-23T14:16:37.598Z"
+stopped_at: Completed 04.1-04-PLAN.md
+last_updated: "2026-10-23T14:36:42.923Z"
 last_activity: 2026-10-23
 last_activity_desc: Phase 3 complete, transitioned to Phase 4
-state_head: d22babb6ae84dea0a330e971b8d91a53da107cc4
+state_head: 271f1b19b40991eaf5c65e49063dd70eb40e85dc
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 138
-  completed_plans: 124
+  completed_plans: 125
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 04.1 (地图渲染与布局重做) — EXECUTING
-Current Plan: 4
+Current Plan: 5
 Total Plans in Phase: 16
 Status: Ready to execute
 Last activity: 2026-10-23 — 04.1-01 complete (naming report + pure declarations)
@@ -142,6 +142,7 @@ Progress: [██████████] 100%
 | Phase 04.1 P01 | 14 | 3 tasks | 12 files |
 | Phase 04.1 P02 | 13 | 2 tasks | 8 files |
 | Phase 04.1 P03 | 14 | 2 tasks | 4 files |
+| Phase 04.1 P04 | 12 min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -338,6 +339,12 @@ Recent decisions affecting current work:
 - [Phase 04.1]: 04.1-03: Full 读取方式把素材组的 cellWidth/cellHeight 当作整张源图尺寸（目录层对 full 类型不切格），第 0 帧矩形即 (0,0,imageW,imageH)，不新增图片尺寸字段
 - [Phase 04.1]: 04.1-03: resolveFrameRect 增加可选第三参数 frameColumns（缺省 1），让 Scan 帧轴折行不需要给 IMapFrameInfo 加成员（P-01 成立）
 - [Phase 04.1]: 04.1-03: 自动元件只在帧数 > 1 时接管帧轴，单帧自动元件与静态图块等价；连接集合为空按同值判定、非空按集合判定（D-06）
+- [Phase 04.1]: 缩略纹理尺寸取整数像素（Math.round，保底 1），显示尺寸保持浮点：RenderTexture 的宽高必须是整数，摆放交给视图层
+- [Phase 04.1]: 画布尺寸非正时缩略描述也退回全零：计划只写了文档尺寸为 0，但画布为 0 时显示尺寸本就无意义，统一退化更难被误用
+- [Phase 04.1]: 布局的缩放 NaN / Infinity 回退到 MAP_ZOOM_DEFAULT 而不是夹到边界：夹取只对有意义的越界值有效，NaN 夹完仍是 NaN
+- [Phase 04.1]: 视口格数要求正整数，2.5 这类小数退回默认 13 而不是向下取整：半格视口没有语义，静默取整会让宿主误以为注入生效
+- [Phase 04.1]: 右栏基准宽度非正时回退到 MAP_PALETTE_BASE_WIDTH：宿主传 0 时按缺省算，而不是被夹成 160 最小宽
+- [Phase 04.1]: 两个新模块都不加入 model/index.ts 桶，沿用 04.1-02 / 03 的做法，桶的统一整理留给 Plan 15
 
 ### Pending Todos
 
@@ -365,6 +372,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-23T14:16:37.076Z
-Stopped at: Completed 04.1-03-PLAN.md
+Last session: 2026-10-23T14:36:42.216Z
+Stopped at: Completed 04.1-04-PLAN.md
 Resume file: None
