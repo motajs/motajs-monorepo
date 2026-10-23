@@ -1,7 +1,7 @@
 import { Application, Container, Graphics, Rectangle, Sprite, Texture } from 'pixi.js';
 import { ReactElement, useEffect, useRef, useState } from 'react';
 import { MAP_CELL_SIZE } from '../constants';
-import { IMapCellPosition, IMapPassMark, IMapRect, IMapRenderCell, IMapRenderModel } from '../types';
+import { IMapCellPosition, IMapDocument, IMapPassMark, IMapRect, IMapRenderCell, IMapRenderModel } from '../types';
 import { useMapObjectUrl } from './useMapObjectUrl';
 
 // 唯一 import pixi.js 的文件：把渲染模型画成占位格 / 图块 / 网格 / 通行度标记。
@@ -33,6 +33,14 @@ export interface IMapSurfaceProps {
   readonly imageVersion?: number;
   /** 读取图片字节的回调 */
   readonly loadBytes?: MapBytesLoader;
+  /** 当前地图文档；大地图缩略纹理逐格铺内容时用它，缺省时只画占位 */
+  readonly document?: IMapDocument;
+  /** 当前图层标识；参与缩略纹理的重建判据 */
+  readonly currentLayerId?: string;
+  /** 高于当前层的图层统一不透明度，0..1；参与缩略纹理的重建判据 */
+  readonly aboveLayerOpacity?: number;
+  /** 动画帧速（毫秒 / 帧）；缺省 `MAP_FRAME_SPEED_DEFAULT` */
+  readonly cellFrameSpeed?: number;
   /** 画布初始化失败时回调，面板据此显示错误态 */
   onError?(): void;
 }

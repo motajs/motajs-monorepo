@@ -17,10 +17,12 @@ import {
   IMapSizeLimit,
   IMapTileGroup,
   IMapViewport,
+  MapBottomTab,
   MapBrushMode,
   MapDialogKind,
   MapImageStatus,
   MapPanelStatus,
+  MapTileCategory,
   MapUnsavedChoice,
 } from '../types';
 import { MapCanvas } from './MapCanvas';
@@ -168,6 +170,55 @@ export interface IMapPanelViewProps {
   onPropertyChange?(path: readonly (string | number)[], value: unknown): void;
   /** 属性加载失败后的重试 */
   onPropertiesRetry?(): void;
+  /**
+   * 画布滚动后把视口位置交给面板
+   * @param left 视口左上角所在的格子横坐标
+   * @param top 视口左上角所在的格子纵坐标
+   */
+  onSetViewport?(left: number, top: number): void;
+  /**
+   * 缩放滑块松手后把新值交给面板
+   * @param value 夹取到 `MAP_ZOOM_MIN`..`MAP_ZOOM_MAX` 的新缩放值
+   */
+  onSetZoom?(value: number): void;
+  /** 宿主注入的动画帧速（毫秒 / 帧）；缺省 `MAP_FRAME_SPEED_DEFAULT` */
+  readonly cellFrameSpeed?: number;
+  /**
+   * 切换底部页签
+   * @param tab 目标页签
+   */
+  onSetBottomTab?(tab: MapBottomTab): void;
+  /**
+   * 选择右侧素材分类
+   * @param category 目标分类
+   */
+  onSelectCategory?(category: MapTileCategory): void;
+  /**
+   * 开关 Tileset 单独视图
+   * @param open 为 true 时切到 Tileset 视图
+   */
+  onToggleTileset?(open: boolean): void;
+  /**
+   * 开关素材区的帧数角标
+   * @param value 为 true 时显示
+   */
+  onToggleFrameCount?(value: boolean): void;
+  /**
+   * 把「右键某个普通图块」交给面板收藏
+   * @param number 要收藏的图块编号
+   */
+  onFavoriteTile?(number: number): void;
+  /**
+   * 选中擦除或某个收藏位（数字键 `1..9` / `0` 与收藏格点击）
+   * @param index 0 表示擦除，1..9 对应第 1..9 个收藏格
+   */
+  onSelectFavoriteSlot?(index: number): void;
+  /**
+   * 把收藏从一格挪到另一格
+   * @param from 起始槽位索引（0..8）
+   * @param to 目标槽位索引（0..8）
+   */
+  onReorderFavorites?(from: number, to: number): void;
 }
 
 interface IMapPanelBodyProps {

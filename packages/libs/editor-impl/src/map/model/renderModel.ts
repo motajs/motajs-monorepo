@@ -29,6 +29,8 @@ export interface IMapRenderView {
   readonly viewport: IMapViewport;
   /** 是否处于大地图模式 */
   readonly bigMap: boolean;
+  /** 缩放倍率；缺省 1，渲染模型据此把文档格尺寸换成像素（只在这里乘一次） */
+  readonly zoom?: number;
   /** 面板算好的通行度标记，渲染模型只消费 */
   readonly passMarks: readonly IMapPassMark[];
   /** 当前框选矩形；没有选区时不传 */
@@ -44,6 +46,10 @@ interface ITileImage {
   readonly imagePath: string;
   /** 图块在图集上的像素裁切 */
   readonly crop: IMapTileCrop;
+  /** 素材单格的源像素宽；缺省按裁切宽度处理 */
+  readonly srcWidth?: number;
+  /** 素材单格的源像素高；缺省按裁切高度处理 */
+  readonly srcHeight?: number;
 }
 
 /**

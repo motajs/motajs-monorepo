@@ -89,6 +89,25 @@ export interface IMapCanvasProps {
   readonly layerName: string;
   /** 是否为窄布局 */
   readonly narrow: boolean;
+  /** 高于当前层的图层统一不透明度，0..1；转发给画布用于缩略纹理重建 */
+  readonly aboveLayerOpacity?: number;
+  /** 动画帧速（毫秒 / 帧）；缺省 `MAP_FRAME_SPEED_DEFAULT` */
+  readonly cellFrameSpeed?: number;
+  /** 可见框的横向格数；缺省 `MAP_VIEWPORT_DEFAULT_COLUMNS` */
+  readonly viewportColumns?: number;
+  /** 可见框的纵向格数；缺省 `MAP_VIEWPORT_DEFAULT_ROWS` */
+  readonly viewportRows?: number;
+  /**
+   * 把滚动后的视口位置回报给面板
+   * @param left 视口左上角所在的格子横坐标
+   * @param top 视口左上角所在的格子纵坐标
+   */
+  onSetViewport?(left: number, top: number): void;
+  /**
+   * 选择擦除或某个收藏位（数字键 `1..9` / `0`）
+   * @param index 0 表示擦除，1..9 对应第 1..9 个收藏格
+   */
+  onSelectFavoriteSlot?(index: number): void;
   /** 图块图片的重试计数 */
   readonly imageVersion?: number;
   /** 读取图块图片字节的回调 */

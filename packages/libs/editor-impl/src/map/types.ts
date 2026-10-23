@@ -86,6 +86,72 @@ export const enum MapImageStatus {
   Error,
 }
 
+export const enum MapTileCategory {
+  /** 地形类素材；引擎里单独分出的动态地形也归到这里 */
+  Terrain,
+  /** 敌人与机关类素材 */
+  Enemy,
+  /** 人物与 NPC 类素材 */
+  Npc,
+  /** 物品与道具类素材 */
+  Item,
+  /** 自动拼接类素材，按连接关系拼出四个象限 */
+  Autotile,
+  /** 整张 Tileset 素材；只作为整块图案使用，不参与收藏 */
+  Tileset,
+}
+
+export const enum MapTextureReadType {
+  /** 整张图就是一张素材，不分格 */
+  Full,
+  /** 按格切图，格子尺寸取素材组的 `cellWidth` / `cellHeight` */
+  Grid,
+  /** 横向排列的动画帧，从左往右循环 */
+  RowAnimate,
+  /** 纵向排列的动画帧，从上往下循环 */
+  ColumnAnimate,
+  /** 逐行扫描的动画帧，读到行尾折到下一行 */
+  ScanAnimate,
+}
+
+export const enum MapAutotileType {
+  /** 2×3 的自动拼接素材 */
+  Small2x3,
+  /** 3×4 的自动拼接素材 */
+  Big3x4,
+}
+
+export const enum MapFrameAxis {
+  /** 静态图块，没有帧推进方向 */
+  None,
+  /** 帧沿横向推进 */
+  X,
+  /** 帧沿纵向推进 */
+  Y,
+  /** 帧按行列逐格推进，读到行尾折到下一行 */
+  Scan,
+}
+
+export const enum MapBottomTab {
+  /** 最近使用 */
+  Recent,
+  /** 最常使用 */
+  Frequent,
+  /** 9 格收藏 */
+  Favorites,
+}
+
+export const enum MapDirection {
+  /** 上 */
+  Up,
+  /** 右 */
+  Right,
+  /** 下 */
+  Down,
+  /** 左 */
+  Left,
+}
+
 export interface IMapDirections {
   /** 能否向上通行 */
   readonly up: boolean;
@@ -117,6 +183,46 @@ export interface IMapTilePass {
   readonly onlyEventLayer: boolean;
 }
 
+export interface IMapAutotileQuarters {
+  /** 铺到目标格左上角的源图矩形 */
+  readonly lt: IMapTileCrop;
+  /** 铺到目标格右上角的源图矩形 */
+  readonly rt: IMapTileCrop;
+  /** 铺到目标格右下角的源图矩形 */
+  readonly rb: IMapTileCrop;
+  /** 铺到目标格左下角的源图矩形 */
+  readonly lb: IMapTileCrop;
+}
+
+export interface IMapAutotileRule {
+  /** 自动拼接素材的形状 */
+  readonly type: MapAutotileType;
+  /** 与哪些图块编号单方面连接；由宿主解析引擎文件后给出 */
+  readonly connections: readonly number[];
+}
+
+export interface IMapTilesetMeta {
+  /** Tileset 自身单格的宽（源图像素，为正整数） */
+  readonly cellWidth: number;
+  /** Tileset 自身单格的高（源图像素，为正整数） */
+  readonly cellHeight: number;
+  /** 整图横向的格子数 */
+  readonly columns: number;
+  /** 整图纵向的格子数 */
+  readonly rows: number;
+}
+
+export interface IMapFrameInfo {
+  /** 帧推进方向；静态图块为 `MapFrameAxis.None` */
+  readonly axis: MapFrameAxis;
+  /** 相邻两帧之间在源图上的像素步长 */
+  readonly stride: number;
+  /** 帧数，1..`MAP_FRAME_LIMIT` */
+  readonly count: number;
+  /** 第 0 帧在源图上的矩形 */
+  readonly base: IMapTileCrop;
+}
+
 export interface IMapTileEntry {
   /** 写进地图格子的图块编号；0 表示空格，不会出现在条目里 */
   readonly number: number;
@@ -130,6 +236,8 @@ export interface IMapTileEntry {
   readonly name: string;
   /** 图块的四方向通行属性 */
   readonly pass: IMapTilePass;
+  /** 固定显示第几帧；缺省 -1 表示跟随动画时钟，`>= 0` 时固定该帧 */
+  readonly defaultFrame?: number;
 }
 
 export interface IMapTileGroup {
@@ -143,6 +251,20 @@ export interface IMapTileGroup {
   readonly columns: number;
   /** 分组内的图块列表 */
   readonly tiles: readonly IMapTileEntry[];
+  /** 这个素材组属于六类中的哪一类；缺省按 `MapTileCategory.Terrain` 处理 */
+  readonly category?: MapTileCategory;
+  /** 这个素材组的读取方式；缺省按 `MapTextureReadType.Grid` 处理 */
+  readonly read?: MapTextureReadType;
+  /** 素材单格的源像素宽（不是地图格子）；缺省取 `MAP_CELL_SIZE` */
+  readonly cellWidth?: number;
+  /** 素材单格的源像素高（不是地图格子）；缺省取 `MAP_CELL_SIZE` */
+  readonly cellHeight?: number;
+  /** 每个图块的帧数，1..`MAP_FRAME_LIMIT`；缺省按 1（静态）处理 */
+  readonly frames?: number;
+  /** 自动拼接规则；普通素材没有这个字段 */
+  readonly autotile?: IMapAutotileRule;
+  /** Tileset 元数据；只有 `MapTileCategory.Tileset` 的组才有 */
+  readonly tileset?: IMapTilesetMeta;
 }
 
 export interface IMapLayer {
@@ -171,6 +293,10 @@ export interface IMapDocument {
   readonly layers: readonly IMapLayer[];
   /** 宿主算好的图块目录，随文档一起到达 */
   readonly tileGroups: readonly IMapTileGroup[];
+  /** 这张地图自己的格子宽（像素，为正整数）；缺省取 `MAP_CELL_SIZE` */
+  readonly cellWidth?: number;
+  /** 这张地图自己的格子高（像素，为正整数）；缺省取 `MAP_CELL_SIZE` */
+  readonly cellHeight?: number;
 }
 
 export interface IMapSize {
@@ -274,6 +400,15 @@ export interface IMapEditorCapabilities {
 
   /** 覆盖最近使用文件的约定路径 */
   readonly recentTilesPath?: string;
+
+  /** 宿主覆盖地图视口横向格数；缺省 `MAP_VIEWPORT_DEFAULT_COLUMNS` */
+  readonly viewportColumns?: number;
+
+  /** 宿主覆盖地图视口纵向格数；缺省 `MAP_VIEWPORT_DEFAULT_ROWS` */
+  readonly viewportRows?: number;
+
+  /** 宿主覆盖动画帧速（毫秒 / 帧）；缺省 `MAP_FRAME_SPEED_DEFAULT` */
+  readonly frameSpeed?: number;
 }
 
 export interface IMapPanelTarget {
@@ -363,6 +498,52 @@ export interface IMapViewport {
   readonly top: number;
 }
 
+export interface IMapCellMetrics {
+  /** 一格在画布上的宽（像素，已含缩放） */
+  readonly cellWidth: number;
+  /** 一格在画布上的高（像素，已含缩放） */
+  readonly cellHeight: number;
+  /** 第一格左上角的横向原点（像素） */
+  readonly left: number;
+  /** 第一格左上角的纵向原点（像素） */
+  readonly top: number;
+}
+
+export interface IMapCanvasBounds {
+  /** 画布容器左上角的横向位置（像素） */
+  readonly left: number;
+  /** 画布容器左上角的纵向位置（像素） */
+  readonly top: number;
+}
+
+export interface IMapLayout {
+  /** 可见框的横向格数 */
+  readonly viewportColumns: number;
+  /** 可见框的纵向格数 */
+  readonly viewportRows: number;
+  /** 一格的像素宽（已含缩放） */
+  readonly cellWidth: number;
+  /** 一格的像素高（已含缩放） */
+  readonly cellHeight: number;
+  /** 画布像素宽 */
+  readonly canvasWidth: number;
+  /** 画布像素高 */
+  readonly canvasHeight: number;
+  /** 右侧素材栏的像素宽 */
+  readonly paletteWidth: number;
+}
+
+export interface IMapLayoutOptions {
+  /** 缩放倍率，夹取到 `MAP_ZOOM_MIN`..`MAP_ZOOM_MAX` */
+  readonly zoom: number;
+  /** 宿主覆盖的视口横向格数；缺省 `MAP_VIEWPORT_DEFAULT_COLUMNS` */
+  readonly viewportColumns?: number;
+  /** 宿主覆盖的视口纵向格数；缺省 `MAP_VIEWPORT_DEFAULT_ROWS` */
+  readonly viewportRows?: number;
+  /** 右栏在缩放 1 时的基准宽度；缺省 `MAP_PALETTE_BASE_WIDTH` */
+  readonly paletteBaseWidth?: number;
+}
+
 export interface IMapCellsUndoData {
   /** 这条撤销记录属于哪张地图 */
   readonly mapId: string;
@@ -402,6 +583,18 @@ export interface IMapRenderCell {
   readonly imagePath?: string;
   /** 图片上的像素裁切；与 imagePath 同时缺省表示空格子 */
   readonly crop?: IMapTileCrop;
+  /** 自动拼接格要画四个象限矩形；普通格没有这个字段 */
+  readonly autotileQuarters?: IMapAutotileQuarters;
+  /** 动画帧的推进方向；静态格没有这个字段 */
+  readonly frameAxis?: MapFrameAxis;
+  /** 相邻两帧在源图上的像素步长 */
+  readonly frameStride?: number;
+  /** 动画总帧数，1..`MAP_FRAME_LIMIT` */
+  readonly frameCount?: number;
+  /** 帧序列每行的格数，供逐行扫描的帧轴使用 */
+  readonly frameColumns?: number;
+  /** 固定显示第几帧；缺省 -1 表示跟随动画时钟 */
+  readonly defaultFrame?: number;
 }
 
 export interface IMapRenderGridLine {
@@ -435,6 +628,23 @@ export interface IMapPreview {
   readonly patternHeight: number;
 }
 
+export interface IMapThumbnail {
+  /** 缩略图在画布上的像素宽 */
+  readonly width: number;
+  /** 缩略图在画布上的像素高 */
+  readonly height: number;
+  /** 整张地图缩到缩略图里的缩放倍率 */
+  readonly scale: number;
+  /** 缩略图相对画布左上角的横向偏移（像素） */
+  readonly offsetX: number;
+  /** 缩略图相对画布左上角的纵向偏移（像素） */
+  readonly offsetY: number;
+  /** 缩略纹理的像素宽（不超过 `MAP_THUMBNAIL_MAX_SIZE`） */
+  readonly textureWidth: number;
+  /** 缩略纹理的像素高（不超过 `MAP_THUMBNAIL_MAX_SIZE`） */
+  readonly textureHeight: number;
+}
+
 export interface IMapRenderModel {
   /** 画布宽度（像素） */
   readonly width: number;
@@ -446,6 +656,16 @@ export interface IMapRenderModel {
   readonly gridLines: readonly IMapRenderGridLine[];
   /** 本帧要画的通行度标记 */
   readonly passMarks: readonly IMapPassMark[];
+  /** 本帧的格像素宽（唯一度量来源：文档格尺寸 × 缩放）；缺省取 `MAP_CELL_SIZE` */
+  readonly cellWidth?: number;
+  /** 本帧的格像素高（唯一度量来源：文档格尺寸 × 缩放）；缺省取 `MAP_CELL_SIZE` */
+  readonly cellHeight?: number;
+  /** 本帧视口左上角，叠加层与整条路径据此换算到画布坐标；缺省按 `(0, 0)` 处理 */
+  readonly viewport?: IMapViewport;
+  /** 线模式下整条路径的所有格子；没有路径时为 undefined */
+  readonly previewCells?: readonly IMapCellPosition[];
+  /** 大地图模式的缩略描述；非大地图模式为 undefined */
+  readonly thumbnail?: IMapThumbnail;
   /** 当前框选矩形；没有选区时为 undefined */
   readonly selection?: IMapRect;
   /** 当前绘制预览；没有预览时为 undefined */
@@ -513,4 +733,177 @@ export interface IMapPanelViewState {
   readonly notice?: string;
   /** 加载或保存失败时的错误文案；无错误时为 undefined */
   readonly error?: string;
+  /** 当前缩放（`MAP_ZOOM_MIN`..`MAP_ZOOM_MAX`）；缺省 `MAP_ZOOM_DEFAULT` */
+  readonly zoom?: number;
+  /** 底部当前页签；缺省 `MapBottomTab.Recent` */
+  readonly bottomTab?: MapBottomTab;
+  /** 右侧当前分类；缺省 `MapTileCategory.Terrain` */
+  readonly activeCategory?: MapTileCategory;
+  /** 素材区是否切到 Tileset 单独视图；缺省 false */
+  readonly tilesetOpen?: boolean;
+  /** 素材区是否显示帧数角标；缺省 false */
+  readonly showFrameCount?: boolean;
+  /** 9 格收藏的有序编号列表，空位为 0；缺省一列 0 */
+  readonly favorites?: readonly number[];
+  /** 「最常使用」的展示顺序（已排好序的编号，不是次数表）；缺省空数组 */
+  readonly frequentTiles?: readonly number[];
+  /** 宿主注入的视口横向格数；缺省 `MAP_VIEWPORT_DEFAULT_COLUMNS` */
+  readonly viewportColumns?: number;
+  /** 宿主注入的视口纵向格数；缺省 `MAP_VIEWPORT_DEFAULT_ROWS` */
+  readonly viewportRows?: number;
+}
+
+export interface IMapTilePreferences {
+  /** 最近使用的图块编号，按最近程度排序，不带次数 */
+  readonly recent: readonly number[];
+  /** 9 格收藏的有序编号列表，空位为 0 */
+  readonly favorites: readonly number[];
+  /** 编号 → 使用次数；「最常使用」的顺序由它现算 */
+  readonly frequent: ReadonlyMap<number, number>;
+}
+
+export interface IMapZoomSliderProps {
+  /** 当前缩放值 */
+  readonly value: number;
+  /** 是否禁用；没有缩放回调时为 true */
+  readonly disabled: boolean;
+  /**
+   * 用户松手后把新值交给调用方
+   * @param value 夹取到 `MAP_ZOOM_MIN`..`MAP_ZOOM_MAX` 的新缩放值
+   */
+  onChangeComplete(value: number): void;
+}
+
+export interface IMapMaterialPanelProps {
+  /** 当前文档的图块目录 */
+  readonly groups: readonly IMapTileGroup[];
+  /** 素材组标识 → 图片的 `blob:` 地址；还没读到时为 undefined */
+  readonly groupUrls: Readonly<Record<string, string | undefined>>;
+  /** 素材组标识 → 该组图片的读取状态 */
+  readonly groupStatus: Readonly<Record<string, MapImageStatus | undefined>>;
+  /** 最近使用图块图片的读取状态 */
+  readonly imageStatus: MapImageStatus;
+  /** 当前分类 */
+  readonly activeCategory: MapTileCategory;
+  /** 是否切到 Tileset 单独视图；缺省 false */
+  readonly tilesetOpen?: boolean;
+  /** 当前调色板选中 */
+  readonly selection: IMapPaletteSelection;
+  /** 是否显示帧数角标 */
+  readonly showFrameCount: boolean;
+  /**
+   * 提交一次调色板选择
+   * @param selection 新的选中
+   */
+  onSelectPattern(selection: IMapPaletteSelection): void;
+  /** 请求重新读取图块图片 */
+  onRetryImages(): void;
+  /**
+   * 选择素材分类
+   * @param category 目标分类
+   */
+  onSelectCategory(category: MapTileCategory): void;
+  /**
+   * 开关 Tileset 单独视图
+   * @param open 为 true 时切到 Tileset 视图
+   */
+  onToggleTileset(open: boolean): void;
+  /**
+   * 开关帧数角标
+   * @param value 为 true 时显示
+   */
+  onToggleFrameCount(value: boolean): void;
+  /**
+   * 把「右键某个普通图块」上报给面板收藏；Tileset 不触发
+   * @param number 要收藏的图块编号
+   */
+  onFavoriteTile?(number: number): void;
+}
+
+export interface IMapCategoryNavProps {
+  /** 当前分类 */
+  readonly activeCategory: MapTileCategory;
+  /** Tileset 单独视图是否展开 */
+  readonly tilesetOpen: boolean;
+  /**
+   * 选择素材分类
+   * @param category 目标分类
+   */
+  onSelectCategory(category: MapTileCategory): void;
+  /**
+   * 开关 Tileset 单独视图
+   * @param open 为 true 时切到 Tileset 视图
+   */
+  onToggleTileset(open: boolean): void;
+}
+
+export interface IMapTilesetPickerProps {
+  /** 当前 Tileset 素材组 */
+  readonly group: IMapTileGroup;
+  /** 该组图片的 `blob:` 地址；还没读到时为 undefined */
+  readonly groupUrl?: string;
+  /** 该组图片的读取状态 */
+  readonly status: MapImageStatus;
+  /** 当前调色板选中 */
+  readonly selection: IMapPaletteSelection;
+  /**
+   * 提交一次调色板选择
+   * @param selection 新的选中
+   */
+  onSelectPattern(selection: IMapPaletteSelection): void;
+  /** 请求重新读取图块图片 */
+  onRetryImages(): void;
+}
+
+export interface IMapBottomTabsProps {
+  /** 当前页签 */
+  readonly tab: MapBottomTab;
+  /** 最近使用的图块编号，按最近程度排序 */
+  readonly recentTiles: readonly number[];
+  /** 「最常使用」的展示顺序 */
+  readonly frequentTiles: readonly number[];
+  /** 9 格收藏的有序编号列表，空位为 0 */
+  readonly favorites: readonly number[];
+  /** 当前文档的图块目录；缺了它只能显示编号、画不出图块 */
+  readonly groups?: readonly IMapTileGroup[];
+  /** 素材组标识 → 图片的 `blob:` 地址；还没读到时为 undefined */
+  readonly groupUrls: Readonly<Record<string, string | undefined>>;
+  /** 图块图片的读取状态 */
+  readonly imageStatus: MapImageStatus;
+  /** 当前调色板选中 */
+  readonly selection: IMapPaletteSelection;
+  /**
+   * 切换底部页签
+   * @param tab 目标页签
+   */
+  onSelectTab(tab: MapBottomTab): void;
+  /**
+   * 提交一次调色板选择
+   * @param selection 新的选中
+   */
+  onSelectPattern(selection: IMapPaletteSelection): void;
+}
+
+export interface IMapFavoriteBarProps {
+  /** 9 格收藏的有序编号列表，空位为 0 */
+  readonly favorites: readonly number[];
+  /** 当前调色板选中 */
+  readonly selection: IMapPaletteSelection;
+  /** 当前文档的图块目录；缺了它收藏格画不出图块 */
+  readonly groups?: readonly IMapTileGroup[];
+  /** 素材组标识 → 图片的 `blob:` 地址；还没读到时为 undefined */
+  readonly groupUrls: Readonly<Record<string, string | undefined>>;
+  /**
+   * 选中擦除或某个收藏位
+   * @param index 0 表示擦除，1..9 对应第 1..9 个收藏格
+   */
+  onSelectSlot(index: number): void;
+  /**
+   * 把收藏从一格挪到另一格
+   * @param from 起始槽位索引（0..8）
+   * @param to 目标槽位索引（0..8）
+   */
+  onReorder(from: number, to: number): void;
+  /** 排序是否禁用；为 true 时拖拽与上下按钮都不可用 */
+  readonly reorderDisabled: boolean;
 }

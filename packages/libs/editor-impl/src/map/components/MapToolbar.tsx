@@ -83,6 +83,13 @@ export interface IMapToolbarProps {
    * @param byScreen 为 true 时按一屏移动
    */
   onMoveViewport(dx: number, dy: number, byScreen: boolean): void;
+  /** 缩放滑块的当前值；缺省 `MAP_ZOOM_DEFAULT` */
+  readonly zoom?: number;
+  /**
+   * 缩放滑块松手后把新值交给面板
+   * @param value 夹取到 `MAP_ZOOM_MIN`..`MAP_ZOOM_MAX` 的新缩放值
+   */
+  onSetZoom?(value: number): void;
 }
 
 interface IMapViewControlsProps {

@@ -43,6 +43,10 @@ export interface IMapFileRecord {
   readonly events: Record<string, unknown>;
   /** 本演示不展示的其它字段；保存时必须逐字保留 */
   readonly extra: Record<string, unknown>;
+  /** 每张地图自己的格子宽（像素，属于文件头）；缺省 32 */
+  readonly cellWidth?: number;
+  /** 每张地图自己的格子高（像素，属于文件头）；缺省 32 */
+  readonly cellHeight?: number;
 }
 
 /** 地图能力的宿主选项：图块目录必须由宿主交进来，其余能力按需注入 */
