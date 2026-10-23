@@ -316,9 +316,7 @@ describe('serializeTilePreferences', () => {
     expect(Object.keys(serialized).sort()).toEqual(['favorites', 'frequent', 'recent']);
     expect(serialized.recent).toEqual([3]);
     expect(serialized.favorites).toEqual([1, 0, 0, 0, 0, 0, 0, 0, 0]);
-    expect(JSON.stringify(serialized)).toBe(
-      '{"recent":[3],"frequent":{"12":2},"favorites":[1,0,0,0,0,0,0,0,0]}',
-    );
+    expect(JSON.stringify(serialized)).toBe('{"recent":[3],"frequent":{"12":2},"favorites":[1,0,0,0,0,0,0,0,0]}');
   });
 
   // 次数表的键是数字字符串，写出的 JSON 里没有原型相关键

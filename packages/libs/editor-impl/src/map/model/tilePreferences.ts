@@ -1,6 +1,7 @@
 import {
   MAP_FAVORITE_SLOT_COUNT,
   MAP_FREQUENT_LIMIT,
+  MAP_RECENT_TILES_KEY,
   MAP_TILE_PREFS_FAVORITES_KEY,
   MAP_TILE_PREFS_FREQUENT_KEY,
   MAP_TILE_PREFS_RECENT_KEY,
@@ -232,4 +233,67 @@ export function reorderFavorite(favorites: readonly number[], from: number, to: 
   slots.splice(target, 0, moved);
 
   return slots;
+}
+
+/**
+ * 把旧版「最近使用」文件的任意内容迁移成偏好形状
+ *
+ * 旧文件只有 `{ tiles: number[] }`：迁移只读出 `recent`（沿用最近使用的归一化口径），
+ * `frequent` 与 `favorites` 一律为空。本函数是纯函数，既不读也不删任何文件——
+ * 旧文件是否清理由宿主决定，编辑器只做只读迁移。
+ * @param raw 旧文件的解析结果
+ * @param knownNumbers 图块目录里存在的编号集合
+ * @param limit 最近使用的条目上限
+ * @returns 迁移后的偏好；旧文件形状不对时为空偏好
+ */
+export function migrateRecentTiles(
+  raw: unknown,
+  knownNumbers: ReadonlySet<number>,
+  limit: number,
+): IMapTilePreferences {
+  const tiles = isPlainRecord(raw) ? raw[MAP_RECENT_TILES_KEY] : undefined;
+
+  return {
+    recent: normalizeRecentTiles(tiles, knownNumbers, limit),
+    favorites: createEmptyFavoriteSlots(),
+    frequent: new Map<number, number>(),
+  };
+}
+
+/**
+ * 把次数表写成「数字字符串键 → 次数」的普通对象
+ *
+ * 只输出正整数编号与有限正数次数；对象以 `Object.create(null)` 创建，因此不带任何原型键。
+ * @param counts 次数表
+ * @returns 可直接交给 `serializeTableText` 的普通对象
+ */
+function serializeFrequentCounts(counts: ReadonlyMap<number, number>): Record<string, number> {
+  const result: Record<string, number> = Object.create(null);
+
+  for (const [number, count] of counts) {
+    if (!isPositiveInteger(number)) continue;
+    if (!isPositiveCount(count)) continue;
+
+    result[String(number)] = count;
+  }
+
+  return result;
+}
+
+/**
+ * 把偏好写成可直接序列化的普通对象
+ *
+ * 只输出 `recent` / `frequent` / `favorites` 三个白名单字段：`recent` 与 `favorites` 复制成新数组，
+ * `frequent` 的键一律转成数字字符串；外层对象没有原型，避免把任意输入原样写回。
+ * @param preferences 归一化后的偏好
+ * @returns 交给 `serializeTableText` 包成文件的对象
+ */
+export function serializeTilePreferences(preferences: IMapTilePreferences): Record<string, unknown> {
+  const result: Record<string, unknown> = Object.create(null);
+
+  result[MAP_TILE_PREFS_RECENT_KEY] = [...preferences.recent];
+  result[MAP_TILE_PREFS_FREQUENT_KEY] = serializeFrequentCounts(preferences.frequent);
+  result[MAP_TILE_PREFS_FAVORITES_KEY] = [...preferences.favorites];
+
+  return result;
 }
