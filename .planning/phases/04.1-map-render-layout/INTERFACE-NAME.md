@@ -68,7 +68,7 @@
 | `IMapLayout` | interface | 布局结果：视口格数 / 缩放后的格像素 / 画布像素尺寸 / 右栏宽度 |
 | `IMapLayoutOptions` | interface（Plan 01 声明，Plan 04 只 import） | 布局输入：缩放、宿主覆盖的视口格数、右栏基准宽度；放在 `types.ts` 而不是 `model/layout.ts`，符合「对外接口归该层 types.ts」 |
 | `IMapZoomSliderProps` | interface（Plan 01 声明，Plan 11 只 import） | 缩放滑块 props：当前值、是否禁用、松手后的发布回调 |
-| `IMapMaterialPanelProps` | interface（Plan 01 声明，Plan 12 创建组件、Plan 13 接右键收藏） | 右侧素材区 props：目录、图片地址与状态、当前分类、选中、帧数开关、各回调；**含可选 `onFavoriteTile`** |
+| `IMapMaterialPanelProps` | interface（Plan 01 声明，Plan 12 创建组件、Plan 13 接右键收藏） | 右侧素材区 props：目录、图片地址与状态、当前分类、选中、`showFrameCount` / `onToggleFrameCount`（「显示帧数」勾选框）、`onSelectPattern`、各回调；**含可选 `onFavoriteTile`** |
 | `IMapCategoryNavProps` | interface（Plan 01 声明，Plan 12 只 import） | 竖排分类导航 props：当前分类、Tileset 是否展开、选择分类 / 切换 Tileset 的回调 |
 | `IMapTilesetPickerProps` | interface（Plan 01 声明，Plan 12 只 import） | Tileset 选择器 props：Tileset 组、图片地址与状态、选中、选择图案 / 重试图片 |
 | `IMapBottomTabsProps` | interface（Plan 01 声明，Plan 13 只 import） | 底部三页 props：当前页签、三份编号、图片地址与状态、选中、切页 / 选图案 |
@@ -106,6 +106,7 @@
 | `IMapCanvasProps.cellFrameSpeed` | 字段（可选） | 转发给 `MapSurface` 的动画帧速 |
 | `IMapCanvasProps.viewportColumns` / `.viewportRows` | 字段（可选） | 画布可见框格数；缺省取常量 |
 | `IMapCanvasProps.onSetViewport` | 方法成员（可选） | 画布把滚动位置回报给面板（`left, top`） |
+| `IMapCanvasProps.onSelectFavoriteSlot` | 方法成员（可选） | 画布容器里的数字键 `1..9` / `0` 通知面板选中擦除或某个收藏位（Plan 13 只实现调用） |
 | `IMapPanelViewProps.onSetViewport` | 方法成员（可选） | 视图层把画布回报转发给面板 |
 | `IMapPanelViewProps.onSetZoom` | 方法成员（可选） | 视图层把缩放值转发给面板 |
 | `IMapPanelViewProps.cellFrameSpeed` | 字段（可选） | 宿主注入的帧速，视图层原样下传 |
@@ -150,6 +151,7 @@
 | `resolveFrameInfo` | 自由函数 | 由素材组规则与图块行列算出该图块的帧信息（第 0 帧矩形、帧数、帧轴、步长） |
 | `resolveFrameRect` | 自由函数 | 由帧信息与当前帧号算出该帧的源图裁切矩形 |
 | `resolveCellFrame` | 自由函数 | 由全局帧号与格子的 `defaultFrame` / 帧数算出这个格子该显示第几帧 |
+| `resolveFrameTickAt` | 自由函数 | 由累计毫秒与帧速算出全局帧号 `floor(elapsed / speed)`；默认 300ms 与宿主覆盖（150ms）都在它的单元测试里钉住 |
 | `src/map/model/autotile.ts` | 文件 | 8 方向连接 + 3×4 / 2×3 四分之一块矩形 |
 | `computeAutotileConnection` | 自由函数 | 由同层格子值与宿主注入的连接集合算出 8 位连接数（地图外视为已连接，逐字复刻引擎掩码） |
 | `resolveAutotileQuarters` | 自由函数 | 由自动拼接类型与连接数算出 `lt` / `rt` / `rb` / `lb` 四个半格矩形 |
@@ -298,12 +300,12 @@
 
 ## Plan 12 — 右侧素材区（D-05 / D-18 / D-21 / D-22）
 
-**要做什么：** 右侧按六类展示素材：普通五类竖排、Tileset 单独开关；普通素材逐格显示第一帧、方角框、可选帧数角标；Tileset 整图分格、可框选多格。
+**要做什么：** 右侧按六类展示素材：普通五类竖排、Tileset 单独开关；普通素材逐格显示第一帧、方角框、顶部「显示帧数」勾选框控制角标；Tileset 整图分格、可框选多格。
 
 | 名称 | 种类 | 用途 |
 |------|------|------|
 | `src/map/components/MapMaterialPanel.tsx` | 文件 | 右侧素材区容器：按当前分类渲染素材网格、缺图占位、重试入口 |
-| `IMapMaterialPanelProps` | interface（Plan 01 已声明，本计划只 import 并创建组件） | 素材区 props：目录、图片地址 / 状态、当前分类、选中、帧数开关、回调 |
+| `IMapMaterialPanelProps` | interface（Plan 01 已声明，本计划只 import 并创建组件） | 素材区 props：目录、图片地址 / 状态、当前分类、选中、`showFrameCount` / `onToggleFrameCount`（「显示帧数」勾选框）、回调 |
 | `src/map/components/MapCategoryNav.tsx` | 文件 | 竖排五类导航（Terrains / Enemy / Npc / Item / Autotile）+ Tileset 单独开关 |
 | `IMapCategoryNavProps` | interface（Plan 01 已声明，本计划只 import） | 导航 props：当前分类、Tileset 是否展开、回调 |
 | `src/map/components/MapTilesetPicker.tsx` | 文件 | Tileset 整图 + 分割线 + 单格 / 框选多格 → 图案 |
@@ -311,9 +313,12 @@
 | `.emap-category-nav` / `.emap-category-item` | CSS 类 | 竖排分类 |
 | `.emap-tileset` / `.emap-tileset-grid` | CSS 类 | Tileset 整图与分格层 |
 | `.emap-tile-frames` | CSS 类 | 帧数角标 |
+| `.emap-frame-count` | CSS 类 | 「显示帧数」勾选框一行 |
+| `IMapMaterialPanelProps.onToggleFrameCount` | 方法成员（`IMapMaterialPanelProps` 由 Plan 01 声明，本计划只消费） | 勾选框把新的开关值上报给面板 |
 | `map-category-{terrain\|enemy\|npc\|item\|autotile}` | `data-test-id` | 五个分类按钮 |
 | `map-tileset-toggle` / `map-tileset-grid` | `data-test-id` | Tileset 开关 / 整图分格 |
 | `map-material-grid` | `data-test-id` | 普通素材网格 |
+| `map-frame-count` | `data-test-id` | 「显示帧数」勾选框（D-18 的控件本体） |
 | `map-tile-{number}` | `data-test-id` | 单个普通图块格子（右键收藏与点选的落点） |
 | `map-tile-frames-{number}` | `data-test-id` | 单格帧数角标 |
 | `MapPalette.tsx` / `mapView.palette.test.tsx` | **删除** | 旧的 240px 三段式调色板与其测试，被本计划取代 |
@@ -331,6 +336,8 @@
 | `src/map/components/MapFavoriteBar.tsx` | 文件 | 1 个擦除格 + 9 个收藏格；拖拽 / 上下按钮排序 |
 | `IMapFavoriteBarProps` | interface（Plan 01 已声明，本计划只 import） | 收藏栏 props：收藏数组、当前选中、切图、排序、选中回调 |
 | `MapPanel.addFavorite` | 方法 | 右键把普通图块放进第一个空收藏位；已收藏则忽略；满了替换第 9 位 |
+| `IMapCanvasProps.onSelectFavoriteSlot` | 方法成员（Plan 01 声明） | 画布容器里的数字键回调；本计划只实现调用与 `MapPanelView` 的接线 |
+| `packages/libs/editor-impl/src/map/components/MapCanvas.tsx` | 文件（改造） | 在既有键盘处理里加 `1..9` / `0` 的映射；不挂 `window` |
 | `IMapMaterialPanelProps.onFavoriteTile` | 方法成员（`IMapMaterialPanelProps` 由 Plan 01 在 `types.ts` 声明，本计划只接线） | 素材区把「右键某个图块」这件事上报给面板 |
 | `.emap-bottom` / `.emap-bottom-tab` | CSS 类 | 底部区域与页签 |
 | `.emap-favorite` / `.emap-favorite-slot` | CSS 类 | 收藏栏与单格 |
