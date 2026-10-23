@@ -40,11 +40,7 @@ export function buildThumbnail(document: IMapDocument, canvasWidth: number, canv
 
   const width = document.width * scale;
   const height = document.height * scale;
-  const textureScale = Math.min(
-    1,
-    MAP_THUMBNAIL_MAX_SIZE / document.width,
-    MAP_THUMBNAIL_MAX_SIZE / document.height,
-  );
+  const textureScale = Math.min(1, MAP_THUMBNAIL_MAX_SIZE / document.width, MAP_THUMBNAIL_MAX_SIZE / document.height);
 
   return {
     width,

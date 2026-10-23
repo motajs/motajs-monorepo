@@ -85,7 +85,9 @@ describe('resolveMapLayout 缩放', () => {
 
   // 超出范围的缩放被夹取：5 等价于 2
   it('缩放高于上限时按 2 计算', () => {
-    expect(resolveMapLayout(createMapDocument(), { zoom: 5 })).toEqual(resolveMapLayout(createMapDocument(), { zoom: 2 }));
+    expect(resolveMapLayout(createMapDocument(), { zoom: 5 })).toEqual(
+      resolveMapLayout(createMapDocument(), { zoom: 2 }),
+    );
   });
 
   // 非正方格按各自的边长乘缩放：48 × 24 在 1.5 倍下是 72 × 36
@@ -149,9 +151,7 @@ describe('resolveMapLayout 退化输入', () => {
     const expected = resolveMapLayout(createMapDocument(), { zoom: 1 });
 
     expect(resolveMapLayout(createMapDocument(), { zoom: 1, viewportColumns: 0, viewportRows: 0 })).toEqual(expected);
-    expect(resolveMapLayout(createMapDocument(), { zoom: 1, viewportColumns: -4, viewportRows: -4 })).toEqual(
-      expected,
-    );
+    expect(resolveMapLayout(createMapDocument(), { zoom: 1, viewportColumns: -4, viewportRows: -4 })).toEqual(expected);
     expect(resolveMapLayout(createMapDocument(), { zoom: 1, viewportColumns: 2.5, viewportRows: 2.5 })).toEqual(
       expected,
     );
