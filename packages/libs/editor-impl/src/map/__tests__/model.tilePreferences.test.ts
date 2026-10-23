@@ -1,8 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { MAP_FAVORITE_SLOT_COUNT, MAP_FREQUENT_LIMIT } from '../constants';
-import { normalizeTilePreferences, rankFrequentTiles, reorderFavorite } from '../model/tilePreferences';
+import {
+  migrateRecentTiles,
+  normalizeTilePreferences,
+  rankFrequentTiles,
+  reorderFavorite,
+  serializeTilePreferences,
+} from '../model/tilePreferences';
 
-// 图块偏好的用例：坏输入归一化、次数表排序、收藏移位。
+// 图块偏好的用例：坏输入归一化、次数表排序、收藏移位、旧文件迁移与写回形状。
 // 输入一律当成「可能被用户或别的工具改坏的文件」处理，不抛错、不落半截数据。
 
 /** 用例共用的「目录里存在」编号集合（故意不含 99） */
@@ -261,5 +267,86 @@ describe('reorderFavorite', () => {
     expect(result).not.toBe(input);
     expect(input).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
     expect(result).toEqual([2, 3, 4, 5, 6, 7, 8, 9, 1]);
+  });
+});
+
+describe('migrateRecentTiles', () => {
+  // 旧文件的 { tiles } 只读迁移成 recent：重复、空位与目录外编号都丢掉
+  it('旧文件迁移成最近使用', () => {
+    const preferences = migrateRecentTiles({ tiles: [3, 1, 3, 0, 99] }, KNOWN_NUMBERS, 24);
+
+    expect(preferences.recent).toEqual([3, 1]);
+    expect(preferences.frequent.size).toBe(0);
+    expect(preferences.favorites).toEqual(EMPTY_SLOTS);
+  });
+
+  // 旧文件不是对象、或 tiles 不是数组时都返回空偏好
+  it('畸形旧文件得到空偏好', () => {
+    for (const raw of [null, 'abc', [], {}, { tiles: 'abc' }, { recent: [1] }]) {
+      const preferences = migrateRecentTiles(raw, KNOWN_NUMBERS, 24);
+
+      expect(preferences.recent).toEqual([]);
+      expect(preferences.frequent.size).toBe(0);
+      expect(preferences.favorites).toEqual(EMPTY_SLOTS);
+    }
+  });
+
+  // 迁移不改动读到的旧内容（纯函数、不执行任何文件操作）
+  it('不改动传入的旧内容', () => {
+    const raw = { tiles: [3, 1] };
+    const snapshot = JSON.stringify(raw);
+
+    migrateRecentTiles(raw, KNOWN_NUMBERS, 24);
+
+    expect(JSON.stringify(raw)).toBe(snapshot);
+  });
+});
+
+describe('serializeTilePreferences', () => {
+  // 写回形状只包含 recent / frequent / favorites 三个字段
+  it('只输出三个字段', () => {
+    const preferences = normalizeTilePreferences(
+      { recent: [3], frequent: { '12': 2 }, favorites: [1] },
+      KNOWN_NUMBERS,
+      FAVORITE_NUMBERS,
+      24,
+    );
+    const serialized = serializeTilePreferences(preferences);
+
+    expect(Object.keys(serialized).sort()).toEqual(['favorites', 'frequent', 'recent']);
+    expect(serialized.recent).toEqual([3]);
+    expect(serialized.favorites).toEqual([1, 0, 0, 0, 0, 0, 0, 0, 0]);
+    expect(JSON.stringify(serialized)).toBe(
+      '{"recent":[3],"frequent":{"12":2},"favorites":[1,0,0,0,0,0,0,0,0]}',
+    );
+  });
+
+  // 次数表的键是数字字符串，写出的 JSON 里没有原型相关键
+  it('次数键是数字字符串且不含原型键', () => {
+    const raw = JSON.parse('{"frequent":{"__proto__":9,"12":2}}');
+    const preferences = normalizeTilePreferences(raw, KNOWN_NUMBERS, FAVORITE_NUMBERS, 24);
+    const text = JSON.stringify(serializeTilePreferences(preferences));
+
+    expect(text).toContain('"12":2');
+    expect(text).not.toContain('__proto__');
+    expect(text).not.toContain('constructor');
+  });
+
+  // 写回后再归一化一轮，结果与写回前等价
+  it('写回后往返稳定', () => {
+    const preferences = normalizeTilePreferences(
+      { recent: [3, 1], frequent: { '12': 2, '5': 7 }, favorites: [1, 2, 0] },
+      KNOWN_NUMBERS,
+      FAVORITE_NUMBERS,
+      24,
+    );
+    const text = JSON.stringify(serializeTilePreferences(preferences));
+    const reparsed = normalizeTilePreferences(JSON.parse(text), KNOWN_NUMBERS, FAVORITE_NUMBERS, 24);
+
+    expect(reparsed.recent).toEqual(preferences.recent);
+    expect(reparsed.favorites).toEqual(preferences.favorites);
+    expect(reparsed.frequent.size).toBe(preferences.frequent.size);
+
+    for (const [number, count] of preferences.frequent) expect(reparsed.frequent.get(number)).toBe(count);
   });
 });
