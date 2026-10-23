@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 12
+open_count: 14
 waived_count: 0
 fixed_count: 4
-total_count: 16
-last_updated: 2026-10-23T13:55:27.758Z
+total_count: 18
+last_updated: 2026-10-23T14:17:56.083Z
 ---
 
 # Broken Windows Ledger
@@ -31,6 +31,8 @@ last_updated: 2026-10-23T13:55:27.758Z
 | 14 | 02.1 | deviation | packages/libs/editor-core/vitest.config.ts |  | editor-core vitest 未处理 CSS 致 ?inline 返回空串，样式断言无法成立（Plan 23 已修复） | fixed |  | 2026-10-16T16:43:44.904Z | 2026-10-16T16:44:51.427Z |
 | 15 | 02.1 | deviation | packages/libs/editor-impl/src/table/__tests__/integration.test.tsx |  | 重量级端到端用例超 5s 默认超时（满套件并行争用，HEAD 亦同），Plan 23 放宽到 20s | fixed |  | 2026-10-16T16:43:45.730Z | 2026-10-16T16:44:52.288Z |
 | 16 | 04.1 | deviation | packages/libs/editor-impl/src/map/__tests__/model.cellMetrics.test.ts |  | Task 2 的 RED 未在实现前观察到：实现已由 tracer Task 1 落地；已用一次性变异验证代替 RED 证据 | open |  | 2026-10-23T13:55:27.758Z |  |
+| 17 | 04.1 | deviation | packages/libs/editor-impl/src/map/__tests__/model.tileFrame.test.ts |  | 两个 TDD 任务的 RED 均为导入解析失败（模块尚不存在，属 INVALID_RED）；已用一次性变异证明测试能盯住行为 | open |  | 2026-10-23T14:17:46.935Z |  |
+| 18 | 04.1 | deviation | packages/libs/editor-impl/src/map/model/tileFrame.ts | 196 | resolveFrameRect 增加可选第三参数 frameColumns（Scan 帧轴折行所需）；IMapFrameInfo 未新增成员（P-01） | open |  | 2026-10-23T14:17:56.083Z |  |
 
 ````json
 [
@@ -224,6 +226,30 @@ last_updated: 2026-10-23T13:55:27.758Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-10-23T13:55:27.758Z",
+    "resolved_at": null
+  },
+  {
+    "id": 17,
+    "kind": "deviation",
+    "phase": "04.1",
+    "file": "packages/libs/editor-impl/src/map/__tests__/model.tileFrame.test.ts",
+    "line": null,
+    "description": "两个 TDD 任务的 RED 均为导入解析失败（模块尚不存在，属 INVALID_RED）；已用一次性变异证明测试能盯住行为",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-23T14:17:46.935Z",
+    "resolved_at": null
+  },
+  {
+    "id": 18,
+    "kind": "deviation",
+    "phase": "04.1",
+    "file": "packages/libs/editor-impl/src/map/model/tileFrame.ts",
+    "line": 196,
+    "description": "resolveFrameRect 增加可选第三参数 frameColumns（Scan 帧轴折行所需）；IMapFrameInfo 未新增成员（P-01）",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-23T14:17:56.083Z",
     "resolved_at": null
   }
 ]

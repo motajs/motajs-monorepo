@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.1"
 current_phase_name: 地图渲染与布局重做
-current_plan: 3
+current_plan: 4
 status: executing
-stopped_at: Completed 04.1-02-PLAN.md
-last_updated: "2026-10-23T13:54:09.892Z"
+stopped_at: Completed 04.1-03-PLAN.md
+last_updated: "2026-10-23T14:16:37.598Z"
 last_activity: 2026-10-23
 last_activity_desc: Phase 3 complete, transitioned to Phase 4
-state_head: cab9883343454bf606b9db7a70225db24b351d84
+state_head: d22babb6ae84dea0a330e971b8d91a53da107cc4
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 138
-  completed_plans: 123
+  completed_plans: 124
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 04.1 (地图渲染与布局重做) — EXECUTING
-Current Plan: 3
+Current Plan: 4
 Total Plans in Phase: 16
 Status: Ready to execute
 Last activity: 2026-10-23 — 04.1-01 complete (naming report + pure declarations)
@@ -141,6 +141,7 @@ Progress: [██████████] 100%
 | Phase 04 P13 | 1h 45m | 3 tasks | 5 files |
 | Phase 04.1 P01 | 14 | 3 tasks | 12 files |
 | Phase 04.1 P02 | 13 | 2 tasks | 8 files |
+| Phase 04.1 P03 | 14 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -334,6 +335,9 @@ Recent decisions affecting current work:
 - [Phase 04.1]: 缺省或非法格尺寸统一回退 MAP_CELL_SIZE，命中换算在格宽高非正时返回视口原点（威胁 T-4.1-02-01/02）
 - [Phase 04.1]: 大地图模型的 cellWidth/cellHeight 仍是「文档格 × 缩放」，整图适配的缩略边长只用于排格子
 - [Phase 04.1]: 大地图命中视口规则写在 MapCanvas 调用点（pointerViewport），resolvePointerCell 保持模式无关
+- [Phase 04.1]: 04.1-03: Full 读取方式把素材组的 cellWidth/cellHeight 当作整张源图尺寸（目录层对 full 类型不切格），第 0 帧矩形即 (0,0,imageW,imageH)，不新增图片尺寸字段
+- [Phase 04.1]: 04.1-03: resolveFrameRect 增加可选第三参数 frameColumns（缺省 1），让 Scan 帧轴折行不需要给 IMapFrameInfo 加成员（P-01 成立）
+- [Phase 04.1]: 04.1-03: 自动元件只在帧数 > 1 时接管帧轴，单帧自动元件与静态图块等价；连接集合为空按同值判定、非空按集合判定（D-06）
 
 ### Pending Todos
 
@@ -361,6 +365,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-23T13:54:09.357Z
-Stopped at: Completed 04.1-02-PLAN.md
+Last session: 2026-10-23T14:16:37.076Z
+Stopped at: Completed 04.1-03-PLAN.md
 Resume file: None
