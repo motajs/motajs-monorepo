@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.1"
 current_phase_name: 地图渲染与布局重做
-current_plan: Not started
+current_plan: "2"
 status: executing
-stopped_at: Phase 4.1 context gathered
-last_updated: "2026-10-23T12:29:19.210Z"
-last_activity: 2026-10-21
+stopped_at: Completed 04.1-01-PLAN.md
+last_updated: "2026-10-23T13:05:10.427Z"
+last_activity: 2026-10-23
 last_activity_desc: Phase 3 complete, transitioned to Phase 4
-state_head: efc9f0fe6d8e69278a967049c22cfee68efd2d09
+state_head: dab0e9b2a6718c32578395fdb2f34a4acebc92ab
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 138
-  completed_plans: 121
+  completed_plans: 122
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -29,11 +29,11 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 
 ## Current Position
 
-Phase: 04.1 (地图渲染与布局重做) — READY TO EXECUTE
-Current Plan: Not started
+Phase: 04.1 (地图渲染与布局重做) — EXECUTING
+Current Plan: 2
 Total Plans in Phase: 16
-Status: Ready to execute
-Last activity: 2026-10-21 — 04-01 complete (naming report + map domain types)
+Status: Executing
+Last activity: 2026-10-23 — 04.1-01 complete (naming report + pure declarations)
 
 Progress: [██████████] 100%
 
@@ -139,6 +139,7 @@ Progress: [██████████] 100%
 | Phase 04-map P16 | 14 min | 1 tasks | 4 files |
 | Phase 04 P12 | 63 min | 3 tasks | 8 files |
 | Phase 04 P13 | 1h 45m | 3 tasks | 5 files |
+| Phase 04.1 P01 | 14 | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -325,6 +326,9 @@ Recent decisions affecting current work:
 - [Phase 4]: 大地图进入时存视口、退出时还原；图块目录为空时 canPaint + commitCells 双层守卫
 - [Phase 4]: 演示地图不存 height，由各层完整行数的最小值推导；参差层补 0 / 截断
 - [Phase 4]: 图层名由 addLayer 默认名 + 保存时面板当前名覆盖，两处都落盘
+- [Phase 04.1]: 过渡策略 P-01：全部新接口成员在 04.1-01 声明为可选，Plan 02–13 只消费，Plan 15 才删 IMapTileEntry.crop 并收紧为必填
+- [Phase 04.1]: IMapAutotileRule 的连接表字段叫 connections，与宿主侧 ITileCatalogSource.connections 同名
+- [Phase 04.1]: IMapPanelViewState.favorites / frequentTiles 与 recentTiles 同型（readonly number[]）；只有偏好文件的 frequent 是 ReadonlyMap<number, number> 次数表
 
 ### Pending Todos
 
@@ -352,6 +356,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-22T12:30:55.674Z
-Stopped at: Phase 4.1 context gathered
-Resume file: .planning/phases/04.1-map-render-layout/04.1-CONTEXT.md
+Last session: 2026-10-23T13:05:09.888Z
+Stopped at: Completed 04.1-01-PLAN.md
+Resume file: None
