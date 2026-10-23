@@ -125,7 +125,7 @@ describe('resolveAutotileQuarters 四块象限矩形', () => {
 
   // 四方向都连接：四块落在十字正中，取自十字内容而非四个角
   it('3×4 十字连接时使用十字内容', () => {
-    expect(resolveAutotileQuarters(MapAutotileType.Big3x4, 0b0101_0001, 32, 32)).toEqual({
+    expect(resolveAutotileQuarters(MapAutotileType.Big3x4, 0b0101_0101, 32, 32)).toEqual({
       lt: { x: 64, y: 0, width: 16, height: 16 },
       rt: { x: 80, y: 0, width: 16, height: 16 },
       rb: { x: 80, y: 16, width: 16, height: 16 },
