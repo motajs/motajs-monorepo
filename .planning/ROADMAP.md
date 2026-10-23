@@ -471,7 +471,7 @@ Plans:
   8. Phase 4 UAT 三个问题修复：演示图集不再整片红、通行度四色箭头可辨、属性抽屉首次打开即显示字段行。
   9. 开发宿主可手动验收以上全部行为。
 
-**Plans:** 1/16 plans executed
+**Plans:** 2/16 plans executed
 
 Plans:
 
@@ -481,7 +481,7 @@ Plans:
 
 **Wave 2 — Tracer、纯模型与宿主目录**
 
-- [ ] 04.1-02-PLAN.md — Tracer：每图格子尺寸 + contain 端到端（`cellMetrics` + 渲染模型 + 画布尺寸）（依赖 04.1-01）
+- [x] 04.1-02-PLAN.md — Tracer：每图格子尺寸 + contain 端到端（`cellMetrics` + 渲染模型 + 画布尺寸）（依赖 04.1-01）
 - [ ] 04.1-03-PLAN.md — 帧信息与自动拼接纯模型（依赖 04.1-01）
 - [ ] 04.1-04-PLAN.md — 缩略与布局纯模型（依赖 04.1-01）
 - [ ] 04.1-05-PLAN.md — 图块偏好归一化 / 迁移 / 排序（依赖 04.1-01）

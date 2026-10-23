@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.1"
 current_phase_name: 地图渲染与布局重做
-current_plan: "2"
+current_plan: 3
 status: executing
-stopped_at: Completed 04.1-01-PLAN.md
-last_updated: "2026-10-23T13:05:10.427Z"
+stopped_at: Completed 04.1-02-PLAN.md
+last_updated: "2026-10-23T13:54:09.892Z"
 last_activity: 2026-10-23
 last_activity_desc: Phase 3 complete, transitioned to Phase 4
-state_head: dab0e9b2a6718c32578395fdb2f34a4acebc92ab
+state_head: cab9883343454bf606b9db7a70225db24b351d84
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 138
-  completed_plans: 122
+  completed_plans: 123
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,9 +30,9 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 04.1 (地图渲染与布局重做) — EXECUTING
-Current Plan: 2
+Current Plan: 3
 Total Plans in Phase: 16
-Status: Executing
+Status: Ready to execute
 Last activity: 2026-10-23 — 04.1-01 complete (naming report + pure declarations)
 
 Progress: [██████████] 100%
@@ -140,6 +140,7 @@ Progress: [██████████] 100%
 | Phase 04 P12 | 63 min | 3 tasks | 8 files |
 | Phase 04 P13 | 1h 45m | 3 tasks | 5 files |
 | Phase 04.1 P01 | 14 | 3 tasks | 12 files |
+| Phase 04.1 P02 | 13 | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -329,6 +330,10 @@ Recent decisions affecting current work:
 - [Phase 04.1]: 过渡策略 P-01：全部新接口成员在 04.1-01 声明为可选，Plan 02–13 只消费，Plan 15 才删 IMapTileEntry.crop 并收紧为必填
 - [Phase 04.1]: IMapAutotileRule 的连接表字段叫 connections，与宿主侧 ITileCatalogSource.connections 同名
 - [Phase 04.1]: IMapPanelViewState.favorites / frequentTiles 与 recentTiles 同型（readonly number[]）；只有偏好文件的 frequent 是 ReadonlyMap<number, number> 次数表
+- [Phase 04.1]: 图块裁剪在 tileFrame 接管前按「列 / 行 × 素材格尺寸」推导，不再读 IMapTileEntry.crop
+- [Phase 04.1]: 缺省或非法格尺寸统一回退 MAP_CELL_SIZE，命中换算在格宽高非正时返回视口原点（威胁 T-4.1-02-01/02）
+- [Phase 04.1]: 大地图模型的 cellWidth/cellHeight 仍是「文档格 × 缩放」，整图适配的缩略边长只用于排格子
+- [Phase 04.1]: 大地图命中视口规则写在 MapCanvas 调用点（pointerViewport），resolvePointerCell 保持模式无关
 
 ### Pending Todos
 
@@ -356,6 +361,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-23T13:05:09.888Z
-Stopped at: Completed 04.1-01-PLAN.md
+Last session: 2026-10-23T13:54:09.357Z
+Stopped at: Completed 04.1-02-PLAN.md
 Resume file: None
