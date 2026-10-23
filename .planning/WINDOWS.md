@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 11
+open_count: 12
 waived_count: 0
 fixed_count: 4
-total_count: 15
-last_updated: 2026-10-16T16:44:52.288Z
+total_count: 16
+last_updated: 2026-10-23T13:55:27.758Z
 ---
 
 # Broken Windows Ledger
@@ -30,6 +30,7 @@ last_updated: 2026-10-16T16:44:52.288Z
 | 13 | 01.1-dev-host | unrun-verify |  |  | Manual dev-host acceptance not run by executor (needs a browser): start pnpm --filter @motajs/editor-dev dev at http://127.0.0.1:1056, verify + follows the last tab and closing a non-active of three tabs keeps the active one | open |  | 2026-10-12T08:00:04.110Z |  |
 | 14 | 02.1 | deviation | packages/libs/editor-core/vitest.config.ts |  | editor-core vitest 未处理 CSS 致 ?inline 返回空串，样式断言无法成立（Plan 23 已修复） | fixed |  | 2026-10-16T16:43:44.904Z | 2026-10-16T16:44:51.427Z |
 | 15 | 02.1 | deviation | packages/libs/editor-impl/src/table/__tests__/integration.test.tsx |  | 重量级端到端用例超 5s 默认超时（满套件并行争用，HEAD 亦同），Plan 23 放宽到 20s | fixed |  | 2026-10-16T16:43:45.730Z | 2026-10-16T16:44:52.288Z |
+| 16 | 04.1 | deviation | packages/libs/editor-impl/src/map/__tests__/model.cellMetrics.test.ts |  | Task 2 的 RED 未在实现前观察到：实现已由 tracer Task 1 落地；已用一次性变异验证代替 RED 证据 | open |  | 2026-10-23T13:55:27.758Z |  |
 
 ````json
 [
@@ -212,6 +213,18 @@ last_updated: 2026-10-16T16:44:52.288Z
     "reason": "",
     "recorded_at": "2026-10-16T16:43:45.730Z",
     "resolved_at": "2026-10-16T16:44:52.288Z"
+  },
+  {
+    "id": 16,
+    "kind": "deviation",
+    "phase": "04.1",
+    "file": "packages/libs/editor-impl/src/map/__tests__/model.cellMetrics.test.ts",
+    "line": null,
+    "description": "Task 2 的 RED 未在实现前观察到：实现已由 tracer Task 1 落地；已用一次性变异验证代替 RED 证据",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-23T13:55:27.758Z",
+    "resolved_at": null
   }
 ]
 ````
