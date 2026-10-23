@@ -19,19 +19,21 @@
 | Tileset 每格编号从哪来 | **宿主把每个格子枚举进目录**（`{ number, column, row }`）；编辑器不引入引擎的编号公式。 |
 | `.editor` 目录谁创建 | **保持现状**：由宿主 / 资源层负责，写失败静默降级。**不给 `IEditorPanelContext` 增加 `makeDirectory`。** |
 
-### 2. 过渡期类型策略（需要确认，编号 D-31）
+### 2. 过渡期类型策略（D-31 修订：全部声明在 Plan 01，收紧在 Plan 15）
 
-本阶段要改的是**已有的数据契约**，而 Phase 4 的代码与测试已经在用它。为了满足「先接口、后实现」，同时保证每个计划结束时整包仍然可编译：
+本阶段要改的是**已有的数据契约**，而 Phase 4 的代码与测试已经在用它。为了满足「先接口、后实现」同时保证每个计划结束时整包仍然可编译，策略是：
 
-- Plan 01 只做**新增**：新枚举 / 新接口 / 新字段一律先声明为**可选**，`IMapTileEntry.crop` 暂时保留。
-- 从 Plan 02 起，生产者（测试夹具、演示宿主、真宿主适配器）逐步补上新字段；消费者按「字段缺省时的默认值」工作（缺省格尺寸为 `MAP_CELL_SIZE`，缺省读取方式为 `Grid`，缺省帧数为 1）。
-- Plan 14 做**终态收紧**：删除 `IMapTileEntry.crop`，把 `IMapDocument.cellWidth/cellHeight`、`IMapTileGroup.category/read/cellWidth/cellHeight/frames` 改为必填，并跑全量验证。
+- **Plan 01 一次性声明本阶段全部新增成员**：新枚举 / 新接口 / 新字段 / 组件 props / 视图状态字段一律先声明为**可选**，`IMapTileEntry.crop` 暂时保留。
+- **Plan 02–14 只赋值与消费**，任何实现计划都**不得**新增接口成员；消费者按「字段缺省时的默认值」工作（缺省格尺寸为 `MAP_CELL_SIZE`，缺省读取方式为 `Grid`，缺省帧数为 1，缺省帧速为 300，缺省视口 13×13）。
+- **Plan 15 是独立的接口终态计划**：删除 `IMapTileEntry.crop`，把 `IMapDocument.cellWidth/cellHeight`、`IMapTileGroup.category/read/cellWidth/cellHeight/frames`、`IMapRenderModel.cellWidth/cellHeight/viewport`、`IMapPanelViewState` 的 9 个新字段改为必填，并只做「按编译错误机械对齐生产者」。
 
-这条策略是**可逆的**（只影响类型宽松度），但它决定了 Plan 01 只能新增、不能删除。
+**因此：Plan 08 / Plan 02 / Plan 14 都不再拥有任何接口声明职责。** 若某个实现计划发现还缺字段，必须回到 Plan 01 补声明（并在本文件登记），而不是就地新增。
+
+这条策略是**可逆的**（只影响类型宽松度），但它决定了「接口声明只出现在 Plan 01、收紧只出现在 Plan 15」。
 
 ### 3. 类型放宽不代表语义放宽
 
-宿主契约（D-01 / D-02 / D-04）仍然要求每份目录 / 文档**都**给出这些字段；Plan 06 的宿主适配器与 Plan 14 的终态收紧会把这条落死。默认值只为兼容 Phase 4 的旧宿主与旧测试。
+宿主契约（D-01 / D-02 / D-04）仍然要求每份目录 / 文档**都**给出这些字段；Plan 06 的宿主适配器与 Plan 15 的终态收紧会把这条落死。默认值只为兼容 Phase 4 的旧宿主与旧测试。
 
 ### 4. 数据契约与引擎无关
 
@@ -51,16 +53,18 @@
 | `MapTextureReadType` | `const enum` | 素材读取方式：`Full` / `Grid` / `RowAnimate` / `ColumnAnimate` / `ScanAnimate`（D-02） |
 | `MapAutotileType` | `const enum` | 自动拼接素材形状：`Small2x3`（2×3）/ `Big3x4`（3×4） |
 | `MapFrameAxis` | `const enum` | 动画帧推进方向：`None` / `X` / `Y` / `Scan`；告诉视图帧号该往哪个方向取矩形 |
+| `MapDirection` | `const enum` | 通行度的四个方向：`Up` / `Right` / `Down` / `Left`；四色箭头按它取色，避免字符串字面量 |
 | `MapBottomTab` | `const enum` | 底部三页：`Recent` / `Frequent` / `Favorites` |
 | `IMapAutotileRule` | interface | 一个自动拼接素材的规则：形状 + 它单方面连接的图块编号（D-06，宿主注入） |
 | `IMapTilesetMeta` | interface | Tileset 自身的单格尺寸与行列数（整图分格用） |
 | `IMapFrameInfo` | interface | 一个图块的帧轴 / 帧步长 / 帧数 / 第 0 帧矩形；视图据此现算当前帧裁切 |
 | `IMapCellMetrics` | interface | 一格的像素度量：格宽 / 格高 / 左上原点（命中测试与叠加层共用，替代原来单一的 `size`） |
+| `IMapCanvasBounds` | interface | 画布容器的左上角 `left` / `top`；指针换算用，替代内联对象类型 |
 | `IMapThumbnail` | interface | 大地图缩略纹理的描述：纹理尺寸 / 缩放 / 偏移；重建时机由视图判定，不放进这个纯描述 |
 | `IMapTilePreferences` | interface | `.editor` 偏好：`recent`（最近）/ `frequent`（次数表）/ `favorites`（9 格收藏） |
 | `IMapAutotileQuarters` | interface | 自动拼接一格要画的四个半格矩形：`lt` / `rt` / `rb` / `lb` |
 | `IMapLayout` | interface | 布局结果：视口格数 / 缩放后的格像素 / 画布像素尺寸 / 右栏宽度 |
-| `IMapDocument.cellWidth` / `.cellHeight` | 字段（可选，Plan 14 收紧） | 每张地图自己的格子尺寸（D-04）；缺省按 `MAP_CELL_SIZE` |
+| `IMapDocument.cellWidth` / `.cellHeight` | 字段（可选，Plan 15 收紧） | 每张地图自己的格子尺寸（D-04）；缺省按 `MAP_CELL_SIZE` |
 | `IMapTileGroup.category` | 字段（可选） | 这个素材组属于六类中的哪一类 |
 | `IMapTileGroup.read` | 字段（可选） | 这个素材组的读取方式 |
 | `IMapTileGroup.cellWidth` / `.cellHeight` | 字段（可选） | 素材单格的源像素尺寸（不是地图格子） |
@@ -72,9 +76,27 @@
 | `IMapEditorCapabilities.frameSpeed` | 字段（可选） | 宿主覆盖动画帧速（毫秒）；缺省 300（D-08） |
 | `IMapRenderCell.autotileQuarters` | 字段（可选） | 自动拼接格的四块矩形；普通格没有 |
 | `IMapRenderCell.frameAxis` / `.frameStride` / `.frameCount` / `.frameColumns` / `.defaultFrame` | 字段（可选） | 动画格需要的帧信息；静态格没有 |
-| `IMapRenderModel.cellWidth` / `.cellHeight` | 字段（可选，Plan 02 收紧） | 本帧的格像素度量（唯一度量来源） |
+| `IMapRenderModel.cellWidth` / `.cellHeight` | 字段（可选，Plan 15 收紧） | 本帧的格像素度量（唯一度量来源） |
+| `IMapRenderModel.viewport` | 字段（可选，Plan 15 收紧） | 本帧视口左上角；叠加层 / 框选 / 预览 / 整条路径用「文档坐标 − viewport」换算到画布坐标 |
 | `IMapRenderModel.previewCells` | 字段（可选） | 线模式下整条路径的所有格子（D-14） |
 | `IMapRenderModel.thumbnail` | 字段（可选） | 大地图缩略描述（D-11） |
+| `IMapPanelViewState.zoom` | 字段（可选，Plan 15 收紧） | 当前缩放（0.5..2）；Plan 08 初始化、Plan 11 消费 |
+| `IMapPanelViewState.bottomTab` | 字段（可选，Plan 15 收紧） | 底部当前页签；Plan 08 初始化、Plan 13 消费 |
+| `IMapPanelViewState.activeCategory` | 字段（可选，Plan 15 收紧） | 右侧当前分类；Plan 08 初始化、Plan 12 消费 |
+| `IMapPanelViewState.tilesetOpen` | 字段（可选，Plan 15 收紧） | 是否切到 Tileset 单独视图 |
+| `IMapPanelViewState.showFrameCount` | 字段（可选，Plan 15 收紧） | 素材区是否显示帧数角标 |
+| `IMapPanelViewState.favorites` | 字段（可选，Plan 15 收紧） | 9 格收藏（`0` 为空位） |
+| `IMapPanelViewState.frequentTiles` | 字段（可选，Plan 15 收紧） | 「最常使用」的展示顺序（已排好序的编号） |
+| `IMapPanelViewState.viewportColumns` / `.viewportRows` | 字段（可选，Plan 15 收紧） | 宿主注入的视口格数落进视图状态；缺省 13×13（D-16） |
+| `IMapSurfaceProps.document` / `.currentLayerId` / `.aboveLayerOpacity` | 字段（可选） | 大地图缩略纹理的**内容来源与重建输入**：模型在大地图模式只给缩略描述，逐格内容由画布从这三个值自己铺 |
+| `IMapSurfaceProps.cellFrameSpeed` | 字段（可选） | 动画帧速（毫秒 / 帧）；缺省 300（D-08） |
+| `IMapCanvasProps.aboveLayerOpacity` | 字段（可选） | 转发给 `MapSurface`，供缩略重建判据使用 |
+| `IMapCanvasProps.cellFrameSpeed` | 字段（可选） | 转发给 `MapSurface` 的动画帧速 |
+| `IMapCanvasProps.viewportColumns` / `.viewportRows` | 字段（可选） | 画布可见框格数；缺省取常量 |
+| `IMapCanvasProps.onSetViewport` | 方法成员（可选） | 画布把滚动位置回报给面板（`left, top`） |
+| `IMapPanelViewProps.onSetViewport` | 方法成员（可选） | 视图层把画布回报转发给面板 |
+| `IMapPanelViewProps.onSetZoom` | 方法成员（可选） | 视图层把缩放值转发给面板 |
+| `IMapPanelViewProps.cellFrameSpeed` | 字段（可选） | 宿主注入的帧速，视图层原样下传 |
 | `MAP_VIEWPORT_DEFAULT_COLUMNS` / `MAP_VIEWPORT_DEFAULT_ROWS` | 常量 `13` | 默认地图视口格数（允许宿主配置成长方形） |
 | `MAP_ZOOM_MIN` / `MAP_ZOOM_MAX` / `MAP_ZOOM_DEFAULT` / `MAP_ZOOM_STEP` | 常量 | `0.5` / `2` / `1` / `0.05` |
 | `MAP_PALETTE_BASE_WIDTH` / `MAP_PALETTE_MIN_WIDTH` / `MAP_PALETTE_MAX_WIDTH` | 常量 | 右栏基准宽度 / 最小可用宽度 / 最大宽度 |
@@ -99,7 +121,7 @@
 | `resolveTileDest` | 自由函数 | 给定格子位置与格子尺寸、素材自身尺寸，算出素材在格内的目标矩形（`scale = min(1, cellW/srcW, cellH/srcH)`，再居中） |
 | `resolvePointerCell` | 自由函数 | 把指针的客户端坐标换算成格子坐标（按格宽 / 格高与缩放除，再叠加视口偏移） |
 | `resolveCellMetrics` | 自由函数 | 由格像素尺寸与左上原点组装 `IMapCellMetrics`，作为命中与叠加层的唯一度量来源 |
-| `IMapRenderModel.cellWidth` / `.cellHeight` | 字段（本计划收紧为必填） | 渲染模型自带格像素度量，叠加层不再各写一份 |
+| `IMapRenderModel.cellWidth` / `.cellHeight` | 字段（Plan 01 已声明为可选；本计划只赋值） | 渲染模型自带格像素度量；消费者用 `?? MAP_CELL_SIZE`，Plan 15 收紧为必填 |
 | `src/map/__tests__/model.cellMetrics.test.ts` | 文件 | contain / 保持原尺寸 / 居中 / 指针换算的单元测试 |
 | `src/map/__tests__/mapView.cellMetrics.test.tsx` | 文件 | 端到端：文档格尺寸 → 渲染模型 → 视图收到的模型（`MapSurface` 用桩） |
 | `createSizedTileGroup` | 测试夹具函数 | 造一个带 `cellWidth/cellHeight/read/frames/category` 的素材组，供后续所有模型测试复用 |
@@ -158,17 +180,18 @@
 
 ## Plan 06 — 宿主图块目录与演示图集（G-04-1）
 
-**要做什么：** 让开发宿主真的从引擎文件生成图块目录，并把那张「整片红」的 1×1 演示图换成有区分度的多格图集。
+**要做什么：** 让开发宿主真的从引擎文件生成图块目录，并把那张「整片红」的 1×1 演示图换成五张有区分度的真实图集（含六类素材、动画、两种自动元件、Tileset），再补一张 256×256 演示地图。
 
 | 名称 | 种类 | 用途 |
 |------|------|------|
 | `packages/apps/editor-dev/src/backend/tileCatalog.ts` | 文件 | 宿主适配器：读纹理清单 + 图块表，生成中立图块目录 |
 | `buildTileCatalog` | 自由函数 | 由纹理清单文本、图块表文本、图片尺寸查询与连接规则生成 `readonly IMapTileGroup[]` |
 | `ITileCatalogSource` | interface | 解析输入：两份文本 + 读图片尺寸的函数 + 自动拼接连接表 |
-| `encodeDemoTileAtlas` | 自由函数（演示） | 在 `mapDemo.ts` 内编码一张真实多格 PNG（算法与 `assetDemo.ts` 同形，**不修改** `assetDemo.ts`） |
-| `DEMO_TILE_ATLAS_COLUMNS` / `DEMO_TILE_ATLAS_ROWS` | 常量 | 演示图集的列数 / 行数（4 × 2、每格 32×32、共 128×64） |
+| `encodeDemoTileAtlas` / `encodeDemoAnimateAtlas` / `encodeDemoAutotileBigAtlas` / `encodeDemoAutotileSmallAtlas` / `encodeDemoTilesetAtlas` | 自由函数（演示） | 在 `mapDemo.ts` 内编码五张真实 PNG：128×64 地形、128×32 动画（4 帧）、192×128 与 128×96 自动元件（各 2 帧）、128×64 Tileset（算法与 `assetDemo.ts` 同形，**不修改** `assetDemo.ts`） |
+| `DEMO_TEXTURE_LIST_TEXT` / `DEMO_TILE_TABLE_TEXT` | 常量 | 演示用的引擎格式文本（`.list.jsonc` / `tile.jsonc` 形状），供 `buildTileCatalog` 解析 |
+| `buildDemoTileCatalog` | 自由函数（演示） | 把演示图集尺寸 + 两份文本 + 连接规则交给 `buildTileCatalog`，返回六类目录 |
 | `packages/apps/editor-dev/src/backend/__tests__/tileCatalog.test.ts` | 文件 | 分类映射、读取方式、帧数、自动拼接连接、Tileset 逐格编号、畸形数据 |
-| `packages/apps/editor-dev/src/__tests__/mapDemo.test.ts` | 文件 | G-04-1 收口：图集尺寸 128×64、所有图块裁切都在图内、演示目录六类齐全 |
+| `packages/apps/editor-dev/src/__tests__/mapDemo.test.ts` | 文件 | G-04-1 收口：五张图集尺寸、所有裁切在图内、六类齐全、动画 4 帧、Tileset 8 格、256×256 地图存在 |
 
 ---
 
@@ -181,6 +204,7 @@
 | `IMapRenderView.zoom` | 字段 | 缩放倍率；渲染模型据此把文档格尺寸换成像素 |
 | `IMapRenderView.previewCells` | 字段 | 线模式下要预览的整条路径格子 |
 | `IMapRenderModel.previewCells` | 字段 | 透传给画布的整条路径 |
+| `IMapRenderModel.viewport` | 字段 | 透传视口左上角；画布据此把叠加层从文档坐标换算到画布坐标 |
 | `IMapRenderModel.thumbnail` | 字段 | 大地图模式下替代逐格 `cells` 的缩略描述 |
 | `IMapRenderCell.frameColumns` | 字段 | `ScanAnimate` 用：一行有多少格，帧号才能换算行列 |
 | `src/map/__tests__/model.renderModel.test.ts` | 文件（改造） | 格尺寸 / 动画 / 自动拼接 / 缩略 / 整条路径的断言 |
@@ -191,18 +215,15 @@
 
 **要做什么：** 面板记住用户的缩放、页签、分类、收藏，并把它们写进一个 `.editor` 文件；所有视图动作只改视图状态，不置脏、不进撤销。
 
+> **本计划不声明任何接口成员。** 视图状态的 9 个新字段已在 §Plan 01 声明为可选；本计划只给它们初始值并读写。
+
 | 名称 | 种类 | 用途 |
 |------|------|------|
-| `IMapPanelViewState.zoom` | 字段 | 当前缩放（0.5..2） |
-| `IMapPanelViewState.bottomTab` | 字段 | 底部当前页签 |
-| `IMapPanelViewState.activeCategory` | 字段 | 右侧当前分类 |
-| `IMapPanelViewState.tilesetOpen` | 字段 | 是否切到 Tileset 单独视图 |
-| `IMapPanelViewState.showFrameCount` | 字段 | 素材区是否显示帧数角标 |
-| `IMapPanelViewState.favorites` | 字段 | 9 格收藏（`0` 为空位） |
-| `IMapPanelViewState.frequentTiles` | 字段 | 「最常使用」的展示顺序（已排好序的编号） |
-| `MapPanel.loadTilePreferences` | 方法 | 读 `.editor/map-tiles.json`；缺失时只读迁移旧文件 |
+| `MapPanel.loadTilePreferences` | 方法 | 读 `.editor/map-tiles.json`；缺失时只读迁移旧文件；**成功发布 `recentStatus: Ready`、失败发布 `Error`**，不再永远停在 `Loading` |
 | `MapPanel.saveTilePreferences` | 方法 | 写回偏好文件（失败静默降级） |
-| `MapPanel.recordTileUse` | 方法 | 落笔成功后同时更新最近与最常，并落盘 |
+| `MapPanel.recordTileUse` | 方法 | 落笔成功后同时更新最近与最常，并落盘；Tileset 编号直接忽略 |
+| `MapPanel.collectRecentNumbers` | 方法 | 目录编号去掉 Tileset 分类组，供「最近 / 最常」归一化与 `MapPanel.recordTileUse` 过滤 |
+| `MapPanel.collectFavoriteNumbers` | 方法 | 目录编号去掉 Tileset 分类组，供收藏归一化与 `MapPanel.addFavorite` 过滤 |
 | `MapPanel.setZoom` | 方法 | 记录缩放并发布（不置脏、不进撤销） |
 | `MapPanel.setBottomTab` | 方法 | 切换底部页签 |
 | `MapPanel.selectCategory` | 方法 | 切换右侧竖排分类 |
@@ -219,9 +240,9 @@
 
 | 名称 | 种类 | 用途 |
 |------|------|------|
-| `MapPanel.setViewport` | 方法 | 接收画布回报的滚动位置（夹取到地图边界） |
-| `IMapCanvasProps.onSetViewport` | 方法成员 | 画布把滚动位置回报给面板 |
-| `IMapPanelViewProps.onSetViewport` | 方法成员 | 视图层把回报转发给面板 |
+| `MapPanel.setViewport` | 方法 | 接收画布回报的滚动位置，夹取到「文档尺寸 − 视口格数」 |
+| `IMapCanvasProps.onSetViewport` | 方法成员（Plan 01 声明） | 画布把滚动位置回报给面板；本计划只实现调用 |
+| `IMapPanelViewProps.onSetViewport` | 方法成员（Plan 01 声明） | 视图层把回报转发给面板；本计划只接线 |
 | `.emap-canvas-viewport` | CSS 类 | 可见框：`viewportColumns × viewportRows` 格，`overflow: auto` |
 | `.emap-canvas-spacer` | CSS 类 | 透明占位：整图尺寸，只用来撑滚动条 |
 | `map-canvas-viewport` | `data-test-id` | 视口容器 |
@@ -232,14 +253,17 @@
 
 ## Plan 10 — Pixi 渲染（G-04-2）
 
-**要做什么：** 画布按模型里的度量画，不再到处写死 32；动画只在动画格上换帧；自动拼接用 4 个半格拼；大地图只画一张缩略纹理；通行度改成四个不同颜色的箭头。
+**要做什么：** 画布按模型里的度量画，不再到处写死 32；动画只在动画格上换帧；自动拼接用 4 个半格拼；大地图只画一张缩略纹理；通行度改成四个不同颜色的箭头；线模式把整条路径画出来。
 
 | 名称 | 种类 | 用途 |
 |------|------|------|
-| `resolvePassArrowColor` | 自由函数（`model/passability.ts`） | 按方向取四色之一；四个值互不相同（G-04-2 可测） |
-| `IMapSurfaceProps.cellFrameSpeed` / `IMapCanvasProps.cellFrameSpeed` | 可选字段 | 动画帧速（毫秒 / 帧），由能力注入；缺省 300 |
+| `resolvePassArrowColor` | 自由函数（`model/passability.ts`） | 按 `MapDirection` 取四色之一；四个值互不相同（G-04-2 可测） |
+| `resolvePreviewCellRects` | 自由函数（`model/cellMetrics.ts`） | 把 `previewCells` 从文档坐标换算成画布像素矩形（减去 `model.viewport`、乘格尺寸） |
+| `IMapSurfaceProps.cellFrameSpeed` / `IMapCanvasProps.cellFrameSpeed` | 可选字段（Plan 01 声明） | 动画帧速（毫秒 / 帧），由能力注入；缺省 300 |
+| `IMapSurfaceProps.document` / `.currentLayerId` / `.aboveLayerOpacity` | 可选字段（Plan 01 声明） | 大地图缩略纹理的内容来源与重建判据 |
 | `MAP_PASS_COLOR_*` | 常量（Plan 01 已声明） | 上 / 右 / 下 / 左四色 |
 | `src/map/__tests__/model.passability.test.ts` | 文件（改造） | 追加「四个色值互不相同」与方向映射断言 |
+| `src/map/__tests__/model.cellMetrics.test.ts` | 文件（改造） | 追加整条路径矩形换算断言 |
 
 ---
 
@@ -251,7 +275,8 @@
 |------|------|------|
 | `src/map/components/MapZoomSlider.tsx` | 文件 | 50–200% 缩放滑块（本地 state 驱动拇指，`onChangeComplete` 才发布） |
 | `IMapZoomSliderProps` | interface | 滑块的 props：当前值、禁用、发布回调 |
-| `IMapPanelViewProps.onSetZoom` | 方法成员 | 视图把缩放值交给面板 |
+| `IMapPanelViewProps.onSetZoom` | 方法成员（Plan 01 声明） | 视图把缩放值交给面板；本计划只接线 |
+| `IMapPanelViewProps.cellFrameSpeed` | 字段（Plan 01 声明） | 宿主帧速，视图原样下传给画布 |
 | `.emap-main` | CSS 类 | 左列：工具栏 + 地图 + 底部三页 |
 | `.emap-side` | CSS 类 | 右列：素材区 |
 | `.emap-zoom` | CSS 类 | 缩放滑块容器 |
@@ -278,6 +303,7 @@
 | `map-category-{terrain\|enemy\|npc\|item\|autotile}` | `data-test-id` | 五个分类按钮 |
 | `map-tileset-toggle` / `map-tileset-grid` | `data-test-id` | Tileset 开关 / 整图分格 |
 | `map-material-grid` | `data-test-id` | 普通素材网格 |
+| `map-tile-{number}` | `data-test-id` | 单个普通图块格子（右键收藏与点选的落点） |
 | `map-tile-frames-{number}` | `data-test-id` | 单格帧数角标 |
 | `MapPalette.tsx` / `mapView.palette.test.tsx` | **删除** | 旧的 240px 三段式调色板与其测试，被本计划取代 |
 
@@ -298,23 +324,44 @@
 | `.emap-bottom` / `.emap-bottom-tab` | CSS 类 | 底部区域与页签 |
 | `.emap-favorite` / `.emap-favorite-slot` | CSS 类 | 收藏栏与单格 |
 | `map-bottom-tab-recent` / `-frequent` / `-favorites` | `data-test-id` | 三个页签 |
+| `map-bottom-tile-{number}` | `data-test-id` | 底部当前页里的单个图块格 |
 | `map-favorite-erase` / `map-favorite-{0..8}` | `data-test-id` | 擦除格与 9 个收藏格 |
+| `map-favorite-up-{index}` / `map-favorite-down-{index}` | `data-test-id` | 收藏格的上移 / 下移按钮（拖拽的可访问替代） |
 
 ---
 
-## Plan 14 — 收口：G-04-3 / 类型终态 / 门禁 / 手动验收
+## Plan 14 — 收口门禁：G-04-3 / 桶导出 / 四条门禁
 
-**要做什么：** 修掉属性抽屉「塌成灰线」；把过渡期的宽松类型收紧成正式契约（删除 `crop`）；跑齐全量测试与四条门禁；最后在开发宿主里逐条手动验收。
+**要做什么：** 修掉属性抽屉「塌成灰线」；补齐桶导出；跑四条结构门禁。**不碰 `types.ts`。**
 
 | 名称 | 种类 | 用途 |
 |------|------|------|
 | `.emap-properties` | CSS 类（修复） | 抽屉外层：补 `display:flex; height:100%; min-height:0`，让复用的绝对定位表单有高度 |
 | `MapPropertiesDrawer` 的 `maskClosable={false}` | 属性 | 禁用点外部关闭，保留 Esc 与 ✕（D-15） |
+| `map/model/index.ts` / `map/components/index.ts` | 桶文件（更新） | 导出本阶段全部新模块 |
+| `mapProperties.test.tsx` | 文件（改造） | CSS 高度断言 + `maskClosable` 断言 |
+
+## Plan 15 — 接口终态收紧（纯接口计划）
+
+**要做什么：** 只做「Plan 01 已声明成员」的收紧与机械对齐：删除 `crop`、把新字段改为必填；不新增任何接口成员。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
 | `IMapTileEntry.crop` | **删除** | 裁切改由素材规则现算（D-02 终态） |
 | `IMapDocument.cellWidth` / `.cellHeight` | 字段（收紧为必填） | 每张地图必须声明格子尺寸 |
 | `IMapTileGroup.category` / `.read` / `.cellWidth` / `.cellHeight` / `.frames` | 字段（收紧为必填） | 素材组必须声明规则 |
-| `map/model/index.ts` / `map/components/index.ts` | 桶文件（更新） | 导出本阶段全部新模块 |
-| `mapProperties.test.tsx` | 文件（改造） | CSS 高度断言 + `maskClosable` 断言 |
+| `IMapRenderModel.cellWidth` / `.cellHeight` / `.viewport` | 字段（收紧为必填） | 渲染模型必须自带度量与视口 |
+| `IMapPanelViewState.zoom` / `.bottomTab` / `.activeCategory` / `.tilesetOpen` / `.showFrameCount` / `.favorites` / `.frequentTiles` / `.viewportColumns` / `.viewportRows` | 字段（收紧为必填） | 视图状态必须完整初始化 |
+| `fixtures.ts` / `mapView.toolbar.test.tsx` / `mapDemo.ts` / `tileCatalog.ts` / `mapFiles.test.ts` | 文件（机械对齐） | 按编译错误补齐字段，不允许 `as` 绕过 |
+
+## Plan 16 — 全量门禁 + 九条手动验收
+
+**要做什么：** 跑 `pnpm lint` / `pnpm format:check` / 全量测试 / typecheck / 四条门禁，再在开发宿主里逐条手动验收。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `04.1-16-SUMMARY.md` | 文件 | 每条门禁的命令 / 退出码 / 摘要行，以及九条判据的通过与否 + 证据 |
+| 九条 Success Criteria | 验收清单 | ROADMAP §Phase 04.1 的 1–9 条，逐条记录结论 |
 
 ---
 
@@ -341,6 +388,6 @@
 
 1. **中立图块目录的最终形状**（`IMapTileGroup` 的 `category/read/cellWidth/cellHeight/frames/autotile/tileset`，`IMapTileEntry` 删除 `crop`）—— **one-way**：这是宿主与编辑器的数据契约，改形状要迁移每个宿主实现。
 2. **`.editor/map-tiles.json` 的路径与字段**（`recent` / `frequent` / `favorites`，`favorites` 固定 9 格、`1` 键为擦除）—— **costly**：文件一旦写入用户项目，改路径 / 字段要迁移。
-3. **过渡期类型策略 D-31**（Plan 01 只增不删、Plan 14 收紧）—— **reversible**：只影响类型宽松度，但决定计划顺序。
+3. **接口归属与收紧节奏**（原 D-31，修订后待确认）—— **reversible**：全部新成员只在 Plan 01 声明（可选），实现计划只消费，Plan 15 单列收紧；决定计划顺序，不影响运行时行为。
 4. **布局常量**（13×13 默认视口、50–200% 缩放、右栏基准 / 最小 / 最大宽度）—— **costly**：会被面板、画布、素材区共同消费。
 5. **全部新增命名**（文件 / 类型 / 方法 / 常量 / CSS 类 / `data-test-id`）—— **reversible**：改名只需同步本文件与计划。
