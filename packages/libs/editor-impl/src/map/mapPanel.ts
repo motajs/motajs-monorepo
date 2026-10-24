@@ -1,14 +1,24 @@
 import { Store } from '@tanstack/store';
 import { isEqual } from 'es-toolkit';
 import { createElement, FC, ReactElement } from 'react';
-import { IEditorPanel, IEditorPanelContext, IEditorPanelFactoryParam, IUndoContext } from '@motajs/editor-core';
+import {
+  EditorEntryKind,
+  IEditorPanel,
+  IEditorPanelContext,
+  IEditorPanelFactoryParam,
+  IUndoContext,
+} from '@motajs/editor-core';
 import {
   MAP_ABOVE_LAYER_DEFAULT_OPACITY,
   MAP_CELL_SIZE,
-  MAP_RECENT_TILES_KEY,
+  MAP_FREQUENT_LIMIT,
   MAP_RECENT_TILES_LIMIT,
   MAP_RECENT_TILES_PATH,
   MAP_SAVED_MESSAGE,
+  MAP_TILE_PREFS_PATH,
+  MAP_VIEWPORT_DEFAULT_COLUMNS,
+  MAP_VIEWPORT_DEFAULT_ROWS,
+  MAP_ZOOM_DEFAULT,
 } from './constants';
 import { parseTableText, serializeTableText } from '../shared/jsonc/tableText';
 import { TablePanelStatus } from '../shared/schemaForm/components/TableGrid';
@@ -25,8 +35,15 @@ import {
   isMapDocumentValid,
   isTileCatalogEmpty,
 } from './model/document';
-import { normalizeRecentTiles, updateRecentTiles } from './model/recentTiles';
+import { updateRecentTiles } from './model/recentTiles';
 import { computePassabilityMarks } from './model/passability';
+import {
+  migrateRecentTiles,
+  normalizeTilePreferences,
+  rankFrequentTiles,
+  reorderFavorite,
+  serializeTilePreferences,
+} from './model/tilePreferences';
 import { validateLayerName, validateMapName, validateMapSize } from './model/validation';
 import {
   IMapCellChange,
@@ -43,12 +60,15 @@ import {
   IMapPropertyUndoData,
   IMapRect,
   IMapTileEntry,
+  IMapTilePreferences,
   IMapViewport,
+  MapBottomTab,
   MapBrushMode,
   MapDialogKind,
   MapImageStatus,
   MapPaletteKind,
   MapPanelStatus,
+  MapTileCategory,
   MapUndoType,
   MapUnsavedChoice,
 } from './types';
@@ -379,6 +399,9 @@ export class MapPanel implements IEditorPanel, IMapPanel {
   /** 最近使用读取的序号，用来丢弃晚到的结果，避免刚画的一笔被早先的读取覆盖 */
   private recentToken: number = 0;
 
+  /** 最近 / 最常的次数表；读盘后来自 `IMapTilePreferences.frequent`，落笔时自增，写盘时序列化 */
+  private preferenceCounts: Map<number, number> = new Map();
+
   /** 进入大地图之前的视口；不在大地图时为 undefined */
   private preBigMapViewport?: IMapViewport;
 
@@ -407,6 +430,15 @@ export class MapPanel implements IEditorPanel, IMapPanel {
       viewport: { left: 0, top: 0 },
       unsaved: false,
       saving: false,
+      zoom: MAP_ZOOM_DEFAULT,
+      bottomTab: MapBottomTab.Recent,
+      activeCategory: MapTileCategory.Terrain,
+      tilesetOpen: false,
+      showFrameCount: false,
+      favorites: [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      frequentTiles: [],
+      viewportColumns: this.capabilities.viewportColumns ?? MAP_VIEWPORT_DEFAULT_COLUMNS,
+      viewportRows: this.capabilities.viewportRows ?? MAP_VIEWPORT_DEFAULT_ROWS,
     });
     this.component = (): ReactElement =>
       createElement(MapPanelView, {
@@ -443,6 +475,7 @@ export class MapPanel implements IEditorPanel, IMapPanel {
         canOpenProperties:
           this.capabilities.propertiesSchema !== undefined && this.capabilities.readProperties !== undefined,
         maxMapSize: this.capabilities.maxMapSize,
+        cellFrameSpeed: this.capabilities.frameSpeed,
         onSelectMap: (mapId): void => {
           void this.openMap(mapId);
         },
@@ -616,7 +649,7 @@ export class MapPanel implements IEditorPanel, IMapPanel {
         error: undefined,
       });
       this.refreshPassMarks();
-      void this.loadRecentTiles();
+      void this.loadTilePreferences();
     } catch {
       return;
     }
@@ -636,26 +669,18 @@ export class MapPanel implements IEditorPanel, IMapPanel {
   }
 
   /**
-   * 取最近使用文件的项目内路径；宿主可覆盖，非法路径直接视为不可用
-   * @returns 可交给资源层的路径；路径非法时为 undefined
+   * 收集可进入「最近 / 最常」的编号：目录里除 Tileset 分类组以外的全部编号
+   * @returns 可记录的编号集合
    */
-  private resolveRecentTilesPath(): string | undefined {
-    const path = this.capabilities.recentTilesPath ?? MAP_RECENT_TILES_PATH;
-
-    return isSafeProjectPath(path) ? path : undefined;
-  }
-
-  /**
-   * 收集当前文档图块目录里的全部编号，供最近使用的归一化过滤
-   * @returns 目录里存在的编号集合
-   */
-  private collectTileNumbers(): ReadonlySet<number> {
+  private collectRecentNumbers(): ReadonlySet<number> {
     const numbers: Set<number> = new Set();
     const document = this.document;
 
     if (document === undefined) return numbers;
 
     for (const group of document.tileGroups) {
+      if (group.category === MapTileCategory.Tileset) continue;
+
       for (const tile of group.tiles) numbers.add(tile.number);
     }
 
@@ -663,28 +688,25 @@ export class MapPanel implements IEditorPanel, IMapPanel {
   }
 
   /**
-   * 把最近使用文件原文解析成编号列表；无法解析或形状不对时退化为空列表
-   * @param text 文件原文
-   * @param knownNumbers 图块目录里存在的编号集合
-   * @returns 归一化后的最近使用列表
+   * 收集可进入 9 格收藏的编号：与「最近 / 最常」同一口径，Tileset 分类组不可收藏
+   * @returns 可收藏的编号集合
    */
-  private parseRecentTiles(text: string, knownNumbers: ReadonlySet<number>): readonly number[] {
-    const parsed = parseTableText(text);
-
-    if (!isPlainRecord(parsed.value)) return [];
-
-    return normalizeRecentTiles(parsed.value[MAP_RECENT_TILES_KEY], knownNumbers, MAP_RECENT_TILES_LIMIT);
+  private collectFavoriteNumbers(): ReadonlySet<number> {
+    return this.collectRecentNumbers();
   }
 
   /**
-   * 按读取序号发布最近使用列表；序号已被更晚的读写取代时直接丢弃
-   * @param token 本次读取的序号
-   * @param tiles 读出的列表
+   * 判断项目内某个文件是否存在：按父目录列出直接子条目，不读取内容
+   * @param path 文件的项目内相对路径
+   * @returns 文件存在时为 true
    */
-  private publishRecentTiles(token: number, tiles: readonly number[]): void {
-    if (token !== this.recentToken) return;
+  private async hasProjectFile(path: string): Promise<boolean> {
+    const index = path.lastIndexOf('/');
+    const directory = index < 0 ? '' : path.slice(0, index);
+    const name = index < 0 ? path : path.slice(index + 1);
+    const entries = await this.context.listDirectory(directory);
 
-    this.publish({ recentTiles: tiles });
+    return entries.some((entry) => entry.name === name && entry.kind === EditorEntryKind.File);
   }
 
   /**
@@ -870,7 +892,7 @@ export class MapPanel implements IEditorPanel, IMapPanel {
         error: undefined,
       });
       this.refreshPassMarks();
-      void this.loadRecentTiles();
+      void this.loadTilePreferences();
       await this.loadSummaries();
     } catch (error) {
       if (token === this.loadToken) this.publish({ dialogError: toErrorMessage(error) });
@@ -947,53 +969,88 @@ export class MapPanel implements IEditorPanel, IMapPanel {
   }
 
   /**
-   * 从项目内约定文件读出最近使用图块；文件缺失或损坏都按空列表处理
+   * 读图块偏好：新文件存在时按 `{ recent, frequent, favorites }` 解析，不存在时才只读一次旧版最近使用文件做迁移
+   *
+   * 无论成功还是失败都会发布 `recentStatus`：读到并解析成功（含两条文件都不存在的正常路径）发布 `Ready`，
+   * 读取抛错或路径非法发布 `Error`，不再让「正在加载」一直挂着。
    */
-  async loadRecentTiles(): Promise<void> {
+  async loadTilePreferences(): Promise<void> {
     const token = ++this.recentToken;
-    const path = this.resolveRecentTilesPath();
-
-    if (path === undefined) {
-      this.publishRecentTiles(token, []);
-      return;
-    }
+    const path = MAP_TILE_PREFS_PATH;
 
     try {
-      const resource = await this.context.requestResource(path);
+      if (!isSafeProjectPath(path)) throw new Error('偏好文件路径非法。');
 
-      if (resource === null) {
-        this.publishRecentTiles(token, []);
-        return;
+      const knownNumbers = this.collectRecentNumbers();
+      const favoriteNumbers = this.collectFavoriteNumbers();
+      let preferences: IMapTilePreferences;
+
+      if (await this.hasProjectFile(path)) {
+        const resource = await this.context.requestResource(path);
+
+        if (resource === null) throw new Error('偏好文件不可用。');
+
+        const content = await resource.request();
+
+        if (typeof content !== 'string') throw new Error('偏好文件不是文本。');
+
+        preferences = normalizeTilePreferences(
+          parseTableText(content).value,
+          knownNumbers,
+          favoriteNumbers,
+          MAP_RECENT_TILES_LIMIT,
+        );
+      } else {
+        let legacyRaw: unknown;
+
+        if (isSafeProjectPath(MAP_RECENT_TILES_PATH) && (await this.hasProjectFile(MAP_RECENT_TILES_PATH))) {
+          const resource = await this.context.requestResource(MAP_RECENT_TILES_PATH);
+          const content = resource === null ? undefined : await resource.request();
+
+          if (typeof content === 'string') legacyRaw = parseTableText(content).value;
+        }
+
+        preferences = migrateRecentTiles(legacyRaw, knownNumbers, MAP_RECENT_TILES_LIMIT);
       }
 
-      const content = await resource.request();
+      if (token !== this.recentToken) return;
 
-      if (typeof content !== 'string') {
-        this.publishRecentTiles(token, []);
-        return;
-      }
-
-      this.publishRecentTiles(token, this.parseRecentTiles(content, this.collectTileNumbers()));
+      this.preferenceCounts = new Map(preferences.frequent);
+      this.publish({
+        recentTiles: preferences.recent,
+        favorites: preferences.favorites,
+        frequentTiles: rankFrequentTiles(this.preferenceCounts, MAP_FREQUENT_LIMIT),
+        recentStatus: MapImageStatus.Ready,
+      });
     } catch {
-      this.publishRecentTiles(token, []);
+      if (token !== this.recentToken) return;
+
+      this.publish({ recentStatus: MapImageStatus.Error });
     }
   }
 
   /**
-   * 把当前最近使用列表写回项目内约定文件；失败静默降级，不影响绘制
+   * 把当前最近 / 最常 / 收藏写回偏好文件；失败静默降级，不影响绘制
    */
-  async writeRecentTiles(): Promise<void> {
-    const path = this.resolveRecentTilesPath();
+  async saveTilePreferences(): Promise<void> {
+    const path = MAP_TILE_PREFS_PATH;
 
-    if (path === undefined) return;
+    if (!isSafeProjectPath(path)) return;
 
-    const text = serializeTableText({ [MAP_RECENT_TILES_KEY]: this.store.state.recentTiles }, '');
+    const text = serializeTableText(
+      serializeTilePreferences({
+        recent: this.store.state.recentTiles,
+        frequent: this.preferenceCounts,
+        favorites: this.store.state.favorites ?? [],
+      }),
+      '',
+    );
 
     try {
-      const resource = await this.context.requestResource(path);
+      if (await this.hasProjectFile(path)) {
+        const resource = await this.context.requestResource(path);
 
-      if (resource !== null) {
-        await resource.write(text);
+        if (resource !== null) await resource.write(text);
         return;
       }
 
@@ -1004,12 +1061,62 @@ export class MapPanel implements IEditorPanel, IMapPanel {
   }
 
   /**
-   * 清空最近使用记录并写回文件；该动作不可撤销
+   * 记录一次落笔使用：同时更新「最近」与「最常」的次数并写盘；Tileset 分类组的编号直接忽略
+   *
+   * 次数表就在这里自增，`frequentTiles` 只是它排序后的展示结果；不置脏、不进撤销。
+   * @param number 本次落笔的主图块编号
+   */
+  private recordTileUse(number: number): void {
+    if (!this.collectRecentNumbers().has(number)) return;
+
+    this.preferenceCounts.set(number, (this.preferenceCounts.get(number) ?? 0) + 1);
+    this.recentToken += 1;
+    this.publish({
+      recentTiles: updateRecentTiles(this.store.state.recentTiles, number, MAP_RECENT_TILES_LIMIT),
+      frequentTiles: rankFrequentTiles(this.preferenceCounts, MAP_FREQUENT_LIMIT),
+    });
+    void this.saveTilePreferences();
+  }
+
+  /**
+   * 清空最近使用与最常使用并写回文件；收藏不动，该动作不可撤销
    */
   async clearRecentTiles(): Promise<void> {
     this.recentToken += 1;
-    this.publish({ recentTiles: [] });
-    await this.writeRecentTiles();
+    this.preferenceCounts.clear();
+    this.publish({ recentTiles: [], frequentTiles: [] });
+    await this.saveTilePreferences();
+  }
+
+  /**
+   * 选中擦除或某个收藏位：`0` 表示擦除，`1..9` 对应第 1..9 个收藏格
+   *
+   * 空位与擦除都发布空选择；只改视图状态，不置脏、不登记撤销。
+   * @param index 0..9 的收藏位索引
+   */
+  selectFavoriteSlot(index: number): void {
+    const favorites = this.store.state.favorites ?? [];
+    const number = index === 0 ? 0 : (favorites[index - 1] ?? 0);
+
+    this.paletteSelection =
+      number > 0
+        ? {
+            kind: MapPaletteKind.Tiles,
+            pattern: { width: 1, height: 1, tiles: [number] },
+            primaryTileNumber: number,
+          }
+        : createEmptyPaletteSelection();
+    this.publish({ paletteSelection: this.paletteSelection });
+  }
+
+  /**
+   * 把收藏从一格挪到另一格并写回文件；索引由模型夹取，只改视图状态，不置脏、不登记撤销
+   * @param from 起始槽位索引（0..8）
+   * @param to 目标槽位索引（0..8）
+   */
+  reorderFavorites(from: number, to: number): void {
+    this.publish({ favorites: reorderFavorite(this.store.state.favorites ?? [], from, to) });
+    void this.saveTilePreferences();
   }
 
   /**
@@ -1302,7 +1409,7 @@ export class MapPanel implements IEditorPanel, IMapPanel {
         notice: undefined,
       });
       this.refreshPassMarks();
-      void this.loadRecentTiles();
+      void this.loadTilePreferences();
 
       if (previousMapId !== undefined && previousMapId !== mapId) {
         this.registerBarrier({ action: MapBarrierAction.Switch, mapId });
@@ -1374,11 +1481,6 @@ export class MapPanel implements IEditorPanel, IMapPanel {
     const next = applyCellChanges(document, layerId, changes);
     const selection = this.paletteSelection;
     const recordsRecent = selection.kind !== MapPaletteKind.Empty && selection.primaryTileNumber > 0;
-    const recentTiles = recordsRecent
-      ? updateRecentTiles(this.store.state.recentTiles, selection.primaryTileNumber, MAP_RECENT_TILES_LIMIT)
-      : this.store.state.recentTiles;
-
-    if (recordsRecent) this.recentToken += 1;
 
     this.document = next;
     this.context.addUndoContext(this, {
@@ -1387,14 +1489,13 @@ export class MapPanel implements IEditorPanel, IMapPanel {
     });
     this.publish({
       document: next,
-      recentTiles,
       unsaved: this.computeUnsaved(),
       notice: undefined,
       error: undefined,
     });
     this.refreshPassMarks();
 
-    if (recordsRecent) void this.writeRecentTiles();
+    if (recordsRecent) this.recordTileUse(selection.primaryTileNumber);
   }
 
   /**
@@ -1441,7 +1542,11 @@ export class MapPanel implements IEditorPanel, IMapPanel {
 
       this.propertiesStatus = TablePanelStatus.Error;
       this.propertiesError = toErrorMessage(error);
-      this.publish({ propertiesStatus: this.propertiesStatus, propertyRows: [], propertiesError: this.propertiesError });
+      this.publish({
+        propertiesStatus: this.propertiesStatus,
+        propertyRows: [],
+        propertiesError: this.propertiesError,
+      });
     }
   }
 

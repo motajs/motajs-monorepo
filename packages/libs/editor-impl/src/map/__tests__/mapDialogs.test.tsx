@@ -3,17 +3,20 @@ import { EditorCore, IEditorPanel, IEditorPanelFactoryParam } from '@motajs/edit
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createMapPanelType, MAP_PANEL_TYPE_ID, MapPanel } from '..';
 import { MapLayerDialog, MapNewDialog, MapUnsavedDialog } from '../components/dialogs';
-import { MAP_RECENT_TILES_PATH } from '../constants';
+import { MAP_RECENT_TILES_PATH, MAP_TILE_PREFS_PATH } from '../constants';
 import {
   IMapDocument,
   IMapEditorCapabilities,
   IMapPanelViewState,
   IMapSummary,
+  IMapTileGroup,
   MapDialogKind,
+  MapImageStatus,
   MapPaletteKind,
+  MapTileCategory,
   MapUnsavedChoice,
 } from '../types';
-import { createMapDocument, createMapHarness, FakeFileSystem } from './fixtures';
+import { createMapDocument, createMapHarness, createTileGroup, FakeFileSystem } from './fixtures';
 
 configure({ testIdAttribute: 'data-test-id' });
 
@@ -126,14 +129,36 @@ function viewState(panel: MapPanel): IMapPanelViewState {
 }
 
 /**
- * 等待落笔触发的最近使用写盘走完，再读回文件内容
+ * 等待落笔触发的偏好写盘走完，再读回 `.editor/map-tiles.json` 的内容
  * @param fileSystem 内存文件系统
- * @returns 解析后的文件内容
+ * @returns 解析后的偏好文件内容
  */
-async function readRecentTilesFile(fileSystem: FakeFileSystem): Promise<unknown> {
-  const text = await fileSystem.readFile(MAP_RECENT_TILES_PATH);
+async function readPreferencesFile(fileSystem: FakeFileSystem): Promise<unknown> {
+  const text = await fileSystem.readFile(MAP_TILE_PREFS_PATH);
 
   return JSON.parse(text);
+}
+
+/**
+ * 造一个只含 Tileset 分类组的图块分组，编号 101..104
+ * @returns Tileset 分类的图块分组
+ */
+function createTilesetGroup(): IMapTileGroup {
+  const base = createTileGroup({ id: 'group-tileset', name: '整图', imagePath: 'content/map/tileset.png' });
+  const tiles = base.tiles.map((tile, index) => ({ ...tile, number: 101 + index }));
+
+  return { ...base, tiles, category: MapTileCategory.Tileset };
+}
+
+/**
+ * 造一张除普通图块外还带 Tileset 分类组的地图
+ * @param mapId 地图标识
+ * @returns 带 Tileset 分类组的空格子文档
+ */
+function createTilesetDocument(mapId: string): IMapDocument {
+  const base = createEmptyDocument(mapId);
+
+  return { ...base, tileGroups: [...base.tileGroups, createTilesetGroup()] };
 }
 
 /**
@@ -646,59 +671,136 @@ describe('面板：未保存确认', () => {
   });
 });
 
-describe('面板：最近使用图块', () => {
-  // 打开地图后从项目内约定文件读出列表，顺序保留
+describe('面板：图块偏好与最近使用', () => {
+  // 新偏好文件存在时按 `{ recent, frequent, favorites }` 读入，最近列表顺序保留
   it('打开地图后读出预置的最近使用列表', async () => {
     const fileSystem = new FakeFileSystem();
 
-    fileSystem.seed(MAP_RECENT_TILES_PATH, JSON.stringify({ tiles: [2, 1] }));
+    fileSystem.seed(MAP_TILE_PREFS_PATH, JSON.stringify({ recent: [2, 1], frequent: { '2': 3 }, favorites: [2] }));
 
     const { panel } = await openMapPanel(createCapabilities(), fileSystem);
 
     await waitFor(() => expect(viewState(panel).recentTiles).toEqual([2, 1]));
+    expect(viewState(panel).frequentTiles).toEqual([2]);
+    expect(viewState(panel).favorites).toEqual([2, 0, 0, 0, 0, 0, 0, 0, 0]);
+    expect(viewState(panel).recentStatus).toBe(MapImageStatus.Ready);
   });
 
-  // 文件不存在时按空列表处理，不抛错
-  it('文件缺失时按空列表处理', async () => {
+  // 两条文件都不存在时按空的正常路径处理，最近使用不再停在加载态
+  it('文件缺失时按空列表处理且状态为就绪', async () => {
     const { panel } = await openMapPanel(createCapabilities());
 
-    await expect(panel.loadRecentTiles()).resolves.toBeUndefined();
+    await expect(panel.loadTilePreferences()).resolves.toBeUndefined();
     expect(viewState(panel).recentTiles).toEqual([]);
+    expect(viewState(panel).frequentTiles).toEqual([]);
+    expect(viewState(panel).recentStatus).toBe(MapImageStatus.Ready);
   });
 
-  // 文件内容损坏时按空列表处理
+  // 文件内容损坏时按空偏好处理，不抛错
   it('文件损坏时按空列表处理', async () => {
     const fileSystem = new FakeFileSystem();
 
-    fileSystem.seed(MAP_RECENT_TILES_PATH, '这不是 JSON');
+    fileSystem.seed(MAP_TILE_PREFS_PATH, '这不是 JSON');
 
     const { panel } = await openMapPanel(createCapabilities(), fileSystem);
 
-    await panel.loadRecentTiles();
+    await panel.loadTilePreferences();
 
     expect(viewState(panel).recentTiles).toEqual([]);
+    expect(viewState(panel).recentStatus).toBe(MapImageStatus.Ready);
   });
 
-  // 落笔成功后把主图块写回文件，内容是 1×1 的编号列表
-  it('落笔成功后写回主图块', async () => {
+  // 读取抛错时发布错误态，最近使用不再一直显示正在加载
+  it('读取抛错后状态为失败', async () => {
+    const fileSystem = new FakeFileSystem();
+
+    fileSystem.seed(MAP_TILE_PREFS_PATH, JSON.stringify({ recent: [1], frequent: {}, favorites: [] }));
+    fileSystem.failing.add(MAP_TILE_PREFS_PATH);
+
+    const { panel } = await openMapPanel(createCapabilities(), fileSystem);
+
+    await waitFor(() => expect(viewState(panel).recentStatus).toBe(MapImageStatus.Error));
+  });
+
+  // 新文件不存在时只读一次旧文件做迁移，旧文件不会被删除
+  it('旧版最近使用文件被迁移且保留原文件', async () => {
+    const fileSystem = new FakeFileSystem();
+
+    fileSystem.seed(MAP_RECENT_TILES_PATH, JSON.stringify({ tiles: [3, 2] }));
+
+    const { panel } = await openMapPanel(createCapabilities(), fileSystem);
+
+    await waitFor(() => expect(viewState(panel).recentTiles).toEqual([3, 2]));
+    expect(viewState(panel).recentStatus).toBe(MapImageStatus.Ready);
+    expect(viewState(panel).frequentTiles).toEqual([]);
+    expect(JSON.parse(await fileSystem.readFile(MAP_RECENT_TILES_PATH))).toEqual({ tiles: [3, 2] });
+  });
+
+  // 新文件存在时优先于旧文件，不做迁移
+  it('新文件优先于旧文件', async () => {
+    const fileSystem = new FakeFileSystem();
+
+    fileSystem.seed(MAP_RECENT_TILES_PATH, JSON.stringify({ tiles: [3] }));
+    fileSystem.seed(MAP_TILE_PREFS_PATH, JSON.stringify({ recent: [1], frequent: {}, favorites: [] }));
+
+    const { panel } = await openMapPanel(createCapabilities(), fileSystem);
+
+    await waitFor(() => expect(viewState(panel).recentTiles).toEqual([1]));
+  });
+
+  // 落笔成功后同时写最近与最常，收藏保持 9 格空位
+  it('落笔成功后同时写回最近与最常', async () => {
     const fileSystem = new FakeFileSystem();
     const { panel } = await openMapPanel(createCapabilities(), fileSystem);
 
     paintOneCell(panel);
 
-    await waitFor(async () => expect(await readRecentTilesFile(fileSystem)).toEqual({ tiles: [1] }));
+    await waitFor(async () =>
+      expect(await readPreferencesFile(fileSystem)).toEqual({
+        recent: [1],
+        frequent: { '1': 1 },
+        favorites: [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      }),
+    );
   });
 
-  // 同一编号连续用两次只留一条
-  it('同一编号只留一条', async () => {
+  // 同一编号连续用两次只留一条最近记录，次数累加到 2
+  it('同一编号只留一条且次数累加', async () => {
     const fileSystem = new FakeFileSystem();
     const { panel } = await openMapPanel(createCapabilities(), fileSystem);
 
     paintOneCell(panel);
     panel.commitCells('layer-base', [{ x: 1, y: 0, value: 1 }]);
 
-    await waitFor(async () => expect(await readRecentTilesFile(fileSystem)).toEqual({ tiles: [1] }));
+    await waitFor(async () =>
+      expect(await readPreferencesFile(fileSystem)).toEqual({
+        recent: [1],
+        frequent: { '1': 2 },
+        favorites: [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      }),
+    );
     expect(viewState(panel).recentTiles).toEqual([1]);
+    expect(viewState(panel).frequentTiles).toEqual([1]);
+  });
+
+  // 次数表来自读盘：预置的 3 次在落笔一次后变成 4 次
+  it('落笔在已读入的次数上自增', async () => {
+    const fileSystem = new FakeFileSystem();
+
+    fileSystem.seed(MAP_TILE_PREFS_PATH, JSON.stringify({ recent: [2], frequent: { '2': 3 }, favorites: [] }));
+
+    const { panel } = await openMapPanel(createCapabilities(), fileSystem);
+
+    await waitFor(() => expect(viewState(panel).frequentTiles).toEqual([2]));
+
+    panel['paletteSelection'] = {
+      kind: MapPaletteKind.Tiles,
+      pattern: { width: 1, height: 1, tiles: [2] },
+      primaryTileNumber: 2,
+    };
+    panel.commitCells('layer-base', [{ x: 1, y: 0, value: 2 }]);
+
+    await waitFor(async () => expect(await readPreferencesFile(fileSystem)).toMatchObject({ frequent: { '2': 4 } }));
   });
 
   // 用「空」擦除时不更新最近使用
@@ -707,7 +809,7 @@ describe('面板：最近使用图块', () => {
     const { panel } = await openMapPanel(createCapabilities(), fileSystem);
 
     paintOneCell(panel);
-    await waitFor(async () => expect(await readRecentTilesFile(fileSystem)).toEqual({ tiles: [1] }));
+    await waitFor(async () => expect(await readPreferencesFile(fileSystem)).toMatchObject({ recent: [1] }));
 
     panel['paletteSelection'] = {
       kind: MapPaletteKind.Empty,
@@ -717,21 +819,26 @@ describe('面板：最近使用图块', () => {
     panel.commitCells('layer-base', [{ x: 0, y: 0, value: 0 }]);
 
     expect(viewState(panel).recentTiles).toEqual([1]);
-    expect(await readRecentTilesFile(fileSystem)).toEqual({ tiles: [1] });
+    expect(await readPreferencesFile(fileSystem)).toMatchObject({ recent: [1], frequent: { '1': 1 } });
   });
 
-  // 清除记录后文件内容变成空列表
+  // 清除记录只清最近与最常，收藏不动
   it('清除记录后写回空列表', async () => {
     const fileSystem = new FakeFileSystem();
     const { panel } = await openMapPanel(createCapabilities(), fileSystem);
 
     paintOneCell(panel);
-    await waitFor(async () => expect(await readRecentTilesFile(fileSystem)).toEqual({ tiles: [1] }));
+    await waitFor(async () => expect(await readPreferencesFile(fileSystem)).toMatchObject({ recent: [1] }));
 
     await panel.clearRecentTiles();
 
     expect(viewState(panel).recentTiles).toEqual([]);
-    expect(await readRecentTilesFile(fileSystem)).toEqual({ tiles: [] });
+    expect(viewState(panel).frequentTiles).toEqual([]);
+    expect(await readPreferencesFile(fileSystem)).toEqual({
+      recent: [],
+      frequent: {},
+      favorites: [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    });
   });
 
   // 写文件失败时静默降级：文档仍被改、未保存仍出现，也没有未捕获的拒绝
@@ -739,12 +846,92 @@ describe('面板：最近使用图块', () => {
     const fileSystem = new FakeFileSystem();
     const { panel } = await openMapPanel(createCapabilities(), fileSystem);
 
-    fileSystem.failing.add(MAP_RECENT_TILES_PATH);
+    fileSystem.failing.add(MAP_TILE_PREFS_PATH);
     paintOneCell(panel);
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
 
     expect(viewState(panel).document?.layers[0].cells[0][0]).toBe(1);
     expect(viewState(panel).unsaved).toBe(true);
-    await expect(fileSystem.readFile(MAP_RECENT_TILES_PATH)).rejects.toThrow();
+    await expect(fileSystem.readFile(MAP_TILE_PREFS_PATH)).rejects.toThrow();
+  });
+
+  // Tileset 分类的编号既不进最近也不进最常
+  it('Tileset 编号不进最近与最常', async () => {
+    const fileSystem = new FakeFileSystem();
+    const openMap = async (mapId: string): Promise<IMapDocument> => createTilesetDocument(mapId);
+    const { panel } = await openMapPanel(createCapabilities({ openMap }), fileSystem);
+
+    panel['paletteSelection'] = {
+      kind: MapPaletteKind.Tiles,
+      pattern: { width: 1, height: 1, tiles: [101] },
+      primaryTileNumber: 101,
+    };
+    panel.commitCells('layer-base', [{ x: 0, y: 0, value: 101 }]);
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+    expect(viewState(panel).recentTiles).toEqual([]);
+    expect(viewState(panel).frequentTiles).toEqual([]);
+    await expect(fileSystem.readFile(MAP_TILE_PREFS_PATH)).rejects.toThrow();
+  });
+
+  // 读盘后收藏固定补齐到 9 格
+  it('读盘后收藏固定为 9 格', async () => {
+    const fileSystem = new FakeFileSystem();
+
+    fileSystem.seed(MAP_TILE_PREFS_PATH, JSON.stringify({ recent: [], frequent: {}, favorites: [1, 2] }));
+
+    const { panel } = await openMapPanel(createCapabilities(), fileSystem);
+
+    await waitFor(() => expect(viewState(panel).favorites).toEqual([1, 2, 0, 0, 0, 0, 0, 0, 0]));
+  });
+
+  // 选中收藏位与擦除只改视图状态：不置脏、不进撤销
+  it('选中收藏位与擦除只改视图状态', async () => {
+    const fileSystem = new FakeFileSystem();
+
+    fileSystem.seed(MAP_TILE_PREFS_PATH, JSON.stringify({ recent: [], frequent: {}, favorites: [1, 2] }));
+
+    const { system, panel } = await openMapPanel(createCapabilities(), fileSystem);
+    const addUndo = vi.spyOn(system.undoSystem, 'addUndoContext');
+
+    await waitFor(() => expect(viewState(panel).favorites).toEqual([1, 2, 0, 0, 0, 0, 0, 0, 0]));
+
+    panel.selectFavoriteSlot(2);
+
+    expect(viewState(panel).paletteSelection.kind).toBe(MapPaletteKind.Tiles);
+    expect(viewState(panel).paletteSelection.primaryTileNumber).toBe(2);
+
+    panel.selectFavoriteSlot(0);
+
+    expect(viewState(panel).paletteSelection.kind).toBe(MapPaletteKind.Empty);
+    expect(viewState(panel).paletteSelection.primaryTileNumber).toBe(0);
+
+    panel.selectFavoriteSlot(5);
+
+    expect(viewState(panel).paletteSelection.kind).toBe(MapPaletteKind.Empty);
+    expect(viewState(panel).unsaved).toBe(false);
+    expect(panel.isDirty()).toBe(false);
+    expect(addUndo).not.toHaveBeenCalled();
+  });
+
+  // 收藏排序落盘，且不置脏、不进撤销
+  it('收藏排序落盘且不置脏', async () => {
+    const fileSystem = new FakeFileSystem();
+
+    fileSystem.seed(MAP_TILE_PREFS_PATH, JSON.stringify({ recent: [], frequent: {}, favorites: [1, 2, 3] }));
+
+    const { system, panel } = await openMapPanel(createCapabilities(), fileSystem);
+    const addUndo = vi.spyOn(system.undoSystem, 'addUndoContext');
+
+    await waitFor(() => expect(viewState(panel).favorites?.[0]).toBe(1));
+
+    panel.reorderFavorites(0, 2);
+
+    expect(viewState(panel).favorites).toEqual([2, 3, 1, 0, 0, 0, 0, 0, 0]);
+    await waitFor(async () =>
+      expect(await readPreferencesFile(fileSystem)).toMatchObject({ favorites: [2, 3, 1, 0, 0, 0, 0, 0, 0] }),
+    );
+    expect(viewState(panel).unsaved).toBe(false);
+    expect(addUndo).not.toHaveBeenCalled();
   });
 });
