@@ -3,7 +3,12 @@ import { useStore } from '@tanstack/react-store';
 import { Store } from '@tanstack/store';
 import { Button, Spin } from 'antd';
 import { ReactElement, useEffect, useState } from 'react';
-import { MAP_VIEWPORT_DEFAULT_COLUMNS, MAP_VIEWPORT_DEFAULT_ROWS, MAP_ZOOM_DEFAULT } from '../constants';
+import {
+  MAP_PALETTE_BASE_WIDTH,
+  MAP_VIEWPORT_DEFAULT_COLUMNS,
+  MAP_VIEWPORT_DEFAULT_ROWS,
+  MAP_ZOOM_DEFAULT,
+} from '../constants';
 import { IPaintWrite, isTileCatalogEmpty } from '../model/document';
 import { resolveMapLayout } from '../model/layout';
 import { buildMapRenderModel } from '../model/renderModel';
@@ -12,15 +17,14 @@ import {
   IMapCreateRequest,
   IMapDocument,
   IMapLayer,
+  IMapLayout,
   IMapPaletteSelection,
   IMapPanelViewState,
   IMapRect,
   IMapSizeLimit,
-  IMapTileGroup,
   MapBottomTab,
   MapBrushMode,
   MapDialogKind,
-  MapImageStatus,
   MapPanelStatus,
   MapTileCategory,
   MapUnsavedChoice,
@@ -28,7 +32,6 @@ import {
 import { MapCanvas } from './MapCanvas';
 import { MapLayerDialog, MapNewDialog, MapUnsavedDialog } from './dialogs';
 import { MapEmptyState } from './MapEmptyState';
-import { MapPalette } from './MapPalette';
 import { MapPropertiesDrawer } from './MapPropertiesDrawer';
 import { MapToolbar } from './MapToolbar';
 import { IMapTileGroupUrls, useMapTileGroupUrls } from './useMapObjectUrl';
@@ -275,31 +278,20 @@ function statusToken(status: MapPanelStatus): string {
 }
 
 /**
- * 把各分组的图片状态归纳成一个整体状态：全部失败才算失败，还有分组在读取就算读取中
- * @param groups 当前文档的图块分组
- * @param status 分组标识 → 图片读取状态
- * @returns 调色板要显示的整体图片状态
+ * 按当前视图状态算一次布局；还没有打开地图时返回 undefined
+ *
+ * 布局数字只来自 `resolveMapLayout`，视图不自己算右栏宽度与画布像素。
+ * @param view 当前视图状态
+ * @returns 布局；未打开地图时为 undefined
  */
-function resolvePaletteImageStatus(
-  groups: readonly IMapTileGroup[],
-  status: Readonly<Record<string, MapImageStatus>>,
-): MapImageStatus {
-  if (groups.length === 0) return MapImageStatus.Ready;
+function resolveViewLayout(view: IMapPanelViewState): IMapLayout | undefined {
+  if (view.document === undefined) return undefined;
 
-  let hasLoading = false;
-  let allError = true;
-
-  for (const group of groups) {
-    const current = status[group.id] ?? MapImageStatus.Loading;
-
-    if (current === MapImageStatus.Loading) hasLoading = true;
-    if (current !== MapImageStatus.Error) allError = false;
-  }
-
-  if (allError) return MapImageStatus.Error;
-  if (hasLoading) return MapImageStatus.Loading;
-
-  return MapImageStatus.Ready;
+  return resolveMapLayout(view.document, {
+    zoom: view.zoom ?? MAP_ZOOM_DEFAULT,
+    viewportColumns: view.viewportColumns ?? MAP_VIEWPORT_DEFAULT_COLUMNS,
+    viewportRows: view.viewportRows ?? MAP_VIEWPORT_DEFAULT_ROWS,
+  });
 }
 
 /**
@@ -354,7 +346,9 @@ function renderErrorBody(error: string | undefined, onRetry: () => void): ReactE
 }
 
 /**
- * 渲染就绪态的画布区与图块调色板；渲染模型在这里现算，画布只把本地叠加状态补进模型交给 Pixi 表面
+ * 渲染就绪态的地图区；渲染模型在这里现算，画布只把本地叠加状态补进模型交给 Pixi 表面
+ *
+ * 画布尺寸与格像素都来自 `resolveMapLayout`，渲染模型吃同一个 `zoom`，两边得到同一个格像素。
  * @param input 主体渲染输入
  * @returns 就绪态主体元素
  */
@@ -364,13 +358,11 @@ function renderReadyBody(input: IMapPanelBodyProps): ReactElement {
 
   if (document === undefined) return renderLoadingBody();
 
-  // 画布尺寸只由布局算出（视口格数 × 缩放后格像素）；缩放经 `zoom` 交给渲染模型，两边必须是同一份值
   const zoom = view.zoom ?? MAP_ZOOM_DEFAULT;
-  const layout = resolveMapLayout(document, {
-    zoom,
-    viewportColumns: view.viewportColumns ?? MAP_VIEWPORT_DEFAULT_COLUMNS,
-    viewportRows: view.viewportRows ?? MAP_VIEWPORT_DEFAULT_ROWS,
-  });
+  const layout = resolveViewLayout(view);
+
+  if (layout === undefined) return renderLoadingBody();
+
   const model = buildMapRenderModel(document, {
     width: layout.canvasWidth,
     height: layout.canvasHeight,
@@ -418,20 +410,6 @@ function renderReadyBody(input: IMapPanelBodyProps): ReactElement {
         onSetViewport={input.props.onSetViewport ?? noop}
         onToggleBigMap={toggleBigMap}
       />
-      <div className="emap-palette-slot">
-        <MapPalette
-          groups={document.tileGroups}
-          groupUrls={input.groupImages.urls}
-          groupStatus={input.groupImages.status}
-          imageStatus={resolvePaletteImageStatus(document.tileGroups, input.groupImages.status)}
-          selection={view.paletteSelection}
-          recentTiles={view.recentTiles}
-          recentStatus={view.recentStatus}
-          onSelectPattern={input.props.onSelectPattern ?? noop}
-          onRetryImages={input.props.onRetryImages ?? noop}
-          onClearRecent={input.props.onClearRecent ?? noop}
-        />
-      </div>
     </div>
   );
 }
@@ -511,74 +489,86 @@ export function MapPanelView(props: IMapPanelViewProps): ReactElement {
   const layerNames = layers.map((layer, index) => resolveLayerName(layer, index));
   const tileGroups = document?.tileGroups;
   const groupImages = useMapTileGroupUrls(tileGroups, props.loadTileBytes, view.paletteVersion);
+  const layout = resolveViewLayout(view);
+  const sideWidth = layout === undefined ? MAP_PALETTE_BASE_WIDTH : layout.paletteWidth;
 
   return (
-    <div className="emap-panel" data-test-id="map-panel" data-status={statusToken(view.status)}>
-      <MapToolbar
-        status={view.status}
-        mapSummaries={view.summaries}
-        currentMapId={currentMapId}
-        canCreateMap={props.canCreateMap ?? false}
-        canOpenProperties={props.canOpenProperties ?? false}
-        unsaved={view.unsaved}
-        saving={view.saving}
-        onSelectMap={(mapId): void => props.onSelectMap?.(mapId)}
-        onOpenCreate={(): void => props.onOpenDialog?.(MapDialogKind.New)}
-        onOpenProperties={(): void => props.onOpenProperties?.()}
-        onSave={props.onSave}
-        onRetry={props.onRetry}
-        showEditRow={showEditRow}
-        layers={layers}
-        currentLayerId={view.currentLayerId}
-        canAddLayer={props.canAddLayer ?? false}
-        brushMode={view.brushMode}
-        passabilityVisible={view.passabilityVisible}
-        bigMap={view.bigMap}
-        onSelectLayer={(layerId): void => {
-          if (props.onSelectLayer !== undefined) {
-            props.onSelectLayer(layerId);
-            return;
-          }
+    <div
+      className={narrow ? 'emap-panel is-narrow' : 'emap-panel'}
+      data-test-id="map-panel"
+      data-status={statusToken(view.status)}
+    >
+      <div className="emap-main" data-test-id="map-main">
+        <MapToolbar
+          status={view.status}
+          mapSummaries={view.summaries}
+          currentMapId={currentMapId}
+          canCreateMap={props.canCreateMap ?? false}
+          canOpenProperties={props.canOpenProperties ?? false}
+          unsaved={view.unsaved}
+          saving={view.saving}
+          onSelectMap={(mapId): void => props.onSelectMap?.(mapId)}
+          onOpenCreate={(): void => props.onOpenDialog?.(MapDialogKind.New)}
+          onOpenProperties={(): void => props.onOpenProperties?.()}
+          onSave={props.onSave}
+          onRetry={props.onRetry}
+          showEditRow={showEditRow}
+          layers={layers}
+          currentLayerId={view.currentLayerId}
+          canAddLayer={props.canAddLayer ?? false}
+          brushMode={view.brushMode}
+          passabilityVisible={view.passabilityVisible}
+          bigMap={view.bigMap}
+          onSelectLayer={(layerId): void => {
+            if (props.onSelectLayer !== undefined) {
+              props.onSelectLayer(layerId);
+              return;
+            }
 
-          props.store.setState({ ...props.store.state, currentLayerId: layerId });
-        }}
-        onOpenAddLayer={(): void => props.onOpenDialog?.(MapDialogKind.Layer)}
-        aboveLayerOpacity={view.aboveLayerOpacity}
-        onAboveLayerOpacityChange={(value): void => {
-          if (props.onAboveLayerOpacityChange !== undefined) {
-            props.onAboveLayerOpacityChange(value);
-            return;
-          }
+            props.store.setState({ ...props.store.state, currentLayerId: layerId });
+          }}
+          onOpenAddLayer={(): void => props.onOpenDialog?.(MapDialogKind.Layer)}
+          aboveLayerOpacity={view.aboveLayerOpacity}
+          onAboveLayerOpacityChange={(value): void => {
+            if (props.onAboveLayerOpacityChange !== undefined) {
+              props.onAboveLayerOpacityChange(value);
+              return;
+            }
 
-          props.store.setState({ ...props.store.state, aboveLayerOpacity: value });
-        }}
-        onSelectBrushMode={(mode): void => {
-          if (props.onSelectBrushMode !== undefined) {
-            props.onSelectBrushMode(mode);
-            return;
-          }
+            props.store.setState({ ...props.store.state, aboveLayerOpacity: value });
+          }}
+          onSelectBrushMode={(mode): void => {
+            if (props.onSelectBrushMode !== undefined) {
+              props.onSelectBrushMode(mode);
+              return;
+            }
 
-          props.store.setState({ ...props.store.state, brushMode: mode });
-        }}
-        onTogglePassability={(value): void => {
-          if (props.onTogglePassability !== undefined) {
-            props.onTogglePassability(value);
-            return;
-          }
+            props.store.setState({ ...props.store.state, brushMode: mode });
+          }}
+          onTogglePassability={(value): void => {
+            if (props.onTogglePassability !== undefined) {
+              props.onTogglePassability(value);
+              return;
+            }
 
-          props.store.setState({ ...props.store.state, passabilityVisible: value });
-        }}
-        onToggleBigMap={(value): void => {
-          if (props.onToggleBigMap !== undefined) {
-            props.onToggleBigMap(value);
-            return;
-          }
+            props.store.setState({ ...props.store.state, passabilityVisible: value });
+          }}
+          onToggleBigMap={(value): void => {
+            if (props.onToggleBigMap !== undefined) {
+              props.onToggleBigMap(value);
+              return;
+            }
 
-          props.store.setState({ ...props.store.state, bigMap: value });
-        }}
-      />
-      <MapPanelBody props={props} view={view} narrow={narrow} groupImages={groupImages} />
-      {renderNotice({ view, onRetry: props.onSave })}
+            props.store.setState({ ...props.store.state, bigMap: value });
+          }}
+        />
+        <MapPanelBody props={props} view={view} narrow={narrow} groupImages={groupImages} />
+        <div className="emap-bottom" data-test-id="map-bottom" />
+        {renderNotice({ view, onRetry: props.onSave })}
+      </div>
+      <div className="emap-side" data-test-id="map-sidebar" style={narrow ? undefined : { width: sideWidth }}>
+        <div className="emap-side-slot" />
+      </div>
       {view.dialog === MapDialogKind.New ? (
         <MapNewDialog
           open
