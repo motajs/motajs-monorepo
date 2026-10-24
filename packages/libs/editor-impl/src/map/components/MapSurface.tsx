@@ -150,11 +150,14 @@ function loadImageElement(url: string): Promise<HTMLImageElement> {
 }
 
 /**
- * 收集渲染模型里出现过的图片路径，按首次出现顺序去重
+ * 收集要读取的图片路径，按首次出现顺序去重
+ *
+ * 普通模式只读这一帧出现的图块；大地图没有逐格格子，缩略纹理直接按文档目录铺内容，因此补上目录里的图片。
  * @param model 渲染模型
+ * @param mapDocument 当前地图文档；大地图缩略纹理要用它的图块目录
  * @returns 图片路径列表
  */
-function collectImagePaths(model: IMapRenderModel): string[] {
+function collectImagePaths(model: IMapRenderModel, mapDocument: IMapDocument | undefined): string[] {
   const paths: string[] = [];
   const seen: Set<string> = new Set();
 
@@ -165,6 +168,15 @@ function collectImagePaths(model: IMapRenderModel): string[] {
 
     seen.add(path);
     paths.push(path);
+  }
+
+  if (model.thumbnail === undefined || mapDocument === undefined) return paths;
+
+  for (const group of mapDocument.tileGroups) {
+    if (seen.has(group.imagePath)) continue;
+
+    seen.add(group.imagePath);
+    paths.push(group.imagePath);
   }
 
   return paths;
@@ -1248,7 +1260,7 @@ export function MapSurface(props: IMapSurfaceProps): ReactElement {
         failedRef.current.add(path);
       });
   };
-  const imagePaths = collectImagePaths(props.model);
+  const imagePaths = collectImagePaths(props.model, props.document);
 
   return (
     <div
