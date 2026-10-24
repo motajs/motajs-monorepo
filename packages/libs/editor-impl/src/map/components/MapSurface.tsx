@@ -1,22 +1,27 @@
-import { Application, Container, Graphics, Rectangle, Sprite, Texture } from 'pixi.js';
+import { Application, Container, Graphics, Rectangle, Sprite, Texture, UPDATE_PRIORITY } from 'pixi.js';
 import { ReactElement, useEffect, useRef, useState } from 'react';
-import { MAP_PASS_COLOR_UP } from '../constants';
+import { MAP_FRAME_SPEED_DEFAULT, MAP_PASS_COLOR_UP } from '../constants';
 import { resolvePreviewCellRects } from '../model/cellMetrics';
 import { resolvePassArrowColor } from '../model/passability';
+import { resolveCellFrame, resolveFrameRect, resolveFrameTickAt } from '../model/tileFrame';
 import {
   IMapCellPosition,
   IMapDocument,
+  IMapFrameInfo,
   IMapPassMark,
   IMapRect,
   IMapRenderCell,
   IMapRenderModel,
+  IMapTileCrop,
   MapDirection,
+  MapFrameAxis,
 } from '../types';
 import { useMapObjectUrl } from './useMapObjectUrl';
 
 // 唯一 import pixi.js 的文件：把渲染模型画成占位格 / 图块 / 网格 / 通行度标记。
 // Pixi 应用、场景与纹理表都挂在组件实例的 ref 上，卸载时销毁；模块顶层没有任何可变缓存。
 // 定位只用模型给出的度量：普通模式是 `viewport` + 缩放后的格尺寸，大地图模式是缩略比例与偏移。
+// 动画只有一个时钟：ticker 的累计毫秒交给 `resolveFrameTickAt` 换全局帧号，只有动画格换帧。
 
 /** 读取图片字节的回调 */
 type MapBytesLoader = (path: string) => Promise<Uint8Array | undefined>;
@@ -249,30 +254,251 @@ function createPlaceholder(cell: IMapRenderCell): Graphics {
 }
 
 /**
- * 用一张图块纹理造出裁切后的精灵
+ * 造一张按裁切矩形取景的纹理：共享源图像素，不复制、不重新解码
+ * @param texture 图集纹理
+ * @param crop 源图上的裁切矩形
+ * @returns 裁切后的纹理
+ */
+function createCropTexture(texture: Texture, crop: IMapTileCrop): Texture {
+  return new Texture({ source: texture.source, frame: new Rectangle(crop.x, crop.y, crop.width, crop.height) });
+}
+
+/**
+ * 取一格当前该显示的帧号：`defaultFrame >= 0` 固定帧，否则从第 0 帧起步
+ * @param cell 渲染格
+ * @returns 帧号（0 基）
+ */
+function resolveInitialFrame(cell: IMapRenderCell): number {
+  return resolveCellFrame(cell.defaultFrame, 0, cell.frameCount);
+}
+
+/**
+ * 判断一格是否要跟着动画时钟换帧：帧数大于 1 且没有固定帧
+ * @param cell 渲染格
+ * @returns 需要换帧时为 true
+ */
+function isAnimatedCell(cell: IMapRenderCell): boolean {
+  const count = cell.frameCount ?? 1;
+
+  if (count <= 1) return false;
+
+  const fixed = cell.defaultFrame;
+
+  return fixed === undefined || fixed < 0;
+}
+
+/**
+ * 只沿横向平移一个裁切矩形（自动元件的帧是整块横向排列）
+ * @param crop 原裁切矩形
+ * @param shift 横向平移量（源图像素）
+ * @returns 平移后的裁切矩形
+ */
+function shiftCropX(crop: IMapTileCrop, shift: number): IMapTileCrop {
+  if (shift === 0) return crop;
+
+  return { x: crop.x + shift, y: crop.y, width: crop.width, height: crop.height };
+}
+
+/**
+ * 算自动元件某一帧的四块源图矩形
+ *
+ * `resolveAutotileQuarters` 只给第 0 帧，多帧时四块要一起按 `frameIndex × frameStride` 横向平移。
+ * @param cell 渲染格
+ * @param frame 帧号
+ * @returns 左上 / 右上 / 右下 / 左下四块裁切；不是自动元件时为 undefined
+ */
+function resolveAutotileFrameCrops(cell: IMapRenderCell, frame: number): readonly IMapTileCrop[] | undefined {
+  const quarters = cell.autotileQuarters;
+
+  if (quarters === undefined) return undefined;
+
+  const stride = cell.frameStride ?? 0;
+  const shift = cell.frameAxis === MapFrameAxis.X ? frame * stride : 0;
+
+  return [
+    shiftCropX(quarters.lt, shift),
+    shiftCropX(quarters.rt, shift),
+    shiftCropX(quarters.rb, shift),
+    shiftCropX(quarters.lb, shift),
+  ];
+}
+
+/**
+ * 算一格在某一帧要用的全部裁切矩形：普通格一张，自动元件四块（按 lt → rt → rb → lb）
+ * @param cell 渲染格
+ * @param frame 帧号
+ * @returns 裁切矩形；拿不到裁切时为空数组
+ */
+function resolveCellFrameCrops(cell: IMapRenderCell, frame: number): readonly IMapTileCrop[] {
+  const quarters = resolveAutotileFrameCrops(cell, frame);
+
+  if (quarters !== undefined) return quarters;
+
+  const base = cell.crop;
+
+  if (base === undefined) return [];
+
+  if (cell.frameAxis === undefined || cell.frameStride === undefined || cell.frameCount === undefined) return [base];
+
+  const info: IMapFrameInfo = { axis: cell.frameAxis, stride: cell.frameStride, count: cell.frameCount, base };
+
+  return [resolveFrameRect(info, frame, cell.frameColumns)];
+}
+
+/**
+ * 取某一帧的裁切纹理，按 `key:帧号` 缓存在组件 ref 的 Map 里（模块顶层没有任何缓存）
  * @param texture 图集纹理
  * @param cell 渲染格
- * @param frames 本次绘制的临时裁切纹理收集处
- * @returns 定位好的精灵
+ * @param frame 帧号
+ * @param cache `key:帧号` → 该帧的裁切纹理
+ * @returns 该帧的裁切纹理：普通格 1 张、自动元件 4 张
  */
-function createCellSprite(texture: Texture, cell: IMapRenderCell, frames: Texture[]): Sprite {
-  const crop = cell.crop;
-  let frame = texture;
+function resolveFrameTextures(
+  texture: Texture,
+  cell: IMapRenderCell,
+  frame: number,
+  cache: Map<string, readonly Texture[]>,
+): readonly Texture[] {
+  const cacheKey = `${cell.key}:${frame}`;
+  const cached = cache.get(cacheKey);
 
-  if (crop !== undefined) {
-    frame = new Texture({ source: texture.source, frame: new Rectangle(crop.x, crop.y, crop.width, crop.height) });
-    frames.push(frame);
+  if (cached !== undefined) return cached;
+
+  const textures = resolveCellFrameCrops(cell, frame).map((crop) => createCropTexture(texture, crop));
+
+  cache.set(cacheKey, textures);
+  return textures;
+}
+
+/**
+ * 用一组裁切纹理造这一格的精灵：普通格一张铺满格子，自动元件四块铺满四个象限
+ * @param cell 渲染格
+ * @param textures 该帧的裁切纹理
+ * @returns 按添加顺序排好的精灵（自动元件为 lt → rt → rb → lb）
+ */
+function createCellSprites(cell: IMapRenderCell, textures: readonly Texture[]): Sprite[] {
+  const first = textures[0];
+
+  if (first === undefined) return [];
+
+  if (textures.length === 1) {
+    const sprite = new Sprite(first);
+
+    sprite.x = cell.x;
+    sprite.y = cell.y;
+    sprite.width = cell.width;
+    sprite.height = cell.height;
+    sprite.alpha = cell.opacity;
+    sprite.label = cell.key;
+    return [sprite];
   }
 
-  const sprite = new Sprite(frame);
+  const halfWidth = cell.width / 2;
+  const halfHeight = cell.height / 2;
+  const sprites: Sprite[] = [];
 
-  sprite.x = cell.x;
-  sprite.y = cell.y;
-  sprite.width = cell.width;
-  sprite.height = cell.height;
-  sprite.alpha = cell.opacity;
-  sprite.label = cell.key;
-  return sprite;
+  for (let index = 0; index < textures.length; index += 1) {
+    const sprite = new Sprite(textures[index]);
+
+    sprite.x = cell.x + (index === 1 || index === 2 ? halfWidth : 0);
+    sprite.y = cell.y + (index >= 2 ? halfHeight : 0);
+    sprite.width = halfWidth;
+    sprite.height = halfHeight;
+    sprite.alpha = cell.opacity;
+    sprite.label = `${cell.key}:${index}`;
+    sprites.push(sprite);
+  }
+
+  return sprites;
+}
+
+/**
+ * 把某一帧的裁切纹理换到已经在画布上的精灵上：静态格不受影响，只有动画格会走到这里
+ * @param sprites 该格的精灵
+ * @param textures 该帧的裁切纹理
+ */
+function applyCellFrame(sprites: readonly Sprite[], textures: readonly Texture[]): void {
+  for (let index = 0; index < sprites.length; index += 1) {
+    const texture = textures[index] ?? textures[0];
+
+    if (texture !== undefined) sprites[index].texture = texture;
+  }
+}
+
+/**
+ * 按全局帧号给动画格换帧：只改纹理，不重建、不销毁精灵
+ * @param model 当前渲染模型
+ * @param sprites 格子 key → 该格的精灵
+ * @param frames 格子 key → 当前显示的帧号
+ * @param textures 按图片路径缓存的图集纹理
+ * @param frameTextures `key:帧号` → 该帧的裁切纹理
+ * @param tick 全局帧号
+ */
+function updateAnimatedCells(
+  model: IMapRenderModel,
+  sprites: Map<string, readonly Sprite[]>,
+  frames: Map<string, number>,
+  textures: Map<string, Texture>,
+  frameTextures: Map<string, readonly Texture[]>,
+  tick: number,
+): void {
+  for (const cell of model.cells) {
+    const cellSprites = sprites.get(cell.key);
+
+    if (cellSprites === undefined) continue;
+
+    const frame = resolveCellFrame(cell.defaultFrame, tick, cell.frameCount);
+
+    if (frames.get(cell.key) === frame) continue;
+
+    const path = cell.imagePath;
+
+    if (path === undefined) continue;
+
+    const texture = textures.get(path);
+
+    if (texture === undefined) continue;
+
+    frames.set(cell.key, frame);
+    applyCellFrame(cellSprites, resolveFrameTextures(texture, cell, frame, frameTextures));
+  }
+}
+
+/**
+ * 逐格画图块：没有纹理时画占位格；动画格登记到精灵表，之后再按帧换纹理
+ * @param scene 场景容器
+ * @param model 渲染模型
+ * @param textures 按图片路径缓存的图集纹理
+ * @param animatedSprites 格子 key → 该格的精灵
+ * @param animatedFrames 格子 key → 当前显示的帧号
+ * @param frameTextures `key:帧号` → 该帧的裁切纹理
+ */
+function drawCells(
+  scene: Container,
+  model: IMapRenderModel,
+  textures: Map<string, Texture>,
+  animatedSprites: Map<string, readonly Sprite[]>,
+  animatedFrames: Map<string, number>,
+  frameTextures: Map<string, readonly Texture[]>,
+): void {
+  for (const cell of model.cells) {
+    const texture = cell.imagePath === undefined ? undefined : textures.get(cell.imagePath);
+
+    if (texture === undefined) {
+      scene.addChild(createPlaceholder(cell));
+      continue;
+    }
+
+    const frame = resolveInitialFrame(cell);
+    const sprites = createCellSprites(cell, resolveFrameTextures(texture, cell, frame, frameTextures));
+
+    for (const sprite of sprites) scene.addChild(sprite);
+
+    if (sprites.length === 0 || !isAnimatedCell(cell)) continue;
+
+    animatedSprites.set(cell.key, sprites);
+    animatedFrames.set(cell.key, frame);
+  }
 }
 
 /**
@@ -554,15 +780,19 @@ function drawHover(scene: Container, model: IMapRenderModel, position: IMapCellP
  * @param scene 场景容器
  * @param model 渲染模型
  * @param textures 按图片路径缓存的图集纹理
- * @param frames 本次绘制的临时裁切纹理收集处
+ * @param animatedSprites 格子 key → 该格的精灵
+ * @param animatedFrames 格子 key → 当前显示的帧号
+ * @param frameTextures `key:帧号` → 该帧的裁切纹理
  */
-function drawModel(scene: Container, model: IMapRenderModel, textures: Map<string, Texture>, frames: Texture[]): void {
-  for (const cell of model.cells) {
-    const texture = cell.imagePath === undefined ? undefined : textures.get(cell.imagePath);
-
-    scene.addChild(texture === undefined ? createPlaceholder(cell) : createCellSprite(texture, cell, frames));
-  }
-
+function drawModel(
+  scene: Container,
+  model: IMapRenderModel,
+  textures: Map<string, Texture>,
+  animatedSprites: Map<string, readonly Sprite[]>,
+  animatedFrames: Map<string, number>,
+  frameTextures: Map<string, readonly Texture[]>,
+): void {
+  drawCells(scene, model, textures, animatedSprites, animatedFrames, frameTextures);
   drawGrid(scene, model);
   drawPassMarks(scene, model);
   drawPreviewCells(scene, model);
@@ -600,7 +830,13 @@ export function MapSurface(props: IMapSurfaceProps): ReactElement {
   const appRef = useRef<Application | null>(null);
   const sceneRef = useRef<Container | null>(null);
   const texturesRef = useRef<Map<string, Texture>>(new Map());
-  const framesRef = useRef<Texture[]>([]);
+  const frameTexturesRef = useRef<Map<string, readonly Texture[]>>(new Map());
+  const animatedSpritesRef = useRef<Map<string, readonly Sprite[]>>(new Map());
+  const animatedFramesRef = useRef<Map<string, number>>(new Map());
+  const modelRef = useRef(props.model);
+  const frameSpeedRef = useRef(props.cellFrameSpeed ?? MAP_FRAME_SPEED_DEFAULT);
+  const elapsedRef = useRef(0);
+  const lastTickRef = useRef(-1);
   const pendingRef = useRef<Set<string>>(new Set());
   const failedRef = useRef<Set<string>>(new Set());
   const mountedRef = useRef(true);
@@ -614,6 +850,8 @@ export function MapSurface(props: IMapSurfaceProps): ReactElement {
   const imageVersion = props.imageVersion ?? 0;
 
   onErrorRef.current = props.onError;
+  modelRef.current = props.model;
+  frameSpeedRef.current = props.cellFrameSpeed ?? MAP_FRAME_SPEED_DEFAULT;
 
   useEffect(() => {
     mountedRef.current = true;
@@ -657,6 +895,27 @@ export function MapSurface(props: IMapSurfaceProps): ReactElement {
 
         scene.eventMode = 'none';
         app.stage.addChild(scene);
+        app.ticker.add(
+          (ticker) => {
+            elapsedRef.current += ticker.elapsedMS;
+
+            const tick = resolveFrameTickAt(elapsedRef.current, frameSpeedRef.current);
+
+            if (tick === lastTickRef.current) return;
+
+            lastTickRef.current = tick;
+            updateAnimatedCells(
+              modelRef.current,
+              animatedSpritesRef.current,
+              animatedFramesRef.current,
+              texturesRef.current,
+              frameTexturesRef.current,
+              tick,
+            );
+          },
+          undefined,
+          UPDATE_PRIORITY.HIGH,
+        );
         appRef.current = app;
         sceneRef.current = scene;
         setReadyVersion((value) => value + 1);
@@ -689,30 +948,46 @@ export function MapSurface(props: IMapSurfaceProps): ReactElement {
 
   useEffect(() => {
     const scene = sceneRef.current;
+    const app = appRef.current;
 
-    if (scene === null) return;
+    if (scene === null || app === null) return;
 
     const previous = scene.removeChildren();
 
     for (const child of previous) child.destroy({ children: true });
 
-    destroyFrames(framesRef.current);
+    for (const textures of frameTexturesRef.current.values()) destroyFrames(textures);
 
-    framesRef.current = [];
-    drawModel(scene, props.model, texturesRef.current, framesRef.current);
-    appRef.current?.render();
+    frameTexturesRef.current.clear();
+    animatedSpritesRef.current.clear();
+    animatedFramesRef.current.clear();
+    lastTickRef.current = -1;
+    drawModel(
+      scene,
+      props.model,
+      texturesRef.current,
+      animatedSpritesRef.current,
+      animatedFramesRef.current,
+      frameTexturesRef.current,
+    );
+    app.render();
+
+    if (animatedSpritesRef.current.size > 0) app.ticker.start();
+    else app.ticker.stop();
   }, [props.model, readyVersion, textureVersion]);
 
   useEffect(() => {
     const textures = texturesRef.current;
+    const frameTextures = frameTexturesRef.current;
 
     return (): void => {
       for (const texture of textures.values()) texture.destroy(true);
 
       textures.clear();
-      destroyFrames(framesRef.current);
 
-      framesRef.current = [];
+      for (const frames of frameTextures.values()) destroyFrames(frames);
+
+      frameTextures.clear();
     };
   }, []);
 
