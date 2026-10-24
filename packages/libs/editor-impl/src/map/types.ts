@@ -651,12 +651,12 @@ export interface IMapRenderModel {
   readonly gridLines: readonly IMapRenderGridLine[];
   /** 本帧要画的通行度标记 */
   readonly passMarks: readonly IMapPassMark[];
-  /** 本帧的格像素宽（唯一度量来源：文档格尺寸 × 缩放）；缺省取 `MAP_CELL_SIZE` */
-  readonly cellWidth?: number;
-  /** 本帧的格像素高（唯一度量来源：文档格尺寸 × 缩放）；缺省取 `MAP_CELL_SIZE` */
-  readonly cellHeight?: number;
-  /** 本帧视口左上角，叠加层与整条路径据此换算到画布坐标；缺省按 `(0, 0)` 处理 */
-  readonly viewport?: IMapViewport;
+  /** 本帧的格像素宽（唯一度量来源：文档格尺寸 × 缩放） */
+  readonly cellWidth: number;
+  /** 本帧的格像素高（唯一度量来源：文档格尺寸 × 缩放） */
+  readonly cellHeight: number;
+  /** 本帧视口左上角，叠加层与整条路径据此换算到画布坐标 */
+  readonly viewport: IMapViewport;
   /** 线模式下整条路径的所有格子；没有路径时为 undefined */
   readonly previewCells?: readonly IMapCellPosition[];
   /** 大地图模式的缩略描述；非大地图模式为 undefined */
@@ -728,24 +728,24 @@ export interface IMapPanelViewState {
   readonly notice?: string;
   /** 加载或保存失败时的错误文案；无错误时为 undefined */
   readonly error?: string;
-  /** 当前缩放（`MAP_ZOOM_MIN`..`MAP_ZOOM_MAX`）；缺省 `MAP_ZOOM_DEFAULT` */
-  readonly zoom?: number;
-  /** 底部当前页签；缺省 `MapBottomTab.Recent` */
-  readonly bottomTab?: MapBottomTab;
-  /** 右侧当前分类；缺省 `MapTileCategory.Terrain` */
-  readonly activeCategory?: MapTileCategory;
-  /** 素材区是否切到 Tileset 单独视图；缺省 false */
-  readonly tilesetOpen?: boolean;
-  /** 素材区是否显示帧数角标；缺省 false */
-  readonly showFrameCount?: boolean;
-  /** 9 格收藏的有序编号列表，空位为 0；缺省一列 0 */
-  readonly favorites?: readonly number[];
-  /** 「最常使用」的展示顺序（已排好序的编号，不是次数表）；缺省空数组 */
-  readonly frequentTiles?: readonly number[];
-  /** 宿主注入的视口横向格数；缺省 `MAP_VIEWPORT_DEFAULT_COLUMNS` */
-  readonly viewportColumns?: number;
-  /** 宿主注入的视口纵向格数；缺省 `MAP_VIEWPORT_DEFAULT_ROWS` */
-  readonly viewportRows?: number;
+  /** 当前缩放（`MAP_ZOOM_MIN`..`MAP_ZOOM_MAX`） */
+  readonly zoom: number;
+  /** 底部当前页签 */
+  readonly bottomTab: MapBottomTab;
+  /** 右侧当前分类 */
+  readonly activeCategory: MapTileCategory;
+  /** 素材区是否切到 Tileset 单独视图 */
+  readonly tilesetOpen: boolean;
+  /** 素材区是否显示帧数角标 */
+  readonly showFrameCount: boolean;
+  /** 9 格收藏的有序编号列表，空位为 0 */
+  readonly favorites: readonly number[];
+  /** 「最常使用」的展示顺序（已排好序的编号，不是次数表） */
+  readonly frequentTiles: readonly number[];
+  /** 宿主注入的视口横向格数 */
+  readonly viewportColumns: number;
+  /** 宿主注入的视口纵向格数 */
+  readonly viewportRows: number;
 }
 
 export interface IMapTilePreferences {

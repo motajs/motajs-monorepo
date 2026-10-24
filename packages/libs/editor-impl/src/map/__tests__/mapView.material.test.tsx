@@ -56,22 +56,19 @@ function createDirections(): IMapDirections {
 }
 
 /**
- * 造一个图块条目；裁切矩形按「列 / 行 × 单格尺寸」推导
+ * 造一个图块条目；裁切由素材组的读取规则现算，条目本身只带编号与图集位置
  * @param number 图块编号
  * @param column 图集列号
  * @param row 图集行号
- * @param cellWidth 素材单格宽
- * @param cellHeight 素材单格高
  * @returns 图块条目
  */
-function createTile(number: number, column: number, row: number, cellWidth: number = 32, cellHeight: number = 32): IMapTileEntry {
+function createTile(number: number, column: number, row: number): IMapTileEntry {
   const directions = createDirections();
 
   return {
     number,
     column,
     row,
-    crop: { x: column * cellWidth, y: row * cellHeight, width: cellWidth, height: cellHeight },
     name: `图块 ${number}`,
     pass: { out: directions, in: createDirections(), onlyEventLayer: false },
   };
@@ -144,7 +141,7 @@ function createAutotileGroup(): IMapTileGroup {
     name: '自动元件图集',
     imagePath: 'content/map/autotile.png',
     columns: 2,
-    tiles: [createTile(50, 0, 0, 64, 96), createTile(51, 1, 0, 64, 96)],
+    tiles: [createTile(50, 0, 0), createTile(51, 1, 0)],
     category: MapTileCategory.Autotile,
     read: MapTextureReadType.Grid,
     cellWidth: 64,

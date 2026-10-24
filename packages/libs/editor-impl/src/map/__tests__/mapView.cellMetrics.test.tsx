@@ -3,16 +3,19 @@ import { Store } from '@tanstack/store';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { IMapCanvasProps, MapCanvas } from '../components/MapCanvas';
 import { IMapPanelViewProps, MapPanelView } from '../components/MapPanelView';
+import { MAP_VIEWPORT_DEFAULT_COLUMNS, MAP_VIEWPORT_DEFAULT_ROWS, MAP_ZOOM_DEFAULT } from '../constants';
 import { buildMapRenderModel, IMapRenderView } from '../model/renderModel';
 import {
   IMapDocument,
   IMapPanelViewState,
   IMapRenderModel,
+  MapBottomTab,
   MapBrushMode,
   MapDialogKind,
   MapImageStatus,
   MapPaletteKind,
   MapPanelStatus,
+  MapTileCategory,
 } from '../types';
 import { TablePanelStatus } from '../../shared/schemaForm/components/TableGrid';
 import { createMapDocument, createSizedTileGroup, createWideMapDocument } from './fixtures';
@@ -97,6 +100,15 @@ function createViewState(document: IMapDocument, overrides: Partial<IMapPanelVie
     viewport: { left: 0, top: 0 },
     unsaved: false,
     saving: false,
+    zoom: MAP_ZOOM_DEFAULT,
+    bottomTab: MapBottomTab.Recent,
+    activeCategory: MapTileCategory.Terrain,
+    tilesetOpen: false,
+    showFrameCount: false,
+    favorites: [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    frequentTiles: [],
+    viewportColumns: MAP_VIEWPORT_DEFAULT_COLUMNS,
+    viewportRows: MAP_VIEWPORT_DEFAULT_ROWS,
     ...overrides,
   };
 }

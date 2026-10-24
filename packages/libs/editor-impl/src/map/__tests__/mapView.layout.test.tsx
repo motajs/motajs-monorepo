@@ -8,7 +8,12 @@ import { TablePanelStatus } from '../../shared/schemaForm/components/TableGrid';
 import { MapBottomTabs } from '../components/MapBottomTabs';
 import { MapFavoriteBar } from '../components/MapFavoriteBar';
 import { IMapPanelViewProps, MapPanelView } from '../components/MapPanelView';
-import { MAP_PALETTE_MIN_WIDTH } from '../constants';
+import {
+  MAP_PALETTE_MIN_WIDTH,
+  MAP_VIEWPORT_DEFAULT_COLUMNS,
+  MAP_VIEWPORT_DEFAULT_ROWS,
+  MAP_ZOOM_DEFAULT,
+} from '../constants';
 import { resolveMapLayout } from '../model/layout';
 import {
   IMapBottomTabsProps,
@@ -88,6 +93,15 @@ function createViewState(overrides: Partial<IMapPanelViewState> = {}): IMapPanel
     viewport: { left: 0, top: 0 },
     unsaved: false,
     saving: false,
+    zoom: MAP_ZOOM_DEFAULT,
+    bottomTab: MapBottomTab.Recent,
+    activeCategory: MapTileCategory.Terrain,
+    tilesetOpen: false,
+    showFrameCount: false,
+    favorites: [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    frequentTiles: [],
+    viewportColumns: MAP_VIEWPORT_DEFAULT_COLUMNS,
+    viewportRows: MAP_VIEWPORT_DEFAULT_ROWS,
     ...overrides,
   };
 }
@@ -198,7 +212,6 @@ function createPlainTile(number: number, column: number): IMapTileEntry {
     number,
     column,
     row: 0,
-    crop: { x: column * 32, y: 0, width: 32, height: 32 },
     name: `图块 ${number}`,
     pass: { out: createOpenDirections(), in: createOpenDirections(), onlyEventLayer: false },
   };

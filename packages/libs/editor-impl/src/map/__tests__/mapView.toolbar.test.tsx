@@ -10,17 +10,20 @@ import { ITableSchemaNode } from '../../shared/schemaForm/types';
 import { MapPanelView, IMapPanelViewProps } from '../components/MapPanelView';
 import { MapStatusBar } from '../components/MapStatusBar';
 import { MapToolbar, IMapToolbarProps } from '../components/MapToolbar';
+import { MAP_VIEWPORT_DEFAULT_COLUMNS, MAP_VIEWPORT_DEFAULT_ROWS, MAP_ZOOM_DEFAULT } from '../constants';
 import {
   IMapDocument,
   IMapEditorCapabilities,
   IMapPanelViewState,
   IMapRenderModel,
   IMapSummary,
+  MapBottomTab,
   MapBrushMode,
   MapDialogKind,
   MapImageStatus,
   MapPanelStatus,
   MapPaletteKind,
+  MapTileCategory,
   MapUnsavedChoice,
 } from '../types';
 import { createMapDocument, createMapHarness, FakeFileSystem } from './fixtures';
@@ -128,6 +131,15 @@ function createViewState(overrides: Partial<IMapPanelViewState> = {}): IMapPanel
     viewport: { left: 0, top: 0 },
     unsaved: false,
     saving: false,
+    zoom: MAP_ZOOM_DEFAULT,
+    bottomTab: MapBottomTab.Recent,
+    activeCategory: MapTileCategory.Terrain,
+    tilesetOpen: false,
+    showFrameCount: false,
+    favorites: [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    frequentTiles: [],
+    viewportColumns: MAP_VIEWPORT_DEFAULT_COLUMNS,
+    viewportRows: MAP_VIEWPORT_DEFAULT_ROWS,
     ...overrides,
   };
 }
