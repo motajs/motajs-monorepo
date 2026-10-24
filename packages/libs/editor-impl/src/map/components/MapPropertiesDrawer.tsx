@@ -75,7 +75,14 @@ function renderBody(props: IMapPropertiesDrawerProps): ReactElement | null {
  */
 export function MapPropertiesDrawer(props: IMapPropertiesDrawerProps): ReactElement {
   return (
-    <Drawer open={props.open} size={480} title="地图属性" destroyOnHidden onClose={props.onClose}>
+    <Drawer
+      open={props.open}
+      size={480}
+      title="地图属性"
+      destroyOnHidden
+      maskClosable={false}
+      onClose={props.onClose}
+    >
       <div className="emap-properties" data-test-id="map-properties-drawer">
         <div className="emap-properties-body">{renderBody(props)}</div>
       </div>

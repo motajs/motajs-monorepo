@@ -3,6 +3,7 @@ import { EditorCore, IEditorPanel, IEditorPanelFactoryParam } from '@motajs/edit
 import { createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createMapPanelType, MAP_PANEL_TYPE_ID, MapPanel } from '..';
+import mapCss from '../map.css?inline';
 import { MapPropertiesDrawer, IMapPropertiesDrawerProps } from '../components/MapPropertiesDrawer';
 import { TablePanelStatus } from '../../shared/schemaForm/components/TableGrid';
 import { buildTableTree } from '../../shared/schemaForm/model/traversal';
@@ -150,6 +151,25 @@ function findRow(rows: readonly ITableRowNode[], key: string): ITableRowNode | u
   }
 
   return undefined;
+}
+
+/**
+ * 取出样式表里某个选择器对应的规则体，供 CSS 断言直接检查属性文本
+ * @param css 样式表全文
+ * @param selector 选择器（含其后紧跟的空格与花括号）
+ * @returns 花括号之间的内容；选择器不存在时为 undefined
+ */
+function ruleBody(css: string, selector: string): string | undefined {
+  const start = css.indexOf(selector);
+
+  if (start === -1) return undefined;
+
+  const open = css.indexOf('{', start);
+  const end = css.indexOf('}', open);
+
+  if (open === -1 || end === -1) return undefined;
+
+  return css.slice(open, end);
 }
 
 describe('地图面板：属性域', () => {
@@ -467,5 +487,42 @@ describe('地图属性抽屉', () => {
     rerender(<MapPropertiesDrawer {...createDrawerProps({ open: false, onClose })} />);
 
     expect(screen.queryByTestId('map-properties-drawer')).toBeNull();
+  });
+
+  // 抽屉外层撑满高度并纵向排列，正文拿剩余高度——否则复用的绝对定位表单会塌成一条灰线
+  it('抽屉外层与正文容器带撑满高度与纵向 flex 规则', () => {
+    const outer = ruleBody(mapCss, '.emap-properties {');
+    const body = ruleBody(mapCss, '.emap-properties-body {');
+
+    expect(outer).toContain('display: flex');
+    expect(outer).toContain('flex-direction: column');
+    expect(outer).toContain('height: 100%');
+    expect(body).toContain('position: relative');
+    expect(body).toContain('flex: 1 1 auto');
+    expect(body).toContain('min-height: 0');
+  });
+
+  // 遮罩不可点关：点抽屉外面不会误关
+  it('点击遮罩不触发关闭', () => {
+    const onClose = vi.fn();
+    const { container } = renderDrawer({ onClose });
+    const mask = container.ownerDocument.querySelector('.ant-drawer-mask');
+
+    expect(mask).not.toBeNull();
+
+    fireEvent.click(mask as Element);
+
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  // 遮罩禁用不影响键盘：Esc 仍上报一次 onClose
+  it('按 Esc 上报一次 onClose', () => {
+    const onClose = vi.fn();
+
+    renderDrawer({ onClose });
+
+    fireEvent.keyDown(window, { key: 'Escape' });
+
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

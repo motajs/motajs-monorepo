@@ -604,9 +604,16 @@
   margin-top: 8px;
 }
 
+.emap-properties {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
 .emap-properties-body {
   position: relative;
-  height: 100%;
+  flex: 1 1 auto;
   min-height: 0;
 }
 
