@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.1"
 current_phase_name: 地图渲染与布局重做
-current_plan: 13
+current_plan: 14
 status: executing
-stopped_at: Completed 04.1-12-PLAN.md
-last_updated: "2026-10-24T09:40:13.217Z"
+stopped_at: Completed 04.1-13-PLAN.md
+last_updated: "2026-10-24T10:33:04.135Z"
 last_activity: 2026-10-23
 last_activity_desc: Phase 3 complete, transitioned to Phase 4
-state_head: bdd41f0cc5d0cf92cc94bc31105c4d5f974dcb90
+state_head: 3da3f0cf3930eda19b0344d6e68497d16d550284
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 138
-  completed_plans: 133
+  completed_plans: 134
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 04.1 (地图渲染与布局重做) — EXECUTING
-Current Plan: 13
+Current Plan: 14
 Total Plans in Phase: 16
 Status: Ready to execute
 Last activity: 2026-10-23 — 04.1-01 complete (naming report + pure declarations)
@@ -151,6 +151,7 @@ Progress: [██████████] 100%
 | Phase 04.1 P10 | 20min | 3 tasks | 5 files |
 | Phase 04.1 P11 | 24min | 2 tasks | 7 files |
 | Phase 04.1 P12 | 43min | 3 tasks | 10 files |
+| Phase 04.1-map-render-layout P13 | 26min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -383,6 +384,8 @@ Recent decisions affecting current work:
 - [Phase 04.1]: 空目录提示放在素材区主体：IMapCategoryNavProps 没有目录字段，导航无法判空，也不新增接口成员
 - [Phase 04.1]: Tileset 不逐格建 DOM：整图背景 + 网格线，按 Tileset 自身格尺寸换算行列，编号按目录查表、缺格填 0
 - [Phase 04.1]: 模块级分类清单用 Object.freeze([...]) 声明，满足 coreModuleState 对模块级容器的门禁
+- [Phase 04.1]: 底部页签自报事件：页签名外包一层带 data-test-id 的 span 直接调 onSelectTab，同时保留 Segmented 的 onChange 供键盘；不依赖 jsdom 对 label 激活的实现
+- [Phase 04.1]: 收藏拖拽不使用 setPointerCapture：捕获会把 pointerenter 重定向到起点元素，改为普通 pointerenter + pointerup 结算、容器 pointerleave 取消
 
 ### Pending Todos
 
@@ -410,6 +413,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-24T09:40:12.754Z
-Stopped at: Completed 04.1-12-PLAN.md
+Last session: 2026-10-24T10:33:02.604Z
+Stopped at: Completed 04.1-13-PLAN.md
 Resume file: None
