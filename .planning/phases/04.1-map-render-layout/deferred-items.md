@@ -23,3 +23,11 @@
 - **判定为既有问题：** 本计划只改 `editor-impl/src/map/*` 与 `editor-dev/src/backend/*`；逐条过滤后，**被本计划触碰过的 9 个文件里 0 条报错**。这些错误来自另一个仍在进行中的重构（`DataResource` / `FileHandler` 的泛型收窄），与新增的可选接口成员无关；`tablePanel.ts` 的未使用导入错误来自 `editor` 的 tsconfig 与 `editor-impl` 自身 tsconfig 在 `noUnusedLocals` 上的差异。
 - **影响：** 本计划要求的两个包（`@motajs/editor-impl`、`@motajs/editor-dev`）typecheck 全绿；`editor` 应用侧的报错不影响本阶段任何 verify 命令，但在修好之前不要把 `editor` 的 typecheck 当作回归门禁。
 - **建议：** 由正在做那次重构的计划收口，本阶段不接手。
+
+## 3. `packages/libs/editor-impl/src/map/map.css` 里的 `.emap-viewport-button` 已成为死样式
+
+- **发现于：** Plan 09 / Task 1（删除工具栏四向按钮）
+- **现象：** `map.css:151` 仍保留 `.emap-viewport-button`，但 `MapToolbar.tsx` 里的 `MapViewportButtons` 与全部 `map-viewport-*` 标识已在本计划删除，没有任何元素再用这个类。
+- **判定为范围外：** Plan 09 的约束明确「不得修改 `map.css`」；删除一条不再命中的 CSS 类不影响行为，也不会让任何 verify 变红。
+- **影响：** 仅多出约 3 行无用样式；不影响布局、命中与测试。
+- **建议：** 在 Plan 11（工具栏挂缩放滑块）或本阶段收尾的纯样式提交里一起清掉。

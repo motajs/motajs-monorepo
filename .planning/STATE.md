@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.1"
 current_phase_name: 地图渲染与布局重做
-current_plan: 9
+current_plan: 10
 status: executing
-stopped_at: Completed 04.1-08-PLAN.md
-last_updated: "2026-10-24T06:49:32.329Z"
+stopped_at: Completed 04.1-09-PLAN.md
+last_updated: "2026-10-24T07:40:07.272Z"
 last_activity: 2026-10-23
 last_activity_desc: Phase 3 complete, transitioned to Phase 4
-state_head: 7282f50c3a0e24c9b57e2c663cd35d8ac0a71bff
+state_head: fc55f5bfa0ff090e83c4f2ddc8ea4d36f575400c
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 138
-  completed_plans: 129
+  completed_plans: 130
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 04.1 (地图渲染与布局重做) — EXECUTING
-Current Plan: 9
+Current Plan: 10
 Total Plans in Phase: 16
 Status: Ready to execute
 Last activity: 2026-10-23 — 04.1-01 complete (naming report + pure declarations)
@@ -147,6 +147,7 @@ Progress: [██████████] 100%
 | Phase 04.1 P06 | 22min | 3 tasks | 8 files |
 | Phase 04.1 P07 | 18min | 2 tasks | 3 files |
 | Phase 04.1-map-render-layout P08 | 27 | 2 tasks | 3 files |
+| Phase 04.1 P09 | 45 | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -364,6 +365,11 @@ Recent decisions affecting current work:
 - [Phase 04.1]: 04.1-07: 大地图通行度 step = max(1, ceil(MAP_BIG_MAP_DOT_CELL / thumbnail.scale))，桶内四方向取逻辑或；dot 为 true 时 D-12 四色只承诺普通模式，画布统一画单色点
 - [Phase 04.1]: 04.1-08: 偏好路径只有一个写入口：写入固定 MAP_TILE_PREFS_PATH，旧 MAP_RECENT_TILES_PATH 只作为一次性只读迁移来源
 - [Phase 04.1]: 04.1-08: 用 context.listDirectory 判断偏好文件是否存在，才能把「缺失→迁移且 Ready」与「读失败→Error」分开
+- [Phase 04.1]: 占位层取 max(可见框, 文档尺寸)：小地图不产生滚动条，大地图仍能滚到边缘
+- [Phase 04.1]: 行列标尺移到滚动容器的 20px 留白里，避免 sticky 画布 + overflow 把标尺裁掉（map.css 未改）
+- [Phase 04.1]: MapPanel.setViewport 在大地图期间直接返回：大地图视口恒为 (0,0)，滚动残留回调不得改写
+- [Phase 04.1]: 滚动回报与同步效应统一用 Math.floor 换算格子，避免回报后被同步效应拉回的抖动
+- [Phase 04.1]: 线模式 previewCells 复用 buildStrokeWrites 再去重，保证预览格与落笔格一致
 
 ### Pending Todos
 
@@ -391,6 +397,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-24T06:49:31.666Z
-Stopped at: Completed 04.1-08-PLAN.md
+Last session: 2026-10-24T07:40:06.581Z
+Stopped at: Completed 04.1-09-PLAN.md
 Resume file: None
