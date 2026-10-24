@@ -1,4 +1,5 @@
-import { IMapDirections, IMapDocument, IMapLayer, IMapPassMark, IMapTileEntry } from '../types';
+import { MAP_PASS_COLOR_DOWN, MAP_PASS_COLOR_LEFT, MAP_PASS_COLOR_RIGHT, MAP_PASS_COLOR_UP } from '../constants';
+import { IMapDirections, IMapDocument, IMapLayer, IMapPassMark, IMapTileEntry, MapDirection } from '../types';
 
 // 只读通行度：按图块目录给出的四方向属性，算出每格「不能走」的方向，交给渲染模型画箭头或红点。
 // 只读且纯粹：不写文档、不置脏、不进撤销；空格、未知编号与不在事件层的 onlyEventLayer 图块都不输出标记。
@@ -21,6 +22,21 @@ function findLayer(document: IMapDocument, layerId: string): IMapLayer | undefin
  */
 function isDirectionBlocked(tile: IMapTileEntry, direction: 'up' | 'right' | 'down' | 'left'): boolean {
   return tile.pass.out[direction] === false || tile.pass.in[direction] === false;
+}
+
+/**
+ * 取某个方向不可通行时要画的箭头颜色
+ *
+ * 四个方向各用一种颜色，画布据此把四个方向区分开；颜色只在常量里定义一次，本函数只做映射、不 import Pixi。
+ * @param direction 不可通行的方向
+ * @returns 该方向箭头使用的颜色
+ */
+export function resolvePassArrowColor(direction: MapDirection): number {
+  if (direction === MapDirection.Right) return MAP_PASS_COLOR_RIGHT;
+  if (direction === MapDirection.Down) return MAP_PASS_COLOR_DOWN;
+  if (direction === MapDirection.Left) return MAP_PASS_COLOR_LEFT;
+
+  return MAP_PASS_COLOR_UP;
 }
 
 /**

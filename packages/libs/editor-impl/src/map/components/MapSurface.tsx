@@ -1,11 +1,22 @@
 import { Application, Container, Graphics, Rectangle, Sprite, Texture } from 'pixi.js';
 import { ReactElement, useEffect, useRef, useState } from 'react';
-import { MAP_CELL_SIZE } from '../constants';
-import { IMapCellPosition, IMapDocument, IMapPassMark, IMapRect, IMapRenderCell, IMapRenderModel } from '../types';
+import { MAP_PASS_COLOR_UP } from '../constants';
+import { resolvePreviewCellRects } from '../model/cellMetrics';
+import { resolvePassArrowColor } from '../model/passability';
+import {
+  IMapCellPosition,
+  IMapDocument,
+  IMapPassMark,
+  IMapRect,
+  IMapRenderCell,
+  IMapRenderModel,
+  MapDirection,
+} from '../types';
 import { useMapObjectUrl } from './useMapObjectUrl';
 
 // 唯一 import pixi.js 的文件：把渲染模型画成占位格 / 图块 / 网格 / 通行度标记。
 // Pixi 应用、场景与纹理表都挂在组件实例的 ref 上，卸载时销毁；模块顶层没有任何可变缓存。
+// 定位只用模型给出的度量：普通模式是 `viewport` + 缩放后的格尺寸，大地图模式是缩略比例与偏移。
 
 /** 读取图片字节的回调 */
 type MapBytesLoader = (path: string) => Promise<Uint8Array | undefined>;
@@ -17,7 +28,7 @@ interface IMapImageSourceProps {
   /** 字节版本号；变化时重新读取 */
   readonly version: number;
   /** 读取图片字节的回调 */
-  loadBytes: MapBytesLoader;
+  readonly loadBytes: MapBytesLoader;
   /**
    * 图片地址就绪或失效时回报给画布
    * @param path 图片路径
@@ -33,7 +44,7 @@ export interface IMapSurfaceProps {
   readonly imageVersion?: number;
   /** 读取图片字节的回调 */
   readonly loadBytes?: MapBytesLoader;
-  /** 当前地图文档；大地图缩略纹理逐格铺内容时用它，缺省时只画占位 */
+  /** 当前地图文档；大地图缩略纹理逐格铺内容时用它，缺省时只画缩略底色 */
   readonly document?: IMapDocument;
   /** 当前图层标识；参与缩略纹理的重建判据 */
   readonly currentLayerId?: string;
@@ -66,14 +77,8 @@ const GRID_COLOR = 0x242f42;
 /** 网格线不透明度 */
 const GRID_ALPHA = 0.16;
 
-/** 通行度标记颜色 */
-const PASS_COLOR = 0xd9363e;
-
-/** 通行度标记的白半透明衬底 */
-const PASS_CHIP = 0xffffff;
-
-/** 通行度箭头 / 衬底半径（像素） */
-const PASS_RADIUS = 5;
+/** 通行度箭头的 1px 描边颜色 */
+const PASS_STROKE = 0x1f2530;
 
 /** 通行度降级为红点时的半径（像素） */
 const PASS_DOT_RADIUS = 2;
@@ -160,13 +165,61 @@ function collectImagePaths(model: IMapRenderModel): string[] {
 }
 
 /**
- * 销毁一组按裁切矩形临时创建的纹理
+ * 销毁一组临时创建的纹理
  * @param frames 待销毁的纹理
  */
 function destroyFrames(frames: readonly Texture[]): void {
   for (const frame of frames) {
     if (!frame.destroyed) frame.destroy(false);
   }
+}
+
+/**
+ * 把格子横坐标换算成画布像素横坐标：普通模式减视口再乘格宽，大地图只用缩略比例与偏移
+ * @param model 渲染模型
+ * @param x 格子横坐标
+ * @returns 画布上的像素横坐标
+ */
+function toCanvasX(model: IMapRenderModel, x: number): number {
+  const thumbnail = model.thumbnail;
+
+  if (thumbnail !== undefined) return thumbnail.offsetX + x * thumbnail.scale;
+
+  // 模型的三条构建路径都必给，Plan 15 收紧为必填后删掉 !
+  return (x - model.viewport!.left) * model.cellWidth!;
+}
+
+/**
+ * 把格子纵坐标换算成画布像素纵坐标：普通模式减视口再乘格高，大地图只用缩略比例与偏移
+ * @param model 渲染模型
+ * @param y 格子纵坐标
+ * @returns 画布上的像素纵坐标
+ */
+function toCanvasY(model: IMapRenderModel, y: number): number {
+  const thumbnail = model.thumbnail;
+
+  if (thumbnail !== undefined) return thumbnail.offsetY + y * thumbnail.scale;
+
+  // 模型的三条构建路径都必给，Plan 15 收紧为必填后删掉 !
+  return (y - model.viewport!.top) * model.cellHeight!;
+}
+
+/**
+ * 取一格在画布上的像素宽：由两个相邻格坐标的换算结果相减得到，不重复读模型字段
+ * @param model 渲染模型
+ * @returns 一格的像素宽
+ */
+function resolveCellPixelWidth(model: IMapRenderModel): number {
+  return toCanvasX(model, 1) - toCanvasX(model, 0);
+}
+
+/**
+ * 取一格在画布上的像素高：由两个相邻格坐标的换算结果相减得到，不重复读模型字段
+ * @param model 渲染模型
+ * @returns 一格的像素高
+ */
+function resolveCellPixelHeight(model: IMapRenderModel): number {
+  return toCanvasY(model, 1) - toCanvasY(model, 0);
 }
 
 /**
@@ -250,50 +303,71 @@ function drawGrid(scene: Container, model: IMapRenderModel): void {
 }
 
 /**
- * 画一枚指向「不能走」方向的红色箭头
+ * 画一枚指向「不能走」方向的彩色箭头：自带 1px 描边，四支同时出现时互不重叠
  * @param graphics 目标图形
- * @param x 箭头中心的像素横坐标
- * @param y 箭头中心的像素纵坐标
+ * @param x 格子中心的像素横坐标
+ * @param y 格子中心的像素纵坐标
  * @param dx 方向的横向分量（-1 / 0 / 1）
  * @param dy 方向的纵向分量（-1 / 0 / 1）
+ * @param length 箭头从格子中心伸出的长度（像素，略短于半个格）
+ * @param color 箭头颜色，取自 `resolvePassArrowColor`
  */
-function drawPassArrow(graphics: Graphics, x: number, y: number, dx: number, dy: number): void {
-  const tipX = x + dx * PASS_RADIUS;
-  const tipY = y + dy * PASS_RADIUS;
-  const baseX = x - dx * 2;
-  const baseY = y - dy * 2;
-  const wingX = -dy * 4;
-  const wingY = dx * 4;
+function drawPassArrow(
+  graphics: Graphics,
+  x: number,
+  y: number,
+  dx: number,
+  dy: number,
+  length: number,
+  color: number,
+): void {
+  const tipX = x + dx * length;
+  const tipY = y + dy * length;
+  const inset = Math.min(2, length / 3);
+  const baseX = x + dx * inset;
+  const baseY = y + dy * inset;
+  const wing = Math.max(1.5, length * 0.55);
+  const wingX = -dy * wing;
+  const wingY = dx * wing;
 
-  graphics.moveTo(tipX, tipY);
-  graphics.lineTo(baseX + wingX, baseY + wingY);
-  graphics.lineTo(baseX - wingX, baseY - wingY);
-  graphics.fill({ color: PASS_COLOR });
+  graphics
+    .poly([tipX, tipY, baseX + wingX, baseY + wingY, baseX - wingX, baseY - wingY])
+    .fill({ color })
+    .stroke({ color: PASS_STROKE, width: 1 });
 }
 
 /**
- * 画一个通行度标记：白色半透明衬底 + 每个被阻挡方向的红色箭头；大地图缩小后降级为红点
+ * 画一个通行度标记：每个被阻挡方向一支自己的颜色，不画整圆衬底；大地图缩小后降级为单色点
  * @param graphics 目标图形
  * @param mark 通行度标记
- * @param x 标记中心的像素横坐标
- * @param y 标记中心的像素纵坐标
+ * @param x 格子中心的像素横坐标
+ * @param y 格子中心的像素纵坐标
+ * @param cellWidth 一格的像素宽
+ * @param cellHeight 一格的像素高
  */
-function drawPassMark(graphics: Graphics, mark: IMapPassMark, x: number, y: number): void {
+function drawPassMark(
+  graphics: Graphics,
+  mark: IMapPassMark,
+  x: number,
+  y: number,
+  cellWidth: number,
+  cellHeight: number,
+): void {
   if (mark.dot) {
-    graphics.circle(x, y, PASS_DOT_RADIUS).fill({ color: PASS_COLOR });
+    graphics.circle(x, y, PASS_DOT_RADIUS).fill({ color: MAP_PASS_COLOR_UP });
     return;
   }
 
-  graphics.circle(x, y, PASS_RADIUS).fill({ color: PASS_CHIP, alpha: 0.9 });
+  const length = Math.max(2, Math.min(cellWidth, cellHeight) / 2 - 1);
 
-  if (mark.blocked.up) drawPassArrow(graphics, x, y, 0, -1);
-  if (mark.blocked.right) drawPassArrow(graphics, x, y, 1, 0);
-  if (mark.blocked.down) drawPassArrow(graphics, x, y, 0, 1);
-  if (mark.blocked.left) drawPassArrow(graphics, x, y, -1, 0);
+  if (mark.blocked.up) drawPassArrow(graphics, x, y, 0, -1, length, resolvePassArrowColor(MapDirection.Up));
+  if (mark.blocked.right) drawPassArrow(graphics, x, y, 1, 0, length, resolvePassArrowColor(MapDirection.Right));
+  if (mark.blocked.down) drawPassArrow(graphics, x, y, 0, 1, length, resolvePassArrowColor(MapDirection.Down));
+  if (mark.blocked.left) drawPassArrow(graphics, x, y, -1, 0, length, resolvePassArrowColor(MapDirection.Left));
 }
 
 /**
- * 画通行度叠加层
+ * 画通行度叠加层：只遍历模型给出的标记（已按视口裁剪或按缩略格降采样）
  * @param scene 场景容器
  * @param model 渲染模型
  */
@@ -301,14 +375,20 @@ function drawPassMarks(scene: Container, model: IMapRenderModel): void {
   if (model.passMarks.length === 0) return;
 
   const graphics = new Graphics();
+  const cellWidth = resolveCellPixelWidth(model);
+  const cellHeight = resolveCellPixelHeight(model);
 
   graphics.eventMode = 'none';
 
   for (const mark of model.passMarks) {
-    const x = mark.x * MAP_CELL_SIZE + MAP_CELL_SIZE / 2;
-    const y = mark.y * MAP_CELL_SIZE + MAP_CELL_SIZE / 2;
-
-    drawPassMark(graphics, mark, x, y);
+    drawPassMark(
+      graphics,
+      mark,
+      toCanvasX(model, mark.x) + cellWidth / 2,
+      toCanvasY(model, mark.y) + cellHeight / 2,
+      cellWidth,
+      cellHeight,
+    );
   }
 
   scene.addChild(graphics);
@@ -347,26 +427,28 @@ function drawDashedVertical(graphics: Graphics, from: number, to: number, x: num
 }
 
 /**
- * 把格子矩形换算成像素矩形
+ * 把格子矩形换算成画布像素矩形
+ * @param model 渲染模型
  * @param rect 格子矩形
  * @returns 像素矩形
  */
-function toPixelRect(rect: IMapRect): IMapRect {
+function toPixelRect(model: IMapRenderModel, rect: IMapRect): IMapRect {
   return {
-    x: rect.x * MAP_CELL_SIZE,
-    y: rect.y * MAP_CELL_SIZE,
-    width: rect.width * MAP_CELL_SIZE,
-    height: rect.height * MAP_CELL_SIZE,
+    x: toCanvasX(model, rect.x),
+    y: toCanvasY(model, rect.y),
+    width: rect.width * resolveCellPixelWidth(model),
+    height: rect.height * resolveCellPixelHeight(model),
   };
 }
 
 /**
  * 画框选：12% 填充 + 1px 虚线边框
  * @param scene 场景容器
+ * @param model 渲染模型
  * @param rect 框选矩形（格子）
  */
-function drawSelection(scene: Container, rect: IMapRect): void {
-  const pixel = toPixelRect(rect);
+function drawSelection(scene: Container, model: IMapRenderModel, rect: IMapRect): void {
+  const pixel = toPixelRect(model, rect);
   const fill = new Graphics();
   const border = new Graphics();
 
@@ -388,10 +470,11 @@ function drawSelection(scene: Container, rect: IMapRect): void {
 /**
  * 画绘制预览：35% 填充 + 1px 描边，尺寸等于笔刷图案
  * @param scene 场景容器
+ * @param model 渲染模型
  * @param rect 预览矩形（格子）
  */
-function drawPreview(scene: Container, rect: IMapRect): void {
-  const pixel = toPixelRect(rect);
+function drawPreview(scene: Container, model: IMapRenderModel, rect: IMapRect): void {
+  const pixel = toPixelRect(model, rect);
   const preview = new Graphics();
 
   preview.eventMode = 'none';
@@ -403,22 +486,71 @@ function drawPreview(scene: Container, rect: IMapRect): void {
 }
 
 /**
+ * 把整条路径的格子换算成画布像素矩形：大地图只用缩略比例与偏移，不叠加视口
+ * @param model 渲染模型
+ * @param cells 路径覆盖的格子
+ * @returns 每个格子的像素矩形
+ */
+function resolvePreviewCellRectsFor(model: IMapRenderModel, cells: readonly IMapCellPosition[]): readonly IMapRect[] {
+  const thumbnail = model.thumbnail;
+
+  if (thumbnail !== undefined) {
+    return cells.map((cell) => ({
+      x: thumbnail.offsetX + cell.x * thumbnail.scale,
+      y: thumbnail.offsetY + cell.y * thumbnail.scale,
+      width: thumbnail.scale,
+      height: thumbnail.scale,
+    }));
+  }
+
+  // 模型的三条构建路径都必给，Plan 15 收紧为必填后删掉 !
+  return resolvePreviewCellRects(cells, model.viewport!, model.cellWidth!, model.cellHeight!);
+}
+
+/**
+ * 画线模式整条路径：逐格半透明填充 + 1px 描边，滚动后与格子同源不偏移
+ * @param scene 场景容器
+ * @param model 渲染模型
+ */
+function drawPreviewCells(scene: Container, model: IMapRenderModel): void {
+  const cells = model.previewCells;
+
+  if (cells === undefined || cells.length === 0) return;
+
+  const preview = new Graphics();
+
+  preview.eventMode = 'none';
+
+  for (const rect of resolvePreviewCellRectsFor(model, cells)) {
+    preview
+      .rect(rect.x, rect.y, rect.width, rect.height)
+      .fill({ color: PREVIEW_COLOR, alpha: PREVIEW_FILL_ALPHA })
+      .stroke({ color: PREVIEW_COLOR, alpha: 1, width: 1 });
+  }
+
+  scene.addChild(preview);
+}
+
+/**
  * 画悬停格轮廓：1px、40% accent
  * @param scene 场景容器
+ * @param model 渲染模型
  * @param position 悬停格
  */
-function drawHover(scene: Container, position: IMapCellPosition): void {
+function drawHover(scene: Container, model: IMapRenderModel, position: IMapCellPosition): void {
   const hover = new Graphics();
+  const width = Math.max(0, resolveCellPixelWidth(model) - 1);
+  const height = Math.max(0, resolveCellPixelHeight(model) - 1);
 
   hover.eventMode = 'none';
   hover.setStrokeStyle({ color: HOVER_COLOR, alpha: HOVER_ALPHA, width: 1 });
-  hover.rect(position.x * MAP_CELL_SIZE + 0.5, position.y * MAP_CELL_SIZE + 0.5, MAP_CELL_SIZE - 1, MAP_CELL_SIZE - 1);
+  hover.rect(toCanvasX(model, position.x) + 0.5, toCanvasY(model, position.y) + 0.5, width, height);
   hover.stroke();
   scene.addChild(hover);
 }
 
 /**
- * 把一帧渲染模型画进场景：先画格子，再叠加网格、通行度标记、框选、预览与悬停轮廓
+ * 把一帧渲染模型画进场景：先画格子，再叠加网格、通行度标记、整条路径、框选、预览与悬停轮廓
  * @param scene 场景容器
  * @param model 渲染模型
  * @param textures 按图片路径缓存的图集纹理
@@ -433,10 +565,11 @@ function drawModel(scene: Container, model: IMapRenderModel, textures: Map<strin
 
   drawGrid(scene, model);
   drawPassMarks(scene, model);
+  drawPreviewCells(scene, model);
 
-  if (model.selection !== undefined) drawSelection(scene, model.selection);
-  if (model.preview !== undefined) drawPreview(scene, model.preview.rect);
-  if (model.hover !== undefined) drawHover(scene, model.hover);
+  if (model.selection !== undefined) drawSelection(scene, model, model.selection);
+  if (model.preview !== undefined) drawPreview(scene, model, model.preview.rect);
+  if (model.hover !== undefined) drawHover(scene, model, model.hover);
 }
 
 /**

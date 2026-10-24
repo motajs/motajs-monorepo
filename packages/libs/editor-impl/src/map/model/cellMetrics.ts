@@ -48,6 +48,31 @@ export function resolveCellMetrics(cellWidth: number, cellHeight: number, left: 
 }
 
 /**
+ * 把整条路径的格子换算成画布像素矩形
+ *
+ * 普通模式由本函数把文档坐标减去 `viewport` 再乘格尺寸；画布只负责把矩形画成描边 + 填充。
+ * 越界格照样输出（由画布裁剪），`cells` 为空时返回空数组。
+ * @param cells 路径覆盖的格子
+ * @param viewport 视口左上角所在的格子坐标
+ * @param cellWidth 一格的像素宽
+ * @param cellHeight 一格的像素高
+ * @returns 每个格子的画布像素矩形，顺序与入参一致
+ */
+export function resolvePreviewCellRects(
+  cells: readonly IMapCellPosition[],
+  viewport: IMapViewport,
+  cellWidth: number,
+  cellHeight: number,
+): readonly IMapRect[] {
+  return cells.map((cell) => ({
+    x: (cell.x - viewport.left) * cellWidth,
+    y: (cell.y - viewport.top) * cellHeight,
+    width: cellWidth,
+    height: cellHeight,
+  }));
+}
+
+/**
  * 把指针位置换算成格子坐标：同时扣掉画布容器原点与第一格留白原点，再叠加视口
  *
  * 视口由调用方按模式选择（普通模式传面板视口，大地图模式传零视口），本函数本身不判断模式。

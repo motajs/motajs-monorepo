@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { IMapDirections, IMapDocument, IMapLayer, IMapTileEntry, IMapTilePass } from '../types';
+import { MAP_PASS_COLOR_DOWN, MAP_PASS_COLOR_LEFT, MAP_PASS_COLOR_RIGHT, MAP_PASS_COLOR_UP } from '../constants';
+import { IMapDirections, IMapDocument, IMapLayer, IMapTileEntry, IMapTilePass, MapDirection } from '../types';
 import { IMapRenderView, buildMapRenderModel } from '../model/renderModel';
-import { computePassabilityMarks } from '../model/passability';
+import { computePassabilityMarks, resolvePassArrowColor } from '../model/passability';
 
 // 只读通行度的用例：覆盖空格 / 全通 / 全阻 / 单方向 / 事件层 / 未知编号 / 多图层，以及输出直接喂给渲染模型。
 
@@ -61,6 +62,23 @@ function createLayer(id: string, cells: readonly (readonly number[])[], isEventL
 function createDocument(layers: readonly IMapLayer[], width: number = 3, height: number = 2): IMapDocument {
   return { id: 'map', name: '地图', width, height, layers, tileGroups: [] };
 }
+
+describe('resolvePassArrowColor 四色映射', () => {
+  // 四个方向的颜色常量互不相同：G-04-2 的「四个方向糊成一个红十字」由这条断言钉住
+  it('四个方向的颜色常量互不相同', () => {
+    const colors = [MAP_PASS_COLOR_UP, MAP_PASS_COLOR_RIGHT, MAP_PASS_COLOR_DOWN, MAP_PASS_COLOR_LEFT];
+
+    expect(new Set(colors).size).toBe(4);
+  });
+
+  // 每个方向拿到自己的颜色，不会串到相邻方向
+  it('按方向返回对应颜色', () => {
+    expect(resolvePassArrowColor(MapDirection.Up)).toBe(MAP_PASS_COLOR_UP);
+    expect(resolvePassArrowColor(MapDirection.Right)).toBe(MAP_PASS_COLOR_RIGHT);
+    expect(resolvePassArrowColor(MapDirection.Down)).toBe(MAP_PASS_COLOR_DOWN);
+    expect(resolvePassArrowColor(MapDirection.Left)).toBe(MAP_PASS_COLOR_LEFT);
+  });
+});
 
 describe('computePassabilityMarks', () => {
   // 空格子（编号 0）不产生通行度标记

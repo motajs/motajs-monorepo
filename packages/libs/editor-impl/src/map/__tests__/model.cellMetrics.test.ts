@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveCellMetrics, resolvePointerCell, resolveTileDest } from '../model/cellMetrics';
+import { resolveCellMetrics, resolvePointerCell, resolvePreviewCellRects, resolveTileDest } from '../model/cellMetrics';
 
 // 格子度量的纯函数测试：contain 目标矩形、度量组装与指针换算。
 // 全部断言具体数值（不 snapshot）：这些数字是画布、命中与后续自动拼接共同的度量契约。
@@ -36,6 +36,45 @@ describe('resolveCellMetrics 度量组装', () => {
   // 四个字段原样落到度量上，不在这里做任何换算
   it('原样组装格宽高与第一格原点', () => {
     expect(resolveCellMetrics(48, 24, 12, 6)).toEqual({ cellWidth: 48, cellHeight: 24, left: 12, top: 6 });
+  });
+});
+
+describe('resolvePreviewCellRects 整条路径矩形', () => {
+  // 视口 (3,5)、格 48 × 24 时，格子 (5,7) 落在 (96, 48)，正好是「减视口再乘格尺寸」
+  it('把视口换算进整条路径的每个矩形', () => {
+    expect(resolvePreviewCellRects([{ x: 5, y: 7 }], { left: 3, top: 5 }, 48, 24)).toEqual([
+      { x: 96, y: 48, width: 48, height: 24 },
+    ]);
+  });
+
+  // 空路径返回空数组，画布据此不创建预览图形
+  it('空数组返回空数组', () => {
+    expect(resolvePreviewCellRects([], { left: 3, top: 5 }, 48, 24)).toEqual([]);
+  });
+
+  // 视口在原点时矩形就是格坐标乘格尺寸，不做任何偏移
+  it('视口在原点时矩形就是格坐标乘格尺寸', () => {
+    expect(
+      resolvePreviewCellRects(
+        [
+          { x: 0, y: 0 },
+          { x: 2, y: 1 },
+        ],
+        { left: 0, top: 0 },
+        32,
+        32,
+      ),
+    ).toEqual([
+      { x: 0, y: 0, width: 32, height: 32 },
+      { x: 64, y: 32, width: 32, height: 32 },
+    ]);
+  });
+
+  // 越界格照样输出矩形（裁剪交给画布），不在纯函数里丢弃
+  it('越界格照样输出矩形', () => {
+    expect(resolvePreviewCellRects([{ x: 0, y: 0 }], { left: 2, top: 2 }, 32, 32)).toEqual([
+      { x: -64, y: -64, width: 32, height: 32 },
+    ]);
   });
 });
 
