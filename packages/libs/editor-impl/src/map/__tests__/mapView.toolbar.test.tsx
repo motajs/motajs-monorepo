@@ -1,6 +1,7 @@
-import { cleanup, configure, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, configure, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { Store } from '@tanstack/store';
 import { EditorCore, IEditorPanel, IEditorPanelFactoryParam } from '@motajs/editor-core';
+import { createElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createMapPanelType, MAP_PANEL_TYPE_ID, MapPanel } from '..';
 import { buildTableTree } from '../../shared/schemaForm/model/traversal';
@@ -13,6 +14,7 @@ import {
   IMapDocument,
   IMapEditorCapabilities,
   IMapPanelViewState,
+  IMapRenderModel,
   IMapSummary,
   MapBrushMode,
   MapDialogKind,
@@ -27,8 +29,11 @@ vi.mock('../components/MapSurface', async () => {
   const { createElement: createMockElement } = await import('react');
 
   return {
-    MapSurface: (): ReturnType<typeof createMockElement> =>
-      createMockElement('div', { 'data-test-id': 'map-surface-stub' }),
+    MapSurface: (props: IMapSurfaceStubProps) =>
+      createMockElement('div', {
+        'data-test-id': 'map-surface-stub',
+        'data-cell-width': props.model.cellWidth === undefined ? '' : String(props.model.cellWidth),
+      }),
   };
 });
 
@@ -36,6 +41,11 @@ configure({ testIdAttribute: 'data-test-id' });
 
 // 工具栏 / 状态条 / 视图装配测试：工具栏与状态条按受控 props 直接渲染；
 // 弹窗、抽屉与属性入口经面板视图装配，必要时由真实面板实例驱动。
+
+interface IMapSurfaceStubProps {
+  /** 这一帧的渲染模型 */
+  readonly model: IMapRenderModel;
+}
 
 const PROPERTY_SCHEMA: ITableSchemaNode = {
   type: 'object',
@@ -288,7 +298,7 @@ describe('地图工具栏', () => {
   it('高于当前层的不透明度滑块按当前层位置启用或禁用', () => {
     render(<MapToolbar {...createToolbarProps()} />);
 
-    const slider = screen.getByRole('slider');
+    const slider = within(screen.getByTestId('map-layer-opacity')).getByRole('slider');
 
     expect(slider.getAttribute('aria-valuenow')).toBe('0.3');
     expect(screen.getByTestId('map-layer-opacity').querySelector('.ant-slider')?.className).not.toContain(
@@ -308,10 +318,67 @@ describe('地图工具栏', () => {
     const onAboveLayerOpacityChange = vi.fn();
 
     render(<MapToolbar {...createToolbarProps({ onAboveLayerOpacityChange })} />);
-    fireEvent.keyDown(screen.getByRole('slider'), { key: 'ArrowRight', keyCode: 39 });
+    fireEvent.keyDown(within(screen.getByTestId('map-layer-opacity')).getByRole('slider'), {
+      key: 'ArrowRight',
+      keyCode: 39,
+    });
 
     expect(onAboveLayerOpacityChange).toHaveBeenCalled();
     expect(onAboveLayerOpacityChange.mock.calls[0][0]).toBeGreaterThan(0.3);
+  });
+
+  // 缩放滑块默认 100%
+  it('缩放滑块默认 100%', () => {
+    render(<MapToolbar {...createToolbarProps()} />);
+
+    const zoom = screen.getByTestId('map-zoom');
+
+    expect(within(zoom).getByRole('slider').getAttribute('aria-valuenow')).toBe('1');
+    expect(zoom.textContent).toContain('100%');
+  });
+
+  // 拖动中只动本地拇指位置，不发布新值
+  it('拖动缩放滑块不发布新值', () => {
+    const onSetZoom = vi.fn();
+
+    render(<MapToolbar {...createToolbarProps({ onSetZoom })} />);
+
+    const slider = within(screen.getByTestId('map-zoom')).getByRole('slider');
+
+    fireEvent.keyDown(slider, { key: 'ArrowRight', keyCode: 39 });
+
+    expect(onSetZoom).not.toHaveBeenCalled();
+    expect(slider.getAttribute('aria-valuenow')).toBe('1.05');
+    expect(screen.getByTestId('map-zoom').textContent).toContain('105%');
+  });
+
+  // 松手后只发布一次，值被夹在 50%–200% 之内
+  it('松手后缩放只发布一次且不超出范围', () => {
+    const onSetZoom = vi.fn();
+
+    render(<MapToolbar {...createToolbarProps({ onSetZoom })} />);
+
+    const slider = within(screen.getByTestId('map-zoom')).getByRole('slider');
+
+    fireEvent.keyDown(slider, { key: 'End', keyCode: 35 });
+    fireEvent.keyUp(slider, { key: 'End', keyCode: 35 });
+
+    expect(onSetZoom).toHaveBeenCalledTimes(1);
+    expect(onSetZoom).toHaveBeenCalledWith(2);
+  });
+
+  // 面板给出的越界缩放值显示时先被夹取
+  it('越界的缩放值显示为 50% 或 200%', () => {
+    render(<MapToolbar {...createToolbarProps({ zoom: 3 })} />);
+
+    expect(within(screen.getByTestId('map-zoom')).getByRole('slider').getAttribute('aria-valuenow')).toBe('2');
+    expect(screen.getByTestId('map-zoom').textContent).toContain('200%');
+
+    cleanup();
+    render(<MapToolbar {...createToolbarProps({ zoom: 0.1 })} />);
+
+    expect(within(screen.getByTestId('map-zoom')).getByRole('slider').getAttribute('aria-valuenow')).toBe('0.5');
+    expect(screen.getByTestId('map-zoom').textContent).toContain('50%');
   });
 });
 
@@ -564,6 +631,31 @@ describe('地图面板视图装配', () => {
     await waitFor(() => expect(screen.getByTestId('map-properties-drawer')).not.toBeNull());
 
     expect(readProperties).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('地图面板里的缩放接线', () => {
+  // 端到端：滑块松手 → 面板 Store → 渲染模型的格像素
+  it('缩放 150% 同时写进面板与渲染模型', async () => {
+    const harness = await openMapPanel({
+      listMaps: async (): Promise<readonly IMapSummary[]> => [{ id: 'm1', name: '地图一' }],
+      openMap: async (mapId: string): Promise<IMapDocument> => createMapDocument({ id: mapId, name: mapId }),
+      saveMapData: async (): Promise<void> => {},
+    });
+
+    render(createElement(harness.system.shellSystem.render()));
+    await act(async () => {});
+
+    const slider = within(screen.getByTestId('map-zoom')).getByRole('slider');
+
+    for (let index = 0; index < 10; index += 1) {
+      fireEvent.keyDown(slider, { key: 'ArrowRight', keyCode: 39 });
+    }
+
+    fireEvent.keyUp(slider, { key: 'ArrowRight', keyCode: 39 });
+
+    await waitFor(() => expect(harness.panel['store'].state.zoom).toBe(1.5));
+    await waitFor(() => expect(screen.getByTestId('map-surface-stub').getAttribute('data-cell-width')).toBe('48'));
   });
 });
 

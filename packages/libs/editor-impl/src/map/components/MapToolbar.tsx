@@ -1,6 +1,8 @@
 import { Button, Dropdown, Segmented, Select, Slider, Switch, Tooltip } from 'antd';
 import { ReactElement, useEffect, useState } from 'react';
+import { MAP_ZOOM_DEFAULT } from '../constants';
 import { IMapLayer, IMapSummary, MapBrushMode, MapPanelStatus } from '../types';
+import { MapZoomSlider } from './MapZoomSlider';
 
 // 地图面板的两行工具栏：第一行是地图身份与保存，第二行是编辑工具。
 // 本组件只接 props，不推导业务状态：哪些按钮可用全由调用方给出的状态与能力标记决定。
@@ -92,6 +94,8 @@ interface IMapViewControlsProps {
   readonly passabilityVisible: boolean;
   /** 是否处于大地图模式 */
   readonly bigMap: boolean;
+  /** 缩放滑块的当前值 */
+  readonly zoom: number;
   /**
    * 开关只读通行度叠加层
    * @param value 为 true 时显示
@@ -102,6 +106,11 @@ interface IMapViewControlsProps {
    * @param value 为 true 时进入大地图
    */
   onToggleBigMap(value: boolean): void;
+  /**
+   * 缩放滑块松手后把新值交给面板
+   * @param value 夹取到 `MAP_ZOOM_MIN`..`MAP_ZOOM_MAX` 的新缩放值
+   */
+  onSetZoom?(value: number): void;
 }
 
 /**
@@ -192,6 +201,11 @@ function MapViewControls(props: IMapViewControlsProps): ReactElement {
       >
         大地图
       </Button>
+      <MapZoomSlider
+        value={props.zoom}
+        disabled={props.onSetZoom === undefined}
+        onChangeComplete={(value): void => props.onSetZoom?.(value)}
+      />
     </>
   );
 }
@@ -356,8 +370,10 @@ export function MapToolbar(props: IMapToolbarProps): ReactElement {
                     disabled={!editing}
                     passabilityVisible={props.passabilityVisible}
                     bigMap={props.bigMap}
+                    zoom={props.zoom ?? MAP_ZOOM_DEFAULT}
                     onTogglePassability={props.onTogglePassability}
                     onToggleBigMap={props.onToggleBigMap}
+                    onSetZoom={props.onSetZoom}
                   />
                 </div>
               )}
@@ -371,8 +387,10 @@ export function MapToolbar(props: IMapToolbarProps): ReactElement {
               disabled={!editing}
               passabilityVisible={props.passabilityVisible}
               bigMap={props.bigMap}
+              zoom={props.zoom ?? MAP_ZOOM_DEFAULT}
               onTogglePassability={props.onTogglePassability}
               onToggleBigMap={props.onToggleBigMap}
+              onSetZoom={props.onSetZoom}
             />
           )}
         </div>

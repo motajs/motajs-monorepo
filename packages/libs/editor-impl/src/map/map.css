@@ -178,6 +178,35 @@
   margin: 0;
 }
 
+.emap-zoom {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+  width: 160px;
+  min-width: 0;
+}
+
+.emap-zoom-label {
+  color: var(--editor-muted, #656d76);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.emap-zoom-slider {
+  width: 96px;
+  margin: 0;
+}
+
+.emap-zoom-value {
+  min-width: 38px;
+  color: var(--editor-muted, #656d76);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
 .emap-tooltip-wrap {
   display: inline-flex;
 }

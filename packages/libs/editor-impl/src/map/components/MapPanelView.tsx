@@ -561,6 +561,8 @@ export function MapPanelView(props: IMapPanelViewProps): ReactElement {
 
             props.store.setState({ ...props.store.state, bigMap: value });
           }}
+          zoom={view.zoom ?? MAP_ZOOM_DEFAULT}
+          onSetZoom={props.onSetZoom}
         />
         <MapPanelBody props={props} view={view} narrow={narrow} groupImages={groupImages} />
         <div className="emap-bottom" data-test-id="map-bottom" />
