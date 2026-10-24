@@ -4,3 +4,8 @@ export * from './MapZoomSlider';
 export * from './MapEmptyState';
 export * from './MapStatusBar';
 export * from './MapSurface';
+export * from './MapMaterialPanel';
+export * from './MapCategoryNav';
+export * from './MapTilesetPicker';
+export * from './MapBottomTabs';
+export * from './MapFavoriteBar';
