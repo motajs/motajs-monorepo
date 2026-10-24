@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.1"
 current_phase_name: 地图渲染与布局重做
-current_plan: 7
+current_plan: 8
 status: executing
-stopped_at: Completed 04.1-06-PLAN.md
-last_updated: "2026-10-23T15:54:07.267Z"
+stopped_at: Completed 04.1-07-PLAN.md
+last_updated: "2026-10-24T06:12:40.255Z"
 last_activity: 2026-10-23
 last_activity_desc: Phase 3 complete, transitioned to Phase 4
-state_head: 0353ceb06c7d5133fca43c58600e6274c28373e2
+state_head: 09cf07ab03e1081f2213e52bf9bec850623ce42e
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 138
-  completed_plans: 127
+  completed_plans: 128
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 04.1 (地图渲染与布局重做) — EXECUTING
-Current Plan: 7
+Current Plan: 8
 Total Plans in Phase: 16
 Status: Ready to execute
 Last activity: 2026-10-23 — 04.1-01 complete (naming report + pure declarations)
@@ -145,6 +145,7 @@ Progress: [██████████] 100%
 | Phase 04.1 P04 | 12 min | 2 tasks | 4 files |
 | Phase 04.1 P05 | 30 min | 2 tasks | 2 files |
 | Phase 04.1 P06 | 22min | 3 tasks | 8 files |
+| Phase 04.1 P07 | 18min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -357,6 +358,9 @@ Recent decisions affecting current work:
 - [Phase 04.1]: 04.1-06: 演示大素材做成 192×64 而不是 64×64——96×64 在 48×48 格里 contain 成 48×32、上下各留 8px，留空才可观察
 - [Phase 04.1]: 04.1-06: 演示引擎文本落在 content/map/texture/.list.jsonc 与 content/map/tiles.jsonc——content/texture/.list.jsonc 已被素材面板占用，覆盖会破坏素材演示
 - [Phase 04.1]: 04.1-06: 删除 IMapCapabilityOptions.recentTilesPath——偏好路径唯一由 MAP_TILE_PREFS_PATH 决定，面板回退值与原注入值相同，行为不变
+- [Phase 04.1]: 04.1-07: 静态格不带帧轴，动画格只给第 0 帧矩形 + 帧轴 / 步长 / 帧数 / 行格数——255 帧动画在模型里也只占一份数据
+- [Phase 04.1]: 04.1-07: 自动元件的连接集合在 buildTileImages 里按组建一次 ReadonlySet，逐格只做邻居比较；大地图路径不构建图块索引
+- [Phase 04.1]: 04.1-07: 大地图通行度 step = max(1, ceil(MAP_BIG_MAP_DOT_CELL / thumbnail.scale))，桶内四方向取逻辑或；dot 为 true 时 D-12 四色只承诺普通模式，画布统一画单色点
 
 ### Pending Todos
 
@@ -384,6 +388,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-23T15:54:06.612Z
-Stopped at: Completed 04.1-06-PLAN.md
+Last session: 2026-10-24T06:11:43.880Z
+Stopped at: Completed 04.1-07-PLAN.md
 Resume file: None
