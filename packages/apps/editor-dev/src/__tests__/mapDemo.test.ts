@@ -113,8 +113,8 @@ describe('开发宿主演示图集与图块目录', () => {
     expect(readImageDimensions(encodeDemoSmallTileAtlas())).toEqual({ width: 64, height: 32 });
   });
 
-  // 目录里每个图块的裁切都落在对应图片内
-  it('所有图块的裁切都在图内', () => {
+  // 目录里每个图块的图集位置换算出的单格都落在对应图片内
+  it('所有图块的单格都在图内', () => {
     const groups = buildDemoTileCatalog();
     const sizes = new Map<string, { readonly width: number; readonly height: number }>();
 
@@ -126,12 +126,10 @@ describe('开发宿主演示图集与图块目录', () => {
       if (size === undefined) throw new Error(`未知图集：${group.imagePath}`);
 
       for (const tile of group.tiles) {
-        expect(tile.crop.x).toBeGreaterThanOrEqual(0);
-        expect(tile.crop.y).toBeGreaterThanOrEqual(0);
-        expect(tile.crop.x + tile.crop.width).toBeLessThanOrEqual(size.width);
-        expect(tile.crop.y + tile.crop.height).toBeLessThanOrEqual(size.height);
-        expect(tile.crop.x).toBe(tile.column * (group.cellWidth ?? 32));
-        expect(tile.crop.y).toBe(tile.row * (group.cellHeight ?? 32));
+        expect(tile.column).toBeGreaterThanOrEqual(0);
+        expect(tile.row).toBeGreaterThanOrEqual(0);
+        expect((tile.column + 1) * group.cellWidth).toBeLessThanOrEqual(size.width);
+        expect((tile.row + 1) * group.cellHeight).toBeLessThanOrEqual(size.height);
       }
     }
   });
@@ -268,7 +266,6 @@ describe('开发宿主演示图集与图块目录', () => {
     const entry = tileset.tiles[5];
 
     expect([entry.column, entry.row]).toEqual([1, 1]);
-    expect(entry.crop).toEqual({ x: 32, y: 32, width: 32, height: 32 });
   });
 
   // registerMapDemo 能把视口格数与帧速覆盖并入能力对象，不传时保持缺省
@@ -289,7 +286,6 @@ describe('开发宿主演示图集与图块目录', () => {
     expect(plain.viewportRows).toBeUndefined();
     expect(plain.frameSpeed).toBeUndefined();
     expect(plain.maxMapSize).toEqual({ maxWidth: 256, maxHeight: 256 });
-    expect(plain.recentTilesPath).toBeUndefined();
   });
 
   // seedMapDemo 把七张图集与两份引擎文本真的写进演示项目

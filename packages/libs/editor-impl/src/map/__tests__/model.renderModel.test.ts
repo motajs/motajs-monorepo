@@ -474,7 +474,6 @@ describe('buildMapRenderModel 动画帧', () => {
       number: 7,
       column: 0,
       row: 0,
-      crop: { x: 0, y: 0, width: 32, height: 32 },
       name: '固定帧图块',
       pass: createOpenPass(),
       defaultFrame: 3,
@@ -550,7 +549,6 @@ describe('buildMapRenderModel Tileset', () => {
       number: 1005,
       column: 1,
       row: 1,
-      crop: { x: 32, y: 32, width: 32, height: 32 },
       name: 'Tileset 格',
       pass: createOpenPass(),
     };

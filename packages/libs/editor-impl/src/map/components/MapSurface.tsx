@@ -3,7 +3,7 @@ import { ReactElement, useEffect, useRef, useState } from 'react';
 import { MAP_FRAME_SPEED_DEFAULT, MAP_PASS_COLOR_UP } from '../constants';
 import { resolvePreviewCellRects } from '../model/cellMetrics';
 import { resolvePassArrowColor } from '../model/passability';
-import { resolveCellFrame, resolveFrameRect, resolveFrameTickAt } from '../model/tileFrame';
+import { resolveCellFrame, resolveFrameInfo, resolveFrameRect, resolveFrameTickAt } from '../model/tileFrame';
 import {
   IMapCellPosition,
   IMapDocument,
@@ -802,7 +802,7 @@ function collectThumbnailTiles(
   for (const group of mapDocument.tileGroups) {
     for (const entry of group.tiles) {
       paths.set(entry.number, group.imagePath);
-      crops.set(entry.number, entry.crop);
+      crops.set(entry.number, resolveFrameInfo(group, entry).base);
     }
   }
 }

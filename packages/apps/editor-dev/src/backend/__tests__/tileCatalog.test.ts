@@ -47,8 +47,6 @@ describe('宿主图块目录解析器', () => {
       [0, 0],
       [1, 0],
     ]);
-    expect(groups[0].tiles[0].crop).toEqual({ x: 0, y: 0, width: 32, height: 32 });
-    expect(groups[0].tiles[1].crop).toEqual({ x: 32, y: 0, width: 32, height: 32 });
   });
 
   // rowAnimate 的编号来自 map 数组，帧数由图片宽 ÷ 单格宽得出
@@ -139,10 +137,11 @@ describe('宿主图块目录解析器', () => {
     ]);
     expect(groups[0].tileset).toEqual({ cellWidth: 32, cellHeight: 32, columns: 4, rows: 2 });
 
+    // 编号 1005 落在 (1,1)：条目只带图集位置，帧矩形由读取规则现算
     const entry = groups[0].tiles[5];
 
-    // Grid 下第 0 帧矩形就是该格自己：编号 1005 落在 (1,1)，裁切即 (32,32,32,32)
-    expect(entry.crop).toEqual({ x: 32, y: 32, width: 32, height: 32 });
+    expect(entry.column).toBe(1);
+    expect(entry.row).toBe(1);
   });
 
   // 同一个 grid 数组里混有多个分类时各生成一个组，图块保留它在整个数组里的行列

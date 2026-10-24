@@ -19,7 +19,6 @@ function createEntry(column: number, row: number, defaultFrame?: number): IMapTi
     number: 1,
     column,
     row,
-    crop: { x: 0, y: 0, width: 0, height: 0 },
     name: '图块 1',
     pass: {
       out: { up: true, right: true, down: true, left: true },

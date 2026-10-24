@@ -399,28 +399,18 @@ function createGroupId(category: MapTileCategory, imagePath: string, usedIds: Se
 }
 
 /**
- * 造一个图块条目：裁切矩形按它在整个素材里的行列与单格尺寸推导
+ * 造一个图块条目：裁切由素材组的读取规则与行列现算，条目只带编号与图集位置
  * @param number 写进地图格子的编号
  * @param column 图块在素材里的列号
  * @param row 图块在素材里的行号
- * @param cellWidth 素材单格宽
- * @param cellHeight 素材单格高
  * @param tile 图块表里的分类 / 通行 / 名字
  * @returns 图块条目
  */
-function createTileEntry(
-  number: number,
-  column: number,
-  row: number,
-  cellWidth: number,
-  cellHeight: number,
-  tile: ITileTableEntry,
-): IMapTileEntry {
+function createTileEntry(number: number, column: number, row: number, tile: ITileTableEntry): IMapTileEntry {
   return {
     number,
     column,
     row,
-    crop: { x: column * cellWidth, y: row * cellHeight, width: cellWidth, height: cellHeight },
     name: tile.name,
     pass: tile.pass,
   };
@@ -520,7 +510,7 @@ export function buildTileCatalog(source: ITileCatalogSource): readonly IMapTileG
             cellHeight,
             columns,
             frames: resolveFrames(kind, image, cellWidth, cellHeight, autotileType),
-            tiles: [createTileEntry(identifier, 0, 0, cellWidth, cellHeight, tile)],
+            tiles: [createTileEntry(identifier, 0, 0, tile)],
             autotile,
           },
           usedIds,
@@ -545,7 +535,7 @@ export function buildTileCatalog(source: ITileCatalogSource): readonly IMapTileG
 
           collected.push({
             category: tile.category,
-            tile: createTileEntry(number, column, row, cellWidth, cellHeight, tile),
+            tile: createTileEntry(number, column, row, tile),
           });
         }
       }
@@ -588,7 +578,7 @@ export function buildTileCatalog(source: ITileCatalogSource): readonly IMapTileG
 
       collected.push({
         category: tile.category,
-        tile: createTileEntry(number, column, row, cellWidth, cellHeight, tile),
+        tile: createTileEntry(number, column, row, tile),
       });
     });
 

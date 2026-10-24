@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { IMapDocument, IMapLayer } from '../types';
-import { createMapDocument } from './fixtures';
+import { createMapDocument, createTileGroup } from './fixtures';
 import { applyCellChanges, collectNetCellChanges, isMapDocumentValid, isTileCatalogEmpty } from '../model/document';
 
 /**
@@ -209,8 +209,8 @@ describe('isTileCatalogEmpty', () => {
   it('分组全空时为空目录', () => {
     const document = createMapDocument({
       tileGroups: [
-        { id: 'group-a', name: '分组 A', imagePath: 'content/map/a.png', columns: 2, tiles: [] },
-        { id: 'group-b', name: '分组 B', imagePath: 'content/map/b.png', columns: 2, tiles: [] },
+        createTileGroup({ id: 'group-a', name: '分组 A', imagePath: 'content/map/a.png', columns: 2, tiles: [] }),
+        createTileGroup({ id: 'group-b', name: '分组 B', imagePath: 'content/map/b.png', columns: 2, tiles: [] }),
       ],
     });
 
@@ -225,11 +225,11 @@ describe('isTileCatalogEmpty', () => {
   // 目录只看结构、不看图片字节：图片路径为空字符串仍不算空目录
   it('图片路径缺失但编号有效时不算空目录', () => {
     const document = createMapDocument({
-      tileGroups: [{ id: 'group-a', name: '分组 A', imagePath: '', columns: 1, tiles: [] }],
+      tileGroups: [createTileGroup({ id: 'group-a', name: '分组 A', imagePath: '', columns: 1, tiles: [] })],
     });
     const withTile = createMapDocument({
       tileGroups: [
-        {
+        createTileGroup({
           id: 'group-a',
           name: '分组 A',
           imagePath: '',
@@ -239,7 +239,6 @@ describe('isTileCatalogEmpty', () => {
               number: 1,
               column: 0,
               row: 0,
-              crop: { x: 0, y: 0, width: 32, height: 32 },
               name: '图块 1',
               pass: {
                 out: { up: true, right: true, down: true, left: true },
@@ -248,7 +247,7 @@ describe('isTileCatalogEmpty', () => {
               },
             },
           ],
-        },
+        }),
       ],
     });
 

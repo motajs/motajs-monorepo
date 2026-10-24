@@ -272,37 +272,7 @@ function createBlockedDirections(): IMapDirections {
 }
 
 /**
- * 造一个指定素材格尺寸的图块条目；裁切矩形按「列 / 行 × 素材格尺寸」推导
- * @param number 图块编号
- * @param column 图集列号
- * @param row 图集行号
- * @param cellWidth 素材单格的源像素宽
- * @param cellHeight 素材单格的源像素高
- * @param blocked 为 true 时该图块四方向都不可通行
- * @returns 图块条目
- */
-function createSizedTileEntry(
-  number: number,
-  column: number,
-  row: number,
-  cellWidth: number,
-  cellHeight: number,
-  blocked: boolean = false,
-): IMapTileEntry {
-  const directions = blocked ? createBlockedDirections() : createOpenDirections();
-
-  return {
-    number,
-    column,
-    row,
-    crop: { x: column * cellWidth, y: row * cellHeight, width: cellWidth, height: cellHeight },
-    name: `图块 ${number}`,
-    pass: { out: directions, in: createOpenDirections(), onlyEventLayer: false },
-  };
-}
-
-/**
- * 造一个图块条目；裁切矩形按「列 / 行 × 32 像素」推导，方便测试直接断言
+ * 造一个图块条目；裁切由素材组的读取规则现算，条目本身只带编号与图集位置
  * @param number 图块编号
  * @param column 图集列号
  * @param row 图集行号
@@ -310,7 +280,15 @@ function createSizedTileEntry(
  * @returns 图块条目
  */
 function createTileEntry(number: number, column: number, row: number, blocked: boolean = false): IMapTileEntry {
-  return createSizedTileEntry(number, column, row, MAP_CELL_SIZE, MAP_CELL_SIZE, blocked);
+  const directions = blocked ? createBlockedDirections() : createOpenDirections();
+
+  return {
+    number,
+    column,
+    row,
+    name: `图块 ${number}`,
+    pass: { out: directions, in: createOpenDirections(), onlyEventLayer: false },
+  };
 }
 
 /**
@@ -344,7 +322,7 @@ export function createTileGroup(overrides: Partial<IMapTileGroup> = {}): IMapTil
 /**
  * 造一个可指定素材格尺寸的 2 列 × 2 行图块分组，用于 64 × 64 素材或非正方形格子的用例
  *
- * 图块条目的裁切矩形与分组的 `cellWidth` / `cellHeight` 保持一致；不传时按 `MAP_CELL_SIZE` 处理。
+ * 分组的 `cellWidth` / `cellHeight` 就是素材单格尺寸；不传时按 `MAP_CELL_SIZE` 处理。
  * @param overrides 覆盖分组字段（如 cellWidth / cellHeight / id）
  * @returns 合法的图块分组
  */
@@ -352,10 +330,10 @@ export function createSizedTileGroup(overrides: Partial<IMapTileGroup> = {}): IM
   const cellWidth = overrides.cellWidth ?? MAP_CELL_SIZE;
   const cellHeight = overrides.cellHeight ?? MAP_CELL_SIZE;
   const tiles: readonly IMapTileEntry[] = [
-    createSizedTileEntry(1, 0, 0, cellWidth, cellHeight),
-    createSizedTileEntry(2, 1, 0, cellWidth, cellHeight),
-    createSizedTileEntry(3, 0, 1, cellWidth, cellHeight),
-    createSizedTileEntry(4, 1, 1, cellWidth, cellHeight, true),
+    createTileEntry(1, 0, 0),
+    createTileEntry(2, 1, 0),
+    createTileEntry(3, 0, 1),
+    createTileEntry(4, 1, 1, true),
   ];
 
   return {
@@ -407,6 +385,11 @@ export function createMapDocument(overrides: Partial<IMapDocument> = {}): IMapDo
     imagePath: 'content/map/tiles-a.png',
     columns: 2,
     tiles: [createTileEntry(1, 0, 0), createTileEntry(2, 1, 0)],
+    category: MapTileCategory.Terrain,
+    read: MapTextureReadType.Grid,
+    cellWidth: MAP_CELL_SIZE,
+    cellHeight: MAP_CELL_SIZE,
+    frames: 1,
   };
   const secondGroup: IMapTileGroup = {
     id: 'group-b',
@@ -414,6 +397,11 @@ export function createMapDocument(overrides: Partial<IMapDocument> = {}): IMapDo
     imagePath: 'content/map/tiles-b.png',
     columns: 2,
     tiles: [createTileEntry(3, 0, 0), createTileEntry(4, 1, 0), createTileEntry(5, 0, 1)],
+    category: MapTileCategory.Terrain,
+    read: MapTextureReadType.Grid,
+    cellWidth: MAP_CELL_SIZE,
+    cellHeight: MAP_CELL_SIZE,
+    frames: 1,
   };
 
   return {
@@ -453,5 +441,7 @@ export function createWideMapDocument(width: number, height: number): IMapDocume
     height,
     layers: [{ id: 'layer-wide', name: '整图', zIndex: 0, isEventLayer: false, cells }],
     tileGroups: [createTileGroup()],
+    cellWidth: MAP_CELL_SIZE,
+    cellHeight: MAP_CELL_SIZE,
   };
 }

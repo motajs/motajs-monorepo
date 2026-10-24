@@ -230,8 +230,6 @@ export interface IMapTileEntry {
   readonly column: number;
   /** 图块在整张图集里的行号 */
   readonly row: number;
-  /** 从源图片上裁出的像素矩形 */
-  readonly crop: IMapTileCrop;
   /** 展示给用户看的图块名 */
   readonly name: string;
   /** 图块的四方向通行属性 */
@@ -251,16 +249,16 @@ export interface IMapTileGroup {
   readonly columns: number;
   /** 分组内的图块列表 */
   readonly tiles: readonly IMapTileEntry[];
-  /** 这个素材组属于六类中的哪一类；缺省按 `MapTileCategory.Terrain` 处理 */
-  readonly category?: MapTileCategory;
-  /** 这个素材组的读取方式；缺省按 `MapTextureReadType.Grid` 处理 */
-  readonly read?: MapTextureReadType;
-  /** 素材单格的源像素宽（不是地图格子）；缺省取 `MAP_CELL_SIZE` */
-  readonly cellWidth?: number;
-  /** 素材单格的源像素高（不是地图格子）；缺省取 `MAP_CELL_SIZE` */
-  readonly cellHeight?: number;
-  /** 每个图块的帧数，1..`MAP_FRAME_LIMIT`；缺省按 1（静态）处理 */
-  readonly frames?: number;
+  /** 这个素材组属于六类中的哪一类 */
+  readonly category: MapTileCategory;
+  /** 这个素材组的读取方式 */
+  readonly read: MapTextureReadType;
+  /** 素材单格的源像素宽（不是地图格子） */
+  readonly cellWidth: number;
+  /** 素材单格的源像素高（不是地图格子） */
+  readonly cellHeight: number;
+  /** 每个图块的帧数，1..`MAP_FRAME_LIMIT` */
+  readonly frames: number;
   /** 自动拼接规则；普通素材没有这个字段 */
   readonly autotile?: IMapAutotileRule;
   /** Tileset 元数据；只有 `MapTileCategory.Tileset` 的组才有 */
@@ -293,10 +291,10 @@ export interface IMapDocument {
   readonly layers: readonly IMapLayer[];
   /** 宿主算好的图块目录，随文档一起到达 */
   readonly tileGroups: readonly IMapTileGroup[];
-  /** 这张地图自己的格子宽（像素，为正整数）；缺省取 `MAP_CELL_SIZE` */
-  readonly cellWidth?: number;
-  /** 这张地图自己的格子高（像素，为正整数）；缺省取 `MAP_CELL_SIZE` */
-  readonly cellHeight?: number;
+  /** 这张地图自己的格子宽（像素，为正整数） */
+  readonly cellWidth: number;
+  /** 这张地图自己的格子高（像素，为正整数） */
+  readonly cellHeight: number;
 }
 
 export interface IMapSize {
@@ -397,9 +395,6 @@ export interface IMapEditorCapabilities {
 
   /** 地图尺寸上限；缺省表示不限制 */
   readonly maxMapSize?: IMapSizeLimit;
-
-  /** 覆盖最近使用文件的约定路径 */
-  readonly recentTilesPath?: string;
 
   /** 宿主覆盖地图视口横向格数；缺省 `MAP_VIEWPORT_DEFAULT_COLUMNS` */
   readonly viewportColumns?: number;

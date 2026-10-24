@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { MAP_PASS_COLOR_DOWN, MAP_PASS_COLOR_LEFT, MAP_PASS_COLOR_RIGHT, MAP_PASS_COLOR_UP } from '../constants';
+import {
+  MAP_CELL_SIZE,
+  MAP_PASS_COLOR_DOWN,
+  MAP_PASS_COLOR_LEFT,
+  MAP_PASS_COLOR_RIGHT,
+  MAP_PASS_COLOR_UP,
+} from '../constants';
 import { IMapDirections, IMapDocument, IMapLayer, IMapTileEntry, IMapTilePass, MapDirection } from '../types';
 import { IMapRenderView, buildMapRenderModel } from '../model/renderModel';
 import { computePassabilityMarks, resolvePassArrowColor } from '../model/passability';
@@ -16,7 +22,7 @@ function createDirections(overrides: Partial<IMapDirections> = {}): IMapDirectio
 }
 
 /**
- * 造一个图块条目；裁切与名称固定，通行属性可覆盖
+ * 造一个图块条目；名称固定，通行属性可覆盖
  * @param number 图块编号
  * @param pass 覆盖通行属性字段
  * @returns 图块条目
@@ -26,7 +32,6 @@ function createTile(number: number, pass: Partial<IMapTilePass> = {}): IMapTileE
     number,
     column: 0,
     row: 0,
-    crop: { x: 0, y: 0, width: 32, height: 32 },
     name: `图块 ${number}`,
     pass: { out: createDirections(), in: createDirections(), onlyEventLayer: false, ...pass },
   };
@@ -60,7 +65,16 @@ function createLayer(id: string, cells: readonly (readonly number[])[], isEventL
  * @returns 中立文档
  */
 function createDocument(layers: readonly IMapLayer[], width: number = 3, height: number = 2): IMapDocument {
-  return { id: 'map', name: '地图', width, height, layers, tileGroups: [] };
+  return {
+    id: 'map',
+    name: '地图',
+    width,
+    height,
+    layers,
+    tileGroups: [],
+    cellWidth: MAP_CELL_SIZE,
+    cellHeight: MAP_CELL_SIZE,
+  };
 }
 
 describe('resolvePassArrowColor 四色映射', () => {

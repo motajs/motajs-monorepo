@@ -1,4 +1,12 @@
-import { IMapDataSection, IMapDirections, IMapDocument, IMapTileEntry, IMapTileGroup } from '@motajs/editor-impl/map';
+import {
+  IMapDataSection,
+  IMapDirections,
+  IMapDocument,
+  IMapTileEntry,
+  IMapTileGroup,
+  MapTextureReadType,
+  MapTileCategory,
+} from '@motajs/editor-impl/map';
 import { parseTableText, serializeTableText } from '@motajs/editor-impl/shared';
 import { describe, expect, it } from 'vitest';
 import { MemoryBackend } from '../memoryBackend';
@@ -22,7 +30,7 @@ const OPEN_DIRECTIONS: IMapDirections = { up: true, right: true, down: true, lef
 const BLOCKED_DIRECTIONS: IMapDirections = { up: false, right: false, down: false, left: false };
 
 /**
- * 造一个图块条目；裁切按「列 / 行 × 32 像素」推导
+ * 造一个图块条目；裁切由素材组的读取规则现算，条目只带编号与图集位置
  * @param number 图块编号
  * @param column 图集列号
  * @param name 图块显示名
@@ -36,13 +44,12 @@ function createTileEntry(number: number, column: number, name: string, blocked: 
     number,
     column,
     row: 0,
-    crop: { x: column * 32, y: 0, width: 32, height: 32 },
     name,
     pass: { out: directions, in: OPEN_DIRECTIONS, onlyEventLayer: false },
   };
 }
 
-/** 适配器测试用的图块目录：两个分组，第二个分组的图片故意指向不存在的文件 */
+/** 适配器测试用的图块目录：两个分类，第二个分类的图片故意指向不存在的文件 */
 const TEST_TILE_GROUPS: readonly IMapTileGroup[] = [
   {
     id: 'terrain',
@@ -50,6 +57,11 @@ const TEST_TILE_GROUPS: readonly IMapTileGroup[] = [
     imagePath: 'content/map/terrain.png',
     columns: 2,
     tiles: [createTileEntry(1, 0, '草地'), createTileEntry(2, 1, '墙', true)],
+    category: MapTileCategory.Terrain,
+    read: MapTextureReadType.Grid,
+    cellWidth: 32,
+    cellHeight: 32,
+    frames: 1,
   },
   {
     id: 'missing',
@@ -57,6 +69,11 @@ const TEST_TILE_GROUPS: readonly IMapTileGroup[] = [
     imagePath: 'content/map/does-not-exist.png',
     columns: 1,
     tiles: [createTileEntry(3, 0, '物件')],
+    category: MapTileCategory.Item,
+    read: MapTextureReadType.Grid,
+    cellWidth: 32,
+    cellHeight: 32,
+    frames: 1,
   },
 ];
 
