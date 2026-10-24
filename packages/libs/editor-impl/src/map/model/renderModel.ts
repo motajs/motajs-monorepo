@@ -7,8 +7,10 @@ import {
   MAP_ZOOM_MIN,
 } from '../constants';
 import {
+  IMapAutotileQuarters,
   IMapCellPosition,
   IMapDocument,
+  IMapFrameInfo,
   IMapLayer,
   IMapPassMark,
   IMapPreview,
@@ -17,12 +19,16 @@ import {
   IMapRenderGridLine,
   IMapRenderModel,
   IMapTileCrop,
+  IMapTileGroup,
   IMapViewport,
 } from '../types';
+import { computeAutotileConnection, resolveAutotileQuarters } from './autotile';
 import { resolveTileDest } from './cellMetrics';
+import { resolveFrameInfo } from './tileFrame';
 
 // 一帧要画什么：把中立文档与视图参数算成纯数据。
 // 这一层不 import React / Pixi / editor-core，也不读文件与图片；视图层每次渲染时现算，画布只照着数据画。
+// 格尺寸只在 buildMapRenderModel 顶部乘一次缩放；帧只给「第 0 帧 + 帧轴 + 步长 + 帧数」，不往模型里塞 255 个矩形。
 
 export interface IMapRenderView {
   /** 画布宽度（像素） */
@@ -52,12 +58,22 @@ export interface IMapRenderView {
 interface ITileImage {
   /** 图块所在图集的图片路径 */
   readonly imagePath: string;
-  /** 图块在图集上的像素裁切 */
+  /** 图块第 0 帧在源图上的裁切 */
   readonly crop: IMapTileCrop;
   /** 素材单格的源像素宽；缺省按裁切宽度处理 */
   readonly srcWidth?: number;
   /** 素材单格的源像素高；缺省按裁切高度处理 */
   readonly srcHeight?: number;
+  /** 图块所属的素材组；自动拼接规则与读取方式都从这里读 */
+  readonly group: IMapTileGroup;
+  /** 第 0 帧矩形、帧轴、帧步长与帧数 */
+  readonly frame: IMapFrameInfo;
+  /** 帧序列每行的格数；`ScanAnimate` 时等于素材列数 */
+  readonly frameColumns: number;
+  /** 条目自带的固定帧；缺省 -1 表示跟随动画时钟 */
+  readonly defaultFrame: number;
+  /** 自动元件的单方面连接集合；非自动元件为空集合 */
+  readonly autotileConnections: ReadonlySet<number>;
 }
 
 /**
@@ -70,10 +86,19 @@ function resolvePositiveSize(size: number | undefined): number {
 }
 
 /**
- * 把文档的图块目录摊平成「编号 → 图片路径 + 裁切 + 素材格尺寸」的索引
+ * 取一份可用的帧行格数；非法或非正时按 1 处理
+ * @param columns 素材组声明的列数
+ * @returns 可参与折行换算的列数
+ */
+function resolveFrameColumns(columns: number): number {
+  return Number.isFinite(columns) && columns > 0 ? Math.trunc(columns) : 1;
+}
+
+/**
+ * 把文档的图块目录摊平成「编号 → 图片路径 + 第 0 帧矩形 + 帧规则」的索引
  *
- * 裁切矩形按「列 / 行 × 素材格尺寸」临时推导出第 0 帧的源图矩形；这是 Plan 03 的 `tileFrame` 接管前的过渡实现，
- * 目录里给不出尺寸时按 `MAP_CELL_SIZE` 处理。本层不读图片，素材格尺寸只能来自宿主注入的目录。
+ * 裁切、帧轴、帧步长与帧数一律由 `resolveFrameInfo` 按素材组的读取方式算出；本层不读图片，
+ * 素材格尺寸只能来自宿主注入的目录。Tileset 与自动元件在目录里固定声明为 `Grid`，因此每个编号拿到的是它自己那一格。
  * @param document 中立文档
  * @returns 图块编号索引；同编号重复时后出现的分组覆盖先出现的
  */
@@ -83,17 +108,24 @@ function buildTileImages(document: IMapDocument): Map<number, ITileImage> {
   for (const group of document.tileGroups) {
     const cellWidth = resolvePositiveSize(group.cellWidth);
     const cellHeight = resolvePositiveSize(group.cellHeight);
+    const frameColumns = resolveFrameColumns(group.columns);
+    const connections: ReadonlySet<number> =
+      group.autotile === undefined ? new Set<number>() : new Set(group.autotile.connections);
 
     for (const entry of group.tiles) {
-      // Plan 03 的 tileFrame 接管前，第 0 帧矩形按列 / 行 × 素材格尺寸临时推导
-      const crop: IMapTileCrop = {
-        x: entry.column * cellWidth,
-        y: entry.row * cellHeight,
-        width: cellWidth,
-        height: cellHeight,
-      };
+      const frame = resolveFrameInfo(group, entry);
 
-      images.set(entry.number, { imagePath: group.imagePath, crop, srcWidth: cellWidth, srcHeight: cellHeight });
+      images.set(entry.number, {
+        imagePath: group.imagePath,
+        crop: frame.base,
+        srcWidth: cellWidth,
+        srcHeight: cellHeight,
+        group,
+        frame,
+        frameColumns,
+        defaultFrame: entry.defaultFrame ?? -1,
+        autotileConnections: connections,
+      });
     }
   }
 
@@ -133,22 +165,55 @@ function layerOpacity(layer: IMapLayer, current: IMapLayer | undefined, aboveLay
 }
 
 /**
+ * 算一个自动元件格要画的四块象限矩形
+ *
+ * 连接数由同层邻居与宿主注入的连接集合算出，四块各取素材单格的一半；普通图块返回 undefined。
+ * @param cells 同层格子矩阵（`[y][x]`）
+ * @param x 格子横坐标
+ * @param y 格子纵坐标
+ * @param image 图块索引项
+ * @returns 四块象限矩形；非自动元件为 undefined
+ */
+function resolveCellAutotile(
+  cells: readonly (readonly number[])[],
+  x: number,
+  y: number,
+  image: ITileImage,
+): IMapAutotileQuarters | undefined {
+  const autotile = image.group.autotile;
+
+  if (autotile === undefined) return undefined;
+
+  const connection = computeAutotileConnection(cells, x, y, image.autotileConnections);
+
+  return resolveAutotileQuarters(
+    autotile.type,
+    connection,
+    image.srcWidth ?? image.crop.width,
+    image.srcHeight ?? image.crop.height,
+  );
+}
+
+/**
  * 造一个渲染格：编号 0 表示空格（省略图片），目录里查不到的编号标 missing
  *
  * 有图片时目标矩形由 `resolveTileDest` 按 contain 算出，空格与缺图则占满整格。
+ * 自动元件格额外带四块象限矩形，`crop` 取左上那一块；动画格带帧轴 / 步长 / 帧数 / 行格数，静态格不带帧轴。
+ * @param cells 同层格子矩阵（`[y][x]`），自动拼接按它读邻居
  * @param layerId 图层标识，用于拼稳定的绘制 key
  * @param value 格子里的图块编号
  * @param x 格子横坐标
  * @param y 格子纵坐标
  * @param originX 格子目标区域的左上角横坐标
  * @param originY 格子目标区域的左上角纵坐标
- * @param cellWidth 格子的像素宽
- * @param cellHeight 格子的像素高
+ * @param cellWidth 格子的像素宽（已含缩放）
+ * @param cellHeight 格子的像素高（已含缩放）
  * @param opacity 该层这一帧的不透明度
  * @param images 图块编号索引
  * @returns 渲染格
  */
 function createRenderCell(
+  cells: readonly (readonly number[])[],
   layerId: string,
   value: number,
   x: number,
@@ -175,8 +240,8 @@ function createRenderCell(
     image.srcWidth ?? image.crop.width,
     image.srcHeight ?? image.crop.height,
   );
-
-  return {
+  const quarters = resolveCellAutotile(cells, x, y, image);
+  const cell: IMapRenderCell = {
     key,
     x: dest.x,
     y: dest.y,
@@ -185,7 +250,19 @@ function createRenderCell(
     opacity,
     missing: false,
     imagePath: image.imagePath,
-    crop: image.crop,
+    crop: quarters === undefined ? image.crop : quarters.lt,
+    autotileQuarters: quarters,
+    defaultFrame: image.defaultFrame,
+  };
+
+  if (image.frame.count <= 1) return cell;
+
+  return {
+    ...cell,
+    frameAxis: image.frame.axis,
+    frameStride: image.frame.stride,
+    frameCount: image.frame.count,
+    frameColumns: image.frameColumns,
   };
 }
 
@@ -219,6 +296,27 @@ function buildGridLines(
 }
 
 /**
+ * 只保留落在可见行列内的通行度标记，并统一标成逐方向箭头
+ * @param passMarks 面板算好的整层标记
+ * @param startX 可见范围左上角的格子横坐标
+ * @param startY 可见范围左上角的格子纵坐标
+ * @param columns 可见列数
+ * @param rows 可见行数
+ * @returns 视口内的标记；条数上限是 `columns × rows`，与文档总格数无关
+ */
+function clipPassMarks(
+  passMarks: readonly IMapPassMark[],
+  startX: number,
+  startY: number,
+  columns: number,
+  rows: number,
+): readonly IMapPassMark[] {
+  return passMarks
+    .filter((mark) => mark.x >= startX && mark.x < startX + columns && mark.y >= startY && mark.y < startY + rows)
+    .map((mark) => ({ ...mark, dot: false }));
+}
+
+/**
  * 造一个没有格子的空渲染模型，只透传视图里的框选 / 预览 / 悬停
  * @param view 视图参数
  * @param cellWidth 格子的像素宽
@@ -235,6 +333,7 @@ function buildEmptyModel(view: IMapRenderView, cellWidth: number, cellHeight: nu
     cellWidth,
     cellHeight,
     viewport: view.viewport,
+    previewCells: [],
     selection: view.selection,
     preview: view.preview,
     hover: view.hover,
@@ -243,6 +342,8 @@ function buildEmptyModel(view: IMapRenderView, cellWidth: number, cellHeight: nu
 
 /**
  * 普通模式：按传入的缩放后格尺寸遍历视口覆盖的行列范围
+ *
+ * 通行度标记同样按视口裁剪，因此这一帧的输出规模只与可见格数有关，与文档总格数无关。
  * @param document 中立文档
  * @param view 视图参数
  * @param current 当前层；找不到时为 undefined
@@ -279,6 +380,7 @@ function buildWindowModel(
 
         cells.push(
           createRenderCell(
+            layer.cells,
             layer.id,
             value,
             x,
@@ -300,10 +402,11 @@ function buildWindowModel(
     height: view.height,
     cells,
     gridLines: buildGridLines(columns, rows, cellWidth, cellHeight),
-    passMarks: view.passMarks.map((mark) => ({ ...mark, dot: false })),
+    passMarks: clipPassMarks(view.passMarks, startX, startY, columns, rows),
     cellWidth,
     cellHeight,
     viewport: view.viewport,
+    previewCells: [],
     selection: view.selection,
     preview: view.preview,
     hover: view.hover,
@@ -351,7 +454,19 @@ function buildBigMapModel(
         const value = sourceRow[x];
 
         cells.push(
-          createRenderCell(layer.id, value, x, y, offsetX + x * size, offsetY + y * size, size, size, opacity, images),
+          createRenderCell(
+            layer.cells,
+            layer.id,
+            value,
+            x,
+            y,
+            offsetX + x * size,
+            offsetY + y * size,
+            size,
+            size,
+            opacity,
+            images,
+          ),
         );
       }
     }
@@ -377,17 +492,17 @@ function buildBigMapModel(
  *
  * 唯一调用方是视图层 `MapPanelView`：面板只保存文档与视图状态，不计算也不缓存渲染模型。
  * 缩放只在本函数乘一次：`cellWidth / cellHeight = 文档格尺寸 × 缩放`，两条构建路径原样消费这一对值。
- * 普通模式只输出视口内的格子；大地图模式整图适配并居中，受 `MAP_BIG_MAP_MAX_SPRITES` 上限保护。
+ * 普通模式只输出视口内的格子与视口内的通行度标记；大地图模式整图适配并居中，受 `MAP_BIG_MAP_MAX_SPRITES` 上限保护。
  * @param document 中立文档
  * @param view 视图参数（画布尺寸、当前层、视口、大地图、缩放、框选、预览、悬停、通行度标记）
  * @returns 这一帧的渲染模型
  */
 export function buildMapRenderModel(document: IMapDocument, view: IMapRenderView): IMapRenderModel {
-  const current = findLayer(document, view.currentLayerId);
-  const images = buildTileImages(document);
   const zoom = Math.min(MAP_ZOOM_MAX, Math.max(MAP_ZOOM_MIN, view.zoom ?? MAP_ZOOM_DEFAULT));
   const cellWidth = resolvePositiveSize(document.cellWidth) * zoom;
   const cellHeight = resolvePositiveSize(document.cellHeight) * zoom;
+  const current = findLayer(document, view.currentLayerId);
+  const images = buildTileImages(document);
 
   return view.bigMap
     ? buildBigMapModel(document, view, current, images, cellWidth, cellHeight)

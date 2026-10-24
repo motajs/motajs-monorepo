@@ -1,7 +1,52 @@
 import { describe, expect, it } from 'vitest';
-import { IMapDocument, IMapLayer, IMapPreview, IMapRect } from '../types';
-import { createMapDocument, createSizedTileGroup, createWideMapDocument } from './fixtures';
+import {
+  IMapDocument,
+  IMapLayer,
+  IMapPassMark,
+  IMapPreview,
+  IMapRect,
+  IMapTileEntry,
+  IMapTilePass,
+  MapAutotileType,
+  MapFrameAxis,
+  MapTextureReadType,
+  MapTileCategory,
+} from '../types';
+import { createMapDocument, createSizedTileGroup, createTileGroup, createWideMapDocument } from './fixtures';
 import { IMapRenderView, buildMapRenderModel } from '../model/renderModel';
+
+/**
+ * 造一份四方向都可通行的通行属性
+ * @returns 四方向都为 true 的通行属性
+ */
+function createOpenPass(): IMapTilePass {
+  const directions = { up: true, right: true, down: true, left: true };
+
+  return { out: directions, in: directions, onlyEventLayer: false };
+}
+
+/**
+ * 造一个带方向的通行度标记
+ * @param x 标记所在格横坐标
+ * @param y 标记所在格纵坐标
+ * @param blocked 不可通行的方向
+ * @returns 通行度标记
+ */
+function createPassMark(x: number, y: number, blocked: Partial<IMapPassMark['blocked']>): IMapPassMark {
+  return { x, y, blocked: { up: false, right: false, down: false, left: false, ...blocked }, dot: false };
+}
+
+/**
+ * 造一个 1 格宽的文档，用于把单个图块放进渲染模型
+ * @param value 格子里的图块编号
+ * @param tileGroups 图块目录
+ * @returns 单格文档
+ */
+function createSingleCellDocument(value: number, tileGroups: IMapDocument['tileGroups']): IMapDocument {
+  const layer: IMapLayer = { id: 'layer-base', name: '基础层', zIndex: 0, isEventLayer: false, cells: [[value]] };
+
+  return createMapDocument({ width: 1, height: 1, layers: [layer], tileGroups });
+}
 
 /**
  * 造一个普通模式的视图参数：画布 128 × 96（4 列 × 3 行），视口在左上角
@@ -143,6 +188,40 @@ describe('buildMapRenderModel 普通模式', () => {
     expect(model.passMarks[0].blocked.up).toBe(true);
   });
 
+  // 普通模式只保留视口内的通行度标记：输出条数只与可见格有关，与文档总格数无关
+  it('只保留视口内的通行度标记', () => {
+    const document = createWideMapDocument(40, 40);
+    const model = buildMapRenderModel(
+      document,
+      createView({
+        width: 416,
+        height: 416,
+        currentLayerId: 'layer-wide',
+        viewport: { left: 3, top: 5 },
+        passMarks: [
+          createPassMark(0, 0, { up: true }),
+          createPassMark(3, 5, { right: true }),
+          createPassMark(15, 17, { down: true }),
+          createPassMark(16, 17, { left: true }),
+        ],
+      }),
+    );
+
+    expect(model.passMarks).toHaveLength(2);
+    expect(model.passMarks.map((mark) => `${mark.x},${mark.y}`)).toEqual(['3,5', '15,17']);
+    expect(model.passMarks.every((mark) => mark.dot === false)).toBe(true);
+    expect(model.passMarks[0].blocked.right).toBe(true);
+    expect(model.passMarks[1].blocked.down).toBe(true);
+  });
+
+  // 普通模式输出空的 previewCells，供 Plan 09 的画布在本地覆盖成整条路径
+  it('输出空的 previewCells 供画布覆盖整条路径', () => {
+    const document = createMapDocument();
+    const model = buildMapRenderModel(document, createView());
+
+    expect(model.previewCells).toEqual([]);
+  });
+
   // 框选 / 预览 / 悬停原样透传
   it('透传框选、预览与悬停', () => {
     const document = createMapDocument();
@@ -253,6 +332,22 @@ describe('buildMapRenderModel 格度量', () => {
     });
   });
 
+  // 200% 下同一个文档格是 64，素材填满整格
+  it('把 200% 缩放乘进模型度量', () => {
+    const document = createMapDocument({ tileGroups: [createSizedTileGroup({ cellWidth: 64, cellHeight: 64 })] });
+    const model = buildMapRenderModel(document, createView({ width: 256, height: 192, zoom: 2 }));
+    const first = model.cells[0];
+
+    expect(model.cellWidth).toBe(64);
+    expect(model.cellHeight).toBe(64);
+    expect({ x: first.x, y: first.y, width: first.width, height: first.height }).toEqual({
+      x: 0,
+      y: 0,
+      width: 64,
+      height: 64,
+    });
+  });
+
   // 大地图也给出格度量：模型上报文档格 × 缩放，整图适配的缩略尺寸只用于画格子
   it('大地图模式也给出格度量', () => {
     const document = createWideMapDocument(100, 50);
@@ -264,5 +359,142 @@ describe('buildMapRenderModel 格度量', () => {
     expect(model.cellWidth).toBe(64);
     expect(model.cellHeight).toBe(64);
     expect(model.cells[0].width).toBe(4);
+  });
+});
+
+describe('buildMapRenderModel 动画帧', () => {
+  // 逐行扫描的动画只给帧轴 / 步长 / 帧数 / 行格数，不把 255 个矩形塞进模型
+  it('动画格带帧轴、帧步长、帧数与行格数', () => {
+    const group = createTileGroup({
+      id: 'group-animate',
+      frames: 255,
+      read: MapTextureReadType.ScanAnimate,
+      columns: 3,
+    });
+    const document = createMapDocument({ tileGroups: [group] });
+    const model = buildMapRenderModel(document, createView());
+    const cell = model.cells.find((item) => item.key === 'layer-base:0:0')!;
+
+    expect(cell.frameAxis).toBe(MapFrameAxis.Scan);
+    expect(cell.frameStride).toBe(32);
+    expect(cell.frameCount).toBe(255);
+    expect(cell.frameColumns).toBe(3);
+    expect(cell.defaultFrame).toBe(-1);
+    expect(model.cells).toHaveLength(24);
+  });
+
+  // 静态格不带帧轴与帧数，画布按「没有动画」处理
+  it('静态格不带帧轴', () => {
+    const document = createMapDocument();
+    const model = buildMapRenderModel(document, createView());
+    const cell = model.cells.find((item) => item.key === 'layer-base:0:0')!;
+
+    expect(cell.frameAxis).toBeUndefined();
+    expect(cell.frameStride).toBeUndefined();
+    expect(cell.frameCount).toBeUndefined();
+    expect(cell.defaultFrame).toBe(-1);
+  });
+
+  // 条目声明的固定帧原样带进模型
+  it('固定帧来自图块条目', () => {
+    const entry: IMapTileEntry = {
+      number: 7,
+      column: 0,
+      row: 0,
+      crop: { x: 0, y: 0, width: 32, height: 32 },
+      name: '固定帧图块',
+      pass: createOpenPass(),
+      defaultFrame: 3,
+    };
+    const document = createSingleCellDocument(7, [
+      createTileGroup({ tiles: [entry], frames: 4, read: MapTextureReadType.RowAnimate, columns: 4 }),
+    ]);
+    const model = buildMapRenderModel(document, createView({ width: 32, height: 32 }));
+
+    expect(model.cells).toHaveLength(1);
+    expect(model.cells[0].defaultFrame).toBe(3);
+    expect(model.cells[0].frameCount).toBe(4);
+  });
+});
+
+describe('buildMapRenderModel 自动拼接', () => {
+  // 自动元件格带四块象限矩形，裁切取左上那一块
+  it('自动元件格带四块象限矩形', () => {
+    const group = createSizedTileGroup({
+      id: 'group-autotile',
+      autotile: { type: MapAutotileType.Small2x3, connections: [] },
+    });
+    const document = createMapDocument({ tileGroups: [group] });
+    const model = buildMapRenderModel(document, createView());
+    const cell = model.cells.find((item) => item.key === 'layer-base:0:0')!;
+    const quarters = cell.autotileQuarters!;
+
+    expect(quarters.lt.width).toBe(16);
+    expect(quarters.lt.height).toBe(16);
+    expect(quarters.rt.width).toBe(16);
+    expect(quarters.rb.height).toBe(16);
+    expect(quarters.lb.width).toBe(16);
+    expect(cell.crop).toEqual(quarters.lt);
+  });
+
+  // 连接数由同层邻居算出：右邻居相同值时左上块落在另一位置
+  it('连接数随邻居变化', () => {
+    const group = createSizedTileGroup({
+      id: 'group-autotile',
+      autotile: { type: MapAutotileType.Small2x3, connections: [] },
+    });
+    const connectedLayer: IMapLayer = {
+      id: 'layer-base',
+      name: '基础层',
+      zIndex: 0,
+      isEventLayer: false,
+      cells: [[1, 1]],
+    };
+    const isolatedLayer: IMapLayer = {
+      id: 'layer-base',
+      name: '基础层',
+      zIndex: 0,
+      isEventLayer: false,
+      cells: [[1, 0]],
+    };
+    const connected = buildMapRenderModel(
+      createMapDocument({ width: 2, height: 1, layers: [connectedLayer], tileGroups: [group] }),
+      createView({ width: 64, height: 32 }),
+    );
+    const isolated = buildMapRenderModel(
+      createMapDocument({ width: 2, height: 1, layers: [isolatedLayer], tileGroups: [group] }),
+      createView({ width: 64, height: 32 }),
+    );
+
+    expect(connected.cells[0].autotileQuarters).not.toEqual(isolated.cells[0].autotileQuarters);
+  });
+});
+
+describe('buildMapRenderModel Tileset', () => {
+  // Tileset 声明的读取方式是 Grid：编号 1005 的 (1,1) 格裁切就是它自己那一格，不是整张图集
+  it('Grid 规则下取图集里自己那一格', () => {
+    const entry: IMapTileEntry = {
+      number: 1005,
+      column: 1,
+      row: 1,
+      crop: { x: 32, y: 32, width: 32, height: 32 },
+      name: 'Tileset 格',
+      pass: createOpenPass(),
+    };
+    const group = createSizedTileGroup({
+      id: 'group-tileset',
+      category: MapTileCategory.Tileset,
+      read: MapTextureReadType.Grid,
+      cellWidth: 32,
+      cellHeight: 32,
+      tileset: { cellWidth: 32, cellHeight: 32, columns: 8, rows: 8 },
+      tiles: [entry],
+    });
+    const document = createSingleCellDocument(1005, [group]);
+    const model = buildMapRenderModel(document, createView({ width: 32, height: 32 }));
+
+    expect(model.cells).toHaveLength(1);
+    expect(model.cells[0].crop).toEqual({ x: 32, y: 32, width: 32, height: 32 });
+    expect(model.cells[0].autotileQuarters).toBeUndefined();
   });
 });
