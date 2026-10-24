@@ -330,3 +330,158 @@ describe('素材区普通网格', () => {
     expect(onSelectPattern).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * 派发一个带坐标的指针事件；jsdom 没有 PointerEvent，用 MouseEvent 承担同一监听
+ * @param target 事件目标
+ * @param type 事件类型
+ * @param x 视口横坐标
+ * @param y 视口纵坐标
+ */
+function dispatchPointer(target: Element, type: string, x: number, y: number): void {
+  const event = new MouseEvent(type, {
+    bubbles: true,
+    cancelable: true,
+    clientX: x,
+    clientY: y,
+    button: 0,
+  });
+
+  Object.defineProperty(event, 'pointerId', { configurable: true, value: 1 });
+  fireEvent(target, event);
+}
+
+/**
+ * 造一个 3 × 2 的 Tileset 素材组：编号 1001..1006，按行主序排列
+ * @returns Tileset 分组
+ */
+function createTilesetGroup(): IMapTileGroup {
+  const numbers = [1001, 1002, 1003, 1004, 1005, 1006];
+  const tiles = numbers.map((number, index) => createTile(number, index % 3, Math.floor(index / 3)));
+
+  return {
+    id: 'group-tileset',
+    name: '整图 Tileset',
+    imagePath: 'content/map/tileset.png',
+    columns: 3,
+    tiles,
+    category: MapTileCategory.Tileset,
+    read: MapTextureReadType.Grid,
+    cellWidth: 32,
+    cellHeight: 32,
+    frames: 1,
+    tileset: { cellWidth: 32, cellHeight: 32, columns: 3, rows: 2 },
+  };
+}
+
+/**
+ * 把元素的包围盒钉成固定尺寸，供 jsdom 里按指针坐标换算格子
+ * @param element 目标元素
+ * @param width 包围盒宽（像素）
+ * @param height 包围盒高（像素）
+ */
+function stubRect(element: HTMLElement, width: number, height: number): void {
+  element.getBoundingClientRect = (): DOMRect => ({
+    left: 0,
+    top: 0,
+    right: width,
+    bottom: height,
+    width,
+    height,
+    x: 0,
+    y: 0,
+    toJSON: (): Record<string, number> => ({}),
+  });
+}
+
+describe('素材区 Tileset 选择器', () => {
+  // Tileset 开关打开后出现整图与分格线，普通网格让位
+  it('打开 Tileset 后出现整图分格', () => {
+    render(<MapMaterialPanel {...createProps({ groups: [createTilesetGroup()], tilesetOpen: true })} />);
+
+    expect(screen.getByTestId('map-tileset')).not.toBeNull();
+    expect(screen.getByTestId('map-tileset-canvas')).not.toBeNull();
+    expect(screen.getByTestId('map-tileset-grid').children.length).toBe(3);
+    expect(screen.queryByTestId('map-material-grid')).toBeNull();
+  });
+
+  // 点 (1,1) 得到 1×1 图案，编号与目录一致
+  it('点单格得到 1×1 图案', () => {
+    const onSelectPattern = vi.fn();
+
+    render(
+      <MapMaterialPanel
+        {...createProps({ groups: [createTilesetGroup()], tilesetOpen: true, onSelectPattern })}
+      />,
+    );
+
+    const canvas = screen.getByTestId('map-tileset-canvas');
+
+    stubRect(canvas, 96, 64);
+    dispatchPointer(canvas, 'pointerdown', 40, 40);
+    dispatchPointer(canvas, 'pointerup', 40, 40);
+
+    expect(onSelectPattern).toHaveBeenCalledWith({
+      kind: MapPaletteKind.Tiles,
+      pattern: { width: 1, height: 1, tiles: [1005] },
+      primaryTileNumber: 1005,
+    });
+  });
+
+  // 从 (0,0) 拖到 (1,1) 得到 2×2 行主序图案，缺格填 0 的规则与画布一致
+  it('框选多格得到 2×2 行主序图案', () => {
+    const onSelectPattern = vi.fn();
+
+    render(
+      <MapMaterialPanel
+        {...createProps({ groups: [createTilesetGroup()], tilesetOpen: true, onSelectPattern })}
+      />,
+    );
+
+    const canvas = screen.getByTestId('map-tileset-canvas');
+
+    stubRect(canvas, 96, 64);
+    dispatchPointer(canvas, 'pointerdown', 5, 5);
+    dispatchPointer(canvas, 'pointermove', 40, 40);
+
+    expect(screen.getByTestId('map-tileset-select').textContent).toBe('2×2');
+
+    dispatchPointer(canvas, 'pointerup', 40, 40);
+
+    expect(onSelectPattern).toHaveBeenCalledWith({
+      kind: MapPaletteKind.Tiles,
+      pattern: { width: 2, height: 2, tiles: [1001, 1002, 1004, 1005] },
+      primaryTileNumber: 1001,
+    });
+  });
+
+  // 图片失败：出现失败条与重试，重试只回调重试
+  it('Tileset 图片失败显示重试', () => {
+    const onRetryImages = vi.fn();
+
+    render(
+      <MapMaterialPanel
+        {...createProps({
+          groups: [createTilesetGroup()],
+          groupUrls: {},
+          groupStatus: { 'group-tileset': MapImageStatus.Error },
+          tilesetOpen: true,
+          onRetryImages,
+        })}
+      />,
+    );
+
+    expect(screen.getByTestId('map-tileset-error').textContent).toContain('Tileset 加载失败');
+
+    fireEvent.click(screen.getByTestId('map-tileset-retry'));
+
+    expect(onRetryImages).toHaveBeenCalledTimes(1);
+  });
+
+  // 目录里没有 Tileset 组：开关打开后给空态
+  it('没有 Tileset 素材时给空态', () => {
+    render(<MapMaterialPanel {...createProps({ groups: [createTerrainGroup()], tilesetOpen: true })} />);
+
+    expect(screen.getByTestId('map-tileset-empty').textContent).toBe('暂无 Tileset 素材');
+  });
+});

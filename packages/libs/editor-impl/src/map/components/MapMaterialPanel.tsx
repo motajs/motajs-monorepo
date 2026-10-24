@@ -12,6 +12,7 @@ import {
   MapTileCategory,
 } from '../types';
 import { MapCategoryNav } from './MapCategoryNav';
+import { MapTilesetPicker } from './MapTilesetPicker';
 
 // 右侧素材区：顶部「显示帧数」勾选框 + 五类竖排导航 + 当前分类的普通素材网格。
 // 组件只吃 props：目录、图片地址与状态、当前分类 / 选中 / 开关与回调；它不读文件、不读字节、不持有选中。
@@ -28,6 +29,9 @@ const CATEGORY_EMPTY_TEXT = '该分类暂无素材';
 
 /** 整个目录没有普通素材时的文案 */
 const CATALOG_EMPTY_TEXT = '暂无可用分类';
+
+/** 目录里没有 Tileset 素材时的文案 */
+const TILESET_EMPTY_TEXT = '暂无 Tileset 素材';
 
 /** 一个普通素材按钮的渲染输入 */
 interface IMaterialTileProps {
@@ -316,6 +320,34 @@ function renderLoadingStrip(): ReactElement {
 }
 
 /**
+ * 渲染 Tileset 单独视图：目录里没有 Tileset 组时给空态，否则交给选择器
+ * @param props 素材区 props
+ * @returns Tileset 视图元素
+ */
+function renderTilesetView(props: IMapMaterialPanelProps): ReactElement {
+  const group = props.groups.find((candidate) => candidate.tileset !== undefined);
+
+  if (group === undefined) {
+    return (
+      <div className="emap-material-empty" data-test-id="map-tileset-empty">
+        {TILESET_EMPTY_TEXT}
+      </div>
+    );
+  }
+
+  return (
+    <MapTilesetPicker
+      group={group}
+      groupUrl={props.groupUrls[group.id]}
+      status={groupImageStatus(group, props.groupUrls, props.groupStatus)}
+      selection={props.selection}
+      onSelectPattern={props.onSelectPattern}
+      onRetryImages={props.onRetryImages}
+    />
+  );
+}
+
+/**
  * 右侧素材区：分类导航 + 普通素材网格，Tileset 开关由导航负责
  * @param props 素材区 props
  * @returns 素材区元素
@@ -352,9 +384,7 @@ export function MapMaterialPanel(props: IMapMaterialPanelProps): ReactElement {
       />
       <div className="emap-material-body">
         {tilesetOpen ? (
-          <div className="emap-material-empty" data-test-id="map-tileset-placeholder">
-            Tileset
-          </div>
+          renderTilesetView(props)
         ) : (
           <>
             {anyLoading ? renderLoadingStrip() : null}
