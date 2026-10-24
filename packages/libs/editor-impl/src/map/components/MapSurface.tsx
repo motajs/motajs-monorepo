@@ -1,4 +1,4 @@
-import { Application, Container, Graphics, Rectangle, Sprite, Texture, UPDATE_PRIORITY } from 'pixi.js';
+import { Application, Container, Graphics, Rectangle, RenderTexture, Sprite, Texture, UPDATE_PRIORITY } from 'pixi.js';
 import { ReactElement, useEffect, useRef, useState } from 'react';
 import { MAP_FRAME_SPEED_DEFAULT, MAP_PASS_COLOR_UP } from '../constants';
 import { resolvePreviewCellRects } from '../model/cellMetrics';
@@ -12,6 +12,7 @@ import {
   IMapRect,
   IMapRenderCell,
   IMapRenderModel,
+  IMapThumbnail,
   IMapTileCrop,
   MapDirection,
   MapFrameAxis,
@@ -776,6 +777,192 @@ function drawHover(scene: Container, model: IMapRenderModel, position: IMapCellP
 }
 
 /**
+ * 收集整份目录里「编号 → 图片路径 / 裁切」，供缩略纹理逐格铺内容
+ * @param mapDocument 中立文档
+ * @param paths 编号 → 图片路径的输出表
+ * @param crops 编号 → 裁切矩形的输出表
+ */
+function collectThumbnailTiles(
+  mapDocument: IMapDocument,
+  paths: Map<number, string>,
+  crops: Map<number, IMapTileCrop>,
+): void {
+  for (const group of mapDocument.tileGroups) {
+    for (const entry of group.tiles) {
+      paths.set(entry.number, group.imagePath);
+      crops.set(entry.number, entry.crop);
+    }
+  }
+}
+
+/**
+ * 取缩略纹理里某个图块编号的纹理：同一编号只裁一张，铺 256×256 时不会给每格都建一张
+ * @param value 图块编号
+ * @param paths 编号 → 图片路径
+ * @param crops 编号 → 裁切矩形
+ * @param textures 按图片路径缓存的图集纹理
+ * @param tileTextures 编号 → 已裁好的纹理
+ * @param cropped 本次重建创建的临时纹理收集处
+ * @returns 该编号的裁切纹理；图片或编号缺失时为 undefined
+ */
+function resolveThumbnailTileTexture(
+  value: number,
+  paths: Map<number, string>,
+  crops: Map<number, IMapTileCrop>,
+  textures: Map<string, Texture>,
+  tileTextures: Map<number, Texture>,
+  cropped: Texture[],
+): Texture | undefined {
+  const cached = tileTextures.get(value);
+
+  if (cached !== undefined) return cached;
+
+  const path = paths.get(value);
+  const crop = crops.get(value);
+
+  if (path === undefined || crop === undefined) return undefined;
+
+  const source = textures.get(path);
+
+  if (source === undefined) return undefined;
+
+  const texture = createCropTexture(source, crop);
+
+  tileTextures.set(value, texture);
+  cropped.push(texture);
+  return texture;
+}
+
+/**
+ * 按 zIndex 从低到高把整份文档铺进离屏容器：每格一个 1 源像素 / 格的精灵，高于当前层的图层用统一不透明度
+ * @param container 离屏容器
+ * @param cropped 本次重建创建的临时纹理收集处
+ * @param mapDocument 中立文档
+ * @param currentLayerId 当前图层标识；缺失时所有层都不透明
+ * @param aboveLayerOpacity 高于当前层的图层统一不透明度
+ * @param textureWidth 缩略纹理的像素宽
+ * @param textureHeight 缩略纹理的像素高
+ * @param textures 按图片路径缓存的图集纹理
+ */
+function paintThumbnailLayers(
+  container: Container,
+  cropped: Texture[],
+  mapDocument: IMapDocument,
+  currentLayerId: string | undefined,
+  aboveLayerOpacity: number,
+  textureWidth: number,
+  textureHeight: number,
+  textures: Map<string, Texture>,
+): void {
+  if (mapDocument.width <= 0 || mapDocument.height <= 0) return;
+
+  const scaleX = textureWidth / mapDocument.width;
+  const scaleY = textureHeight / mapDocument.height;
+  const paths: Map<number, string> = new Map();
+  const crops: Map<number, IMapTileCrop> = new Map();
+  const tileTextures: Map<number, Texture> = new Map();
+  const current = mapDocument.layers.find((layer) => layer.id === currentLayerId);
+  const layers = [...mapDocument.layers].sort((left, right) => left.zIndex - right.zIndex);
+
+  collectThumbnailTiles(mapDocument, paths, crops);
+
+  for (const layer of layers) {
+    const aboveCurrent = current !== undefined && layer.id !== current.id && layer.zIndex > current.zIndex;
+    const alpha = aboveCurrent ? aboveLayerOpacity : 1;
+    const rows = Math.min(layer.cells.length, mapDocument.height);
+
+    for (let y = 0; y < rows; y += 1) {
+      const row = layer.cells[y];
+      const columns = Math.min(row.length, mapDocument.width);
+
+      for (let x = 0; x < columns; x += 1) {
+        const value = row[x];
+
+        if (value === 0) continue;
+
+        const texture = resolveThumbnailTileTexture(value, paths, crops, textures, tileTextures, cropped);
+
+        if (texture === undefined) continue;
+
+        const sprite = new Sprite(texture);
+
+        sprite.x = x * scaleX;
+        sprite.y = y * scaleY;
+        sprite.width = scaleX;
+        sprite.height = scaleY;
+        sprite.alpha = alpha;
+        container.addChild(sprite);
+      }
+    }
+  }
+}
+
+/**
+ * 建一张缩略纹理：内容来自 props 里的文档，缺省时只画缩略底色，不抛错
+ * @param app Pixi 应用（提供渲染器）
+ * @param mapDocument 中立文档；旧调用方可能不传
+ * @param currentLayerId 当前图层标识
+ * @param aboveLayerOpacity 高于当前层的图层统一不透明度
+ * @param textureWidth 缩略纹理的像素宽
+ * @param textureHeight 缩略纹理的像素高
+ * @param textures 按图片路径缓存的图集纹理
+ * @returns 建好的缩略纹理
+ */
+function buildThumbnailTexture(
+  app: Application,
+  mapDocument: IMapDocument | undefined,
+  currentLayerId: string | undefined,
+  aboveLayerOpacity: number | undefined,
+  textureWidth: number,
+  textureHeight: number,
+  textures: Map<string, Texture>,
+): RenderTexture {
+  const texture = RenderTexture.create({ width: textureWidth, height: textureHeight, resolution: 1, antialias: false });
+  const container = new Container();
+  const cropped: Texture[] = [];
+
+  if (mapDocument === undefined) {
+    const background = new Graphics();
+
+    background.rect(0, 0, textureWidth, textureHeight).fill({ color: EMPTY_LIGHT });
+    container.addChild(background);
+  } else {
+    paintThumbnailLayers(
+      container,
+      cropped,
+      mapDocument,
+      currentLayerId,
+      aboveLayerOpacity ?? 1,
+      textureWidth,
+      textureHeight,
+      textures,
+    );
+  }
+
+  app.renderer.render({ container, target: texture });
+  container.destroy({ children: true });
+  destroyFrames(cropped);
+  return texture;
+}
+
+/**
+ * 把缩略纹理当一张精灵按缩略描述摆放：显示尺寸与偏移都由 `buildThumbnail` 给出
+ * @param texture 缩略纹理
+ * @param thumbnail 缩略描述
+ * @returns 摆好位置的缩略精灵
+ */
+function createThumbnailSprite(texture: RenderTexture, thumbnail: IMapThumbnail): Sprite {
+  const sprite = new Sprite(texture);
+
+  sprite.x = thumbnail.offsetX;
+  sprite.y = thumbnail.offsetY;
+  sprite.width = thumbnail.width;
+  sprite.height = thumbnail.height;
+  sprite.label = 'map-thumbnail';
+  return sprite;
+}
+
+/**
  * 把一帧渲染模型画进场景：先画格子，再叠加网格、通行度标记、整条路径、框选、预览与悬停轮廓
  * @param scene 场景容器
  * @param model 渲染模型
@@ -833,6 +1020,11 @@ export function MapSurface(props: IMapSurfaceProps): ReactElement {
   const frameTexturesRef = useRef<Map<string, readonly Texture[]>>(new Map());
   const animatedSpritesRef = useRef<Map<string, readonly Sprite[]>>(new Map());
   const animatedFramesRef = useRef<Map<string, number>>(new Map());
+  const thumbnailTextureRef = useRef<RenderTexture | undefined>(undefined);
+  const thumbnailDocumentRef = useRef<IMapDocument | undefined>(undefined);
+  const thumbnailLayerRef = useRef<string | undefined>(undefined);
+  const thumbnailOpacityRef = useRef<number | undefined>(undefined);
+  const thumbnailVersionRef = useRef(-1);
   const modelRef = useRef(props.model);
   const frameSpeedRef = useRef(props.cellFrameSpeed ?? MAP_FRAME_SPEED_DEFAULT);
   const elapsedRef = useRef(0);
@@ -962,6 +1154,49 @@ export function MapSurface(props: IMapSurfaceProps): ReactElement {
     animatedSpritesRef.current.clear();
     animatedFramesRef.current.clear();
     lastTickRef.current = -1;
+
+    const thumbnail = props.model.thumbnail;
+    let thumbnailSprite: Sprite | undefined;
+
+    if (thumbnail !== undefined && thumbnail.textureWidth > 0 && thumbnail.textureHeight > 0) {
+      const stale =
+        thumbnailTextureRef.current === undefined ||
+        thumbnailDocumentRef.current !== props.document ||
+        thumbnailLayerRef.current !== props.currentLayerId ||
+        thumbnailOpacityRef.current !== props.aboveLayerOpacity ||
+        thumbnailVersionRef.current !== textureVersion;
+
+      if (stale) {
+        thumbnailTextureRef.current?.destroy(true);
+        thumbnailTextureRef.current = buildThumbnailTexture(
+          app,
+          props.document,
+          props.currentLayerId,
+          props.aboveLayerOpacity,
+          thumbnail.textureWidth,
+          thumbnail.textureHeight,
+          texturesRef.current,
+        );
+        thumbnailDocumentRef.current = props.document;
+        thumbnailLayerRef.current = props.currentLayerId;
+        thumbnailOpacityRef.current = props.aboveLayerOpacity;
+        thumbnailVersionRef.current = textureVersion;
+      }
+
+      const texture = thumbnailTextureRef.current;
+
+      if (texture !== undefined) thumbnailSprite = createThumbnailSprite(texture, thumbnail);
+    } else if (thumbnailTextureRef.current !== undefined) {
+      thumbnailTextureRef.current.destroy(true);
+      thumbnailTextureRef.current = undefined;
+      thumbnailDocumentRef.current = undefined;
+      thumbnailLayerRef.current = undefined;
+      thumbnailOpacityRef.current = undefined;
+      thumbnailVersionRef.current = -1;
+    }
+
+    if (thumbnailSprite !== undefined) scene.addChild(thumbnailSprite);
+
     drawModel(
       scene,
       props.model,
@@ -974,7 +1209,7 @@ export function MapSurface(props: IMapSurfaceProps): ReactElement {
 
     if (animatedSpritesRef.current.size > 0) app.ticker.start();
     else app.ticker.stop();
-  }, [props.model, readyVersion, textureVersion]);
+  }, [props.model, props.document, props.currentLayerId, props.aboveLayerOpacity, readyVersion, textureVersion]);
 
   useEffect(() => {
     const textures = texturesRef.current;
@@ -988,6 +1223,8 @@ export function MapSurface(props: IMapSurfaceProps): ReactElement {
       for (const frames of frameTextures.values()) destroyFrames(frames);
 
       frameTextures.clear();
+      thumbnailTextureRef.current?.destroy(true);
+      thumbnailTextureRef.current = undefined;
     };
   }, []);
 
