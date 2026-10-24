@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.1"
 current_phase_name: 地图渲染与布局重做
-current_plan: 10
+current_plan: 11
 status: executing
-stopped_at: Completed 04.1-09-PLAN.md
-last_updated: "2026-10-24T07:40:07.272Z"
+stopped_at: Completed 04.1-10-PLAN.md
+last_updated: "2026-10-24T08:20:11.047Z"
 last_activity: 2026-10-23
 last_activity_desc: Phase 3 complete, transitioned to Phase 4
-state_head: fc55f5bfa0ff090e83c4f2ddc8ea4d36f575400c
+state_head: adb3dbc2be6507e23df7affbc31e99fb34b8a698
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 138
-  completed_plans: 130
+  completed_plans: 131
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 04.1 (地图渲染与布局重做) — EXECUTING
-Current Plan: 10
+Current Plan: 11
 Total Plans in Phase: 16
 Status: Ready to execute
 Last activity: 2026-10-23 — 04.1-01 complete (naming report + pure declarations)
@@ -148,6 +148,7 @@ Progress: [██████████] 100%
 | Phase 04.1 P07 | 18min | 2 tasks | 3 files |
 | Phase 04.1-map-render-layout P08 | 27 | 2 tasks | 3 files |
 | Phase 04.1 P09 | 45 | 3 tasks | 7 files |
+| Phase 04.1 P10 | 20min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -370,6 +371,9 @@ Recent decisions affecting current work:
 - [Phase 04.1]: MapPanel.setViewport 在大地图期间直接返回：大地图视口恒为 (0,0)，滚动残留回调不得改写
 - [Phase 04.1]: 滚动回报与同步效应统一用 Math.floor 换算格子，避免回报后被同步效应拉回的抖动
 - [Phase 04.1]: 线模式 previewCells 复用 buildStrokeWrites 再去重，保证预览格与落笔格一致
+- [Phase 04.1]: 画布定位只有 toCanvasX / toCanvasY 一处换算：格像素宽高由相邻两格坐标换算结果相减得到，避免出现第二种格尺寸来源
+- [Phase 04.1]: 大地图缩略纹理的重建除文档引用 / 当前层 / 上层不透明度外还比较图块纹理就绪版本，否则异步读到的图片永远进不了缩略图
+- [Phase 04.1]: 动画时钟只在存在动画格时启动 Pixi ticker，静态地图不空转渲染；大地图的图片路径同时从文档图块目录收集
 
 ### Pending Todos
 
@@ -397,6 +401,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-24T07:40:06.581Z
-Stopped at: Completed 04.1-09-PLAN.md
+Last session: 2026-10-24T08:20:10.318Z
+Stopped at: Completed 04.1-10-PLAN.md
 Resume file: None
