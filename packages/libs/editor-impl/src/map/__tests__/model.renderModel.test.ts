@@ -37,6 +37,23 @@ function createPassMark(x: number, y: number, blocked: Partial<IMapPassMark['blo
 }
 
 /**
+ * 造一份铺满整张地图的通行度标记，四个方向都不可通行
+ * @param width 地图宽度（格子数）
+ * @param height 地图高度（格子数）
+ * @returns 每格一条的通行度标记
+ */
+function createFullPassMarks(width: number, height: number): readonly IMapPassMark[] {
+  const marks: IMapPassMark[] = [];
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1)
+      marks.push(createPassMark(x, y, { up: true, right: true, down: true, left: true }));
+  }
+
+  return marks;
+}
+
+/**
  * 造一个 1 格宽的文档，用于把单个图块放进渲染模型
  * @param value 格子里的图块编号
  * @param tileGroups 图块目录
@@ -237,28 +254,48 @@ describe('buildMapRenderModel 普通模式', () => {
 });
 
 describe('buildMapRenderModel 大地图模式', () => {
-  // 整图按保持宽高比缩放到画布内并居中
-  it('按保持宽高比缩放并居中', () => {
-    const document = createWideMapDocument(100, 50);
+  // 256 × 256 图在 416 画布上只给缩略描述，不产逐格格子；视口原样透传
+  it('只输出缩略描述而不产逐格格子', () => {
+    const document = createWideMapDocument(256, 256);
     const model = buildMapRenderModel(
       document,
-      createView({ width: 400, height: 400, currentLayerId: 'layer-wide', bigMap: true }),
+      createView({
+        width: 416,
+        height: 416,
+        currentLayerId: 'layer-wide',
+        viewport: { left: 100, top: 100 },
+        bigMap: true,
+      }),
     );
 
-    expect(model.cells).toHaveLength(5000);
-    expect(model.cells[0].key).toBe('layer-wide:0:0');
-    expect(model.cells[0].x).toBe(0);
-    expect(model.cells[0].y).toBe(100);
-    expect(model.cells[0].width).toBe(4);
-    expect(model.cells[0].height).toBe(4);
-    expect(model.cells[4999].x).toBe(396);
-    expect(model.cells[4999].y).toBe(296);
+    expect(model.cells).toHaveLength(0);
+    expect(model.gridLines).toHaveLength(0);
+    expect(model.thumbnail).toEqual({
+      width: 416,
+      height: 416,
+      scale: 1.625,
+      offsetX: 0,
+      offsetY: 0,
+      textureWidth: 256,
+      textureHeight: 256,
+    });
+    expect(model.viewport).toEqual({ left: 100, top: 100 });
   });
 
-  // 格边长小于 16px 时通行度标记降级为红点
-  it('格边长小于 16px 时把通行度降级为红点', () => {
+  // 缩略纹理边长受 512 上限约束，映射到画布仍等比居中
+  it('把缩略纹理边长夹到 512', () => {
+    const document: IMapDocument = { ...createMapDocument(), width: 600, height: 600 };
+    const model = buildMapRenderModel(document, createView({ width: 416, height: 416, bigMap: true }));
+
+    expect(model.thumbnail!.textureWidth).toBe(512);
+    expect(model.thumbnail!.textureHeight).toBe(512);
+    expect(model.thumbnail!.scale).toBeCloseTo(416 / 600, 6);
+  });
+
+  // 缩略格小于 16px 时通行度降级为单色点（D-12 的四色箭头只适用普通模式）
+  it('缩略格小于 16px 时把通行度降级为单色点', () => {
     const document = createWideMapDocument(100, 50);
-    const marks = [{ x: 3, y: 4, blocked: { up: false, right: true, down: false, left: false }, dot: false }];
+    const marks = [createPassMark(3, 4, { right: true })];
     const model = buildMapRenderModel(
       document,
       createView({ width: 400, height: 400, currentLayerId: 'layer-wide', bigMap: true, passMarks: marks }),
@@ -267,31 +304,66 @@ describe('buildMapRenderModel 大地图模式', () => {
     expect(model.passMarks).toHaveLength(1);
     expect(model.passMarks[0].dot).toBe(true);
     expect(model.passMarks[0].blocked.right).toBe(true);
+    expect(model.passMarks[0].x).toBe(0);
+    expect(model.passMarks[0].y).toBe(4);
   });
 
-  // 大地图模式不生成网格线
-  it('不生成网格线', () => {
-    const document = createWideMapDocument(20, 10);
+  // 416 画布上的 256 × 256 图：step = 10，65536 条标记被压到不超过 26 × 26 条
+  it('把整层通行度按缩略格降采样', () => {
+    const document = createWideMapDocument(256, 256);
+    const marks = createFullPassMarks(256, 256);
     const model = buildMapRenderModel(
       document,
-      createView({ width: 400, height: 400, currentLayerId: 'layer-wide', bigMap: true }),
+      createView({ width: 416, height: 416, currentLayerId: 'layer-wide', bigMap: true, passMarks: marks }),
     );
 
-    expect(model.gridLines).toHaveLength(0);
+    expect(model.passMarks.length).toBeLessThanOrEqual(26 * 26);
+    expect(model.passMarks.length).toBeGreaterThan(0);
+    expect(model.passMarks.every((mark) => mark.x % 10 === 0 && mark.y % 10 === 0)).toBe(true);
+    expect(model.passMarks.every((mark) => mark.dot)).toBe(true);
   });
 
-  // 图元总数超过上限时只输出当前层
-  it('超过图元上限时只输出当前层', () => {
-    const document = createWideMapDocument(120, 60);
-    const wide = document.layers[0];
-    const layers: readonly IMapLayer[] = [wide, { ...wide, id: 'layer-extra', zIndex: 1 }];
+  // 画布放大到 4096（缩略格 16px）时 step 退回 1，不做合并
+  it('缩略格够大时不合并通行度标记', () => {
+    const document = createWideMapDocument(256, 256);
+    const marks = createFullPassMarks(256, 256);
     const model = buildMapRenderModel(
-      { ...document, layers },
-      createView({ width: 240, height: 120, currentLayerId: 'layer-wide', bigMap: true }),
+      document,
+      createView({ width: 4096, height: 4096, currentLayerId: 'layer-wide', bigMap: true, passMarks: marks }),
     );
 
-    expect(model.cells).toHaveLength(7200);
-    expect(model.cells.every((cell) => cell.key.startsWith('layer-wide:'))).toBe(true);
+    expect(model.passMarks).toHaveLength(256 * 256);
+    expect(model.passMarks.every((mark) => !mark.dot)).toBe(true);
+  });
+
+  // 同一桶内的两个标记只留一条，四个方向取逻辑或
+  it('同一缩略桶内的方向取逻辑或', () => {
+    const document = createWideMapDocument(256, 256);
+    const model = buildMapRenderModel(
+      document,
+      createView({
+        width: 416,
+        height: 416,
+        currentLayerId: 'layer-wide',
+        bigMap: true,
+        passMarks: [createPassMark(0, 0, { up: true }), createPassMark(1, 1, { right: true })],
+      }),
+    );
+
+    expect(model.passMarks).toHaveLength(1);
+    expect(model.passMarks[0].x).toBe(0);
+    expect(model.passMarks[0].y).toBe(0);
+    expect(model.passMarks[0].blocked.up).toBe(true);
+    expect(model.passMarks[0].blocked.right).toBe(true);
+    expect(model.passMarks[0].dot).toBe(true);
+  });
+
+  // 普通模式不带缩略描述
+  it('普通模式不带缩略描述', () => {
+    const document = createMapDocument();
+    const model = buildMapRenderModel(document, createView());
+
+    expect(model.thumbnail).toBeUndefined();
   });
 });
 
@@ -348,7 +420,7 @@ describe('buildMapRenderModel 格度量', () => {
     });
   });
 
-  // 大地图也给出格度量：模型上报文档格 × 缩放，整图适配的缩略尺寸只用于画格子
+  // 大地图也给出格度量：模型上报文档格 × 缩放，而逐格内容交给缩略描述
   it('大地图模式也给出格度量', () => {
     const document = createWideMapDocument(100, 50);
     const model = buildMapRenderModel(
@@ -358,7 +430,8 @@ describe('buildMapRenderModel 格度量', () => {
 
     expect(model.cellWidth).toBe(64);
     expect(model.cellHeight).toBe(64);
-    expect(model.cells[0].width).toBe(4);
+    expect(model.cells).toHaveLength(0);
+    expect(model.thumbnail).toBeDefined();
   });
 });
 

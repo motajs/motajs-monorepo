@@ -157,7 +157,14 @@ describe('computePassabilityMarks', () => {
     const tileIndex = createTileIndex([blockedTile]);
     const document = createDocument([
       createLayer('lower', [[1, 0]], false),
-      createLayer('upper', [[0, 0], [1, 0]], false),
+      createLayer(
+        'upper',
+        [
+          [0, 0],
+          [1, 0],
+        ],
+        false,
+      ),
     ]);
 
     const lower = computePassabilityMarks(document, 'lower', tileIndex);
@@ -190,7 +197,7 @@ describe('computePassabilityMarks', () => {
     expect(model.passMarks[0].dot).toBe(false);
   });
 
-  // 输出直接喂给渲染模型：大地图小格时降级为红点（dot 为 true）
+  // 输出直接喂给渲染模型：大地图按缩略格降采样为红点（40 × 40 图在 400 画布上 step = 2，剩 20 × 20 = 400 条）
   it('输出直接喂给渲染模型的大地图小格得到红点', () => {
     const tile = createTile(1, { out: createDirections({ right: false }) });
     const rows: number[][] = [];
@@ -210,7 +217,7 @@ describe('computePassabilityMarks', () => {
     };
     const model = buildMapRenderModel(document, view);
 
-    expect(model.passMarks).toHaveLength(1600);
+    expect(model.passMarks).toHaveLength(400);
     expect(model.passMarks.every((mark) => mark.dot)).toBe(true);
   });
 });

@@ -1,14 +1,8 @@
-import {
-  MAP_BIG_MAP_DOT_CELL,
-  MAP_BIG_MAP_MAX_SPRITES,
-  MAP_CELL_SIZE,
-  MAP_ZOOM_DEFAULT,
-  MAP_ZOOM_MAX,
-  MAP_ZOOM_MIN,
-} from '../constants';
+import { MAP_BIG_MAP_DOT_CELL, MAP_CELL_SIZE, MAP_ZOOM_DEFAULT, MAP_ZOOM_MAX, MAP_ZOOM_MIN } from '../constants';
 import {
   IMapAutotileQuarters,
   IMapCellPosition,
+  IMapDirections,
   IMapDocument,
   IMapFrameInfo,
   IMapLayer,
@@ -24,6 +18,7 @@ import {
 } from '../types';
 import { computeAutotileConnection, resolveAutotileQuarters } from './autotile';
 import { resolveTileDest } from './cellMetrics';
+import { buildThumbnail } from './thumbnail';
 import { resolveFrameInfo } from './tileFrame';
 
 // 一帧要画什么：把中立文档与视图参数算成纯数据。
@@ -414,13 +409,59 @@ function buildWindowModel(
 }
 
 /**
- * 大地图模式：整图按保持宽高比缩放到画布内并居中；格边长过小时通行度降级为红点
+ * 把两个格子被阻断的方向逐位合并
+ * @param left 已合并的方向
+ * @param right 新标记的方向
+ * @returns 四个方向都取逻辑或的方向集合
+ */
+function mergeBlockedDirections(left: IMapDirections, right: IMapDirections): IMapDirections {
+  return {
+    up: left.up || right.up,
+    right: left.right || right.right,
+    down: left.down || right.down,
+    left: left.left || right.left,
+  };
+}
+
+/**
+ * 把整层通行度标记按缩略格降采样
  *
- * 这里的「格边长」是整图适配后的缩略尺寸，与模型上报的 `cellWidth` / `cellHeight`（文档格 × 缩放）不是同一个值。
+ * 同一桶内的四个方向取逻辑或，每个桶只输出一条；输出条数上限是 `ceil(文档宽 / step) × ceil(文档高 / step)`，
+ * 与文档总格数无关。`step = 1` 时一格一条，不做合并。
+ * @param passMarks 面板算好的整层标记
+ * @param step 每个缩略格覆盖的文档格数
+ * @param dot 为 true 时画布只画一个单色点（D-12 的四色箭头只适用普通模式）
+ * @returns 降采样后的标记
+ */
+function buildBigMapPassMarks(passMarks: readonly IMapPassMark[], step: number, dot: boolean): readonly IMapPassMark[] {
+  const buckets: Map<string, IMapPassMark> = new Map();
+
+  for (const mark of passMarks) {
+    const bucketX = Math.floor(mark.x / step);
+    const bucketY = Math.floor(mark.y / step);
+    const key = `${bucketX}:${bucketY}`;
+    const existing = buckets.get(key);
+
+    buckets.set(key, {
+      x: bucketX * step,
+      y: bucketY * step,
+      blocked: existing === undefined ? mark.blocked : mergeBlockedDirections(existing.blocked, mark.blocked),
+      dot,
+    });
+  }
+
+  return [...buckets.values()];
+}
+
+/**
+ * 大地图模式：只输出一份缩略描述，不再生成逐格格子
+ *
+ * 缩略描述的显示尺寸、缩放与居中偏移由 `buildThumbnail` 按文档与画布算出；真正的逐格内容由画布用
+ * `document` / `currentLayerId` / `aboveLayerOpacity` 铺进离屏纹理，因此模型里不需要 65536 个格子。
+ * 通行度按缩略格降采样，并在格像素小于 `MAP_BIG_MAP_DOT_CELL` 时降级为单色点：
+ * D-12 的「四个方向四种颜色」只承诺普通模式，`dot` 为 true 时画布统一用 `MAP_PASS_COLOR_UP` 画一个点。
  * @param document 中立文档
  * @param view 视图参数
- * @param current 当前层；找不到时为 undefined
- * @param images 图块编号索引
  * @param cellWidth 缩放后的格子像素宽（模型上报值）
  * @param cellHeight 缩放后的格子像素高（模型上报值）
  * @returns 这一帧的渲染模型
@@ -428,59 +469,25 @@ function buildWindowModel(
 function buildBigMapModel(
   document: IMapDocument,
   view: IMapRenderView,
-  current: IMapLayer | undefined,
-  images: Map<number, ITileImage>,
   cellWidth: number,
   cellHeight: number,
 ): IMapRenderModel {
   if (document.width <= 0 || document.height <= 0) return buildEmptyModel(view, cellWidth, cellHeight);
 
-  const size = Math.min(view.width / document.width, view.height / document.height);
-  const offsetX = Math.max(0, (view.width - document.width * size) / 2);
-  const offsetY = Math.max(0, (view.height - document.height * size) / 2);
-  const limited = document.width * document.height * document.layers.length > MAP_BIG_MAP_MAX_SPRITES;
-  const layers = limited && current !== undefined ? [current] : sortLayers(document.layers);
-  const dot = size < MAP_BIG_MAP_DOT_CELL;
-  const cells: IMapRenderCell[] = [];
-
-  for (const layer of layers) {
-    const opacity = layerOpacity(layer, current, view.aboveLayerOpacity);
-
-    for (let y = 0; y < document.height; y += 1) {
-      const sourceRow = layer.cells[y];
-      if (sourceRow === undefined) continue;
-
-      for (let x = 0; x < document.width; x += 1) {
-        const value = sourceRow[x];
-
-        cells.push(
-          createRenderCell(
-            layer.cells,
-            layer.id,
-            value,
-            x,
-            y,
-            offsetX + x * size,
-            offsetY + y * size,
-            size,
-            size,
-            opacity,
-            images,
-          ),
-        );
-      }
-    }
-  }
+  const thumbnail = buildThumbnail(document, view.width, view.height);
+  const dot = thumbnail.scale < MAP_BIG_MAP_DOT_CELL;
+  const step = thumbnail.scale > 0 ? Math.max(1, Math.ceil(MAP_BIG_MAP_DOT_CELL / thumbnail.scale)) : 1;
 
   return {
     width: view.width,
     height: view.height,
-    cells,
+    cells: [],
     gridLines: [],
-    passMarks: view.passMarks.map((mark) => ({ ...mark, dot })),
+    passMarks: buildBigMapPassMarks(view.passMarks, step, dot),
     cellWidth,
     cellHeight,
     viewport: view.viewport,
+    thumbnail,
     selection: view.selection,
     preview: view.preview,
     hover: view.hover,
@@ -492,7 +499,7 @@ function buildBigMapModel(
  *
  * 唯一调用方是视图层 `MapPanelView`：面板只保存文档与视图状态，不计算也不缓存渲染模型。
  * 缩放只在本函数乘一次：`cellWidth / cellHeight = 文档格尺寸 × 缩放`，两条构建路径原样消费这一对值。
- * 普通模式只输出视口内的格子与视口内的通行度标记；大地图模式整图适配并居中，受 `MAP_BIG_MAP_MAX_SPRITES` 上限保护。
+ * 普通模式只输出视口内的格子与视口内的通行度标记；大地图模式只输出缩略描述与降采样后的通行度标记。
  * @param document 中立文档
  * @param view 视图参数（画布尺寸、当前层、视口、大地图、缩放、框选、预览、悬停、通行度标记）
  * @returns 这一帧的渲染模型
@@ -501,10 +508,15 @@ export function buildMapRenderModel(document: IMapDocument, view: IMapRenderView
   const zoom = Math.min(MAP_ZOOM_MAX, Math.max(MAP_ZOOM_MIN, view.zoom ?? MAP_ZOOM_DEFAULT));
   const cellWidth = resolvePositiveSize(document.cellWidth) * zoom;
   const cellHeight = resolvePositiveSize(document.cellHeight) * zoom;
-  const current = findLayer(document, view.currentLayerId);
-  const images = buildTileImages(document);
 
-  return view.bigMap
-    ? buildBigMapModel(document, view, current, images, cellWidth, cellHeight)
-    : buildWindowModel(document, view, current, images, cellWidth, cellHeight);
+  if (view.bigMap) return buildBigMapModel(document, view, cellWidth, cellHeight);
+
+  return buildWindowModel(
+    document,
+    view,
+    findLayer(document, view.currentLayerId),
+    buildTileImages(document),
+    cellWidth,
+    cellHeight,
+  );
 }
