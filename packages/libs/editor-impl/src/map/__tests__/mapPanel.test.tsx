@@ -7,7 +7,9 @@ import {
   IMapEditorCapabilities,
   IMapPanelViewState,
   IMapSummary,
+  MapBottomTab,
   MapPanelStatus,
+  MapTileCategory,
   MapUndoType,
   MapUnsavedChoice,
 } from '../types';
@@ -379,5 +381,73 @@ describe('地图面板：清单 / 打开 / 切换', () => {
     await system.undoSystem.undo();
 
     expect(viewState(panel).document?.layers[0].cells[0][0]).toBe(0);
+  });
+});
+
+describe('地图面板：视图动作', () => {
+  // 缩放被夹到允许区间；只改视图状态，不置脏、不进撤销
+  it('缩放夹取且不置脏不进撤销', async () => {
+    const { system, panel } = await openMapPanel(createCapabilities());
+    const addUndo = vi.spyOn(system.undoSystem, 'addUndoContext');
+
+    panel.setZoom(0.1);
+
+    expect(viewState(panel).zoom).toBe(0.5);
+
+    panel.setZoom(5);
+
+    expect(viewState(panel).zoom).toBe(2);
+
+    panel.setZoom(1.5);
+
+    expect(viewState(panel).zoom).toBe(1.5);
+    expect(viewState(panel).document?.id).toBe('m1');
+    expect(viewState(panel).unsaved).toBe(false);
+    expect(panel.isDirty()).toBe(false);
+    expect(addUndo).not.toHaveBeenCalled();
+  });
+
+  // 页签 / 分类 / Tileset / 帧数开关都只发布对应字段，且不碰当前调色板选择
+  it('页签 / 分类 / Tileset / 帧数只改视图状态', async () => {
+    const { system, panel } = await openMapPanel(createCapabilities());
+    const addUndo = vi.spyOn(system.undoSystem, 'addUndoContext');
+    const selection = viewState(panel).paletteSelection;
+
+    panel.setBottomTab(MapBottomTab.Favorites);
+    panel.selectCategory(MapTileCategory.Enemy);
+    panel.toggleTileset(true);
+    panel.toggleFrameCount(true);
+
+    expect(viewState(panel).bottomTab).toBe(MapBottomTab.Favorites);
+    expect(viewState(panel).activeCategory).toBe(MapTileCategory.Enemy);
+    expect(viewState(panel).tilesetOpen).toBe(true);
+    expect(viewState(panel).showFrameCount).toBe(true);
+    expect(viewState(panel).paletteSelection).toBe(selection);
+    expect(viewState(panel).document?.id).toBe('m1');
+    expect(viewState(panel).unsaved).toBe(false);
+    expect(addUndo).not.toHaveBeenCalled();
+  });
+
+  // 初始视图状态齐全：默认 100% 缩放、最近页签、地形分类、9 格收藏与默认 13×13 视口
+  it('初始视图状态齐全', async () => {
+    const { panel } = await openMapPanel(createCapabilities());
+
+    expect(viewState(panel).zoom).toBe(1);
+    expect(viewState(panel).bottomTab).toBe(MapBottomTab.Recent);
+    expect(viewState(panel).activeCategory).toBe(MapTileCategory.Terrain);
+    expect(viewState(panel).tilesetOpen).toBe(false);
+    expect(viewState(panel).showFrameCount).toBe(false);
+    expect(viewState(panel).favorites).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0]);
+    expect(viewState(panel).frequentTiles).toEqual([]);
+    expect(viewState(panel).viewportColumns).toBe(13);
+    expect(viewState(panel).viewportRows).toBe(13);
+  });
+
+  // 宿主注入的视口格数真的落进视图状态
+  it('宿主注入视口格数', async () => {
+    const { panel } = await openMapPanel(createCapabilities({ viewportColumns: 15, viewportRows: 9 }));
+
+    expect(viewState(panel).viewportColumns).toBe(15);
+    expect(viewState(panel).viewportRows).toBe(9);
   });
 });

@@ -19,6 +19,8 @@ import {
   MAP_VIEWPORT_DEFAULT_COLUMNS,
   MAP_VIEWPORT_DEFAULT_ROWS,
   MAP_ZOOM_DEFAULT,
+  MAP_ZOOM_MAX,
+  MAP_ZOOM_MIN,
 } from './constants';
 import { parseTableText, serializeTableText } from '../shared/jsonc/tableText';
 import { TablePanelStatus } from '../shared/schemaForm/components/TableGrid';
@@ -476,6 +478,13 @@ export class MapPanel implements IEditorPanel, IMapPanel {
           this.capabilities.propertiesSchema !== undefined && this.capabilities.readProperties !== undefined,
         maxMapSize: this.capabilities.maxMapSize,
         cellFrameSpeed: this.capabilities.frameSpeed,
+        onSetZoom: (value): void => this.setZoom(value),
+        onSetBottomTab: (tab): void => this.setBottomTab(tab),
+        onSelectCategory: (category): void => this.selectCategory(category),
+        onToggleTileset: (open): void => this.toggleTileset(open),
+        onToggleFrameCount: (value): void => this.toggleFrameCount(value),
+        onSelectFavoriteSlot: (index): void => this.selectFavoriteSlot(index),
+        onReorderFavorites: (from, to): void => this.reorderFavorites(from, to),
         onSelectMap: (mapId): void => {
           void this.openMap(mapId);
         },
@@ -1145,6 +1154,48 @@ export class MapPanel implements IEditorPanel, IMapPanel {
    */
   setAboveLayerOpacity(value: number): void {
     this.publish({ aboveLayerOpacity: Math.min(1, Math.max(0, value)) });
+  }
+
+  /**
+   * 记录缩放倍率并发布；超出允许区间时夹取，只改视图状态，不置脏、不进撤销
+   * @param value 新缩放倍率
+   */
+  setZoom(value: number): void {
+    if (!Number.isFinite(value)) return;
+
+    this.publish({ zoom: Math.min(MAP_ZOOM_MAX, Math.max(MAP_ZOOM_MIN, value)) });
+  }
+
+  /**
+   * 切换底部页签；只改视图状态，不置脏、不进撤销
+   * @param tab 目标页签
+   */
+  setBottomTab(tab: MapBottomTab): void {
+    this.publish({ bottomTab: tab });
+  }
+
+  /**
+   * 选择右侧素材分类；只改视图状态，不置脏、不进撤销，也不碰当前调色板选择
+   * @param category 目标分类
+   */
+  selectCategory(category: MapTileCategory): void {
+    this.publish({ activeCategory: category });
+  }
+
+  /**
+   * 开关 Tileset 单独视图；只改视图状态，不置脏、不进撤销，也不碰当前调色板选择
+   * @param open 为 true 时切到 Tileset 视图
+   */
+  toggleTileset(open: boolean): void {
+    this.publish({ tilesetOpen: open });
+  }
+
+  /**
+   * 开关素材区的帧数角标；只改视图状态，不置脏、不进撤销
+   * @param value 为 true 时显示
+   */
+  toggleFrameCount(value: boolean): void {
+    this.publish({ showFrameCount: value });
   }
 
   /**
