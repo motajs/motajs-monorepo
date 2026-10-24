@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.1"
 current_phase_name: 地图渲染与布局重做
-current_plan: 14
+current_plan: 15
 status: executing
-stopped_at: Completed 04.1-13-PLAN.md
-last_updated: "2026-10-24T10:33:04.135Z"
+stopped_at: Completed 04.1-14-PLAN.md
+last_updated: "2026-10-24T11:05:47.705Z"
 last_activity: 2026-10-23
 last_activity_desc: Phase 3 complete, transitioned to Phase 4
-state_head: 3da3f0cf3930eda19b0344d6e68497d16d550284
+state_head: cee15761eb90b59ecf511f9a878da8ba0f9b9619
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 138
-  completed_plans: 134
+  completed_plans: 135
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 04.1 (地图渲染与布局重做) — EXECUTING
-Current Plan: 14
+Current Plan: 15
 Total Plans in Phase: 16
 Status: Ready to execute
 Last activity: 2026-10-23 — 04.1-01 complete (naming report + pure declarations)
@@ -152,6 +152,7 @@ Progress: [██████████] 100%
 | Phase 04.1 P11 | 24min | 2 tasks | 7 files |
 | Phase 04.1 P12 | 43min | 3 tasks | 10 files |
 | Phase 04.1-map-render-layout P13 | 26min | 3 tasks | 9 files |
+| Phase 04.1 P14 | 12min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -386,6 +387,8 @@ Recent decisions affecting current work:
 - [Phase 04.1]: 模块级分类清单用 Object.freeze([...]) 声明，满足 coreModuleState 对模块级容器的门禁
 - [Phase 04.1]: 底部页签自报事件：页签名外包一层带 data-test-id 的 span 直接调 onSelectTab，同时保留 Segmented 的 onChange 供键盘；不依赖 jsdom 对 label 激活的实现
 - [Phase 04.1]: 收藏拖拽不使用 setPointerCapture：捕获会把 pointerenter 重定向到起点元素，改为普通 pointerenter + pointerup 结算、容器 pointerleave 取消
+- [Phase 04.1]: 属性抽屉塌陷按布局修：外层纵向 flex + height 100%，正文 flex 1 1 auto，绝对定位表单才有高度
+- [Phase 04.1]: 遮罩关闭交给 antd maskClosable=false，Esc 与 ✕ 路径不变
 
 ### Pending Todos
 
@@ -413,6 +416,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-24T10:33:02.604Z
-Stopped at: Completed 04.1-13-PLAN.md
+Last session: 2026-10-24T11:05:47.093Z
+Stopped at: Completed 04.1-14-PLAN.md
 Resume file: None
