@@ -249,8 +249,8 @@ function demoRecord(mapId: string): IMapFileRecord {
 }
 
 describe('开发宿主地图端到端', () => {
-  // 打开 → 画 / 擦 / 切层 → 加层 → 点「地图属性」改字段 → 保存 → 关闭重开，事件与额外字段逐字未变
-  it('画擦切层加层改属性保存后重开，改动与图层名都在', async () => {
+  // 打开 → 画格 / 切层 → 加层 → 点「地图属性」改字段 → 保存 → 关闭重开，事件与额外字段逐字未变
+  it('画格切层加层改属性保存后重开，改动与图层名都在', async () => {
     const { core, backend, capabilities } = await createHost();
     const readSpy = vi.spyOn(capabilities, 'readProperties');
 
@@ -259,16 +259,14 @@ describe('开发宿主地图端到端', () => {
     const container = await renderShell(core);
     const canvas = queryCanvas(container);
 
-    // 调色板就绪后才能点图块；先确认图块按钮真的渲染出来
+    // 素材区就绪后才能点图块；先确认图块按钮真的渲染出来
     await waitFor(() => {
       expect(screen.getByTestId('map-tile-1')).not.toBeNull();
     });
 
-    // 画一格（(1,2) 原是编号 3 的格子，改写成编号 1），再选擦除格擦掉原点上的一块墙，最后重新选中图块
-    clickCell(canvas, 1, 2);
-    fireEvent.click(screen.getByTestId('map-palette-erase'));
-    clickCell(canvas, 0, 0);
+    // 选编号 1 的图块，再在 (1,2) 画一格（原是编号 3 的格子，改写成编号 1）
     fireEvent.click(screen.getByTestId('map-tile-1'));
+    clickCell(canvas, 1, 2);
 
     await waitFor(() => {
       expect(screen.getByTestId('map-unsaved')).not.toBeNull();
@@ -329,9 +327,9 @@ describe('开发宿主地图端到端', () => {
     const saved = await readRecord(backend, 'small');
     const demo = demoRecord('small');
 
-    // 数据域：画的一格、擦的一格、第二层的一格、新层的一格都在
+    // 数据域：画的一格、第二层的一格、新层的一格都在
     expect(saved.layers[0][2 * 8 + 1]).toBe(1);
-    expect(saved.layers[0][0]).toBe(0);
+    expect(saved.layers[0][0]).toBe(demoRecord('small').layers[0][0]);
     expect(saved.layers[1][1 * 8 + 1]).toBe(1);
     expect(saved.layers[2][3 * 8 + 2]).toBe(1);
     expect(saved.layerNames[2]).toBe('测试层');
@@ -365,7 +363,7 @@ describe('开发宿主地图端到端', () => {
     const reopened = await probeDocument(core, 'small');
 
     expect(reopened.layers[0].cells[2][1]).toBe(1);
-    expect(reopened.layers[0].cells[0][0]).toBe(0);
+    expect(reopened.layers[0].cells[0][0]).toBe(demoRecord('small').layers[0][0]);
     expect(reopened.layers[2].name).toBe('测试层');
   });
 
@@ -449,8 +447,8 @@ describe('开发宿主地图端到端', () => {
     expect(reopened.layers[0].cells[2][1]).toBe(demoRecord('small').layers[0][2 * 8 + 1]);
   });
 
-  // 就绪后调色板真的出现演示分组与图块：证明图块目录经 options.tileGroups → openMap → 文档流到了调色板
-  it('就绪后调色板出现两个演示分组与属于目录的图块', async () => {
+  // 就绪后素材区真的出现演示素材组与图块：证明图块目录经 options.tileGroups → openMap → 文档流到了素材区
+  it('就绪后素材区出现演示分组与属于目录的图块', async () => {
     const { core } = await createHost();
 
     await openMapTab(core, 'small');
@@ -461,7 +459,7 @@ describe('开发宿主地图端到端', () => {
       expect(container.querySelector('[data-test-id="map-tile-1"]')).not.toBeNull();
     });
 
-    const groups = container.querySelectorAll('[data-test-id^="map-palette-group-"]');
+    const groups = container.querySelectorAll('[data-test-id="map-material-grid"]');
 
     expect(groups.length).toBeGreaterThanOrEqual(2);
 

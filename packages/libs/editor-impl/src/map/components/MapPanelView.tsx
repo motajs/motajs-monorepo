@@ -32,6 +32,7 @@ import {
 import { MapCanvas } from './MapCanvas';
 import { MapLayerDialog, MapNewDialog, MapUnsavedDialog } from './dialogs';
 import { MapEmptyState } from './MapEmptyState';
+import { MapMaterialPanel } from './MapMaterialPanel';
 import { MapPropertiesDrawer } from './MapPropertiesDrawer';
 import { MapToolbar } from './MapToolbar';
 import { IMapTileGroupUrls, useMapTileGroupUrls } from './useMapObjectUrl';
@@ -569,7 +570,24 @@ export function MapPanelView(props: IMapPanelViewProps): ReactElement {
         {renderNotice({ view, onRetry: props.onSave })}
       </div>
       <div className="emap-side" data-test-id="map-sidebar" style={narrow ? undefined : { width: sideWidth }}>
-        <div className="emap-side-slot" />
+        <div className="emap-side-slot">
+          <MapMaterialPanel
+            groups={document?.tileGroups ?? []}
+            groupUrls={groupImages.urls}
+            groupStatus={groupImages.status}
+            imageStatus={view.recentStatus}
+            activeCategory={view.activeCategory ?? MapTileCategory.Terrain}
+            tilesetOpen={view.tilesetOpen ?? false}
+            selection={view.paletteSelection}
+            showFrameCount={view.showFrameCount ?? false}
+            onSelectPattern={props.onSelectPattern ?? noop}
+            onRetryImages={props.onRetryImages ?? noop}
+            onSelectCategory={props.onSelectCategory ?? noop}
+            onToggleTileset={props.onToggleTileset ?? noop}
+            onToggleFrameCount={props.onToggleFrameCount ?? noop}
+            onFavoriteTile={props.onFavoriteTile}
+          />
+        </div>
       </div>
       {view.dialog === MapDialogKind.New ? (
         <MapNewDialog

@@ -1,9 +1,17 @@
-import { cleanup, configure, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, configure, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { EditorCore, IEditorPanel, IEditorPanelFactoryParam } from '@motajs/editor-core';
+import { createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { createMapPanelType, MAP_PANEL_TYPE_ID, MapPanel } from '..';
 import { MapMaterialPanel } from '../components/MapMaterialPanel';
 import {
+  IMapDataSection,
   IMapDirections,
+  IMapDocument,
+  IMapEditorCapabilities,
   IMapMaterialPanelProps,
+  IMapRenderModel,
+  IMapSummary,
   IMapTileEntry,
   IMapTileGroup,
   MapAutotileType,
@@ -12,8 +20,29 @@ import {
   MapTextureReadType,
   MapTileCategory,
 } from '../types';
+import { createMapDocument, createMapHarness, FakeFileSystem } from './fixtures';
+
+vi.mock('../components/MapSurface', async () => {
+  const { createElement: createMockElement } = await import('react');
+
+  return {
+    MapSurface: (props: { model: IMapRenderModel }): ReturnType<typeof createMockElement> =>
+      createMockElement('div', {
+        'data-test-id': 'map-surface-stub',
+        'data-cell-count': String(props.model.cells.length),
+      }),
+  };
+});
 
 configure({ testIdAttribute: 'data-test-id' });
+
+// jsdom 没有 blob 地址：素材区的图片地址经它生成，整份文件用同一个可断言的替身
+Object.defineProperty(URL, 'createObjectURL', {
+  configurable: true,
+  writable: true,
+  value: vi.fn((_blob: Blob): string => 'blob:map-material'),
+});
+Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, writable: true, value: vi.fn() });
 
 // 右侧素材区：分类导航、普通素材网格、Autotile 单格、帧数角标与缺图 / 加载 / 失败三态。
 // 全部按受控 props 渲染真实组件；图片地址用假 blob 字符串，不读字节。
@@ -483,5 +512,94 @@ describe('素材区 Tileset 选择器', () => {
     render(<MapMaterialPanel {...createProps({ groups: [createTerrainGroup()], tilesetOpen: true })} />);
 
     expect(screen.getByTestId('map-tileset-empty').textContent).toBe('暂无 Tileset 素材');
+  });
+});
+/** 已装配好的素材面板外壳 */
+interface IMaterialPanelHarness {
+  /** 已初始化的编辑器核心 */
+  readonly system: EditorCore;
+  /** 被捕获的地图面板实例 */
+  readonly panel: MapPanel;
+}
+
+/**
+ * 造一张挂着四类素材（含 Tileset）的文档，分类切换与 Tileset 开关都有目标
+ * @returns 中立地图文档
+ */
+function createMaterialDocument(): IMapDocument {
+  return createMapDocument({
+    id: 'm1',
+    name: '素材地图',
+    tileGroups: [createTerrainGroup(), createEnemyGroup(), createAutotileGroup(), createTilesetGroup()],
+  });
+}
+
+/**
+ * 造一份默认可用的地图能力注入面
+ * @param document 打开时返回的文档
+ * @returns 地图能力注入面
+ */
+function createCapabilities(document: IMapDocument): IMapEditorCapabilities {
+  return {
+    listMaps: async (): Promise<readonly IMapSummary[]> => [{ id: document.id, name: document.name }],
+    openMap: async (): Promise<IMapDocument> => document,
+    saveMapData: async (_data: IMapDataSection): Promise<void> => {},
+  };
+}
+
+/**
+ * 装配核心、注册带实例捕获的地图面板类型，并按打开参数打开首张地图
+ * @param document 打开时返回的文档
+ * @returns 核心与面板实例
+ */
+async function openMaterialPanel(document: IMapDocument): Promise<IMaterialPanelHarness> {
+  const system = await createMapHarness(new FakeFileSystem());
+  const panels: MapPanel[] = [];
+  const type = createMapPanelType(createCapabilities(document));
+
+  system.shellSystem.registerPanelType({
+    id: type.id,
+    name: type.name,
+    icon: type.icon,
+    create: (param: IEditorPanelFactoryParam): IEditorPanel => {
+      const panel = type.create(param);
+
+      if (panel instanceof MapPanel) panels.push(panel);
+      return panel;
+    },
+  });
+
+  const tabId = system.shellSystem.listTabs()[0].id;
+
+  await act(async () => {
+    await system.shellSystem.openPanelInTab(tabId, MAP_PANEL_TYPE_ID, { target: { mapId: document.id } });
+  });
+  await act(async () => {});
+
+  return { system, panel: panels[0] };
+}
+
+describe('素材区端到端接线', () => {
+  // 点分类 / Tileset 开关 / 显示帧数后，面板 Store 里的三个字段真的变化
+  it('点分类、Tileset 开关与显示帧数会改到面板状态', async () => {
+    const harness = await openMaterialPanel(createMaterialDocument());
+
+    render(createElement(harness.system.shellSystem.render()));
+
+    await waitFor(() => expect(screen.getByTestId('map-category-enemy')).not.toBeNull());
+
+    expect(screen.getByTestId('map-material')).not.toBeNull();
+
+    fireEvent.click(screen.getByTestId('map-category-enemy'));
+
+    await waitFor(() => expect(harness.panel['store'].state.activeCategory).toBe(MapTileCategory.Enemy));
+
+    fireEvent.click(screen.getByTestId('map-tileset-toggle'));
+
+    await waitFor(() => expect(harness.panel['store'].state.tilesetOpen).toBe(true));
+
+    fireEvent.click(screen.getByTestId('map-frame-count'));
+
+    await waitFor(() => expect(harness.panel['store'].state.showFrameCount).toBe(true));
   });
 });

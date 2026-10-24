@@ -15,13 +15,13 @@ interface IMapCategoryNavItem {
 }
 
 /** 五个普通分类的显示顺序；Tileset 不在其中，它是独立开关 */
-const MAP_CATEGORY_NAV_ITEMS: readonly IMapCategoryNavItem[] = [
+const MAP_CATEGORY_NAV_ITEMS = Object.freeze<readonly IMapCategoryNavItem[]>([
   { category: MapTileCategory.Terrain, label: '地形', slug: 'terrain' },
   { category: MapTileCategory.Enemy, label: '敌人', slug: 'enemy' },
   { category: MapTileCategory.Npc, label: '人物', slug: 'npc' },
   { category: MapTileCategory.Item, label: '物品', slug: 'item' },
   { category: MapTileCategory.Autotile, label: '自动元件', slug: 'autotile' },
-];
+]);
 
 /**
  * 求一个分类按钮的类名：基础类 + 选中标记
