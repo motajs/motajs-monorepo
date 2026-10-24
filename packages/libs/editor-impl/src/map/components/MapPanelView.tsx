@@ -3,8 +3,9 @@ import { useStore } from '@tanstack/react-store';
 import { Store } from '@tanstack/store';
 import { Button, Spin } from 'antd';
 import { ReactElement, useEffect, useState } from 'react';
-import { MAP_CELL_SIZE, MAP_ZOOM_DEFAULT } from '../constants';
+import { MAP_CELL_SIZE, MAP_VIEWPORT_DEFAULT_COLUMNS, MAP_VIEWPORT_DEFAULT_ROWS, MAP_ZOOM_DEFAULT } from '../constants';
 import { IPaintWrite, isTileCatalogEmpty } from '../model/document';
+import { resolveMapLayout } from '../model/layout';
 import { buildMapRenderModel } from '../model/renderModel';
 import {
   IMapCellPosition,
@@ -392,17 +393,21 @@ function renderReadyBody(input: IMapPanelBodyProps): ReactElement {
 
   if (document === undefined) return renderLoadingBody();
 
-  // 画布尺寸由文档格尺寸与缩放算出；缩放经 `zoom` 交给渲染模型，两者必须是同一份值
-  const width = document.width * (document.cellWidth ?? MAP_CELL_SIZE) * (view.zoom ?? MAP_ZOOM_DEFAULT);
-  const height = document.height * (document.cellHeight ?? MAP_CELL_SIZE) * (view.zoom ?? MAP_ZOOM_DEFAULT);
+  // 画布尺寸只由布局算出（视口格数 × 缩放后格像素）；缩放经 `zoom` 交给渲染模型，两边必须是同一份值
+  const zoom = view.zoom ?? MAP_ZOOM_DEFAULT;
+  const layout = resolveMapLayout(document, {
+    zoom,
+    viewportColumns: view.viewportColumns ?? MAP_VIEWPORT_DEFAULT_COLUMNS,
+    viewportRows: view.viewportRows ?? MAP_VIEWPORT_DEFAULT_ROWS,
+  });
   const model = buildMapRenderModel(document, {
-    width,
-    height,
+    width: layout.canvasWidth,
+    height: layout.canvasHeight,
     currentLayerId: view.currentLayerId ?? '',
     aboveLayerOpacity: view.aboveLayerOpacity,
     viewport: view.viewport,
     bigMap: view.bigMap,
-    zoom: view.zoom ?? MAP_ZOOM_DEFAULT,
+    zoom,
     passMarks: view.passMarks,
   });
   const layerName = resolveCurrentLayerName(document, view.currentLayerId);
@@ -440,12 +445,17 @@ function renderReadyBody(input: IMapPanelBodyProps): ReactElement {
         canPaint={!isTileCatalogEmpty(document)}
         layerName={layerName}
         narrow={input.narrow}
+        aboveLayerOpacity={view.aboveLayerOpacity}
+        cellFrameSpeed={input.props.cellFrameSpeed}
+        viewportColumns={view.viewportColumns}
+        viewportRows={view.viewportRows}
         imageVersion={view.paletteVersion}
         loadBytes={input.props.loadBytes}
         onCommitCells={input.props.onCommitCells ?? noop}
         onCopyRegion={input.props.onCopyRegion ?? noop}
         onPasteAt={input.props.onPasteAt ?? noop}
         onClearRegion={input.props.onClearRegion ?? noop}
+        onSetViewport={input.props.onSetViewport ?? noop}
         onMoveViewport={moveViewport}
         onToggleBigMap={toggleBigMap}
       />
@@ -606,17 +616,6 @@ export function MapPanelView(props: IMapPanelViewProps): ReactElement {
           }
 
           props.store.setState({ ...props.store.state, bigMap: value });
-        }}
-        onMoveViewport={(dx, dy, byScreen): void => {
-          if (props.onMoveViewport !== undefined) {
-            props.onMoveViewport(dx, dy, byScreen);
-            return;
-          }
-
-          props.store.setState({
-            ...props.store.state,
-            viewport: resolveMovedViewport(props.store.state, dx, dy, byScreen),
-          });
         }}
       />
       <MapPanelBody props={props} view={view} narrow={narrow} groupImages={groupImages} />

@@ -20,7 +20,13 @@ vi.mock('../components/MapSurface', async () => {
   const { createElement: createMockElement } = await import('react');
 
   return {
-    MapSurface: (props: { model: IMapRenderModel }) => {
+    MapSurface: (props: {
+      model: IMapRenderModel;
+      document?: IMapDocument;
+      currentLayerId?: string;
+      aboveLayerOpacity?: number;
+      cellFrameSpeed?: number;
+    }) => {
       const model = props.model;
       const opacities = model.cells
         .map((cell) => `${cell.key.split(':')[0]}:${cell.opacity}`)
@@ -44,6 +50,10 @@ vi.mock('../components/MapSurface', async () => {
             : `${preview.rect.x}:${preview.rect.y}:${preview.rect.width}:${preview.rect.height}`,
         'data-hover': hover === undefined ? '' : `${hover.x},${hover.y}`,
         'data-opacity': opacities,
+        'data-map': props.document === undefined ? '' : props.document.id,
+        'data-layer': props.currentLayerId ?? '',
+        'data-above-opacity': props.aboveLayerOpacity === undefined ? '' : String(props.aboveLayerOpacity),
+        'data-frame-speed': props.cellFrameSpeed === undefined ? '' : String(props.cellFrameSpeed),
       });
     },
   };
@@ -116,6 +126,7 @@ function createCanvasProps(overrides: Partial<IMapCanvasProps> = {}): IMapCanvas
     onCopyRegion: vi.fn(),
     onPasteAt: vi.fn(),
     onClearRegion: vi.fn(),
+    onSetViewport: vi.fn(),
     onMoveViewport: vi.fn(),
     onToggleBigMap: vi.fn(),
     ...overrides,
@@ -531,6 +542,121 @@ describe('地图画布叠加层渲染模型', () => {
   });
 });
 
+describe('地图画布视口化', () => {
+  // 画布只画一屏，整图尺寸只出现在透明占位层
+  it('画布尺寸等于视口尺寸，占位层等于整图尺寸', () => {
+    const document = createWideMapDocument(40, 26);
+
+    render(<MapCanvas {...createCanvasProps({ document, model: createModel(document) })} />);
+
+    const canvas = screen.getByTestId('map-canvas');
+    const spacer = screen.getByTestId('map-canvas-spacer');
+
+    expect(canvas.style.width).toBe('416px');
+    expect(canvas.style.height).toBe('416px');
+    expect(spacer.style.width).toBe('1280px');
+    expect(spacer.style.height).toBe('832px');
+  });
+
+  // 占位层按缩放后的格像素撑开：1.5 倍时格 48px
+  it('占位层按缩放后的格像素撑开', () => {
+    const document = createWideMapDocument(40, 26);
+    const model = createModel(document, { width: 13 * 48, height: 13 * 48, zoom: 1.5 });
+
+    render(<MapCanvas {...createCanvasProps({ document, model })} />);
+
+    expect(screen.getByTestId('map-canvas').style.width).toBe('624px');
+    expect(screen.getByTestId('map-canvas-spacer').style.width).toBe('1920px');
+    expect(screen.getByTestId('map-canvas-spacer').style.height).toBe('1248px');
+  });
+
+  // 宿主注入 15×9 视口时画布是 480×288，而不是永远 13×13
+  it('宿主注入的视口格数生效', () => {
+    const document = createWideMapDocument(40, 26);
+
+    render(
+      <MapCanvas
+        {...createCanvasProps({ document, model: createModel(document), viewportColumns: 15, viewportRows: 9 })}
+      />,
+    );
+
+    const canvas = screen.getByTestId('map-canvas');
+
+    expect(canvas.style.width).toBe('480px');
+    expect(canvas.style.height).toBe('288px');
+  });
+
+  // 可见框自己承担滚动
+  it('视口容器可滚动', () => {
+    render(<MapCanvas {...createCanvasProps()} />);
+
+    expect(screen.getByTestId('map-canvas-viewport').style.overflow).toBe('auto');
+  });
+
+  // 滚动位置换算成格子坐标回报给面板，一帧只报一次
+  it('滚动按 rAF 节流回报一次视口格坐标', async () => {
+    const onSetViewport = vi.fn();
+    const document = createWideMapDocument(40, 26);
+
+    render(<MapCanvas {...createCanvasProps({ document, model: createModel(document), onSetViewport })} />);
+
+    const viewport = screen.getByTestId('map-canvas-viewport');
+
+    viewport.scrollLeft = 64;
+    viewport.scrollTop = 96;
+    fireEvent.scroll(viewport);
+
+    await waitFor(() => {
+      expect(onSetViewport).toHaveBeenCalledTimes(1);
+    });
+
+    expect(onSetViewport).toHaveBeenCalledWith(2, 3);
+  });
+
+  // 大地图与滚动互斥：占位层等于可见框，滚动不上报
+  it('大地图模式下占位层等于可见框且滚动不上报', async () => {
+    const onSetViewport = vi.fn();
+    const document = createWideMapDocument(40, 26);
+    const model = createModel(document, { width: 13 * MAP_CELL_SIZE, height: 13 * MAP_CELL_SIZE, bigMap: true });
+
+    render(<MapCanvas {...createCanvasProps({ document, model, bigMap: true, onSetViewport })} />);
+
+    const spacer = screen.getByTestId('map-canvas-spacer');
+
+    expect(spacer.style.width).toBe('416px');
+    expect(spacer.style.height).toBe('416px');
+
+    const viewport = screen.getByTestId('map-canvas-viewport');
+
+    viewport.scrollTop = 64;
+    fireEvent.scroll(viewport);
+
+    await act(async () => {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    });
+
+    expect(onSetViewport).not.toHaveBeenCalled();
+  });
+
+  // 画布把文档 / 图层 / 不透明度 / 帧速原样转交给 Pixi 表面
+  it('把文档、图层、不透明度与帧速转交给 Pixi 表面', () => {
+    const document = createMapDocument();
+
+    render(
+      <MapCanvas
+        {...createCanvasProps({ document, model: createModel(document), aboveLayerOpacity: 0.4, cellFrameSpeed: 250 })}
+      />,
+    );
+
+    const stub = screen.getByTestId('map-surface-stub');
+
+    expect(stub.getAttribute('data-map')).toBe('map-sample');
+    expect(stub.getAttribute('data-layer')).toBe('layer-base');
+    expect(stub.getAttribute('data-above-opacity')).toBe('0.4');
+    expect(stub.getAttribute('data-frame-speed')).toBe('250');
+  });
+});
+
 describe('地图面板里的画布接线', () => {
   // 粘贴越界时提示被裁剪的格数，且整次粘贴只登记一条撤销
   it('粘贴越界时提示裁剪格数并只登记一条撤销', async () => {
@@ -578,24 +704,34 @@ describe('地图面板里的画布接线', () => {
     expect(addUndo).not.toHaveBeenCalled();
   });
 
-  // 大地图：进入后滚轮移动视口，退出后回到进入前的视口
+  // 大地图：进入后视口钉到原点，退出后回到进入前的视口，DOM 滚动位置跟着同步
   it('大地图退出后还原进入前的视口', async () => {
     const harness = await openPanel(createWideMapDocument(20, 20));
 
     await renderShell(harness);
 
     await act(async () => {
-      harness.panel.moveViewport(1, 0, false);
+      harness.panel.setViewport(1, 0);
+    });
+
+    expect(harness.panel['store'].state.viewport).toEqual({ left: 1, top: 0 });
+
+    await act(async () => {
       harness.panel.setBigMap(true);
     });
 
-    expect(harness.panel['store'].state.viewport.left).toBe(1);
+    expect(harness.panel['store'].state.bigMap).toBe(true);
+    expect(harness.panel['store'].state.viewport).toEqual({ left: 0, top: 0 });
 
-    const canvas = screen.getByTestId('map-canvas');
+    const viewport = screen.getByTestId('map-canvas-viewport');
 
-    fireEvent(canvas, new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: 120 }));
+    viewport.scrollLeft = 0;
+    viewport.scrollTop = 0;
+    fireEvent.scroll(viewport);
 
-    expect(harness.panel['store'].state.viewport.top).toBe(1);
+    await act(async () => {});
+
+    expect(harness.panel['store'].state.viewport).toEqual({ left: 0, top: 0 });
 
     await act(async () => {
       harness.panel.setBigMap(false);
@@ -603,6 +739,10 @@ describe('地图面板里的画布接线', () => {
 
     expect(harness.panel['store'].state.bigMap).toBe(false);
     expect(harness.panel['store'].state.viewport).toEqual({ left: 1, top: 0 });
+
+    await waitFor(() => {
+      expect(viewport.scrollLeft).toBe(32);
+    });
   });
 
   // 通行度开关：标记由面板算好进入渲染模型，开关不置脏、不进撤销，关闭后清空

@@ -1,5 +1,5 @@
 import { KeyboardEvent, PointerEvent, ReactElement, WheelEvent, useEffect, useId, useRef, useState } from 'react';
-import { MAP_CELL_SIZE } from '../constants';
+import { MAP_CELL_SIZE, MAP_VIEWPORT_DEFAULT_COLUMNS, MAP_VIEWPORT_DEFAULT_ROWS } from '../constants';
 import { buildFillWrites, buildRectWrites, buildStrokeWrites } from '../model/brush';
 import { resolveCellMetrics, resolvePointerCell } from '../model/cellMetrics';
 import { IPaintWrite } from '../model/document';
@@ -260,6 +260,8 @@ export function MapCanvas(props: IMapCanvasProps): ReactElement {
   const hintId = `${CANVAS_HINT_ID_PREFIX}-${useId()}`;
   const gestureRef = useRef<IMapGesture | undefined>(undefined);
   const pointerRef = useRef<IMapCellPosition | undefined>(undefined);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const scrollFrameRef = useRef<number | undefined>(undefined);
   const [hover, setHover] = useState<IMapCellPosition | undefined>(undefined);
   const [preview, setPreview] = useState<IMapPreview | undefined>(undefined);
   const [selection, setSelection] = useState<IMapRect | undefined>(undefined);
@@ -275,6 +277,59 @@ export function MapCanvas(props: IMapCanvasProps): ReactElement {
 
   // 命中换算的视口：大地图缩略从 (0,0) 起画，必须用零视口；普通模式才叠加面板视口
   const pointerViewport: IMapViewport = props.bigMap ? { left: 0, top: 0 } : props.viewport;
+
+  // 画布只画一屏：尺寸取视口格数 × 渲染模型里的缩放后格像素；整图只出现在透明占位层
+  const viewportColumns = props.viewportColumns ?? MAP_VIEWPORT_DEFAULT_COLUMNS;
+  const viewportRows = props.viewportRows ?? MAP_VIEWPORT_DEFAULT_ROWS;
+  const cellWidth = props.model.cellWidth ?? document.cellWidth ?? MAP_CELL_SIZE;
+  const cellHeight = props.model.cellHeight ?? document.cellHeight ?? MAP_CELL_SIZE;
+  const canvasWidth = viewportColumns * cellWidth;
+  const canvasHeight = viewportRows * cellHeight;
+  // 大地图与滚动互斥：占位层取可见框尺寸，因此不产生滚动条
+  const contentWidth = props.bigMap ? canvasWidth : Math.max(canvasWidth, document.width * cellWidth);
+  const contentHeight = props.bigMap ? canvasHeight : Math.max(canvasHeight, document.height * cellHeight);
+
+  useEffect((): (() => void) => {
+    return (): void => {
+      if (scrollFrameRef.current !== undefined) cancelAnimationFrame(scrollFrameRef.current);
+
+      scrollFrameRef.current = undefined;
+    };
+  }, []);
+
+  useEffect((): void => {
+    if (props.bigMap) return;
+
+    const element = viewportRef.current;
+
+    if (element === null) return;
+
+    const currentLeft = Math.floor(element.scrollLeft / cellWidth);
+    const currentTop = Math.floor(element.scrollTop / cellHeight);
+
+    if (currentLeft === props.viewport.left && currentTop === props.viewport.top) return;
+
+    element.scrollLeft = props.viewport.left * cellWidth;
+    element.scrollTop = props.viewport.top * cellHeight;
+  }, [props.bigMap, props.viewport.left, props.viewport.top, cellWidth, cellHeight]);
+
+  /**
+   * 滚动：rAF 节流后把左上格回报给面板；大地图不滚动也不回报
+   */
+  const handleScroll = (): void => {
+    if (props.bigMap) return;
+    if (scrollFrameRef.current !== undefined) return;
+
+    scrollFrameRef.current = requestAnimationFrame((): void => {
+      scrollFrameRef.current = undefined;
+
+      const element = viewportRef.current;
+
+      if (element === null) return;
+
+      props.onSetViewport?.(Math.floor(element.scrollLeft / cellWidth), Math.floor(element.scrollTop / cellHeight));
+    });
+  };
 
   /**
    * 取消进行中的手势，不提交、不登记撤销
@@ -604,8 +659,6 @@ export function MapCanvas(props: IMapCanvasProps): ReactElement {
   };
 
   const metrics = buildCanvasCellMetrics(document, props.model, props.bigMap);
-  const width = document.width * (props.model.cellWidth ?? document.cellWidth ?? MAP_CELL_SIZE);
-  const height = document.height * (props.model.cellHeight ?? document.cellHeight ?? MAP_CELL_SIZE);
   const renderModel: IMapRenderModel = { ...props.model, selection, preview, hover };
   const canvasClass = [
     'emap-canvas',
@@ -619,65 +672,91 @@ export function MapCanvas(props: IMapCanvasProps): ReactElement {
   return (
     <div className="emap-canvas-area">
       <div className="emap-canvas-scroll" style={{ padding: `${RULER_SIZE}px 0 0 ${RULER_SIZE}px` }}>
+        {props.bigMap ? null : (
+          <>
+            <div
+              className="emap-ruler emap-ruler-top"
+              data-test-id="map-ruler-top"
+              style={{ height: RULER_SIZE, top: 0, left: RULER_SIZE, width: canvasWidth }}
+            >
+              {renderTicks(document.width, props.viewport.left, metrics.cellWidth, hover?.x, true)}
+            </div>
+            <div
+              className="emap-ruler emap-ruler-left"
+              data-test-id="map-ruler-left"
+              style={{ width: RULER_SIZE, top: RULER_SIZE, left: 0, height: canvasHeight }}
+            >
+              {renderTicks(document.height, props.viewport.top, metrics.cellHeight, hover?.y, false)}
+            </div>
+          </>
+        )}
         <div
-          className={canvasClass}
-          data-test-id="map-canvas"
-          tabIndex={0}
-          aria-label="地图画布：左键绘制，右键框选，Ctrl+C / Ctrl+V 复制粘贴"
-          aria-describedby={hintId}
-          style={{ position: 'relative', width, height, lineHeight: 0 }}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onPointerCancel={cancelGesture}
-          onContextMenu={(event): void => event.preventDefault()}
-          onKeyDown={handleKeyDown}
-          onWheel={handleWheel}
+          className="emap-canvas-viewport"
+          data-test-id="map-canvas-viewport"
+          ref={viewportRef}
+          style={{ position: 'relative', width: canvasWidth, height: canvasHeight, overflow: 'auto' }}
+          onScroll={handleScroll}
         >
-          {props.bigMap ? null : (
-            <>
-              <div className="emap-ruler emap-ruler-top" data-test-id="map-ruler-top" style={{ height: RULER_SIZE }}>
-                {renderTicks(document.width, props.viewport.left, metrics.cellWidth, hover?.x, true)}
-              </div>
-              <div className="emap-ruler emap-ruler-left" data-test-id="map-ruler-left" style={{ width: RULER_SIZE }}>
-                {renderTicks(document.height, props.viewport.top, metrics.cellHeight, hover?.y, false)}
-              </div>
-            </>
-          )}
-          {document.layers.length === 0 ? (
-            <div className="emap-canvas-empty-layer" data-test-id="map-empty-layer">
-              该地图没有图层
+          <div
+            className="emap-canvas-spacer"
+            data-test-id="map-canvas-spacer"
+            style={{ position: 'relative', width: contentWidth, height: contentHeight }}
+          >
+            <div
+              className={canvasClass}
+              data-test-id="map-canvas"
+              tabIndex={0}
+              aria-label="地图画布：左键绘制，右键框选，Ctrl+C / Ctrl+V 复制粘贴"
+              aria-describedby={hintId}
+              style={{ position: 'sticky', top: 0, left: 0, width: canvasWidth, height: canvasHeight, lineHeight: 0 }}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerCancel={cancelGesture}
+              onContextMenu={(event): void => event.preventDefault()}
+              onKeyDown={handleKeyDown}
+              onWheel={handleWheel}
+            >
+              {document.layers.length === 0 ? (
+                <div className="emap-canvas-empty-layer" data-test-id="map-empty-layer">
+                  该地图没有图层
+                </div>
+              ) : null}
+              {surfaceError ? (
+                <div className="emap-canvas-state is-error" data-test-id="map-canvas-error">
+                  <div className="emap-state-title">画布初始化失败</div>
+                  <div className="emap-state-body">请检查浏览器是否支持 WebGL。</div>
+                </div>
+              ) : (
+                <MapSurface
+                  model={renderModel}
+                  document={document}
+                  currentLayerId={props.currentLayerId}
+                  aboveLayerOpacity={props.aboveLayerOpacity}
+                  cellFrameSpeed={props.cellFrameSpeed}
+                  loadBytes={props.loadBytes}
+                  imageVersion={props.imageVersion}
+                  onError={(): void => setSurfaceError(true)}
+                />
+              )}
+              <span id={hintId} className="emap-sr-only">
+                快捷键：Ctrl+C 复制，Ctrl+V 粘贴，Escape 取消笔画或选区，F 切换大地图，方向键移动视口。
+              </span>
+              {menu === undefined ? null : (
+                <MapContextMenu
+                  x={menu.x}
+                  y={menu.y}
+                  hasClipboard={hasClipboard}
+                  hasSelection={selection !== undefined}
+                  onCopy={handleMenuCopy}
+                  onPaste={handleMenuPaste}
+                  onClear={handleMenuClear}
+                  onCancelSelection={handleMenuCancelSelection}
+                  onClose={(): void => setMenu(undefined)}
+                />
+              )}
             </div>
-          ) : null}
-          {surfaceError ? (
-            <div className="emap-canvas-state is-error" data-test-id="map-canvas-error">
-              <div className="emap-state-title">画布初始化失败</div>
-              <div className="emap-state-body">请检查浏览器是否支持 WebGL。</div>
-            </div>
-          ) : (
-            <MapSurface
-              model={renderModel}
-              loadBytes={props.loadBytes}
-              imageVersion={props.imageVersion}
-              onError={(): void => setSurfaceError(true)}
-            />
-          )}
-          <span id={hintId} className="emap-sr-only">
-            快捷键：Ctrl+C 复制，Ctrl+V 粘贴，Escape 取消笔画或选区，F 切换大地图，方向键移动视口。
-          </span>
-          {menu === undefined ? null : (
-            <MapContextMenu
-              x={menu.x}
-              y={menu.y}
-              hasClipboard={hasClipboard}
-              hasSelection={selection !== undefined}
-              onCopy={handleMenuCopy}
-              onPaste={handleMenuPaste}
-              onClear={handleMenuClear}
-              onCancelSelection={handleMenuCancelSelection}
-              onClose={(): void => setMenu(undefined)}
-            />
-          )}
+          </div>
         </div>
       </div>
       <MapStatusBar

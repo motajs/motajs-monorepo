@@ -80,7 +80,6 @@ function createToolbarProps(overrides: Partial<IMapToolbarProps> = {}): IMapTool
     onSelectBrushMode: vi.fn(),
     onTogglePassability: vi.fn(),
     onToggleBigMap: vi.fn(),
-    onMoveViewport: vi.fn(),
     ...overrides,
   };
 }
@@ -260,6 +259,9 @@ describe('地图工具栏', () => {
     expect(screen.queryByTestId('map-passability')).toBeNull();
     expect(screen.queryByTestId('map-bigmap')).toBeNull();
     expect(screen.queryByTestId('map-viewport-left')).toBeNull();
+    expect(screen.queryByTestId('map-viewport-up')).toBeNull();
+    expect(screen.queryByTestId('map-viewport-down')).toBeNull();
+    expect(screen.queryByTestId('map-viewport-right')).toBeNull();
   });
 
   // 宿主没有新建能力：新建入口禁用并给出固定 tooltip 文案

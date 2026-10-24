@@ -76,13 +76,6 @@ export interface IMapToolbarProps {
    * @param value 为 true 时进入大地图
    */
   onToggleBigMap(value: boolean): void;
-  /**
-   * 移动视口
-   * @param dx 水平方向移动的格子数
-   * @param dy 垂直方向移动的格子数
-   * @param byScreen 为 true 时按一屏移动
-   */
-  onMoveViewport(dx: number, dy: number, byScreen: boolean): void;
   /** 缩放滑块的当前值；缺省 `MAP_ZOOM_DEFAULT` */
   readonly zoom?: number;
   /**
@@ -109,13 +102,6 @@ interface IMapViewControlsProps {
    * @param value 为 true 时进入大地图
    */
   onToggleBigMap(value: boolean): void;
-  /**
-   * 移动视口
-   * @param dx 水平方向移动的格子数
-   * @param dy 垂直方向移动的格子数
-   * @param byScreen 为 true 时按一屏移动
-   */
-  onMoveViewport(dx: number, dy: number, byScreen: boolean): void;
 }
 
 /**
@@ -179,76 +165,7 @@ function useNarrowLayout(): boolean {
 }
 
 /**
- * 画一个 16px 的方向箭头
- * @param path 箭头路径
- * @returns 内联 SVG 图标
- */
-function createArrowIcon(path: string): ReactElement {
-  return (
-    <svg width={16} height={16} viewBox="0 0 16 16" aria-hidden focusable={false}>
-      <path d={path} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" />
-    </svg>
-  );
-}
-
-/**
- * 视口四向按钮：每次移动一格，按住 Shift 时按一屏移动
- * @param props 控件 props
- * @returns 四向按钮组
- */
-function MapViewportButtons(props: IMapViewControlsProps): ReactElement {
-  return (
-    <span className="emap-toolbar-group">
-      <Button
-        className="emap-viewport-button"
-        size="small"
-        autoInsertSpace={false}
-        disabled={props.disabled}
-        aria-label="向左移动视口"
-        data-test-id="map-viewport-left"
-        onClick={(event): void => props.onMoveViewport(-1, 0, event.shiftKey)}
-      >
-        {createArrowIcon('M10 3L5 8l5 5')}
-      </Button>
-      <Button
-        className="emap-viewport-button"
-        size="small"
-        autoInsertSpace={false}
-        disabled={props.disabled}
-        aria-label="向上移动视口"
-        data-test-id="map-viewport-up"
-        onClick={(event): void => props.onMoveViewport(0, -1, event.shiftKey)}
-      >
-        {createArrowIcon('M3 10l5-5 5 5')}
-      </Button>
-      <Button
-        className="emap-viewport-button"
-        size="small"
-        autoInsertSpace={false}
-        disabled={props.disabled}
-        aria-label="向下移动视口"
-        data-test-id="map-viewport-down"
-        onClick={(event): void => props.onMoveViewport(0, 1, event.shiftKey)}
-      >
-        {createArrowIcon('M3 6l5 5 5-5')}
-      </Button>
-      <Button
-        className="emap-viewport-button"
-        size="small"
-        autoInsertSpace={false}
-        disabled={props.disabled}
-        aria-label="向右移动视口"
-        data-test-id="map-viewport-right"
-        onClick={(event): void => props.onMoveViewport(1, 0, event.shiftKey)}
-      >
-        {createArrowIcon('M6 3l5 5-5 5')}
-      </Button>
-    </span>
-  );
-}
-
-/**
- * 视图类低频控件：显示通行度 / 大地图 / 四向移动；宽屏直接显示，窄屏收进「视图」下拉
+ * 视图类低频控件：显示通行度 / 大地图；宽屏直接显示，窄屏收进「视图」下拉
  * @param props 控件 props
  * @returns 控件组
  */
@@ -275,7 +192,6 @@ function MapViewControls(props: IMapViewControlsProps): ReactElement {
       >
         大地图
       </Button>
-      <MapViewportButtons {...props} />
     </>
   );
 }
@@ -442,7 +358,6 @@ export function MapToolbar(props: IMapToolbarProps): ReactElement {
                     bigMap={props.bigMap}
                     onTogglePassability={props.onTogglePassability}
                     onToggleBigMap={props.onToggleBigMap}
-                    onMoveViewport={props.onMoveViewport}
                   />
                 </div>
               )}
@@ -458,7 +373,6 @@ export function MapToolbar(props: IMapToolbarProps): ReactElement {
               bigMap={props.bigMap}
               onTogglePassability={props.onTogglePassability}
               onToggleBigMap={props.onToggleBigMap}
-              onMoveViewport={props.onMoveViewport}
             />
           )}
         </div>

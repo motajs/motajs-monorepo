@@ -508,6 +508,7 @@ export class MapPanel implements IEditorPanel, IMapPanel {
         onSelectLayer: (layerId): void => this.selectLayer(layerId),
         onTogglePassability: (value): void => this.setPassabilityVisible(value),
         onToggleBigMap: (value): void => this.setBigMap(value),
+        onSetViewport: (left, top): void => this.setViewport(left, top),
         onMoveViewport: (dx, dy, byScreen): void => this.moveViewport(dx, dy, byScreen),
         onCreateMap: (request): Promise<void> => this.createMap(request),
         onAddLayer: (layerName): Promise<void> => this.addLayer(layerName),
@@ -1296,6 +1297,31 @@ export class MapPanel implements IEditorPanel, IMapPanel {
   }
 
   /**
+   * 按格设置视口左上角：夹取到「文档尺寸 − 视口格数」；大地图期间视口恒为 `(0, 0)`，直接忽略
+   * @param left 视口左上角所在的格子横坐标
+   * @param top 视口左上角所在的格子纵坐标
+   */
+  setViewport(left: number, top: number): void {
+    if (this.store.state.bigMap) return;
+
+    const document = this.document;
+
+    if (document === undefined) return;
+
+    const columns = this.store.state.viewportColumns ?? MAP_VIEWPORT_DEFAULT_COLUMNS;
+    const rows = this.store.state.viewportRows ?? MAP_VIEWPORT_DEFAULT_ROWS;
+    const maxLeft = Math.max(0, document.width - columns);
+    const maxTop = Math.max(0, document.height - rows);
+
+    this.publish({
+      viewport: {
+        left: Math.min(maxLeft, Math.max(0, Math.floor(left))),
+        top: Math.min(maxTop, Math.max(0, Math.floor(top))),
+      },
+    });
+  }
+
+  /**
    * 按格或按屏移动视口；大地图下同样生效，到边界不报错
    * @param dx 水平方向移动的格数
    * @param dy 垂直方向移动的格数
@@ -1341,7 +1367,7 @@ export class MapPanel implements IEditorPanel, IMapPanel {
   }
 
   /**
-   * 开关大地图：进入前记住视口，退出时还原；只改视图状态，不置脏、不进撤销
+   * 开关大地图：进入前记住视口并把视口钉到原点，退出时还原；只改视图状态，不置脏、不进撤销
    * @param value 为 true 时进入大地图
    */
   setBigMap(value: boolean): void {
@@ -1349,7 +1375,7 @@ export class MapPanel implements IEditorPanel, IMapPanel {
 
     if (value) {
       this.preBigMapViewport = this.store.state.viewport;
-      this.publish({ bigMap: true });
+      this.publish({ bigMap: true, viewport: { left: 0, top: 0 } });
       return;
     }
 
