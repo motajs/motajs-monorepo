@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.1"
 current_phase_name: 地图渲染与布局重做
-current_plan: 12
+current_plan: 13
 status: executing
-stopped_at: Completed 04.1-11-PLAN.md
-last_updated: "2026-10-24T08:55:29.539Z"
+stopped_at: Completed 04.1-12-PLAN.md
+last_updated: "2026-10-24T09:40:13.217Z"
 last_activity: 2026-10-23
 last_activity_desc: Phase 3 complete, transitioned to Phase 4
-state_head: 58e8dcd7547b7c4a1242a8b5dd454f5b4d345bb4
+state_head: bdd41f0cc5d0cf92cc94bc31105c4d5f974dcb90
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 138
-  completed_plans: 132
+  completed_plans: 133
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 04.1 (地图渲染与布局重做) — EXECUTING
-Current Plan: 12
+Current Plan: 13
 Total Plans in Phase: 16
 Status: Ready to execute
 Last activity: 2026-10-23 — 04.1-01 complete (naming report + pure declarations)
@@ -150,6 +150,7 @@ Progress: [██████████] 100%
 | Phase 04.1 P09 | 45 | 3 tasks | 7 files |
 | Phase 04.1 P10 | 20min | 3 tasks | 5 files |
 | Phase 04.1 P11 | 24min | 2 tasks | 7 files |
+| Phase 04.1 P12 | 43min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -378,6 +379,10 @@ Recent decisions affecting current work:
 - [Phase 04.1]: 布局数字只由 resolveMapLayout 产出：视图用 resolveViewLayout 现算右栏宽度与画布像素，未打开地图时右栏回退 MAP_PALETTE_BASE_WIDTH
 - [Phase 04.1]: 缩放滑块用本地 useState 驱动拇指，只在 onChangeComplete 夹取发布；面板值变化经 useEffect 同步回本地
 - [Phase 04.1]: 窄屏不写内联右栏宽度，改由 .emap-panel.is-narrow .emap-side 折叠为整行、限高 40%
+- [Phase 04.1]: 五类导航内置在 MapMaterialPanel：IMapMaterialPanelProps 已带 activeCategory / onSelectCategory / onToggleTileset，侧列只挂一个组件即可
+- [Phase 04.1]: 空目录提示放在素材区主体：IMapCategoryNavProps 没有目录字段，导航无法判空，也不新增接口成员
+- [Phase 04.1]: Tileset 不逐格建 DOM：整图背景 + 网格线，按 Tileset 自身格尺寸换算行列，编号按目录查表、缺格填 0
+- [Phase 04.1]: 模块级分类清单用 Object.freeze([...]) 声明，满足 coreModuleState 对模块级容器的门禁
 
 ### Pending Todos
 
@@ -405,6 +410,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-24T08:55:28.939Z
-Stopped at: Completed 04.1-11-PLAN.md
+Last session: 2026-10-24T09:40:12.754Z
+Stopped at: Completed 04.1-12-PLAN.md
 Resume file: None
