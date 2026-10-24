@@ -873,3 +873,199 @@
   font-size: 14px;
   font-weight: 600;
 }
+
+/* ==================== 素材区（分类导航 / 普通素材网格） ==================== */
+
+.emap-material {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  color: var(--editor-fg, #202124);
+  background: var(--editor-surface, #ffffff);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.emap-material-head {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  padding: 8px;
+  border-bottom: 1px solid var(--editor-border, #d0d7de);
+}
+
+.emap-frame-count {
+  font-size: 12px;
+}
+
+.emap-category-nav {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--editor-border, #d0d7de);
+}
+
+.emap-category-item {
+  display: block;
+  width: 100%;
+  height: 26px;
+  padding: 0 8px;
+  overflow: hidden;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--editor-fg, #202124);
+  font-size: 12px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.emap-category-item:hover {
+  background: var(--editor-selected, #dbeafe);
+}
+
+.emap-category-item.is-selected {
+  background: var(--editor-selected, #dbeafe);
+  color: var(--editor-accent, #1677ff);
+  font-weight: 600;
+}
+
+.emap-category-item:focus-visible {
+  outline: 2px solid var(--editor-accent, #1677ff);
+  outline-offset: -2px;
+}
+
+.emap-category-tileset {
+  margin-top: 4px;
+  border-top: 1px dashed var(--editor-border, #d0d7de);
+}
+
+.emap-material-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.emap-material-group {
+  border-bottom: 1px solid var(--editor-border, #d0d7de);
+}
+
+.emap-material-group-head {
+  padding: 4px 8px;
+  overflow: hidden;
+  color: var(--editor-fg, #202124);
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.emap-material-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 32px);
+  gap: 4px;
+  justify-content: start;
+  padding: 0 8px 8px;
+}
+
+.emap-material-cell {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--editor-grid, #d8dee4);
+  border-radius: 0;
+  background-color: var(--editor-bg, #f5f6f8);
+  background-repeat: no-repeat;
+  background-size: auto;
+  image-rendering: pixelated;
+  cursor: pointer;
+}
+
+.emap-material-cell:hover {
+  box-shadow: 0 0 0 1px var(--editor-accent, #1677ff);
+}
+
+.emap-material-cell.is-selected {
+  box-shadow:
+    0 0 0 2px var(--editor-accent, #1677ff),
+    inset 0 0 0 1px #ffffff;
+}
+
+.emap-material-cell:focus-visible {
+  outline: 2px solid var(--editor-accent, #1677ff);
+  outline-offset: 1px;
+}
+
+.emap-material-cell.is-missing {
+  background-image:
+    linear-gradient(45deg, var(--emap-empty-b, #f5f6f8) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--emap-empty-b, #f5f6f8) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--emap-empty-b, #f5f6f8) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--emap-empty-b, #f5f6f8) 75%);
+  background-color: var(--emap-empty-a, #ffffff);
+  background-position:
+    0 0,
+    0 4px,
+    4px -4px,
+    -4px 0;
+  background-size: 8px 8px;
+}
+
+.emap-material-missing-mark {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  padding: 0 2px;
+  background: var(--emap-missing-bg, #fff2e8);
+  color: var(--emap-missing-fg, #d4380d);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 14px;
+  pointer-events: none;
+}
+
+.emap-tile-frames {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 0 2px;
+  border-radius: 0;
+  background: rgba(0, 0, 0, 0.6);
+  color: #ffffff;
+  font-size: 10px;
+  line-height: 14px;
+  pointer-events: none;
+}
+
+.emap-material-empty {
+  padding: 16px 8px;
+  color: var(--editor-muted, #656d76);
+  font-size: 12px;
+  text-align: center;
+}
+
+.emap-material-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 8px;
+  color: var(--editor-muted, #656d76);
+  font-size: 12px;
+  text-align: center;
+}
+
+.emap-material-state.is-error .emap-material-state-title {
+  color: var(--emap-danger-fg, #d00);
+  font-size: 14px;
+  font-weight: 600;
+}
