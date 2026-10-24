@@ -412,6 +412,127 @@
 
 ---
 
+## Plan 17 — 接口与命名（UAT 修复轮，纯声明）
+
+**要做什么：** 把「缩放 = 分区比例 + 整体渲染缩放」和「地图区填满」这两件事需要的字段、常量先声明出来；不写任何逻辑，不改任何已有成员的含义以外的东西。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `IMapRenderModel.renderScale` | **新增**可选字段（`types.ts`，Plan 19 收紧为必填） | 整体渲染缩放：画布把这个倍率一次性乘到整个场景上，因此图块不会被压扁、内容不会跟着变小（D-30）；`cellWidth/cellHeight` 同时改为**逻辑**格尺寸（= 文档格尺寸，不乘缩放） |
+| `IMapRenderModel.cellWidth` / `.cellHeight` | 语义修订（不新增成员） | 从「缩放后的格像素」改为「逻辑格像素」；屏幕上的格像素 = 逻辑格 × `renderScale`（D-30） |
+| `IMapLayout.renderScale` | **新增**可选字段（`types.ts`，Plan 19 收紧为必填） | 布局算出的整体渲染缩放；面板据此给画布与命中测试同一个倍率 |
+| `IMapLayout.mapPaneWidth` | **新增**可选字段（`types.ts`，Plan 19 收紧为必填） | 左列（地图区）的像素宽；右列宽仍叫 `paletteWidth`，两列之和即可用宽度（D-31） |
+| `IMapLayoutOptions.availableWidth` / `.availableHeight` | **新增**可选字段（`types.ts`） | 视图量到的真实可用空间（像素）；缺省或 ≤ 0 时回退到宿主注入的视口格数（D-31） |
+| `MAP_PANE_SHARE_MIN` / `MAP_PANE_SHARE_MAX` | **新增**常量（`constants.ts`） | 左列占可用宽度的下限 / 上限：缩放到最大时取 `MIN`（素材区最宽），缩放到最小时取 `MAX`（D-31） |
+| `MAP_PALETTE_BASE_WIDTH` / `MAP_PALETTE_MIN_WIDTH` / `MAP_PALETTE_MAX_WIDTH` | 常量**改值**（240 / 160 / 360 → 320 / 240 / 520） | 素材区在 100% 缩放时就要更大（U-06 的「素材区要大一些」） |
+| `IMapCanvasProps.viewportColumns` / `.viewportRows` | **删除**（由 Plan 19 执行） | 画布尺寸改由渲染模型给出，不再自己按格数算；本计划只在报告里登记 |
+| `MapDialogKind.Unsaved` / `MapUnsavedChoice` / `IMapUnsavedDialogProps` / `IMapPanelViewProps.onUnsavedDecision` | **删除**（由 Plan 23 执行） | 自动保存后不再有「未保存」弹窗（D-37）；本计划只登记，避免 Plan 17 一改就编译红 |
+| Plan 17 正文节（本文件） | 文件 | 新命名与语义的唯一确认点；用户确认前不得写实现 |
+
+---
+
+## Plan 18 — editor-core 自动保存契约与切换时序
+
+**要做什么：** 把「切走就落盘」变成 core 的硬契约：外壳在切换 / 关闭 / 替换面板前**按顺序** await 面板的落盘钩子，并且不许任何面板再用 `onBeforeClose` 问「要不要保存」。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `IEditorPanel.onSwitchOut` | 语义**收紧**（JSDoc 重写，签名不变） | 唯一的落盘点：切走前必须把未保存改动写完；外壳会在切换 / 关闭 / 替换 / 注销前 await 它；**不得**弹确认框（D-37） |
+| `IEditorPanel.onBeforeClose` | 语义**收紧**（JSDoc 重写，签名不变） | 只允许用于「必须拦截」的破坏性场景；不得再用于询问未保存改动（D-37） |
+| `ShellSystem` 的私有切换链（实现细节，不新增接口成员） | 实现约定 | 把「先 switchOut、再 switchIn」串成一条链，保证保存先于下一个面板的切入 |
+| `src/shell/__tests__/shellAutosave.test.ts` | 新文件 | 断言：切换前 await 落盘、关闭标签前 await 落盘、标签被替换前 await 落盘、落盘抛错只记日志且不卡住切换 |
+
+---
+
+## Plan 19 — 缩放语义：分区比例 + 整体渲染缩放
+
+**要做什么：** 让缩放真正同时作用于「左右分栏比例」和「整个地图的渲染倍率」，并把命中测试、滚动、大地图三处换算统一到同一个倍率上。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `resolveMapLayout` | 自由函数（改造，`model/layout.ts`） | 吃「文档格尺寸 + 缩放 + 可用空间 + 视口格数」，产出逻辑格尺寸、`renderScale`、`mapPaneWidth`、`paletteWidth`、画布像素尺寸 |
+| `buildMapRenderModel` | 自由函数（改造，`model/renderModel.ts`） | 用逻辑格尺寸算格子矩形、用 `renderScale` 算可见格数；三条返回路径都带 `renderScale`（大地图恒为 1） |
+| `buildCanvasCellMetrics` | 自由函数（改造，`MapCanvas.tsx`） | 命中测试用的**屏幕**格像素 = 模型逻辑格 × `renderScale`（D-30） |
+| `useMapElementSize` | hook（新文件 `components/useMapElementSize.ts`） | 用 `ResizeObserver` + `getBoundingClientRect` 量地图区的可用像素；量不到时返回 0，让布局回退到注入视口（D-31） |
+| `MAP_CANVAS_GUTTER_X` / `MAP_CANVAS_GUTTER_Y` | **新增**常量（`constants.ts`） | 画布外框占用的固定像素：左侧标尺 20、上方标尺 20 + 状态条 24；布局从可用空间里扣掉它们才是画布尺寸 |
+| `IMapRenderModel.renderScale` / `IMapLayout.renderScale` / `IMapLayout.mapPaneWidth` | 由可选**收紧为必填** | 收敛到「渲染模型与布局必须自带倍率」 |
+| `IMapCanvasProps.viewportColumns` / `.viewportRows` | 删除 | 画布尺寸改由模型给出 |
+| `map-viewport-frame` | `data-test-id`（新） | 被测量的地图区外框；测试据此注入可用尺寸 |
+
+---
+
+## Plan 20 — 版面重排（D-31 / D-32）
+
+**要做什么：** 顶栏通栏、左列地图区填满、右列素材区通高、分类横排自动换行——把「地图区很大但周围全是空白」的观感彻底改掉。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `.emap-columns` | CSS 类（新） | 顶栏下方的一行容器：左列 `emap-main` + 右列 `emap-side` |
+| `.emap-panel` | CSS 类（改） | 从「横向两列」改为「纵向：顶栏 + 一行两列」 |
+| `.emap-main` / `.emap-side` / `.emap-body` / `.emap-canvas-area` / `.emap-canvas-scroll` | CSS 类（改） | 左列填满剩余高度、右列通高；去掉会让画布不填满的固定高度与多余留白 |
+| `.emap-category-nav` / `.emap-category-item` | CSS 类（改） | 分类导航横排、`space-between`、自动换行（D-32） |
+| `.emap-category-row` | CSS 类（可选，新） | 横排时把「五个普通分类」与「Tileset 开关」分成两组；只有在确实需要分组换行时才新增，不新增就不要出现在代码里 |
+| `map-columns` | `data-test-id`（新） | 顶栏下的两列容器；测试据此断言「顶栏在列容器之外」 |
+
+---
+
+## Plan 21 — 渲染清晰度与演示数据（D-34 / D-35 / D-36）
+
+**要做什么：** 大地图不再发糊（最近邻 + 按显示分辨率生成缩略纹理），演示数据换成真实四帧自动元件并补上真实通行属性。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `buildThumbnail` | 自由函数（改造，`model/thumbnail.ts`） | 缩略纹理尺寸改为「按显示像素 1:1，超过上限才缩」；不再无脑按格子数降采样（D-35） |
+| `MAP_THUMBNAIL_MAX_TEXTURE` | 常量（沿用 `MAP_THUMBNAIL_MAX_SIZE`，不新增） | 纹理边长上限 |
+| `decodeDataUrlBytes` | 自由函数（新，`editor-dev/src/demo/pngBytes.ts`） | 把 `?inline` 导入的 data URL 解成字节，供演示宿主 seed 真实 PNG（D-34） |
+| `DEMO_AUTOTILE_BIG_PNG_URL` | 常量（新） | `autotile1.png` 的 `?inline` 数据地址 |
+| `readDemoAutotileBigBytes` | 自由函数（新，`editor-dev/src/demo/mapDemo.ts`） | 把上面那份数据地址解成真实 PNG 字节；seed 与「读图片尺寸」共用这一处，保证两处维度一致 |
+| `src/demo/assets/autotile1.png` | 文件（新，二进制） | 真实四帧自动元件素材（384×128） |
+| `DEMO_TILE_TABLE` 的 `pass` 字段 | 数据（改） | 演示图块的四方向通行属性（D-36） |
+
+---
+
+## Plan 22 — 快捷栏重做（D-33）
+
+**要做什么：** 收藏格显示「按哪个数字键选它」，图块加描边；最近 / 最常只显示缩略图；收藏只保留拖拽排序。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `MAP_FAVORITE_SLOT_KEYS` | 常量（新，`components/MapFavoriteBar.tsx` 内） | 九个收藏位对应的数字键文案：`2`…`9`、`0`；擦除格固定 `1` |
+| `.is-favorite` | CSS 类（新） | 收藏格图块的描边，保证键位数字压在深色图块上也看得清 |
+| `map-favorite-key-{index}` | `data-test-id`（新） | 收藏格上的槽位键文本（断言「显示的是键位，不是图块编号」） |
+| `map-favorite-up-{index}` / `map-favorite-down-{index}` | `data-test-id`（**删除**） | 上下移动按钮；D-33 只保留拖拽 |
+| `MapBottomTabs` 里的编号文本 | **删除** | 最近 / 最常不再显示图块编号（D-33） |
+
+---
+
+## Plan 23 — 地图面板自动保存（D-37）
+
+**要做什么：** 地图面板切走、关标签、换图都自动落盘，删掉整套「未保存」弹窗。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `MapPanel.onSwitchOut` | 方法（实现，签名不变） | 切走时 `await this.save()`（D-37） |
+| `MapPanel.onBeforeClose` | 方法（改造） | 先保存；保存失败返回 `false`（标签保留、提示行显示错误），成功返回 `true`；不再弹窗 |
+| `MapPanel.openMap` / `.createMap` / `.addLayer` / `.setMap` | 方法（改造） | 换图前先保存，失败则中止换图（D-37） |
+| `MapPanel.requestUnsavedDecision` / `.resolveUnsavedDecision` / `.requestDiscard` | 方法（**删除**） | 自动保存后不再需要「询问 / 放弃」这套机制 |
+| `MapUnsavedDialog` / `IMapUnsavedDialogProps` | 组件 / 接口（**删除**，含 `dialogs/index.ts` 的导出） | 弹窗本体（D-37） |
+| `MapDialogKind.Unsaved` / `MapUnsavedChoice` | `const enum` 成员（**删除**） | 弹窗的状态与选择枚举 |
+| `IMapPanelViewProps.onUnsavedDecision` | 方法成员（**删除**） | 视图不再需要转交「用户按了哪个按钮」 |
+
+---
+
+## Plan 24 — 阶段收口（D-38）
+
+**要做什么：** 重跑机器门禁，再按修订后的九条人工清单在开发宿主里逐条验收；本计划是阶段完成与否的唯一判据。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `04.1-24-SUMMARY.md` | 文件（新） | 每条门禁的命令 / 退出码 / 摘要行 + 九条人工判据的结论与证据 |
+| `04.1-16-PLAN.md` | 保持未完成 | 机器门禁证据保留；人工验收判据由本计划取代（D-38） |
+
+---
+
 ## 开放问题口径
 
 > 与 Phase 4 不同，本阶段进入规划时仍有未定项。三条「用户确认」已在 §全局口径 锁定；下表是其余各项的执行口径。
@@ -428,6 +549,10 @@
 | OQ8 缩略图重建触发点 | **已定（研究结论）** | 文档引用 + 当前层 + 上层不透明度；视口 / 缩放 / 悬停 / 框选 / 通行度开关不重建。 |
 | OQ9 缩放是否影响素材区图标 | **已定（研究结论）** | 不影响；图标固定 32px，只改右栏宽度。 |
 | OQ10 收藏拖拽 vs 上下按钮 | **已定（研究结论）** | 先做指针拖拽；jsdom 下不可靠时保留「上移 / 下移」按钮（D-19 允许）。 |
+| OQ11 收藏排序是否保留上下按钮 | **已定（用户，UAT 修订）** | 不保留：只做拖拽，删除上下按钮（D-33 覆盖 OQ10 的后半句）。 |
+| OQ12 缩放升高时左右两栏往哪边让 | **待用户确认（Plan 17 的确认点）** | 规划器提案：缩放升高 → 每格变大、**素材区变宽**、地图区变窄；缩放到最小 → 素材区变窄、地图区变宽，便于先看全局再挑素材。若用户要求相反方向，只改 `resolveMapLayout` 里的比例映射与两个比例常量，其它不动。 |
+| OQ13 仓库外的 `autotile1.png` 怎么进 CI | **已定（研究结论）** | 复制一份到 `packages/apps/editor-dev/src/demo/assets/autotile1.png` 并以 `?inline` 导入（仓库已有同样做法的先例：`assetDemo.ts` 的字体）；不引用仓库外路径。 |
+| OQ14 宿主注入的 `viewportColumns/viewportRows`（含 `?mapViewport=wide`）还有没有用 | **待用户确认（Plan 17 的确认点）** | 规划器提案：**只当回退**——真正跑在浏览器里时地图区由可用空间与缩放决定，注入的 13×13 / 15×9 只在「量不到可用空间」时生效（jsdom、首次渲染）。代价是 `?mapViewport=wide` 在浏览器里只影响帧速（150ms），不再改变可见格数。若要求「注入视口必须真的限制可见格数」，把它改成**下限**（画布不小于该格数，窗口更小时出现滚动），需要额外改 `resolveMapLayout` 一处分支。 |
 
 ---
 
