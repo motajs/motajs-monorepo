@@ -758,6 +758,23 @@ describe('地图面板里的画布接线', () => {
     });
   });
 
+  // 视口坐标被夹取到「文档尺寸 − 视口格数」，不会露出空白格
+  it('设置视口时夹取到文档范围', async () => {
+    const harness = await openPanel(createWideMapDocument(20, 20));
+
+    await act(async () => {
+      harness.panel.setViewport(99, 99);
+    });
+
+    expect(harness.panel['store'].state.viewport).toEqual({ left: 7, top: 7 });
+
+    await act(async () => {
+      harness.panel.setViewport(-5, -5);
+    });
+
+    expect(harness.panel['store'].state.viewport).toEqual({ left: 0, top: 0 });
+  });
+
   // 方向键 / WASD / 滚轮都不再移动视口：普通模式与大地图各一次
   it('方向键与滚轮不再改变视口', async () => {
     const harness = await openPanel(createWideMapDocument(20, 20));
