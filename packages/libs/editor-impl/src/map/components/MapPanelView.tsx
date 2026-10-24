@@ -30,6 +30,8 @@ import {
   MapUnsavedChoice,
 } from '../types';
 import { MapCanvas } from './MapCanvas';
+import { MapBottomTabs } from './MapBottomTabs';
+import { MapFavoriteBar } from './MapFavoriteBar';
 import { MapLayerDialog, MapNewDialog, MapUnsavedDialog } from './dialogs';
 import { MapEmptyState } from './MapEmptyState';
 import { MapMaterialPanel } from './MapMaterialPanel';
@@ -409,6 +411,7 @@ function renderReadyBody(input: IMapPanelBodyProps): ReactElement {
         onPasteAt={input.props.onPasteAt ?? noop}
         onClearRegion={input.props.onClearRegion ?? noop}
         onSetViewport={input.props.onSetViewport ?? noop}
+        onSelectFavoriteSlot={(index): void => input.props.onSelectFavoriteSlot?.(index)}
         onToggleBigMap={toggleBigMap}
       />
     </div>
@@ -566,7 +569,29 @@ export function MapPanelView(props: IMapPanelViewProps): ReactElement {
           onSetZoom={props.onSetZoom}
         />
         <MapPanelBody props={props} view={view} narrow={narrow} groupImages={groupImages} />
-        <div className="emap-bottom" data-test-id="map-bottom" />
+        <div className="emap-bottom" data-test-id="map-bottom">
+          <MapFavoriteBar
+            favorites={view.favorites ?? []}
+            selection={view.paletteSelection}
+            groups={tileGroups}
+            groupUrls={groupImages.urls}
+            onSelectSlot={(index): void => props.onSelectFavoriteSlot?.(index)}
+            onReorder={(from, to): void => props.onReorderFavorites?.(from, to)}
+            reorderDisabled={false}
+          />
+          <MapBottomTabs
+            tab={view.bottomTab ?? MapBottomTab.Recent}
+            recentTiles={view.recentTiles}
+            frequentTiles={view.frequentTiles ?? []}
+            favorites={view.favorites ?? []}
+            groups={tileGroups}
+            groupUrls={groupImages.urls}
+            imageStatus={view.recentStatus}
+            selection={view.paletteSelection}
+            onSelectTab={(tab): void => props.onSetBottomTab?.(tab)}
+            onSelectPattern={props.onSelectPattern ?? noop}
+          />
+        </div>
         {renderNotice({ view, onRetry: props.onSave })}
       </div>
       <div className="emap-side" data-test-id="map-sidebar" style={narrow ? undefined : { width: sideWidth }}>

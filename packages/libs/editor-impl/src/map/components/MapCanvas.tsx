@@ -1,5 +1,10 @@
 import { KeyboardEvent, PointerEvent, ReactElement, useEffect, useId, useRef, useState } from 'react';
-import { MAP_CELL_SIZE, MAP_VIEWPORT_DEFAULT_COLUMNS, MAP_VIEWPORT_DEFAULT_ROWS } from '../constants';
+import {
+  MAP_CELL_SIZE,
+  MAP_FAVORITE_SLOT_COUNT,
+  MAP_VIEWPORT_DEFAULT_COLUMNS,
+  MAP_VIEWPORT_DEFAULT_ROWS,
+} from '../constants';
 import { buildFillWrites, buildRectWrites, buildStrokeWrites } from '../model/brush';
 import { resolveCellMetrics, resolvePointerCell } from '../model/cellMetrics';
 import { IPaintWrite } from '../model/document';
@@ -558,7 +563,7 @@ export function MapCanvas(props: IMapCanvasProps): ReactElement {
   };
 
   /**
-   * 键盘：复制 / 粘贴 / Escape / F；只在画布聚焦时响应
+   * 键盘：复制 / 粘贴 / Escape / F / 数字键；只在画布聚焦时响应
    * @param event 键盘事件
    */
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
@@ -578,6 +583,12 @@ export function MapCanvas(props: IMapCanvasProps): ReactElement {
         pasteOnCanvas();
       }
 
+      return;
+    }
+
+    if (event.key.length === 1 && event.key >= '0' && event.key <= '9') {
+      event.preventDefault();
+      props.onSelectFavoriteSlot?.(event.key === '0' ? MAP_FAVORITE_SLOT_COUNT : Number(event.key) - 1);
       return;
     }
 

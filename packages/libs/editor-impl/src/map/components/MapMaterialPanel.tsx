@@ -52,6 +52,11 @@ interface IMaterialTileProps {
    * @param tile 被点中的图块条目
    */
   onSelect(tile: IMapTileEntry): void;
+  /**
+   * 右键把该图块上报收藏
+   * @param number 要收藏的图块编号
+   */
+  onFavorite(number: number): void;
 }
 
 /**
@@ -236,6 +241,10 @@ function renderMaterialTile(props: IMaterialTileProps): ReactElement {
       aria-label={tileLabel(props.tile)}
       aria-pressed={props.selected}
       onClick={(): void => props.onSelect(props.tile)}
+      onContextMenu={(event): void => {
+        event.preventDefault();
+        props.onFavorite(props.tile.number);
+      }}
     >
       {props.missing ? (
         <span className="emap-material-missing-mark" aria-hidden="true">
@@ -277,6 +286,7 @@ function renderCategoryGroup(props: IMapMaterialPanelProps, group: IMapTileGroup
             selected: isTileSelected(tile, props.selection),
             showFrameCount: props.showFrameCount,
             onSelect: (picked): void => props.onSelectPattern(createTileSelection(picked.number)),
+            onFavorite: (number): void => props.onFavoriteTile?.(number),
           }),
         )}
       </div>
@@ -293,13 +303,7 @@ function renderErrorStrip(onRetry: () => void): ReactElement {
   return (
     <div className="emap-material-state is-error" data-test-id="map-material-error">
       <span className="emap-material-state-title">{ERROR_TEXT}</span>
-      <Button
-        type="link"
-        size="small"
-        autoInsertSpace={false}
-        data-test-id="map-material-retry"
-        onClick={onRetry}
-      >
+      <Button type="link" size="small" autoInsertSpace={false} data-test-id="map-material-retry" onClick={onRetry}>
         重试
       </Button>
     </div>

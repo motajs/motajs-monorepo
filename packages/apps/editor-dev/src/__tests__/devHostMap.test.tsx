@@ -459,6 +459,9 @@ describe('开发宿主地图端到端', () => {
       expect(container.querySelector('[data-test-id="map-tile-1"]')).not.toBeNull();
     });
 
+    // 底部收藏栏与素材区一起就位（Plan 13 恢复了 Plan 12 临时去掉的擦除格覆盖）
+    expect(container.querySelector('[data-test-id="map-favorite-erase"]')).not.toBeNull();
+
     const groups = container.querySelectorAll('[data-test-id="map-material-grid"]');
 
     expect(groups.length).toBeGreaterThanOrEqual(2);
@@ -476,5 +479,30 @@ describe('开发宿主地图端到端', () => {
 
       expect(numbers.has(number)).toBe(true);
     }
+  });
+
+  // 收藏栏随素材区一起就位：右键普通图块后收藏栏出现该编号，点擦除格把选择切回空
+  it('右键图块进收藏栏，擦除格可选中', async () => {
+    const { core } = await createHost();
+
+    await openMapTab(core, 'small');
+
+    const container = await renderShell(core);
+
+    await waitFor(() => {
+      expect(container.querySelector('[data-test-id="map-tile-1"]')).not.toBeNull();
+    });
+
+    fireEvent.contextMenu(screen.getByTestId('map-tile-1'));
+    await act(async () => {});
+
+    expect(screen.getByTestId('map-favorite-0').getAttribute('data-tile-number')).toBe('1');
+    expect(screen.getByTestId('map-favorite-erase').className).not.toContain('is-selected');
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('map-favorite-erase'));
+    });
+
+    expect(screen.getByTestId('map-favorite-erase').className).toContain('is-selected');
   });
 });

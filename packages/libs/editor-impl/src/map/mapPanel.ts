@@ -10,6 +10,7 @@ import {
 } from '@motajs/editor-core';
 import {
   MAP_ABOVE_LAYER_DEFAULT_OPACITY,
+  MAP_FAVORITE_SLOT_COUNT,
   MAP_FREQUENT_LIMIT,
   MAP_RECENT_TILES_LIMIT,
   MAP_RECENT_TILES_PATH,
@@ -456,6 +457,7 @@ export class MapPanel implements IEditorPanel, IMapPanel {
           this.commitCells(layerId, [{ x: position.x, y: position.y, value }]);
         },
         onSelectPattern: (selection): void => this.selectPalette(selection),
+        onFavoriteTile: (number): void => this.addFavorite(number),
         onRetryImages: (): void => this.reloadTileImages(),
         onClearRecent: (): void => {
           void this.clearRecentTiles();
@@ -1124,6 +1126,29 @@ export class MapPanel implements IEditorPanel, IMapPanel {
    */
   reorderFavorites(from: number, to: number): void {
     this.publish({ favorites: reorderFavorite(this.store.state.favorites ?? [], from, to) });
+    void this.saveTilePreferences();
+  }
+
+  /**
+   * 右键收藏一个普通图块：只接受目录内且非 Tileset 的编号
+   *
+   * 已收藏的编号直接忽略；否则填入第一个空位，9 格全满时替换第 9 格。只改视图状态与偏好文件，
+   * 不置脏、不登记撤销、不改变当前调色板选中。
+   * @param number 要收藏的图块编号
+   */
+  addFavorite(number: number): void {
+    if (!this.collectFavoriteNumbers().has(number)) return;
+
+    const favorites = this.store.state.favorites ?? [];
+
+    if (favorites.includes(number)) return;
+
+    const slots = Array.from({ length: MAP_FAVORITE_SLOT_COUNT }, (_unused, slot) => favorites[slot] ?? 0);
+    const emptyIndex = slots.indexOf(0);
+    const index = emptyIndex < 0 ? MAP_FAVORITE_SLOT_COUNT - 1 : emptyIndex;
+
+    slots[index] = number;
+    this.publish({ favorites: slots });
     void this.saveTilePreferences();
   }
 
