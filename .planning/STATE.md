@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.1"
 current_phase_name: 地图渲染与布局重做
-current_plan: 15
+current_plan: 16
 status: executing
-stopped_at: Completed 04.1-14-PLAN.md
-last_updated: "2026-10-24T11:05:47.705Z"
+stopped_at: Completed 04.1-15-PLAN.md
+last_updated: "2026-10-24T11:48:00.869Z"
 last_activity: 2026-10-23
 last_activity_desc: Phase 3 complete, transitioned to Phase 4
-state_head: cee15761eb90b59ecf511f9a878da8ba0f9b9619
+state_head: 2b31d3f7d39ea3e473f603704670d681f5711a99
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 138
-  completed_plans: 135
+  completed_plans: 136
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 04.1 (地图渲染与布局重做) — EXECUTING
-Current Plan: 15
+Current Plan: 16
 Total Plans in Phase: 16
 Status: Ready to execute
 Last activity: 2026-10-23 — 04.1-01 complete (naming report + pure declarations)
@@ -153,6 +153,7 @@ Progress: [██████████] 100%
 | Phase 04.1 P12 | 43min | 3 tasks | 10 files |
 | Phase 04.1-map-render-layout P13 | 26min | 3 tasks | 9 files |
 | Phase 04.1 P14 | 12min | 2 tasks | 5 files |
+| Phase 04.1 P15 | 35min | 2 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -389,6 +390,7 @@ Recent decisions affecting current work:
 - [Phase 04.1]: 收藏拖拽不使用 setPointerCapture：捕获会把 pointerenter 重定向到起点元素，改为普通 pointerenter + pointerup 结算、容器 pointerleave 取消
 - [Phase 04.1]: 属性抽屉塌陷按布局修：外层纵向 flex + height 100%，正文 flex 1 1 auto，绝对定位表单才有高度
 - [Phase 04.1]: 遮罩关闭交给 antd maskClosable=false，Esc 与 ✕ 路径不变
+- [Phase 04.1]: 04.1-15: 删除 IMapTileEntry.crop 与 IMapEditorCapabilities.recentTilesPath；文档/素材组/渲染模型/视图状态的可选字段改必填，裁切一律由 resolveFrameInfo 现算
 
 ### Pending Todos
 
@@ -416,6 +418,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-24T11:05:47.093Z
-Stopped at: Completed 04.1-14-PLAN.md
+Last session: 2026-10-24T11:48:00.341Z
+Stopped at: Completed 04.1-15-PLAN.md
 Resume file: None
