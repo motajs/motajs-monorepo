@@ -157,7 +157,12 @@ function createAutotileGroup(): IMapTileGroup {
  * @returns 素材区 props
  */
 function createProps(overrides: Partial<IMapMaterialPanelProps> = {}): IMapMaterialPanelProps {
-  const groups = overrides.groups ?? [createTerrainGroup(), createAnimateGroup(), createEnemyGroup(), createAutotileGroup()];
+  const groups = overrides.groups ?? [
+    createTerrainGroup(),
+    createAnimateGroup(),
+    createEnemyGroup(),
+    createAutotileGroup(),
+  ];
   const groupUrls: Record<string, string | undefined> = {};
   const groupStatus: Record<string, MapImageStatus | undefined> = {};
 
@@ -436,9 +441,7 @@ describe('素材区 Tileset 选择器', () => {
     const onSelectPattern = vi.fn();
 
     render(
-      <MapMaterialPanel
-        {...createProps({ groups: [createTilesetGroup()], tilesetOpen: true, onSelectPattern })}
-      />,
+      <MapMaterialPanel {...createProps({ groups: [createTilesetGroup()], tilesetOpen: true, onSelectPattern })} />,
     );
 
     const canvas = screen.getByTestId('map-tileset-canvas');
@@ -459,9 +462,7 @@ describe('素材区 Tileset 选择器', () => {
     const onSelectPattern = vi.fn();
 
     render(
-      <MapMaterialPanel
-        {...createProps({ groups: [createTilesetGroup()], tilesetOpen: true, onSelectPattern })}
-      />,
+      <MapMaterialPanel {...createProps({ groups: [createTilesetGroup()], tilesetOpen: true, onSelectPattern })} />,
     );
 
     const canvas = screen.getByTestId('map-tileset-canvas');

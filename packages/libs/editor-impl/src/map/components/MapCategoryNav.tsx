@@ -67,7 +67,9 @@ export function MapCategoryNav(props: IMapCategoryNavProps): ReactElement {
       <button
         type="button"
         className={
-          props.tilesetOpen ? 'emap-category-item emap-category-tileset is-selected' : 'emap-category-item emap-category-tileset'
+          props.tilesetOpen
+            ? 'emap-category-item emap-category-tileset is-selected'
+            : 'emap-category-item emap-category-tileset'
         }
         data-test-id="map-tileset-toggle"
         aria-pressed={props.tilesetOpen}

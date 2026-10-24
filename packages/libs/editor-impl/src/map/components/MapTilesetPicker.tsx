@@ -175,13 +175,7 @@ function renderError(onRetry: () => void): ReactElement {
   return (
     <div className="emap-material-state is-error" data-test-id="map-tileset-error">
       <span className="emap-material-state-title">{ERROR_TEXT}</span>
-      <Button
-        type="link"
-        size="small"
-        autoInsertSpace={false}
-        data-test-id="map-tileset-retry"
-        onClick={onRetry}
-      >
+      <Button type="link" size="small" autoInsertSpace={false} data-test-id="map-tileset-retry" onClick={onRetry}>
         重试
       </Button>
     </div>
