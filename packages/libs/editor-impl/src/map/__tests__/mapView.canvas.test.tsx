@@ -49,6 +49,8 @@ vi.mock('../components/MapSurface', async () => {
             ? ''
             : `${preview.rect.x}:${preview.rect.y}:${preview.rect.width}:${preview.rect.height}`,
         'data-hover': hover === undefined ? '' : `${hover.x},${hover.y}`,
+        'data-preview-cells':
+          model.previewCells === undefined ? '' : model.previewCells.map((cell) => `${cell.x},${cell.y}`).join(';'),
         'data-opacity': opacities,
         'data-map': props.document === undefined ? '' : props.document.id,
         'data-layer': props.currentLayerId ?? '',
@@ -279,6 +281,34 @@ describe('地图画布手势', () => {
 
     expect(onCommitCells).toHaveBeenCalledTimes(1);
     expect(onCommitCells.mock.calls[0][0]).toHaveLength(4);
+  });
+
+  // 线模式拖动时预览覆盖整条路径，松开后清空
+  it('线模式拖动预览整条路径', () => {
+    render(<MapCanvas {...createCanvasProps()} />);
+
+    const canvas = screen.getByTestId('map-canvas');
+
+    dispatchPointer(canvas, 'pointerdown', { ...cellPoint(1, 1), buttons: 1 });
+    dispatchPointer(canvas, 'pointermove', { ...cellPoint(4, 1), buttons: 1 });
+
+    expect(screen.getByTestId('map-surface-stub').getAttribute('data-preview-cells')).toBe('1,1;2,1;3,1;4,1');
+
+    dispatchPointer(canvas, 'pointerup', cellPoint(4, 1));
+
+    expect(screen.getByTestId('map-surface-stub').getAttribute('data-preview-cells')).toBe('');
+  });
+
+  // 矩形模式不带整条路径预览
+  it('矩形模式不设整条路径预览', () => {
+    render(<MapCanvas {...createCanvasProps({ brushMode: MapBrushMode.Rect })} />);
+
+    const canvas = screen.getByTestId('map-canvas');
+
+    dispatchPointer(canvas, 'pointerdown', { ...cellPoint(0, 0), buttons: 1 });
+    dispatchPointer(canvas, 'pointermove', { ...cellPoint(1, 1), buttons: 1 });
+
+    expect(screen.getByTestId('map-surface-stub').getAttribute('data-preview-cells')).toBe('');
   });
 
   // 填充：只替换与点击格同值且四邻域连通的区域

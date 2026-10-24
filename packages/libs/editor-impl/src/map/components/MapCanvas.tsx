@@ -210,6 +210,31 @@ function clampSelection(rect: IMapRect, document: IMapDocument): IMapRect | unde
 }
 
 /**
+ * 把一笔路径摊成去重后的格子集合：与真正落笔的写入完全一致
+ * @param path 线笔画经过的格子（按移动顺序）
+ * @param pattern 笔刷图案
+ * @returns 去重后的格子列表，保持首次出现的顺序
+ */
+function resolveStrokePreviewCells(
+  path: readonly IMapCellPosition[],
+  pattern: IMapBrushPattern,
+): readonly IMapCellPosition[] {
+  const seen: Set<string> = new Set();
+  const cells: IMapCellPosition[] = [];
+
+  for (const write of buildStrokeWrites(path, pattern)) {
+    const key = `${write.x}:${write.y}`;
+
+    if (seen.has(key)) continue;
+
+    seen.add(key);
+    cells.push({ x: write.x, y: write.y });
+  }
+
+  return cells;
+}
+
+/**
  * 判断一次按下是否只能按「单击」处理：没有 pointerId 的按下来自合成事件或非指针设备，无法跟踪后续拖动
  *
  * 这类按下没有可用的拖动轨迹，因此立刻按单格落笔提交；真实指针事件始终带有 pointerId，仍走按下 → 拖动 → 松开。
@@ -235,6 +260,7 @@ export function MapCanvas(props: IMapCanvasProps): ReactElement {
   const scrollFrameRef = useRef<number | undefined>(undefined);
   const [hover, setHover] = useState<IMapCellPosition | undefined>(undefined);
   const [preview, setPreview] = useState<IMapPreview | undefined>(undefined);
+  const [previewCells, setPreviewCells] = useState<readonly IMapCellPosition[] | undefined>(undefined);
   const [selection, setSelection] = useState<IMapRect | undefined>(undefined);
   const [menu, setMenu] = useState<IMapMenuState | undefined>(undefined);
   const [surfaceError, setSurfaceError] = useState(false);
@@ -242,6 +268,7 @@ export function MapCanvas(props: IMapCanvasProps): ReactElement {
   useEffect(() => {
     gestureRef.current = undefined;
     setPreview(undefined);
+    setPreviewCells(undefined);
     setSelection(undefined);
     setMenu(undefined);
   }, [document.id, props.currentLayerId]);
@@ -308,6 +335,7 @@ export function MapCanvas(props: IMapCanvasProps): ReactElement {
   const cancelGesture = (): void => {
     gestureRef.current = undefined;
     setPreview(undefined);
+    setPreviewCells(undefined);
   };
 
   /**
@@ -387,6 +415,7 @@ export function MapCanvas(props: IMapCanvasProps): ReactElement {
 
     gestureRef.current = { kind: MapGestureKind.Paint, start: position, path: [position], moved: false };
     setPreview(createPositionPreview(position, pattern));
+    setPreviewCells(props.brushMode === MapBrushMode.Rect ? undefined : resolveStrokePreviewCells([position], pattern));
   };
 
   /**
@@ -485,6 +514,7 @@ export function MapCanvas(props: IMapCanvasProps): ReactElement {
       const rect = normalizeRect(gesture.start, position);
 
       setPreview({ rect, patternWidth: pattern.width, patternHeight: pattern.height });
+      setPreviewCells(undefined);
       return;
     }
 
@@ -492,6 +522,7 @@ export function MapCanvas(props: IMapCanvasProps): ReactElement {
 
     gestureRef.current = { ...gesture, moved: true, path };
     setPreview(createPositionPreview(position, pattern));
+    setPreviewCells(resolveStrokePreviewCells(path, pattern));
   };
 
   /**
@@ -514,6 +545,7 @@ export function MapCanvas(props: IMapCanvasProps): ReactElement {
     if (event.button !== 0) return;
 
     setPreview(undefined);
+    setPreviewCells(undefined);
 
     if (props.brushMode === MapBrushMode.Rect) {
       const last = gesture.path[gesture.path.length - 1] ?? gesture.start;
@@ -595,7 +627,7 @@ export function MapCanvas(props: IMapCanvasProps): ReactElement {
   };
 
   const metrics = buildCanvasCellMetrics(document, props.model, props.bigMap);
-  const renderModel: IMapRenderModel = { ...props.model, selection, preview, hover };
+  const renderModel: IMapRenderModel = { ...props.model, selection, preview, previewCells, hover };
   const canvasClass = [
     'emap-canvas',
     document.layers.length === 0 ? 'is-empty-layer' : '',
