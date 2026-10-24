@@ -49,7 +49,38 @@
 }
 
 .emap-bottom {
+  display: flex;
   flex: 0 0 auto;
+  flex-direction: column;
+  border-top: 1px solid var(--editor-border, #d0d7de);
+  background: var(--editor-toolbar-bg, #ffffff);
+}
+
+.emap-bottom-tab {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 4px 8px 8px;
+}
+
+.emap-favorite {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 4px;
+  padding: 4px 8px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--editor-grid, #d8dee4);
+}
+
+.emap-favorite-slot {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 32px;
 }
 
 .emap-panel.is-narrow {
@@ -851,4 +882,3 @@
   font-size: 12px;
   white-space: nowrap;
 }
-
