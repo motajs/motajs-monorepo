@@ -10,7 +10,6 @@ import {
 } from '@motajs/editor-core';
 import {
   MAP_ABOVE_LAYER_DEFAULT_OPACITY,
-  MAP_CELL_SIZE,
   MAP_FREQUENT_LIMIT,
   MAP_RECENT_TILES_LIMIT,
   MAP_RECENT_TILES_PATH,
@@ -509,7 +508,6 @@ export class MapPanel implements IEditorPanel, IMapPanel {
         onTogglePassability: (value): void => this.setPassabilityVisible(value),
         onToggleBigMap: (value): void => this.setBigMap(value),
         onSetViewport: (left, top): void => this.setViewport(left, top),
-        onMoveViewport: (dx, dy, byScreen): void => this.moveViewport(dx, dy, byScreen),
         onCreateMap: (request): Promise<void> => this.createMap(request),
         onAddLayer: (layerName): Promise<void> => this.addLayer(layerName),
         onUnsavedDecision: (choice): void => {
@@ -1319,30 +1317,6 @@ export class MapPanel implements IEditorPanel, IMapPanel {
         top: Math.min(maxTop, Math.max(0, Math.floor(top))),
       },
     });
-  }
-
-  /**
-   * 按格或按屏移动视口；大地图下同样生效，到边界不报错
-   * @param dx 水平方向移动的格数
-   * @param dy 垂直方向移动的格数
-   * @param byScreen 为 true 时按一屏移动
-   */
-  moveViewport(dx: number, dy: number, byScreen: boolean): void {
-    const document = this.document;
-
-    if (document === undefined) return;
-
-    const screenX = Math.max(1, Math.floor(window.innerWidth / MAP_CELL_SIZE));
-    const screenY = Math.max(1, Math.floor(window.innerHeight / MAP_CELL_SIZE));
-    const stepX = byScreen ? screenX : 1;
-    const stepY = byScreen ? screenY : 1;
-    const maxLeft = Math.max(0, document.width - 1);
-    const maxTop = Math.max(0, document.height - 1);
-    const viewport = this.store.state.viewport;
-    const left = Math.min(maxLeft, Math.max(0, viewport.left + dx * stepX));
-    const top = Math.min(maxTop, Math.max(0, viewport.top + dy * stepY));
-
-    this.publish({ viewport: { left, top } });
   }
 
   /**

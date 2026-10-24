@@ -144,7 +144,7 @@ function createCanvasProps(overrides: Partial<IMapCanvasProps> = {}): IMapCanvas
     onCopyRegion: vi.fn(),
     onPasteAt: vi.fn(),
     onClearRegion: vi.fn(),
-    onMoveViewport: vi.fn(),
+    onSetViewport: vi.fn(),
     onToggleBigMap: vi.fn(),
     ...overrides,
   };

@@ -127,7 +127,6 @@ function createCanvasProps(overrides: Partial<IMapCanvasProps> = {}): IMapCanvas
     onPasteAt: vi.fn(),
     onClearRegion: vi.fn(),
     onSetViewport: vi.fn(),
-    onMoveViewport: vi.fn(),
     onToggleBigMap: vi.fn(),
     ...overrides,
   };
@@ -428,36 +427,20 @@ describe('地图画布手势', () => {
     expect(onPasteAt).toHaveBeenCalledWith({ x: 0, y: 0 });
   });
 
-  // 方向键移动视口一格
-  it('方向键移动视口一格', () => {
-    const onMoveViewport = vi.fn();
-    const props = createCanvasProps({ onMoveViewport });
-
-    render(<MapCanvas {...props} />);
-
-    fireEvent.keyDown(screen.getByTestId('map-canvas'), { key: 'ArrowRight' });
-
-    expect(onMoveViewport).toHaveBeenCalledWith(1, 0, false);
-  });
-
-  // 大地图下滚轮上下移动、Shift + 滚轮左右移动
-  it('大地图下滚轮与 Shift 滚轮移动视口', () => {
-    const onMoveViewport = vi.fn();
-    const props = createCanvasProps({
-      onMoveViewport,
-      bigMap: true,
-      model: createModel(createMapDocument(), { bigMap: true }),
-    });
+  // 方向键与滚轮不再移动视口
+  it('方向键与滚轮不改变视口', () => {
+    const onSetViewport = vi.fn();
+    const props = createCanvasProps({ onSetViewport });
 
     render(<MapCanvas {...props} />);
 
     const canvas = screen.getByTestId('map-canvas');
 
+    fireEvent.keyDown(canvas, { key: 'ArrowRight' });
+    fireEvent.keyDown(canvas, { key: 'd' });
     fireEvent(canvas, new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: 120 }));
-    fireEvent(canvas, new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: 120, shiftKey: true }));
 
-    expect(onMoveViewport.mock.calls[0]).toEqual([0, 1, false]);
-    expect(onMoveViewport.mock.calls[1]).toEqual([1, 0, false]);
+    expect(onSetViewport).not.toHaveBeenCalled();
   });
 });
 
@@ -743,6 +726,35 @@ describe('地图面板里的画布接线', () => {
     await waitFor(() => {
       expect(viewport.scrollLeft).toBe(32);
     });
+  });
+
+  // 方向键 / WASD / 滚轮都不再移动视口：普通模式与大地图各一次
+  it('方向键与滚轮不再改变视口', async () => {
+    const harness = await openPanel(createWideMapDocument(20, 20));
+
+    await renderShell(harness);
+
+    const canvas = screen.getByTestId('map-canvas');
+
+    fireEvent.keyDown(canvas, { key: 'ArrowRight' });
+    fireEvent.keyDown(canvas, { key: 'w' });
+    fireEvent(canvas, new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: 120 }));
+
+    await act(async () => {});
+
+    expect(harness.panel['store'].state.viewport).toEqual({ left: 0, top: 0 });
+
+    await act(async () => {
+      harness.panel.setBigMap(true);
+    });
+
+    fireEvent.keyDown(canvas, { key: 'ArrowDown' });
+    fireEvent(canvas, new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: 120, shiftKey: true }));
+
+    await act(async () => {});
+
+    expect(harness.panel['store'].state.bigMap).toBe(true);
+    expect(harness.panel['store'].state.viewport).toEqual({ left: 0, top: 0 });
   });
 
   // 通行度开关：标记由面板算好进入渲染模型，开关不置脏、不进撤销，关闭后清空

@@ -1,4 +1,4 @@
-import { KeyboardEvent, PointerEvent, ReactElement, WheelEvent, useEffect, useId, useRef, useState } from 'react';
+import { KeyboardEvent, PointerEvent, ReactElement, useEffect, useId, useRef, useState } from 'react';
 import { MAP_CELL_SIZE, MAP_VIEWPORT_DEFAULT_COLUMNS, MAP_VIEWPORT_DEFAULT_ROWS } from '../constants';
 import { buildFillWrites, buildRectWrites, buildStrokeWrites } from '../model/brush';
 import { resolveCellMetrics, resolvePointerCell } from '../model/cellMetrics';
@@ -48,14 +48,6 @@ interface IMapMenuState {
   readonly x: number;
   /** 指针在视口中的纵坐标 */
   readonly y: number;
-}
-
-/** 方向键 / WASD 对应的视口位移 */
-interface IMapViewportStep {
-  /** 水平方向移动的格数 */
-  readonly dx: number;
-  /** 垂直方向移动的格数 */
-  readonly dy: number;
 }
 
 export interface IMapCanvasProps {
@@ -124,13 +116,6 @@ export interface IMapCanvasProps {
    * @param rect 要清空的矩形
    */
   onClearRegion(rect: IMapRect): void;
-  /**
-   * 移动视口
-   * @param dx 水平方向移动的格数
-   * @param dy 垂直方向移动的格数
-   * @param byScreen 为 true 时按一屏移动
-   */
-  onMoveViewport(dx: number, dy: number, byScreen: boolean): void;
   /**
    * 开关大地图模式
    * @param value 为 true 时进入大地图
@@ -222,20 +207,6 @@ function clampSelection(rect: IMapRect, document: IMapDocument): IMapRect | unde
   const clamped = clampRectToMap(rect, document.width, document.height).rect;
 
   return clamped.width === 0 || clamped.height === 0 ? undefined : clamped;
-}
-
-/**
- * 命中方向键 / WASD 时返回视口位移
- * @param key 键盘事件的 key
- * @returns 视口位移；不是移动键时为 undefined
- */
-function resolveViewportStep(key: string): IMapViewportStep | undefined {
-  if (key === 'ArrowLeft' || key === 'a' || key === 'A') return { dx: -1, dy: 0 };
-  if (key === 'ArrowRight' || key === 'd' || key === 'D') return { dx: 1, dy: 0 };
-  if (key === 'ArrowUp' || key === 'w' || key === 'W') return { dx: 0, dy: -1 };
-  if (key === 'ArrowDown' || key === 's' || key === 'S') return { dx: 0, dy: 1 };
-
-  return undefined;
 }
 
 /**
@@ -337,19 +308,6 @@ export function MapCanvas(props: IMapCanvasProps): ReactElement {
   const cancelGesture = (): void => {
     gestureRef.current = undefined;
     setPreview(undefined);
-  };
-
-  /**
-   * 命中画笔时的视口位移回调
-   * @param key 键盘事件的 key
-   */
-  const moveByKey = (key: string): boolean => {
-    const step = resolveViewportStep(key);
-
-    if (step === undefined) return false;
-
-    props.onMoveViewport(step.dx, step.dy, false);
-    return true;
   };
 
   /**
@@ -568,7 +526,7 @@ export function MapCanvas(props: IMapCanvasProps): ReactElement {
   };
 
   /**
-   * 键盘：复制 / 粘贴 / Escape / F / 方向键与 WASD；只在画布聚焦时响应
+   * 键盘：复制 / 粘贴 / Escape / F；只在画布聚焦时响应
    * @param event 键盘事件
    */
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
@@ -600,29 +558,7 @@ export function MapCanvas(props: IMapCanvasProps): ReactElement {
     if (event.key === 'f' || event.key === 'F') {
       event.preventDefault();
       props.onToggleBigMap(!props.bigMap);
-      return;
     }
-
-    if (moveByKey(event.key)) event.preventDefault();
-  };
-
-  /**
-   * 滚轮：大地图下上下移动，Shift + 滚轮左右移动
-   * @param event 滚轮事件
-   */
-  const handleWheel = (event: WheelEvent<HTMLDivElement>): void => {
-    if (!props.bigMap) return;
-
-    event.preventDefault();
-
-    if (event.shiftKey) {
-      if (event.deltaY !== 0) props.onMoveViewport(event.deltaY > 0 ? 1 : -1, 0, false);
-
-      return;
-    }
-
-    if (event.deltaY !== 0) props.onMoveViewport(0, event.deltaY > 0 ? 1 : -1, false);
-    else if (event.deltaX !== 0) props.onMoveViewport(event.deltaX > 0 ? 1 : -1, 0, false);
   };
 
   /**
@@ -715,7 +651,6 @@ export function MapCanvas(props: IMapCanvasProps): ReactElement {
               onPointerCancel={cancelGesture}
               onContextMenu={(event): void => event.preventDefault()}
               onKeyDown={handleKeyDown}
-              onWheel={handleWheel}
             >
               {document.layers.length === 0 ? (
                 <div className="emap-canvas-empty-layer" data-test-id="map-empty-layer">
@@ -740,7 +675,7 @@ export function MapCanvas(props: IMapCanvasProps): ReactElement {
                 />
               )}
               <span id={hintId} className="emap-sr-only">
-                快捷键：Ctrl+C 复制，Ctrl+V 粘贴，Escape 取消笔画或选区，F 切换大地图，方向键移动视口。
+                快捷键：Ctrl+C 复制，Ctrl+V 粘贴，Escape 取消笔画或选区，F 切换大地图。
               </span>
               {menu === undefined ? null : (
                 <MapContextMenu

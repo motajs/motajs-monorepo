@@ -3,7 +3,7 @@ import { useStore } from '@tanstack/react-store';
 import { Store } from '@tanstack/store';
 import { Button, Spin } from 'antd';
 import { ReactElement, useEffect, useState } from 'react';
-import { MAP_CELL_SIZE, MAP_VIEWPORT_DEFAULT_COLUMNS, MAP_VIEWPORT_DEFAULT_ROWS, MAP_ZOOM_DEFAULT } from '../constants';
+import { MAP_VIEWPORT_DEFAULT_COLUMNS, MAP_VIEWPORT_DEFAULT_ROWS, MAP_ZOOM_DEFAULT } from '../constants';
 import { IPaintWrite, isTileCatalogEmpty } from '../model/document';
 import { resolveMapLayout } from '../model/layout';
 import { buildMapRenderModel } from '../model/renderModel';
@@ -17,7 +17,6 @@ import {
   IMapRect,
   IMapSizeLimit,
   IMapTileGroup,
-  IMapViewport,
   MapBottomTab,
   MapBrushMode,
   MapDialogKind,
@@ -134,13 +133,6 @@ export interface IMapPanelViewProps {
    * @param value 为 true 时进入大地图
    */
   onToggleBigMap?(value: boolean): void;
-  /**
-   * 移动视口
-   * @param dx 水平方向移动的格子数
-   * @param dy 垂直方向移动的格子数
-   * @param byScreen 为 true 时按一屏移动
-   */
-  onMoveViewport?(dx: number, dy: number, byScreen: boolean): void;
   /**
    * 调整高于当前层的图层不透明度
    * @param value 新的不透明度，0..1
@@ -329,27 +321,6 @@ function useNarrowLayout(): boolean {
 }
 
 /**
- * 没有外部回调时把视口状态直接写回订阅源，保证视口按钮在视图层仍然可用
- * @param view 当前视图状态
- * @param dx 水平方向移动的格子数
- * @param dy 垂直方向移动的格子数
- * @param byScreen 为 true 时按一屏移动
- * @returns 新的视口左上角
- */
-function resolveMovedViewport(view: IMapPanelViewState, dx: number, dy: number, byScreen: boolean): IMapViewport {
-  const document = view.document;
-  const screenStep = Math.max(1, Math.floor(window.innerWidth / MAP_CELL_SIZE));
-  const stepX = byScreen ? screenStep : 1;
-  const stepY = byScreen ? screenStep : 1;
-  const maxLeft = document === undefined ? 0 : Math.max(0, document.width - 1);
-  const maxTop = document === undefined ? 0 : Math.max(0, document.height - 1);
-  const left = Math.min(maxLeft, Math.max(0, view.viewport.left + dx * stepX));
-  const top = Math.min(maxTop, Math.max(0, view.viewport.top + dy * stepY));
-
-  return { left, top };
-}
-
-/**
  * 渲染地图加载中的画布区
  * @returns 加载态元素
  */
@@ -411,17 +382,6 @@ function renderReadyBody(input: IMapPanelBodyProps): ReactElement {
     passMarks: view.passMarks,
   });
   const layerName = resolveCurrentLayerName(document, view.currentLayerId);
-  const moveViewport = (dx: number, dy: number, byScreen: boolean): void => {
-    if (input.props.onMoveViewport !== undefined) {
-      input.props.onMoveViewport(dx, dy, byScreen);
-      return;
-    }
-
-    input.props.store.setState({
-      ...input.props.store.state,
-      viewport: resolveMovedViewport(input.props.store.state, dx, dy, byScreen),
-    });
-  };
   const toggleBigMap = (value: boolean): void => {
     if (input.props.onToggleBigMap !== undefined) {
       input.props.onToggleBigMap(value);
@@ -456,7 +416,6 @@ function renderReadyBody(input: IMapPanelBodyProps): ReactElement {
         onPasteAt={input.props.onPasteAt ?? noop}
         onClearRegion={input.props.onClearRegion ?? noop}
         onSetViewport={input.props.onSetViewport ?? noop}
-        onMoveViewport={moveViewport}
         onToggleBigMap={toggleBigMap}
       />
       <div className="emap-palette-slot">
