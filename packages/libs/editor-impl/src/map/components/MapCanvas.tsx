@@ -640,11 +640,7 @@ export function MapCanvas(props: IMapCanvasProps): ReactElement {
 
   return (
     <div className="emap-canvas-area">
-      <div
-        className="emap-map-region"
-        data-test-id="map-region"
-        style={{ width: regionWidth, height: regionHeight }}
-      >
+      <div className="emap-map-region" data-test-id="map-region" style={{ width: regionWidth, height: regionHeight }}>
         {props.bigMap ? null : (
           <>
             <div
