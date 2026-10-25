@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.1"
 current_phase_name: 地图渲染与布局重做
-current_plan: 16
+current_plan: 18
 status: executing
-stopped_at: Completed 04.1-15-PLAN.md
-last_updated: "2026-10-24T11:48:00.869Z"
-last_activity: 2026-10-23
+stopped_at: Completed 04.1-17-PLAN.md
+last_updated: "2026-10-25T07:08:40.170Z"
+last_activity: 2026-10-25
 last_activity_desc: Phase 3 complete, transitioned to Phase 4
-state_head: 2b31d3f7d39ea3e473f603704670d681f5711a99
+state_head: 0988bc093b12506d8d813c88e058b481230ebcf1
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 138
-  completed_plans: 136
+  total_plans: 146
+  completed_plans: 137
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,12 +30,12 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 04.1 (地图渲染与布局重做) — EXECUTING
-Current Plan: 16
-Total Plans in Phase: 16
-Status: Ready to execute
-Last activity: 2026-10-23 — 04.1-01 complete (naming report + pure declarations)
+Current Plan: 18
+Total Plans in Phase: 24
+Status: Executing — 04.1-17 complete, ready for 04.1-18
+Last activity: 2026-10-25 — 04.1-17 complete (32 基准与面板视口宽高声明 + 命名确认)
 
-Progress: [██████████] 100%
+Progress: [███████░░░] 71%
 
 ## Performance Metrics
 
@@ -154,6 +154,7 @@ Progress: [██████████] 100%
 | Phase 04.1-map-render-layout P13 | 26min | 3 tasks | 9 files |
 | Phase 04.1 P14 | 12min | 2 tasks | 5 files |
 | Phase 04.1 P15 | 35min | 2 tasks | 15 files |
+| Phase 04.1 P17 | 38min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -391,6 +392,9 @@ Recent decisions affecting current work:
 - [Phase 04.1]: 属性抽屉塌陷按布局修：外层纵向 flex + height 100%，正文 flex 1 1 auto，绝对定位表单才有高度
 - [Phase 04.1]: 遮罩关闭交给 antd maskClosable=false，Esc 与 ✕ 路径不变
 - [Phase 04.1]: 04.1-15: 删除 IMapTileEntry.crop 与 IMapEditorCapabilities.recentTilesPath；文档/素材组/渲染模型/视图状态的可选字段改必填，裁切一律由 resolveFrameInfo 现算
+- [Phase 04.1]: 04.1-17: 显示格以 32x32 为基准（MAP_DISPLAY_CELL_SIZE），与文档格尺寸 MAP_CELL_SIZE 分开命名；缩放只剩整体倍率 renderScale（D-39）
+- [Phase 04.1]: 04.1-17: 地图区宽/高改为面板参数（onSetViewportSize / viewportColumns / viewportRows，范围 1-64），宿主注入只作初始默认值；素材区基准 320 / 最小 240 / 没有最大宽度，MAP_PALETTE_MAX_WIDTH=520 是 Plan 19 要删的过渡常量（D-40 / D-41 修订）
+- [Phase 04.1]: 04.1-17: 顶栏只读标签显示文档声明的格尺寸（cellWidth/cellHeight + MAP_CELL_SIZE_LABEL），格式固定为 图格尺寸：{cellWidth}px * {cellHeight}px，不影响地图区大小（D-42）
 
 ### Pending Todos
 
@@ -418,6 +422,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-24T11:48:00.341Z
-Stopped at: Completed 04.1-15-PLAN.md
+Last session: 2026-10-25T07:08:39.531Z
+Stopped at: Completed 04.1-17-PLAN.md
 Resume file: None
