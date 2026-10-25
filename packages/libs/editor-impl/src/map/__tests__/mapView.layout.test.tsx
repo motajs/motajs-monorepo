@@ -278,6 +278,32 @@ function stubPanelWidth(width: number): void {
   });
 }
 
+/**
+ * 渲染一份带指定文档 / 地图区宽高 / 缩放的面板视图，读回画布的内联宽高后卸载
+ * @param document 当前打开的文档
+ * @param columns 地图区横向格数
+ * @param rows 地图区纵向格数
+ * @param zoom 缩放倍率
+ * @returns 画布的内联宽高
+ */
+function measureCanvas(
+  document: IMapDocument,
+  columns: number,
+  rows: number,
+  zoom: number,
+): { width: string; height: string } {
+  const store = new Store<IMapPanelViewState>(
+    createViewState({ document, viewportColumns: columns, viewportRows: rows, zoom }),
+  );
+  const rendered = render(<MapPanelView {...createViewProps(store)} />);
+  const canvas = screen.getByTestId('map-canvas');
+  const size = { width: canvas.style.width, height: canvas.style.height };
+
+  rendered.unmount();
+
+  return size;
+}
+
 beforeEach(() => {
   Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 1200 });
 });
@@ -344,6 +370,20 @@ describe('地图面板左右两列布局', () => {
     expect(screen.getByTestId('map-sidebar').style.width).toBe(`${MAP_PALETTE_MIN_WIDTH}px`);
   });
 
+  // 面板实测 2000：右栏跟着变宽（1584 = 2000 − 416），说明素材区拿剩余宽度且没有上限
+  it('面板实测宽度 2000 时右栏 1584', () => {
+    const document = createMapDocument();
+    const store = new Store<IMapPanelViewState>(createViewState({ document }));
+
+    stubPanelWidth(2000);
+    render(<MapPanelView {...createViewProps(store)} />);
+
+    const expected = resolveMapLayout({ zoom: 1, availableWidth: 2000 }).paletteWidth;
+
+    expect(expected).toBe(1584);
+    expect(screen.getByTestId('map-sidebar').style.width).toBe('1584px');
+  });
+
   // 画布宽度 = 视口格数 × 缩放后的格像素（32px 文档格在 150% 时是 48px）
   it('画布尺寸随缩放后的格像素变化', () => {
     const document = createMapDocument();
@@ -377,6 +417,94 @@ describe('地图面板左右两列布局', () => {
     render(<MapPanelView {...createViewProps(store, { cellFrameSpeed: 150 })} />);
 
     expect(screen.getByTestId('map-surface-stub').getAttribute('data-frame-speed')).toBe('150');
+  });
+});
+
+describe('地图面板顶层结构', () => {
+  // 顶栏通栏：它挂在面板根下、在列容器之前，既不在左列也不在两列容器里
+  it('顶栏在列容器之外且排在列容器之前', () => {
+    const store = new Store<IMapPanelViewState>(createViewState());
+
+    render(<MapPanelView {...createViewProps(store)} />);
+
+    const toolbar = screen.getByTestId('map-toolbar');
+    const columns = screen.getByTestId('map-columns');
+
+    expect(toolbar.closest('[data-test-id="map-main"]')).toBeNull();
+    expect(toolbar.closest('[data-test-id="map-columns"]')).toBeNull();
+    expect(toolbar.parentElement).toBe(screen.getByTestId('map-panel'));
+    expect(toolbar.compareDocumentPosition(columns) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  // 两列容器同时装着左列地图区与右列素材区
+  it('两列容器同时包含地图区与素材区', () => {
+    const store = new Store<IMapPanelViewState>(createViewState());
+
+    render(<MapPanelView {...createViewProps(store)} />);
+
+    const columns = screen.getByTestId('map-columns');
+
+    expect(columns.contains(screen.getByTestId('map-main'))).toBe(true);
+    expect(columns.contains(screen.getByTestId('map-sidebar'))).toBe(true);
+  });
+
+  // 左列从上到下只有三块：地图主体、底部三页、提示行（顶栏已经不在里面）
+  it('左列依次是地图主体、底部三页与提示行', () => {
+    const store = new Store<IMapPanelViewState>(createViewState());
+
+    render(<MapPanelView {...createViewProps(store)} />);
+
+    const children = Array.from(screen.getByTestId('map-main').children);
+
+    expect(children).toHaveLength(3);
+    expect(children[0].className).toBe('emap-body');
+    expect(children[1].getAttribute('data-test-id')).toBe('map-bottom');
+    expect(children[2].getAttribute('data-test-id')).toBe('map-notice');
+  });
+});
+
+describe('画布尺寸跟着地图区宽高与缩放走', () => {
+  // 默认 13×13 100% 是 416×416；15×9 是 480×288（控件改的值直接进布局）
+  it('13×13 与 15×9 在 100% 下的画布像素', () => {
+    expect(measureCanvas(createMapDocument(), 13, 13, 1)).toEqual({ width: '416px', height: '416px' });
+    expect(measureCanvas(createMapDocument(), 15, 9, 1)).toEqual({ width: '480px', height: '288px' });
+  });
+
+  // 同一 13×13 下缩放是整张画布的等比倍率：200% 翻倍、50% 减半
+  it('13×13 在 200% 与 50% 下的画布像素', () => {
+    expect(measureCanvas(createMapDocument(), 13, 13, 2)).toEqual({ width: '832px', height: '832px' });
+    expect(measureCanvas(createMapDocument(), 13, 13, 0.5)).toEqual({ width: '208px', height: '208px' });
+  });
+
+  // 文档声明 48×48 只是数据里的格尺寸，画布仍按 32 基准算：两种文档得到同一个 416
+  it('48×48 文档与 32×32 文档画布尺寸相同', () => {
+    const small = measureCanvas(createMapDocument({ cellWidth: 32, cellHeight: 32 }), 13, 13, 1);
+    const large = measureCanvas(createMapDocument({ cellWidth: 48, cellHeight: 48 }), 13, 13, 1);
+
+    expect(small).toEqual({ width: '416px', height: '416px' });
+    expect(large).toEqual(small);
+  });
+});
+
+describe('顶栏只读图格尺寸', () => {
+  // 32×32 的地图显示 32px；换一张声明 48×48 的地图后文案跟着变（取的是文档值，不是常量 32）
+  it('换图后图格尺寸标签跟着变', () => {
+    const store = new Store<IMapPanelViewState>(
+      createViewState({ document: createMapDocument({ id: 'camp', cellWidth: 32, cellHeight: 32 }) }),
+    );
+
+    render(<MapPanelView {...createViewProps(store)} />);
+
+    expect(screen.getByTestId('map-cell-size').textContent).toBe('图格尺寸：32px * 32px');
+
+    act((): void => {
+      store.setState({
+        ...store.state,
+        document: createMapDocument({ id: 'detail', cellWidth: 48, cellHeight: 48 }),
+      });
+    });
+
+    expect(screen.getByTestId('map-cell-size').textContent).toBe('图格尺寸：48px * 48px');
   });
 });
 

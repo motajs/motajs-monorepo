@@ -4,6 +4,7 @@ import { createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createMapPanelType, MAP_PANEL_TYPE_ID, MapPanel } from '..';
 import { MapMaterialPanel } from '../components/MapMaterialPanel';
+import mapCss from '../map.css?inline';
 import {
   IMapDataSection,
   IMapDirections,
@@ -599,5 +600,45 @@ describe('素材区端到端接线', () => {
     fireEvent.click(screen.getByTestId('map-frame-count'));
 
     await waitFor(() => expect(harness.panel['store'].state.showFrameCount).toBe(true));
+  });
+});
+
+/**
+ * 取出样式表里某个选择器对应的规则体，供 CSS 断言直接检查属性文本
+ * @param css 样式表全文
+ * @param selector 选择器（含其后紧跟的空格与花括号）
+ * @returns 花括号之间的内容；选择器不存在时为 undefined
+ */
+function ruleBody(css: string, selector: string): string | undefined {
+  const start = css.indexOf(selector);
+
+  if (start === -1) return undefined;
+
+  const open = css.indexOf('{', start);
+  const end = css.indexOf('}', open);
+
+  if (open === -1 || end === -1) return undefined;
+
+  return css.slice(open, end);
+}
+
+describe('素材分类导航横排（D-32）', () => {
+  // 导航横排、两端对齐、放不下自动换行
+  it('分类导航横排两端对齐且可换行', () => {
+    const nav = ruleBody(mapCss, '.emap-category-nav {');
+
+    expect(nav).toBeDefined();
+    expect(nav).toContain('flex-direction: row');
+    expect(nav).toContain('justify-content: space-between');
+    expect(nav).toContain('flex-wrap: wrap');
+  });
+
+  // 按钮按内容宽（不再整行铺满），且不裁字
+  it('分类按钮按内容宽且不裁字', () => {
+    const item = ruleBody(mapCss, '.emap-category-item {');
+
+    expect(item).toBeDefined();
+    expect(item).not.toContain('width: 100%');
+    expect(item).toContain('white-space: nowrap');
   });
 });

@@ -395,6 +395,86 @@ describe('地图工具栏', () => {
   });
 });
 
+describe('地图区宽高数字框（D-40）', () => {
+  // 「视图」组里两个数字框，默认都是 13
+  it('宽高数字框默认 13 × 13', () => {
+    render(<MapToolbar {...createToolbarProps()} />);
+
+    expect(screen.getByTestId<HTMLInputElement>('map-viewport-columns').value).toBe('13');
+    expect(screen.getByTestId<HTMLInputElement>('map-viewport-rows').value).toBe('13');
+  });
+
+  // 改宽报 (15, 13)；宽变成 15 之后再改高，报 (15, 9)
+  it('改宽高分别上报新的宽高组合', () => {
+    const onSetViewportSize = vi.fn();
+    const props = createToolbarProps({ onSetViewportSize });
+    const rendered = render(<MapToolbar {...props} />);
+
+    fireEvent.change(screen.getByTestId('map-viewport-columns'), { target: { value: '15' } });
+
+    expect(onSetViewportSize).toHaveBeenLastCalledWith(15, MAP_VIEWPORT_DEFAULT_ROWS);
+
+    rendered.rerender(<MapToolbar {...props} viewportColumns={15} />);
+    fireEvent.change(screen.getByTestId('map-viewport-rows'), { target: { value: '9' } });
+
+    expect(onSetViewportSize).toHaveBeenLastCalledWith(15, 9);
+  });
+
+  // 没有回调时两个数字框都禁用（面板没接线就不让点）
+  it('没有回调时宽高数字框禁用', () => {
+    render(<MapToolbar {...createToolbarProps()} />);
+
+    expect(screen.getByTestId<HTMLInputElement>('map-viewport-columns').disabled).toBe(true);
+    expect(screen.getByTestId<HTMLInputElement>('map-viewport-rows').disabled).toBe(true);
+  });
+});
+
+describe('顶栏图格尺寸标签（D-42）', () => {
+  // 32 × 32 的地图：文案全等，冒号与空格写错都不算通过
+  it('32 × 32 地图显示 图格尺寸：32px * 32px', () => {
+    render(<MapToolbar {...createToolbarProps({ cellWidth: 32, cellHeight: 32 })} />);
+
+    expect(screen.getByTestId('map-cell-size').textContent).toBe('图格尺寸：32px * 32px');
+  });
+
+  // 48 × 48 的地图：数字来自文档声明，不是 32 基准
+  it('48 × 48 地图显示 图格尺寸：48px * 48px', () => {
+    render(<MapToolbar {...createToolbarProps({ cellWidth: 48, cellHeight: 48 })} />);
+
+    expect(screen.getByTestId('map-cell-size').textContent).toBe('图格尺寸：48px * 48px');
+  });
+
+  // 标签排在地图下拉之后，且只读（没有输入框）
+  it('标签排在地图下拉之后且是纯文本', () => {
+    render(<MapToolbar {...createToolbarProps({ cellWidth: 32, cellHeight: 32 })} />);
+
+    const select = screen.getByTestId('map-select');
+    const label = screen.getByTestId('map-cell-size');
+
+    expect(select.compareDocumentPosition(label) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(label.querySelector('input')).toBeNull();
+  });
+
+  // 任意一个格尺寸缺省就不渲染标签
+  it('缺任一格尺寸时不渲染标签', () => {
+    render(<MapToolbar {...createToolbarProps({ cellWidth: 32 })} />);
+
+    expect(screen.queryByTestId('map-cell-size')).toBeNull();
+
+    cleanup();
+    render(<MapToolbar {...createToolbarProps({ cellHeight: 32 })} />);
+
+    expect(screen.queryByTestId('map-cell-size')).toBeNull();
+  });
+
+  // 两个格尺寸都没给（没有打开地图）同样不渲染
+  it('没有打开地图时不渲染标签', () => {
+    render(<MapToolbar {...createToolbarProps()} />);
+
+    expect(screen.queryByTestId('map-cell-size')).toBeNull();
+  });
+});
+
 describe('地图状态条', () => {
   // 就绪时五段齐全：坐标 / 选区 / 地图 / 图层 / 模式
   it('显示坐标、选区、地图、图层与模式五段', () => {
