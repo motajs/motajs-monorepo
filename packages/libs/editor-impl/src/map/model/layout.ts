@@ -1,7 +1,7 @@
 import {
   MAP_DISPLAY_CELL_SIZE,
   MAP_PALETTE_BASE_WIDTH,
-  MAP_PALETTE_MIN_WIDTH,
+  MAP_RULER_SIZE,
   MAP_VIEWPORT_DEFAULT_COLUMNS,
   MAP_VIEWPORT_DEFAULT_ROWS,
   MAP_ZOOM_DEFAULT,
@@ -50,9 +50,10 @@ function resolveViewportCount(value: number | undefined, fallback: number): numb
  *
  * 画布 = 视口格数 × `MAP_DISPLAY_CELL_SIZE` × 缩放，与地图文档自己声明的格尺寸完全无关（D-39）；
  * 那对声明值只用于素材切分与数据本身。缩放是整张画布的等比倍率，屏幕格像素 = 32 × 缩放。
- * 可用宽度只决定素材区多宽：素材区拿「可用宽度 − 画布宽」，只有最小 240、**没有上限**（D-41 修订）；
- * 量不到可用宽度时回退到 `MAP_PALETTE_BASE_WIDTH`。`MAP_VIEWPORT_DEFAULT_*` 只是视图状态缺值时的兜底。
- * 本函数只吃入参：不读取窗口宽度，也不做任何 DOM 测量。
+ * 地图区 = 标尺 + 画布：`mapPaneWidth = canvasWidth + MAP_RULER_SIZE`（D-43）；
+ * 素材区拿「可用宽度 − 地图区宽度」，可以为 0；**任何区域都没有最小 / 最大尺寸**，挤不下由用户调比例（D-44）。
+ * 量不到可用宽度时素材区回退到 `MAP_PALETTE_BASE_WIDTH`，地图区仍按「画布 + 标尺」算。
+ * `MAP_VIEWPORT_DEFAULT_*` 只是视图状态缺值时的兜底。本函数只吃入参：不读取窗口宽度，也不做任何 DOM 测量。
  * @param options 缩放倍率、可选的视口格数与视图量到的可用宽度
  * @returns 视口格数、整体倍率、格像素、画布像素与地图区 / 素材区宽度
  */
@@ -65,9 +66,8 @@ export function resolveMapLayout(options: IMapLayoutOptions): IMapLayout {
   const canvasWidth = viewportColumns * cellWidth;
   const canvasHeight = viewportRows * cellHeight;
   const availableWidth = resolvePositive(options.availableWidth, 0);
-  const paletteWidth =
-    availableWidth > 0 ? Math.max(MAP_PALETTE_MIN_WIDTH, availableWidth - canvasWidth) : MAP_PALETTE_BASE_WIDTH;
-  const mapPaneWidth = availableWidth > 0 ? availableWidth - paletteWidth : canvasWidth;
+  const mapPaneWidth = canvasWidth + MAP_RULER_SIZE;
+  const paletteWidth = availableWidth > 0 ? Math.max(0, availableWidth - mapPaneWidth) : MAP_PALETTE_BASE_WIDTH;
 
   return {
     viewportColumns,

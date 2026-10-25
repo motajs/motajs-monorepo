@@ -3,11 +3,11 @@ import { resolveMapLayout } from '../model/layout';
 
 // 布局的纯函数测试：13 × 13 视口、50%–200% 缩放、可用宽度与素材区 / 地图区的宽度分配。
 // 全部断言具体数值（不 snapshot）：画布尺寸 = 格数 × 32 × 缩放，与任何地图文档都无关；
-// 素材区拿「可用宽度 − 画布宽」，只有最小 240、没有上限。
+// 地图区 = 画布 + 标尺（20），素材区拿「可用宽度 − 地图区宽度」，没有任何最小 / 最大尺寸。
 // 本文件不读窗口尺寸：桩里 window.innerWidth 为 0，另有一条用例把它改成 4000 仍要求结果不变。
 
 describe('resolveMapLayout 默认视口', () => {
-  // 默认 13 × 13、缩放 1：格 32、画布 416 × 416；量不到可用宽度时素材区回退 320、地图区等于画布
+  // 默认 13 × 13、缩放 1：格 32、画布 416 × 416；量不到可用宽度时素材区回退 320、地图区 = 画布 + 标尺 436
   it('默认 13 × 13 视口', () => {
     expect(resolveMapLayout({ zoom: 1 })).toEqual({
       viewportColumns: 13,
@@ -18,11 +18,11 @@ describe('resolveMapLayout 默认视口', () => {
       canvasWidth: 416,
       canvasHeight: 416,
       paletteWidth: 320,
-      mapPaneWidth: 416,
+      mapPaneWidth: 436,
     });
   });
 
-  // 15 × 9：画布 480 × 288，素材区仍回退 320
+  // 15 × 9：画布 480 × 288，素材区仍回退 320、地图区 500
   it('长方形视口 15 × 9', () => {
     const layout = resolveMapLayout({ zoom: 1, viewportColumns: 15, viewportRows: 9 });
 
@@ -31,7 +31,7 @@ describe('resolveMapLayout 默认视口', () => {
     expect(layout.canvasWidth).toBe(480);
     expect(layout.canvasHeight).toBe(288);
     expect(layout.paletteWidth).toBe(320);
-    expect(layout.mapPaneWidth).toBe(480);
+    expect(layout.mapPaneWidth).toBe(500);
   });
 
   // 只覆盖横向格数时纵向仍取默认 13：画布 480 × 416
@@ -106,60 +106,67 @@ describe('resolveMapLayout 缩放', () => {
 });
 
 describe('resolveMapLayout 素材区与地图区宽度', () => {
-  // 可用 1200、画布 416：素材区拿剩余 784，不被任何上限截断
-  it('可用宽度 1200 时素材区 784、地图区 416', () => {
+  // 可用 1200、画布 416：地图区 436，素材区拿剩余 764，不被任何上限截断
+  it('可用宽度 1200 时素材区 764、地图区 436', () => {
     const layout = resolveMapLayout({ zoom: 1, availableWidth: 1200 });
 
     expect(layout.canvasWidth).toBe(416);
-    expect(layout.paletteWidth).toBe(784);
-    expect(layout.mapPaneWidth).toBe(416);
+    expect(layout.paletteWidth).toBe(764);
+    expect(layout.mapPaneWidth).toBe(436);
   });
 
-  // 可用 600 小于画布 + 最小素材区：素材区被最小宽度顶住 240，地图区只剩 360（允许横向滚动）
-  it('可用宽度 600 时素材区被最小宽度顶住', () => {
+  // 可用 600 大于地图区：素材区拿 164，没有最小宽度夹取
+  it('可用宽度 600 时素材区 164、地图区 436', () => {
     const layout = resolveMapLayout({ zoom: 1, availableWidth: 600 });
 
-    expect(layout.paletteWidth).toBe(240);
-    expect(layout.mapPaneWidth).toBe(360);
-    expect(layout.mapPaneWidth).toBeLessThan(layout.canvasWidth);
+    expect(layout.paletteWidth).toBe(164);
+    expect(layout.mapPaneWidth).toBe(436);
+    expect(layout.mapPaneWidth).toBe(layout.canvasWidth + 20);
   });
 
-  // 可用 3000：素材区 2584，仍然没有上限
-  it('可用宽度 3000 时素材区 2584', () => {
+  // 可用 300 小于地图区：素材区压到 0，地图区仍是「画布 + 标尺」——没有任何最小宽度兜底
+  it('可用宽度小于地图区时素材区为 0、地图区不变', () => {
+    const layout = resolveMapLayout({ zoom: 1, availableWidth: 300 });
+
+    expect(layout.paletteWidth).toBe(0);
+    expect(layout.mapPaneWidth).toBe(436);
+  });
+
+  // 可用 3000：素材区 2564，仍然没有上限
+  it('可用宽度 3000 时素材区 2564', () => {
     const layout = resolveMapLayout({ zoom: 1, availableWidth: 3000 });
 
-    expect(layout.paletteWidth).toBe(2584);
-    expect(layout.mapPaneWidth).toBe(416);
+    expect(layout.paletteWidth).toBe(2564);
+    expect(layout.mapPaneWidth).toBe(436);
   });
 
-  // 缩放变大画布也变大：可用 1200、200% 时画布 832，素材区只剩 368（仍高于最小 240）
+  // 缩放变大画布也变大：可用 1200、200% 时画布 832、地图区 852，素材区只剩 348（无最小宽度）
   it('放大到 200% 时素材区按剩余宽度收窄', () => {
     const layout = resolveMapLayout({ zoom: 2, availableWidth: 1200 });
 
     expect(layout.canvasWidth).toBe(832);
-    expect(layout.paletteWidth).toBe(368);
-    expect(layout.mapPaneWidth).toBe(832);
+    expect(layout.paletteWidth).toBe(348);
+    expect(layout.mapPaneWidth).toBe(852);
   });
 
-  // 可用宽度越大素材区越宽：始终等于「可用宽度 − 画布宽」，且从不低于 240
-  it('素材区宽度随可用宽度线性增长且从不低于最小宽度', () => {
+  // 可用宽度越大素材区越宽：始终等于「可用宽度 − 地图区宽度」，可以为 0
+  it('素材区宽度按可用宽度减去地图区线性变化且没有下限', () => {
     const availableWidths = [0, 100, 655, 1200, 1600, 2000, 3000];
 
     for (const availableWidth of availableWidths) {
       const layout = resolveMapLayout({ zoom: 1, availableWidth });
 
-      expect(layout.paletteWidth).toBeGreaterThanOrEqual(240);
-
       if (availableWidth > 0) {
-        const mapPaneWidth = layout.mapPaneWidth;
+        expect(layout.paletteWidth).toBe(Math.max(0, availableWidth - layout.mapPaneWidth));
+      }
 
-        expect(layout.paletteWidth).toBe(Math.max(240, availableWidth - layout.canvasWidth));
-        expect(layout.paletteWidth + mapPaneWidth).toBe(availableWidth);
+      if (availableWidth >= layout.mapPaneWidth) {
+        expect(layout.paletteWidth + layout.mapPaneWidth).toBe(availableWidth);
       }
     }
   });
 
-  // 量不到可用宽度（0 / 负数 / 非数）时回退基准 320，地图区等于画布
+  // 量不到可用宽度（0 / 负数 / 非数）时素材区回退基准 320，地图区仍是「画布 + 标尺」
   it('可用宽度缺省或非法时素材区回退 320', () => {
     const expected = resolveMapLayout({ zoom: 1 });
 
@@ -167,7 +174,7 @@ describe('resolveMapLayout 素材区与地图区宽度', () => {
     expect(resolveMapLayout({ zoom: 1, availableWidth: -120 })).toEqual(expected);
     expect(resolveMapLayout({ zoom: 1, availableWidth: Number.NaN })).toEqual(expected);
     expect(expected.paletteWidth).toBe(320);
-    expect(expected.mapPaneWidth).toBe(expected.canvasWidth);
+    expect(expected.mapPaneWidth).toBe(expected.canvasWidth + 20);
   });
 });
 

@@ -9,7 +9,6 @@ import { MapBottomTabs } from '../components/MapBottomTabs';
 import { MapFavoriteBar } from '../components/MapFavoriteBar';
 import { IMapPanelViewProps, MapPanelView } from '../components/MapPanelView';
 import {
-  MAP_PALETTE_MIN_WIDTH,
   MAP_VIEWPORT_DEFAULT_COLUMNS,
   MAP_VIEWPORT_DEFAULT_ROWS,
   MAP_VIEWPORT_MAX_COUNT,
@@ -350,8 +349,8 @@ describe('地图面板左右两列布局', () => {
     expect(screen.getByTestId('map-sidebar').style.width).toBe('320px');
   });
 
-  // 面板实测 1200：右栏拿剩余 784（画布 416），不被任何上限截断
-  it('面板实测宽度 1200 时右栏 784', () => {
+  // 面板实测 1200：右栏拿剩余 764（地图区 436 = 画布 416 + 标尺 20），不被任何上限截断
+  it('面板实测宽度 1200 时右栏 764', () => {
     const document = createMapDocument();
     const store = new Store<IMapPanelViewState>(createViewState({ document }));
 
@@ -360,12 +359,12 @@ describe('地图面板左右两列布局', () => {
 
     const expected = resolveMapLayout({ zoom: 1, availableWidth: 1200 }).paletteWidth;
 
-    expect(expected).toBe(784);
-    expect(screen.getByTestId('map-sidebar').style.width).toBe('784px');
+    expect(expected).toBe(764);
+    expect(screen.getByTestId('map-sidebar').style.width).toBe(`${expected}px`);
   });
 
-  // 面板实测 600：右栏被最小宽度 240 顶住，地图区只剩 360（小于画布时允许横向滚动）
-  it('面板实测宽度 600 时右栏 240', () => {
+  // 面板实测 600：右栏拿 164（600 − 436），没有最小宽度夹取
+  it('面板实测宽度 600 时右栏 164', () => {
     const document = createMapDocument();
     const store = new Store<IMapPanelViewState>(createViewState({ document }));
 
@@ -374,12 +373,26 @@ describe('地图面板左右两列布局', () => {
 
     const expected = resolveMapLayout({ zoom: 1, availableWidth: 600 }).paletteWidth;
 
-    expect(expected).toBe(MAP_PALETTE_MIN_WIDTH);
-    expect(screen.getByTestId('map-sidebar').style.width).toBe(`${MAP_PALETTE_MIN_WIDTH}px`);
+    expect(expected).toBe(164);
+    expect(screen.getByTestId('map-sidebar').style.width).toBe(`${expected}px`);
   });
 
-  // 面板实测 2000：右栏跟着变宽（1584 = 2000 − 416），说明素材区拿剩余宽度且没有上限
-  it('面板实测宽度 2000 时右栏 1584', () => {
+  // 面板实测 300 小于地图区：右栏压到 0（证明没有任何 240 下限）
+  it('面板实测宽度 300 时右栏 0', () => {
+    const document = createMapDocument();
+    const store = new Store<IMapPanelViewState>(createViewState({ document }));
+
+    stubPanelWidth(300);
+    render(<MapPanelView {...createViewProps(store)} />);
+
+    const expected = resolveMapLayout({ zoom: 1, availableWidth: 300 }).paletteWidth;
+
+    expect(expected).toBe(0);
+    expect(screen.getByTestId('map-sidebar').style.width).toBe('0px');
+  });
+
+  // 面板实测 2000：右栏跟着变宽（1564 = 2000 − 436），说明素材区拿剩余宽度且没有上限
+  it('面板实测宽度 2000 时右栏 1564', () => {
     const document = createMapDocument();
     const store = new Store<IMapPanelViewState>(createViewState({ document }));
 
@@ -388,8 +401,8 @@ describe('地图面板左右两列布局', () => {
 
     const expected = resolveMapLayout({ zoom: 1, availableWidth: 2000 }).paletteWidth;
 
-    expect(expected).toBe(1584);
-    expect(screen.getByTestId('map-sidebar').style.width).toBe('1584px');
+    expect(expected).toBe(1564);
+    expect(screen.getByTestId('map-sidebar').style.width).toBe(`${expected}px`);
   });
 
   // 画布宽度 = 视口格数 × 缩放后的格像素（32px 文档格在 150% 时是 48px）

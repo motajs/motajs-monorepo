@@ -70,11 +70,8 @@ export const MAP_ZOOM_DEFAULT = 1;
 /** 缩放滑块每动一格的步长 */
 export const MAP_ZOOM_STEP = 0.05;
 
-/** 右侧素材栏在缩放 1 时的基准宽度（像素）；素材区在 100% 时就该够大 */
+/** 右侧素材栏在缩放 1 时的基准宽度（像素）；只在量不到可用宽度时使用 */
 export const MAP_PALETTE_BASE_WIDTH = 320;
-
-/** 右侧素材栏的最小可用宽度（像素）；缩放到最大时也只压到这里 */
-export const MAP_PALETTE_MIN_WIDTH = 240;
 
 /** 上下文未覆盖时使用的动画帧速（毫秒 / 帧） */
 export const MAP_FRAME_SPEED_DEFAULT = 300;
