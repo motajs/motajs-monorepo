@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.1"
 current_phase_name: 地图渲染与布局重做
-current_plan: 20
+current_plan: 21
 status: executing
-stopped_at: Completed 04.1-19-PLAN.md
-last_updated: "2026-10-25T08:05:17.234Z"
+stopped_at: Completed 04.1-20-PLAN.md
+last_updated: "2026-10-25T08:49:39.114Z"
 last_activity: 2026-10-25
 last_activity_desc: Phase 3 complete, transitioned to Phase 4
-state_head: 008ad32493eb8db71c1e893eeb790d65c6e9a97d
+state_head: c9c4e7e5201db4d31f3bf8245aae1c2b060eeb9d
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 146
-  completed_plans: 139
+  completed_plans: 140
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 04.1 (地图渲染与布局重做) — EXECUTING
-Current Plan: 20
+Current Plan: 21
 Total Plans in Phase: 24
 Status: Executing — 04.1-18 complete, ready for 04.1-19
 Last activity: 2026-10-25 — 04.1-18 complete (自动保存契约：串行切换链 + 关闭/替换前落盘)
@@ -157,6 +157,7 @@ Progress: [███████░░░] 71%
 | Phase 04.1 P17 | 38min | 2 tasks | 7 files |
 | Phase 4.1 P18 | 8min | 2 tasks | 4 files |
 | Phase 04.1 P19 | 33 | 3 tasks | 14 files |
+| Phase 04.1 P20 | 23min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -403,6 +404,8 @@ Recent decisions affecting current work:
 - [Phase 04.1]: 画布尺寸只由「视口格数 × 32 × 缩放」决定，与地图声明的格尺寸无关（D-39）；缩放任整体倍率而非乘进格尺寸，由 Pixi 场景 scene.scale 施加
 - [Phase 04.1]: 素材区 = max(240, 可用宽度 − 画布宽)、无上限；MAP_PALETTE_MAX_WIDTH 与 Math.min 夹取一并删除（D-41 修订），量不到可用宽度时回退 320
 - [Phase 04.1]: 布局在 MapPanelView 顶层只算一次，右栏宽度与画布共用同一份结果；MapCanvas 不再收视口格数 props
+- [Phase 04.1]: 顶栏从 .emap-main 提到面板根下成为通栏、新增 .emap-columns 承担左右分栏（D-31）；分类导航横排 space-between + wrap，不引入可选分组类（D-32）
+- [Phase 04.1]: 地图区宽高只有面板一个入口：InputNumber 限 1..64，MapPanel.setViewportSize 再夹一次并重夹视口，纯视图状态不置脏；图格尺寸标签只读 view.document 的声明值（D-40 / D-42）
 
 ### Pending Todos
 
@@ -430,6 +433,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-25T08:05:16.770Z
-Stopped at: Completed 04.1-19-PLAN.md
+Last session: 2026-10-25T08:49:38.617Z
+Stopped at: Completed 04.1-20-PLAN.md
 Resume file: None
