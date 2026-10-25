@@ -930,6 +930,10 @@ function buildThumbnailTexture(
   textures: Map<string, Texture>,
 ): RenderTexture {
   const texture = RenderTexture.create({ width: textureWidth, height: textureHeight, resolution: 1, antialias: false });
+
+  // 缩略图是像素画的放大结果：不设最近邻时线性插值会把相邻格子糊成一片
+  texture.source.scaleMode = 'nearest';
+
   const container = new Container();
   const cropped: Texture[] = [];
 
@@ -1254,7 +1258,12 @@ export function MapSurface(props: IMapSurfaceProps): ReactElement {
 
         if (!mountedRef.current) return;
 
-        texturesRef.current.set(path, Texture.from(image));
+        const texture = Texture.from(image);
+
+        // 图块与动画帧都裁自这张基础纹理（裁切共用同一个 source），因此只在这里设一次最近邻；
+        // 像素画放大时线性插值会糊掉边缘，必须关掉平滑
+        texture.source.scaleMode = 'nearest';
+        texturesRef.current.set(path, texture);
         setTextureVersion((value) => value + 1);
       })
       .catch(() => {

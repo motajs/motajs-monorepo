@@ -2,25 +2,25 @@ import { describe, expect, it } from 'vitest';
 import { buildThumbnail } from '../model/thumbnail';
 import { createMapDocument } from './fixtures';
 
-// 缩略描述的纯函数测试：纹理尺寸上限、显示尺寸按画布适配并居中。
+// 缩略描述的纯函数测试：纹理按显示像素生成、超过上限才等比缩小，显示尺寸按画布适配并居中。
 // 全部断言具体数值（不 snapshot）：这些数字是 Plan 10 建 RenderTexture 与摆放 Sprite 的唯一依据。
 // 非二进制可精确表示的小数（10.4 / 270.4 / 72.8）用 toBeCloseTo 固定到小数点后 6 位，避免浮点尾差误报。
 
 describe('buildThumbnail 按画布适配', () => {
-  // 256 × 256 的地图放进 416 × 416 画布：纹理 1:1、缩放 1.625、恰好铺满且无留白
-  it('256 × 256 地图铺满画布且纹理 1:1', () => {
+  // 256 × 256 的地图放进 416 × 416 画布：缩放 1.625、恰好铺满且无留白；纹理按显示像素 416 × 416
+  it('256 × 256 地图铺满画布且纹理等于显示像素', () => {
     expect(buildThumbnail(createMapDocument({ width: 256, height: 256 }), 416, 416)).toEqual({
       width: 416,
       height: 416,
       scale: 1.625,
       offsetX: 0,
       offsetY: 0,
-      textureWidth: 256,
-      textureHeight: 256,
+      textureWidth: 416,
+      textureHeight: 416,
     });
   });
 
-  // 40 × 26 的扁地图：按较紧的宽边适配，缩放 10.4、高 270.4、垂直留白 72.8
+  // 40 × 26 的扁地图：按较紧的宽边适配，缩放 10.4、高 270.4、垂直留白 72.8；纹理跟着显示像素 416 × 270
   it('扁地图按较紧的宽边适配并垂直居中', () => {
     const thumbnail = buildThumbnail(createMapDocument({ width: 40, height: 26 }), 416, 416);
 
@@ -29,11 +29,11 @@ describe('buildThumbnail 按画布适配', () => {
     expect(thumbnail.height).toBeCloseTo(270.4, 6);
     expect(thumbnail.offsetX).toBe(0);
     expect(thumbnail.offsetY).toBeCloseTo(72.8, 6);
-    expect(thumbnail.textureWidth).toBe(40);
-    expect(thumbnail.textureHeight).toBe(26);
+    expect(thumbnail.textureWidth).toBe(416);
+    expect(thumbnail.textureHeight).toBe(270);
   });
 
-  // 26 × 40 的竖地图：按较紧的高边适配，宽 270.4、水平留白 72.8
+  // 26 × 40 的竖地图：按较紧的高边适配，宽 270.4、水平留白 72.8；纹理跟着显示像素 270 × 416
   it('竖地图按较紧的高边适配并水平居中', () => {
     const thumbnail = buildThumbnail(createMapDocument({ width: 26, height: 40 }), 416, 416);
 
@@ -42,11 +42,11 @@ describe('buildThumbnail 按画布适配', () => {
     expect(thumbnail.height).toBeCloseTo(416, 6);
     expect(thumbnail.offsetX).toBeCloseTo(72.8, 6);
     expect(thumbnail.offsetY).toBe(0);
-    expect(thumbnail.textureWidth).toBe(26);
-    expect(thumbnail.textureHeight).toBe(40);
+    expect(thumbnail.textureWidth).toBe(270);
+    expect(thumbnail.textureHeight).toBe(416);
   });
 
-  // 长方形画布 480 × 288 放 40 × 20 的地图：缩放 12、高 240、垂直留白 24
+  // 长方形画布 480 × 288 放 40 × 20 的地图：缩放 12、高 240、垂直留白 24；纹理 480 × 240
   it('长方形画布按自身宽高比适配', () => {
     expect(buildThumbnail(createMapDocument({ width: 40, height: 20 }), 480, 288)).toEqual({
       width: 480,
@@ -54,19 +54,28 @@ describe('buildThumbnail 按画布适配', () => {
       scale: 12,
       offsetX: 0,
       offsetY: 24,
-      textureWidth: 40,
-      textureHeight: 20,
+      textureWidth: 480,
+      textureHeight: 240,
     });
   });
 });
 
 describe('buildThumbnail 纹理上限', () => {
-  // 超过上限的假想文档：纹理降到 512 × 512（降采样一半），显示仍按画布适配
-  it('超过纹理上限时降采样到 512 × 512', () => {
-    expect(buildThumbnail(createMapDocument({ width: 1024, height: 1024 }), 416, 416)).toEqual({
-      width: 416,
-      height: 416,
-      scale: 0.40625,
+  // 放得下的地图不再无条件降采样：40 × 26 的地图放到 416 画布里，纹理就是显示像素
+  it('显示尺寸不超过上限时纹理与显示像素 1:1', () => {
+    const thumbnail = buildThumbnail(createMapDocument({ width: 40, height: 26 }), 416, 416);
+
+    expect(thumbnail.textureWidth).toBe(Math.round(thumbnail.width));
+    expect(thumbnail.textureHeight).toBe(Math.round(thumbnail.height));
+    expect(thumbnail.textureWidth).toBeLessThanOrEqual(512);
+  });
+
+  // 画布极大（2000 × 2000）时显示尺寸远超上限：纹理按最长边等比夹到 512 × 512，显示仍按画布适配
+  it('显示尺寸超过上限时夹到 512 × 512', () => {
+    expect(buildThumbnail(createMapDocument({ width: 256, height: 256 }), 2000, 2000)).toEqual({
+      width: 2000,
+      height: 2000,
+      scale: 7.8125,
       offsetX: 0,
       offsetY: 0,
       textureWidth: 512,
@@ -74,19 +83,19 @@ describe('buildThumbnail 纹理上限', () => {
     });
   });
 
-  // 600 × 300 的大文档只按最长边降采样：纹理 512 × 256，比例与地图一致
-  it('非正方文档降采样后纹理比例不变', () => {
-    const thumbnail = buildThumbnail(createMapDocument({ width: 600, height: 300 }), 416, 416);
+  // 600 × 300 的大显示尺寸只按最长边等比缩小：纹理 512 × 256，比例与地图一致（不会被压成正方形）
+  it('非正方文档夹取后纹理比例不变', () => {
+    const thumbnail = buildThumbnail(createMapDocument({ width: 600, height: 300 }), 2000, 2000);
 
     expect(thumbnail.textureWidth).toBe(512);
     expect(thumbnail.textureHeight).toBe(256);
-    expect(thumbnail.width).toBeCloseTo(416, 6);
-    expect(thumbnail.height).toBeCloseTo(208, 6);
+    expect(thumbnail.width).toBeCloseTo(2000, 6);
+    expect(thumbnail.height).toBeCloseTo(1000, 6);
   });
 
-  // 恰好等于上限的文档不降采样：512 × 512 保持原尺寸
-  it('等于上限的文档保持原纹理尺寸', () => {
-    const thumbnail = buildThumbnail(createMapDocument({ width: 512, height: 512 }), 416, 416);
+  // 恰好等于上限的显示尺寸不缩小：512 × 512 画布里的 512 × 512 地图纹理保持 512 × 512
+  it('等于上限的显示尺寸保持原纹理尺寸', () => {
+    const thumbnail = buildThumbnail(createMapDocument({ width: 512, height: 512 }), 512, 512);
 
     expect(thumbnail.textureWidth).toBe(512);
     expect(thumbnail.textureHeight).toBe(512);

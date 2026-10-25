@@ -22,10 +22,11 @@ function buildZeroThumbnail(): IMapThumbnail {
 }
 
 /**
- * 把整张地图算成一份缩略描述：显示尺寸按画布等比适配并居中，纹理尺寸受边长上限约束
+ * 把整张地图算成一份缩略描述：显示尺寸按画布等比适配并居中，纹理尺寸按显示像素生成并受边长上限约束
  *
  * 只由文档尺寸与画布尺寸决定：视口 / 缩放 / 选区 / 悬停都不参与，因此同一文档 + 同一画布永远得到同一份描述。
- * 纹理按 1 源像素 / 格生成，超过 `MAP_THUMBNAIL_MAX_SIZE` 时按最长边等比降采样；任一尺寸非正时退回全零描述，不抛错。
+ * 纹理按显示像素 1:1 生成（1 纹理像素 = 1 显示像素），只有显示尺寸超过 `MAP_THUMBNAIL_MAX_SIZE` 时才按最长边等比缩小，
+ * 因此本就放得下的地图不再被无条件降采样；任一尺寸非正时退回全零描述，不抛错。
  * @param document 中立文档（只用 width / height）
  * @param canvasWidth 画布的像素宽
  * @param canvasHeight 画布的像素高
@@ -40,7 +41,7 @@ export function buildThumbnail(document: IMapDocument, canvasWidth: number, canv
 
   const width = document.width * scale;
   const height = document.height * scale;
-  const textureScale = Math.min(1, MAP_THUMBNAIL_MAX_SIZE / document.width, MAP_THUMBNAIL_MAX_SIZE / document.height);
+  const textureScale = Math.min(1, MAP_THUMBNAIL_MAX_SIZE / width, MAP_THUMBNAIL_MAX_SIZE / height);
 
   return {
     width,
@@ -48,7 +49,7 @@ export function buildThumbnail(document: IMapDocument, canvasWidth: number, canv
     scale,
     offsetX: Math.max(0, (canvasWidth - width) / 2),
     offsetY: Math.max(0, (canvasHeight - height) / 2),
-    textureWidth: Math.max(1, Math.round(document.width * textureScale)),
-    textureHeight: Math.max(1, Math.round(document.height * textureScale)),
+    textureWidth: Math.max(1, Math.round(width * textureScale)),
+    textureHeight: Math.max(1, Math.round(height * textureScale)),
   };
 }

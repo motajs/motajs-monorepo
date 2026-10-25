@@ -277,8 +277,8 @@ describe('buildMapRenderModel 大地图模式', () => {
       scale: 1.625,
       offsetX: 0,
       offsetY: 0,
-      textureWidth: 256,
-      textureHeight: 256,
+      textureWidth: 416,
+      textureHeight: 416,
     });
     expect(model.viewport).toEqual({ left: 100, top: 100 });
   });
@@ -286,11 +286,11 @@ describe('buildMapRenderModel 大地图模式', () => {
   // 缩略纹理边长受 512 上限约束，映射到画布仍等比居中
   it('把缩略纹理边长夹到 512', () => {
     const document: IMapDocument = { ...createMapDocument(), width: 600, height: 600 };
-    const model = buildMapRenderModel(document, createView({ width: 416, height: 416, bigMap: true }));
+    const model = buildMapRenderModel(document, createView({ width: 2000, height: 2000, bigMap: true }));
 
     expect(model.thumbnail!.textureWidth).toBe(512);
     expect(model.thumbnail!.textureHeight).toBe(512);
-    expect(model.thumbnail!.scale).toBeCloseTo(416 / 600, 6);
+    expect(model.thumbnail!.scale).toBeCloseTo(2000 / 600, 6);
   });
 
   // 缩略格小于 16px 时通行度降级为单色点（D-12 的四色箭头只适用普通模式）
