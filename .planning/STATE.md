@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.1"
 current_phase_name: 地图渲染与布局重做
-current_plan: 21
+current_plan: 22
 status: executing
-stopped_at: Completed 04.1-20-PLAN.md
-last_updated: "2026-10-25T08:49:39.114Z"
+stopped_at: Completed 04.1-21-PLAN.md
+last_updated: "2026-10-25T09:08:43.488Z"
 last_activity: 2026-10-25
 last_activity_desc: Phase 3 complete, transitioned to Phase 4
-state_head: c9c4e7e5201db4d31f3bf8245aae1c2b060eeb9d
+state_head: 30c65eb7a582edf40990ee66072b6a54c18c5dad
 progress:
   total_phases: 9
-  completed_phases: 0
+  completed_phases: 5
   total_plans: 146
-  completed_plans: 140
+  completed_plans: 141
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,10 +30,10 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 04.1 (地图渲染与布局重做) — EXECUTING
-Current Plan: 21
+Current Plan: 22
 Total Plans in Phase: 24
-Status: Executing — 04.1-18 complete, ready for 04.1-19
-Last activity: 2026-10-25 — 04.1-18 complete (自动保存契约：串行切换链 + 关闭/替换前落盘)
+Status: Executing — 04.1-21 complete（大地图清晰度 / 真实自动元件 / 真实通行属性），ready for 04.1-23
+Last activity: 2026-10-25 — 04.1-21 complete（缩略纹理按显示像素 + 最近邻、真实四帧自动元件、演示图块 pass）
 
 Progress: [███████░░░] 71%
 
@@ -158,6 +158,7 @@ Progress: [███████░░░] 71%
 | Phase 4.1 P18 | 8min | 2 tasks | 4 files |
 | Phase 04.1 P19 | 33 | 3 tasks | 14 files |
 | Phase 04.1 P20 | 23min | 3 tasks | 9 files |
+| Phase 04.1 P21 | 15min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -406,6 +407,10 @@ Recent decisions affecting current work:
 - [Phase 04.1]: 布局在 MapPanelView 顶层只算一次，右栏宽度与画布共用同一份结果；MapCanvas 不再收视口格数 props
 - [Phase 04.1]: 顶栏从 .emap-main 提到面板根下成为通栏、新增 .emap-columns 承担左右分栏（D-31）；分类导航横排 space-between + wrap，不引入可选分组类（D-32）
 - [Phase 04.1]: 地图区宽高只有面板一个入口：InputNumber 限 1..64，MapPanel.setViewportSize 再夹一次并重夹视口，纯视图状态不置脏；图格尺寸标签只读 view.document 的声明值（D-40 / D-42）
+- [Phase 04.1]: 04.1-21: 缩略纹理按显示像素生成（1 纹理像素 = 1 显示像素），上限 512 只做等比夹取——两边各自 clamp 会把非正方地图压变形
+- [Phase 04.1]: 04.1-21: 最近邻只设两处——缩略 RenderTexture 建好后、基础图块纹理 Texture.from(image) 后；裁切纹理共用同一 source 自动继承
+- [Phase 04.1]: 04.1-21: 演示大号自动元件改用仓库内真实素材 autotile1.png（384×128），帧数不手写、由解析器按 384 ÷ 96 得出 4
+- [Phase 04.1]: 04.1-21: 演示图块 pass 的 out 与 in 都写满四方向，不依赖解析器「缺省即可通行」的默认值（否则容易写出看着是墙其实能走的假数据）
 
 ### Pending Todos
 
@@ -433,6 +438,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-25T08:49:38.617Z
-Stopped at: Completed 04.1-20-PLAN.md
+Last session: 2026-10-25T09:08:21.490Z
+Stopped at: Completed 04.1-21-PLAN.md
 Resume file: None
