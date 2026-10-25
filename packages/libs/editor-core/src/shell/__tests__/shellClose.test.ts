@@ -256,7 +256,8 @@ describe('ShellSystem 关闭前询问', () => {
 
     const [firstTab, secondTab] = await openTwoPanels(shellSystem, 'close');
 
-    act(() => {
+    // 切换是排进串行链后异步投递的：必须等它结算，下面询问时读到的次数才是真实顺序
+    await act(async () => {
       shellSystem.activateTab(firstTab);
     });
 
@@ -281,7 +282,7 @@ describe('ShellSystem 关闭前询问', () => {
 
     const [firstTab, secondTab] = await openTwoPanels(shellSystem, 'close');
 
-    act(() => {
+    await act(async () => {
       shellSystem.activateTab(firstTab);
     });
 
@@ -330,7 +331,8 @@ describe('ShellSystem 关闭前询问', () => {
 
     const [firstTab, secondTab] = await openTwoPanels(shellSystem, 'plain');
 
-    act(() => {
+    // 切换是排进串行链后异步投递的：先等它结算，快照才有意义，否则会把待投递的切入误记成关闭引入的
+    await act(async () => {
       shellSystem.activateTab(firstTab);
     });
 

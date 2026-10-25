@@ -401,6 +401,8 @@ export class ShellSystem implements IShellSystem {
   private activeTabId: string | null = null;
   /** 最近一次投递过切入通知的面板实例 id，用于判定活动面板是否真正变化 */
   private lastActiveInstanceId: string | null = null;
+  /** 串行切换链：切出与切入按投递顺序依次结算，链本身永不 reject */
+  private switchChain: Promise<void> = Promise.resolve();
   /** 面板实例 id 计数器，会话内递增、不复用 */
   private instanceCounter: number = 0;
   /** 标签 id 计数器，会话内递增、不复用 */
@@ -520,6 +522,9 @@ export class ShellSystem implements IShellSystem {
     this.instanceTypes.delete(instanceId);
     this.instanceStatuses.delete(instanceId);
 
+    // 释放前必须等所有尚未结算的落盘：标签替换、注销面板类型、释放 core 都经由这里释放实例
+    await this.switchChain;
+
     await instance.dispose();
     this.notify();
   }
@@ -572,7 +577,7 @@ export class ShellSystem implements IShellSystem {
     const current = this.tabs[index];
 
     if (current.instanceId !== null) {
-      if (this.activeTabId === current.id) this.leaveActiveInstance(current.instanceId);
+      if (this.activeTabId === current.id) await this.leaveActiveInstance(current.instanceId);
       await this.closePanelInstance(current.instanceId);
     }
 
@@ -773,7 +778,7 @@ export class ShellSystem implements IShellSystem {
     const wasActive = this.activeTabId === tabId;
 
     if (tab.instanceId !== null) {
-      if (wasActive) this.leaveActiveInstance(tab.instanceId);
+      if (wasActive) await this.leaveActiveInstance(tab.instanceId);
       await this.closePanelInstance(tab.instanceId);
     }
 
@@ -797,16 +802,18 @@ export class ShellSystem implements IShellSystem {
   }
 
   /**
-   * 在活动面板即将被销毁时立即中断其切入状态：清空记录并向该面板投递切出通知
+   * 在活动面板即将被销毁时立即中断其切入状态：清空记录并把切出排进串行切换链
    * @param instanceId 即将销毁的面板实例 id
+   * @returns 该切出结算完成时 resolve，供调用方在释放实例前等待
    */
-  private leaveActiveInstance(instanceId: string): void {
+  private leaveActiveInstance(instanceId: string): Promise<void> {
     this.lastActiveInstanceId = null;
-    void this.invokeSwitchOut(instanceId);
+    return this.enqueueSwitchOut(instanceId);
   }
 
   /**
    * 将活动面板与最近一次切入通知对齐：目标变化时对离开的面板投递切出、对进入的面板投递切入
+   * 两者都排进同一条串行链，保证切入一定在切出（落盘）结算之后才发生
    * 目标面板仍在初始化时不投递，待其初始化完成由 initializeInstance 再次对齐
    */
   private syncActiveInstance(): void {
@@ -820,8 +827,32 @@ export class ShellSystem implements IShellSystem {
 
     this.lastActiveInstanceId = nextInstanceId;
 
-    if (previousInstanceId !== null) void this.invokeSwitchOut(previousInstanceId);
-    if (nextInstanceId !== null) void this.invokeSwitchIn(nextInstanceId);
+    if (previousInstanceId !== null) this.enqueueSwitchOut(previousInstanceId);
+    if (nextInstanceId !== null) this.enqueueSwitchIn(nextInstanceId);
+  }
+
+  /**
+   * 把一次切入投递排进串行切换链
+   * @param instanceId 目标面板实例 id
+   * @returns 该链节点结算完成时 resolve
+   */
+  private enqueueSwitchIn(instanceId: string): Promise<void> {
+    const step = this.switchChain.then(() => this.invokeSwitchIn(instanceId));
+
+    this.switchChain = step;
+    return step;
+  }
+
+  /**
+   * 把一次切出（落盘）投递排进串行切换链
+   * @param instanceId 目标面板实例 id
+   * @returns 该链节点结算完成时 resolve
+   */
+  private enqueueSwitchOut(instanceId: string): Promise<void> {
+    const step = this.switchChain.then(() => this.invokeSwitchOut(instanceId));
+
+    this.switchChain = step;
+    return step;
   }
 
   /**
