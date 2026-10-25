@@ -291,15 +291,17 @@ function statusToken(status: MapPanelStatus): string {
  *
  * 布局数字只来自 `resolveMapLayout`，视图不自己算右栏宽度与画布像素。
  * @param view 当前视图状态
+ * @param availableWidth 面板量到的可用宽度（像素）；量不到时为 0
  * @returns 布局；未打开地图时为 undefined
  */
-function resolveViewLayout(view: IMapPanelViewState): IMapLayout | undefined {
+function resolveViewLayout(view: IMapPanelViewState, availableWidth: number): IMapLayout | undefined {
   if (view.document === undefined) return undefined;
 
-  return resolveMapLayout(view.document, {
+  return resolveMapLayout({
     zoom: view.zoom ?? MAP_ZOOM_DEFAULT,
     viewportColumns: view.viewportColumns ?? MAP_VIEWPORT_DEFAULT_COLUMNS,
     viewportRows: view.viewportRows ?? MAP_VIEWPORT_DEFAULT_ROWS,
+    availableWidth,
   });
 }
 
@@ -368,7 +370,7 @@ function renderReadyBody(input: IMapPanelBodyProps): ReactElement {
   if (document === undefined) return renderLoadingBody();
 
   const zoom = view.zoom ?? MAP_ZOOM_DEFAULT;
-  const layout = resolveViewLayout(view);
+  const layout = resolveViewLayout(view, 0);
 
   if (layout === undefined) return renderLoadingBody();
 
@@ -499,7 +501,7 @@ export function MapPanelView(props: IMapPanelViewProps): ReactElement {
   const layerNames = layers.map((layer, index) => resolveLayerName(layer, index));
   const tileGroups = document?.tileGroups;
   const groupImages = useMapTileGroupUrls(tileGroups, props.loadTileBytes, view.paletteVersion);
-  const layout = resolveViewLayout(view);
+  const layout = resolveViewLayout(view, 0);
   const sideWidth = layout === undefined ? MAP_PALETTE_BASE_WIDTH : layout.paletteWidth;
 
   return (

@@ -1,4 +1,11 @@
-import { MAP_BIG_MAP_DOT_CELL, MAP_CELL_SIZE, MAP_ZOOM_DEFAULT, MAP_ZOOM_MAX, MAP_ZOOM_MIN } from '../constants';
+import {
+  MAP_BIG_MAP_DOT_CELL,
+  MAP_CELL_SIZE,
+  MAP_DISPLAY_CELL_SIZE,
+  MAP_ZOOM_DEFAULT,
+  MAP_ZOOM_MAX,
+  MAP_ZOOM_MIN,
+} from '../constants';
 import {
   IMapAutotileQuarters,
   IMapCellPosition,
@@ -23,7 +30,8 @@ import { resolveFrameInfo } from './tileFrame';
 
 // 一帧要画什么：把中立文档与视图参数算成纯数据。
 // 这一层不 import React / Pixi / editor-core，也不读文件与图片；视图层每次渲染时现算，画布只照着数据画。
-// 格尺寸只在 buildMapRenderModel 顶部乘一次缩放；帧只给「第 0 帧 + 帧轴 + 步长 + 帧数」，不往模型里塞 255 个矩形。
+// 格尺寸是固定的显示基准 32；缩放由画布整场景施加，可见格数按「32 × 缩放」折算。
+// 帧只给「第 0 帧 + 帧轴 + 步长 + 帧数」，不往模型里塞 255 个矩形。
 
 export interface IMapRenderView {
   /** 画布宽度（像素） */
@@ -38,7 +46,7 @@ export interface IMapRenderView {
   readonly viewport: IMapViewport;
   /** 是否处于大地图模式 */
   readonly bigMap: boolean;
-  /** 缩放倍率；缺省 1，渲染模型据此把文档格尺寸换成像素（只在这里乘一次） */
+  /** 缩放倍率；缺省 1，渲染模型只用它把画布像素折算成可见格数（屏幕像素由画布整场景施加） */
   readonly zoom?: number;
   /** 面板算好的通行度标记，渲染模型只消费 */
   readonly passMarks: readonly IMapPassMark[];
@@ -314,17 +322,24 @@ function clipPassMarks(
 /**
  * 造一个没有格子的空渲染模型，只透传视图里的框选 / 预览 / 悬停
  * @param view 视图参数
- * @param cellWidth 格子的像素宽
- * @param cellHeight 格子的像素高
+ * @param cellWidth 显示格的基准像素宽
+ * @param cellHeight 显示格的基准像素高
+ * @param renderScale 整体渲染倍率
  * @returns 空渲染模型
  */
-function buildEmptyModel(view: IMapRenderView, cellWidth: number, cellHeight: number): IMapRenderModel {
+function buildEmptyModel(
+  view: IMapRenderView,
+  cellWidth: number,
+  cellHeight: number,
+  renderScale: number,
+): IMapRenderModel {
   return {
     width: view.width,
     height: view.height,
     cells: [],
     gridLines: [],
     passMarks: [],
+    renderScale,
     cellWidth,
     cellHeight,
     viewport: view.viewport,
@@ -336,15 +351,16 @@ function buildEmptyModel(view: IMapRenderView, cellWidth: number, cellHeight: nu
 }
 
 /**
- * 普通模式：按传入的缩放后格尺寸遍历视口覆盖的行列范围
+ * 普通模式：按「显示格基准 × 整体倍率」折算可见行列范围
  *
  * 通行度标记同样按视口裁剪，因此这一帧的输出规模只与可见格数有关，与文档总格数无关。
  * @param document 中立文档
  * @param view 视图参数
  * @param current 当前层；找不到时为 undefined
  * @param images 图块编号索引
- * @param cellWidth 缩放后的格子像素宽
- * @param cellHeight 缩放后的格子像素高
+ * @param cellWidth 显示格的基准像素宽（不含缩放）
+ * @param cellHeight 显示格的基准像素高（不含缩放）
+ * @param renderScale 整体渲染倍率
  * @returns 这一帧的渲染模型
  */
 function buildWindowModel(
@@ -354,11 +370,15 @@ function buildWindowModel(
   images: Map<number, ITileImage>,
   cellWidth: number,
   cellHeight: number,
+  renderScale: number,
 ): IMapRenderModel {
   const startX = Math.max(0, Math.floor(view.viewport.left));
   const startY = Math.max(0, Math.floor(view.viewport.top));
-  const columns = Math.min(Math.ceil(view.width / cellWidth), Math.max(0, document.width - startX));
-  const rows = Math.min(Math.ceil(view.height / cellHeight), Math.max(0, document.height - startY));
+  const columns = Math.min(
+    Math.ceil(view.width / (cellWidth * renderScale)),
+    Math.max(0, document.width - startX),
+  );
+  const rows = Math.min(Math.ceil(view.height / (cellHeight * renderScale)), Math.max(0, document.height - startY));
   const cells: IMapRenderCell[] = [];
 
   for (const layer of sortLayers(document.layers)) {
@@ -398,6 +418,7 @@ function buildWindowModel(
     cells,
     gridLines: buildGridLines(columns, rows, cellWidth, cellHeight),
     passMarks: clipPassMarks(view.passMarks, startX, startY, columns, rows),
+    renderScale,
     cellWidth,
     cellHeight,
     viewport: view.viewport,
@@ -462,8 +483,9 @@ function buildBigMapPassMarks(passMarks: readonly IMapPassMark[], step: number, 
  * D-12 的「四个方向四种颜色」只承诺普通模式，`dot` 为 true 时画布统一用 `MAP_PASS_COLOR_UP` 画一个点。
  * @param document 中立文档
  * @param view 视图参数
- * @param cellWidth 缩放后的格子像素宽（模型上报值）
- * @param cellHeight 缩放后的格子像素高（模型上报值）
+ * @param cellWidth 显示格的基准像素宽（模型上报值）
+ * @param cellHeight 显示格的基准像素高（模型上报值）
+ * @param renderScale 整体渲染倍率；大地图固定为 1，缩略图已按画布像素算好
  * @returns 这一帧的渲染模型
  */
 function buildBigMapModel(
@@ -471,8 +493,11 @@ function buildBigMapModel(
   view: IMapRenderView,
   cellWidth: number,
   cellHeight: number,
+  renderScale: number,
 ): IMapRenderModel {
-  if (document.width <= 0 || document.height <= 0) return buildEmptyModel(view, cellWidth, cellHeight);
+  if (document.width <= 0 || document.height <= 0) {
+    return buildEmptyModel(view, cellWidth, cellHeight, renderScale);
+  }
 
   const thumbnail = buildThumbnail(document, view.width, view.height);
   const dot = thumbnail.scale < MAP_BIG_MAP_DOT_CELL;
@@ -484,6 +509,7 @@ function buildBigMapModel(
     cells: [],
     gridLines: [],
     passMarks: buildBigMapPassMarks(view.passMarks, step, dot),
+    renderScale,
     cellWidth,
     cellHeight,
     viewport: view.viewport,
@@ -498,18 +524,19 @@ function buildBigMapModel(
  * 把一份中立文档与视图参数算成一帧要画的纯数据
  *
  * 唯一调用方是视图层 `MapPanelView`：面板只保存文档与视图状态，不计算也不缓存渲染模型。
- * 缩放只在本函数乘一次：`cellWidth / cellHeight = 文档格尺寸 × 缩放`，两条构建路径原样消费这一对值。
+ * 显示格尺寸恒为 `MAP_DISPLAY_CELL_SIZE`，与文档声明的格尺寸无关；缩放作为整体倍率原样上报，
+ * 可见格数按「显示格 × 缩放」折算（屏幕像素由画布整场景施加）。
  * 普通模式只输出视口内的格子与视口内的通行度标记；大地图模式只输出缩略描述与降采样后的通行度标记。
  * @param document 中立文档
  * @param view 视图参数（画布尺寸、当前层、视口、大地图、缩放、框选、预览、悬停、通行度标记）
  * @returns 这一帧的渲染模型
  */
 export function buildMapRenderModel(document: IMapDocument, view: IMapRenderView): IMapRenderModel {
-  const zoom = Math.min(MAP_ZOOM_MAX, Math.max(MAP_ZOOM_MIN, view.zoom ?? MAP_ZOOM_DEFAULT));
-  const cellWidth = resolvePositiveSize(document.cellWidth) * zoom;
-  const cellHeight = resolvePositiveSize(document.cellHeight) * zoom;
+  const renderScale = Math.min(MAP_ZOOM_MAX, Math.max(MAP_ZOOM_MIN, view.zoom ?? MAP_ZOOM_DEFAULT));
+  const cellWidth = MAP_DISPLAY_CELL_SIZE;
+  const cellHeight = MAP_DISPLAY_CELL_SIZE;
 
-  if (view.bigMap) return buildBigMapModel(document, view, cellWidth, cellHeight);
+  if (view.bigMap) return buildBigMapModel(document, view, cellWidth, cellHeight, 1);
 
   return buildWindowModel(
     document,
@@ -518,5 +545,6 @@ export function buildMapRenderModel(document: IMapDocument, view: IMapRenderView
     buildTileImages(document),
     cellWidth,
     cellHeight,
+    renderScale,
   );
 }

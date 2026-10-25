@@ -293,7 +293,7 @@ describe('地图面板左右两列布局', () => {
 
     render(<MapPanelView {...createViewProps(store)} />);
 
-    const expected = resolveMapLayout(document, { zoom: 1 }).paletteWidth;
+    const expected = resolveMapLayout({ zoom: 1 }).paletteWidth;
 
     expect(expected).toBe(320);
     expect(screen.getByTestId('map-sidebar').style.width).toBe('320px');
@@ -306,7 +306,7 @@ describe('地图面板左右两列布局', () => {
 
     render(<MapPanelView {...createViewProps(store)} />);
 
-    const expected = resolveMapLayout(document, { zoom: 2 }).paletteWidth;
+    const expected = resolveMapLayout({ zoom: 2 }).paletteWidth;
 
     expect(expected).toBe(MAP_PALETTE_MIN_WIDTH);
     expect(screen.getByTestId('map-sidebar').style.width).toBe(`${MAP_PALETTE_MIN_WIDTH}px`);

@@ -1,7 +1,6 @@
 import {
-  MAP_CELL_SIZE,
+  MAP_DISPLAY_CELL_SIZE,
   MAP_PALETTE_BASE_WIDTH,
-  MAP_PALETTE_MAX_WIDTH,
   MAP_PALETTE_MIN_WIDTH,
   MAP_VIEWPORT_DEFAULT_COLUMNS,
   MAP_VIEWPORT_DEFAULT_ROWS,
@@ -9,9 +8,9 @@ import {
   MAP_ZOOM_MAX,
   MAP_ZOOM_MIN,
 } from '../constants';
-import { IMapDocument, IMapLayout, IMapLayoutOptions } from '../types';
+import { IMapLayout, IMapLayoutOptions } from '../types';
 
-// 布局的纯函数：把「文档格尺寸 + 缩放 + 视口格数」算成格像素、画布像素与右栏宽度。
+// 布局的纯函数：把「缩放 + 视口格数 + 可用宽度」算成格像素、画布像素与右栏宽度。
 // 这一层不 import React / Pixi / editor-core，也不读 window / document 全局；视图层只照结果摆位置。
 
 /**
@@ -47,35 +46,40 @@ function resolveViewportCount(value: number | undefined, fallback: number): numb
 }
 
 /**
- * 把文档格尺寸、缩放与视口格数算成画布像素、格像素与右栏宽度
+ * 把缩放、视口格数与可用宽度算成画布像素、格像素与右栏宽度
  *
- * 格像素 = 文档格尺寸 × 缩放（与渲染模型同一个 `zoom`，两边得到同一个格像素）；
- * 视口格数缺省取 `MAP_VIEWPORT_DEFAULT_COLUMNS` / `MAP_VIEWPORT_DEFAULT_ROWS`，非法时同样回退；
- * 右栏宽度 = `clamp(round(基准宽度 / 缩放), 最小, 最大)`，保证素材区永远不会被挤到不可用。
+ * 画布 = 视口格数 × `MAP_DISPLAY_CELL_SIZE` × 缩放，与地图文档自己声明的格尺寸完全无关（D-39）；
+ * 那对声明值只用于素材切分与数据本身。缩放是整张画布的等比倍率，屏幕格像素 = 32 × 缩放。
+ * 可用宽度只决定素材区多宽：素材区拿「可用宽度 − 画布宽」，只有最小 240、**没有上限**（D-41 修订）；
+ * 量不到可用宽度时回退到 `MAP_PALETTE_BASE_WIDTH`。`MAP_VIEWPORT_DEFAULT_*` 只是视图状态缺值时的兜底。
  * 本函数只吃入参：不读取窗口宽度，也不做任何 DOM 测量。
- * @param document 中立文档（只用 cellWidth / cellHeight）
- * @param options 缩放倍率与可选的视口格数、右栏基准宽度
- * @returns 视口格数、格像素、画布像素与右栏宽度
+ * @param options 缩放倍率、可选的视口格数与视图量到的可用宽度
+ * @returns 视口格数、整体倍率、格像素、画布像素与地图区 / 素材区宽度
  */
-export function resolveMapLayout(document: IMapDocument, options: IMapLayoutOptions): IMapLayout {
-  const zoom = clampZoom(options.zoom);
+export function resolveMapLayout(options: IMapLayoutOptions): IMapLayout {
+  const renderScale = clampZoom(options.zoom);
   const viewportColumns = resolveViewportCount(options.viewportColumns, MAP_VIEWPORT_DEFAULT_COLUMNS);
   const viewportRows = resolveViewportCount(options.viewportRows, MAP_VIEWPORT_DEFAULT_ROWS);
-  const cellWidth = resolvePositive(document.cellWidth, MAP_CELL_SIZE) * zoom;
-  const cellHeight = resolvePositive(document.cellHeight, MAP_CELL_SIZE) * zoom;
-  const paletteBaseWidth = resolvePositive(options.paletteBaseWidth, MAP_PALETTE_BASE_WIDTH);
-  const paletteWidth = Math.min(
-    MAP_PALETTE_MAX_WIDTH,
-    Math.max(MAP_PALETTE_MIN_WIDTH, Math.round(paletteBaseWidth / zoom)),
-  );
+  const cellWidth = MAP_DISPLAY_CELL_SIZE * renderScale;
+  const cellHeight = MAP_DISPLAY_CELL_SIZE * renderScale;
+  const canvasWidth = viewportColumns * cellWidth;
+  const canvasHeight = viewportRows * cellHeight;
+  const availableWidth = resolvePositive(options.availableWidth, 0);
+  const paletteWidth =
+    availableWidth > 0
+      ? Math.max(MAP_PALETTE_MIN_WIDTH, availableWidth - canvasWidth)
+      : MAP_PALETTE_BASE_WIDTH;
+  const mapPaneWidth = availableWidth > 0 ? availableWidth - paletteWidth : canvasWidth;
 
   return {
     viewportColumns,
     viewportRows,
+    renderScale,
     cellWidth,
     cellHeight,
-    canvasWidth: viewportColumns * cellWidth,
-    canvasHeight: viewportRows * cellHeight,
+    canvasWidth,
+    canvasHeight,
     paletteWidth,
+    mapPaneWidth,
   };
 }

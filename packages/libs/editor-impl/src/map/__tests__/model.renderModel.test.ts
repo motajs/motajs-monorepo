@@ -13,6 +13,7 @@ import {
   MapTileCategory,
 } from '../types';
 import { createMapDocument, createSizedTileGroup, createTileGroup, createWideMapDocument } from './fixtures';
+import { resolveMapLayout } from '../model/layout';
 import { IMapRenderView, buildMapRenderModel } from '../model/renderModel';
 
 /**
@@ -368,8 +369,8 @@ describe('buildMapRenderModel 大地图模式', () => {
 });
 
 describe('buildMapRenderModel 格度量', () => {
-  // 文档自带 48 × 24 格：模型带这对度量，64 × 64 素材 contain 到 24 × 24 并水平居中
-  it('按文档格尺寸给出度量与 contain 目标矩形', () => {
+  // 文档自报 48 × 24 也只是素材切分的依据：模型上报的显示格恒为 32 × 32
+  it('文档声明的格尺寸不进入模型度量', () => {
     const document = createMapDocument({
       cellWidth: 48,
       cellHeight: 24,
@@ -378,62 +379,114 @@ describe('buildMapRenderModel 格度量', () => {
     const model = buildMapRenderModel(document, createView({ width: 192, height: 72 }));
     const first = model.cells[0];
 
-    expect(model.cellWidth).toBe(48);
-    expect(model.cellHeight).toBe(24);
+    expect(model.renderScale).toBe(1);
+    expect(model.cellWidth).toBe(32);
+    expect(model.cellHeight).toBe(32);
     expect({ x: first.x, y: first.y, width: first.width, height: first.height }).toEqual({
-      x: 12,
+      x: 0,
       y: 0,
-      width: 24,
-      height: 24,
+      width: 32,
+      height: 32,
     });
   });
 
-  // 缩放只在模型顶部乘一次：32 的文档格在 150% 下是 48，素材同步缩到 48 × 48
-  it('把缩放乘进模型度量', () => {
+  // 150%：显示格仍是 32，倍率单独上报；屏幕格像素 = 32 × 1.5
+  it('把缩放作为整体倍率上报而不乘进格度量', () => {
     const document = createMapDocument({ tileGroups: [createSizedTileGroup({ cellWidth: 64, cellHeight: 64 })] });
     const model = buildMapRenderModel(document, createView({ width: 192, height: 144, zoom: 1.5 }));
     const first = model.cells[0];
 
-    expect(model.cellWidth).toBe(48);
-    expect(model.cellHeight).toBe(48);
+    expect(model.renderScale).toBe(1.5);
+    expect(model.cellWidth).toBe(32);
+    expect(model.cellHeight).toBe(32);
+    expect(model.cellWidth * (model.renderScale ?? 1)).toBe(48);
     expect({ x: first.x, y: first.y, width: first.width, height: first.height }).toEqual({
       x: 0,
       y: 0,
-      width: 48,
-      height: 48,
+      width: 32,
+      height: 32,
     });
   });
 
-  // 200% 下同一个文档格是 64，素材填满整格
-  it('把 200% 缩放乘进模型度量', () => {
+  // 200%：屏幕格 64，模型的显示格基准还是 32
+  it('200% 下屏幕格翻倍而模型格基准仍是 32', () => {
     const document = createMapDocument({ tileGroups: [createSizedTileGroup({ cellWidth: 64, cellHeight: 64 })] });
     const model = buildMapRenderModel(document, createView({ width: 256, height: 192, zoom: 2 }));
     const first = model.cells[0];
 
-    expect(model.cellWidth).toBe(64);
-    expect(model.cellHeight).toBe(64);
+    expect(model.renderScale).toBe(2);
+    expect(model.cellWidth).toBe(32);
+    expect(model.cellHeight).toBe(32);
+    expect(model.cellWidth * (model.renderScale ?? 1)).toBe(64);
     expect({ x: first.x, y: first.y, width: first.width, height: first.height }).toEqual({
       x: 0,
       y: 0,
-      width: 64,
-      height: 64,
+      width: 32,
+      height: 32,
     });
   });
 
-  // 大地图也给出格度量：模型上报文档格 × 缩放，而逐格内容交给缩略描述
-  it('大地图模式也给出格度量', () => {
+  // 大地图固定 renderScale = 1：缩略图已按画布像素算好，再乘一次就会溢出画布
+  it('大地图模式上报固定的格度量与倍率 1', () => {
     const document = createWideMapDocument(100, 50);
     const model = buildMapRenderModel(
       document,
       createView({ width: 400, height: 400, currentLayerId: 'layer-wide', bigMap: true, zoom: 2 }),
     );
 
-    expect(model.cellWidth).toBe(64);
-    expect(model.cellHeight).toBe(64);
+    expect(model.renderScale).toBe(1);
+    expect(model.cellWidth).toBe(32);
+    expect(model.cellHeight).toBe(32);
     expect(model.cells).toHaveLength(0);
     expect(model.thumbnail).toBeDefined();
   });
+
+  // 空模型（大地图但文档尺寸为 0）同样带 renderScale = 1
+  it('空模型也带倍率 1', () => {
+    const document = createMapDocument({ width: 0, height: 0 });
+    const model = buildMapRenderModel(document, createView({ width: 416, height: 416, bigMap: true }));
+
+    expect(model.renderScale).toBe(1);
+    expect(model.cells).toHaveLength(0);
+  });
 });
+
+describe('buildMapRenderModel 可见格数与缩放同源', () => {
+  // 13 × 13 的画布在 100% 下看到 13 列：竖直网格线 14 条（夹具放大到 16 × 16 才不会被文档裁掉）
+  it('100% 时 416 宽的画布看到 13 列', () => {
+    const document = createMapDocument({ cellWidth: 48, cellHeight: 48, width: 16, height: 16 });
+    const model = buildMapRenderModel(document, createView({ width: 416, height: 416 }));
+    const verticals = model.gridLines.filter((line) => line.vertical);
+
+    expect(model.renderScale).toBe(1);
+    expect(verticals).toHaveLength(14);
+  });
+
+  // 同样 416 宽的画布在 200% 下只看到 7 列：竖直网格线 8 条
+  it('200% 时同一块画布只看到 7 列', () => {
+    const document = createMapDocument({ cellWidth: 48, cellHeight: 48, width: 16, height: 16 });
+    const model = buildMapRenderModel(document, createView({ width: 416, height: 416, zoom: 2 }));
+    const verticals = model.gridLines.filter((line) => line.vertical);
+
+    expect(model.renderScale).toBe(2);
+    expect(verticals).toHaveLength(8);
+  });
+
+  // 布局与渲染模型同源：屏幕格像素 = 模型格基准 × 模型倍率
+  it('布局的格像素等于模型格基准乘倍率', () => {
+    const layout = resolveMapLayout({ zoom: 1.5 });
+    const document = createMapDocument();
+    const model = buildMapRenderModel(
+      document,
+      createView({ width: layout.canvasWidth, height: layout.canvasHeight, zoom: 1.5 }),
+    );
+
+    expect(layout.canvasWidth).toBe(624);
+    expect(model.renderScale).toBe(layout.renderScale);
+    expect(model.cellWidth * (model.renderScale ?? 1)).toBe(layout.cellWidth);
+  });
+});
+
 
 describe('buildMapRenderModel 动画帧', () => {
   // 逐行扫描的动画只给帧轴 / 步长 / 帧数 / 行格数，不把 255 个矩形塞进模型
