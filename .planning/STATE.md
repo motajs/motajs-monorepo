@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.1"
 current_phase_name: 地图渲染与布局重做
-current_plan: 18
+current_plan: 19
 status: executing
-stopped_at: Completed 04.1-17-PLAN.md
-last_updated: "2026-10-25T07:08:40.170Z"
+stopped_at: Completed 04.1-18-PLAN.md
+last_updated: "2026-10-25T07:29:24.328Z"
 last_activity: 2026-10-25
 last_activity_desc: Phase 3 complete, transitioned to Phase 4
-state_head: 0988bc093b12506d8d813c88e058b481230ebcf1
+state_head: 7fd95dd98460f7641f82979cda193abc557ba5a1
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 146
-  completed_plans: 137
+  completed_plans: 138
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,10 +30,10 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 04.1 (地图渲染与布局重做) — EXECUTING
-Current Plan: 18
+Current Plan: 19
 Total Plans in Phase: 24
-Status: Executing — 04.1-17 complete, ready for 04.1-18
-Last activity: 2026-10-25 — 04.1-17 complete (32 基准与面板视口宽高声明 + 命名确认)
+Status: Executing — 04.1-18 complete, ready for 04.1-19
+Last activity: 2026-10-25 — 04.1-18 complete (自动保存契约：串行切换链 + 关闭/替换前落盘)
 
 Progress: [███████░░░] 71%
 
@@ -155,6 +155,7 @@ Progress: [███████░░░] 71%
 | Phase 04.1 P14 | 12min | 2 tasks | 5 files |
 | Phase 04.1 P15 | 35min | 2 tasks | 15 files |
 | Phase 04.1 P17 | 38min | 2 tasks | 7 files |
+| Phase 4.1 P18 | 8min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -395,6 +396,9 @@ Recent decisions affecting current work:
 - [Phase 04.1]: 04.1-17: 显示格以 32x32 为基准（MAP_DISPLAY_CELL_SIZE），与文档格尺寸 MAP_CELL_SIZE 分开命名；缩放只剩整体倍率 renderScale（D-39）
 - [Phase 04.1]: 04.1-17: 地图区宽/高改为面板参数（onSetViewportSize / viewportColumns / viewportRows，范围 1-64），宿主注入只作初始默认值；素材区基准 320 / 最小 240 / 没有最大宽度，MAP_PALETTE_MAX_WIDTH=520 是 Plan 19 要删的过渡常量（D-40 / D-41 修订）
 - [Phase 04.1]: 04.1-17: 顶栏只读标签显示文档声明的格尺寸（cellWidth/cellHeight + MAP_CELL_SIZE_LABEL），格式固定为 图格尺寸：{cellWidth}px * {cellHeight}px，不影响地图区大小（D-42）
+- [Phase 04.1]: 04.1-18: 落盘点只留 IEditorPanel.onSwitchOut 一个，onBeforeClose 不再询问未保存（D-37）；串行链放 ShellSystem 内部，不新增接口成员、activateTab 保持同步签名
+- [Phase 04.1]: 04.1-18: closePanelInstance 在 dispose() 之前统一 await 未结算的落盘，标签替换 / 注销面板类型 / 释放 core 三条路径自动覆盖
+- [Phase 04.1]: 04.1-18: 外壳不给落盘加超时（T-4.1-18-02 取 accept）——写入的失败与超时归各面板资源层，外壳加超时会误杀正常慢写入
 
 ### Pending Todos
 
@@ -422,6 +426,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-25T07:08:39.531Z
-Stopped at: Completed 04.1-17-PLAN.md
+Last session: 2026-10-25T07:29:23.858Z
+Stopped at: Completed 04.1-18-PLAN.md
 Resume file: None
