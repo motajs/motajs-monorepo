@@ -127,7 +127,8 @@
 | `IMapToolbarProps.onSetZoom` | 方法成员（可选） | 工具栏缩放滑块松手后的发布回调 |
 | `MAP_VIEWPORT_DEFAULT_COLUMNS` / `MAP_VIEWPORT_DEFAULT_ROWS` | 常量 `13` | 默认地图视口格数（允许宿主配置成长方形） |
 | `MAP_ZOOM_MIN` / `MAP_ZOOM_MAX` / `MAP_ZOOM_DEFAULT` / `MAP_ZOOM_STEP` | 常量 | `0.5` / `2` / `1` / `0.05` |
-| `MAP_PALETTE_BASE_WIDTH` / `MAP_PALETTE_MIN_WIDTH` / `MAP_PALETTE_MAX_WIDTH` | 常量 | 右栏基准宽度 / 最小可用宽度 / 最大宽度 |
+| `MAP_PALETTE_BASE_WIDTH` / `MAP_PALETTE_MIN_WIDTH` | 常量 | 右栏基准宽度（量不到可用宽度时的回退值）/ 最小可用宽度；素材区**没有最大宽度** |
+| `MAP_PALETTE_MAX_WIDTH` | 常量（**过渡**） | 旧布局代码的过渡常量；Plan 19 删除，素材区不设上限 |
 | `MAP_FRAME_SPEED_DEFAULT` | 常量 `300` | 动画默认帧速（毫秒 / 帧） |
 | `MAP_FRAME_LIMIT` | 常量 `255` | 单个图块的最大帧数（D-08） |
 | `MAP_THUMBNAIL_MAX_SIZE` | 常量 `512` | 缩略纹理的边长上限（降采样用） |
@@ -424,7 +425,8 @@
 | `IMapLayout.renderScale` | **新增**可选字段（`types.ts`，Plan 19 收紧为必填） | 布局算出的整体渲染缩放，与渲染模型同源 |
 | `IMapLayout.mapPaneWidth` | **新增**可选字段（`types.ts`，Plan 19 收紧为必填） | 左列（地图区）的像素宽；右列宽仍叫 `paletteWidth`，两列之和即可用宽度（D-41） |
 | `IMapLayoutOptions.availableWidth` | **新增**可选字段（`types.ts`） | 视图量到的可用宽度（面板根元素，像素）；缺省或 ≤ 0 时素材区回退到 `MAP_PALETTE_BASE_WIDTH`（D-41） |
-| `MAP_PALETTE_BASE_WIDTH` / `MAP_PALETTE_MIN_WIDTH` / `MAP_PALETTE_MAX_WIDTH` | 常量**改值**（240 / 160 / 360 → 320 / 240 / 520） | 素材区基准更大、上下限更宽（D-41 / U-06 的「素材区要大一些」） |
+| `MAP_PALETTE_BASE_WIDTH` / `MAP_PALETTE_MIN_WIDTH` | 常量**改值**（240 / 160 → 320 / 240） | 素材区基准更大、最小更宽；**素材区没有最大宽度**（D-41 修订 / U-06 的「素材区要大一些」） |
+| `MAP_PALETTE_MAX_WIDTH` | 常量**过渡**（`360` → `520`） | 只为让既有 `model/layout.ts` 的 `Math.min(...)` 继续编译；Plan 19 删除它并取消上限（D-41 修订） |
 | `MAP_VIEWPORT_MIN_COUNT` / `MAP_VIEWPORT_MAX_COUNT` | **新增**常量（1 / 64） | 面板上「地图区宽 / 高」两个数字框的取值范围（D-40） |
 | `IMapPanelViewState.viewportColumns` / `.viewportRows` | 语义修订（JSDoc，签名不变） | 从「宿主注入的视口格数」改为「地图区宽 / 高（格数），面板控件可改，初值来自宿主注入」（D-40） |
 | `IMapEditorCapabilities.viewportColumns` / `.viewportRows` | 语义修订（JSDoc，签名不变；该接口在代码里就叫 `IMapEditorCapabilities`，与 §Plan 01 一致） | 只作**初始默认值**，不再是可见格数的驱动器（D-40） |
@@ -460,11 +462,12 @@
 
 | 名称 | 种类 | 用途 |
 |------|------|------|
-| `resolveMapLayout(options)` | 自由函数（改造，`model/layout.ts`） | 去掉文档入参；吃「缩放 + 视口格数 + 可用宽度」，产出 `renderScale`、格像素（32 × 缩放）、画布像素、`mapPaneWidth`、`paletteWidth`（D-39 / D-41） |
+| `resolveMapLayout(options)` | 自由函数（改造，`model/layout.ts`） | 去掉文档入参；吃「缩放 + 视口格数 + 可用宽度」，产出 `renderScale`、格像素（32 × 缩放）、画布像素、`mapPaneWidth`、`paletteWidth`；素材区 = 可用宽度 − 画布宽，**只有最小 240、没有上限**（D-39 / D-41 修订） |
 | `buildMapRenderModel` | 自由函数（改造，`model/renderModel.ts`） | 格像素 = `MAP_DISPLAY_CELL_SIZE`（不含缩放）；可见格数用「格像素 × `renderScale`」算；三条返回路径都带 `renderScale`（大地图恒为 1） |
 | `buildCanvasCellMetrics` | 自由函数（改造，`MapCanvas.tsx`） | 命中测试用的**屏幕**格像素 = `MAP_DISPLAY_CELL_SIZE × renderScale`（D-39） |
 | `useMapElementWidth` | hook（新文件 `components/useMapElementWidth.ts`） | 量面板根元素的可用宽度（`ResizeObserver` + `getBoundingClientRect`）；量不到返回 0，素材区回退到基准宽度（D-41）。只量宽度：画布高度已经由「格数 × 32 × 缩放」决定 |
-| `MAP_CANVAS_GUTTER_X` | **新增**常量（`constants.ts`，值 20） | 画布左侧标尺占用的像素，从可用宽度里扣掉才是素材区能用的宽度。**不新增** `MAP_CANVAS_GUTTER_Y`：画布高度由格数与缩放决定，不需要从可用高度里扣 |
+| `MAP_PALETTE_MAX_WIDTH` | 常量（**删除**） | Plan 17 的过渡常量；本计划删除，素材区从此没有上限（D-41 修订） |
+| `MAP_CANVAS_GUTTER_X` | **不新增** | 右栏拿剩余宽度（可用宽度 − 画布宽），不另扣标尺宽度；标尺的 20px 内边距仍由 `MapCanvas` 自己的 `RULER_SIZE` 负责 |
 | `IMapRenderModel.renderScale` / `IMapLayout.renderScale` / `IMapLayout.mapPaneWidth` | 由可选**收紧为必填** | 收敛到「渲染模型与布局必须自带倍率」 |
 | `IMapCanvasProps.viewportColumns` / `.viewportRows` | 删除 | 画布尺寸改由模型给出 |
 | `IMapPanelView` 顶层的布局计算 | 实现约定（不新增名字） | 用 `map-panel` 根元素的实测宽度算一次 `resolveMapLayout`，把结果同时给 `emap-side` 宽度与画布；不再在 `renderReadyBody` 里各自再算一次 |
@@ -479,7 +482,7 @@
 |------|------|------|
 | `.emap-columns` | CSS 类（新） | 顶栏下方的一行容器：左列 `emap-main` + 右列 `emap-side` |
 | `.emap-panel` | CSS 类（改） | 从「横向两列」改为「纵向：顶栏 + 一行两列」 |
-| `.emap-main` / `.emap-side` / `.emap-body` / `.emap-canvas-area` / `.emap-canvas-scroll` | CSS 类（改） | 左列占满剩余高度、右列通高；去掉会把画布顶住的固定高度与多余留白（画布尺寸固定，多出来的空间留在地图区一侧） |
+| `.emap-main` / `.emap-side` / `.emap-body` / `.emap-canvas-area` / `.emap-canvas-scroll` | CSS 类（改） | 左列占满剩余高度、右列通高；`.emap-side` 宽度取 `layout.paletteWidth`（剩余宽度，只有最小 240、没有上限）；去掉会把画布顶住的固定高度与多余留白（画布尺寸固定，多出来的空间留在地图区一侧） |
 | `.emap-category-nav` / `.emap-category-item` | CSS 类（改） | 分类导航横排、`space-between`、自动换行（D-32） |
 | `.emap-category-row` | CSS 类（可选，新） | 横排时把「五个普通分类」与「Tileset 开关」分成两组；只有在确实需要分组换行时才新增，不新增就不要出现在代码里 |
 | `map-columns` | `data-test-id`（新） | 顶栏下的两列容器；测试据此断言「顶栏在列容器之外」 |
@@ -487,6 +490,7 @@
 | `map-viewport-size` / `map-viewport-columns` / `map-viewport-rows` | `data-test-id`（新） | 两个数字框的容器与各自输入框；测试据此断言默认 13×13 与改值生效 |
 | `.emap-cell-size` | CSS 类（新） | 顶栏里那个只读的图格尺寸标签：与 `.emap-toolbar-label` 同色同字号、`flex: 0 0 auto`、`white-space: nowrap` |
 | `map-cell-size` | `data-test-id`（新） | 顶栏图格尺寸标签本体；测试据此断言 `图格尺寸：32px * 32px`、`图格尺寸：48px * 48px`，以及换图后文案跟着变（D-42） |
+| `map-sidebar` 宽度断言 | 测试约定（改） | 素材区拿剩余宽度：可用 1200 → 784、2000 → 1584（无上限），600 → 240（只有最小生效）；不再有 520 上限期望（D-41 修订） |
 | `?mapViewport=wide` | 删除（`editor-dev/src/main.tsx`） | 视口宽高改由面板控件决定，宿主注入只作初始默认值（D-40） |
 
 ---
@@ -544,6 +548,7 @@
 | 名称 | 种类 | 用途 |
 |------|------|------|
 | `04.1-24-SUMMARY.md` | 文件（新） | 每条门禁的命令 / 退出码 / 摘要行 + 九条人工判据的结论与证据 |
+| 第 1 条人工判据补充 | 验收约定（改） | 窗口拉宽（或缩放调小）时素材区跟着变宽、**没有上限**（明显超过 520），而地图始终是 13×13 × 32 × 缩放（D-41 修订） |
 | `04.1-16-PLAN.md` | 保持未完成 | 机器门禁证据保留；人工验收判据由本计划取代（D-38） |
 
 ---
@@ -565,7 +570,7 @@
 | OQ9 缩放是否影响素材区图标 | **已定（研究结论）** | 不影响；图标固定 32px，只改右栏宽度。 |
 | OQ10 收藏拖拽 vs 上下按钮 | **已定（研究结论）** | 先做指针拖拽；jsdom 下不可靠时保留「上移 / 下移」按钮（D-19 允许）。 |
 | OQ11 收藏排序是否保留上下按钮 | **已定（用户，UAT 修订）** | 不保留：只做拖拽，删除上下按钮（D-33 覆盖 OQ10 的后半句）。 |
-| OQ12 缩放升高时左右两栏往哪边让 | **已定（用户，第二轮：方向 A）** | 缩放升高 → 地图区变宽、内容同比变大；素材区拿剩余宽度（基准 320 / 最小 240 / 最大 520）（D-41）。不再有「左列占比」这种按比例分栏的算法。 |
+| OQ12 缩放升高时左右两栏往哪边让 | **已定（用户，第二轮：方向 A；第三轮修订：素材区无上限）** | 缩放升高 → 地图区变宽、内容同比变大；素材区拿剩余宽度（基准 320 / 最小 240，**没有最大宽度**）（D-41 修订）。不再有「左列占比」这种按比例分栏的算法。 |
 | OQ13 仓库外的 `autotile1.png` 怎么进 CI | **已定（研究结论）** | 复制一份到 `packages/apps/editor-dev/src/demo/assets/autotile1.png` 并以 `?inline` 导入（仓库已有同样做法的先例：`assetDemo.ts` 的字体）；不引用仓库外路径。 |
 | OQ14 宿主注入的 `viewportColumns/viewportRows`（含 `?mapViewport=wide`）还有没有用 | **已定（用户，第二轮）** | 只作**初始默认值**；可见格数由面板上的「地图区宽 / 高」决定，且不再有任何查询参数路径——`?mapViewport=wide` 整条删除（D-40）。 |
 | OQ15 地图区尺寸以什么为基准 | **已定（用户，第二轮）** | 以 **32×32** 为基准：画布 = 格数 × 32 × 缩放，与地图声明的 `cellWidth/cellHeight` 无关；声明格尺寸仍用于素材切分、`contain` 的源尺寸与文档数据（D-39）。 |
@@ -577,6 +582,6 @@
 1. **中立图块目录的最终形状**（`IMapTileGroup` 的 `category/read/cellWidth/cellHeight/frames/autotile/tileset`，`IMapTileEntry` 删除 `crop`）—— **one-way**：这是宿主与编辑器的数据契约，改形状要迁移每个宿主实现。
 2. **`.editor/map-tiles.json` 的路径与字段**（`recent` / `frequent` / `favorites`，`favorites` 固定 9 格、`1` 键为擦除）—— **costly**：文件一旦写入用户项目，改路径 / 字段要迁移。
 3. **接口归属与收紧节奏**（策略编号 **P-01**，规划器提案、不在 CONTEXT.md 的 D-01…D-29 里）—— **reversible**：全部新成员只在 Plan 01 声明（可选），实现计划只消费，Plan 15 单列收紧；决定计划顺序，不影响运行时行为。
-4. **布局常量**（地图区宽高默认 13×13、范围 1–64，50–200% 缩放，显示格基准 32，右栏基准 / 最小 / 最大宽度 320 / 240 / 520）—— **costly**：会被面板、画布、素材区共同消费（D-39 / D-40 / D-41）。
+4. **布局常量**（地图区宽高默认 13×13、范围 1–64，50–200% 缩放，显示格基准 32，右栏基准 320 / 最小 240，**没有最大宽度**）—— **costly**：会被面板、画布、素材区共同消费（D-39 / D-40 / D-41）。
 5. **全部新增命名**（文件 / 类型 / 方法 / 常量 / CSS 类 / `data-test-id`）—— **reversible**：改名只需同步本文件与计划。
 6. **顶栏图格尺寸标签的文案与格式**（`图格尺寸：{cellWidth}px * {cellHeight}px`，数字取自文档声明的 `cellWidth` / `cellHeight`；全角冒号，`*` 两侧各一个空格）—— **reversible**：纯显示文案（D-42）。
