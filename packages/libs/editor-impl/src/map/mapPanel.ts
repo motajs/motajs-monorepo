@@ -74,7 +74,6 @@ import {
   MapPanelStatus,
   MapTileCategory,
   MapUndoType,
-  MapUnsavedChoice,
 } from './types';
 
 // 地图面板的数据层：打开宿主给的地图、把落笔留在内存、点保存才把整份数据域交回宿主。
@@ -142,17 +141,6 @@ function isSafeProjectPath(path: string): boolean {
 }
 
 /**
- * 深拷贝一份中立文档：只复制会被继续编辑的图层几何，图块目录原样沿用
- * @param document 待拷贝的文档
- * @returns 图层与格子都不共享引用的新文档
- */
-function cloneMapDocument(document: IMapDocument): IMapDocument {
-  const layers = document.layers.map((layer) => ({ ...layer, cells: layer.cells.map((row) => [...row]) }));
-
-  return { ...document, layers };
-}
-
-/**
  * 判断一个值是否为非空、非数组的普通对象
  * @param value 待判断的值
  * @returns 是普通对象时为 true
@@ -195,9 +183,6 @@ function nameLastLayer(document: IMapDocument, layerName: string): IMapDocument 
 
   return { ...document, layers };
 }
-
-/** 未保存确认的结算函数：把「继续 / 取消」交回等待方 */
-type UnsavedDecisionResolver = (value: boolean) => void;
 
 interface IMapBarrierData {
   /** 这次屏障对应的动作 */
@@ -394,12 +379,6 @@ export class MapPanel implements IEditorPanel, IMapPanel {
   /** 是否正在等宿主创建地图 / 新增图层；此时不允许关闭弹窗 */
   private creating: boolean = false;
 
-  /** 未保存确认弹窗的结算函数；没有待决询问时为 undefined */
-  private pendingUnsavedResolve?: UnsavedDecisionResolver;
-
-  /** 未保存确认弹窗等待中的结果；没有待决询问时为 undefined */
-  private pendingUnsavedPromise?: Promise<boolean>;
-
   /** 最近使用读取的序号，用来丢弃晚到的结果，避免刚画的一笔被早先的读取覆盖 */
   private recentToken: number = 0;
 
@@ -515,9 +494,6 @@ export class MapPanel implements IEditorPanel, IMapPanel {
         onSetViewport: (left, top): void => this.setViewport(left, top),
         onCreateMap: (request): Promise<void> => this.createMap(request),
         onAddLayer: (layerName): Promise<void> => this.addLayer(layerName),
-        onUnsavedDecision: (choice): void => {
-          void this.resolveUnsavedDecision(choice);
-        },
         onPropertyChange: (path, value): void => this.commitProperty(path, value),
         onPropertiesRetry: (): void => {
           void this.loadProperties();
@@ -640,15 +616,20 @@ export class MapPanel implements IEditorPanel, IMapPanel {
 
   /**
    * 按宿主返回重读当前地图；失败时保留内存文档，不把用户改动换成错误页
+   *
+   * 读盘期间用户若已经动过文档（落笔 / 撤销都会换出新的文档对象），这次刷新直接丢弃：
+   * 迟到的读盘结果不能覆盖内存里的改动，也不能把保存中的基线换回旧内容。
    * @param mapId 当前地图标识
    */
   private async refreshOpenedMap(mapId: string): Promise<void> {
     const token = ++this.loadToken;
+    const opened = this.document;
 
     try {
       const document = await this.capabilities.openMap(mapId);
 
       if (token !== this.loadToken) return;
+      if (this.document !== opened) return;
       if (!isMapDocumentValid(document)) return;
 
       this.document = document;
@@ -666,19 +647,6 @@ export class MapPanel implements IEditorPanel, IMapPanel {
     } catch {
       return;
     }
-  }
-
-  /**
-   * 结算一次未保存询问：先清掉待决状态再回答，重复点击不会二次结算
-   * @param value 为 true 表示继续原操作
-   */
-  private settleUnsavedDecision(value: boolean): void {
-    const resolve = this.pendingUnsavedResolve;
-
-    this.pendingUnsavedResolve = undefined;
-    this.pendingUnsavedPromise = undefined;
-
-    if (resolve !== undefined) resolve(value);
   }
 
   /**
@@ -740,88 +708,15 @@ export class MapPanel implements IEditorPanel, IMapPanel {
   }
 
   /**
-   * 有未保存改动时先问一句；没有改动时直接放行
-   * @returns 为 true 表示可以继续原操作
-   */
-  requestUnsavedDecision(): Promise<boolean> {
-    if (!this.isDirty()) return Promise.resolve(true);
-
-    const pending = this.pendingUnsavedPromise;
-
-    if (pending !== undefined) return pending;
-
-    const promise = new Promise<boolean>((resolve) => {
-      this.pendingUnsavedResolve = resolve;
-    });
-
-    this.pendingUnsavedPromise = promise;
-    this.openDialog(MapDialogKind.Unsaved);
-
-    return promise;
-  }
-
-  /**
-   * 未保存弹窗三个按钮的唯一承接方法：视图只把用户按了哪个交上来
-   * @param choice 用户选择的动作
-   */
-  async resolveUnsavedDecision(choice: MapUnsavedChoice): Promise<void> {
-    if (this.pendingUnsavedResolve === undefined) return;
-
-    if (choice === MapUnsavedChoice.Cancel) {
-      this.closeDialog();
-      this.settleUnsavedDecision(false);
-      return;
-    }
-
-    if (choice === MapUnsavedChoice.Discard) {
-      await this.requestDiscard();
-      this.closeDialog();
-      this.settleUnsavedDecision(true);
-      return;
-    }
-
-    const saved = await this.save();
-
-    if (!saved) return;
-
-    this.closeDialog();
-    this.settleUnsavedDecision(true);
-  }
-
-  /**
-   * 放弃内存改动：用最近基线覆盖文档与属性，并登记一条屏障
+   * 外壳在关闭标签前先保存：成功才允许关闭，失败保留标签并把错误交给提示行
    *
-   * 覆盖的是深拷贝，之后继续编辑不会改到基线本身；没有基线时退回空状态。
-   */
-  async requestDiscard(): Promise<void> {
-    const baseline = this.dataBaseline;
-    const propertiesBaseline = this.propertiesBaseline;
-
-    this.document = baseline === undefined ? undefined : cloneMapDocument(baseline);
-    this.properties = propertiesBaseline === undefined ? {} : cloneProperties(propertiesBaseline);
-    this.publish({
-      document: this.document,
-      currentLayerId: this.currentLayerId,
-      selection: undefined,
-      preview: undefined,
-      hover: undefined,
-    });
-    this.refreshUnsaved();
-    this.refreshPropertyRows();
-    this.refreshPassMarks();
-    this.registerBarrier({ action: MapBarrierAction.Discard, mapId: this.document?.id ?? '' });
-  }
-
-  /**
-   * 外壳在关闭标签前询问：有未保存改动时等用户决定，出错按取消关闭处理
+   * 还没有打开任何地图时没有可保存的内容，直接放行，避免空面板的标签关不掉。
    * @returns 允许关闭时为 true
    */
   async onBeforeClose(): Promise<boolean> {
-    try {
-      return await this.requestUnsavedDecision();
-    } catch {
-      return false;
-    }
+    if (this.document === undefined) return true;
+
+    return await this.save();
   }
 
   /**
@@ -860,7 +755,7 @@ export class MapPanel implements IEditorPanel, IMapPanel {
       return;
     }
 
-    if (!(await this.requestUnsavedDecision())) return;
+    if (this.isDirty() && !(await this.save())) return;
 
     this.creating = true;
     const token = ++this.loadToken;
@@ -939,7 +834,7 @@ export class MapPanel implements IEditorPanel, IMapPanel {
       return;
     }
 
-    if (!(await this.requestUnsavedDecision())) return;
+    if (this.isDirty() && !(await this.save())) return;
 
     this.creating = true;
     const token = ++this.loadToken;
@@ -1444,7 +1339,7 @@ export class MapPanel implements IEditorPanel, IMapPanel {
   /**
    * 读取并打开一张地图；渲染模型留给视图现算
    *
-   * 有未保存改动时先问一句；取消则保持当前地图不动。每次继续都递增请求序号，晚到的旧结果直接丢弃；
+   * 换图前先保存：保存失败就停在原地图，当前地图与改动都保留。每次继续都递增请求序号，晚到的旧结果直接丢弃；
    * 切换地图成功后在撤销栈上留一条屏障，避免上一张图的撤销记录作用到新图上。
    * @param mapId 地图标识
    */
@@ -1453,11 +1348,7 @@ export class MapPanel implements IEditorPanel, IMapPanel {
 
     if (mapId === previousMapId) return;
 
-    if (this.isDirty()) {
-      const decision = await this.requestUnsavedDecision();
-
-      if (!decision) return;
-    }
+    if (this.isDirty() && !(await this.save())) return;
 
     const token = ++this.loadToken;
 
@@ -1807,7 +1698,6 @@ export class MapPanel implements IEditorPanel, IMapPanel {
   async initialize(): Promise<void> {}
 
   async dispose(): Promise<void> {
-    this.settleUnsavedDecision(false);
     this.creating = false;
     this.document = undefined;
     this.currentLayerId = undefined;
@@ -1833,7 +1723,12 @@ export class MapPanel implements IEditorPanel, IMapPanel {
     await this.refreshOpenedMap(document.id);
   }
 
-  async onSwitchOut(): Promise<void> {}
+  /**
+   * 切走面板时把未落盘的改动写回宿主；失败时错误已经由 `publish({ error })` 显示在提示行
+   */
+  async onSwitchOut(): Promise<void> {
+    await this.save();
+  }
 
   async onUpdateResource(): Promise<void> {}
 }

@@ -27,12 +27,11 @@ import {
   MapDialogKind,
   MapPanelStatus,
   MapTileCategory,
-  MapUnsavedChoice,
 } from '../types';
 import { MapCanvas } from './MapCanvas';
 import { MapBottomTabs } from './MapBottomTabs';
 import { MapFavoriteBar } from './MapFavoriteBar';
-import { MapLayerDialog, MapNewDialog, MapUnsavedDialog } from './dialogs';
+import { MapLayerDialog, MapNewDialog } from './dialogs';
 import { MapEmptyState } from './MapEmptyState';
 import { MapMaterialPanel } from './MapMaterialPanel';
 import { MapPropertiesDrawer } from './MapPropertiesDrawer';
@@ -157,11 +156,6 @@ export interface IMapPanelViewProps {
    * @returns 加层完成的异步结果
    */
   onAddLayer?(layerName: string): Promise<void>;
-  /**
-   * 把未保存弹窗里的选择交给面板
-   * @param choice 用户按下的按钮
-   */
-  onUnsavedDecision?(choice: MapUnsavedChoice): void;
   /**
    * 提交一个属性字段
    * @param path 字段路径段数组
@@ -659,14 +653,6 @@ export function MapPanelView(props: IMapPanelViewProps): ReactElement {
             await props.onAddLayer?.(layerName);
           }}
           onCancel={(): void => props.onCloseDialog?.()}
-        />
-      ) : null}
-      {view.dialog === MapDialogKind.Unsaved ? (
-        <MapUnsavedDialog
-          open
-          saving={view.saving}
-          saveError={view.error}
-          onUnsavedDecision={(choice): void => props.onUnsavedDecision?.(choice)}
         />
       ) : null}
       <MapPropertiesDrawer

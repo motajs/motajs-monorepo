@@ -55,17 +55,6 @@ export const enum MapDialogKind {
   New,
   /** 新增图层弹窗 */
   Layer,
-  /** 未保存改动确认弹窗 */
-  Unsaved,
-}
-
-export const enum MapUnsavedChoice {
-  /** 保存并继续原操作 */
-  SaveAndContinue,
-  /** 放弃内存改动并继续原操作 */
-  Discard,
-  /** 取消原操作，保持现状 */
-  Cancel,
 }
 
 export const enum MapGestureKind {
@@ -913,6 +902,6 @@ export interface IMapFavoriteBarProps {
    * @param to 目标槽位索引（0..8）
    */
   onReorder(from: number, to: number): void;
-  /** 排序是否禁用；为 true 时拖拽与上下按钮都不可用 */
+  /** 排序是否禁用；为 true 时拖拽不可用 */
   readonly reorderDisabled: boolean;
 }
