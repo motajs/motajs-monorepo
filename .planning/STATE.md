@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.1"
 current_phase_name: 地图渲染与布局重做
-current_plan: 23
+current_plan: 24
 status: executing
-stopped_at: Completed 04.1-22-PLAN.md
-last_updated: "2026-10-25T09:33:48.038Z"
+stopped_at: Completed 04.1-23-PLAN.md
+last_updated: "2026-10-25T10:04:50.643Z"
 last_activity: 2026-10-25
 last_activity_desc: Phase 3 complete, transitioned to Phase 4
-state_head: a929e1a365d6939b257e49f4febc0126c9b029a7
+state_head: 977ee74862924d6b069c4c0308404a5c49d90b14
 progress:
   total_phases: 9
   completed_phases: 5
   total_plans: 146
-  completed_plans: 142
+  completed_plans: 143
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,10 +30,10 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 04.1 (地图渲染与布局重做) — EXECUTING
-Current Plan: 23
+Current Plan: 24
 Total Plans in Phase: 24
-Status: Executing — 04.1-22 complete（快捷栏槽位键 / 底部只留缩略图 / 排序只留拖拽），ready for 04.1-23
-Last activity: 2026-10-25 — 04.1-22 complete（收藏格显示数字键位并加描边、最近 / 最常去掉编号、删掉上下按钮）
+Status: Executing — 04.1-23 complete（地图面板自动保存 + 删除未保存弹窗），ready for 04.1-24
+Last activity: 2026-10-25 — 04.1-23 complete（切走 / 关标签 / 换图前自动保存，保存失败留在原地；未保存弹窗整套删除；editor-impl 全量 949 条 0 失败）
 
 Progress: [███████░░░] 71%
 
@@ -160,6 +160,7 @@ Progress: [███████░░░] 71%
 | Phase 04.1 P20 | 23min | 3 tasks | 9 files |
 | Phase 04.1 P21 | 15min | 3 tasks | 9 files |
 | Phase 04.1 P22 | 22 | 3 tasks | 4 files |
+| Phase 04.1-map-render-layout P23 | 45min | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -416,6 +417,9 @@ Recent decisions affecting current work:
 - [Phase 04.1]: 收藏格描边用 inset box-shadow，不加外圈，避免与 .is-selected 的 2px 外圈打架
 - [Phase 04.1]: 底部图块格只画缩略图，title / aria-label 用图块名，名称缺失时回退「未知图块」而不泄漏编号
 - [Phase 04.1]: 收藏排序只保留拖拽，上移 / 下移按钮及其测试 id 全部删除，types.ts 未改
+- [Phase 04.1]: 地图面板切走 / 关标签 / 换图前一律先 save()，失败就留在原地并在提示行报错，不再弹未保存确认框
+- [Phase 04.1]: 换图路径用 isDirty() 短路：干净时同步继续，保住 openMap 立即发布 Loading 的时序
+- [Phase 04.1]: refreshOpenedMap 用文档对象身份判断读盘期间是否被改过，改过就丢弃迟到结果，避免覆盖用户改动
 
 ### Pending Todos
 
@@ -443,6 +447,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-25T09:33:47.575Z
-Stopped at: Completed 04.1-22-PLAN.md
+Last session: 2026-10-25T10:04:50.062Z
+Stopped at: Completed 04.1-23-PLAN.md
 Resume file: None
