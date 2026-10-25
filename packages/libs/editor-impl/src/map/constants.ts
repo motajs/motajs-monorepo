@@ -73,7 +73,7 @@ export const MAP_PALETTE_BASE_WIDTH = 320;
 /** 右侧素材栏的最小可用宽度（像素）；缩放到最大时也只压到这里 */
 export const MAP_PALETTE_MIN_WIDTH = 240;
 
-/** 右侧素材栏的最大宽度（像素）；上限 520 防止把地图区挤没 */
+/** 过渡：Plan 19 删除本常量并取消素材区上限（素材区拿剩余宽度，只有最小 240） */
 export const MAP_PALETTE_MAX_WIDTH = 520;
 
 /** 上下文未覆盖时使用的动画帧速（毫秒 / 帧） */
