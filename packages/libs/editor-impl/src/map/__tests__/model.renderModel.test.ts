@@ -487,7 +487,6 @@ describe('buildMapRenderModel 可见格数与缩放同源', () => {
   });
 });
 
-
 describe('buildMapRenderModel 动画帧', () => {
   // 逐行扫描的动画只给帧轴 / 步长 / 帧数 / 行格数，不把 255 个矩形塞进模型
   it('动画格带帧轴、帧步长、帧数与行格数', () => {
