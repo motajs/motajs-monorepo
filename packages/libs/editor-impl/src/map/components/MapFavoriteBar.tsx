@@ -1,4 +1,3 @@
-import { Button } from 'antd';
 import { CSSProperties, ReactElement, useState } from 'react';
 import { MAP_CELL_SIZE, MAP_FAVORITE_SLOT_COUNT } from '../constants';
 import { resolveFrameInfo, resolveFrameRect } from '../model/tileFrame';
@@ -13,11 +12,18 @@ import {
 
 // 地图底部的收藏栏：1 个擦除格 + 9 个收藏格。
 // 索引口径只在这里写一次：擦除格调 `onSelectSlot(0)`，第 i 个收藏格调 `onSelectSlot(i + 1)`；
-// 拖拽从第 i 格到第 j 格调 `onReorder(i, j)`，另有上移 / 下移按钮作为可访问替代。
+// 拖拽从第 i 格到第 j 格调 `onReorder(i, j)`，排序只保留拖拽，没有上移 / 下移按钮。
 // 每格都按「目录 + 图片地址 + 第 0 帧矩形」现算背景，空位留空格子；组件不读文件、不持久化。
+// 格子上写的数字是「按哪个数字键能选它」，不是图块编号。
 
 /** 擦除格的文案 */
 const ERASE_TEXT = '擦';
+
+/** 擦除格对应的数字键 */
+const ERASE_SLOT_KEY = '1';
+
+/** 第 i 个收藏格对应的数字键：依次是 `2`…`9`、`0`（与 `MapCanvas` 的键盘映射一致） */
+const MAP_FAVORITE_SLOT_KEYS: readonly string[] = ['2', '3', '4', '5', '6', '7', '8', '9', '0'];
 
 /** 编号在目录里的归属：素材组与图块条目 */
 interface IFavoriteTileLookup {
@@ -45,19 +51,11 @@ interface IFavoriteSlotProps {
   readonly style: CSSProperties;
   /** 该格是否为当前选中 */
   readonly selected: boolean;
-  /** 排序是否禁用 */
-  readonly reorderDisabled: boolean;
   /**
    * 选中该槽位
    * @param index 1..9 的收藏位索引（0 留给擦除格）
    */
   onSelect(index: number): void;
-  /**
-   * 把收藏从一格挪到另一格
-   * @param from 起始槽位索引（0..8）
-   * @param to 目标槽位索引（0..8）
-   */
-  onReorder(from: number, to: number): void;
   /**
    * 指针按在收藏格上，开始拖拽
    * @param index 起点槽位索引
@@ -201,14 +199,14 @@ function favoriteSlotLabel(index: number, number: number): string {
 }
 
 /**
- * 渲染一个收藏格：图块按钮 + 上移 / 下移按钮
+ * 渲染一个收藏格：图块按钮与键位角标
  * @param props 收藏格渲染输入
  * @returns 收藏格元素
  */
 function renderFavoriteSlot(props: IFavoriteSlotProps): ReactElement {
-  const className = props.selected ? 'emap-material-cell is-selected' : 'emap-material-cell';
-  const canMoveUp = !props.reorderDisabled && props.index > 0;
-  const canMoveDown = !props.reorderDisabled && props.index < MAP_FAVORITE_SLOT_COUNT - 1;
+  const className = props.selected
+    ? 'emap-material-cell emap-favorite-tile is-favorite is-selected'
+    : 'emap-material-cell emap-favorite-tile is-favorite';
 
   return (
     <div className="emap-favorite-slot" key={props.index} data-empty={String(props.number <= 0)}>
@@ -226,30 +224,10 @@ function renderFavoriteSlot(props: IFavoriteSlotProps): ReactElement {
         onPointerEnter={(): void => props.onDragOver(props.index)}
         onPointerUp={(): void => props.onDragEnd(props.index)}
       >
-        {props.number > 0 ? props.number : null}
+        <span className="emap-favorite-key" data-test-id={`map-favorite-key-${props.index}`}>
+          {MAP_FAVORITE_SLOT_KEYS[props.index]}
+        </span>
       </button>
-      <Button
-        size="small"
-        type="text"
-        autoInsertSpace={false}
-        data-test-id={`map-favorite-up-${props.index}`}
-        disabled={!canMoveUp}
-        aria-label={`${favoriteSlotLabel(props.index, props.number)} 上移`}
-        onClick={(): void => props.onReorder(props.index, props.index - 1)}
-      >
-        ↑
-      </Button>
-      <Button
-        size="small"
-        type="text"
-        autoInsertSpace={false}
-        data-test-id={`map-favorite-down-${props.index}`}
-        disabled={!canMoveDown}
-        aria-label={`${favoriteSlotLabel(props.index, props.number)} 下移`}
-        onClick={(): void => props.onReorder(props.index, props.index + 1)}
-      >
-        ↓
-      </Button>
     </div>
   );
 }
@@ -279,6 +257,9 @@ export function MapFavoriteBar(props: IMapFavoriteBarProps): ReactElement {
           onClick={(): void => props.onSelectSlot(0)}
         >
           {ERASE_TEXT}
+          <span className="emap-favorite-key" data-test-id="map-favorite-key-erase">
+            {ERASE_SLOT_KEY}
+          </span>
         </button>
       </div>
       {Array.from({ length: MAP_FAVORITE_SLOT_COUNT }, (_unused, index) => index).map((index) => {
@@ -291,9 +272,7 @@ export function MapFavoriteBar(props: IMapFavoriteBarProps): ReactElement {
           number,
           style: tileBackgroundStyle(lookup, url, frameRectOf(lookup)),
           selected: isFavoriteSelected(number, props.selection),
-          reorderDisabled: props.reorderDisabled,
           onSelect: props.onSelectSlot,
-          onReorder: props.onReorder,
           onDragStart: (from): void => {
             if (props.reorderDisabled) return;
 
