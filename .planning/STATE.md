@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.1"
 current_phase_name: 地图渲染与布局重做
-current_plan: 24
+current_plan: 26
 status: executing
-stopped_at: Completed 04.1-23-PLAN.md
-last_updated: "2026-10-25T10:04:50.643Z"
+stopped_at: Completed 04.1-25-PLAN.md
+last_updated: "2026-10-25T13:59:06.181Z"
 last_activity: 2026-10-25
-last_activity_desc: Phase 3 complete, transitioned to Phase 4
-state_head: 977ee74862924d6b069c4c0308404a5c49d90b14
+last_activity_desc: 04.1-25 complete（纯声明：MAP_RULER_SIZE=20；mapPaneWidth 口径改为「画布宽 + 标尺」；宿主目录新增 tilesetReserve / tilesetUnit；INTERFACE-NAME.md 七节命名表 + OQ16 + 确认清单第 7 条；两个包 typecheck 与 coreModuleState / coreEngineNeutral 全 exit 0；命名「全部可以」确认）
+state_head: 97b86d00073c4d4eb54455785e5abedfee1dc330
 progress:
   total_phases: 9
   completed_phases: 5
-  total_plans: 146
-  completed_plans: 143
+  total_plans: 153
+  completed_plans: 144
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,12 +30,12 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 04.1 (地图渲染与布局重做) — EXECUTING
-Current Plan: 24
-Total Plans in Phase: 24
-Status: Executing — 04.1-23 complete（地图面板自动保存 + 删除未保存弹窗），ready for 04.1-24
-Last activity: 2026-10-25 — 04.1-23 complete（切走 / 关标签 / 换图前自动保存，保存失败留在原地；未保存弹窗整套删除；editor-impl 全量 949 条 0 失败）
+Current Plan: 26
+Total Plans in Phase: 31
+Status: Executing — 04.1-25 complete（第四轮接口与命名：标尺常量 MAP_RULER_SIZE + Tileset 编号段参数 + 七节命名表；用户确认「全部可以」），ready for 04.1-26
+Last activity: 2026-10-25 — 04.1-25 complete（纯声明：MAP_RULER_SIZE=20；mapPaneWidth 口径改为「画布宽 + 标尺」；宿主目录新增 tilesetReserve / tilesetUnit；INTERFACE-NAME.md 七节命名表 + OQ16 + 确认清单第 7 条；两个包 typecheck 与 coreModuleState / coreEngineNeutral 全 exit 0；命名「全部可以」确认）
 
-Progress: [███████░░░] 71%
+Progress: [███████░░░] 74%
 
 ## Performance Metrics
 
@@ -161,6 +161,7 @@ Progress: [███████░░░] 71%
 | Phase 04.1 P21 | 15min | 3 tasks | 9 files |
 | Phase 04.1 P22 | 22 | 3 tasks | 4 files |
 | Phase 04.1-map-render-layout P23 | 45min | 2 tasks | 10 files |
+| Phase 04.1 P25 | 15min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -420,6 +421,9 @@ Recent decisions affecting current work:
 - [Phase 04.1]: 地图面板切走 / 关标签 / 换图前一律先 save()，失败就留在原地并在提示行报错，不再弹未保存确认框
 - [Phase 04.1]: 换图路径用 isDirty() 短路：干净时同步继续，保住 openMap 立即发布 Loading 的时序
 - [Phase 04.1]: refreshOpenedMap 用文档对象身份判断读盘期间是否被改过，改过就丢弃迟到结果，避免覆盖用户改动
+- [Phase 04.1]: 04.1-25：MAP_RULER_SIZE（20）成为标尺厚度的唯一来源，地图区宽度口径固定为「画布宽 + 标尺」（D-43）；画布本地的 RULER_SIZE 由计划 26 收敛
+- [Phase 04.1]: 04.1-25：宿主目录输入新增 tilesetReserve / tilesetUnit（缺省 100000 / 10000），编辑器仍只认目录里枚举好的编号（D-51）；旧 tilesetBase 标注废弃、由计划 29 删除
+- [Phase 04.1]: 04.1-25：第四轮全部新增 / 删除名字经用户一次性确认（「全部可以」）；tilesetOpen 一族删除由计划 27 执行，MAP_PALETTE_MIN_WIDTH / .emap-canvas-scroll 由计划 26 执行
 
 ### Pending Todos
 
@@ -447,6 +451,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-25T10:04:50.062Z
-Stopped at: Completed 04.1-23-PLAN.md
+Last session: 2026-10-25T13:53:39.677Z
+Stopped at: Completed 04.1-25-PLAN.md
 Resume file: None
