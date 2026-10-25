@@ -85,6 +85,20 @@ export interface IMapToolbarProps {
    * @param value 夹取到 `MAP_ZOOM_MIN`..`MAP_ZOOM_MAX` 的新缩放值
    */
   onSetZoom?(value: number): void;
+  /** 「视图」组地图区宽的当前值（格数） */
+  readonly viewportColumns?: number;
+  /** 「视图」组地图区高的当前值（格数） */
+  readonly viewportRows?: number;
+  /**
+   * 用户改完地图区宽 / 高后上报新值；缺省时两个数字框只读
+   * @param columns 新的地图区横向格数
+   * @param rows 新的地图区纵向格数
+   */
+  onSetViewportSize?(columns: number, rows: number): void;
+  /** 当前地图文档声明的格子宽（像素）；只给顶栏只读标签用，不是显示格基准、不含缩放 */
+  readonly cellWidth?: number;
+  /** 当前地图文档声明的格子高（像素）；只给顶栏只读标签用，不是显示格基准、不含缩放 */
+  readonly cellHeight?: number;
 }
 
 interface IMapViewControlsProps {

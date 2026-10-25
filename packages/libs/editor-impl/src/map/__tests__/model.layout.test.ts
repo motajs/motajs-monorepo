@@ -8,7 +8,7 @@ import { createMapDocument } from './fixtures';
 // 本文件不读窗口尺寸：桩里 window.innerWidth 为 0，另有一条用例把它改成 4000 仍要求结果不变。
 
 describe('resolveMapLayout 默认视口', () => {
-  // 默认 13 × 13、文档格 32 × 32、缩放 1：格 32、画布 416 × 416、右栏 240
+  // 默认 13 × 13、文档格 32 × 32、缩放 1：格 32、画布 416 × 416、右栏 320
   it('默认 13 × 13 视口', () => {
     expect(resolveMapLayout(createMapDocument(), { zoom: 1 })).toEqual({
       viewportColumns: 13,
@@ -17,7 +17,7 @@ describe('resolveMapLayout 默认视口', () => {
       cellHeight: 32,
       canvasWidth: 416,
       canvasHeight: 416,
-      paletteWidth: 240,
+      paletteWidth: 320,
     });
   });
 
@@ -29,7 +29,7 @@ describe('resolveMapLayout 默认视口', () => {
     expect(layout.viewportRows).toBe(9);
     expect(layout.canvasWidth).toBe(480);
     expect(layout.canvasHeight).toBe(288);
-    expect(layout.paletteWidth).toBe(240);
+    expect(layout.paletteWidth).toBe(320);
   });
 
   // 只覆盖横向格数时纵向仍取默认 13：画布 480 × 416
@@ -43,7 +43,7 @@ describe('resolveMapLayout 默认视口', () => {
 });
 
 describe('resolveMapLayout 缩放', () => {
-  // 50%：格 16 × 16、画布 208 × 208；右栏按 240 / 0.5 = 480 计算后夹到上限 360
+  // 50%：格 16 × 16、画布 208 × 208；右栏按 320 / 0.5 = 640 计算后夹到上限 520
   it('缩放 0.5 时格变小、画布变小、右栏顶到上限', () => {
     const layout = resolveMapLayout(createMapDocument(), { zoom: 0.5 });
 
@@ -51,10 +51,10 @@ describe('resolveMapLayout 缩放', () => {
     expect(layout.cellHeight).toBe(16);
     expect(layout.canvasWidth).toBe(208);
     expect(layout.canvasHeight).toBe(208);
-    expect(layout.paletteWidth).toBe(360);
+    expect(layout.paletteWidth).toBe(520);
   });
 
-  // 200%：格 64 × 64、画布 832 × 832；右栏按 240 / 2 = 120 计算后夹到下限 160
+  // 200%：格 64 × 64、画布 832 × 832；右栏按 320 / 2 = 160 计算后夹到下限 240
   it('缩放 2 时格变大、画布变大、右栏缩到下限', () => {
     const layout = resolveMapLayout(createMapDocument(), { zoom: 2 });
 
@@ -62,18 +62,18 @@ describe('resolveMapLayout 缩放', () => {
     expect(layout.cellHeight).toBe(64);
     expect(layout.canvasWidth).toBe(832);
     expect(layout.canvasHeight).toBe(832);
-    expect(layout.paletteWidth).toBe(160);
+    expect(layout.paletteWidth).toBe(240);
   });
 
-  // 150%：格 48 × 48、画布 624 × 624；右栏 round(240 / 1.5) = 160
-  it('缩放 1.5 时格 48 且右栏 160', () => {
+  // 150%：格 48 × 48、画布 624 × 624；右栏 round(320 / 1.5) = 213 计算后夹到下限 240
+  it('缩放 1.5 时格 48 且右栏 240', () => {
     const layout = resolveMapLayout(createMapDocument(), { zoom: 1.5 });
 
     expect(layout.cellWidth).toBe(48);
     expect(layout.cellHeight).toBe(48);
     expect(layout.canvasWidth).toBe(624);
     expect(layout.canvasHeight).toBe(624);
-    expect(layout.paletteWidth).toBe(160);
+    expect(layout.paletteWidth).toBe(240);
   });
 
   // 超出范围的缩放被夹取：0.1 等价于 0.5
@@ -103,14 +103,14 @@ describe('resolveMapLayout 缩放', () => {
 });
 
 describe('resolveMapLayout 右栏宽度', () => {
-  // 基准宽度可被宿主覆盖：480 在缩放 1 时夹到上限 360
-  it('基准宽度大于上限时夹到 360', () => {
-    expect(resolveMapLayout(createMapDocument(), { zoom: 1, paletteBaseWidth: 480 }).paletteWidth).toBe(360);
+  // 基准宽度可被宿主覆盖：1000 在缩放 1 时夹到上限 520
+  it('基准宽度大于上限时夹到 520', () => {
+    expect(resolveMapLayout(createMapDocument(), { zoom: 1, paletteBaseWidth: 1000 }).paletteWidth).toBe(520);
   });
 
-  // 基准宽度小于下限时夹到 160
-  it('基准宽度小于下限时夹到 160', () => {
-    expect(resolveMapLayout(createMapDocument(), { zoom: 1, paletteBaseWidth: 100 }).paletteWidth).toBe(160);
+  // 基准宽度小于下限时夹到 240
+  it('基准宽度小于下限时夹到 240', () => {
+    expect(resolveMapLayout(createMapDocument(), { zoom: 1, paletteBaseWidth: 100 }).paletteWidth).toBe(240);
   });
 
   // 基准宽度落在区间内时原样使用：300 在缩放 1 时就是 300
@@ -118,7 +118,7 @@ describe('resolveMapLayout 右栏宽度', () => {
     expect(resolveMapLayout(createMapDocument(), { zoom: 1, paletteBaseWidth: 300 }).paletteWidth).toBe(300);
   });
 
-  // 任意缩放与基准宽度下，右栏都不会跑出 160..360
+  // 任意缩放与基准宽度下，右栏都不会跑出 240..520
   it('右栏宽度始终落在最小与最大之间', () => {
     const zooms = [0.1, 0.5, 0.75, 1, 1.25, 1.5, 2, 5];
     const bases = [0, 100, 240, 300, 480, 1000];
@@ -127,8 +127,8 @@ describe('resolveMapLayout 右栏宽度', () => {
       for (const paletteBaseWidth of bases) {
         const paletteWidth = resolveMapLayout(createMapDocument(), { zoom, paletteBaseWidth }).paletteWidth;
 
-        expect(paletteWidth).toBeGreaterThanOrEqual(160);
-        expect(paletteWidth).toBeLessThanOrEqual(360);
+        expect(paletteWidth).toBeGreaterThanOrEqual(240);
+        expect(paletteWidth).toBeLessThanOrEqual(520);
       }
     }
   });

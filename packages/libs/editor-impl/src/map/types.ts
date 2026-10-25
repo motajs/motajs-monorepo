@@ -396,10 +396,10 @@ export interface IMapEditorCapabilities {
   /** 地图尺寸上限；缺省表示不限制 */
   readonly maxMapSize?: IMapSizeLimit;
 
-  /** 宿主覆盖地图视口横向格数；缺省 `MAP_VIEWPORT_DEFAULT_COLUMNS` */
+  /** 地图区横向格数的初始默认值；可见格数由面板上的宽 / 高控件决定，宿主注入不再驱动地图区尺寸 */
   readonly viewportColumns?: number;
 
-  /** 宿主覆盖地图视口纵向格数；缺省 `MAP_VIEWPORT_DEFAULT_ROWS` */
+  /** 地图区纵向格数的初始默认值；可见格数由面板上的宽 / 高控件决定，宿主注入不再驱动地图区尺寸 */
   readonly viewportRows?: number;
 
   /** 宿主覆盖动画帧速（毫秒 / 帧）；缺省 `MAP_FRAME_SPEED_DEFAULT` */
@@ -516,6 +516,8 @@ export interface IMapLayout {
   readonly viewportColumns: number;
   /** 可见框的纵向格数 */
   readonly viewportRows: number;
+  /** 整体渲染缩放：画布与命中测试共用这个倍率 */
+  readonly renderScale?: number;
   /** 一格的像素宽（已含缩放） */
   readonly cellWidth: number;
   /** 一格的像素高（已含缩放） */
@@ -526,10 +528,12 @@ export interface IMapLayout {
   readonly canvasHeight: number;
   /** 右侧素材栏的像素宽 */
   readonly paletteWidth: number;
+  /** 左列（地图区）的像素宽 */
+  readonly mapPaneWidth?: number;
 }
 
 export interface IMapLayoutOptions {
-  /** 缩放倍率，夹取到 `MAP_ZOOM_MIN`..`MAP_ZOOM_MAX` */
+  /** 缩放倍率，夹取到 `MAP_ZOOM_MIN`..`MAP_ZOOM_MAX`；同时是画布的整体渲染倍率与画布尺寸的乘数 */
   readonly zoom: number;
   /** 宿主覆盖的视口横向格数；缺省 `MAP_VIEWPORT_DEFAULT_COLUMNS` */
   readonly viewportColumns?: number;
@@ -537,6 +541,8 @@ export interface IMapLayoutOptions {
   readonly viewportRows?: number;
   /** 右栏在缩放 1 时的基准宽度；缺省 `MAP_PALETTE_BASE_WIDTH` */
   readonly paletteBaseWidth?: number;
+  /** 视图量到的可用宽度（像素）；缺省或 ≤ 0 时素材区回退到 `MAP_PALETTE_BASE_WIDTH` */
+  readonly availableWidth?: number;
 }
 
 export interface IMapCellsUndoData {
@@ -651,9 +657,17 @@ export interface IMapRenderModel {
   readonly gridLines: readonly IMapRenderGridLine[];
   /** 本帧要画的通行度标记 */
   readonly passMarks: readonly IMapPassMark[];
-  /** 本帧的格像素宽（唯一度量来源：文档格尺寸 × 缩放） */
+  /** 整体渲染缩放：画布把整个场景等比放大这个倍率；屏幕格像素 = 本帧的 `cellWidth` / `cellHeight` × 它 */
+  readonly renderScale?: number;
+  /**
+   * 本帧的显示格基准宽（= `MAP_DISPLAY_CELL_SIZE`，不含缩放）；
+   * 地图文档自己声明的格尺寸只用于素材切分与数据本身
+   */
   readonly cellWidth: number;
-  /** 本帧的格像素高（唯一度量来源：文档格尺寸 × 缩放） */
+  /**
+   * 本帧的显示格基准高（= `MAP_DISPLAY_CELL_SIZE`，不含缩放）；
+   * 地图文档自己声明的格尺寸只用于素材切分与数据本身
+   */
   readonly cellHeight: number;
   /** 本帧视口左上角，叠加层与整条路径据此换算到画布坐标 */
   readonly viewport: IMapViewport;
@@ -742,9 +756,9 @@ export interface IMapPanelViewState {
   readonly favorites: readonly number[];
   /** 「最常使用」的展示顺序（已排好序的编号，不是次数表） */
   readonly frequentTiles: readonly number[];
-  /** 宿主注入的视口横向格数 */
+  /** 地图区横向格数（宽）；面板控件可改，初值来自宿主注入 */
   readonly viewportColumns: number;
-  /** 宿主注入的视口纵向格数 */
+  /** 地图区纵向格数（高）；面板控件可改，初值来自宿主注入 */
   readonly viewportRows: number;
 }
 

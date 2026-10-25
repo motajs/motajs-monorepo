@@ -1,8 +1,11 @@
 /** 面板类型标识，装配方引用它而不各写字符串 */
 export const MAP_PANEL_TYPE_ID = 'map';
 
-/** 一格在像素上的边长 */
+/** 一格在像素上的边长；仅用于地图文档没有声明格尺寸时的兜底 */
 export const MAP_CELL_SIZE = 32;
+
+/** 显示网格的基准格边长（像素）；画布 = 格数 × 它 × 缩放，与 `MAP_CELL_SIZE`（文档兜底）是两件事 */
+export const MAP_DISPLAY_CELL_SIZE = 32;
 
 /** 新建地图的默认宽度（格子数） */
 export const MAP_DEFAULT_WIDTH = 32;
@@ -43,6 +46,15 @@ export const MAP_VIEWPORT_DEFAULT_COLUMNS = 13;
 /** 上下文未覆盖时，地图视口的默认纵向格数 */
 export const MAP_VIEWPORT_DEFAULT_ROWS = 13;
 
+/** 面板上「地图区宽 / 高」数字框允许的最小格数 */
+export const MAP_VIEWPORT_MIN_COUNT = 1;
+
+/** 面板上「地图区宽 / 高」数字框允许的最大格数 */
+export const MAP_VIEWPORT_MAX_COUNT = 64;
+
+/** 顶栏只读标签的前缀；完整格式为 `图格尺寸：{cellWidth}px * {cellHeight}px`，数字取自地图文档声明的格尺寸 */
+export const MAP_CELL_SIZE_LABEL = '图格尺寸';
+
 /** 允许的最小缩放倍率 */
 export const MAP_ZOOM_MIN = 0.5;
 
@@ -55,14 +67,14 @@ export const MAP_ZOOM_DEFAULT = 1;
 /** 缩放滑块每动一格的步长 */
 export const MAP_ZOOM_STEP = 0.05;
 
-/** 右侧素材栏在缩放 1 时的基准宽度（像素） */
-export const MAP_PALETTE_BASE_WIDTH = 240;
+/** 右侧素材栏在缩放 1 时的基准宽度（像素）；素材区在 100% 时就该够大 */
+export const MAP_PALETTE_BASE_WIDTH = 320;
 
-/** 右侧素材栏的最小可用宽度（像素） */
-export const MAP_PALETTE_MIN_WIDTH = 160;
+/** 右侧素材栏的最小可用宽度（像素）；缩放到最大时也只压到这里 */
+export const MAP_PALETTE_MIN_WIDTH = 240;
 
-/** 右侧素材栏的最大宽度（像素） */
-export const MAP_PALETTE_MAX_WIDTH = 360;
+/** 右侧素材栏的最大宽度（像素）；上限 520 防止把地图区挤没 */
+export const MAP_PALETTE_MAX_WIDTH = 520;
 
 /** 上下文未覆盖时使用的动画帧速（毫秒 / 帧） */
 export const MAP_FRAME_SPEED_DEFAULT = 300;

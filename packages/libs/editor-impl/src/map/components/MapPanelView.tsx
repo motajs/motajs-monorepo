@@ -176,6 +176,12 @@ export interface IMapPanelViewProps {
    */
   onSetViewport?(left: number, top: number): void;
   /**
+   * 把新的「地图区宽 / 高（格数）」交给面板数据层；缺省时视图只改本地 store
+   * @param columns 地图区横向格数
+   * @param rows 地图区纵向格数
+   */
+  onSetViewportSize?(columns: number, rows: number): void;
+  /**
    * 缩放滑块松手后把新值交给面板
    * @param value 夹取到 `MAP_ZOOM_MIN`..`MAP_ZOOM_MAX` 的新缩放值
    */

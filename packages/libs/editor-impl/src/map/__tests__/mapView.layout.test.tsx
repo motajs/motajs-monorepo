@@ -286,7 +286,7 @@ describe('地图面板左右两列布局', () => {
     expect(side.querySelector('.emap-side-slot')).not.toBeNull();
   });
 
-  // 缩放 1 时右栏宽度就是布局函数给出的 240
+  // 缩放 1 时右栏宽度就是布局函数给出的 320
   it('缩放 1 时右栏宽度等于布局函数的结果', () => {
     const document = createMapDocument();
     const store = new Store<IMapPanelViewState>(createViewState({ document }));
@@ -295,8 +295,8 @@ describe('地图面板左右两列布局', () => {
 
     const expected = resolveMapLayout(document, { zoom: 1 }).paletteWidth;
 
-    expect(expected).toBe(240);
-    expect(screen.getByTestId('map-sidebar').style.width).toBe('240px');
+    expect(expected).toBe(320);
+    expect(screen.getByTestId('map-sidebar').style.width).toBe('320px');
   });
 
   // 缩放 200% 时右栏收窄，但不低于最小可用宽度
