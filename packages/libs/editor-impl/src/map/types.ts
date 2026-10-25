@@ -517,7 +517,7 @@ export interface IMapLayout {
   readonly canvasHeight: number;
   /** 右侧素材栏的像素宽 */
   readonly paletteWidth: number;
-  /** 左列（地图区）的像素宽 */
+  /** 左列地图区的像素宽 = 画布宽 + `MAP_RULER_SIZE`；左右分栏宽度之和即可用宽度（D-43） */
   readonly mapPaneWidth: number;
 }
 

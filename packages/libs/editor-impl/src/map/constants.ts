@@ -7,6 +7,9 @@ export const MAP_CELL_SIZE = 32;
 /** 显示网格的基准格边长（像素）；画布 = 格数 × 它 × 缩放，与 `MAP_CELL_SIZE`（文档兜底）是两件事 */
 export const MAP_DISPLAY_CELL_SIZE = 32;
 
+/** 行列标尺的厚度（像素）；地图区宽度 = 画布宽 + 它，画布用它定位标尺与可视区，两处必须同源（D-43） */
+export const MAP_RULER_SIZE = 20;
+
 /** 新建地图的默认宽度（格子数） */
 export const MAP_DEFAULT_WIDTH = 32;
 
