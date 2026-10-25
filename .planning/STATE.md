@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.1"
 current_phase_name: 地图渲染与布局重做
-current_plan: 19
+current_plan: 20
 status: executing
-stopped_at: Completed 04.1-18-PLAN.md
-last_updated: "2026-10-25T07:29:24.328Z"
+stopped_at: Completed 04.1-19-PLAN.md
+last_updated: "2026-10-25T08:05:17.234Z"
 last_activity: 2026-10-25
 last_activity_desc: Phase 3 complete, transitioned to Phase 4
-state_head: 7fd95dd98460f7641f82979cda193abc557ba5a1
+state_head: 008ad32493eb8db71c1e893eeb790d65c6e9a97d
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 146
-  completed_plans: 138
+  completed_plans: 139
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 04.1 (地图渲染与布局重做) — EXECUTING
-Current Plan: 19
+Current Plan: 20
 Total Plans in Phase: 24
 Status: Executing — 04.1-18 complete, ready for 04.1-19
 Last activity: 2026-10-25 — 04.1-18 complete (自动保存契约：串行切换链 + 关闭/替换前落盘)
@@ -156,6 +156,7 @@ Progress: [███████░░░] 71%
 | Phase 04.1 P15 | 35min | 2 tasks | 15 files |
 | Phase 04.1 P17 | 38min | 2 tasks | 7 files |
 | Phase 4.1 P18 | 8min | 2 tasks | 4 files |
+| Phase 04.1 P19 | 33 | 3 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -399,6 +400,9 @@ Recent decisions affecting current work:
 - [Phase 04.1]: 04.1-18: 落盘点只留 IEditorPanel.onSwitchOut 一个，onBeforeClose 不再询问未保存（D-37）；串行链放 ShellSystem 内部，不新增接口成员、activateTab 保持同步签名
 - [Phase 04.1]: 04.1-18: closePanelInstance 在 dispose() 之前统一 await 未结算的落盘，标签替换 / 注销面板类型 / 释放 core 三条路径自动覆盖
 - [Phase 04.1]: 04.1-18: 外壳不给落盘加超时（T-4.1-18-02 取 accept）——写入的失败与超时归各面板资源层，外壳加超时会误杀正常慢写入
+- [Phase 04.1]: 画布尺寸只由「视口格数 × 32 × 缩放」决定，与地图声明的格尺寸无关（D-39）；缩放任整体倍率而非乘进格尺寸，由 Pixi 场景 scene.scale 施加
+- [Phase 04.1]: 素材区 = max(240, 可用宽度 − 画布宽)、无上限；MAP_PALETTE_MAX_WIDTH 与 Math.min 夹取一并删除（D-41 修订），量不到可用宽度时回退 320
+- [Phase 04.1]: 布局在 MapPanelView 顶层只算一次，右栏宽度与画布共用同一份结果；MapCanvas 不再收视口格数 props
 
 ### Pending Todos
 
@@ -426,6 +430,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-25T07:29:23.858Z
-Stopped at: Completed 04.1-18-PLAN.md
+Last session: 2026-10-25T08:05:16.770Z
+Stopped at: Completed 04.1-19-PLAN.md
 Resume file: None
