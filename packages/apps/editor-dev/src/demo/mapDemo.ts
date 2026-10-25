@@ -1,6 +1,12 @@
 import { EditorCore, IEditorFileSystem } from '@motajs/editor-core';
 import { readImageDimensions } from '@motajs/editor-impl/asset';
-import { createMapPanelType, IMapEditorCapabilities, IMapTileGroup } from '@motajs/editor-impl/map';
+import {
+  createMapPanelType,
+  IMapDirections,
+  IMapEditorCapabilities,
+  IMapTileGroup,
+  IMapTilePass,
+} from '@motajs/editor-impl/map';
 import { ITableSchemaNode, serializeTableText } from '@motajs/editor-impl/shared';
 import { createMapCapabilities, IMapFileRecord, mapFilePath, MAP_LIST_PATH } from '../backend/mapFiles';
 import { buildTileCatalog } from '../backend/tileCatalog';
@@ -437,29 +443,49 @@ const DEMO_TEXTURE_LIST: readonly Record<string, unknown>[] = [
   },
 ];
 
-/** 演示工程图块表的原始数据：只给编号与类型，不带 `map` / `source` */
+/** 四方向都可通行的通行表：给「不该出现通行度标记」的图块用 */
+const PASS_OPEN: IMapDirections = { up: true, right: true, down: true, left: true };
+
+/** 四方向都不可通行的通行表：给墙体用，开启通行度后会立刻出现四色箭头 */
+const PASS_BLOCKED: IMapDirections = { up: false, right: false, down: false, left: false };
+
+/** 只有向右可通行的通行表：给点缀地形用，开启通行度后能同时看到两种方向 */
+const PASS_RIGHT_ONLY: IMapDirections = { up: false, right: true, down: false, left: false };
+
+/**
+ * 造一份图块通行属性：离开（`out`）与进入（`in`）用同一张四方向表，且不在事件层独占
+ *
+ * 四方向全部显式写出：解析器对缺省方向一律按「可通行」处理，省略字段很容易写出「看着是墙其实能走」的假数据。
+ * @param directions 四方向通行表
+ * @returns 完整的图块通行属性
+ */
+function createPass(directions: IMapDirections): IMapTilePass {
+  return { out: directions, in: directions, onlyEventLayer: false };
+}
+
+/** 演示工程图块表的原始数据：编号、类型与真实通行属性（地图上出现过的编号都带显式 `pass`） */
 const DEMO_TILE_TABLE: readonly Record<string, unknown>[] = [
-  { type: 2, identifier: 1 },
-  { type: 2, identifier: 2 },
-  { type: 2, identifier: 3 },
-  { type: 2, identifier: 4 },
-  { type: 3, identifier: 10 },
-  { type: 5, identifier: 5 },
-  { type: 5, identifier: 6 },
+  { type: 2, identifier: 1, pass: createPass(PASS_OPEN) },
+  { type: 2, identifier: 2, pass: createPass(PASS_BLOCKED) },
+  { type: 2, identifier: 3, pass: createPass(PASS_OPEN) },
+  { type: 2, identifier: 4, pass: createPass(PASS_RIGHT_ONLY) },
+  { type: 3, identifier: 10, pass: createPass(PASS_OPEN) },
+  { type: 5, identifier: 5, pass: createPass(PASS_BLOCKED) },
+  { type: 5, identifier: 6, pass: createPass(PASS_BLOCKED) },
   { type: 6, identifier: 7 },
   { type: 4, identifier: 8 },
-  { type: 4, identifier: 20 },
-  { type: 4, identifier: 21 },
-  { type: 4, identifier: 30 },
-  { type: 4, identifier: 31 },
-  { type: 4, identifier: 32 },
-  { type: 4, identifier: 33 },
-  { type: 4, identifier: 34 },
-  { type: 4, identifier: 35 },
-  { type: 4, identifier: 36 },
-  { type: 4, identifier: 37 },
-  { type: 7, identifier: 90 },
-  { type: 7, identifier: 91 },
+  { type: 4, identifier: 20, pass: createPass(PASS_OPEN) },
+  { type: 4, identifier: 21, pass: createPass(PASS_OPEN) },
+  { type: 4, identifier: 30, pass: createPass(PASS_OPEN) },
+  { type: 4, identifier: 31, pass: createPass(PASS_OPEN) },
+  { type: 4, identifier: 32, pass: createPass(PASS_OPEN) },
+  { type: 4, identifier: 33, pass: createPass(PASS_OPEN) },
+  { type: 4, identifier: 34, pass: createPass(PASS_OPEN) },
+  { type: 4, identifier: 35, pass: createPass(PASS_OPEN) },
+  { type: 4, identifier: 36, pass: createPass(PASS_OPEN) },
+  { type: 4, identifier: 37, pass: createPass(PASS_OPEN) },
+  { type: 7, identifier: 90, pass: createPass(PASS_OPEN) },
+  { type: 7, identifier: 91, pass: createPass(PASS_OPEN) },
   { type: 8, identifier: 1000 },
   { type: 8, identifier: 1001 },
   { type: 8, identifier: 1002 },

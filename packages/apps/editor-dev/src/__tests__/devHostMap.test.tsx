@@ -1,6 +1,12 @@
 import { act, cleanup, configure, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { EditorCore, IEditorPanel } from '@motajs/editor-core';
-import { IMapDocument, IMapEditorCapabilities, MAP_PANEL_TYPE_ID, MapPanel } from '@motajs/editor-impl/map';
+import {
+  IMapDocument,
+  IMapEditorCapabilities,
+  IMapRenderModel,
+  MAP_PANEL_TYPE_ID,
+  MapPanel,
+} from '@motajs/editor-impl/map';
 import { parseTableText } from '@motajs/editor-impl/shared';
 import { createElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -14,7 +20,13 @@ import { buildDemoTileCatalog, MAP_DEMO_MAPS, registerMapDemo, seedMapDemo } fro
 vi.mock('../../../../libs/editor-impl/src/map/components/MapSurface', async () => {
   const React = await import('react');
 
-  return { MapSurface: () => React.createElement('div', { 'data-test-id': 'map-surface-stub' }) };
+  return {
+    MapSurface: (props: { readonly model: IMapRenderModel }) =>
+      React.createElement('div', {
+        'data-test-id': 'map-surface-stub',
+        'data-pass-count': String(props.model.passMarks.length),
+      }),
+  };
 });
 
 configure({ testIdAttribute: 'data-test-id' });
@@ -479,6 +491,23 @@ describe('开发宿主地图端到端', () => {
 
       expect(numbers.has(number)).toBe(true);
     }
+  });
+
+  // 打开通行度开关后，画布收到的渲染模型带非空 passMarks：证明演示图块的通行属性真的走到了标记链路
+  it('打开通行度开关后画布收到非空通行度标记', async () => {
+    const { core } = await createHost();
+
+    await openMapTab(core, 'small');
+
+    await renderShell(core);
+
+    expect(screen.getByTestId('map-surface-stub').getAttribute('data-pass-count')).toBe('0');
+
+    fireEvent.click(screen.getByTestId('map-passability').querySelector('button') as Element);
+
+    await waitFor(() => {
+      expect(Number(screen.getByTestId('map-surface-stub').getAttribute('data-pass-count'))).toBeGreaterThan(0);
+    });
   });
 
   // 收藏栏随素材区一起就位：右键普通图块后收藏栏出现该编号，点擦除格把选择切回空

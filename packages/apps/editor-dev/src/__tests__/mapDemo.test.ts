@@ -1,6 +1,14 @@
 import { EditorCore } from '@motajs/editor-core';
 import { readImageDimensions } from '@motajs/editor-impl/asset';
-import { IMapTileGroup, MapAutotileType, MapTextureReadType, MapTileCategory } from '@motajs/editor-impl/map';
+import {
+  computePassabilityMarks,
+  IMapDocument,
+  IMapTileEntry,
+  IMapTileGroup,
+  MapAutotileType,
+  MapTextureReadType,
+  MapTileCategory,
+} from '@motajs/editor-impl/map';
 import { describe, expect, it } from 'vitest';
 import { IMapFileRecord, toMapDocument } from '../backend/mapFiles';
 import { MemoryBackend } from '../backend/memoryBackend';
@@ -102,6 +110,31 @@ function findRecord(mapId: string): IMapFileRecord {
   if (record === undefined) throw new Error(`演示地图缺失：${mapId}`);
 
   return record;
+}
+
+/**
+ * 按编号找演示图块条目
+ * @param groups 整份目录
+ * @param number 图块编号
+ * @returns 命中的图块条目
+ */
+function findTile(groups: readonly IMapTileGroup[], number: number): IMapTileEntry {
+  for (const group of groups) {
+    const tile = group.tiles.find((candidate) => candidate.number === number);
+
+    if (tile !== undefined) return tile;
+  }
+
+  throw new Error(`图块缺失：${number}`);
+}
+
+/**
+ * 把整份目录摊平成编号索引；通行度计算只需要这一个入参
+ * @param groups 整份目录
+ * @returns 编号到图块条目的只读索引
+ */
+function createTileIndex(groups: readonly IMapTileGroup[]): ReadonlyMap<number, IMapTileEntry> {
+  return new Map(groups.flatMap((group) => group.tiles).map((tile) => [tile.number, tile]));
 }
 
 describe('开发宿主演示图集与图块目录', () => {
@@ -314,6 +347,87 @@ describe('开发宿主演示图集与图块目录', () => {
 
     expect(await backend.readFile('content/map/texture/.list.jsonc')).toBe(DEMO_TEXTURE_LIST_TEXT);
     expect(await backend.readFile('content/map/tiles.jsonc')).toBe(DEMO_TILE_TABLE_TEXT);
+  });
+});
+
+describe('开发宿主演示图块的通行属性', () => {
+  // 地形主格四面可通行：开启通行度也不该出现标记（对照组）
+  it('编号 1 四面可通行', () => {
+    const tile = findTile(buildDemoTileCatalog(), 1);
+    const open = { up: true, right: true, down: true, left: true };
+
+    expect(tile.pass.out).toEqual(open);
+    expect(tile.pass.in).toEqual(open);
+    expect(tile.pass.onlyEventLayer).toBe(false);
+  });
+
+  // 边界墙四面不可通行：小营地边框一圈会立刻出现四色箭头
+  it('编号 2 四面都不可通行', () => {
+    const tile = findTile(buildDemoTileCatalog(), 2);
+    const blocked = { up: false, right: false, down: false, left: false };
+
+    expect(tile.pass.out).toEqual(blocked);
+    expect(tile.pass.in).toEqual(blocked);
+  });
+
+  // 点缀地形只有向右可通行：宽图 / 大地图上能同时看到两种方向
+  it('编号 4 只有向右可通行', () => {
+    const tile = findTile(buildDemoTileCatalog(), 4);
+    const rightOnly = { up: false, right: true, down: false, left: false };
+
+    expect(tile.pass.out).toEqual(rightOnly);
+    expect(tile.pass.in).toEqual(rightOnly);
+  });
+
+  // 敌人四面不可通行
+  it('编号 5 四面都不可通行', () => {
+    const tile = findTile(buildDemoTileCatalog(), 5);
+    const blocked = { up: false, right: false, down: false, left: false };
+
+    expect(tile.pass.out).toEqual(blocked);
+    expect(tile.pass.in).toEqual(blocked);
+  });
+
+  // 地图上真正出现过的编号在图块表里都写了 pass：不会被缺省值悄悄改成「全通」
+  it('地图实际使用的编号都带显式 pass', () => {
+    const entries = JSON.parse(DEMO_TILE_TABLE_TEXT) as readonly Record<string, unknown>[];
+    const used = new Set<number>();
+
+    for (const record of MAP_DEMO_MAPS) {
+      for (const cells of Object.values(record.layers)) {
+        for (const value of cells) used.add(value);
+      }
+    }
+
+    used.delete(0);
+
+    for (const number of used) {
+      const entry = entries.find((candidate) => candidate.identifier === number);
+
+      if (entry === undefined) throw new Error(`图块表缺少编号：${number}`);
+
+      expect(entry.pass).toBeDefined();
+    }
+  });
+
+  // 端到端纯函数断言：演示目录 + 只含编号 2 的 1×1 文档 → 一条四面 blocked 的标记
+  // 这证明「演示数据 → 目录 → 标记」整条链路是通的，而不只是数据里多了个字段
+  it('演示目录能把编号 2 算成四面 blocked 标记', () => {
+    const groups = buildDemoTileCatalog();
+    const document: IMapDocument = {
+      id: 'pass-2',
+      name: '通行度',
+      width: 1,
+      height: 1,
+      layers: [{ id: 'layer-0', name: '地面层', zIndex: 0, isEventLayer: false, cells: [[2]] }],
+      tileGroups: groups,
+      cellWidth: 32,
+      cellHeight: 32,
+    };
+
+    expect(computePassabilityMarks(document, 'layer-0', createTileIndex(groups))).toEqual([
+      { x: 0, y: 0, blocked: { up: true, right: true, down: true, left: true }, dot: false },
+    ]);
   });
 });
 
