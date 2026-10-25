@@ -16,7 +16,7 @@
 | 问题 | 锁定口径 |
 |------|----------|
 | Tileset 按什么尺寸分格 | 按 **Tileset 自身的** `cellWidth / cellHeight`（来自目录的 `IMapTilesetMeta`）；地图的格子尺寸只决定素材切分的源矩形与文档数据，**不决定显示格与地图区尺寸**（D-39：显示格以 32 为基准）。 |
-| Tileset 每格编号从哪来 | **宿主把每个格子枚举进目录**（`{ number, column, row }`）；编辑器不引入引擎的编号公式。 |
+| Tileset 每格编号从哪来 | **宿主把每个格子枚举进目录**（`{ number, column, row }`）；编辑器不引入引擎的编号公式。编号仍由宿主枚举进目录（编辑器不引入引擎公式）；宿主按引擎的 `tilesetReserve` + `tilesetUnit` 生成连续编号段（D-51）。 |
 | `.editor` 目录谁创建 | **保持现状**：由宿主 / 资源层负责，写失败静默降级。**不给 `IEditorPanelContext` 增加 `makeDirectory`。** |
 
 ### 2. 过渡期类型策略（P-01，规划器提案：全部声明在 Plan 01，收紧在 Plan 15）
@@ -553,6 +553,101 @@
 
 ---
 
+## Plan 25 — 接口与命名（UAT 第四轮，纯声明）
+
+**要做什么：** 把第四轮要用的新名字一次定下来：一个共用的标尺厚度常量、地图区宽度含标尺的口径、宿主目录输入里的 Tileset 编号段参数；只改声明，不写实现。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `MAP_RULER_SIZE` | **新增**常量（`constants.ts`，值 `20`） | 行列标尺的厚度（像素）。地图区宽度 = 画布宽 + 它；画布画标尺、布局算地图区宽度必须共用同一个值，不再各写一个 20（D-43，U-11 的根因就是宽度没算标尺） |
+| `IMapLayout.mapPaneWidth` | 语义修订（JSDoc，不新增成员、签名不变） | 从「地图区像素宽」改为「= 画布宽 + `MAP_RULER_SIZE`」；左右分栏宽度之和即可用宽度（D-43） |
+| `ITileCatalogSource.tilesetReserve` | **新增**可选字段（`apps/editor-dev/src/backend/types.ts`） | Tileset 编号段的起点，对应引擎同名配置；缺省 `100000`（D-51） |
+| `ITileCatalogSource.tilesetUnit` | **新增**可选字段（同上文件） | 每个编号段的容量，对应引擎同名配置；缺省 `10000`（D-51） |
+| `ITileCatalogSource.tilesetBase` | 语义修订 → **标注已废弃**（由 Plan 29 删除） | 旧口径是「每张图从固定基号逐格枚举」，表达不了多张图占用连续编号段，由 `tilesetReserve` + `tilesetUnit` 取代；本计划保留它只为让 `mapDemo.ts` 仍可编译 |
+
+---
+
+## Plan 26 — 地图区结构与比例
+
+**要做什么：** 让地图区变成「标尺 + 画布」一个整体、只有画布内部滚动，把滑块改叫「地图区比例」，并删掉所有最小尺寸兜底。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `.emap-map-region` | CSS 类（新） | 地图区外框：位置上下文 + `overflow: hidden`；尺寸 = 标尺 + 画布，它自己不滚（D-43 / U-14） |
+| `.emap-ruler-corner` | CSS 类（新） | 左上角 20×20 的交叉点，填上横竖两条标尺交会处的缺口 |
+| `map-region` | `data-test-id`（新） | 地图区外框本体；测试据此断言外框尺寸含标尺、且外框不产生滚动条 |
+| `MAP_PALETTE_MIN_WIDTH` | 常量 **删除**（本计划执行） | 任何区域都没有最小 / 最大尺寸：素材区宽度 = 可用宽度 − 地图区宽度，可以为 0；挤不下由用户调比例（D-44） |
+| `.emap-canvas-scroll` | CSS 类 **删除**（本计划执行） | 旧的外层滚动容器；全局只保留画布内部一个滚动容器（D-43 / U-14） |
+| `MapZoomSlider` 的界面文案 | 语义修订（不新增名字） | 「缩放」→「地图区比例」；它是地图区尺寸的唯一驱动。契约不动：字段仍叫 `zoom`、常量仍叫 `MAP_ZOOM_*`、组件仍叫 `MapZoomSlider`（D-45） |
+
+---
+
+## Plan 27 — 素材分类导航（六类同一排）
+
+**要做什么：** Tileset 从「特殊开关」变成普通分类，六项同一排等宽铺满；顺带删掉 `tilesetOpen` 一族状态与回调。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `map-category-tileset` | `data-test-id`（新） | Tileset 作为普通分类按钮的落点，与其余五类同一排（D-47） |
+| `.emap-category-tileset` | CSS 类 **删除** | Tileset 不再有特殊按钮样式 |
+| `map-tileset-toggle` | `data-test-id` **删除** | 旧的独立开关；入口改由 `map-category-tileset` 承担 |
+| `IMapCategoryNavProps.tilesetOpen` / `.onToggleTileset` | 成员 **删除** | 导航不再拥有「Tileset 是否展开」这一份状态；`activeCategory` 是当前素材视图的唯一真源（D-47） |
+| `IMapMaterialPanelProps.tilesetOpen` / `.onToggleTileset` | 成员 **删除** | 素材区直接按 `activeCategory` 判断是否画 Tileset 视图；`activeCategory` 是当前素材视图的唯一真源（D-47） |
+| `IMapPanelViewProps.onToggleTileset` | 方法成员 **删除** | 视图层不再转发开关事件；`activeCategory` 是当前素材视图的唯一真源（D-47） |
+| `IMapPanelViewState.tilesetOpen` | 字段 **删除** | 视图状态里不再存「Tileset 是否展开」；`activeCategory` 是当前素材视图的唯一真源（D-47） |
+| `MapPanel.toggleTileset` | 方法 **删除** | 面板不再有「进入 / 退出 Tileset 单独视图」的动作；切分类统一走 `MapPanel.selectCategory`（D-47） |
+
+---
+
+## Plan 28 — 收藏拖拽反馈
+
+**要做什么：** 收藏格拖拽时给出看得见的反馈：拖起源降透明度、悬停目标加描边。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `.is-dragging` | CSS 类（新） | 拖动源的格子降低不透明度（`0.4`），让用户看清正在搬哪一格（D-48） |
+| `.is-drag-over` | CSS 类（新） | 当前悬停的目标格加一圈强调色描边，指示松手后会落在哪（D-48） |
+
+---
+
+## Plan 29 — 演示数据与宿主目录正确性
+
+**要做什么：** 修演示数据的两个数据错误（自动元件连接表、只有一张 Tileset），并把宿主目录的 Tileset 编号改成引擎规则生成，再补一条与引擎对拍的黄金测试。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `DEMO_TILESET_2_IMAGE_PATH` | 常量（新，`mapDemo.ts`） | 第二张演示 Tileset 的图片路径（96×96、2×2、每格 48×48，与第一张的 32×32 不同） |
+| `encodeDemoTileset2Atlas` | 自由函数（新，`mapDemo.ts`） | 现场编码第二张 Tileset 的 PNG 字节，供演示宿主 seed |
+| `DEMO_TILESET_RESERVE` / `DEMO_TILESET_UNIT` | 模块常量（`mapDemo.ts`，`100000` / `10000`） | 演示用的引擎默认编号段参数；第二张图的编号因此从 `110000` 起，证明「多张图占连续编号段」（D-51） |
+| `DEFAULT_TILESET_RESERVE` / `DEFAULT_TILESET_UNIT` | 模块常量（`tileCatalog.ts`，`100000` / `10000`） | 宿主没给值时的引擎默认；第 k 张图的起始编号 = `reserve` + 前面各图段数之和 × `unit`，每张图占 `ceil(该图格数 / unit)` 段（按图片格数算，不按图块表条目数算，D-51） |
+| `model.autotileGolden.test.ts` | 文件（新） | 与引擎对拍的黄金测试：`0…255` 全部连接值逐一对四块象限矩形，3×4 与 2×3 两种形状都比（D-50） |
+| `portMapAutotile` / `portSliceRect` | 该测试内私有函数 | 逐字搬运的引擎 `mapAutotile` / `getSliceRect`；算法本身不改，只用来证明一致 |
+| `DEMO_TILE_TABLE` 的连接集合 | 数据修订（不新增名字） | 自动元件改为**只与同类连接**（连接集合为空即「同值连接」），修掉 U-16 的「只连地形 1 / 2」；演示区扩成带一个空洞的 4×3 块，让内角可见（D-49） |
+
+---
+
+## Plan 30 — Tileset 多图视图
+
+**要做什么：** 素材区的 Tileset 视图从「只画第一张图」改成「按目录顺序把每张图各画一块」，块间有图名与分割线。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `map-tileset-item` | `data-test-id`（新） | Tileset 视图里的一张图；测试据此断言「张数 = 目录里的 Tileset 组数」 |
+| `.emap-tileset` / `.emap-tileset-scroll` | CSS 类（语义变更） | 从「一张图占满整块」改为「多张图纵向堆叠，滚动交给素材区主体」，不再自己出一层滚动条（D-52） |
+| `IMapTilesetPickerProps` | **不变**（明确登记） | 素材区为每张图各渲染一个选择器，props 形状不变；选择 / 框选 / 多格预览仍按「单张图内」的列 / 行换算（D-52） |
+
+---
+
+## Plan 31 — 最终验证
+
+**要做什么：** 重跑全部机器门禁，再按修订后的清单在开发宿主里逐条验收 U-01…U-17；本计划是阶段能否收口的唯一判据。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `04.1-31-SUMMARY.md` | 文件（新） | 每条门禁的命令 / 退出码 / 摘要行 + U-01…U-17 逐条结论与证据（D-53） |
+
+---
+
 ## 开放问题口径
 
 > 与 Phase 4 不同，本阶段进入规划时仍有未定项。三条「用户确认」已在 §全局口径 锁定；下表是其余各项的执行口径。
@@ -574,6 +669,7 @@
 | OQ13 仓库外的 `autotile1.png` 怎么进 CI | **已定（研究结论）** | 复制一份到 `packages/apps/editor-dev/src/demo/assets/autotile1.png` 并以 `?inline` 导入（仓库已有同样做法的先例：`assetDemo.ts` 的字体）；不引用仓库外路径。 |
 | OQ14 宿主注入的 `viewportColumns/viewportRows`（含 `?mapViewport=wide`）还有没有用 | **已定（用户，第二轮）** | 只作**初始默认值**；可见格数由面板上的「地图区宽 / 高」决定，且不再有任何查询参数路径——`?mapViewport=wide` 整条删除（D-40）。 |
 | OQ15 地图区尺寸以什么为基准 | **已定（用户，第二轮）** | 以 **32×32** 为基准：画布 = 格数 × 32 × 缩放，与地图声明的 `cellWidth/cellHeight` 无关；声明格尺寸仍用于素材切分、`contain` 的源尺寸与文档数据（D-39）。 |
+| OQ16 `activeCategory` 与 Tileset 视图的关系 | **已定（用户，第四轮）** | `activeCategory === Tileset` 即 Tileset 视图；`tilesetOpen` 一族（视图状态字段、面板方法 `MapPanel.toggleTileset`、三处 props、`map-tileset-toggle` 测试标识）全部删除（D-47）。 |
 
 ---
 
@@ -585,3 +681,4 @@
 4. **布局常量**（地图区宽高默认 13×13、范围 1–64，50–200% 缩放，显示格基准 32，右栏基准 320 / 最小 240，**没有最大宽度**）—— **costly**：会被面板、画布、素材区共同消费（D-39 / D-40 / D-41）。
 5. **全部新增命名**（文件 / 类型 / 方法 / 常量 / CSS 类 / `data-test-id`）—— **reversible**：改名只需同步本文件与计划。
 6. **顶栏图格尺寸标签的文案与格式**（`图格尺寸：{cellWidth}px * {cellHeight}px`，数字取自文档声明的 `cellWidth` / `cellHeight`；全角冒号，`*` 两侧各一个空格）—— **reversible**：纯显示文案（D-42）。
+7. **第四轮新增的名字与两处收敛**（标尺厚度常量 `MAP_RULER_SIZE`、地图区宽度含标尺的口径、宿主目录的 Tileset 编号段参数 `tilesetReserve` / `tilesetUnit`，以及删除 `tilesetOpen` 一族）—— **costly**：宿主目录契约与视图状态同时收敛（D-43 / D-47 / D-51）。
