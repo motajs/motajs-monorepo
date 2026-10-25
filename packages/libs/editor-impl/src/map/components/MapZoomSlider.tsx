@@ -5,6 +5,7 @@ import { IMapZoomSliderProps } from '../types';
 
 // 缩放滑块：本地 state 驱动拇指位置，松手才把夹取后的值交给面板。
 // 受控值来自面板 Store，若拖动中立刻发布会让拇指回弹，所以只有 onChangeComplete 才上报。
+// 它调的是「地图区多大」，不是画面缩放（D-45）：字段仍叫 zoom，界面文案叫「地图区比例」。
 
 /**
  * 把缩放值夹到允许范围；非数时回退默认
@@ -40,7 +41,7 @@ export function MapZoomSlider(props: IMapZoomSliderProps): ReactElement {
 
   return (
     <span className="emap-zoom" data-test-id="map-zoom">
-      <span className="emap-zoom-label">缩放</span>
+      <span className="emap-zoom-label">地图区比例</span>
       <Slider
         className="emap-zoom-slider"
         min={MAP_ZOOM_MIN}

@@ -392,9 +392,16 @@ describe('地图工具栏', () => {
     expect(within(screen.getByTestId('map-zoom')).getByRole('slider').getAttribute('aria-valuenow')).toBe('0.5');
     expect(screen.getByTestId('map-zoom').textContent).toContain('50%');
   });
+  // 滑块界面文案是「地图区比例」，字段仍是 zoom（D-45）
+  it('滑块文案是地图区比例', () => {
+    render(<MapToolbar {...createToolbarProps()} />);
+
+    expect(screen.getByTestId('map-zoom').textContent).toContain('地图区比例');
+    expect(within(screen.getByTestId('map-zoom')).getByRole('slider').getAttribute('aria-valuenow')).toBe('1');
+  });
 });
 
-describe('地图区宽高数字框（D-40）', () => {
+describe('地图区宽高数字框（D-40 / D-46）', () => {
   // 「视图」组里两个数字框，默认都是 13
   it('宽高数字框默认 13 × 13', () => {
     render(<MapToolbar {...createToolbarProps()} />);
@@ -403,20 +410,55 @@ describe('地图区宽高数字框（D-40）', () => {
     expect(screen.getByTestId<HTMLInputElement>('map-viewport-rows').value).toBe('13');
   });
 
-  // 改宽报 (15, 13)；宽变成 15 之后再改高，报 (15, 9)
-  it('改宽高分别上报新的宽高组合', () => {
+  // 输入过程中不上报；失焦时按「宽 15、高仍 13」提交一次（U-15）
+  it('宽输入过程中不上报，失焦后提交一次', () => {
     const onSetViewportSize = vi.fn();
-    const props = createToolbarProps({ onSetViewportSize });
-    const rendered = render(<MapToolbar {...props} />);
 
-    fireEvent.change(screen.getByTestId('map-viewport-columns'), { target: { value: '15' } });
+    render(<MapToolbar {...createToolbarProps({ onSetViewportSize })} />);
 
-    expect(onSetViewportSize).toHaveBeenLastCalledWith(15, MAP_VIEWPORT_DEFAULT_ROWS);
+    const columns = screen.getByTestId('map-viewport-columns');
 
-    rendered.rerender(<MapToolbar {...props} viewportColumns={15} />);
-    fireEvent.change(screen.getByTestId('map-viewport-rows'), { target: { value: '9' } });
+    fireEvent.change(columns, { target: { value: '15' } });
 
-    expect(onSetViewportSize).toHaveBeenLastCalledWith(15, 9);
+    expect(onSetViewportSize).not.toHaveBeenCalled();
+
+    fireEvent.blur(columns);
+
+    expect(onSetViewportSize).toHaveBeenCalledTimes(1);
+    expect(onSetViewportSize).toHaveBeenCalledWith(15, MAP_VIEWPORT_DEFAULT_ROWS);
+  });
+
+  // 回车与失焦走同一条提交路径：高改成 9 后回车 → (13, 9)
+  it('高在回车后提交', () => {
+    const onSetViewportSize = vi.fn();
+
+    render(<MapToolbar {...createToolbarProps({ onSetViewportSize })} />);
+
+    const rows = screen.getByTestId('map-viewport-rows');
+
+    fireEvent.change(rows, { target: { value: '9' } });
+
+    expect(onSetViewportSize).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(rows, { key: 'Enter' });
+
+    expect(onSetViewportSize).toHaveBeenCalledTimes(1);
+    expect(onSetViewportSize).toHaveBeenCalledWith(MAP_VIEWPORT_DEFAULT_COLUMNS, 9);
+  });
+
+  // 清空后失焦：不上报，显示回退到 props 当前值
+  it('清空后失焦不提交并回退显示', () => {
+    const onSetViewportSize = vi.fn();
+
+    render(<MapToolbar {...createToolbarProps({ onSetViewportSize, viewportColumns: 20 })} />);
+
+    const columns = screen.getByTestId<HTMLInputElement>('map-viewport-columns');
+
+    fireEvent.change(columns, { target: { value: '' } });
+    fireEvent.blur(columns);
+
+    expect(onSetViewportSize).not.toHaveBeenCalled();
+    expect(columns.value).toBe('20');
   });
 
   // 没有回调时两个数字框都禁用（面板没接线就不让点）

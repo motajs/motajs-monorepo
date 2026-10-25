@@ -216,6 +216,15 @@ function toViewportCount(value: number | null): number | undefined {
 }
 
 /**
+ * 把格数夹到面板允许的范围
+ * @param value 已取整的格数
+ * @returns 夹到 `MAP_VIEWPORT_MIN_COUNT`..`MAP_VIEWPORT_MAX_COUNT` 的格数
+ */
+function clampViewportCount(value: number): number {
+  return Math.min(MAP_VIEWPORT_MAX_COUNT, Math.max(MAP_VIEWPORT_MIN_COUNT, value));
+}
+
+/**
  * 视图类低频控件：显示通行度 / 大地图 / 缩放 / 地图区宽高；宽屏直接显示，窄屏收进「视图」下拉
  * @param props 控件 props
  * @returns 控件组
@@ -224,6 +233,51 @@ function MapViewControls(props: IMapViewControlsProps): ReactElement {
   const viewportColumns = props.viewportColumns ?? MAP_VIEWPORT_DEFAULT_COLUMNS;
   const viewportRows = props.viewportRows ?? MAP_VIEWPORT_DEFAULT_ROWS;
   const viewportDisabled = props.onSetViewportSize === undefined;
+  const [columnsDraft, setColumnsDraft] = useState<number | null>(viewportColumns);
+  const [rowsDraft, setRowsDraft] = useState<number | null>(viewportRows);
+
+  // 面板夹取后回传的 props 才是权威值：props 一变就把草稿同步回来（D-46）
+  useEffect((): void => {
+    setColumnsDraft(viewportColumns);
+  }, [viewportColumns]);
+
+  useEffect((): void => {
+    setRowsDraft(viewportRows);
+  }, [viewportRows]);
+
+  /**
+   * 提交宽输入框的草稿：非法 / 空值时回退到 props 当前值，合法时夹取后与高的当前值配对上报
+   */
+  const commitColumns = (): void => {
+    const columns = toViewportCount(columnsDraft);
+
+    if (columns === undefined) {
+      setColumnsDraft(viewportColumns);
+      return;
+    }
+
+    const next = clampViewportCount(columns);
+
+    setColumnsDraft(next);
+    props.onSetViewportSize?.(next, viewportRows);
+  };
+
+  /**
+   * 提交高输入框的草稿：非法 / 空值时回退到 props 当前值，合法时夹取后与宽的当前值配对上报
+   */
+  const commitRows = (): void => {
+    const rows = toViewportCount(rowsDraft);
+
+    if (rows === undefined) {
+      setRowsDraft(viewportRows);
+      return;
+    }
+
+    const next = clampViewportCount(rows);
+
+    setRowsDraft(next);
+    props.onSetViewportSize?.(viewportColumns, next);
+  };
 
   return (
     <>
@@ -262,13 +316,11 @@ function MapViewControls(props: IMapViewControlsProps): ReactElement {
           precision={0}
           controls={false}
           disabled={viewportDisabled}
-          value={viewportColumns}
+          value={columnsDraft}
           data-test-id="map-viewport-columns"
-          onChange={(value): void => {
-            const columns = toViewportCount(value);
-
-            if (columns !== undefined) props.onSetViewportSize?.(columns, viewportRows);
-          }}
+          onChange={(value): void => setColumnsDraft(value)}
+          onBlur={commitColumns}
+          onPressEnter={commitColumns}
         />
         <span className="emap-viewport-size-label">高</span>
         <InputNumber
@@ -279,13 +331,11 @@ function MapViewControls(props: IMapViewControlsProps): ReactElement {
           precision={0}
           controls={false}
           disabled={viewportDisabled}
-          value={viewportRows}
+          value={rowsDraft}
           data-test-id="map-viewport-rows"
-          onChange={(value): void => {
-            const rows = toViewportCount(value);
-
-            if (rows !== undefined) props.onSetViewportSize?.(viewportColumns, rows);
-          }}
+          onChange={(value): void => setRowsDraft(value)}
+          onBlur={commitRows}
+          onPressEnter={commitRows}
         />
       </span>
     </>
