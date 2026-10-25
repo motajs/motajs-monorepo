@@ -66,9 +66,7 @@ export function resolveMapLayout(options: IMapLayoutOptions): IMapLayout {
   const canvasHeight = viewportRows * cellHeight;
   const availableWidth = resolvePositive(options.availableWidth, 0);
   const paletteWidth =
-    availableWidth > 0
-      ? Math.max(MAP_PALETTE_MIN_WIDTH, availableWidth - canvasWidth)
-      : MAP_PALETTE_BASE_WIDTH;
+    availableWidth > 0 ? Math.max(MAP_PALETTE_MIN_WIDTH, availableWidth - canvasWidth) : MAP_PALETTE_BASE_WIDTH;
   const mapPaneWidth = availableWidth > 0 ? availableWidth - paletteWidth : canvasWidth;
 
   return {

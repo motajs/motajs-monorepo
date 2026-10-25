@@ -374,10 +374,7 @@ function buildWindowModel(
 ): IMapRenderModel {
   const startX = Math.max(0, Math.floor(view.viewport.left));
   const startY = Math.max(0, Math.floor(view.viewport.top));
-  const columns = Math.min(
-    Math.ceil(view.width / (cellWidth * renderScale)),
-    Math.max(0, document.width - startX),
-  );
+  const columns = Math.min(Math.ceil(view.width / (cellWidth * renderScale)), Math.max(0, document.width - startX));
   const rows = Math.min(Math.ceil(view.height / (cellHeight * renderScale)), Math.max(0, document.height - startY));
   const cells: IMapRenderCell[] = [];
 
