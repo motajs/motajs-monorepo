@@ -357,7 +357,7 @@
 
 .emap-body {
   display: flex;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-width: 0;
   min-height: 0;
 }
@@ -369,15 +369,14 @@
   flex-direction: column;
   min-width: 0;
   min-height: 0;
+  overflow: hidden;
 }
 
-.emap-canvas-scroll {
+/* 地图区外框 = 标尺 + 画布，位置与尺寸由内联样式给出；自己不滚，只有画布内部滚（D-43） */
+.emap-map-region {
   position: relative;
-  flex: 1 1 auto;
-  min-width: 0;
-  min-height: 0;
-  padding: 20px 0 0 20px;
-  overflow: auto;
+  flex: 0 0 auto;
+  overflow: hidden;
   background: var(--editor-bg, #f5f6f8);
 }
 
@@ -429,17 +428,18 @@
   user-select: none;
 }
 
-.emap-ruler-top {
-  top: -20px;
+.emap-ruler-corner {
+  top: 0;
   left: 0;
-  width: 100%;
+  border-right: 1px solid var(--editor-border, #d0d7de);
+  border-bottom: 1px solid var(--editor-border, #d0d7de);
+}
+
+.emap-ruler-top {
   border-bottom: 1px solid var(--editor-border, #d0d7de);
 }
 
 .emap-ruler-left {
-  top: 0;
-  left: -20px;
-  height: 100%;
   border-right: 1px solid var(--editor-border, #d0d7de);
 }
 
@@ -519,7 +519,7 @@
 
 .emap-canvas-empty-layer {
   position: absolute;
-  inset: 20px 0 0 20px;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;

@@ -1,5 +1,5 @@
 import { KeyboardEvent, PointerEvent, ReactElement, useEffect, useId, useRef, useState } from 'react';
-import { MAP_CELL_SIZE, MAP_FAVORITE_SLOT_COUNT } from '../constants';
+import { MAP_CELL_SIZE, MAP_FAVORITE_SLOT_COUNT, MAP_RULER_SIZE } from '../constants';
 import { buildFillWrites, buildRectWrites, buildStrokeWrites } from '../model/brush';
 import { resolveCellMetrics, resolvePointerCell } from '../model/cellMetrics';
 import { IPaintWrite } from '../model/document';
@@ -118,9 +118,6 @@ export interface IMapCanvasProps {
    */
   onToggleBigMap(value: boolean): void;
 }
-
-/** 行列标尺的宽度 / 高度（像素） */
-const RULER_SIZE = 20;
 
 /** 标尺每隔多少格标一个数字 */
 const RULER_LABEL_STEP = 5;
@@ -280,6 +277,10 @@ export function MapCanvas(props: IMapCanvasProps): ReactElement {
   // 大地图与滚动互斥：占位层取可见框尺寸，因此不产生滚动条
   const contentWidth = props.bigMap ? canvasWidth : Math.max(canvasWidth, document.width * cellWidth);
   const contentHeight = props.bigMap ? canvasHeight : Math.max(canvasHeight, document.height * cellHeight);
+  // 地图区外框 = 标尺 + 画布；大地图没有标尺，外框等于画布（D-43）
+  const ruler = props.bigMap ? 0 : MAP_RULER_SIZE;
+  const regionWidth = canvasWidth + ruler;
+  const regionHeight = canvasHeight + ruler;
 
   useEffect((): (() => void) => {
     return (): void => {
@@ -639,20 +640,28 @@ export function MapCanvas(props: IMapCanvasProps): ReactElement {
 
   return (
     <div className="emap-canvas-area">
-      <div className="emap-canvas-scroll" style={{ padding: `${RULER_SIZE}px 0 0 ${RULER_SIZE}px` }}>
+      <div
+        className="emap-map-region"
+        data-test-id="map-region"
+        style={{ width: regionWidth, height: regionHeight }}
+      >
         {props.bigMap ? null : (
           <>
             <div
+              className="emap-ruler emap-ruler-corner"
+              style={{ width: MAP_RULER_SIZE, height: MAP_RULER_SIZE, top: 0, left: 0 }}
+            />
+            <div
               className="emap-ruler emap-ruler-top"
               data-test-id="map-ruler-top"
-              style={{ height: RULER_SIZE, top: 0, left: RULER_SIZE, width: canvasWidth }}
+              style={{ height: MAP_RULER_SIZE, top: 0, left: MAP_RULER_SIZE, width: canvasWidth }}
             >
               {renderTicks(document.width, props.viewport.left, metrics.cellWidth, hover?.x, true)}
             </div>
             <div
               className="emap-ruler emap-ruler-left"
               data-test-id="map-ruler-left"
-              style={{ width: RULER_SIZE, top: RULER_SIZE, left: 0, height: canvasHeight }}
+              style={{ width: MAP_RULER_SIZE, top: MAP_RULER_SIZE, left: 0, height: canvasHeight }}
             >
               {renderTicks(document.height, props.viewport.top, metrics.cellHeight, hover?.y, false)}
             </div>
@@ -662,7 +671,14 @@ export function MapCanvas(props: IMapCanvasProps): ReactElement {
           className="emap-canvas-viewport"
           data-test-id="map-canvas-viewport"
           ref={viewportRef}
-          style={{ position: 'relative', width: canvasWidth, height: canvasHeight, overflow: 'auto' }}
+          style={{
+            position: 'absolute',
+            top: ruler,
+            left: ruler,
+            width: canvasWidth,
+            height: canvasHeight,
+            overflow: 'auto',
+          }}
           onScroll={handleScroll}
         >
           <div
