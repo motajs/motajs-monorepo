@@ -575,6 +575,18 @@ export function MapPanelView(props: IMapPanelViewProps): ReactElement {
         }}
         zoom={view.zoom ?? MAP_ZOOM_DEFAULT}
         onSetZoom={props.onSetZoom}
+        viewportColumns={view.viewportColumns}
+        viewportRows={view.viewportRows}
+        onSetViewportSize={(columns, rows): void => {
+          if (props.onSetViewportSize !== undefined) {
+            props.onSetViewportSize(columns, rows);
+            return;
+          }
+
+          props.store.setState({ ...props.store.state, viewportColumns: columns, viewportRows: rows });
+        }}
+        cellWidth={document?.cellWidth}
+        cellHeight={document?.cellHeight}
       />
       <div className="emap-columns" data-test-id="map-columns">
         <div className="emap-main" data-test-id="map-main">

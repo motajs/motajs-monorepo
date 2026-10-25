@@ -138,6 +138,14 @@
   white-space: nowrap;
 }
 
+/* 第一行地图名之后的只读图格尺寸：数字取自文档声明值，与 32 基准 / 缩放无关（D-42） */
+.emap-cell-size {
+  flex: 0 0 auto;
+  color: var(--editor-muted, #656d76);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 .emap-toolbar-map-select {
   flex: 0 1 240px;
   min-width: 160px;
@@ -248,6 +256,24 @@
   font-variant-numeric: tabular-nums;
   text-align: right;
   white-space: nowrap;
+}
+
+/* 「视图」组里的地图区宽 / 高：两个窄数字框 + 短标签，是改变地图区大小的唯一入口（D-40） */
+.emap-viewport-size {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+}
+
+.emap-viewport-size-label {
+  color: var(--editor-muted, #656d76);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.emap-viewport-size .ant-input-number {
+  width: 56px;
 }
 
 .emap-tooltip-wrap {

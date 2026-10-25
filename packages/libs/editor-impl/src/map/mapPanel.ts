@@ -18,6 +18,8 @@ import {
   MAP_TILE_PREFS_PATH,
   MAP_VIEWPORT_DEFAULT_COLUMNS,
   MAP_VIEWPORT_DEFAULT_ROWS,
+  MAP_VIEWPORT_MAX_COUNT,
+  MAP_VIEWPORT_MIN_COUNT,
   MAP_ZOOM_DEFAULT,
   MAP_ZOOM_MAX,
   MAP_ZOOM_MIN,
@@ -480,6 +482,7 @@ export class MapPanel implements IEditorPanel, IMapPanel {
         maxMapSize: this.capabilities.maxMapSize,
         cellFrameSpeed: this.capabilities.frameSpeed,
         onSetZoom: (value): void => this.setZoom(value),
+        onSetViewportSize: (columns, rows): void => this.setViewportSize(columns, rows),
         onSetBottomTab: (tab): void => this.setBottomTab(tab),
         onSelectCategory: (category): void => this.selectCategory(category),
         onToggleTileset: (open): void => this.toggleTileset(open),
@@ -1342,6 +1345,26 @@ export class MapPanel implements IEditorPanel, IMapPanel {
         top: Math.min(maxTop, Math.max(0, Math.floor(top))),
       },
     });
+  }
+
+  /**
+   * 记录地图区宽 / 高（格数）并把当前视口左上角重新夹回合法范围
+   *
+   * 只改视图状态：不置脏、不进撤销、不写盘。非数时保留各自当前值。
+   * @param columns 新的地图区横向格数
+   * @param rows 新的地图区纵向格数
+   */
+  setViewportSize(columns: number, rows: number): void {
+    const state = this.store.state;
+    const nextColumns = Number.isFinite(columns)
+      ? Math.min(MAP_VIEWPORT_MAX_COUNT, Math.max(MAP_VIEWPORT_MIN_COUNT, Math.floor(columns)))
+      : (state.viewportColumns ?? MAP_VIEWPORT_DEFAULT_COLUMNS);
+    const nextRows = Number.isFinite(rows)
+      ? Math.min(MAP_VIEWPORT_MAX_COUNT, Math.max(MAP_VIEWPORT_MIN_COUNT, Math.floor(rows)))
+      : (state.viewportRows ?? MAP_VIEWPORT_DEFAULT_ROWS);
+
+    this.publish({ viewportColumns: nextColumns, viewportRows: nextRows });
+    this.setViewport(this.store.state.viewport.left, this.store.state.viewport.top);
   }
 
   /**

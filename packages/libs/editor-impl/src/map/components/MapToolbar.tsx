@@ -1,6 +1,13 @@
-import { Button, Dropdown, Segmented, Select, Slider, Switch, Tooltip } from 'antd';
+import { Button, Dropdown, InputNumber, Segmented, Select, Slider, Switch, Tooltip } from 'antd';
 import { ReactElement, useEffect, useState } from 'react';
-import { MAP_ZOOM_DEFAULT } from '../constants';
+import {
+  MAP_CELL_SIZE_LABEL,
+  MAP_VIEWPORT_DEFAULT_COLUMNS,
+  MAP_VIEWPORT_DEFAULT_ROWS,
+  MAP_VIEWPORT_MAX_COUNT,
+  MAP_VIEWPORT_MIN_COUNT,
+  MAP_ZOOM_DEFAULT,
+} from '../constants';
 import { IMapLayer, IMapSummary, MapBrushMode, MapPanelStatus } from '../types';
 import { MapZoomSlider } from './MapZoomSlider';
 
@@ -110,6 +117,16 @@ interface IMapViewControlsProps {
   readonly bigMap: boolean;
   /** 缩放滑块的当前值 */
   readonly zoom: number;
+  /** 「视图」组地图区宽的当前值（格数）；缺省 `MAP_VIEWPORT_DEFAULT_COLUMNS` */
+  readonly viewportColumns?: number;
+  /** 「视图」组地图区高的当前值（格数）；缺省 `MAP_VIEWPORT_DEFAULT_ROWS` */
+  readonly viewportRows?: number;
+  /**
+   * 用户改完地图区宽 / 高后上报新值；缺省时两个数字框只读
+   * @param columns 新的地图区横向格数
+   * @param rows 新的地图区纵向格数
+   */
+  onSetViewportSize?(columns: number, rows: number): void;
   /**
    * 开关只读通行度叠加层
    * @param value 为 true 时显示
@@ -188,11 +205,26 @@ function useNarrowLayout(): boolean {
 }
 
 /**
- * 视图类低频控件：显示通行度 / 大地图；宽屏直接显示，窄屏收进「视图」下拉
+ * 把数字框报出的原始值归一成可提交的整数
+ * @param value 数字框报出的值；清空时为 null
+ * @returns 取整后的格数；空值或非数时返回 undefined 表示不提交
+ */
+function toViewportCount(value: number | null): number | undefined {
+  if (value === null || !Number.isFinite(value)) return undefined;
+
+  return Math.round(value);
+}
+
+/**
+ * 视图类低频控件：显示通行度 / 大地图 / 缩放 / 地图区宽高；宽屏直接显示，窄屏收进「视图」下拉
  * @param props 控件 props
  * @returns 控件组
  */
 function MapViewControls(props: IMapViewControlsProps): ReactElement {
+  const viewportColumns = props.viewportColumns ?? MAP_VIEWPORT_DEFAULT_COLUMNS;
+  const viewportRows = props.viewportRows ?? MAP_VIEWPORT_DEFAULT_ROWS;
+  const viewportDisabled = props.onSetViewportSize === undefined;
+
   return (
     <>
       <label className="emap-toolbar-group" data-test-id="map-passability">
@@ -220,6 +252,42 @@ function MapViewControls(props: IMapViewControlsProps): ReactElement {
         disabled={props.onSetZoom === undefined}
         onChangeComplete={(value): void => props.onSetZoom?.(value)}
       />
+      <span className="emap-viewport-size" data-test-id="map-viewport-size">
+        <span className="emap-viewport-size-label">宽</span>
+        <InputNumber
+          size="small"
+          min={MAP_VIEWPORT_MIN_COUNT}
+          max={MAP_VIEWPORT_MAX_COUNT}
+          step={1}
+          precision={0}
+          controls={false}
+          disabled={viewportDisabled}
+          value={viewportColumns}
+          data-test-id="map-viewport-columns"
+          onChange={(value): void => {
+            const columns = toViewportCount(value);
+
+            if (columns !== undefined) props.onSetViewportSize?.(columns, viewportRows);
+          }}
+        />
+        <span className="emap-viewport-size-label">高</span>
+        <InputNumber
+          size="small"
+          min={MAP_VIEWPORT_MIN_COUNT}
+          max={MAP_VIEWPORT_MAX_COUNT}
+          step={1}
+          precision={0}
+          controls={false}
+          disabled={viewportDisabled}
+          value={viewportRows}
+          data-test-id="map-viewport-rows"
+          onChange={(value): void => {
+            const rows = toViewportCount(value);
+
+            if (rows !== undefined) props.onSetViewportSize?.(viewportColumns, rows);
+          }}
+        />
+      </span>
     </>
   );
 }
@@ -273,6 +341,11 @@ export function MapToolbar(props: IMapToolbarProps): ReactElement {
             onChange={(value): void => props.onSelectMap(value)}
           />
         </span>
+        {props.cellWidth !== undefined && props.cellHeight !== undefined ? (
+          <span className="emap-cell-size" data-test-id="map-cell-size">
+            {`${MAP_CELL_SIZE_LABEL}：${props.cellWidth}px * ${props.cellHeight}px`}
+          </span>
+        ) : null}
         <Tooltip title={props.canCreateMap ? undefined : '当前项目不支持新建地图。'}>
           <span className="emap-tooltip-wrap">
             <Button
@@ -385,6 +458,9 @@ export function MapToolbar(props: IMapToolbarProps): ReactElement {
                     passabilityVisible={props.passabilityVisible}
                     bigMap={props.bigMap}
                     zoom={props.zoom ?? MAP_ZOOM_DEFAULT}
+                    viewportColumns={props.viewportColumns}
+                    viewportRows={props.viewportRows}
+                    onSetViewportSize={props.onSetViewportSize}
                     onTogglePassability={props.onTogglePassability}
                     onToggleBigMap={props.onToggleBigMap}
                     onSetZoom={props.onSetZoom}
@@ -402,6 +478,9 @@ export function MapToolbar(props: IMapToolbarProps): ReactElement {
               passabilityVisible={props.passabilityVisible}
               bigMap={props.bigMap}
               zoom={props.zoom ?? MAP_ZOOM_DEFAULT}
+              viewportColumns={props.viewportColumns}
+              viewportRows={props.viewportRows}
+              onSetViewportSize={props.onSetViewportSize}
               onTogglePassability={props.onTogglePassability}
               onToggleBigMap={props.onToggleBigMap}
               onSetZoom={props.onSetZoom}
