@@ -5,10 +5,13 @@ import { ITableSchemaNode, serializeTableText } from '@motajs/editor-impl/shared
 import { createMapCapabilities, IMapFileRecord, mapFilePath, MAP_LIST_PATH } from '../backend/mapFiles';
 import { buildTileCatalog } from '../backend/tileCatalog';
 import { IMapDemoOverrides, IMemoryBackend } from '../backend/types';
+import { decodeDataUrlBytes } from './pngBytes';
+import DEMO_AUTOTILE_BIG_PNG_URL from './assets/autotile1.png?inline';
 
 // 开发宿主的地图演示数据：两张尺幅不同的地图、七张真实图集、一份两字段的属性 schema。
 // 图块目录不是手写数组：宿主把引擎格式的两份文本（纹理清单 + 图块表）交给 `buildTileCatalog` 现场解析，
 // 六类素材、动画、两种自动元件、Tileset、大 / 小素材都从同一份素材数据里长出来；能力包只拿到中立目录。
+// 其中大号自动元件用的是仓库里 384×128 的真实四帧素材（`assets/autotile1.png`），其余六张仍按代码现场编码。
 
 /** 地形图集相对项目根的路径：4×2、每格 32×32 的高对比色块 */
 const DEMO_TERRAIN_IMAGE_PATH = 'content/map/tiles-terrain.png';
@@ -16,7 +19,7 @@ const DEMO_TERRAIN_IMAGE_PATH = 'content/map/tiles-terrain.png';
 /** 横向动画图集的路径：4×1、每格 32×32 的四帧渐变色 */
 const DEMO_ANIMATE_IMAGE_PATH = 'content/map/tiles-animate.png';
 
-/** 3×4 自动元件图集的路径：192×128、两帧并排（每帧 96×128） */
+/** 3×4 自动元件图集的路径：384×128、四帧并排（每帧 96×128），内容来自仓库内的真实素材 */
 const DEMO_AUTOTILE_BIG_IMAGE_PATH = 'content/map/tiles-autotile-big.png';
 
 /** 2×3 自动元件图集的路径：128×96、两帧并排（每帧 64×96） */
@@ -318,17 +321,13 @@ export function encodeDemoAnimateAtlas(): Uint8Array {
 }
 
 /**
- * 编码 3×4 自动元件图集：192×128、两帧并排（每帧 96×128、每格 32×32）
- * @returns 完整的 PNG 字节
+ * 取大号自动元件的真实素材字节：把 `?inline` 导入的 data URL 解码成 PNG 字节
+ *
+ * 尺寸与帧数都不手写：调用方用 `readImageDimensions` 现算尺寸，帧数由图片宽 ÷ 单帧块宽推出。
+ * @returns 真实四帧自动元件素材的原始字节
  */
-export function encodeDemoAutotileBigAtlas(): Uint8Array {
-  return encodeDemoPng(192, 128, (x, y) => {
-    const frame = Math.floor(x / 96);
-    const column = Math.floor((x % 96) / 32);
-    const row = Math.floor(y / 32);
-
-    return paletteColor(frame * 12 + row * 3 + column, checkerVariant(x, y));
-  });
+export function readDemoAutotileBigBytes(): Uint8Array {
+  return decodeDataUrlBytes(DEMO_AUTOTILE_BIG_PNG_URL);
 }
 
 /**
@@ -488,7 +487,7 @@ export function buildDemoTileCatalog(): readonly IMapTileGroup[] {
   const dimensions = {
     [DEMO_TERRAIN_IMAGE_PATH]: readImageDimensions(encodeDemoTileAtlas()),
     [DEMO_ANIMATE_IMAGE_PATH]: readImageDimensions(encodeDemoAnimateAtlas()),
-    [DEMO_AUTOTILE_BIG_IMAGE_PATH]: readImageDimensions(encodeDemoAutotileBigAtlas()),
+    [DEMO_AUTOTILE_BIG_IMAGE_PATH]: readImageDimensions(readDemoAutotileBigBytes()),
     [DEMO_AUTOTILE_SMALL_IMAGE_PATH]: readImageDimensions(encodeDemoAutotileSmallAtlas()),
     [DEMO_TILESET_IMAGE_PATH]: readImageDimensions(encodeDemoTilesetAtlas()),
     [DEMO_LARGE_IMAGE_PATH]: readImageDimensions(encodeDemoLargeTileAtlas()),
@@ -663,7 +662,7 @@ export async function seedMapDemo(backend: IMemoryBackend): Promise<void> {
 
   backend.seed(DEMO_TERRAIN_IMAGE_PATH, encodeDemoTileAtlas());
   backend.seed(DEMO_ANIMATE_IMAGE_PATH, encodeDemoAnimateAtlas());
-  backend.seed(DEMO_AUTOTILE_BIG_IMAGE_PATH, encodeDemoAutotileBigAtlas());
+  backend.seed(DEMO_AUTOTILE_BIG_IMAGE_PATH, readDemoAutotileBigBytes());
   backend.seed(DEMO_AUTOTILE_SMALL_IMAGE_PATH, encodeDemoAutotileSmallAtlas());
   backend.seed(DEMO_TILESET_IMAGE_PATH, encodeDemoTilesetAtlas());
   backend.seed(DEMO_LARGE_IMAGE_PATH, encodeDemoLargeTileAtlas());

@@ -9,13 +9,13 @@ import {
   DEMO_TEXTURE_LIST_TEXT,
   DEMO_TILE_TABLE_TEXT,
   encodeDemoAnimateAtlas,
-  encodeDemoAutotileBigAtlas,
   encodeDemoAutotileSmallAtlas,
   encodeDemoLargeTileAtlas,
   encodeDemoSmallTileAtlas,
   encodeDemoTileAtlas,
   encodeDemoTilesetAtlas,
   MAP_DEMO_MAPS,
+  readDemoAutotileBigBytes,
   registerMapDemo,
   seedMapDemo,
 } from '../demo/mapDemo';
@@ -48,12 +48,15 @@ const SMALL_PATH = 'content/map/tiles-small.png';
 const ATLAS_SIZES: readonly (readonly [string, number, number])[] = [
   [TERRAIN_PATH, 128, 64],
   [ANIMATE_PATH, 128, 32],
-  [AUTOTILE_BIG_PATH, 192, 128],
+  [AUTOTILE_BIG_PATH, 384, 128],
   [AUTOTILE_SMALL_PATH, 128, 96],
   [TILESET_PATH, 128, 64],
   [LARGE_PATH, 192, 64],
   [SMALL_PATH, 64, 32],
 ];
+
+/** PNG 文件头的八个字节 */
+const PNG_SIGNATURE: readonly number[] = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 
 /**
  * 按图片路径与分类找素材组
@@ -106,11 +109,19 @@ describe('开发宿主演示图集与图块目录', () => {
   it('七张图集尺寸与用途对应', () => {
     expect(readImageDimensions(encodeDemoTileAtlas())).toEqual({ width: 128, height: 64 });
     expect(readImageDimensions(encodeDemoAnimateAtlas())).toEqual({ width: 128, height: 32 });
-    expect(readImageDimensions(encodeDemoAutotileBigAtlas())).toEqual({ width: 192, height: 128 });
+    expect(readImageDimensions(readDemoAutotileBigBytes())).toEqual({ width: 384, height: 128 });
     expect(readImageDimensions(encodeDemoAutotileSmallAtlas())).toEqual({ width: 128, height: 96 });
     expect(readImageDimensions(encodeDemoTilesetAtlas())).toEqual({ width: 128, height: 64 });
     expect(readImageDimensions(encodeDemoLargeTileAtlas())).toEqual({ width: 192, height: 64 });
     expect(readImageDimensions(encodeDemoSmallTileAtlas())).toEqual({ width: 64, height: 32 });
+  });
+
+  // 大号自动元件直接来自仓库内素材：字节以 PNG 签名开头，证明 `?inline` 解出的是真图片而不是缺省数据
+  it('大号自动元件字节带 PNG 签名', () => {
+    const bytes = readDemoAutotileBigBytes();
+
+    expect(Array.from(bytes.subarray(0, PNG_SIGNATURE.length))).toEqual(PNG_SIGNATURE);
+    expect(bytes.length).toBeGreaterThan(PNG_SIGNATURE.length);
   });
 
   // 目录里每个图块的图集位置换算出的单格都落在对应图片内
@@ -224,14 +235,15 @@ describe('开发宿主演示图集与图块目录', () => {
     expect(positions(animate)).toEqual([[0, 0]]);
   });
 
-  // 两种自动元件各 1 个图块、2 帧、read 为 Grid
-  it('两种自动元件都是单格 2 帧且 read 为 Grid', () => {
+  // 两种自动元件各 1 个图块、read 为 Grid；大号的是真实四帧素材（384 ÷ 96 = 4），小号的仍两帧
+  it('两种自动元件都是单格且 read 为 Grid', () => {
     const groups = buildDemoTileCatalog();
     const big = findGroup(groups, AUTOTILE_BIG_PATH, MapTileCategory.Autotile);
     const small = findGroup(groups, AUTOTILE_SMALL_PATH, MapTileCategory.Autotile);
 
     expect(big.read).toBe(MapTextureReadType.Grid);
-    expect(big.frames).toBe(2);
+    expect(big.imagePath).toBe('content/map/tiles-autotile-big.png');
+    expect(big.frames).toBe(4);
     expect(numbers(big)).toEqual([90]);
     expect(positions(big)).toEqual([[0, 0]]);
     expect(big.autotile).toEqual({ type: MapAutotileType.Big3x4, connections: [1, 2] });
