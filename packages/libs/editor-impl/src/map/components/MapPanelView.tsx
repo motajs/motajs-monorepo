@@ -511,116 +511,118 @@ export function MapPanelView(props: IMapPanelViewProps): ReactElement {
       data-test-id="map-panel"
       data-status={statusToken(view.status)}
     >
-      <div className="emap-main" data-test-id="map-main">
-        <MapToolbar
-          status={view.status}
-          mapSummaries={view.summaries}
-          currentMapId={currentMapId}
-          canCreateMap={props.canCreateMap ?? false}
-          canOpenProperties={props.canOpenProperties ?? false}
-          unsaved={view.unsaved}
-          saving={view.saving}
-          onSelectMap={(mapId): void => props.onSelectMap?.(mapId)}
-          onOpenCreate={(): void => props.onOpenDialog?.(MapDialogKind.New)}
-          onOpenProperties={(): void => props.onOpenProperties?.()}
-          onSave={props.onSave}
-          onRetry={props.onRetry}
-          showEditRow={showEditRow}
-          layers={layers}
-          currentLayerId={view.currentLayerId}
-          canAddLayer={props.canAddLayer ?? false}
-          brushMode={view.brushMode}
-          passabilityVisible={view.passabilityVisible}
-          bigMap={view.bigMap}
-          onSelectLayer={(layerId): void => {
-            if (props.onSelectLayer !== undefined) {
-              props.onSelectLayer(layerId);
-              return;
-            }
+      <MapToolbar
+        status={view.status}
+        mapSummaries={view.summaries}
+        currentMapId={currentMapId}
+        canCreateMap={props.canCreateMap ?? false}
+        canOpenProperties={props.canOpenProperties ?? false}
+        unsaved={view.unsaved}
+        saving={view.saving}
+        onSelectMap={(mapId): void => props.onSelectMap?.(mapId)}
+        onOpenCreate={(): void => props.onOpenDialog?.(MapDialogKind.New)}
+        onOpenProperties={(): void => props.onOpenProperties?.()}
+        onSave={props.onSave}
+        onRetry={props.onRetry}
+        showEditRow={showEditRow}
+        layers={layers}
+        currentLayerId={view.currentLayerId}
+        canAddLayer={props.canAddLayer ?? false}
+        brushMode={view.brushMode}
+        passabilityVisible={view.passabilityVisible}
+        bigMap={view.bigMap}
+        onSelectLayer={(layerId): void => {
+          if (props.onSelectLayer !== undefined) {
+            props.onSelectLayer(layerId);
+            return;
+          }
 
-            props.store.setState({ ...props.store.state, currentLayerId: layerId });
-          }}
-          onOpenAddLayer={(): void => props.onOpenDialog?.(MapDialogKind.Layer)}
-          aboveLayerOpacity={view.aboveLayerOpacity}
-          onAboveLayerOpacityChange={(value): void => {
-            if (props.onAboveLayerOpacityChange !== undefined) {
-              props.onAboveLayerOpacityChange(value);
-              return;
-            }
+          props.store.setState({ ...props.store.state, currentLayerId: layerId });
+        }}
+        onOpenAddLayer={(): void => props.onOpenDialog?.(MapDialogKind.Layer)}
+        aboveLayerOpacity={view.aboveLayerOpacity}
+        onAboveLayerOpacityChange={(value): void => {
+          if (props.onAboveLayerOpacityChange !== undefined) {
+            props.onAboveLayerOpacityChange(value);
+            return;
+          }
 
-            props.store.setState({ ...props.store.state, aboveLayerOpacity: value });
-          }}
-          onSelectBrushMode={(mode): void => {
-            if (props.onSelectBrushMode !== undefined) {
-              props.onSelectBrushMode(mode);
-              return;
-            }
+          props.store.setState({ ...props.store.state, aboveLayerOpacity: value });
+        }}
+        onSelectBrushMode={(mode): void => {
+          if (props.onSelectBrushMode !== undefined) {
+            props.onSelectBrushMode(mode);
+            return;
+          }
 
-            props.store.setState({ ...props.store.state, brushMode: mode });
-          }}
-          onTogglePassability={(value): void => {
-            if (props.onTogglePassability !== undefined) {
-              props.onTogglePassability(value);
-              return;
-            }
+          props.store.setState({ ...props.store.state, brushMode: mode });
+        }}
+        onTogglePassability={(value): void => {
+          if (props.onTogglePassability !== undefined) {
+            props.onTogglePassability(value);
+            return;
+          }
 
-            props.store.setState({ ...props.store.state, passabilityVisible: value });
-          }}
-          onToggleBigMap={(value): void => {
-            if (props.onToggleBigMap !== undefined) {
-              props.onToggleBigMap(value);
-              return;
-            }
+          props.store.setState({ ...props.store.state, passabilityVisible: value });
+        }}
+        onToggleBigMap={(value): void => {
+          if (props.onToggleBigMap !== undefined) {
+            props.onToggleBigMap(value);
+            return;
+          }
 
-            props.store.setState({ ...props.store.state, bigMap: value });
-          }}
-          zoom={view.zoom ?? MAP_ZOOM_DEFAULT}
-          onSetZoom={props.onSetZoom}
-        />
-        <MapPanelBody props={props} view={view} narrow={narrow} groupImages={groupImages} layout={layout} />
-        <div className="emap-bottom" data-test-id="map-bottom">
-          <MapFavoriteBar
-            favorites={view.favorites ?? []}
-            selection={view.paletteSelection}
-            groups={tileGroups}
-            groupUrls={groupImages.urls}
-            onSelectSlot={(index): void => props.onSelectFavoriteSlot?.(index)}
-            onReorder={(from, to): void => props.onReorderFavorites?.(from, to)}
-            reorderDisabled={false}
-          />
-          <MapBottomTabs
-            tab={view.bottomTab ?? MapBottomTab.Recent}
-            recentTiles={view.recentTiles}
-            frequentTiles={view.frequentTiles ?? []}
-            favorites={view.favorites ?? []}
-            groups={tileGroups}
-            groupUrls={groupImages.urls}
-            imageStatus={view.recentStatus}
-            selection={view.paletteSelection}
-            onSelectTab={(tab): void => props.onSetBottomTab?.(tab)}
-            onSelectPattern={props.onSelectPattern ?? noop}
-          />
+          props.store.setState({ ...props.store.state, bigMap: value });
+        }}
+        zoom={view.zoom ?? MAP_ZOOM_DEFAULT}
+        onSetZoom={props.onSetZoom}
+      />
+      <div className="emap-columns" data-test-id="map-columns">
+        <div className="emap-main" data-test-id="map-main">
+          <MapPanelBody props={props} view={view} narrow={narrow} groupImages={groupImages} layout={layout} />
+          <div className="emap-bottom" data-test-id="map-bottom">
+            <MapFavoriteBar
+              favorites={view.favorites ?? []}
+              selection={view.paletteSelection}
+              groups={tileGroups}
+              groupUrls={groupImages.urls}
+              onSelectSlot={(index): void => props.onSelectFavoriteSlot?.(index)}
+              onReorder={(from, to): void => props.onReorderFavorites?.(from, to)}
+              reorderDisabled={false}
+            />
+            <MapBottomTabs
+              tab={view.bottomTab ?? MapBottomTab.Recent}
+              recentTiles={view.recentTiles}
+              frequentTiles={view.frequentTiles ?? []}
+              favorites={view.favorites ?? []}
+              groups={tileGroups}
+              groupUrls={groupImages.urls}
+              imageStatus={view.recentStatus}
+              selection={view.paletteSelection}
+              onSelectTab={(tab): void => props.onSetBottomTab?.(tab)}
+              onSelectPattern={props.onSelectPattern ?? noop}
+            />
+          </div>
+          {renderNotice({ view, onRetry: props.onSave })}
         </div>
-        {renderNotice({ view, onRetry: props.onSave })}
-      </div>
-      <div className="emap-side" data-test-id="map-sidebar" style={narrow ? undefined : { width: sideWidth }}>
-        <div className="emap-side-slot">
-          <MapMaterialPanel
-            groups={document?.tileGroups ?? []}
-            groupUrls={groupImages.urls}
-            groupStatus={groupImages.status}
-            imageStatus={view.recentStatus}
-            activeCategory={view.activeCategory ?? MapTileCategory.Terrain}
-            tilesetOpen={view.tilesetOpen ?? false}
-            selection={view.paletteSelection}
-            showFrameCount={view.showFrameCount ?? false}
-            onSelectPattern={props.onSelectPattern ?? noop}
-            onRetryImages={props.onRetryImages ?? noop}
-            onSelectCategory={props.onSelectCategory ?? noop}
-            onToggleTileset={props.onToggleTileset ?? noop}
-            onToggleFrameCount={props.onToggleFrameCount ?? noop}
-            onFavoriteTile={props.onFavoriteTile}
-          />
+        <div className="emap-side" data-test-id="map-sidebar" style={narrow ? undefined : { width: sideWidth }}>
+          <div className="emap-side-slot">
+            <MapMaterialPanel
+              groups={document?.tileGroups ?? []}
+              groupUrls={groupImages.urls}
+              groupStatus={groupImages.status}
+              imageStatus={view.recentStatus}
+              activeCategory={view.activeCategory ?? MapTileCategory.Terrain}
+              tilesetOpen={view.tilesetOpen ?? false}
+              selection={view.paletteSelection}
+              showFrameCount={view.showFrameCount ?? false}
+              onSelectPattern={props.onSelectPattern ?? noop}
+              onRetryImages={props.onRetryImages ?? noop}
+              onSelectCategory={props.onSelectCategory ?? noop}
+              onToggleTileset={props.onToggleTileset ?? noop}
+              onToggleFrameCount={props.onToggleFrameCount ?? noop}
+              onFavoriteTile={props.onFavoriteTile}
+            />
+          </div>
         </div>
       </div>
       {view.dialog === MapDialogKind.New ? (

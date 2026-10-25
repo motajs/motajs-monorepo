@@ -12,7 +12,7 @@
   --emap-empty-a: var(--editor-surface, #ffffff);
   --emap-empty-b: var(--editor-bg, #f5f6f8);
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   width: 100%;
   height: 100%;
   overflow: hidden;
@@ -20,6 +20,15 @@
   background: var(--editor-surface, #ffffff);
   font-size: 13px;
   line-height: 1.5;
+}
+
+.emap-columns {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: row;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .emap-main {
@@ -35,6 +44,7 @@
   display: flex;
   flex: 0 0 auto;
   flex-direction: column;
+  height: 100%;
   min-height: 0;
   overflow: hidden;
   border-left: 1px solid var(--editor-border, #d0d7de);
@@ -83,12 +93,14 @@
   width: 32px;
 }
 
-.emap-panel.is-narrow {
+/* 窄布局仍按上下堆叠：两列容器改竖排，素材区保留「最多 40% 高」的既有行为 */
+.emap-panel.is-narrow .emap-columns {
   flex-direction: column;
 }
 
 .emap-panel.is-narrow .emap-side {
   width: 100%;
+  height: auto;
   max-height: 40%;
   border-top: 1px solid var(--editor-border, #d0d7de);
   border-left: none;
@@ -643,19 +655,23 @@
   font-size: 12px;
 }
 
+/* 分类导航横排：放不下就换行，一行内两端对齐（D-32 / U-10） */
 .emap-category-nav {
   display: flex;
   flex: 0 0 auto;
-  flex-direction: column;
-  gap: 2px;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px;
   padding: 4px 8px;
   border-bottom: 1px solid var(--editor-border, #d0d7de);
 }
 
+/* 按内容宽的直角胶囊：宽度由文字决定，窄面板下靠换行腾地方，不裁字 */
 .emap-category-item {
   display: block;
-  width: 100%;
-  height: 26px;
+  flex: 0 0 auto;
+  height: 24px;
   padding: 0 8px;
   overflow: hidden;
   border: none;
@@ -663,8 +679,6 @@
   background: transparent;
   color: var(--editor-fg, #202124);
   font-size: 12px;
-  text-align: left;
-  text-overflow: ellipsis;
   white-space: nowrap;
   cursor: pointer;
 }
@@ -684,9 +698,11 @@
   outline-offset: -2px;
 }
 
+/* 横排时用左侧虚线把 Tileset 与五个普通分类隔开 */
 .emap-category-tileset {
-  margin-top: 4px;
-  border-top: 1px dashed var(--editor-border, #d0d7de);
+  flex: 0 0 auto;
+  margin-left: 4px;
+  border-left: 1px dashed var(--editor-border, #d0d7de);
 }
 
 .emap-material-body {

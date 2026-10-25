@@ -288,8 +288,8 @@ afterEach(() => {
 });
 
 describe('地图面板左右两列布局', () => {
-  // 左列是工具栏 + 地图 + 底部占位，右列是素材区挂载点
-  it('左右两列同时存在且左列含工具栏、地图与底部占位', () => {
+  // 顶栏通栏在列容器之外；左列是地图 + 底部占位 + 提示行，右列是素材区挂载点
+  it('左右两列同时存在且左列含地图、底部占位与提示行', () => {
     const store = new Store<IMapPanelViewState>(createViewState());
 
     render(<MapPanelView {...createViewProps(store)} />);
@@ -297,7 +297,6 @@ describe('地图面板左右两列布局', () => {
     const main = screen.getByTestId('map-main');
     const side = screen.getByTestId('map-sidebar');
 
-    expect(main.querySelector('[data-test-id="map-toolbar"]')).not.toBeNull();
     expect(main.querySelector('[data-test-id="map-canvas"]')).not.toBeNull();
     expect(main.querySelector('.emap-bottom')).not.toBeNull();
     expect(main.querySelector('[data-test-id="map-notice"]')).not.toBeNull();

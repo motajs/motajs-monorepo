@@ -1,7 +1,7 @@
 import { ReactElement } from 'react';
 import { IMapCategoryNavProps, MapTileCategory } from '../types';
 
-// 右侧素材区的分类导航：五个普通分类竖排，Tileset 作为独立开关放在最后。
+// 右侧素材区的分类导航：五个普通分类与 Tileset 独立开关横排，放不下自动换行。
 // 只吃 props（当前分类、Tileset 是否展开、两个回调），不持有状态、不读目录、不生成图片地址。
 
 /** 分类导航里的一项：分类、显示名与拼进 data-test-id 的稳定标识 */
@@ -33,7 +33,7 @@ function itemClassName(selected: boolean): string {
 }
 
 /**
- * 素材分类导航：五类竖排 + 独立 Tileset 开关
+ * 素材分类导航：五类与独立 Tileset 开关横排、两端对齐、放不下自动换行
  *
  * 点普通分类会顺手收起 Tileset 视图；再点一次 Tileset 开关同样收起，
  * 这样六类素材都能到达，不会卡在 Tileset 视图里。
