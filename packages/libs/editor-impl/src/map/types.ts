@@ -517,7 +517,7 @@ export interface IMapLayout {
   /** 可见框的纵向格数 */
   readonly viewportRows: number;
   /** 整体渲染缩放：画布与命中测试共用这个倍率 */
-  readonly renderScale?: number;
+  readonly renderScale: number;
   /** 一格的像素宽（已含缩放） */
   readonly cellWidth: number;
   /** 一格的像素高（已含缩放） */
@@ -529,7 +529,7 @@ export interface IMapLayout {
   /** 右侧素材栏的像素宽 */
   readonly paletteWidth: number;
   /** 左列（地图区）的像素宽 */
-  readonly mapPaneWidth?: number;
+  readonly mapPaneWidth: number;
 }
 
 export interface IMapLayoutOptions {
@@ -658,7 +658,7 @@ export interface IMapRenderModel {
   /** 本帧要画的通行度标记 */
   readonly passMarks: readonly IMapPassMark[];
   /** 整体渲染缩放：画布把整个场景等比放大这个倍率；屏幕格像素 = 本帧的 `cellWidth` / `cellHeight` × 它 */
-  readonly renderScale?: number;
+  readonly renderScale: number;
   /**
    * 本帧的显示格基准宽（= `MAP_DISPLAY_CELL_SIZE`，不含缩放）；
    * 地图文档自己声明的格尺寸只用于素材切分与数据本身

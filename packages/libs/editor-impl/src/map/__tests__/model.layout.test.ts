@@ -151,7 +151,7 @@ describe('resolveMapLayout 素材区与地图区宽度', () => {
       expect(layout.paletteWidth).toBeGreaterThanOrEqual(240);
 
       if (availableWidth > 0) {
-        const mapPaneWidth = layout.mapPaneWidth ?? 0;
+        const mapPaneWidth = layout.mapPaneWidth;
 
         expect(layout.paletteWidth).toBe(Math.max(240, availableWidth - layout.canvasWidth));
         expect(layout.paletteWidth + mapPaneWidth).toBe(availableWidth);

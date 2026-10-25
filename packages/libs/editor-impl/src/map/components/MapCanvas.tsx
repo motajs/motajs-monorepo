@@ -149,7 +149,7 @@ function isPositionInside(document: IMapDocument, position: IMapCellPosition): b
  */
 function buildCanvasCellMetrics(document: IMapDocument, model: IMapRenderModel, bigMap: boolean): IMapCellMetrics {
   if (!bigMap) {
-    const renderScale = model.renderScale ?? 1;
+    const renderScale = model.renderScale;
 
     return resolveCellMetrics(model.cellWidth * renderScale, model.cellHeight * renderScale, 0, 0);
   }
@@ -272,7 +272,7 @@ export function MapCanvas(props: IMapCanvasProps): ReactElement {
   const pointerViewport: IMapViewport = props.bigMap ? { left: 0, top: 0 } : props.viewport;
 
   // 画布尺寸由模型给出（布局已按「32 × 缩放」算好）；屏幕格像素 = 显示格基准 × 整体倍率
-  const renderScale = props.model.renderScale ?? 1;
+  const renderScale = props.model.renderScale;
   const cellWidth = props.model.cellWidth * renderScale;
   const cellHeight = props.model.cellHeight * renderScale;
   const canvasWidth = props.model.width;

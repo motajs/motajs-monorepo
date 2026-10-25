@@ -36,7 +36,7 @@ vi.mock('../components/MapSurface', async () => {
       createMockElement('div', {
         'data-test-id': 'map-surface-stub',
         'data-cell-width': String(props.model.cellWidth),
-        'data-render-scale': props.model.renderScale === undefined ? '' : String(props.model.renderScale),
+        'data-render-scale': String(props.model.renderScale),
       }),
   };
 });

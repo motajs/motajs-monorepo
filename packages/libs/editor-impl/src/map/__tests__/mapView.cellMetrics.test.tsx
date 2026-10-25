@@ -32,7 +32,7 @@ vi.mock('../components/MapSurface', async () => {
         'data-test-id': 'map-surface-stub',
         'data-cell-width': String(model.cellWidth),
         'data-cell-height': String(model.cellHeight),
-        'data-render-scale': model.renderScale === undefined ? '' : String(model.renderScale),
+        'data-render-scale': String(model.renderScale),
         'data-cell-rect': first === undefined ? '' : `${first.x}:${first.y}:${first.width}:${first.height}`,
       });
     },

@@ -399,7 +399,7 @@ describe('buildMapRenderModel 格度量', () => {
     expect(model.renderScale).toBe(1.5);
     expect(model.cellWidth).toBe(32);
     expect(model.cellHeight).toBe(32);
-    expect(model.cellWidth * (model.renderScale ?? 1)).toBe(48);
+    expect(model.cellWidth * model.renderScale).toBe(48);
     expect({ x: first.x, y: first.y, width: first.width, height: first.height }).toEqual({
       x: 0,
       y: 0,
@@ -417,7 +417,7 @@ describe('buildMapRenderModel 格度量', () => {
     expect(model.renderScale).toBe(2);
     expect(model.cellWidth).toBe(32);
     expect(model.cellHeight).toBe(32);
-    expect(model.cellWidth * (model.renderScale ?? 1)).toBe(64);
+    expect(model.cellWidth * model.renderScale).toBe(64);
     expect({ x: first.x, y: first.y, width: first.width, height: first.height }).toEqual({
       x: 0,
       y: 0,
@@ -483,7 +483,7 @@ describe('buildMapRenderModel 可见格数与缩放同源', () => {
 
     expect(layout.canvasWidth).toBe(624);
     expect(model.renderScale).toBe(layout.renderScale);
-    expect(model.cellWidth * (model.renderScale ?? 1)).toBe(layout.cellWidth);
+    expect(model.cellWidth * model.renderScale).toBe(layout.cellWidth);
   });
 });
 
