@@ -2,7 +2,7 @@ import '../map.css';
 import { useStore } from '@tanstack/react-store';
 import { Store } from '@tanstack/store';
 import { Button, Spin } from 'antd';
-import { ReactElement, useEffect, useState } from 'react';
+import { ReactElement, useEffect, useRef, useState } from 'react';
 import {
   MAP_PALETTE_BASE_WIDTH,
   MAP_VIEWPORT_DEFAULT_COLUMNS,
@@ -38,6 +38,7 @@ import { MapMaterialPanel } from './MapMaterialPanel';
 import { MapPropertiesDrawer } from './MapPropertiesDrawer';
 import { MapToolbar } from './MapToolbar';
 import { IMapTileGroupUrls, useMapTileGroupUrls } from './useMapObjectUrl';
+import { useMapElementWidth } from './useMapElementWidth';
 
 // 地图面板的装配层：工具栏 / 主体 / 保存提示行 / 弹窗 / 属性抽屉都在这里按视图状态装配。
 // 本视图只接 props，不 import 面板类；渲染模型在这里每次渲染时现算，再交给 MapSurface 消费。
@@ -235,6 +236,8 @@ interface IMapPanelBodyProps {
   readonly narrow: boolean;
   /** 分组图片地址与读取状态 */
   readonly groupImages: IMapTileGroupUrls;
+  /** 面板顶层算好的布局；未打开地图时为 undefined */
+  readonly layout?: IMapLayout;
 }
 
 interface IMapNoticeProps {
@@ -359,21 +362,18 @@ function renderErrorBody(error: string | undefined, onRetry: () => void): ReactE
 /**
  * 渲染就绪态的地图区；渲染模型在这里现算，画布只把本地叠加状态补进模型交给 Pixi 表面
  *
- * 画布尺寸与格像素都来自 `resolveMapLayout`，渲染模型吃同一个 `zoom`，两边得到同一个格像素。
+ * 画布尺寸与格像素都来自面板顶层算好的布局，渲染模型吃同一个 `zoom`；两边得到同一个屏幕格像素。
  * @param input 主体渲染输入
  * @returns 就绪态主体元素
  */
 function renderReadyBody(input: IMapPanelBodyProps): ReactElement {
   const view = input.view;
   const document = view.document;
+  const layout = input.layout;
 
-  if (document === undefined) return renderLoadingBody();
+  if (document === undefined || layout === undefined) return renderLoadingBody();
 
   const zoom = view.zoom ?? MAP_ZOOM_DEFAULT;
-  const layout = resolveViewLayout(view, 0);
-
-  if (layout === undefined) return renderLoadingBody();
-
   const model = buildMapRenderModel(document, {
     width: layout.canvasWidth,
     height: layout.canvasHeight,
@@ -410,8 +410,6 @@ function renderReadyBody(input: IMapPanelBodyProps): ReactElement {
         narrow={input.narrow}
         aboveLayerOpacity={view.aboveLayerOpacity}
         cellFrameSpeed={input.props.cellFrameSpeed}
-        viewportColumns={view.viewportColumns}
-        viewportRows={view.viewportRows}
         imageVersion={view.paletteVersion}
         loadBytes={input.props.loadBytes}
         onCommitCells={input.props.onCommitCells ?? noop}
@@ -489,8 +487,10 @@ function renderNotice(props: IMapNoticeProps): ReactElement {
  * @returns 面板元素
  */
 export function MapPanelView(props: IMapPanelViewProps): ReactElement {
+  const panelRef = useRef<HTMLDivElement>(null);
   const view = useStore(props.store);
   const narrow = useNarrowLayout();
+  const availableWidth = useMapElementWidth(panelRef);
   const document = view.document;
   const showEditRow =
     view.status === MapPanelStatus.Loading ||
@@ -501,11 +501,12 @@ export function MapPanelView(props: IMapPanelViewProps): ReactElement {
   const layerNames = layers.map((layer, index) => resolveLayerName(layer, index));
   const tileGroups = document?.tileGroups;
   const groupImages = useMapTileGroupUrls(tileGroups, props.loadTileBytes, view.paletteVersion);
-  const layout = resolveViewLayout(view, 0);
+  const layout = resolveViewLayout(view, availableWidth);
   const sideWidth = layout === undefined ? MAP_PALETTE_BASE_WIDTH : layout.paletteWidth;
 
   return (
     <div
+      ref={panelRef}
       className={narrow ? 'emap-panel is-narrow' : 'emap-panel'}
       data-test-id="map-panel"
       data-status={statusToken(view.status)}
@@ -576,7 +577,7 @@ export function MapPanelView(props: IMapPanelViewProps): ReactElement {
           zoom={view.zoom ?? MAP_ZOOM_DEFAULT}
           onSetZoom={props.onSetZoom}
         />
-        <MapPanelBody props={props} view={view} narrow={narrow} groupImages={groupImages} />
+        <MapPanelBody props={props} view={view} narrow={narrow} groupImages={groupImages} layout={layout} />
         <div className="emap-bottom" data-test-id="map-bottom">
           <MapFavoriteBar
             favorites={view.favorites ?? []}

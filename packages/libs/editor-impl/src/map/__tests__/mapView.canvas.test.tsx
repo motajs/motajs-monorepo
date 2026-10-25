@@ -3,9 +3,10 @@ import { EditorCore, IEditorPanel, IEditorPanelFactoryParam } from '@motajs/edit
 import { createElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createMapPanelType, MAP_PANEL_TYPE_ID, MapPanel } from '..';
-import { MAP_CELL_SIZE } from '../constants';
+import { MAP_CELL_SIZE, MAP_ZOOM_DEFAULT } from '../constants';
 import { IMapCanvasProps, MapCanvas } from '../components/MapCanvas';
 import { IPaintWrite } from '../model/document';
+import { resolveMapLayout } from '../model/layout';
 import { buildMapRenderModel, IMapRenderView } from '../model/renderModel';
 import { IMapDocument, IMapEditorCapabilities, IMapRenderModel, MapBrushMode } from '../types';
 import {
@@ -87,15 +88,17 @@ interface IPointerInit {
 }
 
 /**
- * 造一帧渲染模型
+ * 造一帧渲染模型：默认画布取 13 × 13 布局给出的 416 × 416
  * @param document 中立文档
  * @param overrides 覆盖视图参数
  * @returns 渲染模型
  */
 function createModel(document: IMapDocument, overrides: Partial<IMapRenderView> = {}): IMapRenderModel {
+  const layout = resolveMapLayout({ zoom: MAP_ZOOM_DEFAULT });
+
   return buildMapRenderModel(document, {
-    width: document.width * MAP_CELL_SIZE,
-    height: document.height * MAP_CELL_SIZE,
+    width: layout.canvasWidth,
+    height: layout.canvasHeight,
     currentLayerId: document.layers[0]?.id ?? '',
     aboveLayerOpacity: 0.3,
     viewport: { left: 0, top: 0 },
@@ -556,8 +559,8 @@ describe('地图画布叠加层渲染模型', () => {
 });
 
 describe('地图画布视口化', () => {
-  // 画布只画一屏，整图尺寸只出现在透明占位层
-  it('画布尺寸等于视口尺寸，占位层等于整图尺寸', () => {
+  // 画布尺寸直接取模型的宽高（模型已按「格数 × 32 × 缩放」算好）
+  it('画布尺寸等于模型的宽高，占位层等于整图尺寸', () => {
     const document = createWideMapDocument(40, 26);
 
     render(<MapCanvas {...createCanvasProps({ document, model: createModel(document) })} />);
@@ -571,7 +574,7 @@ describe('地图画布视口化', () => {
     expect(spacer.style.height).toBe('832px');
   });
 
-  // 占位层按缩放后的格像素撑开：1.5 倍时格 48px
+  // 占位层按「32 × 倍率」撑开：1.5 倍时屏幕格 48px
   it('占位层按缩放后的格像素撑开', () => {
     const document = createWideMapDocument(40, 26);
     const model = createModel(document, { width: 13 * 48, height: 13 * 48, zoom: 1.5 });
@@ -583,20 +586,46 @@ describe('地图画布视口化', () => {
     expect(screen.getByTestId('map-canvas-spacer').style.height).toBe('1248px');
   });
 
-  // 宿主注入 15×9 视口时画布是 480×288，而不是永远 13×13
-  it('宿主注入的视口格数生效', () => {
+  // 15 × 9 的布局给出 480 × 288 的模型，画布照模型尺寸铺开而不是永远 13 × 13
+  it('画布尺寸跟随布局给出的模型宽高', () => {
     const document = createWideMapDocument(40, 26);
+    const layout = resolveMapLayout({ zoom: 1, viewportColumns: 15, viewportRows: 9 });
+    const model = createModel(document, { width: layout.canvasWidth, height: layout.canvasHeight });
 
-    render(
-      <MapCanvas
-        {...createCanvasProps({ document, model: createModel(document), viewportColumns: 15, viewportRows: 9 })}
-      />,
-    );
+    render(<MapCanvas {...createCanvasProps({ document, model })} />);
 
     const canvas = screen.getByTestId('map-canvas');
 
     expect(canvas.style.width).toBe('480px');
     expect(canvas.style.height).toBe('288px');
+  });
+
+  // 缩放 200% 时屏幕格 64px：同一屏幕点位仍命中同一格（命中与画面共用「32 × 倍率」）
+  it('200% 下按屏幕格像素命中同一格', () => {
+    const onCommitCells = vi.fn();
+    const document = createWideMapDocument(40, 26);
+    const model = createModel(document, { zoom: 2, width: 416, height: 416 });
+
+    render(
+      <MapCanvas
+        {...createCanvasProps({
+          document,
+          model,
+          onCommitCells,
+          pattern: { width: 1, height: 1, tiles: [2] },
+        })}
+      />,
+    );
+
+    const canvas = screen.getByTestId('map-canvas');
+    const x = 2 * 64 + 32;
+    const y = 1 * 64 + 32;
+
+    dispatchPointer(canvas, 'pointerdown', { x, y, buttons: 1 });
+    dispatchPointer(canvas, 'pointerup', { x, y });
+
+    expect(onCommitCells).toHaveBeenCalledTimes(1);
+    expect(onCommitCells.mock.calls[0][0]).toEqual([{ x: 2, y: 1, value: 2 }]);
   });
 
   // 可见框自己承担滚动

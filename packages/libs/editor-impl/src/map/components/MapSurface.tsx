@@ -1170,6 +1170,8 @@ export function MapSurface(props: IMapSurfaceProps): ReactElement {
     const thumbnail = props.model.thumbnail;
     let thumbnailSprite: Sprite | undefined;
 
+    scene.scale.set(props.model.renderScale ?? 1);
+
     if (thumbnail !== undefined && thumbnail.textureWidth > 0 && thumbnail.textureHeight > 0) {
       const stale =
         thumbnailTextureRef.current === undefined ||

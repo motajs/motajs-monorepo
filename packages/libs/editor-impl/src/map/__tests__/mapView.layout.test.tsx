@@ -260,6 +260,24 @@ function createTilesetGroup(): IMapTileGroup {
   };
 }
 
+/**
+ * 让面板根元素量到一个固定宽度，模拟真实外壳决定的可用宽度
+ * @param width 面板可用宽度（像素）
+ */
+function stubPanelWidth(width: number): void {
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+    x: 0,
+    y: 0,
+    width,
+    height: 0,
+    top: 0,
+    left: 0,
+    right: width,
+    bottom: 0,
+    toJSON: (): Record<string, never> => ({}),
+  });
+}
+
 beforeEach(() => {
   Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 1200 });
 });
@@ -286,8 +304,8 @@ describe('地图面板左右两列布局', () => {
     expect(side.querySelector('.emap-side-slot')).not.toBeNull();
   });
 
-  // 缩放 1 时右栏宽度就是布局函数给出的 320
-  it('缩放 1 时右栏宽度等于布局函数的结果', () => {
+  // 量不到面板宽度时右栏回退到基准 320
+  it('量不到面板宽度时右栏回退基准宽度', () => {
     const document = createMapDocument();
     const store = new Store<IMapPanelViewState>(createViewState({ document }));
 
@@ -299,14 +317,29 @@ describe('地图面板左右两列布局', () => {
     expect(screen.getByTestId('map-sidebar').style.width).toBe('320px');
   });
 
-  // 缩放 200% 时右栏收窄，但不低于最小可用宽度
-  it('缩放到 200% 时右栏不小于最小可用宽度', () => {
+  // 面板实测 1200：右栏拿剩余 784（画布 416），不被任何上限截断
+  it('面板实测宽度 1200 时右栏 784', () => {
     const document = createMapDocument();
-    const store = new Store<IMapPanelViewState>(createViewState({ document, zoom: 2 }));
+    const store = new Store<IMapPanelViewState>(createViewState({ document }));
 
+    stubPanelWidth(1200);
     render(<MapPanelView {...createViewProps(store)} />);
 
-    const expected = resolveMapLayout({ zoom: 2 }).paletteWidth;
+    const expected = resolveMapLayout({ zoom: 1, availableWidth: 1200 }).paletteWidth;
+
+    expect(expected).toBe(784);
+    expect(screen.getByTestId('map-sidebar').style.width).toBe('784px');
+  });
+
+  // 面板实测 600：右栏被最小宽度 240 顶住，地图区只剩 360（小于画布时允许横向滚动）
+  it('面板实测宽度 600 时右栏 240', () => {
+    const document = createMapDocument();
+    const store = new Store<IMapPanelViewState>(createViewState({ document }));
+
+    stubPanelWidth(600);
+    render(<MapPanelView {...createViewProps(store)} />);
+
+    const expected = resolveMapLayout({ zoom: 1, availableWidth: 600 }).paletteWidth;
 
     expect(expected).toBe(MAP_PALETTE_MIN_WIDTH);
     expect(screen.getByTestId('map-sidebar').style.width).toBe(`${MAP_PALETTE_MIN_WIDTH}px`);

@@ -35,7 +35,8 @@ vi.mock('../components/MapSurface', async () => {
     MapSurface: (props: IMapSurfaceStubProps) =>
       createMockElement('div', {
         'data-test-id': 'map-surface-stub',
-        'data-cell-width': props.model.cellWidth === undefined ? '' : String(props.model.cellWidth),
+        'data-cell-width': String(props.model.cellWidth),
+        'data-render-scale': props.model.renderScale === undefined ? '' : String(props.model.renderScale),
       }),
   };
 });
@@ -647,7 +648,7 @@ describe('地图面板视图装配', () => {
 });
 
 describe('地图面板里的缩放接线', () => {
-  // 端到端：滑块松手 → 面板 Store → 渲染模型的格像素
+  // 端到端：滑块松手 → 面板 Store → 渲染模型的整体倍率（显示格基准仍是 32）
   it('缩放 150% 同时写进面板与渲染模型', async () => {
     const harness = await openMapPanel({
       listMaps: async (): Promise<readonly IMapSummary[]> => [{ id: 'm1', name: '地图一' }],
@@ -667,7 +668,8 @@ describe('地图面板里的缩放接线', () => {
     fireEvent.keyUp(slider, { key: 'ArrowRight', keyCode: 39 });
 
     await waitFor(() => expect(harness.panel['store'].state.zoom).toBe(1.5));
-    await waitFor(() => expect(screen.getByTestId('map-surface-stub').getAttribute('data-cell-width')).toBe('48'));
+    await waitFor(() => expect(screen.getByTestId('map-surface-stub').getAttribute('data-cell-width')).toBe('32'));
+    expect(screen.getByTestId('map-surface-stub').getAttribute('data-render-scale')).toBe('1.5');
   });
 });
 

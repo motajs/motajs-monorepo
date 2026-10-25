@@ -30,8 +30,9 @@ vi.mock('../components/MapSurface', async () => {
 
       return createMockElement('div', {
         'data-test-id': 'map-surface-stub',
-        'data-cell-width': String(model.cellWidth ?? ''),
-        'data-cell-height': String(model.cellHeight ?? ''),
+        'data-cell-width': String(model.cellWidth),
+        'data-cell-height': String(model.cellHeight),
+        'data-render-scale': model.renderScale === undefined ? '' : String(model.renderScale),
         'data-cell-rect': first === undefined ? '' : `${first.x}:${first.y}:${first.width}:${first.height}`,
       });
     },
@@ -40,8 +41,8 @@ vi.mock('../components/MapSurface', async () => {
 
 configure({ testIdAttribute: 'data-test-id' });
 
-// 格子尺寸与 contain 的视图链路测试：文档格尺寸 → 渲染模型 → 视图 / 画布。
-// Pixi 表面被替换成只回显格度量的数据属性，画布走真实 MapCanvas，命中换算与绘制消费同一份度量。
+// 显示格基准与整体倍率的视图链路测试：文档 → 渲染模型 → 视图 / 画布。
+// Pixi 表面被替换成只回显格度量与倍率的数据属性；画布走真实 MapCanvas，命中换算与绘制消费同一份度量。
 
 interface IPointerInit {
   /** 指针在视口中的横坐标 */
@@ -191,59 +192,68 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('文档格尺寸进入渲染模型', () => {
-  // 48 × 24 的格子放 64 × 64 素材：模型带这对格度量，目标矩形按 contain 缩到 24 × 24 并水平居中
-  it('非正方形格把大素材 contain 进格内', () => {
+describe('文档声明的格尺寸不进入显示格', () => {
+  // 48 × 24 的文档格放 64 × 64 素材：屏幕格仍是 32，素材 contain 到 32 × 32
+  it('非正方形文档格不影响显示格', () => {
     renderPanel(createDocument({ cellWidth: 48, cellHeight: 24 }));
-
-    const stub = screen.getByTestId('map-surface-stub');
-
-    expect(stub.getAttribute('data-cell-width')).toBe('48');
-    expect(stub.getAttribute('data-cell-height')).toBe('24');
-    expect(stub.getAttribute('data-cell-rect')).toBe('12:0:24:24');
-  });
-
-  // 缺省格子按 32：模型度量与画布尺寸都不再依赖写死的常量推导
-  it('缺省格子仍是 32 且素材保持原尺寸', () => {
-    renderPanel(createDocument());
 
     const stub = screen.getByTestId('map-surface-stub');
 
     expect(stub.getAttribute('data-cell-width')).toBe('32');
     expect(stub.getAttribute('data-cell-height')).toBe('32');
+    expect(stub.getAttribute('data-render-scale')).toBe('1');
+    expect(stub.getAttribute('data-cell-rect')).toBe('0:0:32:32');
+  });
+
+  // 48 × 48 的文档格同样按 32 显示：显示格与文档声明彻底脱钩
+  it('正方形文档格也按 32 显示', () => {
+    renderPanel(createDocument({ cellWidth: 48, cellHeight: 48 }));
+
+    const stub = screen.getByTestId('map-surface-stub');
+
+    expect(stub.getAttribute('data-cell-width')).toBe('32');
+    expect(stub.getAttribute('data-render-scale')).toBe('1');
     expect(stub.getAttribute('data-cell-rect')).toBe('0:0:32:32');
   });
 });
 
 describe('缩放经视图进入渲染模型', () => {
-  // 150%：32 的文档格变成 48，64 的素材同步缩到 48 × 48，模型仍只带一份格度量
-  it('150% 下格度量与目标矩形都是 48', () => {
+  // 同一画布尺寸下 100% 与 200%：屏幕格像素翻倍，而模型的显示格基准仍是 32
+  it('100% 与 200% 只差整体倍率', () => {
+    renderPanel(createDocument(), { zoom: 1 });
+
+    const normal = screen.getByTestId('map-surface-stub');
+
+    expect(normal.getAttribute('data-cell-width')).toBe('32');
+    expect(normal.getAttribute('data-render-scale')).toBe('1');
+
+    cleanup();
+    renderPanel(createDocument(), { zoom: 2 });
+
+    const doubled = screen.getByTestId('map-surface-stub');
+
+    expect(doubled.getAttribute('data-cell-width')).toBe('32');
+    expect(doubled.getAttribute('data-render-scale')).toBe('2');
+    expect(doubled.getAttribute('data-cell-rect')).toBe('0:0:32:32');
+  });
+
+  // 150%：模型带倍率 1.5，屏幕格像素 = 32 × 1.5
+  it('150% 下倍率是 1.5 而格基准仍是 32', () => {
     renderPanel(createDocument(), { zoom: 1.5 });
 
     const stub = screen.getByTestId('map-surface-stub');
 
-    expect(stub.getAttribute('data-cell-width')).toBe('48');
-    expect(stub.getAttribute('data-cell-height')).toBe('48');
-    expect(stub.getAttribute('data-cell-rect')).toBe('0:0:48:48');
+    expect(stub.getAttribute('data-cell-width')).toBe('32');
+    expect(stub.getAttribute('data-cell-height')).toBe('32');
+    expect(stub.getAttribute('data-render-scale')).toBe('1.5');
   });
 
-  // 200%：格度量与目标矩形都是 64，缩放只在渲染模型顶部乘一次
-  it('200% 下格度量与目标矩形都是 64', () => {
-    renderPanel(createDocument(), { zoom: 2 });
-
-    const stub = screen.getByTestId('map-surface-stub');
-
-    expect(stub.getAttribute('data-cell-width')).toBe('64');
-    expect(stub.getAttribute('data-cell-height')).toBe('64');
-    expect(stub.getAttribute('data-cell-rect')).toBe('0:0:64:64');
-  });
-
-  // 不传 zoom 时按 1 处理：格度量与目标矩形都回到 32
+  // 不传 zoom 时按 1 处理：倍率 1、格基准 32
   it('不传缩放时按 1 处理', () => {
     renderPanel(createDocument());
 
     expect(screen.getByTestId('map-surface-stub').getAttribute('data-cell-width')).toBe('32');
-    expect(screen.getByTestId('map-surface-stub').getAttribute('data-cell-rect')).toBe('0:0:32:32');
+    expect(screen.getByTestId('map-surface-stub').getAttribute('data-render-scale')).toBe('1');
   });
 });
 

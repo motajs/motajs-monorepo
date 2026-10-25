@@ -1,10 +1,5 @@
 import { KeyboardEvent, PointerEvent, ReactElement, useEffect, useId, useRef, useState } from 'react';
-import {
-  MAP_CELL_SIZE,
-  MAP_FAVORITE_SLOT_COUNT,
-  MAP_VIEWPORT_DEFAULT_COLUMNS,
-  MAP_VIEWPORT_DEFAULT_ROWS,
-} from '../constants';
+import { MAP_CELL_SIZE, MAP_FAVORITE_SLOT_COUNT } from '../constants';
 import { buildFillWrites, buildRectWrites, buildStrokeWrites } from '../model/brush';
 import { resolveCellMetrics, resolvePointerCell } from '../model/cellMetrics';
 import { IPaintWrite } from '../model/document';
@@ -82,10 +77,6 @@ export interface IMapCanvasProps {
   readonly aboveLayerOpacity?: number;
   /** 动画帧速（毫秒 / 帧）；缺省 `MAP_FRAME_SPEED_DEFAULT` */
   readonly cellFrameSpeed?: number;
-  /** 可见框的横向格数；缺省 `MAP_VIEWPORT_DEFAULT_COLUMNS` */
-  readonly viewportColumns?: number;
-  /** 可见框的纵向格数；缺省 `MAP_VIEWPORT_DEFAULT_ROWS` */
-  readonly viewportRows?: number;
   /**
    * 把滚动后的视口位置回报给面板
    * @param left 视口左上角所在的格子横坐标
@@ -150,18 +141,17 @@ function isPositionInside(document: IMapDocument, position: IMapCellPosition): b
 }
 
 /**
- * 算这一帧的格尺寸与第一格原点：普通模式取模型里的缩放后格尺寸，大地图按整图适配缩放并居中
+ * 算这一帧的屏幕格尺寸与第一格原点：普通模式取「显示格基准 × 整体倍率」，大地图按整图适配缩放并居中
  * @param document 中立文档
- * @param model 渲染模型（提供画布尺寸与格尺寸）
+ * @param model 渲染模型（提供画布尺寸、显示格基准与整体倍率）
  * @param bigMap 是否处于大地图模式
  * @returns 格尺寸与第一格原点
  */
 function buildCanvasCellMetrics(document: IMapDocument, model: IMapRenderModel, bigMap: boolean): IMapCellMetrics {
   if (!bigMap) {
-    const cellWidth = model.cellWidth ?? document.cellWidth ?? MAP_CELL_SIZE;
-    const cellHeight = model.cellHeight ?? document.cellHeight ?? MAP_CELL_SIZE;
+    const renderScale = model.renderScale ?? 1;
 
-    return resolveCellMetrics(cellWidth, cellHeight, 0, 0);
+    return resolveCellMetrics(model.cellWidth * renderScale, model.cellHeight * renderScale, 0, 0);
   }
 
   if (document.width <= 0 || document.height <= 0) return resolveCellMetrics(MAP_CELL_SIZE, MAP_CELL_SIZE, 0, 0);
@@ -281,13 +271,12 @@ export function MapCanvas(props: IMapCanvasProps): ReactElement {
   // 命中换算的视口：大地图缩略从 (0,0) 起画，必须用零视口；普通模式才叠加面板视口
   const pointerViewport: IMapViewport = props.bigMap ? { left: 0, top: 0 } : props.viewport;
 
-  // 画布只画一屏：尺寸取视口格数 × 渲染模型里的缩放后格像素；整图只出现在透明占位层
-  const viewportColumns = props.viewportColumns ?? MAP_VIEWPORT_DEFAULT_COLUMNS;
-  const viewportRows = props.viewportRows ?? MAP_VIEWPORT_DEFAULT_ROWS;
-  const cellWidth = props.model.cellWidth ?? document.cellWidth ?? MAP_CELL_SIZE;
-  const cellHeight = props.model.cellHeight ?? document.cellHeight ?? MAP_CELL_SIZE;
-  const canvasWidth = viewportColumns * cellWidth;
-  const canvasHeight = viewportRows * cellHeight;
+  // 画布尺寸由模型给出（布局已按「32 × 缩放」算好）；屏幕格像素 = 显示格基准 × 整体倍率
+  const renderScale = props.model.renderScale ?? 1;
+  const cellWidth = props.model.cellWidth * renderScale;
+  const cellHeight = props.model.cellHeight * renderScale;
+  const canvasWidth = props.model.width;
+  const canvasHeight = props.model.height;
   // 大地图与滚动互斥：占位层取可见框尺寸，因此不产生滚动条
   const contentWidth = props.bigMap ? canvasWidth : Math.max(canvasWidth, document.width * cellWidth);
   const contentHeight = props.bigMap ? canvasHeight : Math.max(canvasHeight, document.height * cellHeight);
