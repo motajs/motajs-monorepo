@@ -37,7 +37,13 @@ import {
   MapTextureReadType,
   MapTileCategory,
 } from '../types';
-import { createMapDocument, createMapHarness, createTileGroup, createWideMapDocument, FakeFileSystem } from './fixtures';
+import {
+  createMapDocument,
+  createMapHarness,
+  createTileGroup,
+  createWideMapDocument,
+  FakeFileSystem,
+} from './fixtures';
 
 vi.mock('../components/MapSurface', async () => {
   const { createElement: createMockElement } = await import('react');
@@ -654,6 +660,19 @@ describe('地图下方三页签', () => {
     });
   });
 
+  // 最近使用页只画缩略图：格子里没有编号文本，悬停 / 无障碍文案用图块名
+  it('最近使用格没有编号文本且 title 用图块名', () => {
+    render(<MapBottomTabs {...createTabsProps({ recentTiles: [1, 2] })} />);
+
+    const first = screen.getByTestId('map-bottom-tile-1');
+    const second = screen.getByTestId('map-bottom-tile-2');
+
+    expect(first.textContent).toBe('');
+    expect(second.textContent).toBe('');
+    expect(first.getAttribute('title')).toBe('图块 1');
+    expect(second.getAttribute('title')).toBe('图块 2');
+  });
+
   // 空列表显示「暂无记录」
   it('空列表显示暂无记录', () => {
     render(<MapBottomTabs {...createTabsProps({ recentTiles: [] })} />);
@@ -687,21 +706,24 @@ describe('收藏栏与排序', () => {
     expect(onSelectSlot.mock.calls.map((call) => call[0])).toEqual([0, 1, 9]);
   });
 
-  // 下移 / 上移按钮上报正确的 from / to；两端按钮禁用
-  it('上下按钮上报正确的槽位', () => {
-    const onReorder = vi.fn();
+  // 上下移动按钮已经删掉，排序只剩拖拽
+  it('不再有上移 / 下移按钮', () => {
+    render(<MapFavoriteBar {...createFavoriteProps({ favorites: [2, 3, 0, 0, 0, 0, 0, 0, 0] })} />);
 
-    render(<MapFavoriteBar {...createFavoriteProps({ favorites: [2, 3, 0, 0, 0, 0, 0, 0, 0], onReorder })} />);
+    expect(screen.queryByTestId('map-favorite-up-0')).toBeNull();
+    expect(screen.queryAllByTestId(/^map-favorite-(up|down)-/)).toHaveLength(0);
+  });
 
-    fireEvent.click(screen.getByTestId('map-favorite-down-0'));
-    fireEvent.click(screen.getByTestId('map-favorite-up-1'));
+  // 收藏格写的是「按哪个数字键选它」：2…9、0；擦除格是 1；图块编号不再出现在可见文本里
+  it('收藏格显示槽位键而不是图块编号', () => {
+    render(<MapFavoriteBar {...createFavoriteProps({ favorites: [3, 4, 0, 0, 0, 0, 0, 0, 0] })} />);
 
-    expect(onReorder.mock.calls).toEqual([
-      [0, 1],
-      [1, 0],
-    ]);
-    expect((screen.getByTestId('map-favorite-up-0') as HTMLButtonElement).disabled).toBe(true);
-    expect((screen.getByTestId('map-favorite-down-8') as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByTestId('map-favorite-key-erase').textContent).toBe('1');
+    expect(screen.getByTestId('map-favorite-key-0').textContent).toBe('2');
+    expect(screen.getByTestId('map-favorite-key-7').textContent).toBe('9');
+    expect(screen.getByTestId('map-favorite-key-8').textContent).toBe('0');
+    expect(screen.getByTestId('map-favorite-0').textContent).toBe('2');
+    expect(screen.getByTestId('map-favorite-1').textContent).toBe('3');
   });
 
   // 拖拽：按下起点格、进入目标格、在目标格松开后上报 from / to
