@@ -15,7 +15,7 @@ import {
 
 // 地图下方的三页：最近使用 / 最常使用 / 收藏。
 // 三份编号都来自面板视图状态，组件自己不持久化、不读文件；切换页签只改显示，不碰地图。
-// 每个格子都按「目录 + 图片地址 + 第 0 帧矩形」现算背景，目录缺失时只留编号文本。
+// 每个格子都按「目录 + 图片地址 + 第 0 帧矩形」现算背景；格子只显示缩略图，编号不落到界面上。
 
 /** 列表为空时的文案 */
 const EMPTY_TEXT = '暂无记录';
@@ -208,32 +208,32 @@ function numbersOfTab(props: IMapBottomTabsProps): readonly number[] {
 }
 
 /**
- * 渲染一个底部图块格：有目录与图片时真的画出图块，否则只留编号
+ * 渲染一个底部图块格：只画缩略图，悬停 / 无障碍文案用图块名
  * @param props 图块格渲染输入
  * @returns 图块格元素
  */
 function renderBottomTile(props: IMapBottomTileProps): ReactElement {
-  const lookup = findBottomTile(props.groups, props.number);
+  const number = props.number;
+  const lookup = findBottomTile(props.groups, number);
   const url = lookup === undefined ? undefined : props.groupUrls[lookup.group.id];
   const rect = frameRectOf(lookup);
-  const selected = isBottomTileSelected(props.number, props.selection);
+  const selected = isBottomTileSelected(number, props.selection);
   const className = selected ? 'emap-material-cell is-selected' : 'emap-material-cell';
+  const label = lookup === undefined || lookup.entry.name.length === 0 ? '未知图块' : lookup.entry.name;
 
   return (
     <button
-      key={props.number}
+      key={number}
       type="button"
       className={className}
-      data-test-id={`map-bottom-tile-${props.number}`}
+      data-test-id={`map-bottom-tile-${number}`}
       data-frame-rect={rect === undefined ? '' : `${rect.x},${rect.y},${rect.width},${rect.height}`}
       style={tileBackgroundStyle(lookup, url, rect)}
-      title={`图块编号 ${props.number}`}
-      aria-label={`图块编号 ${props.number}`}
+      title={label}
+      aria-label={label}
       aria-pressed={selected}
-      onClick={(): void => props.onSelect(props.number)}
-    >
-      {props.number}
-    </button>
+      onClick={(): void => props.onSelect(number)}
+    />
   );
 }
 
