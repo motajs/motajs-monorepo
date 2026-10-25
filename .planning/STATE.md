@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.1"
 current_phase_name: 地图渲染与布局重做
-current_plan: 22
+current_plan: 23
 status: executing
-stopped_at: Completed 04.1-21-PLAN.md
-last_updated: "2026-10-25T09:08:43.488Z"
+stopped_at: Completed 04.1-22-PLAN.md
+last_updated: "2026-10-25T09:33:48.038Z"
 last_activity: 2026-10-25
 last_activity_desc: Phase 3 complete, transitioned to Phase 4
-state_head: 30c65eb7a582edf40990ee66072b6a54c18c5dad
+state_head: 54b1c7d044adcb8cbcd0854c7c737a94b9d223e2
 progress:
   total_phases: 9
   completed_phases: 5
   total_plans: 146
-  completed_plans: 141
+  completed_plans: 142
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,10 +30,10 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 04.1 (地图渲染与布局重做) — EXECUTING
-Current Plan: 22
+Current Plan: 23
 Total Plans in Phase: 24
-Status: Executing — 04.1-21 complete（大地图清晰度 / 真实自动元件 / 真实通行属性），ready for 04.1-23
-Last activity: 2026-10-25 — 04.1-21 complete（缩略纹理按显示像素 + 最近邻、真实四帧自动元件、演示图块 pass）
+Status: Executing — 04.1-22 complete（快捷栏槽位键 / 底部只留缩略图 / 排序只留拖拽），ready for 04.1-23
+Last activity: 2026-10-25 — 04.1-22 complete（收藏格显示数字键位并加描边、最近 / 最常去掉编号、删掉上下按钮）
 
 Progress: [███████░░░] 71%
 
@@ -159,6 +159,7 @@ Progress: [███████░░░] 71%
 | Phase 04.1 P19 | 33 | 3 tasks | 14 files |
 | Phase 04.1 P20 | 23min | 3 tasks | 9 files |
 | Phase 04.1 P21 | 15min | 3 tasks | 9 files |
+| Phase 04.1 P22 | 22 | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -411,6 +412,10 @@ Recent decisions affecting current work:
 - [Phase 04.1]: 04.1-21: 最近邻只设两处——缩略 RenderTexture 建好后、基础图块纹理 Texture.from(image) 后；裁切纹理共用同一 source 自动继承
 - [Phase 04.1]: 04.1-21: 演示大号自动元件改用仓库内真实素材 autotile1.png（384×128），帧数不手写、由解析器按 384 ÷ 96 得出 4
 - [Phase 04.1]: 04.1-21: 演示图块 pass 的 out 与 in 都写满四方向，不依赖解析器「缺省即可通行」的默认值（否则容易写出看着是墙其实能走的假数据）
+- [Phase 04.1]: 槽位键 2…9、0 抽成 MAP_FAVORITE_SLOT_KEYS，与 MapCanvas 的数字键映射逐条对齐，避免显示与选中不一致
+- [Phase 04.1]: 收藏格描边用 inset box-shadow，不加外圈，避免与 .is-selected 的 2px 外圈打架
+- [Phase 04.1]: 底部图块格只画缩略图，title / aria-label 用图块名，名称缺失时回退「未知图块」而不泄漏编号
+- [Phase 04.1]: 收藏排序只保留拖拽，上移 / 下移按钮及其测试 id 全部删除，types.ts 未改
 
 ### Pending Todos
 
@@ -438,6 +443,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-25T09:08:21.490Z
-Stopped at: Completed 04.1-21-PLAN.md
+Last session: 2026-10-25T09:33:47.575Z
+Stopped at: Completed 04.1-22-PLAN.md
 Resume file: None
