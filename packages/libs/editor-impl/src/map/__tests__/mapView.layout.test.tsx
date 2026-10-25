@@ -12,6 +12,8 @@ import {
   MAP_PALETTE_MIN_WIDTH,
   MAP_VIEWPORT_DEFAULT_COLUMNS,
   MAP_VIEWPORT_DEFAULT_ROWS,
+  MAP_VIEWPORT_MAX_COUNT,
+  MAP_VIEWPORT_MIN_COUNT,
   MAP_ZOOM_DEFAULT,
 } from '../constants';
 import { resolveMapLayout } from '../model/layout';
@@ -35,7 +37,7 @@ import {
   MapTextureReadType,
   MapTileCategory,
 } from '../types';
-import { createMapDocument, createMapHarness, createTileGroup, FakeFileSystem } from './fixtures';
+import { createMapDocument, createMapHarness, createTileGroup, createWideMapDocument, FakeFileSystem } from './fixtures';
 
 vi.mock('../components/MapSurface', async () => {
   const { createElement: createMockElement } = await import('react');
@@ -505,6 +507,39 @@ describe('顶栏只读图格尺寸', () => {
     });
 
     expect(screen.getByTestId('map-cell-size').textContent).toBe('图格尺寸：48px * 48px');
+  });
+});
+
+describe('面板上的地图区宽高（D-40 / T-4.1-20-02）', () => {
+  // 宽高只改视图状态：越界值夹到 1..64，非数保留当前值，视口左上角按新格数重新夹取
+  it('宽高夹到 1..64 且重新夹取视口，不置脏', async () => {
+    const harness = await openPanel(createWideMapDocument(40, 40));
+    const store = harness.panel['store'];
+
+    harness.panel.setViewport(27, 27);
+    expect(store.state.viewport).toEqual({ left: 27, top: 27 });
+
+    harness.panel.setViewportSize(1, 1);
+    expect(store.state.viewportColumns).toBe(MAP_VIEWPORT_MIN_COUNT);
+    expect(store.state.viewportRows).toBe(MAP_VIEWPORT_MIN_COUNT);
+
+    harness.panel.setViewport(39, 39);
+    expect(store.state.viewport).toEqual({ left: 39, top: 39 });
+
+    harness.panel.setViewportSize(64, 64);
+    expect(store.state.viewportColumns).toBe(MAP_VIEWPORT_MAX_COUNT);
+    expect(store.state.viewportRows).toBe(MAP_VIEWPORT_MAX_COUNT);
+    expect(store.state.viewport).toEqual({ left: 0, top: 0 });
+
+    harness.panel.setViewportSize(0, 999);
+    expect(store.state.viewportColumns).toBe(MAP_VIEWPORT_MIN_COUNT);
+    expect(store.state.viewportRows).toBe(MAP_VIEWPORT_MAX_COUNT);
+
+    harness.panel.setViewportSize(Number.NaN, Number.NaN);
+    expect(store.state.viewportColumns).toBe(MAP_VIEWPORT_MIN_COUNT);
+    expect(store.state.viewportRows).toBe(MAP_VIEWPORT_MAX_COUNT);
+
+    expect(harness.panel.isDirty()).toBe(false);
   });
 });
 
