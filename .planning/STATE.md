@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.1"
 current_phase_name: 地图渲染与布局重做
-current_plan: 26
+current_plan: 27
 status: executing
-stopped_at: Completed 04.1-25-PLAN.md
-last_updated: "2026-10-25T13:59:06.181Z"
-last_activity: 2026-10-25
-last_activity_desc: 04.1-25 complete（纯声明：MAP_RULER_SIZE=20；mapPaneWidth 口径改为「画布宽 + 标尺」；宿主目录新增 tilesetReserve / tilesetUnit；INTERFACE-NAME.md 七节命名表 + OQ16 + 确认清单第 7 条；两个包 typecheck 与 coreModuleState / coreEngineNeutral 全 exit 0；命名「全部可以」确认）
-state_head: 97b86d00073c4d4eb54455785e5abedfee1dc330
+stopped_at: Completed 04.1-26-PLAN.md
+last_updated: "2026-10-25T23:52:00.000Z"
+last_activity: 2026-10-26
+last_activity_desc: 04.1-26 complete（地图区 = 标尺 + 画布、单滚动层、素材区无下限；滑块「地图区比例」；宽高框 blur/Enter 提交；editor-impl typecheck 与 954 tests 全绿）
+state_head: b6c7d9383c215200bd6ca89e87e675fd5518849a
 progress:
   total_phases: 9
-  completed_phases: 5
+  completed_phases: 0
   total_plans: 153
-  completed_plans: 144
+  completed_plans: 145
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,10 +30,10 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 04.1 (地图渲染与布局重做) — EXECUTING
-Current Plan: 26
+Current Plan: 27
 Total Plans in Phase: 31
-Status: Executing — 04.1-25 complete（第四轮接口与命名：标尺常量 MAP_RULER_SIZE + Tileset 编号段参数 + 七节命名表；用户确认「全部可以」），ready for 04.1-26
-Last activity: 2026-10-25 — 04.1-25 complete（纯声明：MAP_RULER_SIZE=20；mapPaneWidth 口径改为「画布宽 + 标尺」；宿主目录新增 tilesetReserve / tilesetUnit；INTERFACE-NAME.md 七节命名表 + OQ16 + 确认清单第 7 条；两个包 typecheck 与 coreModuleState / coreEngineNeutral 全 exit 0；命名「全部可以」确认）
+Status: Executing — 04.1-26 complete（地图区 = 标尺 + 画布；外框不滚、只有画布内部滚；素材区无最小宽度；滑块「地图区比例」；宽高框 blur/Enter 提交），ready for 04.1-27
+Last activity: 2026-10-26 — 04.1-26 complete（mapPaneWidth = canvasWidth + MAP_RULER_SIZE；paletteWidth = max(0, 可用宽度 − 地图区)；删除 MAP_PALETTE_MIN_WIDTH 与 .emap-canvas-scroll；MapCanvas 改用 MAP_RULER_SIZE；editor-impl typecheck exit 0、84 files / 954 tests passed）
 
 Progress: [███████░░░] 74%
 
@@ -162,6 +162,7 @@ Progress: [███████░░░] 74%
 | Phase 04.1 P22 | 22 | 3 tasks | 4 files |
 | Phase 04.1-map-render-layout P23 | 45min | 2 tasks | 10 files |
 | Phase 04.1 P25 | 15min | 2 tasks | 4 files |
+| Phase 04.1 P26 | 13min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -424,6 +425,9 @@ Recent decisions affecting current work:
 - [Phase 04.1]: 04.1-25：MAP_RULER_SIZE（20）成为标尺厚度的唯一来源，地图区宽度口径固定为「画布宽 + 标尺」（D-43）；画布本地的 RULER_SIZE 由计划 26 收敛
 - [Phase 04.1]: 04.1-25：宿主目录输入新增 tilesetReserve / tilesetUnit（缺省 100000 / 10000），编辑器仍只认目录里枚举好的编号（D-51）；旧 tilesetBase 标注废弃、由计划 29 删除
 - [Phase 04.1]: 04.1-25：第四轮全部新增 / 删除名字经用户一次性确认（「全部可以」）；tilesetOpen 一族删除由计划 27 执行，MAP_PALETTE_MIN_WIDTH / .emap-canvas-scroll 由计划 26 执行
+- [Phase 04.1]: 地图区宽度无条件 = 画布 + MAP_RULER_SIZE，素材区 max(0, 可用宽度 − 地图区) 且删除 240 下限（D-43 / D-44 / U-11）
+- [Phase 04.1]: 标尺与画布合并进 .emap-map-region，外框 overflow hidden、仅 .emap-canvas-viewport 可滚，删除 .emap-canvas-scroll（U-14）
+- [Phase 04.1]: 滑块文案改「地图区比例」但保留 zoom 契约；宽高数字框改为草稿 + blur/Enter 提交并回退非法值（D-45 / D-46 / U-15）
 
 ### Pending Todos
 
@@ -451,6 +455,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-25T13:53:39.677Z
-Stopped at: Completed 04.1-25-PLAN.md
+Last session: 2026-10-25T23:49:57.260Z
+Stopped at: Completed 04.1-26-PLAN.md
 Resume file: None
