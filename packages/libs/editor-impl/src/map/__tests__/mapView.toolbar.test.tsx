@@ -24,7 +24,6 @@ import {
   MapPanelStatus,
   MapPaletteKind,
   MapTileCategory,
-  MapUnsavedChoice,
 } from '../types';
 import { createMapDocument, createMapHarness, FakeFileSystem } from './fixtures';
 
@@ -628,25 +627,6 @@ describe('地图面板视图装配', () => {
     fireEvent.click(screen.getByTestId('map-layer-add'));
 
     await waitFor(() => expect(screen.getByTestId('map-layer-dialog')).not.toBeNull());
-  });
-
-  // 脏状态下出现未保存确认；点取消只上报取消并保持当前地图
-  it('未保存弹窗由视图状态渲染且取消不换图', async () => {
-    const store = new Store<IMapPanelViewState>(createViewState({ unsaved: true, dialog: MapDialogKind.Unsaved }));
-    const onUnsavedDecision = vi.fn((choice: MapUnsavedChoice): void => {
-      if (choice === MapUnsavedChoice.Cancel) setDialog(store, MapDialogKind.None);
-    });
-
-    render(<MapPanelView {...createViewProps(store, { onUnsavedDecision })} />);
-
-    expect(screen.getByTestId('map-unsaved-dialog')).not.toBeNull();
-
-    fireEvent.click(screen.getByTestId('map-unsaved-cancel'));
-
-    await waitFor(() => expect(screen.queryByTestId('map-unsaved-dialog')).toBeNull());
-
-    expect(onUnsavedDecision).toHaveBeenCalledWith(MapUnsavedChoice.Cancel);
-    expect(store.state.document?.id).toBe('map-sample');
   });
 
   // 抽屉由视图状态打开，正文容器带 emap-properties-body，关闭只上报一次

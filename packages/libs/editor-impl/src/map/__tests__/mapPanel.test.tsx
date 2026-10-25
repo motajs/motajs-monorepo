@@ -11,7 +11,6 @@ import {
   MapPanelStatus,
   MapTileCategory,
   MapUndoType,
-  MapUnsavedChoice,
 } from '../types';
 import { createMapDocument, createMapHarness, FakeFileSystem } from './fixtures';
 
@@ -335,10 +334,8 @@ describe('地图面板：清单 / 打开 / 切换', () => {
 
     panel.commitCells('layer-base', [{ x: 0, y: 0, value: 1 }]);
 
-    const switching = panel.openMap('m2');
-
-    await panel.resolveUnsavedDecision(MapUnsavedChoice.Discard);
-    await switching;
+    // 换图会先把上一张图的改动存回宿主，再打开目标地图
+    await panel.openMap('m2');
 
     const before = viewState(panel).document;
 

@@ -1,10 +1,11 @@
-﻿import { act, cleanup, configure, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, configure, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { EditorCore, IEditorPanel, IEditorPanelFactoryParam } from '@motajs/editor-core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createMapPanelType, MAP_PANEL_TYPE_ID, MapPanel } from '..';
-import { MapLayerDialog, MapNewDialog, MapUnsavedDialog } from '../components/dialogs';
+import { MapLayerDialog, MapNewDialog } from '../components/dialogs';
 import { MAP_RECENT_TILES_PATH, MAP_TILE_PREFS_PATH } from '../constants';
 import {
+  IMapDataSection,
   IMapDocument,
   IMapEditorCapabilities,
   IMapPanelViewState,
@@ -14,7 +15,6 @@ import {
   MapImageStatus,
   MapPaletteKind,
   MapTileCategory,
-  MapUnsavedChoice,
 } from '../types';
 import { createMapDocument, createMapHarness, createTileGroup, FakeFileSystem } from './fixtures';
 
@@ -402,42 +402,6 @@ describe('新增图层弹窗', () => {
   });
 });
 
-describe('未保存确认弹窗', () => {
-  // 保存中三个按钮都禁用并显示「正在保存…」
-  it('保存中三个按钮禁用并显示进度', () => {
-    render(<MapUnsavedDialog open saving onUnsavedDecision={(): void => {}} />);
-
-    expect(screen.getByTestId<HTMLButtonElement>('map-unsaved-save').disabled).toBe(true);
-    expect(screen.getByTestId<HTMLButtonElement>('map-unsaved-discard').disabled).toBe(true);
-    expect(screen.getByTestId<HTMLButtonElement>('map-unsaved-cancel').disabled).toBe(true);
-    expect(screen.queryByText('正在保存…')).not.toBeNull();
-  });
-
-  // 三个按钮只把选择交回，不做任何判断
-  it('三个按钮只把用户选择交回面板', () => {
-    const onUnsavedDecision = vi.fn();
-
-    render(<MapUnsavedDialog open saving={false} onUnsavedDecision={onUnsavedDecision} />);
-
-    fireEvent.click(screen.getByTestId('map-unsaved-save'));
-    fireEvent.click(screen.getByTestId('map-unsaved-discard'));
-    fireEvent.click(screen.getByTestId('map-unsaved-cancel'));
-
-    expect(onUnsavedDecision.mock.calls.map((call) => call[0])).toEqual([
-      MapUnsavedChoice.SaveAndContinue,
-      MapUnsavedChoice.Discard,
-      MapUnsavedChoice.Cancel,
-    ]);
-  });
-
-  // 保存失败原因换行显示在正文下方
-  it('保存失败原因显示在正文下方', () => {
-    render(<MapUnsavedDialog open saving={false} saveError="磁盘已满" onUnsavedDecision={(): void => {}} />);
-
-    expect(screen.getByTestId('map-unsaved-error').textContent).toContain('保存失败：磁盘已满');
-  });
-});
-
 describe('面板：新建地图与新增图层', () => {
   // 新建成功后打开新文档、当前层是初始图层、视口回左上角并登记屏障
   it('新建地图成功后打开新文档并登记屏障', async () => {
@@ -536,91 +500,45 @@ describe('面板：新建地图与新增图层', () => {
   });
 });
 
-describe('面板：未保存确认', () => {
-  // 刚打开、什么都没改时关闭标签直接放行，弹窗不出现
-  it('干净时关闭标签直接放行', async () => {
-    const { panel } = await openMapPanel(createCapabilities());
-
-    expect(await panel.onBeforeClose()).toBe(true);
-    expect(viewState(panel).dialog).toBe(MapDialogKind.None);
-  });
-
-  // 脏时切图会先问一句；取消后仍停在原图，宿主没有被再次调用
-  it('脏时切图先询问，取消后不继续', async () => {
-    const openMap = vi.fn(async (mapId: string): Promise<IMapDocument> => createEmptyDocument(mapId));
-    const { panel } = await openMapPanel(createCapabilities({ openMap }));
-    const initialCalls = openMap.mock.calls.length;
+describe('面板：切走与换图前自动保存', () => {
+  // 切走即保存：改一格后切走，宿主收到新值、未保存清空，全程不出现任何弹窗
+  it('切走时自动保存且不弹任何确认框', async () => {
+    const saveMapData = vi.fn(async (_data: IMapDataSection): Promise<void> => {});
+    const { panel } = await openMapPanel(createCapabilities({ saveMapData }));
 
     paintOneCell(panel);
 
-    const switching = panel.openMap('m2');
-
-    expect(viewState(panel).dialog).toBe(MapDialogKind.Unsaved);
-    await panel.resolveUnsavedDecision(MapUnsavedChoice.Cancel);
-    await switching;
-
-    expect(openMap).toHaveBeenCalledTimes(initialCalls);
-    expect(viewState(panel).document?.id).toBe('m1');
-    expect(viewState(panel).dialog).toBe(MapDialogKind.None);
     expect(panel.isDirty()).toBe(true);
-  });
 
-  // 放弃改动回到基线、清掉未保存并登记屏障，原操作继续
-  it('放弃改动回到基线并登记屏障', async () => {
-    const { system, panel } = await openMapPanel(createCapabilities());
-
-    paintOneCell(panel);
-
-    const addUndo = vi.spyOn(system.undoSystem, 'addUndoContext');
-    const closing = panel.onBeforeClose();
-
-    expect(viewState(panel).dialog).toBe(MapDialogKind.Unsaved);
-    await panel.resolveUnsavedDecision(MapUnsavedChoice.Discard);
-
-    expect(await closing).toBe(true);
-    expect(viewState(panel).document?.layers[0].cells[0][0]).toBe(0);
-    expect(panel.isDirty()).toBe(false);
-    expect(addUndo).toHaveBeenCalledTimes(1);
-    expect(addUndo.mock.calls[0][1]).toMatchObject({ barrier: true });
-  });
-
-  // 放弃改动后原切图操作继续，最终打开的是目标地图
-  it('放弃改动后切图继续', async () => {
-    const { panel } = await openMapPanel(createCapabilities());
-
-    paintOneCell(panel);
-
-    const switching = panel.openMap('m2');
-
-    await panel.resolveUnsavedDecision(MapUnsavedChoice.Discard);
-    await switching;
-
-    expect(viewState(panel).document?.id).toBe('m2');
-    expect(viewState(panel).dialog).toBe(MapDialogKind.None);
-  });
-
-  // 保存并继续成功时宿主收到保存，原操作继续
-  it('保存并继续成功后切图继续', async () => {
-    const saveMapData = vi.fn(async (): Promise<void> => {});
-    const openMap = vi.fn(async (mapId: string): Promise<IMapDocument> => createEmptyDocument(mapId));
-    const { panel } = await openMapPanel(createCapabilities({ saveMapData, openMap }));
-    const initialCalls = openMap.mock.calls.length;
-
-    paintOneCell(panel);
-
-    const switching = panel.openMap('m2');
-
-    await panel.resolveUnsavedDecision(MapUnsavedChoice.SaveAndContinue);
-    await switching;
+    await panel.onSwitchOut();
 
     expect(saveMapData).toHaveBeenCalledTimes(1);
-    expect(openMap).toHaveBeenCalledTimes(initialCalls + 1);
-    expect(viewState(panel).document?.id).toBe('m2');
+    expect(saveMapData.mock.calls[0][0].id).toBe('m1');
+    expect(saveMapData.mock.calls[0][0].layers[0].cells[0][0]).toBe(1);
+    expect(viewState(panel).unsaved).toBe(false);
+    expect(viewState(panel).dialog).toBe(MapDialogKind.None);
+    expect(screen.queryByTestId('map-unsaved-dialog')).toBeNull();
   });
 
-  // 保存并继续失败时弹窗保持打开、显示原因，原操作不继续；仍可选取消收尾
-  it('保存并继续失败时弹窗保持打开且不继续', async () => {
-    const saveMapData = vi.fn(async (): Promise<void> => {
+  // 换图前保存：先把手上的改动写给原地图，再切到目标地图
+  it('换图前先把改动存回原地图', async () => {
+    const saveMapData = vi.fn(async (_data: IMapDataSection): Promise<void> => {});
+    const openMap = vi.fn(async (mapId: string): Promise<IMapDocument> => createEmptyDocument(mapId));
+    const { panel } = await openMapPanel(createCapabilities({ saveMapData, openMap }));
+
+    paintOneCell(panel);
+    await panel.openMap('m2');
+
+    expect(saveMapData).toHaveBeenCalledTimes(1);
+    expect(saveMapData.mock.calls[0][0].id).toBe('m1');
+    expect(saveMapData.mock.calls[0][0].layers[0].cells[0][0]).toBe(1);
+    expect(viewState(panel).document?.id).toBe('m2');
+    expect(viewState(panel).unsaved).toBe(false);
+  });
+
+  // 保存失败中止换图：仍停在原地图，改动与错误提示都保留
+  it('保存失败时中止换图并保留原地图与改动', async () => {
+    const saveMapData = vi.fn(async (_data: IMapDataSection): Promise<void> => {
       throw new Error('磁盘已满');
     });
     const openMap = vi.fn(async (mapId: string): Promise<IMapDocument> => createEmptyDocument(mapId));
@@ -628,46 +546,13 @@ describe('面板：未保存确认', () => {
     const initialCalls = openMap.mock.calls.length;
 
     paintOneCell(panel);
+    await panel.openMap('m2');
 
-    const switching = panel.openMap('m2');
-
-    await panel.resolveUnsavedDecision(MapUnsavedChoice.SaveAndContinue);
-
-    expect(viewState(panel).dialog).toBe(MapDialogKind.Unsaved);
+    expect(openMap).toHaveBeenCalledTimes(initialCalls);
+    expect(viewState(panel).document?.id).toBe('m1');
+    expect(viewState(panel).document?.layers[0].cells[0][0]).toBe(1);
     expect(viewState(panel).error).toContain('磁盘已满');
-    expect(viewState(panel).saving).toBe(false);
-    expect(openMap).toHaveBeenCalledTimes(initialCalls);
-    expect(viewState(panel).document?.id).toBe('m1');
-
-    await panel.resolveUnsavedDecision(MapUnsavedChoice.Cancel);
-    await switching;
-
-    expect(viewState(panel).dialog).toBe(MapDialogKind.None);
-    expect(openMap).toHaveBeenCalledTimes(initialCalls);
-  });
-
-  // 关闭标签时取消返回 false，放弃返回 true
-  it('关闭标签时取消返回 false', async () => {
-    const { panel } = await openMapPanel(createCapabilities());
-
-    paintOneCell(panel);
-
-    const closing = panel.onBeforeClose();
-
-    await panel.resolveUnsavedDecision(MapUnsavedChoice.Cancel);
-
-    expect(await closing).toBe(false);
-  });
-
-  // 没有待决询问时结算方法直接返回，不抛错也不改状态
-  it('没有待决询问时结算方法不抛错', async () => {
-    const { panel } = await openMapPanel(createCapabilities());
-
-    await expect(panel.resolveUnsavedDecision(MapUnsavedChoice.Cancel)).resolves.toBeUndefined();
-
-    expect(viewState(panel).dialog).toBe(MapDialogKind.None);
-    expect(viewState(panel).dialogError).toBeUndefined();
-    expect(viewState(panel).document?.id).toBe('m1');
+    expect(viewState(panel).unsaved).toBe(true);
   });
 });
 

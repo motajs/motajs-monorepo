@@ -8,7 +8,7 @@ import { createMapDocument, createMapHarness, FakeFileSystem } from './fixtures'
 configure({ testIdAttribute: 'data-test-id' });
 
 // 手动保存测试：只提交有改动的域、成功后把发出的快照设为基线、失败不丢改动。
-// 全部经真实 EditorCore 装配，撤销路径与生产一致。
+// 另有两条关闭标签前自动保存的用例；全部经真实 EditorCore 装配，撤销路径与生产一致。
 
 interface IHarness {
   /** 已初始化的编辑器核心 */
@@ -234,5 +234,37 @@ describe('地图面板：按域手动保存', () => {
     expect(undone).toBe(true);
     expect(viewState(panel).document?.layers[0].cells[0][1]).toBe(0);
     expect(panel.isDirty()).toBe(false);
+  });
+});
+
+describe('地图面板：关闭标签前自动保存', () => {
+  // 保存失败时不允许关闭：文档与改动都还在内存里，错误交给提示行
+  it('保存失败时关闭被拒绝且文档仍在内存里', async () => {
+    const saveMapData = vi.fn(async (_data: IMapDataSection): Promise<void> => {
+      throw new Error('磁盘已满');
+    });
+    const { panel } = await openMapPanel(createCapabilities({ saveMapData }));
+
+    panel.commitCells('layer-base', [{ x: 0, y: 0, value: 1 }]);
+
+    const closed = await panel.onBeforeClose();
+
+    expect(closed).toBe(false);
+    expect(viewState(panel).document?.id).toBe('m1');
+    expect(viewState(panel).document?.layers[0].cells[0][0]).toBe(1);
+    expect(viewState(panel).unsaved).toBe(true);
+    expect(viewState(panel).error).toContain('磁盘已满');
+  });
+
+  // 没有改动时直接放行，不打扰宿主
+  it('没有改动时直接放行且不写盘', async () => {
+    const saveMapData = vi.fn(async (_data: IMapDataSection): Promise<void> => {});
+    const { panel } = await openMapPanel(createCapabilities({ saveMapData }));
+
+    const closed = await panel.onBeforeClose();
+
+    expect(closed).toBe(true);
+    expect(saveMapData).not.toHaveBeenCalled();
+    expect(viewState(panel).unsaved).toBe(false);
   });
 });

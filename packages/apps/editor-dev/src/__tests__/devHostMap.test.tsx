@@ -379,14 +379,15 @@ describe('开发宿主地图端到端', () => {
     expect(reopened.layers[2].name).toBe('测试层');
   });
 
-  // 有未保存改动时点关闭标签 → 出现未保存确认；选「取消」后标签仍在
-  it('未保存时关闭标签会弹确认，取消后标签仍在', async () => {
-    const { core } = await createHost();
+  // 有未保存改动时点关闭标签 → 先自动保存再关闭，文件里已经是新值，全程不弹确认框
+  it('未保存时关闭标签会先保存再关闭', async () => {
+    const { core, backend } = await createHost();
 
     await openMapTab(core, 'small');
 
     const container = await renderShell(core);
 
+    fireEvent.click(screen.getByTestId('map-tile-1'));
     clickCell(queryCanvas(container), 1, 2);
 
     await waitFor(() => {
@@ -401,31 +402,35 @@ describe('开发宿主地图端到端', () => {
     await act(async () => {
       fireEvent.click(closeButton);
     });
-
-    await waitFor(() => {
-      expect(screen.getByTestId('map-unsaved-dialog')).not.toBeNull();
-    });
-
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('map-unsaved-cancel'));
-    });
     await act(async () => {});
 
     expect(core.shellSystem.listTabs()).toHaveLength(tabsBefore);
-    expect(container.querySelector('[data-test-id="map-panel"]')).not.toBeNull();
+    expect(core.shellSystem.listTabs()[0].typeId).toBeNull();
     expect(screen.queryByTestId('map-unsaved-dialog')).toBeNull();
+
+    const file = await readRecord(backend, 'small');
+
+    expect(file.layers[0][2 * 8 + 1]).toBe(1);
   });
 
-  // 有未保存改动时选「放弃改动」：标签关闭、文件没被写入，重新打开回到保存前状态
-  it('放弃改动后关标签，重开回到保存前状态', async () => {
-    const { core, backend } = await createHost();
+  // 保存失败时点关闭标签 → 拒绝关闭，标签与面板都还在，错误写在提示行
+  it('保存失败时关闭标签被拒绝并显示错误', async () => {
+    const { core, capabilities } = await createHost();
 
     await openMapTab(core, 'small');
 
     const container = await renderShell(core);
 
+    fireEvent.click(screen.getByTestId('map-tile-1'));
     clickCell(queryCanvas(container), 1, 2);
 
+    await waitFor(() => {
+      expect(screen.getByTestId('map-unsaved')).not.toBeNull();
+    });
+
+    vi.spyOn(capabilities, 'saveMapData').mockRejectedValue(new Error('磁盘已满'));
+
+    const tabsBefore = core.shellSystem.listTabs().length;
     const closeButton = container.querySelector('.editor-shell-tab-close');
 
     if (closeButton === null) throw new Error('标签关闭按钮缺失');
@@ -435,28 +440,11 @@ describe('开发宿主地图端到端', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId('map-unsaved-dialog')).not.toBeNull();
+      expect(screen.getByTestId('map-notice').textContent).toContain('磁盘已满');
     });
 
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('map-unsaved-discard'));
-    });
-    await act(async () => {});
-
-    expect(core.shellSystem.listTabs()[0].typeId).toBeNull();
-
-    const file = await readRecord(backend, 'small');
-
-    expect(file.layers[0][2 * 8 + 1]).toBe(demoRecord('small').layers[0][2 * 8 + 1]);
-
-    await openMapTab(core, 'small');
-    await waitFor(() => {
-      expect(container.querySelector('[data-test-id="map-panel"]')?.getAttribute('data-status')).toBe('ready');
-    });
-
-    const reopened = await probeDocument(core, 'small');
-
-    expect(reopened.layers[0].cells[2][1]).toBe(demoRecord('small').layers[0][2 * 8 + 1]);
+    expect(core.shellSystem.listTabs()).toHaveLength(tabsBefore);
+    expect(container.querySelector('[data-test-id="map-panel"]')).not.toBeNull();
   });
 
   // 就绪后素材区真的出现演示素材组与图块：证明图块目录经 options.tileGroups → openMap → 文档流到了素材区
