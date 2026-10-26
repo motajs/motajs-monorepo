@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.1"
 current_phase_name: 地图渲染与布局重做
-current_plan: 37
+current_plan: 38
 status: executing
-stopped_at: Completed 04.1-37-PLAN.md
-last_updated: "2026-10-26T12:50:25.592Z"
+stopped_at: Completed 04.1-38-PLAN.md
+last_updated: "2026-10-26T14:37:23.354Z"
 last_activity: 2026-10-26
-last_activity_desc: 04.1-37 complete（大地图缩略改吃逐格数据：自动元件四块 / contain 与普通模式逐块相等，`MAP_BIG_MAP_AUTOTILE_CELL = 4` 限制四块展开，裁切纹理按图片路径 + 矩形共享；editor-impl 全量 1026 tests / 88 files exit 0，typecheck exit 0）
-state_head: 59af6b58626a630aa71733429412be1dc9194ab8
+last_activity_desc: 04.1-38 complete（U-30 / U-31 / U-32：大地图缩略对小于格子的素材允许放大以铺满、普通模式仍只缩不放；通行度先铺纯黑 0.7 视口蒙版再画 8/7 四色箭头；面板根 :focus / :focus-visible 不再画默认框；editor-impl 全量 1038 tests / 88 files exit 0，typecheck / lint / format exit 0）
+state_head: 96bf3918a57f86b3f91b06956bf950e12e0f90db
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 159
-  completed_plans: 155
+  total_plans: 160
+  completed_plans: 156
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,10 +30,10 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 04.1 (地图渲染与布局重做) — EXECUTING
-Current Plan: 37
-Total Plans in Phase: 37
-Status: Executing — 04.1-37 complete（U-28 / U-29：大地图缩略与普通模式共用 `createRenderCell`，自动元件拆四块、大 / 小素材按 contain 摆放，每格 <4px 不拆四块；裁切纹理按「图片路径 + 裁切矩形」共享）；剩余 04.1-31（最终人工验收，含 U-26…U-29）
-Last activity: 2026-10-26 — 04.1-37 complete（`renderModel.ts` 新增 `buildThumbnailCells`；`constants.ts` 新增 `MAP_BIG_MAP_AUTOTILE_CELL = 4`；`MapSurface.tsx` 改用 `paintThumbnailCells` + `resolveCropTextures` 并按矩形共享纹理，删除三个旧私有函数；`model.renderModel.test.ts` 新增 7 条用例；editor-impl 全量 1026 tests / 88 files exit 0、typecheck exit 0、prettier --check 通过；editor-dev 1 条既有失败记入 `deferred-items.md` 第 5 条）
+Current Plan: 38
+Total Plans in Phase: 38
+Status: Executing — 04.1-38 complete（U-30 / U-31 / U-32：缩略允许放大铺满、通行度纯黑蒙版 + 更大箭头、面板根去掉默认聚焦框）；剩余 04.1-16 / 04.1-24 / 04.1-31（人工验收，含 U-30…U-32）
+Last activity: 2026-10-26 — 04.1-38 complete（`cellMetrics.ts` 的 `resolveTileDest` 增可选 `allowUpscale`；`renderModel.ts` 的 `createRenderCell` 透传、仅 `buildThumbnailCells` 开启；`constants.ts` 新增 `MAP_PASS_OVERLAY_COLOR` / `MAP_PASS_OVERLAY_ALPHA` 并把箭头头部改为 8 / 3.5；`passability.ts` 新增 `resolvePassOverlayRect`；`MapSurface.drawPassMarks` 先画蒙版再画标记；`map.css` 压掉面板根 outline；editor-impl 全量 1038 tests / 88 files exit 0、typecheck exit 0、lint exit 0、format:check exit 0）
 
 Progress: [███████░░░] 74%
 
@@ -173,6 +173,7 @@ Progress: [███████░░░] 74%
 | Phase 04.1 P35 | 15min | 3 tasks | 7 files |
 | Phase 04.1 P36 | 10min | 2 tasks | 6 files |
 | Phase 04.1 P37 | 9 | 2 tasks | 4 files |
+| Phase 04.1 P38 | 13 | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -460,6 +461,9 @@ Recent decisions affecting current work:
 - [Phase 04.1]: 04.1-37: MAP_BIG_MAP_AUTOTILE_CELL = 4，每格小于它时自动元件只画整格裁切（四块各不足 2px 看不出、图元数翻四倍），contain 不受影响
 - [Phase 04.1]: 04.1-37: 大地图缩略复用既有 IMapRenderCell / IMapAutotileQuarters，新增纯函数 buildThumbnailCells 调 createRenderCell，不新增接口、不改 IMapRenderModel
 - [Phase 04.1]: 04.1-37: 裁切纹理按「图片路径 + 裁切矩形」共享，不按格子 key；缩略只在 stale 时重建，不跟动画时钟
+- [Phase 04.1]: 大地图缩略允许放大用显式开关（resolveTileDest allowUpscale 默认 false），普通模式继续只缩不放，保住 D-57 共用逐格逻辑。
+- [Phase 04.1]: 通行度叠加层先铺纯黑 0.7 整块视口蒙版再画箭头；箭头头部常量 8/3.5，32×32 实际头长受全长一半夹取为 7.5px，四向仍不重叠。
+- [Phase 04.1]: 面板根只压自身 outline（:focus / :focus-visible），不写全局 *:focus，真实控件 :focus-visible 保留。
 
 ### Pending Todos
 
@@ -487,6 +491,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-26T12:50:24.050Z
-Stopped at: Completed 04.1-37-PLAN.md
+Last session: 2026-10-26T14:37:22.774Z
+Stopped at: Completed 04.1-38-PLAN.md
 Resume file: None
