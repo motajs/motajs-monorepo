@@ -5,16 +5,16 @@ current_phase: "04.1"
 current_phase_name: 地图渲染与布局重做
 current_plan: 31
 status: executing
-stopped_at: Completed 04.1-32-PLAN.md
-last_updated: "2026-10-26T06:49:02.530Z"
+stopped_at: Completed 04.1-33-PLAN.md
+last_updated: "2026-10-26T07:28:05.975Z"
 last_activity: 2026-10-26
 last_activity_desc: 04.1-27 complete（Tileset 变成普通第六类、六类同一排等宽铺满并加相邻竖线、`activeCategory` 成为素材视图唯一真源、`tilesetOpen` 一族全部删除；editor-impl typecheck exit 0、全量 85 files / 960 tests 全绿、prettier 全绿）
-state_head: e5ca07ba1de9058d39c6e2445f75465750c4c042
+state_head: 70b4c65fccc8ac06310e53c6f57bb65c73df77d1
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 155
-  completed_plans: 150
+  completed_plans: 151
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -168,6 +168,7 @@ Progress: [███████░░░] 74%
 | Phase 04.1 P28 | 7min | 2 tasks | 3 files |
 | Phase 04.1 P30 | 7 | 2 tasks | 4 files |
 | Phase 04.1 P32 | 12min | 3 tasks | 11 files |
+| Phase 04.1 P33 | 13 | 3 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -442,6 +443,9 @@ Recent decisions affecting current work:
 - [Phase 04.1]: 自动元件图集高度不乘帧数：帧只沿横向推进，autotile1.png（384×128）按 3×32×4 宽、4×32 高计算（U-18 根因）
 - [Phase 04.1]: 缩略图贴图只用一个显示倍数 min(按钮/源格宽, 按钮/源格高)，宽高同比，96×64 缩完仍是 3:2（U-21）
 - [Phase 04.1]: 三个缩略图组件共用 resolveGroupAtlasRect + resolveTileBackgroundStyle，删掉六处重复的图集尺寸/偏移计算
+- [Phase 04.1]: 数字键监听挂在 .emap-panel 根，输入控件与修饰键放行；映射收成 resolveFavoriteSlotIndex（1=擦除，2..9/0=收藏位）
+- [Phase 04.1]: 通行度箭头头部固定 6px 长 / 5px 宽，由 resolvePassArrowLength / resolvePassArrowHeadLength 给出几何，32×32 四向不重叠
+- [Phase 04.1]: 不透明度滑块用 10px 左 margin 留白；标尺每格画 .emap-ruler-line，纵轴标签顶对齐并删除半行位移
 
 ### Pending Todos
 
@@ -469,6 +473,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-26T06:49:02.043Z
-Stopped at: Completed 04.1-32-PLAN.md
+Last session: 2026-10-26T07:28:05.489Z
+Stopped at: Completed 04.1-33-PLAN.md
 Resume file: None
