@@ -8,6 +8,7 @@ import {
   MapAutotileType,
   MapTextureReadType,
   MapTileCategory,
+  resolveGroupAtlasRect,
 } from '@motajs/editor-impl/map';
 import { describe, expect, it } from 'vitest';
 import { IMapFileRecord, toMapDocument } from '../backend/mapFiles';
@@ -232,6 +233,35 @@ describe('开发宿主演示图集与图块目录', () => {
     expect(positions(item)).toEqual([[3, 1]]);
 
     for (const group of [terrain, enemy, npc, item]) expect(group.read).toBe(MapTextureReadType.Grid);
+
+    // 只收录第 0 行的地形组也要按整张 128×64 贴图，否则第 1 行的敌人 / 人物 / 物品会一起画进同一格（U-25）
+    expect(terrain.rows).toBe(2);
+    expect(resolveGroupAtlasRect(terrain)).toEqual({ x: 0, y: 0, width: 128, height: 64 });
+  });
+
+  // 分桶不改变真实行数：每个组的 rows 都等于「图片高 ÷ 该组素材格高」，地形图集四组都是 2 行
+  it('每个组的 rows 都等于图片高除以素材格高', () => {
+    const groups = buildDemoTileCatalog();
+    const sizes = new Map<string, { readonly width: number; readonly height: number }>();
+
+    for (const [path, width, height] of ATLAS_SIZES) sizes.set(path, { width, height });
+
+    for (const group of groups) {
+      const size = sizes.get(group.imagePath);
+
+      if (size === undefined) throw new Error(`未知图集：${group.imagePath}`);
+
+      expect(group.rows).toBe(Math.max(1, Math.floor(size.height / group.cellHeight)));
+    }
+
+    for (const category of [
+      MapTileCategory.Terrain,
+      MapTileCategory.Enemy,
+      MapTileCategory.Npc,
+      MapTileCategory.Item,
+    ]) {
+      expect(findGroup(groups, TERRAIN_PATH, category).rows).toBe(2);
+    }
   });
 
   // 大素材每格 96×64、小素材每格 16×16，行列与编号一一对应

@@ -191,6 +191,28 @@ function createLargeGroup(): IMapTileGroup {
 }
 
 /**
+ * 造一个「只收录第 0 行、但来源图片是两行」的地形组
+ *
+ * 整张图集 128×64，目录里只有 (0,0) / (1,0)：按目录行号算会把第 1 行的图块一起画进同一格（U-25）。
+ * @returns 两行地形分组
+ */
+function createTallTerrainGroup(): IMapTileGroup {
+  return {
+    id: 'group-tall-terrain',
+    name: '两行地形',
+    imagePath: 'content/map/tall-terrain.png',
+    columns: 4,
+    rows: 2,
+    tiles: [createTile(1, 0, 0), createTile(2, 1, 0)],
+    category: MapTileCategory.Terrain,
+    read: MapTextureReadType.Grid,
+    cellWidth: 32,
+    cellHeight: 32,
+    frames: 1,
+  };
+}
+
+/**
  * 造一份素材区 props：默认给三组都可用的图片地址与状态
  * @param overrides 覆盖的 props
  * @returns 素材区 props
@@ -339,6 +361,19 @@ describe('素材区普通网格', () => {
 
     expect(screen.getByTestId('map-tile-1').style.backgroundPosition).toBe('0px 0px');
     expect(screen.getByTestId('map-tile-2').style.backgroundPosition).toBe('-32px 0px');
+  });
+
+  // U-25 回归：只收录第 0 行、图片两行的地形组，素材格按整张 128×64 贴图，第二个按钮靠负偏移取第二列
+  it('两行地形组按整张 128×64 贴图', () => {
+    render(<MapMaterialPanel {...createProps({ groups: [createTallTerrainGroup()] })} />);
+
+    const first = screen.getByTestId('map-tile-1');
+    const second = screen.getByTestId('map-tile-2');
+
+    expect(first.style.backgroundSize).toBe('128px 64px');
+    expect(first.style.backgroundPosition).toBe('0px 0px');
+    expect(second.style.backgroundSize).toBe('128px 64px');
+    expect(second.style.backgroundPosition).toBe('-32px 0px');
   });
 
   // 素材框是直角：内联圆角为 0

@@ -267,6 +267,28 @@ function createTilesetGroup(): IMapTileGroup {
 }
 
 /**
+ * 造一个「只收录第 0 行、但来源图片是两行」的地形组
+ *
+ * 整张图集 128×64，目录里只有 (0,0) / (1,0)：按目录行号算会把第 1 行的图块一起画进同一格（U-25）。
+ * @returns 两行地形分组
+ */
+function createTallTerrainGroup(): IMapTileGroup {
+  return {
+    id: 'group-tall-terrain',
+    name: '两行地形',
+    imagePath: 'content/map/tiles-tall-terrain.png',
+    columns: 4,
+    rows: 2,
+    tiles: [createPlainTile(1, 0), createPlainTile(2, 1)],
+    category: MapTileCategory.Terrain,
+    read: MapTextureReadType.Grid,
+    cellWidth: 32,
+    cellHeight: 32,
+    frames: 1,
+  };
+}
+
+/**
  * 让面板根元素量到一个固定宽度，模拟真实外壳决定的可用宽度
  * @param width 面板可用宽度（像素）
  */
@@ -699,6 +721,23 @@ describe('地图下方三页签', () => {
 
     expect(screen.getByTestId('map-bottom-empty').textContent).toBe('暂无记录');
   });
+
+  // U-25 回归：只收录第 0 行、图片两行的地形组，整张图集按 128×64 贴图，第二格靠负偏移取第二列
+  it('两行地形组在底部三页按整张 128×64 贴图', () => {
+    const group = createTallTerrainGroup();
+    const groupUrls = { [group.id]: 'blob:tall-terrain' };
+
+    render(<MapBottomTabs {...createTabsProps({ recentTiles: [1, 2], groups: [group], groupUrls })} />);
+
+    const first = screen.getByTestId('map-bottom-tile-1');
+    const second = screen.getByTestId('map-bottom-tile-2');
+
+    expect(first.getAttribute('data-frame-rect')).toBe('0,0,32,32');
+    expect(first.style.backgroundSize).toBe('128px 64px');
+    expect(first.style.backgroundPosition).toBe('0px 0px');
+    expect(second.style.backgroundSize).toBe('128px 64px');
+    expect(second.style.backgroundPosition).toBe('-32px 0px');
+  });
 });
 
 describe('收藏栏与排序', () => {
@@ -798,6 +837,23 @@ describe('收藏栏与排序', () => {
     expect(filled.style.backgroundSize).toBe('64px 32px');
     expect(empty.getAttribute('data-tile-number')).toBe('0');
     expect(empty.style.backgroundImage).toBe('');
+  });
+
+  // U-25 回归：收藏栏里的两行地形组同样按整张 128×64 贴图，一格只显示一个 32×32 源格
+  it('两行地形组在收藏栏按整张 128×64 贴图', () => {
+    const group = createTallTerrainGroup();
+    const groupUrls = { [group.id]: 'blob:tall-terrain' };
+
+    render(
+      <MapFavoriteBar
+        {...createFavoriteProps({ favorites: [1, 2, 0, 0, 0, 0, 0, 0, 0], groups: [group], groupUrls })}
+      />,
+    );
+
+    expect(screen.getByTestId('map-favorite-0').style.backgroundSize).toBe('128px 64px');
+    expect(screen.getByTestId('map-favorite-0').style.backgroundPosition).toBe('0px 0px');
+    expect(screen.getByTestId('map-favorite-1').style.backgroundSize).toBe('128px 64px');
+    expect(screen.getByTestId('map-favorite-1').style.backgroundPosition).toBe('-32px 0px');
   });
 });
 
