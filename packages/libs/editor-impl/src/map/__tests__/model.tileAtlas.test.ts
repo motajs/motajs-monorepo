@@ -147,3 +147,76 @@ describe('resolveGroupAtlasRect 图集真实尺寸', () => {
     expect(resolveGroupAtlasRect(negative).width).toBe(32);
   });
 });
+
+describe('resolveGroupAtlasRect 来源图片真实行数', () => {
+  // U-25 回归：四列两行、只收录第 0 行两条 → 整张图集仍是 128×64
+  it('只收录第 0 行的 Grid 用 rows 撑到 128×64', () => {
+    const group = createAtlasGroup({ columns: 4, rows: 2, tiles: [createEntry(0, 0), createEntry(1, 0)] });
+
+    expect(resolveGroupAtlasRect(group)).toEqual({ x: 0, y: 0, width: 128, height: 64 });
+  });
+
+  // 目录覆盖两行时显式 rows 不会被重复放大：仍是 128×64
+  it('目录覆盖两行时 rows 仍是 128×64', () => {
+    const group = createAtlasGroup({
+      columns: 4,
+      rows: 2,
+      tiles: [createEntry(0, 0), createEntry(1, 0), createEntry(0, 1), createEntry(1, 1)],
+    });
+
+    expect(resolveGroupAtlasRect(group)).toEqual({ x: 0, y: 0, width: 128, height: 64 });
+  });
+
+  // rows 缺省时保持修改前行为：只收录第 0 行就是一行高（旧宿主不受影响）
+  it('rows 缺省时仍按目录行号算高度', () => {
+    const group = createAtlasGroup({ columns: 4, tiles: [createEntry(0, 0), createEntry(1, 0)] });
+
+    expect(resolveGroupAtlasRect(group)).toEqual({ x: 0, y: 0, width: 128, height: 32 });
+  });
+
+  // rows 为 0 或非数时退回目录行号，不抛错
+  it('rows 为 0 或 NaN 时退回目录行号', () => {
+    const zero = createAtlasGroup({ columns: 4, rows: 0, tiles: [createEntry(0, 0), createEntry(1, 0)] });
+    const nan = createAtlasGroup({ columns: 4, rows: Number.NaN, tiles: [createEntry(0, 0), createEntry(1, 0)] });
+
+    expect(resolveGroupAtlasRect(zero)).toEqual({ x: 0, y: 0, width: 128, height: 32 });
+    expect(resolveGroupAtlasRect(nan)).toEqual({ x: 0, y: 0, width: 128, height: 32 });
+  });
+
+  // 横向动画同样认真实行数：四帧两行 → 128×64
+  it('RowAnimate 四帧 rows 为 2 → 128×64', () => {
+    const group = createAtlasGroup({ read: MapTextureReadType.RowAnimate, frames: 4, rows: 2 });
+
+    expect(resolveGroupAtlasRect(group)).toEqual({ x: 0, y: 0, width: 128, height: 64 });
+  });
+
+  // 横向动画缺省 rows 时仍是一行高
+  it('RowAnimate 缺省 rows → 128×32', () => {
+    const group = createAtlasGroup({ read: MapTextureReadType.RowAnimate, frames: 4 });
+
+    expect(resolveGroupAtlasRect(group)).toEqual({ x: 0, y: 0, width: 128, height: 32 });
+  });
+
+  // 显式 rows 不影响自动元件：整块行数才是它的高度来源
+  it('Big3x4 四帧带 rows 4 仍是 384×128', () => {
+    const group = createAtlasGroup({
+      frames: 4,
+      rows: 4,
+      autotile: { type: MapAutotileType.Big3x4, connections: [] },
+    });
+
+    expect(resolveGroupAtlasRect(group)).toEqual({ x: 0, y: 0, width: 384, height: 128 });
+  });
+
+  // 显式 rows 不影响 Tileset：自身行列才是它的尺寸来源
+  it('Tileset 3×2 带 rows 9 仍是 144×96', () => {
+    const group = createAtlasGroup({
+      cellWidth: 48,
+      cellHeight: 48,
+      rows: 9,
+      tileset: { cellWidth: 48, cellHeight: 48, columns: 3, rows: 2 },
+    });
+
+    expect(resolveGroupAtlasRect(group)).toEqual({ x: 0, y: 0, width: 144, height: 96 });
+  });
+});

@@ -4,8 +4,8 @@ import { IMapTileCrop, IMapTileGroup, MapAutotileType, MapTextureReadType } from
 // 图集真实像素尺寸：缩略图与素材格必须按整张图集的真实大小贴图，按钮里才只露出一个源格。
 // 用「目录里出现过的最大行号」推高度会把只有一条目录项的自动元件压成一行（U-18 的根因），
 // 所以自动元件按整块行数算高度、按整块列数 × 帧数算宽度；其余读取方式按各自的帧轴铺开。
-// 普通网格的高度必须取来源图片真实行数（宿主填的 `rows`）：按目录最大行号会把只收录第 0 行的
-// 分类组压成一行，相邻行的图块就一起画进同一个格子（U-25）。
+// 普通网格与横向动画的高度必须取来源图片真实行数（宿主填的 `rows`）：按目录最大行号会把只收录
+// 第 0 行的分类组压成一行，相邻行的图块就一起画进同一个格子（U-25）。
 
 /**
  * 把素材格尺寸归一化成正整数，非法值退回默认边长
@@ -89,9 +89,9 @@ function resolveImageRows(group: IMapTileGroup, fallback: number): number {
  * 求整张图集在源图上的像素矩形
  *
  * 顺序即优先级：Tileset 用自身行列；自动元件用「整块列数 × 帧数」乘「整块行数」（高度不乘帧数，
- * 因为它的帧只沿横向推进）；横向 / 纵向动画在帧那一侧变长；扫描动画按列数折行；整图一格就是素材格
- * 尺寸；普通网格按来源图片真实行数算行数（缺省才退回目录最大行号）。`x` / `y` 恒为 0：
- * 这里只回答「图集有多大」，贴哪一格由帧矩形决定。
+ * 因为它的帧只沿横向推进）；横向动画在帧那一侧变长、高度取来源图片真实行数；纵向动画在高度那一侧
+ * 变长；扫描动画按列数折行；整图一格就是素材格尺寸；普通网格按来源图片真实行数算行数
+ * （缺省才退回目录最大行号）。`x` / `y` 恒为 0：这里只回答「图集有多大」，贴哪一格由帧矩形决定。
  * @param group 素材组（提供读取方式、素材格尺寸、帧数、列数与自动拼接 / Tileset 元数据）
  * @returns 整张图集的源图矩形
  */
@@ -120,7 +120,7 @@ export function resolveGroupAtlasRect(group: IMapTileGroup): IMapTileCrop {
   }
 
   if (group.read === MapTextureReadType.RowAnimate) {
-    return { x: 0, y: 0, width: cellWidth * frames, height: cellHeight };
+    return { x: 0, y: 0, width: cellWidth * frames, height: resolveImageRows(group, 1) * cellHeight };
   }
 
   if (group.read === MapTextureReadType.ColumnAnimate) {
