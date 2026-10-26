@@ -236,6 +236,14 @@ export interface IMapTileGroup {
   readonly imagePath: string;
   /** 图集横向的图块列数，用于按列 / 行换算裁切来源 */
   readonly columns: number;
+  /**
+   * 来源图片真实的图块行数（= 图片高 ÷ 素材格高），由宿主填入
+   *
+   * 它不是「目录里出现过的最大行号 + 1」——目录可能只收录图片的一部分行（演示里按分类分桶就会这样）。
+   * 算整张图集高度时优先用它，缺省才退回按目录行号推算；否则「图片有两行、这一组只收了第 0 行」
+   * 的素材会被压成一行，相邻行的图块就会一起画进同一个格子里（U-25）。
+   */
+  readonly rows?: number;
   /** 分组内的图块列表 */
   readonly tiles: readonly IMapTileEntry[];
   /** 这个素材组属于六类中的哪一类 */
