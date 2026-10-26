@@ -214,6 +214,7 @@ function resolveCellAutotile(
  * @param cellHeight 格子的像素高（已含缩放）
  * @param opacity 该层这一帧的不透明度
  * @param images 图块编号索引
+ * @param allowUpscale 为 true 时允许把小于格子的素材放大到贴满格；只给大地图缩略用，普通模式必须保持 false
  * @returns 渲染格
  */
 function createRenderCell(
@@ -228,6 +229,7 @@ function createRenderCell(
   cellHeight: number,
   opacity: number,
   images: Map<number, ITileImage>,
+  allowUpscale: boolean = false,
 ): IMapRenderCell {
   const image = value === 0 ? undefined : images.get(value);
   const key = `${layerId}:${x}:${y}`;
@@ -243,6 +245,7 @@ function createRenderCell(
     cellHeight,
     image.srcWidth ?? image.crop.width,
     image.srcHeight ?? image.crop.height,
+    allowUpscale,
   );
   const quarters = resolveCellAutotile(cells, x, y, image);
   const cell: IMapRenderCell = {
@@ -577,6 +580,8 @@ export function buildThumbnailCells(
           cellHeight,
           opacity,
           images,
+          // 缩略图的一格就是显示格：小地图的格子会比源图块大，必须允许放大才能铺满、不出现大块间隙
+          true,
         );
         const image = images.get(value)!;
 

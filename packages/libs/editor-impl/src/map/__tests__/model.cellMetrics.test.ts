@@ -30,6 +30,31 @@ describe('resolveTileDest 素材 contain', () => {
     expect(resolveTileDest(0, 0, 32, 24, 0, 64)).toEqual({ x: 0, y: 0, width: 32, height: 24 });
     expect(resolveTileDest(0, 0, 32, 24, 64, 0)).toEqual({ x: 0, y: 0, width: 32, height: 24 });
   });
+
+  // 默认不放大的回归：52 格里的 32 源格仍按原尺寸居中、四周各留 10px，不被顺手放大
+  it('默认不放大地图缩略以外的格子', () => {
+    expect(resolveTileDest(0, 0, 52, 52, 32, 32)).toEqual({ x: 10, y: 10, width: 32, height: 32 });
+  });
+
+  // 允许放大后铺满：52 × 52 的格子放 32 × 32 的源格得到贴满整格、没有留白
+  it('允许放大后小素材铺满整格', () => {
+    expect(resolveTileDest(0, 0, 52, 52, 32, 32, true)).toEqual({ x: 0, y: 0, width: 52, height: 52 });
+  });
+
+  // 允许放大不等于强行拉伸：96 × 64 仍按 contain 比例，本次宽贴满 52、高约 34.6667、上下居中
+  it('允许放大时仍按 contain 比例不拉伸', () => {
+    const dest = resolveTileDest(0, 0, 52, 52, 96, 64, true);
+
+    expect(dest.width).toBeCloseTo(52, 6);
+    expect(dest.height).toBeCloseTo(104 / 3, 6);
+    expect(dest.y).toBeCloseTo(26 / 3, 6);
+  });
+
+  // 非法素材尺寸在允许放大时仍退化为整格矩形，不产生 NaN
+  it('允许放大时非法素材尺寸仍退化为整格矩形', () => {
+    expect(resolveTileDest(0, 0, 52, 52, 0, 64, true)).toEqual({ x: 0, y: 0, width: 52, height: 52 });
+    expect(resolveTileDest(0, 0, 52, 52, 64, 0, true)).toEqual({ x: 0, y: 0, width: 52, height: 52 });
+  });
 });
 
 describe('resolveCellMetrics 度量组装', () => {

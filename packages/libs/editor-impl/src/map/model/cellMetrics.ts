@@ -7,12 +7,14 @@ import { IMapCanvasBounds, IMapCellMetrics, IMapCellPosition, IMapRect, IMapView
  * 按 contain 规则把素材放进格子：大素材按比例缩小、小素材保持原尺寸，并在格内水平 / 垂直居中
  *
  * 缩放的唯一来源是格子尺寸与素材尺寸；素材尺寸非法（0、负数或非数）时退化为整格矩形，不抛错。
+ * 普通模式仍然只缩不放（小素材保持原尺寸并居中）；只有 `allowUpscale` 为 true 时才允许把小于格子的素材放大到贴满格。
  * @param cellX 格子左上角的横坐标（像素）
  * @param cellY 格子左上角的纵坐标（像素）
  * @param cellWidth 格子的像素宽
  * @param cellHeight 格子的像素高
  * @param srcWidth 素材的源像素宽
  * @param srcHeight 素材的源像素高
+ * @param allowUpscale 为 true 时允许把小于格子的素材放大到贴满格；只给大地图缩略用，普通模式必须保持 false
  * @returns 素材在画布上的目标矩形
  */
 export function resolveTileDest(
@@ -22,10 +24,13 @@ export function resolveTileDest(
   cellHeight: number,
   srcWidth: number,
   srcHeight: number,
+  allowUpscale: boolean = false,
 ): IMapRect {
   if (!(srcWidth > 0) || !(srcHeight > 0)) return { x: cellX, y: cellY, width: cellWidth, height: cellHeight };
 
-  const scale = Math.min(1, cellWidth / srcWidth, cellHeight / srcHeight);
+  const scale = allowUpscale
+    ? Math.min(cellWidth / srcWidth, cellHeight / srcHeight)
+    : Math.min(1, cellWidth / srcWidth, cellHeight / srcHeight);
 
   if (!(scale > 0)) return { x: cellX, y: cellY, width: cellWidth, height: cellHeight };
 

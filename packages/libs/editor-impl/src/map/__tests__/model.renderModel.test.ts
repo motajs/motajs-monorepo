@@ -15,6 +15,7 @@ import {
 import { createMapDocument, createSizedTileGroup, createTileGroup, createWideMapDocument } from './fixtures';
 import { resolveMapLayout } from '../model/layout';
 import { IMapRenderView, buildMapRenderModel, buildThumbnailCells } from '../model/renderModel';
+import { buildThumbnail } from '../model/thumbnail';
 
 /**
  * 造一份四方向都可通行的通行属性
@@ -750,5 +751,87 @@ describe('buildThumbnailCells 大地图逐格数据', () => {
     expect(buildThumbnailCells({ ...document, height: 0 }, 64, 48, 'layer-base', 1)).toEqual([]);
     expect(buildThumbnailCells(document, 0, 48, 'layer-base', 1)).toEqual([]);
     expect(buildThumbnailCells(document, 64, -1, 'layer-base', 1)).toEqual([]);
+  });
+});
+
+describe('buildThumbnailCells 小地图铺满（U-30）', () => {
+  // 8×6 的「小营地」缩略是 416×312、每格 52×52，逐格铺满且相邻格首尾相接（行宽之和 416、列高之和 312）
+  it('8×6 缩略每格铺满且首尾相接', () => {
+    const document = createWideMapDocument(8, 6);
+    const thumbnail = buildThumbnail(document, 416, 416);
+
+    expect(thumbnail.scale).toBe(52);
+    expect(thumbnail.textureWidth).toBe(416);
+    expect(thumbnail.textureHeight).toBe(312);
+
+    const cells = buildThumbnailCells(document, thumbnail.textureWidth, thumbnail.textureHeight, 'layer-wide', 1);
+
+    expect(cells).toHaveLength(48);
+
+    for (let row = 0; row < 6; row += 1) {
+      for (let column = 0; column < 8; column += 1) {
+        const cell = cells[row * 8 + column];
+
+        expect(cell.x).toBe(column * 52);
+        expect(cell.y).toBe(row * 52);
+        expect(cell.width).toBe(52);
+        expect(cell.height).toBe(52);
+
+        if (column < 7) expect(cell.x + cell.width).toBe(cells[row * 8 + column + 1].x);
+      }
+    }
+
+    expect(cells[0].x).toBe(0);
+    expect(cells[7].x + cells[7].width).toBe(416);
+    expect(cells[47].y + cells[47].height).toBe(312);
+  });
+
+  // 自动元件格在缩略里同样铺满 52×52，四块象限各占 26×26，裁切取左上那一块
+  it('自动元件格的四块铺满缩略格子', () => {
+    const group = createSizedTileGroup({
+      id: 'group-autotile',
+      autotile: { type: MapAutotileType.Big3x4, connections: [] },
+    });
+    const cells: number[][] = [];
+
+    for (let y = 0; y < 6; y += 1) {
+      const row: number[] = [];
+
+      for (let x = 0; x < 8; x += 1) row.push(1);
+      cells.push(row);
+    }
+
+    const document = createMapDocument({
+      id: 'map-thumb-autotile',
+      width: 8,
+      height: 6,
+      layers: [{ id: 'layer-autotile', name: '自动元件层', zIndex: 0, isEventLayer: false, cells }],
+      tileGroups: [group],
+    });
+    const thumbnail = buildThumbnail(document, 416, 416);
+    const thumbnailCells = buildThumbnailCells(
+      document,
+      thumbnail.textureWidth,
+      thumbnail.textureHeight,
+      'layer-autotile',
+      1,
+    );
+
+    expect(thumbnailCells).toHaveLength(48);
+    expect(thumbnailCells.every((cell) => cell.autotileQuarters !== undefined)).toBe(true);
+    expect(thumbnailCells.every((cell) => cell.width === 52 && cell.height === 52)).toBe(true);
+    expect(thumbnailCells[0].crop).toEqual(thumbnailCells[0].autotileQuarters!.lt);
+  });
+
+  // 同一份 8×6 文档在普通模式仍是 32×32 的显示格，证明放大开关只在大地图缩略生效
+  it('普通模式没有放大', () => {
+    const document = createWideMapDocument(8, 6);
+    const model = buildMapRenderModel(
+      document,
+      createView({ width: 416, height: 416, currentLayerId: 'layer-wide' }),
+    );
+
+    expect(model.cells[0].width).toBe(32);
+    expect(model.cells[0].height).toBe(32);
   });
 });
