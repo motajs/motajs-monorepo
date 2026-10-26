@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.1"
 current_phase_name: 地图渲染与布局重做
-current_plan: 27
+current_plan: 28
 status: executing
-stopped_at: Completed 04.1-26-PLAN.md
-last_updated: "2026-10-25T23:52:00.000Z"
+stopped_at: Completed 04.1-29-PLAN.md
+last_updated: "2026-10-26T00:11:10.382Z"
 last_activity: 2026-10-26
-last_activity_desc: 04.1-26 complete（地图区 = 标尺 + 画布、单滚动层、素材区无下限；滑块「地图区比例」；宽高框 blur/Enter 提交；editor-impl typecheck 与 954 tests 全绿）
-state_head: b6c7d9383c215200bd6ca89e87e675fd5518849a
+last_activity_desc: 04.1-29 complete（演示自动元件改为只与同类连接、4×3 带空洞演示区、256 种连接引擎对拍、Tileset 编号按 reserve + unit 累计并补第二张图；editor-dev 91 tests / editor-impl 4 golden tests 全绿）
+state_head: 452ad703b893244eebccb909700ae9922c6db049
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 153
-  completed_plans: 145
+  completed_plans: 146
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,10 +30,10 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 04.1 (地图渲染与布局重做) — EXECUTING
-Current Plan: 27
+Current Plan: 28
 Total Plans in Phase: 31
-Status: Executing — 04.1-26 complete（地图区 = 标尺 + 画布；外框不滚、只有画布内部滚；素材区无最小宽度；滑块「地图区比例」；宽高框 blur/Enter 提交），ready for 04.1-27
-Last activity: 2026-10-26 — 04.1-26 complete（mapPaneWidth = canvasWidth + MAP_RULER_SIZE；paletteWidth = max(0, 可用宽度 − 地图区)；删除 MAP_PALETTE_MIN_WIDTH 与 .emap-canvas-scroll；MapCanvas 改用 MAP_RULER_SIZE；editor-impl typecheck exit 0、84 files / 954 tests passed）
+Status: Executing — 04.1-29 complete（演示连接表改自连、4×3 带空洞、256 种连接对拍、Tileset 编号按 reserve + unit）；04.1-27 / 04.1-28 仍未完成
+Last activity: 2026-10-26 — 04.1-29 complete（connections 置空 = 同值连接；portMapAutotile / portSliceRect 对 0…255 全量比对；DEFAULT_TILESET_RESERVE 100000 / DEFAULT_TILESET_UNIT 10000，两张演示图 100000…100007 与 110000…110003；editor-dev 10 files / 91 tests、editor-impl golden 4 tests、两包 typecheck exit 0）
 
 Progress: [███████░░░] 74%
 
@@ -163,6 +163,7 @@ Progress: [███████░░░] 74%
 | Phase 04.1-map-render-layout P23 | 45min | 2 tasks | 10 files |
 | Phase 04.1 P25 | 15min | 2 tasks | 4 files |
 | Phase 04.1 P26 | 13min | 3 tasks | 9 files |
+| Phase 04.1 P29 | 8min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -428,6 +429,9 @@ Recent decisions affecting current work:
 - [Phase 04.1]: 地图区宽度无条件 = 画布 + MAP_RULER_SIZE，素材区 max(0, 可用宽度 − 地图区) 且删除 240 下限（D-43 / D-44 / U-11）
 - [Phase 04.1]: 标尺与画布合并进 .emap-map-region，外框 overflow hidden、仅 .emap-canvas-viewport 可滚，删除 .emap-canvas-scroll（U-14）
 - [Phase 04.1]: 滑块文案改「地图区比例」但保留 zoom 契约；宽高数字框改为草稿 + blur/Enter 提交并回退非法值（D-45 / D-46 / U-15）
+- [Phase 04.1]: 演示自动元件连接集合改为空对象：空集合 = 只与同类连接（引擎 spec 为空的分支），根因是数据而非算法（D-49）
+- [Phase 04.1]: 引擎对拍以测试内私有端口函数实现（portMapAutotile / portSliceRect），不导出、不 import 仓库外路径，256 种连接 × 两种形状全量比对（D-50）
+- [Phase 04.1]: Tileset 编号段按 ceil(图片格数 / tilesetUnit) 累计，至少 1 段；缺省 reserve 100000 / unit 10000；tilesetBase 已删除（D-51）
 
 ### Pending Todos
 
@@ -455,6 +459,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-25T23:49:57.260Z
-Stopped at: Completed 04.1-26-PLAN.md
+Last session: 2026-10-26T00:11:09.818Z
+Stopped at: Completed 04.1-29-PLAN.md
 Resume file: None
