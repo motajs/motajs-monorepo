@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.1"
 current_phase_name: 地图渲染与布局重做
-current_plan: 30
+current_plan: 31
 status: executing
-stopped_at: Completed 04.1-30-PLAN.md
-last_updated: "2026-10-26T01:01:23.599Z"
+stopped_at: Completed 04.1-32-PLAN.md
+last_updated: "2026-10-26T06:49:02.530Z"
 last_activity: 2026-10-26
 last_activity_desc: 04.1-27 complete（Tileset 变成普通第六类、六类同一排等宽铺满并加相邻竖线、`activeCategory` 成为素材视图唯一真源、`tilesetOpen` 一族全部删除；editor-impl typecheck exit 0、全量 85 files / 960 tests 全绿、prettier 全绿）
-state_head: 12e8b4a6996720bf80dc78d5151610beafcdd7f5
+state_head: e5ca07ba1de9058d39c6e2445f75465750c4c042
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 153
-  completed_plans: 149
+  total_plans: 155
+  completed_plans: 150
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 04.1 (地图渲染与布局重做) — EXECUTING
-Current Plan: 30
+Current Plan: 31
 Total Plans in Phase: 31
 Status: Executing — 04.1-28 complete（收藏拖拽反馈：源格 `is-dragging` 降不透明度、目标格 `is-drag-over` 加描边，松手恢复；排序逻辑未改）；第四轮剩余 04.1-30 / 04.1-31
 Last activity: 2026-10-26 — 04.1-28 complete（`MapFavoriteBar` 新增 `dragging` / `dragOver` 两个渲染输入与 `is-dragging` / `is-drag-over` 类名，`map.css` 末尾追加 `opacity: 0.4` 与强调色描边两条规则；`mapView.layout.test.tsx` 37 passed、全量 85 files / 961 tests、typecheck exit 0、prettier 全绿）
@@ -167,6 +167,7 @@ Progress: [███████░░░] 74%
 | Phase 04.1 P27 | 16min | 3 tasks | 11 files |
 | Phase 04.1 P28 | 7min | 2 tasks | 3 files |
 | Phase 04.1 P30 | 7 | 2 tasks | 4 files |
+| Phase 04.1 P32 | 12min | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -438,6 +439,9 @@ Recent decisions affecting current work:
 - [Phase 04.1]: 04.1-27: Tileset 变成普通分类，六类同一排等宽铺满；activeCategory 是素材视图唯一真源，tilesetOpen 一族全部删除
 - [Phase 04.1]: 收藏拖拽反馈：源格 is-dragging（opacity 0.4）、目标格 is-drag-over（强调色描边），dragOver 判定带 drag.from !== index 以免源格自标；两条 CSS 规则追加在 map.css 末尾以盖过 .is-selected 的 box-shadow
 - [Phase 04.1]: Tileset 视图按目录顺序横向渲染全部图：每图一块、块间竖线用既有 --editor-border、滚动只在 .emap-material-body（D-52）
+- [Phase 04.1]: 自动元件图集高度不乘帧数：帧只沿横向推进，autotile1.png（384×128）按 3×32×4 宽、4×32 高计算（U-18 根因）
+- [Phase 04.1]: 缩略图贴图只用一个显示倍数 min(按钮/源格宽, 按钮/源格高)，宽高同比，96×64 缩完仍是 3:2（U-21）
+- [Phase 04.1]: 三个缩略图组件共用 resolveGroupAtlasRect + resolveTileBackgroundStyle，删掉六处重复的图集尺寸/偏移计算
 
 ### Pending Todos
 
@@ -465,6 +469,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-26T01:01:23.025Z
-Stopped at: Completed 04.1-30-PLAN.md
+Last session: 2026-10-26T06:49:02.043Z
+Stopped at: Completed 04.1-32-PLAN.md
 Resume file: None
