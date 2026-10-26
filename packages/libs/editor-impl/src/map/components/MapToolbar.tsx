@@ -449,7 +449,7 @@ export function MapToolbar(props: IMapToolbarProps): ReactElement {
         ) : null}
       </div>
       {props.showEditRow ? (
-        <div className="emap-toolbar-row">
+        <div className="emap-toolbar-edit-row emap-toolbar-row">
           <div className="emap-toolbar-layers" data-test-id="map-layer-mode" data-disabled={String(layerDisabled)}>
             {props.layers.length === 0 ? (
               <span className="emap-toolbar-layers-empty">该地图没有图层</span>

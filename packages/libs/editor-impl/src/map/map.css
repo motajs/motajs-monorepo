@@ -133,11 +133,13 @@
   border-left: none;
 }
 
+/* 顶栏两行各 32px 时仍是 64px；第二行放不下换行后靠 min-height + auto 自然长高（U-35） */
 .emap-toolbar {
   display: flex;
-  flex: 0 0 64px;
+  flex: 0 0 auto;
   flex-direction: column;
-  height: 64px;
+  height: auto;
+  min-height: 64px;
   border-bottom: 1px solid var(--editor-border, #d0d7de);
   background: var(--editor-toolbar-bg, #ffffff);
 }
@@ -156,6 +158,19 @@
 
 .emap-toolbar-row + .emap-toolbar-row {
   border-top: 1px solid var(--editor-border, #d0d7de);
+}
+
+/* 编辑工具行：放不下时整行换行、顶栏跟着长高，而不是把「地图区比例」压窄（U-35）。
+   必须写在 .emap-toolbar-row 之后，同优先级靠源顺序覆盖基类的 flex / height / overflow。 */
+.emap-toolbar-edit-row {
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  height: auto;
+  min-height: 32px;
+  row-gap: 2px;
+  padding: 2px 8px;
+  overflow: visible;
 }
 
 .emap-toolbar-label {
@@ -258,27 +273,32 @@
   margin: 0 0 0 10px;
 }
 
+/* 「地图区比例」容器保底宽度：标签约 60px + 两个 4px 间隙 + 滑块轨道 96px + 百分比最小 38px = 202px，
+   取 208px 留余量。必须用最小宽度撑住容器，不能靠给标签加省略号「腾地方」（U-35）。 */
 .emap-zoom {
   display: flex;
   flex: 0 0 auto;
   align-items: center;
   gap: 4px;
-  width: 160px;
-  min-width: 0;
+  min-width: 208px;
 }
 
 .emap-zoom-label {
+  flex: 0 0 auto;
   color: var(--editor-muted, #656d76);
   font-size: 12px;
   white-space: nowrap;
 }
 
+/* 滑块轨道是 flex 子项，默认允许收缩——这是轨道被压到五十来像素的直接原因（U-35） */
 .emap-zoom-slider {
+  flex: 0 0 96px;
   width: 96px;
   margin: 0;
 }
 
 .emap-zoom-value {
+  flex: 0 0 auto;
   min-width: 38px;
   color: var(--editor-muted, #656d76);
   font-size: 12px;
