@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.1"
 current_phase_name: 地图渲染与布局重做
-current_plan: 31
+current_plan: 35
 status: executing
-stopped_at: Completed 04.1-33-PLAN.md
-last_updated: "2026-10-26T07:28:05.975Z"
+stopped_at: Completed 04.1-34-PLAN.md
+last_updated: "2026-10-26T10:39:26.687Z"
 last_activity: 2026-10-26
-last_activity_desc: 04.1-27 complete（Tileset 变成普通第六类、六类同一排等宽铺满并加相邻竖线、`activeCategory` 成为素材视图唯一真源、`tilesetOpen` 一族全部删除；editor-impl typecheck exit 0、全量 85 files / 960 tests 全绿、prettier 全绿）
-state_head: 70b4c65fccc8ac06310e53c6f57bb65c73df77d1
+last_activity_desc: 04.1-34 complete（图集真实行数接口：`IMapTileGroup.rows` 可选字段 + JSDoc、`INTERFACE-NAME.md` §Plan 34 / §Plan 35 + OQ17 + 确认清单第 10 条、`04.1-CONTEXT.md` 第六轮 + D-54；零实现改动，editor-impl / editor-dev typecheck exit 0、prettier / eslint exit 0、用户确认「全部可以」）
+state_head: 23ac0869d7a227075a4c16c48b9edb23b7d58479
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 155
-  completed_plans: 151
+  total_plans: 157
+  completed_plans: 152
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,10 +30,10 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 04.1 (地图渲染与布局重做) — EXECUTING
-Current Plan: 31
-Total Plans in Phase: 31
-Status: Executing — 04.1-28 complete（收藏拖拽反馈：源格 `is-dragging` 降不透明度、目标格 `is-drag-over` 加描边，松手恢复；排序逻辑未改）；第四轮剩余 04.1-30 / 04.1-31
-Last activity: 2026-10-26 — 04.1-28 complete（`MapFavoriteBar` 新增 `dragging` / `dragOver` 两个渲染输入与 `is-dragging` / `is-drag-over` 类名，`map.css` 末尾追加 `opacity: 0.4` 与强调色描边两条规则；`mapView.layout.test.tsx` 37 passed、全量 85 files / 961 tests、typecheck exit 0、prettier 全绿）
+Current Plan: 35
+Total Plans in Phase: 35
+Status: Executing — 04.1-34 complete（图集真实行数：只加可选字段 `IMapTileGroup.rows` + 命名登记 + 决策 D-54，零实现改动，用户已确认「全部可以」）；剩余 04.1-31（最终人工验收，含 U-25）与 04.1-35（宿主填 `rows` + `resolveGroupAtlasRect` 消费）
+Last activity: 2026-10-26 — 04.1-34 complete（`IMapTileGroup.rows` 可选字段与 JSDoc、`INTERFACE-NAME.md` §Plan 34 / §Plan 35 + OQ17 + 确认清单第 10 条、`04.1-CONTEXT.md` 第六轮小节 + D-54；editor-impl / editor-dev typecheck 均 exit 0、prettier 与 eslint 均 exit 0、3 files changed）
 
 Progress: [███████░░░] 74%
 
@@ -169,6 +169,7 @@ Progress: [███████░░░] 74%
 | Phase 04.1 P30 | 7 | 2 tasks | 4 files |
 | Phase 04.1 P32 | 12min | 3 tasks | 11 files |
 | Phase 04.1 P33 | 13 | 3 tasks | 14 files |
+| Phase 04.1 P34 | 188min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -446,6 +447,8 @@ Recent decisions affecting current work:
 - [Phase 04.1]: 数字键监听挂在 .emap-panel 根，输入控件与修饰键放行；映射收成 resolveFavoriteSlotIndex（1=擦除，2..9/0=收藏位）
 - [Phase 04.1]: 通行度箭头头部固定 6px 长 / 5px 宽，由 resolvePassArrowLength / resolvePassArrowHeadLength 给出几何，32×32 四向不重叠
 - [Phase 04.1]: 不透明度滑块用 10px 左 margin 留白；标尺每格画 .emap-ruler-line，纵轴标签顶对齐并删除半行位移
+- [Phase 04.1]: 04.1-34: 图集高度改由宿主填入的来源图片真实行数决定——IMapTileGroup 加可选字段 rows（= 图片高 ÷ 素材格高），不是「目录最大行号 + 1」；用户已确认字段名与四项口径「全部可以」（U-25 / D-54）
+- [Phase 04.1]: 04.1-34: rows 保持可选、本计划只声明不消费——宿主赋值（buildTileCatalog）与编辑器读取（resolveGroupAtlasRect）全部归 04.1-35，避免命名未确认时带着半个接口开工
 
 ### Pending Todos
 
@@ -473,6 +476,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-26T07:28:05.489Z
-Stopped at: Completed 04.1-33-PLAN.md
+Last session: 2026-10-26T10:39:25.431Z
+Stopped at: Completed 04.1-34-PLAN.md
 Resume file: None
