@@ -21,6 +21,7 @@ import {
   encodeDemoLargeTileAtlas,
   encodeDemoSmallTileAtlas,
   encodeDemoTileAtlas,
+  encodeDemoTileset2Atlas,
   encodeDemoTilesetAtlas,
   MAP_DEMO_MAPS,
   readDemoAutotileBigBytes,
@@ -46,19 +47,23 @@ const AUTOTILE_SMALL_PATH = 'content/map/tiles-autotile-small.png';
 /** Tileset 图集路径 */
 const TILESET_PATH = 'content/map/tiles-tileset.png';
 
+/** 第二张 Tileset 图集路径 */
+const TILESET_2_PATH = 'content/map/tiles-tileset-2.png';
+
 /** 大素材图集路径 */
 const LARGE_PATH = 'content/map/tiles-large.png';
 
 /** 小素材图集路径 */
 const SMALL_PATH = 'content/map/tiles-small.png';
 
-/** 七张演示图集各自的期望尺寸 */
+/** 八张演示图集各自的期望尺寸 */
 const ATLAS_SIZES: readonly (readonly [string, number, number])[] = [
   [TERRAIN_PATH, 128, 64],
   [ANIMATE_PATH, 128, 32],
   [AUTOTILE_BIG_PATH, 384, 128],
   [AUTOTILE_SMALL_PATH, 128, 96],
   [TILESET_PATH, 128, 64],
+  [TILESET_2_PATH, 96, 96],
   [LARGE_PATH, 192, 64],
   [SMALL_PATH, 64, 32],
 ];
@@ -138,13 +143,14 @@ function createTileIndex(groups: readonly IMapTileGroup[]): ReadonlyMap<number, 
 }
 
 describe('开发宿主演示图集与图块目录', () => {
-  // 七张图集都是真实 PNG，尺寸与用途一一对应
-  it('七张图集尺寸与用途对应', () => {
+  // 八张图集都是真实 PNG，尺寸与用途一一对应
+  it('八张图集尺寸与用途对应', () => {
     expect(readImageDimensions(encodeDemoTileAtlas())).toEqual({ width: 128, height: 64 });
     expect(readImageDimensions(encodeDemoAnimateAtlas())).toEqual({ width: 128, height: 32 });
     expect(readImageDimensions(readDemoAutotileBigBytes())).toEqual({ width: 384, height: 128 });
     expect(readImageDimensions(encodeDemoAutotileSmallAtlas())).toEqual({ width: 128, height: 96 });
     expect(readImageDimensions(encodeDemoTilesetAtlas())).toEqual({ width: 128, height: 64 });
+    expect(readImageDimensions(encodeDemoTileset2Atlas())).toEqual({ width: 96, height: 96 });
     expect(readImageDimensions(encodeDemoLargeTileAtlas())).toEqual({ width: 192, height: 64 });
     expect(readImageDimensions(encodeDemoSmallTileAtlas())).toEqual({ width: 64, height: 32 });
   });
@@ -178,7 +184,7 @@ describe('开发宿主演示图集与图块目录', () => {
     }
   });
 
-  // 六类齐全，且都指向七张真实图集之一（不再有 tiles-objects 这种缺图占位）
+  // 六类齐全，且都指向八张真实图集之一（不再有 tiles-objects 这种缺图占位）
   it('六类齐全且都指向真实图集', () => {
     const groups = buildDemoTileCatalog();
     const categories = new Set(groups.map((group) => group.category));
@@ -288,14 +294,14 @@ describe('开发宿主演示图集与图块目录', () => {
     expect(small.autotile).toEqual({ type: MapAutotileType.Small2x3, connections: [] });
   });
 
-  // Tileset 恰好 8 格、编号连续 1000..1007，read 为 Grid 且每格裁切就是自己那一格
-  it('Tileset 逐格编号且 read 为 Grid', () => {
+  // Tileset 恰好 8 格、编号为引擎编号段 100000..100007，read 为 Grid 且每格裁切就是自己那一格
+  it('第一张 Tileset 逐格编号且 read 为 Grid', () => {
     const groups = buildDemoTileCatalog();
     const tileset = findGroup(groups, TILESET_PATH, MapTileCategory.Tileset);
 
     expect(tileset.read).toBe(MapTextureReadType.Grid);
     expect(tileset.tiles).toHaveLength(8);
-    expect(numbers(tileset)).toEqual([1000, 1001, 1002, 1003, 1004, 1005, 1006, 1007]);
+    expect(numbers(tileset)).toEqual([100000, 100001, 100002, 100003, 100004, 100005, 100006, 100007]);
     expect(positions(tileset)).toEqual([
       [0, 0],
       [1, 0],
@@ -311,6 +317,28 @@ describe('开发宿主演示图集与图块目录', () => {
     const entry = tileset.tiles[5];
 
     expect([entry.column, entry.row]).toEqual([1, 1]);
+  });
+
+  // 第二张 Tileset 格尺寸不同（48×48），占用下一段编号 110000..110003，两张图编号不相交
+  it('第二张 Tileset 占用下一段编号', () => {
+    const groups = buildDemoTileCatalog();
+    const first = findGroup(groups, TILESET_PATH, MapTileCategory.Tileset);
+    const second = findGroup(groups, TILESET_2_PATH, MapTileCategory.Tileset);
+
+    expect(second.read).toBe(MapTextureReadType.Grid);
+    expect(second.tiles).toHaveLength(4);
+    expect(numbers(second)).toEqual([110000, 110001, 110002, 110003]);
+    expect(positions(second)).toEqual([
+      [0, 0],
+      [1, 0],
+      [0, 1],
+      [1, 1],
+    ]);
+    expect(second.tileset).toEqual({ cellWidth: 48, cellHeight: 48, columns: 2, rows: 2 });
+
+    const firstNumbers = new Set(numbers(first));
+
+    for (const number of numbers(second)) expect(firstNumbers.has(number)).toBe(false);
   });
 
   // registerMapDemo 能把视口格数与帧速覆盖并入能力对象，不传时保持缺省
@@ -333,8 +361,8 @@ describe('开发宿主演示图集与图块目录', () => {
     expect(plain.maxMapSize).toEqual({ maxWidth: 256, maxHeight: 256 });
   });
 
-  // seedMapDemo 把七张图集与两份引擎文本真的写进演示项目
-  it('seedMapDemo 写入七张图集与两份引擎文本', async () => {
+  // seedMapDemo 把八张图集与两份引擎文本真的写进演示项目
+  it('seedMapDemo 写入八张图集与两份引擎文本', async () => {
     const backend = new MemoryBackend();
 
     await seedMapDemo(backend);

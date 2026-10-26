@@ -15,14 +15,22 @@ const TILE_TABLE_TEXT = `[
   { "type": 4, "identifier": 8, "name": "宝箱" },
   { "type": 7, "identifier": 90, "name": "石墙" },
   { "type": 7, "identifier": 91, "name": "木墙" },
-  { "type": 8, "identifier": 1000 },
-  { "type": 8, "identifier": 1001 },
-  { "type": 8, "identifier": 1002 },
-  { "type": 8, "identifier": 1003 },
-  { "type": 8, "identifier": 1004 },
-  { "type": 8, "identifier": 1005 },
-  { "type": 8, "identifier": 1006 },
-  { "type": 8, "identifier": 1007 }
+  { "type": 8, "identifier": 100000 },
+  { "type": 8, "identifier": 100001 },
+  { "type": 8, "identifier": 100002 },
+  { "type": 8, "identifier": 100003 },
+  { "type": 8, "identifier": 100004 },
+  { "type": 8, "identifier": 100005 },
+  { "type": 8, "identifier": 100006 },
+  { "type": 8, "identifier": 100007 },
+  { "type": 8, "identifier": 100008 },
+  { "type": 8, "identifier": 100009 },
+  { "type": 8, "identifier": 100010 },
+  { "type": 8, "identifier": 100011 },
+  { "type": 8, "identifier": 110000 },
+  { "type": 8, "identifier": 110001 },
+  { "type": 8, "identifier": 110002 },
+  { "type": 8, "identifier": 110003 }
 ]`;
 
 /** 四方向都可通行的期望值 */
@@ -113,18 +121,21 @@ describe('宿主图块目录解析器', () => {
   // Tileset 逐格枚举编号、read 必须是 Grid，且第 0 帧矩形就是该格自己
   it('tileset 逐格编号且 read 为 Grid', () => {
     const groups = buildTileCatalog({
-      textureText: `[{ "type": "tileset", "source": "set.png", "cellWidth": 32, "cellHeight": 32, "identifier": 1000 }]`,
+      textureText: `[{ "type": "tileset", "source": "set.png", "cellWidth": 32, "cellHeight": 32 }]`,
       tileText: TILE_TABLE_TEXT,
       dimensions: { 'set.png': { width: 128, height: 64 } },
       connections: {},
-      tilesetBase: 1000,
+      tilesetReserve: 100000,
+      tilesetUnit: 10000,
     });
 
     expect(groups).toHaveLength(1);
     expect(groups[0].category).toBe(MapTileCategory.Tileset);
     expect(groups[0].read).toBe(MapTextureReadType.Grid);
     expect(groups[0].tiles).toHaveLength(8);
-    expect(groups[0].tiles.map((tile) => tile.number)).toEqual([1000, 1001, 1002, 1003, 1004, 1005, 1006, 1007]);
+    expect(groups[0].tiles.map((tile) => tile.number)).toEqual([
+      100000, 100001, 100002, 100003, 100004, 100005, 100006, 100007,
+    ]);
     expect(groups[0].tiles.map((tile) => [tile.column, tile.row])).toEqual([
       [0, 0],
       [1, 0],
@@ -137,11 +148,69 @@ describe('宿主图块目录解析器', () => {
     ]);
     expect(groups[0].tileset).toEqual({ cellWidth: 32, cellHeight: 32, columns: 4, rows: 2 });
 
-    // 编号 1005 落在 (1,1)：条目只带图集位置，帧矩形由读取规则现算
+    // 编号 100005 落在 (1,1)：条目只带图集位置，帧矩形由读取规则现算
     const entry = groups[0].tiles[5];
 
     expect(entry.column).toBe(1);
     expect(entry.row).toBe(1);
+  });
+
+  // 两张 Tileset 各占一段：第二张的起点 = 100000 + 1 × 10000
+  it('两张 Tileset 占用连续的编号段', () => {
+    const groups = buildTileCatalog({
+      textureText: `[
+        { "type": "tileset", "source": "set-a.png", "cellWidth": 32, "cellHeight": 32 },
+        { "type": "tileset", "source": "set-b.png", "cellWidth": 48, "cellHeight": 48 }
+      ]`,
+      tileText: TILE_TABLE_TEXT,
+      dimensions: {
+        'set-a.png': { width: 128, height: 64 },
+        'set-b.png': { width: 96, height: 96 },
+      },
+      connections: {},
+      tilesetReserve: 100000,
+      tilesetUnit: 10000,
+    });
+
+    expect(groups.map((group) => group.imagePath)).toEqual(['set-a.png', 'set-b.png']);
+    expect(groups.flatMap((group) => group.tiles.map((tile) => tile.number)).slice(8)).toEqual([
+      110000, 110001, 110002, 110003,
+    ]);
+  });
+
+  // 一张图超过一段容量时，下一张图的起点要跳过整段：8 格 / 每段 4 格 → 占 2 段
+  it('一张图超过一段容量时下一张跳过整段', () => {
+    const groups = buildTileCatalog({
+      textureText: `[
+        { "type": "tileset", "source": "wide.png", "cellWidth": 32, "cellHeight": 32 },
+        { "type": "tileset", "source": "small.png", "cellWidth": 48, "cellHeight": 48 }
+      ]`,
+      tileText: TILE_TABLE_TEXT,
+      dimensions: {
+        'wide.png': { width: 128, height: 64 },
+        'small.png': { width: 96, height: 96 },
+      },
+      connections: {},
+      tilesetReserve: 100000,
+      tilesetUnit: 4,
+    });
+
+    expect(groups.flatMap((group) => group.tiles.map((tile) => tile.number))).toEqual([
+      100000, 100001, 100002, 100003, 100004, 100005, 100006, 100007, 100008, 100009, 100010, 100011,
+    ]);
+  });
+
+  // 宿主不传 reserve / unit 时用引擎默认值 100000 / 10000
+  it('缺省编号段参数时使用引擎默认值', () => {
+    const groups = buildTileCatalog({
+      textureText: `[{ "type": "tileset", "source": "set.png", "cellWidth": 32, "cellHeight": 32 }]`,
+      tileText: TILE_TABLE_TEXT,
+      dimensions: { 'set.png': { width: 128, height: 64 } },
+      connections: {},
+    });
+
+    expect(groups[0].tiles[0].number).toBe(100000);
+    expect(groups[0].tiles.at(-1)?.number).toBe(100007);
   });
 
   // 同一个 grid 数组里混有多个分类时各生成一个组，图块保留它在整个数组里的行列

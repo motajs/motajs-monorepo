@@ -22,8 +22,6 @@ export interface ITileCatalogSource {
   readonly dimensions: Readonly<Record<string, IAssetImageDimensions | undefined>>;
   /** 图块编号 → 单方面连接的图块编号（自动拼接用） */
   readonly connections: Readonly<Record<number, readonly number[]>>;
-  /** 已废弃：旧口径是每张图从固定基号逐格枚举，无法表达多张图占用连续编号段；由 `tilesetReserve` + `tilesetUnit` 取代，计划 29 删除 */
-  readonly tilesetBase?: number;
   /** Tileset 编号段的起点，对应引擎同名配置；缺省 `100000`（D-51） */
   readonly tilesetReserve?: number;
   /** 每个编号段的容量，对应引擎同名配置；缺省 `10000`（D-51） */

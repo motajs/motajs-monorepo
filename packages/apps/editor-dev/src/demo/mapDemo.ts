@@ -14,10 +14,10 @@ import { IMapDemoOverrides, IMemoryBackend } from '../backend/types';
 import { decodeDataUrlBytes } from './pngBytes';
 import DEMO_AUTOTILE_BIG_PNG_URL from './assets/autotile1.png?inline';
 
-// 开发宿主的地图演示数据：两张尺幅不同的地图、七张真实图集、一份两字段的属性 schema。
+// 开发宿主的地图演示数据：两张尺幅不同的地图、八张真实图集、一份两字段的属性 schema。
 // 图块目录不是手写数组：宿主把引擎格式的两份文本（纹理清单 + 图块表）交给 `buildTileCatalog` 现场解析，
 // 六类素材、动画、两种自动元件、Tileset、大 / 小素材都从同一份素材数据里长出来；能力包只拿到中立目录。
-// 其中大号自动元件用的是仓库里 384×128 的真实四帧素材（`assets/autotile1.png`），其余六张仍按代码现场编码。
+// 其中大号自动元件用的是仓库里 384×128 的真实四帧素材（`assets/autotile1.png`），其余七张仍按代码现场编码。
 
 /** 地形图集相对项目根的路径：4×2、每格 32×32 的高对比色块 */
 const DEMO_TERRAIN_IMAGE_PATH = 'content/map/tiles-terrain.png';
@@ -33,6 +33,15 @@ const DEMO_AUTOTILE_SMALL_IMAGE_PATH = 'content/map/tiles-autotile-small.png';
 
 /** Tileset 图集的路径：4×2、每格 32×32 */
 const DEMO_TILESET_IMAGE_PATH = 'content/map/tiles-tileset.png';
+
+/** 第二张 Tileset 图集的路径：2×2、每格 48×48，与第一张的格尺寸明显不同 */
+const DEMO_TILESET_2_IMAGE_PATH = 'content/map/tiles-tileset-2.png';
+
+/** 演示用 Tileset 编号段起点：与引擎默认值一致（D-51） */
+const DEMO_TILESET_RESERVE = 100000;
+
+/** 演示用每个 Tileset 编号段的容量：与引擎默认值一致（D-51） */
+const DEMO_TILESET_UNIT = 10000;
 
 /** 大素材图集的路径：192×64、两块 96×64 的素材，比 48 的地图格更大 */
 const DEMO_LARGE_IMAGE_PATH = 'content/map/tiles-large.png';
@@ -364,6 +373,19 @@ export function encodeDemoTilesetAtlas(): Uint8Array {
 }
 
 /**
+ * 编码第二张 Tileset 图集：96×96、2×2、每格 48×48，色块与第一张明显不同
+ * @returns 完整的 PNG 字节
+ */
+export function encodeDemoTileset2Atlas(): Uint8Array {
+  return encodeDemoPng(96, 96, (x, y) => {
+    const column = Math.floor(x / 48);
+    const row = Math.floor(y / 48);
+
+    return paletteColor(44 + row * 2 + column, checkerVariant(x, y));
+  });
+}
+
+/**
  * 编码大素材图集：192×64、2×1、每格 96×64，两块都比 48 的地图格更大
  * @returns 完整的 PNG 字节
  */
@@ -439,7 +461,12 @@ const DEMO_TEXTURE_LIST: readonly Record<string, unknown>[] = [
     source: DEMO_TILESET_IMAGE_PATH,
     cellWidth: DEMO_MAP_CELL_SIZE,
     cellHeight: DEMO_MAP_CELL_SIZE,
-    identifier: 1000,
+  },
+  {
+    type: 'tileset',
+    source: DEMO_TILESET_2_IMAGE_PATH,
+    cellWidth: 48,
+    cellHeight: 48,
   },
 ];
 
@@ -486,14 +513,18 @@ const DEMO_TILE_TABLE: readonly Record<string, unknown>[] = [
   { type: 4, identifier: 37, pass: createPass(PASS_OPEN) },
   { type: 7, identifier: 90, pass: createPass(PASS_OPEN) },
   { type: 7, identifier: 91, pass: createPass(PASS_OPEN) },
-  { type: 8, identifier: 1000 },
-  { type: 8, identifier: 1001 },
-  { type: 8, identifier: 1002 },
-  { type: 8, identifier: 1003 },
-  { type: 8, identifier: 1004 },
-  { type: 8, identifier: 1005 },
-  { type: 8, identifier: 1006 },
-  { type: 8, identifier: 1007 },
+  { type: 8, identifier: 100000 },
+  { type: 8, identifier: 100001 },
+  { type: 8, identifier: 100002 },
+  { type: 8, identifier: 100003 },
+  { type: 8, identifier: 100004 },
+  { type: 8, identifier: 100005 },
+  { type: 8, identifier: 100006 },
+  { type: 8, identifier: 100007 },
+  { type: 8, identifier: 110000 },
+  { type: 8, identifier: 110001 },
+  { type: 8, identifier: 110002 },
+  { type: 8, identifier: 110003 },
 ];
 
 /** 演示用的纹理清单文本：引擎 `.list.jsonc` 的形状，交给 `buildTileCatalog` 解析 */
@@ -503,10 +534,11 @@ export const DEMO_TEXTURE_LIST_TEXT: string = JSON.stringify(DEMO_TEXTURE_LIST, 
 export const DEMO_TILE_TABLE_TEXT: string = JSON.stringify(DEMO_TILE_TABLE, null, 2);
 
 /**
- * 由七张演示图集与两份引擎文本生成中立图块目录
+ * 由八张演示图集与两份引擎文本生成中立图块目录
  *
  * 图片尺寸用 `readImageDimensions` 从编码结果现算，宿主不需要在运行时解码图片；
  * 自动元件只给单方面连接编号，切片与四象限拼接由能力包现算。
+ * Tileset 编号由宿主按引擎规则累计编号段：第一张从 100000 起、第二张从 110000 起（D-51）。
  * @returns 六类图块目录
  */
 export function buildDemoTileCatalog(): readonly IMapTileGroup[] {
@@ -516,6 +548,7 @@ export function buildDemoTileCatalog(): readonly IMapTileGroup[] {
     [DEMO_AUTOTILE_BIG_IMAGE_PATH]: readImageDimensions(readDemoAutotileBigBytes()),
     [DEMO_AUTOTILE_SMALL_IMAGE_PATH]: readImageDimensions(encodeDemoAutotileSmallAtlas()),
     [DEMO_TILESET_IMAGE_PATH]: readImageDimensions(encodeDemoTilesetAtlas()),
+    [DEMO_TILESET_2_IMAGE_PATH]: readImageDimensions(encodeDemoTileset2Atlas()),
     [DEMO_LARGE_IMAGE_PATH]: readImageDimensions(encodeDemoLargeTileAtlas()),
     [DEMO_SMALL_IMAGE_PATH]: readImageDimensions(encodeDemoSmallTileAtlas()),
   };
@@ -527,7 +560,8 @@ export function buildDemoTileCatalog(): readonly IMapTileGroup[] {
     tileText: DEMO_TILE_TABLE_TEXT,
     dimensions,
     connections: {},
-    tilesetBase: 1000,
+    tilesetReserve: DEMO_TILESET_RESERVE,
+    tilesetUnit: DEMO_TILESET_UNIT,
   });
 }
 
@@ -676,7 +710,7 @@ export const MAP_DEMO_MAPS: readonly IMapFileRecord[] = [
 ];
 
 /**
- * 把演示地图文件、清单、七张图集与两份引擎文本写进内存后端
+ * 把演示地图文件、清单、八张图集与两份引擎文本写进内存后端
  * @param backend 开发宿主的内存后端
  */
 export async function seedMapDemo(backend: IMemoryBackend): Promise<void> {
@@ -693,6 +727,7 @@ export async function seedMapDemo(backend: IMemoryBackend): Promise<void> {
   backend.seed(DEMO_AUTOTILE_BIG_IMAGE_PATH, readDemoAutotileBigBytes());
   backend.seed(DEMO_AUTOTILE_SMALL_IMAGE_PATH, encodeDemoAutotileSmallAtlas());
   backend.seed(DEMO_TILESET_IMAGE_PATH, encodeDemoTilesetAtlas());
+  backend.seed(DEMO_TILESET_2_IMAGE_PATH, encodeDemoTileset2Atlas());
   backend.seed(DEMO_LARGE_IMAGE_PATH, encodeDemoLargeTileAtlas());
   backend.seed(DEMO_SMALL_IMAGE_PATH, encodeDemoSmallTileAtlas());
   backend.seed(DEMO_TEXTURE_LIST_PATH, DEMO_TEXTURE_LIST_TEXT);

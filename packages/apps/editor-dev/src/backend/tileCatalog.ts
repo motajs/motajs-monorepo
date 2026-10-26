@@ -20,6 +20,12 @@ import { ITileCatalogSource } from './types';
 // `editor-impl/map` 永远看不到它们；解析结果只给规则与编号，切片与自动拼接由能力包现算。
 // 畸形条目一律跳过而不是抛错：宿主拿到半份数据也比整个地图面板打不开好。
 
+/** 引擎默认的 Tileset 编号段起点：宿主没给 `tilesetReserve` 时使用 */
+const DEFAULT_TILESET_RESERVE = 100000;
+
+/** 引擎默认的每个 Tileset 编号段容量：宿主没给 `tilesetUnit` 时使用 */
+const DEFAULT_TILESET_UNIT = 10000;
+
 /** 一张图集里的一条图块表记录：分类与通行属性来自图块表，编号即键 */
 interface ITileTableEntry {
   /** 图块在目录里的分类 */
@@ -464,9 +470,12 @@ function bucketByCategory(tiles: readonly ICategorizedTile[]): Map<MapTileCatego
  * 从纹理清单 + 图块表生成中立的图块目录
  *
  * 每个纹理清单条目先按 `source` 查图片尺寸，缺失即跳过（不猜尺寸）；普通素材的编号来自
- * 条目的 `map` 数组，自动元件与 Tileset 的编号来自 `identifier` / `tilesetBase` 枚举。
+ * 条目的 `map` 数组，自动元件的编号来自 `identifier`。
+ * Tileset 编号按引擎的 `tilesetReserve` + `tilesetUnit` 累计编号段：第 k 张图的起点是
+ * `reserve + 已占用段数 × unit`，每张图按图片格数 `ceil(count / unit)` 占段（至少 1 段），
+ * 因此多张图占用连续且互不重叠的编号段，不再每张图从固定基号枚举（D-51）。
  * 同一个 `map` 数组里混有多个分类时按图块表的 `type` 各生成一个组，图块保留它在整个数组里的行列。
- * @param source 宿主解析输入：两份文本、图片尺寸查询表与自动拼接连接表
+ * @param source 宿主解析输入：两份文本、图片尺寸查询表、自动拼接连接表与 Tileset 编号段参数
  * @returns 六类图块目录；没有可解析的条目时为空数组
  */
 export function buildTileCatalog(source: ITileCatalogSource): readonly IMapTileGroup[] {
@@ -474,6 +483,7 @@ export function buildTileCatalog(source: ITileCatalogSource): readonly IMapTileG
   const tileTable = buildTileTable(readEntryList(source.tileText));
   const usedIds: Set<string> = new Set();
   const groups: IMapTileGroup[] = [];
+  let usedTilesetSegments = 0;
 
   for (const entry of textureEntries) {
     const kind = readText(entry.type);
@@ -522,7 +532,13 @@ export function buildTileCatalog(source: ITileCatalogSource): readonly IMapTileG
 
     if (kind === 'tileset') {
       const rows = Math.floor(image.height / cellHeight);
-      const base = source.tilesetBase ?? 1;
+
+      if (rows <= 0) continue;
+
+      const count = columns * rows;
+      const reserve = readPositiveInt(source.tilesetReserve) ?? DEFAULT_TILESET_RESERVE;
+      const unit = readPositiveInt(source.tilesetUnit) ?? DEFAULT_TILESET_UNIT;
+      const base = reserve + usedTilesetSegments * unit;
       const tileset: IMapTilesetMeta = { cellWidth, cellHeight, columns, rows };
       const collected: ICategorizedTile[] = [];
 
@@ -539,6 +555,8 @@ export function buildTileCatalog(source: ITileCatalogSource): readonly IMapTileG
           });
         }
       }
+
+      usedTilesetSegments += Math.max(1, Math.ceil(count / unit));
 
       for (const [category, tiles] of bucketByCategory(collected)) {
         groups.push(
