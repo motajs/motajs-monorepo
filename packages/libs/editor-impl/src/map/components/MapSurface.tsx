@@ -1,8 +1,19 @@
 import { Application, Container, Graphics, Rectangle, RenderTexture, Sprite, Texture, UPDATE_PRIORITY } from 'pixi.js';
 import { ReactElement, useEffect, useRef, useState } from 'react';
-import { MAP_FRAME_SPEED_DEFAULT, MAP_PASS_ARROW_HEAD_HALF_WIDTH, MAP_PASS_COLOR_UP } from '../constants';
+import {
+  MAP_FRAME_SPEED_DEFAULT,
+  MAP_PASS_ARROW_HEAD_HALF_WIDTH,
+  MAP_PASS_COLOR_UP,
+  MAP_PASS_OVERLAY_ALPHA,
+  MAP_PASS_OVERLAY_COLOR,
+} from '../constants';
 import { resolvePreviewCellRects } from '../model/cellMetrics';
-import { resolvePassArrowColor, resolvePassArrowHeadLength, resolvePassArrowLength } from '../model/passability';
+import {
+  resolvePassArrowColor,
+  resolvePassArrowHeadLength,
+  resolvePassArrowLength,
+  resolvePassOverlayRect,
+} from '../model/passability';
 import { buildThumbnailCells } from '../model/renderModel';
 import { resolveCellFrame, resolveFrameRect, resolveFrameTickAt } from '../model/tileFrame';
 import {
@@ -25,6 +36,7 @@ import { useMapObjectUrl } from './useMapObjectUrl';
 // 定位只用模型给出的度量：普通模式是 `viewport` + 缩放后的格尺寸，大地图模式是缩略比例与偏移。
 // 动画只有一个时钟：ticker 的累计毫秒交给 `resolveFrameTickAt` 换全局帧号，只有动画格换帧。
 // 大地图缩略纹理改用与普通模式同一套逐格数据（自动元件四块 / contain / 第 0 帧），纹理仍然只在重建时构建一次。
+// 通行度叠加层先铺纯黑蒙版、再画箭头。
 
 /** 读取图片字节的回调 */
 type MapBytesLoader = (path: string) => Promise<Uint8Array | undefined>;
@@ -620,7 +632,7 @@ function drawPassMark(
 }
 
 /**
- * 画通行度叠加层：只遍历模型给出的标记（已按视口裁剪或按缩略格降采样）
+ * 画通行度叠加层：先铺一层覆盖整个视口的纯黑蒙版，再遍历模型给出的标记（已按视口裁剪或按缩略格降采样）
  * @param scene 场景容器
  * @param model 渲染模型
  */
@@ -632,6 +644,13 @@ function drawPassMarks(scene: Container, model: IMapRenderModel): void {
   const cellHeight = resolveCellPixelHeight(model);
 
   graphics.eventMode = 'none';
+
+  const overlay = resolvePassOverlayRect(model.width, model.height);
+
+  graphics.rect(overlay.x, overlay.y, overlay.width, overlay.height).fill({
+    color: MAP_PASS_OVERLAY_COLOR,
+    alpha: MAP_PASS_OVERLAY_ALPHA,
+  });
 
   for (const mark of model.passMarks) {
     drawPassMark(

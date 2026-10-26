@@ -7,6 +7,8 @@ import {
   MAP_PASS_COLOR_LEFT,
   MAP_PASS_COLOR_RIGHT,
   MAP_PASS_COLOR_UP,
+  MAP_PASS_OVERLAY_ALPHA,
+  MAP_PASS_OVERLAY_COLOR,
 } from '../constants';
 import { IMapDirections, IMapDocument, IMapLayer, IMapTileEntry, IMapTilePass, MapDirection } from '../types';
 import { IMapRenderView, buildMapRenderModel } from '../model/renderModel';
@@ -15,7 +17,9 @@ import {
   resolvePassArrowColor,
   resolvePassArrowHeadLength,
   resolvePassArrowLength,
+  resolvePassOverlayRect,
 } from '../model/passability';
+import mapSurfaceSource from '../components/MapSurface.tsx?raw';
 
 // 只读通行度的用例：覆盖空格 / 全通 / 全阻 / 单方向 / 事件层 / 未知编号 / 多图层，以及输出直接喂给渲染模型。
 
@@ -274,28 +278,58 @@ describe('通行度箭头几何', () => {
     expect(resolvePassArrowLength(Number.NaN, Number.NaN)).toBe(2);
   });
 
-  // 头长取「常量上限」与「全长一半」的较小值，保证头不会超过箭头本身
+  // 头长取「常量上限」与「全长一半」的较小值：常量 8px 在 16 长时封顶，15 长时受一半上限夹成 7.5px
   it('头长夹取在常量上限与全长一半之间', () => {
-    expect(resolvePassArrowHeadLength(15)).toBe(MAP_PASS_ARROW_HEAD_LENGTH);
+    expect(resolvePassArrowHeadLength(16)).toBe(8);
+    expect(resolvePassArrowHeadLength(15)).toBe(7.5);
     expect(resolvePassArrowHeadLength(4)).toBe(2);
     expect(resolvePassArrowHeadLength(0)).toBe(0);
   });
 
-  // 常量落在 4..6px 区间：整头宽 5px，头长 6px
-  it('常量边界落在 4..6px 区间', () => {
-    expect(MAP_PASS_ARROW_HEAD_LENGTH).toBeGreaterThanOrEqual(4);
-    expect(MAP_PASS_ARROW_HEAD_LENGTH).toBeLessThanOrEqual(6);
-    expect(MAP_PASS_ARROW_HEAD_HALF_WIDTH * 2).toBeGreaterThanOrEqual(4);
-    expect(MAP_PASS_ARROW_HEAD_HALF_WIDTH * 2).toBeLessThanOrEqual(6);
+  // 常量按用户口径放大 2px：头长 8px、整头宽 7px
+  it('常量放大到头长 8px / 整头宽 7px', () => {
+    expect(MAP_PASS_ARROW_HEAD_LENGTH).toBe(8);
+    expect(MAP_PASS_ARROW_HEAD_HALF_WIDTH * 2).toBe(7);
   });
 
-  // 32×32 下三角底离中心还有 9px，远大于半宽 2.5px：四支箭头的轴向带互不相交
+  // 32×32 下三角底离中心还有 7.5px，大于半宽 3.5px；整头宽 7px 也小于箭头全长 15px：四向头部互不相交
   it('32×32 格内四方向头部互不重叠', () => {
     const length = resolvePassArrowLength(32, 32);
     const headLength = resolvePassArrowHeadLength(length);
 
     expect(length - headLength).toBeGreaterThan(MAP_PASS_ARROW_HEAD_HALF_WIDTH);
-    expect(MAP_PASS_ARROW_HEAD_HALF_WIDTH * 2).toBeLessThanOrEqual(6);
+    expect(length - headLength).toBe(7.5);
+    expect(MAP_PASS_ARROW_HEAD_HALF_WIDTH * 2).toBe(7);
     expect(MAP_PASS_ARROW_HEAD_HALF_WIDTH * 2).toBeLessThan(length);
+  });
+});
+
+describe('通行度蒙版', () => {
+  // 蒙版是纯黑、约 0.7 不透明度：压暗底图但保留图块轮廓
+  it('蒙版色与不透明度符合用户口径', () => {
+    expect(MAP_PASS_OVERLAY_COLOR).toBe(0x000000);
+    expect(MAP_PASS_OVERLAY_ALPHA).toBe(0.7);
+  });
+
+  // 蒙版覆盖整个地图视口，不是只覆盖有标记的格子
+  it('蒙版矩形覆盖整个视口', () => {
+    expect(resolvePassOverlayRect(416, 416)).toEqual({ x: 0, y: 0, width: 416, height: 416 });
+    expect(resolvePassOverlayRect(128, 96)).toEqual({ x: 0, y: 0, width: 128, height: 96 });
+  });
+
+  // 尺寸非法时退化为全 0 矩形，不抛错
+  it('非法尺寸退化为全 0 矩形', () => {
+    expect(resolvePassOverlayRect(0, 0)).toEqual({ x: 0, y: 0, width: 0, height: 0 });
+    expect(resolvePassOverlayRect(Number.NaN, 16)).toEqual({ x: 0, y: 0, width: 0, height: 0 });
+  });
+
+  // 源码顺序钉住「先蒙版、后箭头」：蒙版矩形必须出现在标记循环之前
+  it('蒙版矩形先于标记循环绘制', () => {
+    const overlayIndex = mapSurfaceSource.indexOf('resolvePassOverlayRect(model.width, model.height)');
+    const loopIndex = mapSurfaceSource.indexOf('for (const mark of model.passMarks)');
+
+    expect(overlayIndex).toBeGreaterThanOrEqual(0);
+    expect(loopIndex).toBeGreaterThanOrEqual(0);
+    expect(overlayIndex).toBeLessThan(loopIndex);
   });
 });

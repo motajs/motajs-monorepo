@@ -5,7 +5,7 @@ import {
   MAP_PASS_COLOR_RIGHT,
   MAP_PASS_COLOR_UP,
 } from '../constants';
-import { IMapDirections, IMapDocument, IMapLayer, IMapPassMark, IMapTileEntry, MapDirection } from '../types';
+import { IMapDirections, IMapDocument, IMapLayer, IMapPassMark, IMapRect, IMapTileEntry, MapDirection } from '../types';
 
 // 只读通行度：按图块目录给出的四方向属性，算出每格「不能走」的方向，交给渲染模型画箭头或红点。
 // 只读且纯粹：不写文档、不置脏、不进撤销；空格、未知编号与不在事件层的 onlyEventLayer 图块都不输出标记。
@@ -68,6 +68,22 @@ export function resolvePassArrowHeadLength(length: number): number {
   if (!Number.isFinite(length) || length <= 0) return 0;
 
   return Math.min(MAP_PASS_ARROW_HEAD_LENGTH, length / 2);
+}
+
+/**
+ * 算通行度蒙版要铺的矩形：覆盖整个地图视口，而不是只覆盖有标记的格子
+ *
+ * 大地图模式同样覆盖整个画布；由画布的 `drawPassMarks` 在箭头之前铺一次。
+ * 宽高不是有限正数时返回全 0，不抛错。
+ * @param canvasWidth 画布的像素宽
+ * @param canvasHeight 画布的像素高
+ * @returns 从画布左上角起、覆盖整块视口的矩形
+ */
+export function resolvePassOverlayRect(canvasWidth: number, canvasHeight: number): IMapRect {
+  if (!Number.isFinite(canvasWidth) || canvasWidth <= 0) return { x: 0, y: 0, width: 0, height: 0 };
+  if (!Number.isFinite(canvasHeight) || canvasHeight <= 0) return { x: 0, y: 0, width: 0, height: 0 };
+
+  return { x: 0, y: 0, width: canvasWidth, height: canvasHeight };
 }
 
 /**

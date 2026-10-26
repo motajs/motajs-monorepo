@@ -121,8 +121,14 @@ export const MAP_PASS_COLOR_DOWN = 0x2f9e44;
 /** 通行度向左箭头的颜色 */
 export const MAP_PASS_COLOR_LEFT = 0xb26bd8;
 
-/** 通行度箭头头部沿方向占的长度（像素）；按 32×32 格里四支箭头互不重叠取 6，不要凭手感改大 */
-export const MAP_PASS_ARROW_HEAD_LENGTH = 6;
+/** 通行度叠加层的纯黑蒙版色；先蒙版、再箭头，覆盖整个地图视口 */
+export const MAP_PASS_OVERLAY_COLOR = 0x000000;
 
-/** 通行度箭头头部的一半宽度（像素）；整头宽 5px，落在 4..6px 区间内 */
-export const MAP_PASS_ARROW_HEAD_HALF_WIDTH = 2.5;
+/** 通行度叠加层蒙版的不透明度；约 0.7，压暗底图但保留可读的图块轮廓 */
+export const MAP_PASS_OVERLAY_ALPHA = 0.7;
+
+/** 通行度箭头头部沿方向占的长度（像素）；32×32 格里四支箭头仍互不重叠，按用户口径比原来大约 2px */
+export const MAP_PASS_ARROW_HEAD_LENGTH = 8;
+
+/** 通行度箭头头部的一半宽度（像素）；整头宽 7px（原 5px），落在 7..8px 区间 */
+export const MAP_PASS_ARROW_HEAD_HALF_WIDTH = 3.5;
