@@ -642,6 +642,7 @@ export function MapCanvas(props: IMapCanvasProps): ReactElement {
               data-test-id="map-ruler-top"
               style={{ height: MAP_RULER_SIZE, top: 0, left: MAP_RULER_SIZE, width: canvasWidth }}
             >
+              {renderRulerLines(document.width, props.viewport.left, metrics.cellWidth, true)}
               {renderTicks(document.width, props.viewport.left, metrics.cellWidth, hover?.x, true)}
             </div>
             <div
@@ -649,6 +650,7 @@ export function MapCanvas(props: IMapCanvasProps): ReactElement {
               data-test-id="map-ruler-left"
               style={{ width: MAP_RULER_SIZE, top: MAP_RULER_SIZE, left: 0, height: canvasHeight }}
             >
+              {renderRulerLines(document.height, props.viewport.top, metrics.cellHeight, false)}
               {renderTicks(document.height, props.viewport.top, metrics.cellHeight, hover?.y, false)}
             </div>
           </>
@@ -738,6 +740,28 @@ export function MapCanvas(props: IMapCanvasProps): ReactElement {
       />
     </div>
   );
+}
+
+/**
+ * 画标尺上的格子刻度线：与数字标签共用同一份视口偏移与格像素，因此永远对齐格子边界
+ * @param count 总格数（宽或高）
+ * @param offset 视口起点（列或行）
+ * @param size 格边长（像素）
+ * @param horizontal 为 true 时是上方横向标尺，否则是左侧纵向标尺
+ * @returns 刻度线元素数组
+ */
+function renderRulerLines(count: number, offset: number, size: number, horizontal: boolean): ReactElement[] {
+  const lines: ReactElement[] = [];
+  const first = Math.max(0, Math.floor(offset));
+
+  for (let index = first; index <= count; index += 1) {
+    const position = (index - offset) * size;
+    const style = horizontal ? { left: position } : { top: position };
+
+    lines.push(<span key={index} className="emap-ruler-line" style={style} />);
+  }
+
+  return lines;
 }
 
 /**

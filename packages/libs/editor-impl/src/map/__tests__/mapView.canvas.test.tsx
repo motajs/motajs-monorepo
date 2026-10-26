@@ -9,6 +9,7 @@ import { IPaintWrite } from '../model/document';
 import { resolveMapLayout } from '../model/layout';
 import { buildMapRenderModel, IMapRenderView } from '../model/renderModel';
 import { IMapDocument, IMapEditorCapabilities, IMapRenderModel, MapBrushMode } from '../types';
+import mapCss from '../map.css?inline';
 import {
   createMapDocument,
   createMapHarness,
@@ -135,6 +136,25 @@ function createCanvasProps(overrides: Partial<IMapCanvasProps> = {}): IMapCanvas
     onToggleBigMap: vi.fn(),
     ...overrides,
   };
+}
+
+/**
+ * 取 CSS 里某条规则的声明体（不含选择器与花括号）
+ * @param css 整份样式文本
+ * @param selector 选择器（含末尾空格与左花括号）
+ * @returns 声明体；找不到时为 undefined
+ */
+function ruleBody(css: string, selector: string): string | undefined {
+  const start = css.indexOf(selector);
+
+  if (start === -1) return undefined;
+
+  const open = css.indexOf('{', start);
+  const end = css.indexOf('}', open);
+
+  if (open === -1 || end === -1) return undefined;
+
+  return css.slice(open, end);
 }
 
 /**
@@ -991,5 +1011,38 @@ describe('地图画布状态条口径', () => {
     await renderShell(harness);
 
     expect(screen.getByTestId('map-canvas').className).toContain('is-readonly');
+  });
+});
+
+describe('标尺刻度线与纵轴标签（U-24）', () => {
+  // 13 格文档在两条标尺上都按格子边界画 14 条刻度线（0..13），第一条从 0px 起
+  it('两条标尺各按格子边界渲染刻度线', () => {
+    const document = createMapDocument({ width: 13, height: 13 });
+
+    render(<MapCanvas {...createCanvasProps({ document, model: createModel(document) })} />);
+
+    const top = screen.getByTestId('map-ruler-top').querySelectorAll('.emap-ruler-line');
+    const left = screen.getByTestId('map-ruler-left').querySelectorAll('.emap-ruler-line');
+
+    expect(top).toHaveLength(14);
+    expect(left).toHaveLength(14);
+    expect((top[0] as HTMLElement).style.left).toBe('0px');
+    expect((left[0] as HTMLElement).style.top).toBe('0px');
+  });
+
+  // 纵轴 `0` 顶对齐在标尺内，不再被横标尺切掉一半；规则里也没有向上位移
+  it('纵轴 0 标签顶对齐且没有向上位移', () => {
+    render(<MapCanvas {...createCanvasProps()} />);
+
+    const ticks = Array.from(screen.getByTestId('map-ruler-left').querySelectorAll('.emap-ruler-tick'));
+    const zero = ticks.find((tick) => tick.textContent === '0');
+
+    expect(zero).toBeDefined();
+    expect((zero as HTMLElement).style.top).toBe('0px');
+
+    const rule = ruleBody(mapCss, '.emap-ruler-left .emap-ruler-tick {');
+
+    expect(rule).toBeDefined();
+    expect(rule).not.toContain('translate');
   });
 });

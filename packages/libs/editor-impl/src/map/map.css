@@ -245,8 +245,10 @@
 }
 
 .emap-opacity-slider {
+  flex: 0 0 auto;
   width: 96px;
-  margin: 0;
+  /* 手柄拖到最左会向盒子左侧溢出约 5px；10px 左间距让标签不被压住，不要用负 margin 或绝对定位掩盖 */
+  margin: 0 0 0 10px;
 }
 
 .emap-zoom {
@@ -443,6 +445,23 @@
   border-right: 1px solid var(--editor-border, #d0d7de);
 }
 
+.emap-ruler-line {
+  position: absolute;
+  background: var(--editor-border, #d0d7de);
+}
+
+.emap-ruler-top .emap-ruler-line {
+  bottom: 0;
+  width: 1px;
+  height: 6px;
+}
+
+.emap-ruler-left .emap-ruler-line {
+  right: 0;
+  height: 1px;
+  width: 6px;
+}
+
 .emap-ruler-tick {
   position: absolute;
   font-size: 9px;
@@ -457,7 +476,6 @@
 
 .emap-ruler-left .emap-ruler-tick {
   left: 3px;
-  transform: translateY(-5px);
 }
 
 .emap-ruler-tick.is-active {

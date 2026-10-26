@@ -25,6 +25,7 @@ import {
   MapPaletteKind,
   MapTileCategory,
 } from '../types';
+import mapCss from '../map.css?inline';
 import { createMapDocument, createMapHarness, FakeFileSystem } from './fixtures';
 
 vi.mock('../components/MapSurface', async () => {
@@ -54,6 +55,25 @@ const PROPERTY_SCHEMA: ITableSchemaNode = {
   type: 'object',
   properties: { name: { type: 'string' } },
 };
+
+/**
+ * 取 CSS 里某条规则的声明体（不含选择器与花括号）
+ * @param css 整份样式文本
+ * @param selector 选择器（含末尾空格与左花括号）
+ * @returns 声明体；找不到时为 undefined
+ */
+function ruleBody(css: string, selector: string): string | undefined {
+  const start = css.indexOf(selector);
+
+  if (start === -1) return undefined;
+
+  const open = css.indexOf('{', start);
+  const end = css.indexOf('}', open);
+
+  if (open === -1 || end === -1) return undefined;
+
+  return css.slice(open, end);
+}
 
 /**
  * 造一份工具栏的完整 props，可按用例覆盖个别字段
@@ -771,6 +791,26 @@ describe('地图面板里的缩放接线', () => {
     await waitFor(() => expect(harness.panel['store'].state.zoom).toBe(1.5));
     await waitFor(() => expect(screen.getByTestId('map-surface-stub').getAttribute('data-cell-width')).toBe('32'));
     expect(screen.getByTestId('map-surface-stub').getAttribute('data-render-scale')).toBe('1.5');
+  });
+});
+
+describe('不透明度滑块的标签间距（U-22）', () => {
+  // 滑块手柄拖到最左会溢出自身盒子：规则里必须有 10px 左间距，否则会压住标签
+  it('滑块与标签之间留出 10px 左间距', () => {
+    const slider = ruleBody(mapCss, '.emap-opacity-slider {');
+
+    expect(slider).toBeDefined();
+    expect(slider).toContain('margin: 0 0 0 10px');
+    expect(slider).toContain('flex: 0 0 auto');
+    expect(slider).not.toContain('margin: 0;');
+  });
+
+  // 间距只来自滑块自身的左 margin，容器保持原有的 4px 间隙
+  it('容器保持 4px 间隙', () => {
+    const opacity = ruleBody(mapCss, '.emap-opacity {');
+
+    expect(opacity).toBeDefined();
+    expect(opacity).toContain('gap: 4px');
   });
 });
 
