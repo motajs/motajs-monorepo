@@ -405,6 +405,29 @@ function createTilesetGroup(): IMapTileGroup {
 }
 
 /**
+ * 造第二个 Tileset 素材组：2 × 2、每格 48 × 48，编号 2001..2004
+ * @returns 第二个 Tileset 分组
+ */
+function createSecondTilesetGroup(): IMapTileGroup {
+  const numbers = [2001, 2002, 2003, 2004];
+  const tiles = numbers.map((number, index) => createTile(number, index % 2, Math.floor(index / 2)));
+
+  return {
+    id: 'group-tileset-second',
+    name: '第二张 Tileset',
+    imagePath: 'content/map/tileset-second.png',
+    columns: 2,
+    tiles,
+    category: MapTileCategory.Tileset,
+    read: MapTextureReadType.Grid,
+    cellWidth: 48,
+    cellHeight: 48,
+    frames: 1,
+    tileset: { cellWidth: 48, cellHeight: 48, columns: 2, rows: 2 },
+  };
+}
+
+/**
  * 把元素的包围盒钉成固定尺寸，供 jsdom 里按指针坐标换算格子
  * @param element 目标元素
  * @param width 包围盒宽（像素）
@@ -433,7 +456,7 @@ describe('素材区 Tileset 选择器', () => {
       />,
     );
 
-    expect(screen.getByTestId('map-tileset')).not.toBeNull();
+    expect(screen.getByTestId('map-tileset-item')).not.toBeNull();
     expect(screen.getByTestId('map-tileset-canvas')).not.toBeNull();
     expect(screen.getByTestId('map-tileset-grid').children.length).toBe(3);
     expect(screen.queryByTestId('map-material-grid')).toBeNull();
@@ -529,6 +552,65 @@ describe('素材区 Tileset 选择器', () => {
     );
 
     expect(screen.getByTestId('map-tileset-empty').textContent).toBe('暂无 Tileset 素材');
+  });
+});
+
+describe('素材区 Tileset 多图横向并排（D-52）', () => {
+  // 两张图按目录顺序各占一块，图名可见，格尺寸各按自己那张图
+  it('两张 Tileset 图按目录顺序各占一块', () => {
+    render(
+      <MapMaterialPanel
+        {...createProps({
+          groups: [createTilesetGroup(), createSecondTilesetGroup()],
+          activeCategory: MapTileCategory.Tileset,
+        })}
+      />,
+    );
+
+    const items = screen.getAllByTestId('map-tileset-item');
+
+    expect(items.length).toBe(2);
+    expect(items.map((item) => item.getAttribute('data-group-id'))).toEqual([
+      'group-tileset',
+      'group-tileset-second',
+    ]);
+
+    const blocks = Array.from(document.querySelectorAll('.emap-tileset-block'));
+
+    expect(blocks.length).toBe(2);
+    expect(blocks[0].textContent).toContain('整图 Tileset');
+    expect(blocks[1].textContent).toContain('第二张 Tileset');
+
+    const canvases = screen.getAllByTestId('map-tileset-canvas');
+
+    expect(canvases.map((canvas) => canvas.getAttribute('data-cell-width'))).toEqual(['32', '48']);
+  });
+
+  // 在第二块上框选，得到的编号只属于第二张图，第一张的编号不会混进来
+  it('第二张图上框选只得到第二张图的编号', () => {
+    const onSelectPattern = vi.fn();
+
+    render(
+      <MapMaterialPanel
+        {...createProps({
+          groups: [createTilesetGroup(), createSecondTilesetGroup()],
+          activeCategory: MapTileCategory.Tileset,
+          onSelectPattern,
+        })}
+      />,
+    );
+
+    const canvas = screen.getAllByTestId('map-tileset-canvas')[1];
+
+    stubRect(canvas, 96, 96);
+    dispatchPointer(canvas, 'pointerdown', 5, 5);
+    dispatchPointer(canvas, 'pointerup', 5, 5);
+
+    expect(onSelectPattern).toHaveBeenCalledWith({
+      kind: MapPaletteKind.Tiles,
+      pattern: { width: 1, height: 1, tiles: [2001] },
+      primaryTileNumber: 2001,
+    });
   });
 });
 /** 已装配好的素材面板外壳 */
@@ -670,5 +752,43 @@ describe('素材分类导航横排（D-47）', () => {
 
     expect(divider).toBeDefined();
     expect(divider).toContain('border-left');
+  });
+});
+
+describe('素材区 Tileset 横向并排样式（D-52）', () => {
+  // 一行到底：横向排列且不写自动换行
+  it('Tileset 行横向排列且不换行', () => {
+    const row = ruleBody(mapCss, '.emap-tileset-row {');
+
+    expect(row).toBeDefined();
+    expect(row).toContain('flex-direction: row');
+    expect(row).not.toContain('flex-wrap');
+  });
+
+  // 块与块之间一条竖线
+  it('相邻 Tileset 块之间有竖线', () => {
+    const divider = ruleBody(mapCss, '.emap-tileset-block + .emap-tileset-block {');
+
+    expect(divider).toBeDefined();
+    expect(divider).toContain('border-left');
+  });
+
+  // 素材区主体是唯一滚动容器，且能横向滚
+  it('素材区主体双向滚动', () => {
+    const body = ruleBody(mapCss, '.emap-material-body {');
+
+    expect(body).toBeDefined();
+    expect(body).toContain('overflow: auto');
+  });
+
+  // 内层不再占满整块高度，也不再自己滚
+  it('Tileset 内层不占满高度且不自己滚', () => {
+    const tileset = ruleBody(mapCss, '.emap-tileset {');
+    const scroll = ruleBody(mapCss, '.emap-tileset-scroll {');
+
+    expect(tileset).toBeDefined();
+    expect(tileset).not.toContain('height: 100%');
+    expect(scroll).toBeDefined();
+    expect(scroll).not.toContain('overflow: auto');
   });
 });
