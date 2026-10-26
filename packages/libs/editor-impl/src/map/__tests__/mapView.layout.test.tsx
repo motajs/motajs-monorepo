@@ -891,7 +891,7 @@ describe('底部三页与收藏栏接线', () => {
 
     tile.focus();
 
-    expect(document.activeElement).toBe(tile);
+    expect(tile.ownerDocument.activeElement).toBe(tile);
 
     expect(fireEvent.keyDown(tile, { key: '2' })).toBe(false);
     await act(async () => {});
