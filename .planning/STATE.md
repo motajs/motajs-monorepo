@@ -32,8 +32,8 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 Phase: 04.1 (地图渲染与布局重做) — EXECUTING
 Current Plan: 29
 Total Plans in Phase: 31
-Status: Executing — 04.1-27 complete（Tileset 变普通第六类、六类同一排、`activeCategory` 单一真源）；只剩 04.1-28 未完成
-Last activity: 2026-10-26 — 04.1-27 complete（`MapCategoryNav` 六项同排 + `space-around` + `flex: 1 1 64px` + 相邻竖线；`MapMaterialPanel` 用 `activeCategory === Tileset` 判视图；删除 `MapPanel.toggleTileset` / 四处 props 成员 / `map-tileset-toggle` / `.emap-category-tileset`；`mapView.material.test.tsx` 19 passed、`mapPanel.test.tsx` 20 passed、全量 85 files / 960 tests、typecheck exit 0、prettier 全绿）
+Status: Executing — 04.1-28 complete（收藏拖拽反馈：源格 `is-dragging` 降不透明度、目标格 `is-drag-over` 加描边，松手恢复；排序逻辑未改）；第四轮剩余 04.1-30 / 04.1-31
+Last activity: 2026-10-26 — 04.1-28 complete（`MapFavoriteBar` 新增 `dragging` / `dragOver` 两个渲染输入与 `is-dragging` / `is-drag-over` 类名，`map.css` 末尾追加 `opacity: 0.4` 与强调色描边两条规则；`mapView.layout.test.tsx` 37 passed、全量 85 files / 961 tests、typecheck exit 0、prettier 全绿）
 
 Progress: [███████░░░] 74%
 
