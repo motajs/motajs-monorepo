@@ -628,23 +628,60 @@
 
 ## Plan 30 — Tileset 多图视图
 
-**要做什么：** 素材区的 Tileset 视图从「只画第一张图」改成「按目录顺序把每张图各画一块」，块间有图名与分割线。
+**要做什么：** 素材区的 Tileset 视图从「只画第一张图」改成「按目录顺序把每张图左右并排各画一块」，块上有图名、块间一条竖线；一行超宽时由素材区主体横向滚动。
 
 | 名称 | 种类 | 用途 |
 |------|------|------|
-| `map-tileset-item` | `data-test-id`（新） | Tileset 视图里的一张图；测试据此断言「张数 = 目录里的 Tileset 组数」 |
-| `.emap-tileset` / `.emap-tileset-scroll` | CSS 类（语义变更） | 从「一张图占满整块」改为「多张图纵向堆叠，滚动交给素材区主体」，不再自己出一层滚动条（D-52） |
+| `map-tileset-item` | `data-test-id`（新） | 一张 Tileset 图（= 一个块）；测试据此断言「块数 = 目录里的 Tileset 组数」 |
+| `.emap-tileset-row` | CSS 类（新） | 横向排布的容器：`display: flex`、`flex-direction: row`、`align-items: flex-start`、`width: max-content`、`min-width: 100%`，且不设 `flex-wrap`——块只排一行，超宽交给素材区主体横向滚动（D-52） |
+| `.emap-tileset-block` | CSS 类（新） | 一块（图名 + 一张图）：`flex: 0 0 auto` 不压缩不均分，`display: flex` + `flex-direction: column`（D-52） |
+| `.emap-tileset-block + .emap-tileset-block` | CSS 规则（新） | 块与块之间的**竖线**：`border-left: 1px solid var(--editor-border, #d0d7de)`；沿用既有边框颜色变量，不新增颜色体系（D-52） |
+| `.emap-material-body` | CSS 类（语义变更） | `overflow-y: auto` → `overflow: auto`：Tileset 一行超出宽度时横向滚动（需要时纵向也滚）（D-52） |
+| `.emap-tileset` / `.emap-tileset-scroll` | CSS 类（语义变更） | 从「一张图占满整块 + 自己滚动」改为「内容高度、不出自己的滚动条」；滚动全部交给 `.emap-material-body`（D-52） |
 | `IMapTilesetPickerProps` | **不变**（明确登记） | 素材区为每张图各渲染一个选择器，props 形状不变；选择 / 框选 / 多格预览仍按「单张图内」的列 / 行换算（D-52） |
 
 ---
 
 ## Plan 31 — 最终验证
 
-**要做什么：** 重跑全部机器门禁，再按修订后的清单在开发宿主里逐条验收 U-01…U-17；本计划是阶段能否收口的唯一判据。
+**要做什么：** 重跑全部机器门禁，再按修订后的清单在开发宿主里逐条验收 U-01…U-24；本计划是阶段能否收口的唯一判据。
 
 | 名称 | 种类 | 用途 |
 |------|------|------|
-| `04.1-31-SUMMARY.md` | 文件（新） | 每条门禁的命令 / 退出码 / 摘要行 + U-01…U-17 逐条结论与证据（D-53） |
+| `04.1-31-SUMMARY.md` | 文件（新） | 每条门禁的命令 / 退出码 / 摘要行 + U-01…U-24 逐条结论与证据（D-53） |
+
+---
+
+## Plan 32 — 图块渲染（图集尺寸 + 一个源格等比贴图）
+
+**要做什么：** 底部三页 / 收藏栏按素材组的真实图集尺寸贴第 0 帧，素材区一个按钮只显示一个源格并按源格宽高比等比缩放；三处共用同一个纯函数。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `resolveGroupAtlasRect` | 自由函数（新，`model/tileAtlas.ts`） | 求**整张图集**在源图上的像素矩形（`x` / `y` 恒为 0）。七种布局：Tileset 用自身列 / 行；自动元件 = 整块列数 × 帧数 宽、整块行数 高（高度不含帧数，因为帧只沿横向推进）；横向动画 = 帧数 宽；纵向动画 = 帧数 高；扫描动画 = `ceil(帧数 / 列数)` 行；`Full` = 整图一格的尺寸；普通 `Grid` = 目录列数 × 目录最大行号 + 1。返回既有 `IMapTileCrop`，不新增接口（U-18） |
+| `resolveTileBackgroundStyle` | 自由函数（新，`components/tileBackgroundStyle.ts`） | 由「图片地址 + 素材组 + 第 0 帧矩形 + 按钮边长」算出背景样式：整张图集按**一个**倍数缩放（`min(按钮宽 / 源格宽, 按钮高 / 源格高)`，宽高同比），再把这一格居中并负偏移到位。素材区、底部三页、收藏栏三处共用，组件不再自己算图集宽 / 高（U-18 / U-20 / U-21） |
+| `MAP_MATERIAL_CELL_SIZE` | 常量（新，`constants.ts`，`32`） | 素材格 / 收藏格的显示边长（像素）。必须与 `map.css` 里 `.emap-material-cell`、`.emap-favorite-slot` 的 `32px` 同源，改它就要同步改 CSS（U-20 / U-21） |
+| `model/index.ts` | 桶导出（追加） | 追加 `export * from './tileAtlas';`，与既有「一个模块一行」的顺序一致 |
+| `resolveAssetSize` / `atlasWidthOf` / `atlasHeightOf` | 自由函数（**删除**，`MapBottomTabs` / `MapFavoriteBar` 各一对） | 这两个文件原各自私有的三份小函数全部删掉，改调 `resolveTileBackgroundStyle`；保留两份就是 U-18 的复发条件 |
+| `backgroundOffset` | 自由函数（**删除**，三个组件各一份） | 偏移改由 `resolveTileBackgroundStyle` 统一给出（含正 / 负 / 0 与两位小数），不再各写一份只处理负值的实现 |
+
+---
+
+## Plan 33 — 交互、通行度叠加层与标尺
+
+**要做什么：** 数字键从画布上移到面板根；通行度箭头变细并保证四向不重叠；不透明度滑块与标签留出间距；标尺纵轴标签顶对齐并按格子边界画刻度线。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `resolveFavoriteSlotIndex` | 自由函数（新，`model/favoriteSlot.ts`） | 数字键 → 收藏槽位索引：`1` → 0（擦除）、`2`..`9` → 1..8、`0` → 9（`MAP_FAVORITE_SLOT_COUNT`）、其它 → `undefined`。与 `MapPanel.selectFavoriteSlot` 的槽位口径一致；面板根与单测共用（U-19） |
+| `resolvePassArrowLength` | 自由函数（新增，`model/passability.ts`） | 一支通行度箭头从格中心伸出的长度（像素）：`max(2, min(格宽, 格高) / 2 - 1)`，32×32 → 15。从 `MapSurface` 下沉成纯函数，供测试断言（U-23） |
+| `resolvePassArrowHeadLength` | 自由函数（新增，`model/passability.ts`） | 箭头头部沿方向占的长度（像素）：`min(MAP_PASS_ARROW_HEAD_LENGTH, 长度 / 2)`，保证很短的小格子里头部仍小于整个箭头（U-23） |
+| `MAP_PASS_ARROW_HEAD_LENGTH` | 常量（新，`constants.ts`，`6`） | 箭头头部长度（像素）。取值依据是「32×32 格里四支箭头互不重叠」，不得随意调大（U-23） |
+| `MAP_PASS_ARROW_HEAD_HALF_WIDTH` | 常量（新，`constants.ts`，`2.5`） | 箭头头部的一半宽度（像素），整头宽 5px，落在 4–6px 区间（U-23） |
+| `.emap-ruler-line` | CSS 类（新，`map.css`） | 标尺上对齐格子边界的刻度线：上标尺从底边起 1px 宽、6px 高；左标尺从右边起 1px 高、6px 宽。只占靠近画布那一侧，不与数字抢位置（U-24） |
+| `.emap-opacity-slider` | CSS 类（语义变更） | `margin: 0` → `margin: 0 0 0 10px` 并加 `flex: 0 0 auto`：滑块手柄在最左端会向左溢出约 5px，10px 左间距保证不压住标签；宽度与可操作性不变（U-22） |
+| `.emap-ruler-left .emap-ruler-tick` | CSS 规则（语义变更） | 去掉「上移半个行高」的位移，改为顶对齐：左上角纵轴的 `0` 完整落在标尺内，不再被横向标尺切掉一半（U-24） |
+| `IMapCanvasProps.onSelectFavoriteSlot` | 成员 **删除** | 槽位数字键改由面板根统一处理；画布只保留 Ctrl+C / Ctrl+V、Escape、F 四种画布专属键（U-19） |
 
 ---
 
@@ -682,3 +719,5 @@
 5. **全部新增命名**（文件 / 类型 / 方法 / 常量 / CSS 类 / `data-test-id`）—— **reversible**：改名只需同步本文件与计划。
 6. **顶栏图格尺寸标签的文案与格式**（`图格尺寸：{cellWidth}px * {cellHeight}px`，数字取自文档声明的 `cellWidth` / `cellHeight`；全角冒号，`*` 两侧各一个空格）—— **reversible**：纯显示文案（D-42）。
 7. **第四轮新增的名字与两处收敛**（标尺厚度常量 `MAP_RULER_SIZE`、地图区宽度含标尺的口径、宿主目录的 Tileset 编号段参数 `tilesetReserve` / `tilesetUnit`，以及删除 `tilesetOpen` 一族）—— **costly**：宿主目录契约与视图状态同时收敛（D-43 / D-47 / D-51）。
+8. **第五轮新增的三个类名**（`.emap-tileset-row` 横向排布容器、`.emap-tileset-block` 单块、`.emap-tileset-block + .emap-tileset-block` 的竖线规则）—— **reversible**：只在 `map.css` 与 `MapMaterialPanel.tsx` 内部使用，改名只影响本文件的登记与一个计划的文案（D-52 修订）。
+9. **第六轮新增的七个名字与三处收缩**（`resolveGroupAtlasRect`、`resolveTileBackgroundStyle`、`MAP_MATERIAL_CELL_SIZE`、`resolveFavoriteSlotIndex`、`resolvePassArrowLength`、`resolvePassArrowHeadLength`、`.emap-ruler-line`；常量 `MAP_PASS_ARROW_HEAD_LENGTH` / `MAP_PASS_ARROW_HEAD_HALF_WIDTH`；以及删除 `IMapCanvasProps.onSelectFavoriteSlot`、三个组件里的图集尺寸 / 偏移私有函数）—— **reversible**：全部是 `editor-impl` 内部的纯函数、常量与 CSS 类，改名只影响本文件与 `04.1-32` / `04.1-33` 的文案；删除的画布回调不改变任何对外 props（U-19 / U-23 / U-24）。
