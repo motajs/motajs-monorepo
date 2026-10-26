@@ -558,7 +558,7 @@ describe('素材区 Tileset 选择器', () => {
 describe('素材区 Tileset 多图横向并排（D-52）', () => {
   // 两张图按目录顺序各占一块，图名可见，格尺寸各按自己那张图
   it('两张 Tileset 图按目录顺序各占一块', () => {
-    render(
+    const { container } = render(
       <MapMaterialPanel
         {...createProps({
           groups: [createTilesetGroup(), createSecondTilesetGroup()],
@@ -570,12 +570,9 @@ describe('素材区 Tileset 多图横向并排（D-52）', () => {
     const items = screen.getAllByTestId('map-tileset-item');
 
     expect(items.length).toBe(2);
-    expect(items.map((item) => item.getAttribute('data-group-id'))).toEqual([
-      'group-tileset',
-      'group-tileset-second',
-    ]);
+    expect(items.map((item) => item.getAttribute('data-group-id'))).toEqual(['group-tileset', 'group-tileset-second']);
 
-    const blocks = Array.from(document.querySelectorAll('.emap-tileset-block'));
+    const blocks = Array.from(container.querySelectorAll('.emap-tileset-block'));
 
     expect(blocks.length).toBe(2);
     expect(blocks[0].textContent).toContain('整图 Tileset');
