@@ -1,6 +1,6 @@
 import { Segmented } from 'antd';
 import { CSSProperties, ReactElement } from 'react';
-import { MAP_CELL_SIZE } from '../constants';
+import { MAP_MATERIAL_CELL_SIZE } from '../constants';
 import { resolveFrameInfo, resolveFrameRect } from '../model/tileFrame';
 import {
   IMapBottomTabsProps,
@@ -12,10 +12,12 @@ import {
   MapImageStatus,
   MapPaletteKind,
 } from '../types';
+import { resolveTileBackgroundStyle } from './tileBackgroundStyle';
 
 // 地图下方的三页：最近使用 / 最常使用 / 收藏。
 // 三份编号都来自面板视图状态，组件自己不持久化、不读文件；切换页签只改显示，不碰地图。
-// 每个格子都按「目录 + 图片地址 + 第 0 帧矩形」现算背景；格子只显示缩略图，编号不落到界面上。
+// 每个格子都按「目录 + 图片地址 + 第 0 帧矩形」现算背景：真实图集尺寸 × 一个显示倍数，只画第 0 帧
+// 的那一格（U-18 / U-20 / U-21）；格子只显示缩略图，编号不落到界面上。
 
 /** 列表为空时的文案 */
 const EMPTY_TEXT = '暂无记录';
@@ -69,46 +71,6 @@ const TAB_OPTIONS: readonly IMapBottomTabOption[] = [
 ] as const;
 
 /**
- * 把素材格尺寸归一化成正整数，非法值退回默认边长
- * @param size 目录给出的素材格尺寸
- * @returns 可用的素材格尺寸（源图像素）
- */
-function resolveAssetSize(size: number | undefined): number {
-  if (size === undefined) return MAP_CELL_SIZE;
-  if (!Number.isFinite(size) || size <= 0) return MAP_CELL_SIZE;
-
-  return Math.trunc(size);
-}
-
-/**
- * 求素材图集在源图上的像素宽
- * @param group 素材组
- * @returns 图集宽度（列数 × 素材格宽）
- */
-function atlasWidthOf(group: IMapTileGroup): number {
-  const columns = group.tileset === undefined ? group.columns : group.tileset.columns;
-
-  return Math.max(1, columns) * resolveAssetSize(group.cellWidth);
-}
-
-/**
- * 求素材图集在源图上的像素高
- * @param group 素材组
- * @returns 图集高度（行数 × 素材格高）
- */
-function atlasHeightOf(group: IMapTileGroup): number {
-  const cellHeight = resolveAssetSize(group.cellHeight);
-
-  if (group.tileset !== undefined) return Math.max(1, group.tileset.rows) * cellHeight;
-
-  let rows = 1;
-
-  for (const tile of group.tiles) rows = Math.max(rows, tile.row + 1);
-
-  return rows * cellHeight;
-}
-
-/**
  * 按编号在目录里找图块：编号在目录里唯一，找不到时返回 undefined
  * @param groups 整份图块目录
  * @param number 图块编号
@@ -130,15 +92,6 @@ function findBottomTile(
 }
 
 /**
- * 把背景偏移写成一段：0 写成 `0px`，其余写成负偏移
- * @param value 源图上的像素偏移
- * @returns 背景定位的一段
- */
-function backgroundOffset(value: number): string {
-  return value === 0 ? '0px' : `-${value}px`;
-}
-
-/**
  * 求图块第一帧在源图上的矩形
  * @param lookup 编号在目录里的归属
  * @returns 第 0 帧的源图矩形；查不到编号时为 undefined
@@ -150,7 +103,7 @@ function frameRectOf(lookup: IMapBottomTileLookup | undefined): IMapTileCrop | u
 }
 
 /**
- * 求图块格的背景样式：整张图集按列 / 行尺寸铺开，再负偏移到该图块的第一帧
+ * 求图块格的背景样式：按真实图集尺寸与一个显示倍数只画第 0 帧那一格
  * @param lookup 编号在目录里的归属
  * @param url 该组图片的 blob 地址
  * @param rect 第一帧的源图矩形
@@ -163,11 +116,7 @@ function tileBackgroundStyle(
 ): CSSProperties {
   if (lookup === undefined || url === undefined || rect === undefined) return {};
 
-  return {
-    backgroundImage: `url("${url}")`,
-    backgroundPosition: `${backgroundOffset(rect.x)} ${backgroundOffset(rect.y)}`,
-    backgroundSize: `${atlasWidthOf(lookup.group)}px ${atlasHeightOf(lookup.group)}px`,
-  };
+  return resolveTileBackgroundStyle(url, lookup.group, rect, MAP_MATERIAL_CELL_SIZE);
 }
 
 /**

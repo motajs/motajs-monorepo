@@ -655,6 +655,14 @@ describe('地图下方三页签', () => {
     expect(tile.style.backgroundImage).toContain('blob:group-a');
   });
 
+  // 同一组里第二格靠负偏移截取，说明一个按钮只显示一个源格（不是靠尺寸碰巧）
+  it('同一组里第二格用负偏移截取', () => {
+    render(<MapBottomTabs {...createTabsProps({ recentTiles: [1, 2] })} />);
+
+    expect(screen.getByTestId('map-bottom-tile-1').style.backgroundPosition).toBe('0px 0px');
+    expect(screen.getByTestId('map-bottom-tile-2').style.backgroundPosition).toBe('-32px 0px');
+  });
+
   // 图片就绪后不再停在「正在加载」；点某格上报 1×1 的最近使用选中
   it('图片就绪后显示图块并能点出 1×1 选择', () => {
     const onSelectPattern = vi.fn();

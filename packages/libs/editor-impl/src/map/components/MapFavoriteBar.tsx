@@ -1,5 +1,5 @@
 import { CSSProperties, ReactElement, useState } from 'react';
-import { MAP_CELL_SIZE, MAP_FAVORITE_SLOT_COUNT } from '../constants';
+import { MAP_FAVORITE_SLOT_COUNT, MAP_MATERIAL_CELL_SIZE } from '../constants';
 import { resolveFrameInfo, resolveFrameRect } from '../model/tileFrame';
 import {
   IMapFavoriteBarProps,
@@ -9,11 +9,13 @@ import {
   IMapTileGroup,
   MapPaletteKind,
 } from '../types';
+import { resolveTileBackgroundStyle } from './tileBackgroundStyle';
 
 // 地图底部的收藏栏：1 个擦除格 + 9 个收藏格。
 // 索引口径只在这里写一次：擦除格调 `onSelectSlot(0)`，第 i 个收藏格调 `onSelectSlot(i + 1)`；
 // 拖拽从第 i 格到第 j 格调 `onReorder(i, j)`，排序只保留拖拽，没有上移 / 下移按钮。
-// 每格都按「目录 + 图片地址 + 第 0 帧矩形」现算背景，空位留空格子；组件不读文件、不持久化。
+// 每格都按「目录 + 图片地址 + 第 0 帧矩形」现算背景：真实图集尺寸 × 一个显示倍数，只画第 0 帧的那一格
+// （U-18 / U-20 / U-21），空位留空格子；组件不读文件、不持久化。
 // 格子上写的数字是「按哪个数字键能选它」，不是图块编号。
 
 /** 擦除格的文案 */
@@ -78,46 +80,6 @@ interface IFavoriteSlotProps {
 }
 
 /**
- * 把素材格尺寸归一化成正整数，非法值退回默认边长
- * @param size 目录给出的素材格尺寸
- * @returns 可用的素材格尺寸（源图像素）
- */
-function resolveAssetSize(size: number | undefined): number {
-  if (size === undefined) return MAP_CELL_SIZE;
-  if (!Number.isFinite(size) || size <= 0) return MAP_CELL_SIZE;
-
-  return Math.trunc(size);
-}
-
-/**
- * 求素材图集在源图上的像素宽
- * @param group 素材组
- * @returns 图集宽度（列数 × 素材格宽）
- */
-function atlasWidthOf(group: IMapTileGroup): number {
-  const columns = group.tileset === undefined ? group.columns : group.tileset.columns;
-
-  return Math.max(1, columns) * resolveAssetSize(group.cellWidth);
-}
-
-/**
- * 求素材图集在源图上的像素高
- * @param group 素材组
- * @returns 图集高度（行数 × 素材格高）
- */
-function atlasHeightOf(group: IMapTileGroup): number {
-  const cellHeight = resolveAssetSize(group.cellHeight);
-
-  if (group.tileset !== undefined) return Math.max(1, group.tileset.rows) * cellHeight;
-
-  let rows = 1;
-
-  for (const tile of group.tiles) rows = Math.max(rows, tile.row + 1);
-
-  return rows * cellHeight;
-}
-
-/**
  * 按编号在目录里找图块：编号在目录里唯一，找不到时返回 undefined
  * @param groups 整份图块目录
  * @param number 图块编号
@@ -139,15 +101,6 @@ function findFavoriteTile(
 }
 
 /**
- * 把背景偏移写成一段：0 写成 `0px`，其余写成负偏移
- * @param value 源图上的像素偏移
- * @returns 背景定位的一段
- */
-function backgroundOffset(value: number): string {
-  return value === 0 ? '0px' : `-${value}px`;
-}
-
-/**
  * 求图块第一帧在源图上的矩形
  * @param lookup 编号在目录里的归属
  * @returns 第 0 帧的源图矩形；查不到编号时为 undefined
@@ -159,7 +112,7 @@ function frameRectOf(lookup: IFavoriteTileLookup | undefined): IMapTileCrop | un
 }
 
 /**
- * 求收藏格的背景样式：整张图集按列 / 行尺寸铺开，再负偏移到该图块的第一帧
+ * 求收藏格的背景样式：按真实图集尺寸与一个显示倍数只画第 0 帧那一格
  * @param lookup 编号在目录里的归属
  * @param url 该组图片的 blob 地址
  * @param rect 第一帧的源图矩形
@@ -172,11 +125,7 @@ function tileBackgroundStyle(
 ): CSSProperties {
   if (lookup === undefined || url === undefined || rect === undefined) return {};
 
-  return {
-    backgroundImage: `url("${url}")`,
-    backgroundPosition: `${backgroundOffset(rect.x)} ${backgroundOffset(rect.y)}`,
-    backgroundSize: `${atlasWidthOf(lookup.group)}px ${atlasHeightOf(lookup.group)}px`,
-  };
+  return resolveTileBackgroundStyle(url, lookup.group, rect, MAP_MATERIAL_CELL_SIZE);
 }
 
 /**

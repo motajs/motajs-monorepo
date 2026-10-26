@@ -153,6 +153,44 @@ function createAutotileGroup(): IMapTileGroup {
 }
 
 /**
+ * 造一个 16×16 的小图块素材组：两列一行，编号 201、202
+ * @returns 小图块分组
+ */
+function createSmallGroup(): IMapTileGroup {
+  return {
+    id: 'group-small',
+    name: '小图块图集',
+    imagePath: 'content/map/small.png',
+    columns: 2,
+    tiles: [createTile(201, 0, 0), createTile(202, 1, 0)],
+    category: MapTileCategory.Terrain,
+    read: MapTextureReadType.Grid,
+    cellWidth: 16,
+    cellHeight: 16,
+    frames: 1,
+  };
+}
+
+/**
+ * 造一个 96×64 的长方形素材组：两列一行，编号 301、302
+ * @returns 长方形图块分组
+ */
+function createLargeGroup(): IMapTileGroup {
+  return {
+    id: 'group-large',
+    name: '长方形图集',
+    imagePath: 'content/map/large.png',
+    columns: 2,
+    tiles: [createTile(301, 0, 0), createTile(302, 1, 0)],
+    category: MapTileCategory.Terrain,
+    read: MapTextureReadType.Grid,
+    cellWidth: 96,
+    cellHeight: 64,
+    frames: 1,
+  };
+}
+
+/**
  * 造一份素材区 props：默认给三组都可用的图片地址与状态
  * @param overrides 覆盖的 props
  * @returns 素材区 props
@@ -259,7 +297,8 @@ describe('素材区分类导航', () => {
 });
 
 describe('素材区普通网格', () => {
-  // Autotile 只渲染左上角一格，背景矩形是第一帧的完整素材格
+  // Autotile 只渲染左上角一格，背景矩形是第一帧的完整素材格；图集 384×384 缩到 128×128，
+  // 64×96 的源格在 32px 按钮里横向居中留 5.33（U-18 / U-20 / U-21）
   it('Autotile 只渲染一格且背景矩形是第一帧整格', () => {
     render(<MapMaterialPanel {...createProps({ activeCategory: MapTileCategory.Autotile })} />);
 
@@ -269,7 +308,37 @@ describe('素材区普通网格', () => {
     const button = screen.getByTestId('map-tile-50');
 
     expect(button.getAttribute('data-frame-rect')).toBe('0,0,64,96');
-    expect(button.style.backgroundPosition).toBe('0px 0px');
+    expect(button.style.backgroundSize).toBe('128px 128px');
+    expect(button.style.backgroundPosition).toBe('5.33px 0px');
+  });
+
+  // 16×16 小图块在 32px 按钮里放大 2 倍，不再露出 2×2 个格（U-20）
+  it('16×16 源格放大到 64×32', () => {
+    render(<MapMaterialPanel {...createProps({ groups: [createSmallGroup()] })} />);
+
+    expect(screen.getByTestId('map-tile-201').style.backgroundSize).toBe('64px 32px');
+  });
+
+  // 96×64 长方形图块等比缩到 64×21.33，宽高比不变成 1:1（U-21）
+  it('96×64 源格等比缩为 64×21.33', () => {
+    render(<MapMaterialPanel {...createProps({ groups: [createLargeGroup()] })} />);
+
+    expect(screen.getByTestId('map-tile-301').style.backgroundSize).toBe('64px 21.33px');
+  });
+
+  // 32×32 普通图块保持不变：图集两列 64×32，一格就是 32×32
+  it('32×32 源格保持 64×32', () => {
+    render(<MapMaterialPanel {...createProps()} />);
+
+    expect(screen.getByTestId('map-tile-1').style.backgroundSize).toBe('64px 32px');
+  });
+
+  // 同一组里第二个图块（column = 1）靠负偏移截取，证明一个按钮只显示一个源格
+  it('同一组里第二个图块用负偏移截取', () => {
+    render(<MapMaterialPanel {...createProps()} />);
+
+    expect(screen.getByTestId('map-tile-1').style.backgroundPosition).toBe('0px 0px');
+    expect(screen.getByTestId('map-tile-2').style.backgroundPosition).toBe('-32px 0px');
   });
 
   // 素材框是直角：内联圆角为 0

@@ -1,12 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { resolveGroupAtlasRect } from '../model/tileAtlas';
-import {
-  IMapTileEntry,
-  IMapTileGroup,
-  MapAutotileType,
-  MapTextureReadType,
-  MapTileCategory,
-} from '../types';
+import { IMapTileEntry, IMapTileGroup, MapAutotileType, MapTextureReadType, MapTileCategory } from '../types';
 
 // 图集真实像素尺寸的纯函数测试：七种布局各自的宽高，外加格尺寸 / 帧数 / 列数的非法值夹取。
 // 全部断言具体像素（不 snapshot）：这些数字决定缩略图里到底露出几个源格。

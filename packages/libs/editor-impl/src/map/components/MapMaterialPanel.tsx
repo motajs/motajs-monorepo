@@ -1,5 +1,6 @@
 import { Button, Checkbox, Spin } from 'antd';
 import { CSSProperties, ReactElement } from 'react';
+import { MAP_MATERIAL_CELL_SIZE } from '../constants';
 import { resolveFrameInfo, resolveFrameRect } from '../model/tileFrame';
 import {
   IMapMaterialPanelProps,
@@ -13,10 +14,12 @@ import {
 } from '../types';
 import { MapCategoryNav } from './MapCategoryNav';
 import { MapTilesetPicker } from './MapTilesetPicker';
+import { resolveTileBackgroundStyle } from './tileBackgroundStyle';
 
 // 右侧素材区：顶部「显示帧数」勾选框 + 六类同一排的分类导航 + 当前分类的素材视图。
 // 组件只吃 props：目录、图片地址与状态、当前分类 / 选中 / 回调；它不读文件、不读字节、不持有选中。
-// 帧矩形一律由 model/tileFrame 现算，不读目录里的 crop（那个字段 Plan 15 会删掉）。
+// 帧矩形一律由 model/tileFrame 现算，不读目录里的 crop（那个字段 Plan 15 会删掉）；
+// 背景按真实图集尺寸 × 一个显示倍数贴图，只画第 0 帧矩形（U-18 / U-20 / U-21）。
 
 /** 图片读取中的文案 */
 const LOADING_TEXT = '正在加载图块…';
@@ -148,28 +151,16 @@ function frameRectOf(group: IMapTileGroup, tile: IMapTileEntry): IMapTileCrop {
 }
 
 /**
- * 把像素偏移写成背景定位的一段：0 写成 `0px`，其余写成负偏移
- * @param value 源图上的像素偏移
- * @returns 背景定位的一段
- */
-function backgroundOffset(value: number): string {
-  return value === 0 ? '0px' : `-${value}px`;
-}
-
-/**
- * 求某个图块按钮的内联样式：按第一帧矩形负偏移到源图片上的对应位置
+ * 求某个图块按钮的内联样式：按真实图集尺寸与一个显示倍数把第一帧矩形贴进 32px 按钮
  * @param url 该组图片的 blob 地址
+ * @param group 图块所属分组
  * @param rect 第一帧的源图矩形
  * @returns 内联样式；没有地址时显式清空图片
  */
-function tileStyle(url: string | undefined, rect: IMapTileCrop): CSSProperties {
+function tileStyle(url: string | undefined, group: IMapTileGroup, rect: IMapTileCrop): CSSProperties {
   if (url === undefined) return { backgroundImage: 'none', borderRadius: 0 };
 
-  return {
-    backgroundImage: `url("${url}")`,
-    backgroundPosition: `${backgroundOffset(rect.x)} ${backgroundOffset(rect.y)}`,
-    borderRadius: 0,
-  };
+  return resolveTileBackgroundStyle(url, group, rect, MAP_MATERIAL_CELL_SIZE);
 }
 
 /**
@@ -236,7 +227,7 @@ function renderMaterialTile(props: IMaterialTileProps): ReactElement {
       data-test-id={`map-tile-${props.tile.number}`}
       data-missing={String(props.missing)}
       data-frame-rect={`${rect.x},${rect.y},${rect.width},${rect.height}`}
-      style={tileStyle(props.url, rect)}
+      style={tileStyle(props.url, props.group, rect)}
       title={tileTitle(props.tile, props.missing)}
       aria-label={tileLabel(props.tile)}
       aria-pressed={props.selected}
