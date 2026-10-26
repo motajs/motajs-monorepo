@@ -9,6 +9,7 @@ export * from './recentTiles';
 export * from './dirty';
 export * from './validation';
 export * from './tileFrame';
+export * from './tileAtlas';
 export * from './autotile';
 export * from './cellMetrics';
 export * from './thumbnail';
