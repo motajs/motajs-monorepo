@@ -826,10 +826,7 @@ describe('buildThumbnailCells 小地图铺满（U-30）', () => {
   // 同一份 8×6 文档在普通模式仍是 32×32 的显示格，证明放大开关只在大地图缩略生效
   it('普通模式没有放大', () => {
     const document = createWideMapDocument(8, 6);
-    const model = buildMapRenderModel(
-      document,
-      createView({ width: 416, height: 416, currentLayerId: 'layer-wide' }),
-    );
+    const model = buildMapRenderModel(document, createView({ width: 416, height: 416, currentLayerId: 'layer-wide' }));
 
     expect(model.cells[0].width).toBe(32);
     expect(model.cells[0].height).toBe(32);
