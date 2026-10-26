@@ -404,25 +404,36 @@ describe('地图面板：视图动作', () => {
     expect(addUndo).not.toHaveBeenCalled();
   });
 
-  // 页签 / 分类 / Tileset / 帧数开关都只发布对应字段，且不碰当前调色板选择
-  it('页签 / 分类 / Tileset / 帧数只改视图状态', async () => {
+  // 页签 / 分类 / 帧数开关都只发布对应字段，且不碰当前调色板选择
+  it('页签 / 分类 / 帧数只改视图状态', async () => {
     const { system, panel } = await openMapPanel(createCapabilities());
     const addUndo = vi.spyOn(system.undoSystem, 'addUndoContext');
     const selection = viewState(panel).paletteSelection;
 
     panel.setBottomTab(MapBottomTab.Favorites);
     panel.selectCategory(MapTileCategory.Enemy);
-    panel.toggleTileset(true);
     panel.toggleFrameCount(true);
 
     expect(viewState(panel).bottomTab).toBe(MapBottomTab.Favorites);
     expect(viewState(panel).activeCategory).toBe(MapTileCategory.Enemy);
-    expect(viewState(panel).tilesetOpen).toBe(true);
     expect(viewState(panel).showFrameCount).toBe(true);
     expect(viewState(panel).paletteSelection).toBe(selection);
     expect(viewState(panel).document?.id).toBe('m1');
     expect(viewState(panel).unsaved).toBe(false);
     expect(addUndo).not.toHaveBeenCalled();
+  });
+
+  // Tileset 是普通分类：选它即进入 Tileset 视图，再选回地形能离开
+  it('选 Tileset 分类后能再选回地形', async () => {
+    const { panel } = await openMapPanel(createCapabilities());
+
+    panel.selectCategory(MapTileCategory.Tileset);
+
+    expect(viewState(panel).activeCategory).toBe(MapTileCategory.Tileset);
+
+    panel.selectCategory(MapTileCategory.Terrain);
+
+    expect(viewState(panel).activeCategory).toBe(MapTileCategory.Terrain);
   });
 
   // 初始视图状态齐全：默认 100% 缩放、最近页签、地形分类、9 格收藏与默认 13×13 视口
@@ -432,7 +443,6 @@ describe('地图面板：视图动作', () => {
     expect(viewState(panel).zoom).toBe(1);
     expect(viewState(panel).bottomTab).toBe(MapBottomTab.Recent);
     expect(viewState(panel).activeCategory).toBe(MapTileCategory.Terrain);
-    expect(viewState(panel).tilesetOpen).toBe(false);
     expect(viewState(panel).showFrameCount).toBe(false);
     expect(viewState(panel).favorites).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0]);
     expect(viewState(panel).frequentTiles).toEqual([]);

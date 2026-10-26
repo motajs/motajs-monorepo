@@ -178,7 +178,6 @@ function createProps(overrides: Partial<IMapMaterialPanelProps> = {}): IMapMater
     groupStatus,
     imageStatus: MapImageStatus.Ready,
     activeCategory: MapTileCategory.Terrain,
-    tilesetOpen: false,
     selection: {
       kind: MapPaletteKind.Empty,
       pattern: { width: 1, height: 1, tiles: [0] },
@@ -188,7 +187,6 @@ function createProps(overrides: Partial<IMapMaterialPanelProps> = {}): IMapMater
     onSelectPattern: vi.fn(),
     onRetryImages: vi.fn(),
     onSelectCategory: vi.fn(),
-    onToggleTileset: vi.fn(),
     onToggleFrameCount: vi.fn(),
     ...overrides,
   };
@@ -210,8 +208,8 @@ afterEach(() => {
 });
 
 describe('素材区分类导航', () => {
-  // 五类按钮、Tileset 开关与「显示帧数」勾选框都在
-  it('渲染五类导航、Tileset 开关与显示帧数勾选框', () => {
+  // 六类按钮都在同一排，旧的独立 Tileset 开关不再存在
+  it('渲染六类导航与显示帧数勾选框', () => {
     render(<MapMaterialPanel {...createProps()} />);
 
     expect(screen.getByTestId('map-category-terrain')).not.toBeNull();
@@ -219,22 +217,22 @@ describe('素材区分类导航', () => {
     expect(screen.getByTestId('map-category-npc')).not.toBeNull();
     expect(screen.getByTestId('map-category-item')).not.toBeNull();
     expect(screen.getByTestId('map-category-autotile')).not.toBeNull();
-    expect(screen.getByTestId('map-tileset-toggle')).not.toBeNull();
+    expect(screen.getByTestId('map-category-tileset')).not.toBeNull();
+    expect(screen.queryByTestId('map-tileset-toggle')).toBeNull();
     expect(screen.getByTestId('map-frame-count')).not.toBeNull();
   });
 
-  // 点分类把目标分类交回；点 Tileset 开关把新的展开状态交回
-  it('点分类与 Tileset 开关各自上报目标值', () => {
+  // 点任意一类都把目标分类交回，Tileset 与其余五类走同一条回调
+  it('点分类按钮上报目标分类', () => {
     const onSelectCategory = vi.fn();
-    const onToggleTileset = vi.fn();
 
-    render(<MapMaterialPanel {...createProps({ onSelectCategory, onToggleTileset })} />);
+    render(<MapMaterialPanel {...createProps({ onSelectCategory })} />);
 
     fireEvent.click(screen.getByTestId('map-category-enemy'));
-    fireEvent.click(screen.getByTestId('map-tileset-toggle'));
+    fireEvent.click(screen.getByTestId('map-category-tileset'));
 
-    expect(onSelectCategory).toHaveBeenCalledWith(MapTileCategory.Enemy);
-    expect(onToggleTileset).toHaveBeenCalledWith(true);
+    expect(onSelectCategory).toHaveBeenNthCalledWith(1, MapTileCategory.Enemy);
+    expect(onSelectCategory).toHaveBeenNthCalledWith(2, MapTileCategory.Tileset);
   });
 
   // 切换分类后只显示该分类的图块
@@ -427,9 +425,13 @@ function stubRect(element: HTMLElement, width: number, height: number): void {
 }
 
 describe('素材区 Tileset 选择器', () => {
-  // Tileset 开关打开后出现整图与分格线，普通网格让位
-  it('打开 Tileset 后出现整图分格', () => {
-    render(<MapMaterialPanel {...createProps({ groups: [createTilesetGroup()], tilesetOpen: true })} />);
+  // 当前分类为 Tileset 时出现整图与分格线，普通网格让位
+  it('分类为 Tileset 时出现整图分格', () => {
+    render(
+      <MapMaterialPanel
+        {...createProps({ groups: [createTilesetGroup()], activeCategory: MapTileCategory.Tileset })}
+      />,
+    );
 
     expect(screen.getByTestId('map-tileset')).not.toBeNull();
     expect(screen.getByTestId('map-tileset-canvas')).not.toBeNull();
@@ -442,7 +444,13 @@ describe('素材区 Tileset 选择器', () => {
     const onSelectPattern = vi.fn();
 
     render(
-      <MapMaterialPanel {...createProps({ groups: [createTilesetGroup()], tilesetOpen: true, onSelectPattern })} />,
+      <MapMaterialPanel
+        {...createProps({
+          groups: [createTilesetGroup()],
+          activeCategory: MapTileCategory.Tileset,
+          onSelectPattern,
+        })}
+      />,
     );
 
     const canvas = screen.getByTestId('map-tileset-canvas');
@@ -463,7 +471,13 @@ describe('素材区 Tileset 选择器', () => {
     const onSelectPattern = vi.fn();
 
     render(
-      <MapMaterialPanel {...createProps({ groups: [createTilesetGroup()], tilesetOpen: true, onSelectPattern })} />,
+      <MapMaterialPanel
+        {...createProps({
+          groups: [createTilesetGroup()],
+          activeCategory: MapTileCategory.Tileset,
+          onSelectPattern,
+        })}
+      />,
     );
 
     const canvas = screen.getByTestId('map-tileset-canvas');
@@ -493,7 +507,7 @@ describe('素材区 Tileset 选择器', () => {
           groups: [createTilesetGroup()],
           groupUrls: {},
           groupStatus: { 'group-tileset': MapImageStatus.Error },
-          tilesetOpen: true,
+          activeCategory: MapTileCategory.Tileset,
           onRetryImages,
         })}
       />,
@@ -506,9 +520,13 @@ describe('素材区 Tileset 选择器', () => {
     expect(onRetryImages).toHaveBeenCalledTimes(1);
   });
 
-  // 目录里没有 Tileset 组：开关打开后给空态
+  // 目录里没有 Tileset 组：分类为 Tileset 时给空态
   it('没有 Tileset 素材时给空态', () => {
-    render(<MapMaterialPanel {...createProps({ groups: [createTerrainGroup()], tilesetOpen: true })} />);
+    render(
+      <MapMaterialPanel
+        {...createProps({ groups: [createTerrainGroup()], activeCategory: MapTileCategory.Tileset })}
+      />,
+    );
 
     expect(screen.getByTestId('map-tileset-empty').textContent).toBe('暂无 Tileset 素材');
   });
@@ -522,7 +540,7 @@ interface IMaterialPanelHarness {
 }
 
 /**
- * 造一张挂着四类素材（含 Tileset）的文档，分类切换与 Tileset 开关都有目标
+ * 造一张挂着四类素材（含 Tileset）的文档，六类分类切换都有目标
  * @returns 中立地图文档
  */
 function createMaterialDocument(): IMapDocument {
@@ -579,8 +597,8 @@ async function openMaterialPanel(document: IMapDocument): Promise<IMaterialPanel
 }
 
 describe('素材区端到端接线', () => {
-  // 点分类 / Tileset 开关 / 显示帧数后，面板 Store 里的三个字段真的变化
-  it('点分类、Tileset 开关与显示帧数会改到面板状态', async () => {
+  // 点分类按钮后面板 Store 的 activeCategory 跟着走；点回地形能离开 Tileset 视图
+  it('点分类会改到面板状态且能从 Tileset 回到地形', async () => {
     const harness = await openMaterialPanel(createMaterialDocument());
 
     render(createElement(harness.system.shellSystem.render()));
@@ -593,9 +611,13 @@ describe('素材区端到端接线', () => {
 
     await waitFor(() => expect(harness.panel['store'].state.activeCategory).toBe(MapTileCategory.Enemy));
 
-    fireEvent.click(screen.getByTestId('map-tileset-toggle'));
+    fireEvent.click(screen.getByTestId('map-category-tileset'));
 
-    await waitFor(() => expect(harness.panel['store'].state.tilesetOpen).toBe(true));
+    await waitFor(() => expect(harness.panel['store'].state.activeCategory).toBe(MapTileCategory.Tileset));
+
+    fireEvent.click(screen.getByTestId('map-category-terrain'));
+
+    await waitFor(() => expect(harness.panel['store'].state.activeCategory).toBe(MapTileCategory.Terrain));
 
     fireEvent.click(screen.getByTestId('map-frame-count'));
 
@@ -622,23 +644,31 @@ function ruleBody(css: string, selector: string): string | undefined {
   return css.slice(open, end);
 }
 
-describe('素材分类导航横排（D-32）', () => {
-  // 导航横排、两端对齐、放不下自动换行
-  it('分类导航横排两端对齐且可换行', () => {
+describe('素材分类导航横排（D-47）', () => {
+  // 导航横排、space-around 排布、放不下自动换行
+  it('分类导航横排 space-around 且可换行', () => {
     const nav = ruleBody(mapCss, '.emap-category-nav {');
 
     expect(nav).toBeDefined();
     expect(nav).toContain('flex-direction: row');
-    expect(nav).toContain('justify-content: space-between');
+    expect(nav).toContain('justify-content: space-around');
     expect(nav).toContain('flex-wrap: wrap');
   });
 
-  // 按钮按内容宽（不再整行铺满），且不裁字
-  it('分类按钮按内容宽且不裁字', () => {
+  // 按钮等宽铺满（flex 1 1 64px），且不裁字
+  it('分类按钮等宽铺满且不裁字', () => {
     const item = ruleBody(mapCss, '.emap-category-item {');
 
     expect(item).toBeDefined();
-    expect(item).not.toContain('width: 100%');
+    expect(item).toContain('flex: 1 1 64px');
     expect(item).toContain('white-space: nowrap');
+  });
+
+  // 相邻按钮之间一条竖线
+  it('相邻分类按钮之间有竖线', () => {
+    const divider = ruleBody(mapCss, '.emap-category-item + .emap-category-item {');
+
+    expect(divider).toBeDefined();
+    expect(divider).toContain('border-left');
   });
 });
