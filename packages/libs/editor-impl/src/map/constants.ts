@@ -7,6 +7,9 @@ export const MAP_CELL_SIZE = 32;
 /** 显示网格的基准格边长（像素）；画布 = 格数 × 它 × 缩放，与 `MAP_CELL_SIZE`（文档兜底）是两件事 */
 export const MAP_DISPLAY_CELL_SIZE = 32;
 
+/** 素材格 / 收藏格的显示边长（像素）；必须与 `map.css` 里 `.emap-material-cell` 与 `.emap-favorite-slot` 的 32px 同源，改这里就要同步改 CSS */
+export const MAP_MATERIAL_CELL_SIZE = 32;
+
 /** 行列标尺的厚度（像素）；地图区宽度 = 画布宽 + 它，画布用它定位标尺与可视区，两处必须同源（D-43） */
 export const MAP_RULER_SIZE = 20;
 
