@@ -279,13 +279,13 @@ describe('开发宿主演示图集与图块目录', () => {
     expect(big.frames).toBe(4);
     expect(numbers(big)).toEqual([90]);
     expect(positions(big)).toEqual([[0, 0]]);
-    expect(big.autotile).toEqual({ type: MapAutotileType.Big3x4, connections: [1, 2] });
+    expect(big.autotile).toEqual({ type: MapAutotileType.Big3x4, connections: [] });
 
     expect(small.read).toBe(MapTextureReadType.Grid);
     expect(small.frames).toBe(2);
     expect(numbers(small)).toEqual([91]);
     expect(positions(small)).toEqual([[0, 0]]);
-    expect(small.autotile).toEqual({ type: MapAutotileType.Small2x3, connections: [1, 2] });
+    expect(small.autotile).toEqual({ type: MapAutotileType.Small2x3, connections: [] });
   });
 
   // Tileset 恰好 8 格、编号连续 1000..1007，read 为 Grid 且每格裁切就是自己那一格
@@ -468,15 +468,23 @@ describe('开发宿主演示地图记录', () => {
     expect(cells[4 * 8 + 6]).toBe(10);
 
     for (const [x, y] of [
+      [3, 1],
+      [4, 1],
+      [5, 1],
+      [6, 1],
+      [3, 2],
       [4, 2],
-      [5, 2],
       [6, 2],
+      [3, 3],
       [4, 3],
       [5, 3],
       [6, 3],
     ]) {
       expect(cells[y * 8 + x]).toBe(90);
     }
+
+    // 4×3 演示区正中的空洞落回地形 1，四周是 90，因此十字接缝（内角）在界面上可见
+    expect(cells[2 * 8 + 5]).toBe(1);
 
     for (const [x, y] of [
       [1, 2],

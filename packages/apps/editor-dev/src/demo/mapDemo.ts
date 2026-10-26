@@ -520,11 +520,13 @@ export function buildDemoTileCatalog(): readonly IMapTileGroup[] {
     [DEMO_SMALL_IMAGE_PATH]: readImageDimensions(encodeDemoSmallTileAtlas()),
   };
 
+  // 连接集合留空 = 只与同类连接（引擎 `spec` 为空的分支）；非空集合会让自动元件只连列出的编号，
+  // 正是 U-16 的根因：整片同类自动元件被画成一格一格的孤立块，看着像连反了。
   return buildTileCatalog({
     textureText: DEMO_TEXTURE_LIST_TEXT,
     tileText: DEMO_TILE_TABLE_TEXT,
     dimensions,
-    connections: { 90: [1, 2], 91: [1, 2] },
+    connections: {},
     tilesetBase: 1000,
   });
 }
@@ -592,7 +594,7 @@ export const MAP_DEMO_MAPS: readonly IMapFileRecord[] = [
 
         if (border) return 2;
         if ((x === 1 && y === 1) || (x === 6 && y === 4)) return 10;
-        if (x >= 4 && x <= 6 && y >= 2 && y <= 3) return 90;
+        if (x >= 3 && x <= 6 && y >= 1 && y <= 3 && !(x === 5 && y === 2)) return 90;
         if (x >= 1 && x <= 2 && y >= 2 && y <= 3) return 91;
 
         return 1;
@@ -604,7 +606,7 @@ export const MAP_DEMO_MAPS: readonly IMapFileRecord[] = [
     layerNames: { 0: '地面层', 1: '遮挡层' },
     properties: { name: '小营地', initialGold: 30 },
     events: { '3,2': { type: 'battle', enemyId: 'greenSlime', once: true } },
-    extra: { note: '演示地图：保存时必须原样保留', order: 1 },
+    extra: { note: '演示地图：保存时必须原样保留；自动元件区是 4×3 带一个空洞，用来观察内角', order: 1 },
     cellWidth: DEMO_MAP_CELL_SIZE,
     cellHeight: DEMO_MAP_CELL_SIZE,
   },
