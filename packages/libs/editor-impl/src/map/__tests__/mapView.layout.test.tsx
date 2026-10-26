@@ -992,7 +992,7 @@ describe('底部三页与收藏栏接线', () => {
 
     expect(panel.ownerDocument.activeElement).toBe(panel);
 
-    expect(fireEvent.keyDown(document.activeElement!, { key: '2' })).toBe(false);
+    expect(fireEvent.keyDown(panel.ownerDocument.activeElement!, { key: '2' })).toBe(false);
 
     await act(async () => {});
 

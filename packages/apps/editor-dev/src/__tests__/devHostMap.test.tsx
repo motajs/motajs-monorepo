@@ -469,7 +469,10 @@ describe('开发宿主地图端到端', () => {
     const numbers: Set<number> = new Set(
       buildDemoTileCatalog().flatMap((group) => group.tiles.map((tile) => tile.number)),
     );
-    const tiles = Array.from(container.querySelectorAll('[data-test-id^="map-tile-"]'));
+    // 帧数角标也是 map-tile- 前缀（map-tile-frames-N），这里只取真正的图块按钮
+    const tiles = Array.from(
+      container.querySelectorAll('[data-test-id^="map-tile-"]:not([data-test-id^="map-tile-frames-"])'),
+    );
 
     expect(tiles.length).toBeGreaterThan(0);
 
