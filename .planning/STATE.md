@@ -5,16 +5,16 @@ current_phase: "04.1"
 current_phase_name: 地图渲染与布局重做
 current_plan: 28
 status: executing
-stopped_at: Completed 04.1-29-PLAN.md
-last_updated: "2026-10-26T00:11:10.382Z"
+stopped_at: Completed 04.1-27-PLAN.md
+last_updated: "2026-10-26T00:29:29.608Z"
 last_activity: 2026-10-26
-last_activity_desc: 04.1-29 complete（演示自动元件改为只与同类连接、4×3 带空洞演示区、256 种连接引擎对拍、Tileset 编号按 reserve + unit 累计并补第二张图；editor-dev 91 tests / editor-impl 4 golden tests 全绿）
-state_head: 452ad703b893244eebccb909700ae9922c6db049
+last_activity_desc: 04.1-27 complete（Tileset 变成普通第六类、六类同一排等宽铺满并加相邻竖线、`activeCategory` 成为素材视图唯一真源、`tilesetOpen` 一族全部删除；editor-impl typecheck exit 0、全量 85 files / 960 tests 全绿、prettier 全绿）
+state_head: 3de3cf0c4f12b9c8974ff8b7186fcc925870bc19
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 153
-  completed_plans: 146
+  completed_plans: 147
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -32,8 +32,8 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 Phase: 04.1 (地图渲染与布局重做) — EXECUTING
 Current Plan: 28
 Total Plans in Phase: 31
-Status: Executing — 04.1-29 complete（演示连接表改自连、4×3 带空洞、256 种连接对拍、Tileset 编号按 reserve + unit）；04.1-27 / 04.1-28 仍未完成
-Last activity: 2026-10-26 — 04.1-29 complete（connections 置空 = 同值连接；portMapAutotile / portSliceRect 对 0…255 全量比对；DEFAULT_TILESET_RESERVE 100000 / DEFAULT_TILESET_UNIT 10000，两张演示图 100000…100007 与 110000…110003；editor-dev 10 files / 91 tests、editor-impl golden 4 tests、两包 typecheck exit 0）
+Status: Executing — 04.1-27 complete（Tileset 变普通第六类、六类同一排、`activeCategory` 单一真源）；只剩 04.1-28 未完成
+Last activity: 2026-10-26 — 04.1-27 complete（`MapCategoryNav` 六项同排 + `space-around` + `flex: 1 1 64px` + 相邻竖线；`MapMaterialPanel` 用 `activeCategory === Tileset` 判视图；删除 `MapPanel.toggleTileset` / 四处 props 成员 / `map-tileset-toggle` / `.emap-category-tileset`；`mapView.material.test.tsx` 19 passed、`mapPanel.test.tsx` 20 passed、全量 85 files / 960 tests、typecheck exit 0、prettier 全绿）
 
 Progress: [███████░░░] 74%
 
@@ -164,6 +164,7 @@ Progress: [███████░░░] 74%
 | Phase 04.1 P25 | 15min | 2 tasks | 4 files |
 | Phase 04.1 P26 | 13min | 3 tasks | 9 files |
 | Phase 04.1 P29 | 8min | 3 tasks | 6 files |
+| Phase 04.1 P27 | 16min | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -432,6 +433,7 @@ Recent decisions affecting current work:
 - [Phase 04.1]: 演示自动元件连接集合改为空对象：空集合 = 只与同类连接（引擎 spec 为空的分支），根因是数据而非算法（D-49）
 - [Phase 04.1]: 引擎对拍以测试内私有端口函数实现（portMapAutotile / portSliceRect），不导出、不 import 仓库外路径，256 种连接 × 两种形状全量比对（D-50）
 - [Phase 04.1]: Tileset 编号段按 ceil(图片格数 / tilesetUnit) 累计，至少 1 段；缺省 reserve 100000 / unit 10000；tilesetBase 已删除（D-51）
+- [Phase 04.1]: 04.1-27: Tileset 变成普通分类，六类同一排等宽铺满；activeCategory 是素材视图唯一真源，tilesetOpen 一族全部删除
 
 ### Pending Todos
 
@@ -459,6 +461,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-26T00:11:09.818Z
-Stopped at: Completed 04.1-29-PLAN.md
+Last session: 2026-10-26T00:29:28.396Z
+Stopped at: Completed 04.1-27-PLAN.md
 Resume file: None
