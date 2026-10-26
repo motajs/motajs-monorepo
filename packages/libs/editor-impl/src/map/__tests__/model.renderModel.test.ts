@@ -702,6 +702,46 @@ describe('buildThumbnailCells 大地图逐格数据', () => {
     expect(thumbnail.some((cell) => cell.key === 'layer-base:2:2')).toBe(false);
   });
 
+  // 每格 4px 正好压在可见性下限上，四块仍然展开（`>=` 是包含的）
+  it('每格 4px 时仍拆四块', () => {
+    const document = createAutotileDocument();
+    const thumbnail = buildThumbnailCells(document, 8, 8, 'layer-base', 1);
+
+    expect(thumbnail).toHaveLength(4);
+    expect(thumbnail.every((cell) => cell.autotileQuarters !== undefined)).toBe(true);
+  });
+
+  // 每格 2px 时不再拆四块：裁切退回该图块的第 0 帧，contain 目标矩形保持不变
+  it('每格小于 4px 时不拆四块但保留 contain 矩形', () => {
+    const document = createAutotileDocument();
+    const thumbnail = buildThumbnailCells(document, 4, 4, 'layer-base', 1);
+
+    expect(thumbnail).toHaveLength(4);
+    expect(thumbnail.every((cell) => cell.autotileQuarters === undefined)).toBe(true);
+    expect(thumbnail[0].crop).toEqual({ x: 0, y: 0, width: 32, height: 32 });
+    expect(thumbnail[0].x).toBe(0);
+    expect(thumbnail[0].y).toBe(0);
+    expect(thumbnail[0].width).toBe(2);
+    expect(thumbnail[0].height).toBe(2);
+  });
+
+  // 可见性上限不连坐 contain：大素材在每格 2px 时仍按比例缩进格子，不拉满整格
+  it('每格小于 4px 时大素材仍按 contain 摆放', () => {
+    const group = createSizedTileGroup({ cellWidth: 96, cellHeight: 64 });
+    const document = createSingleCellDocument(1, [group]);
+    const thumbnail = buildThumbnailCells(document, 2, 2, 'layer-base', 1);
+    const cell = thumbnail[0];
+    const expectedHeight = (64 / 96) * 2;
+
+    expect(thumbnail).toHaveLength(1);
+    expect(cell.autotileQuarters).toBeUndefined();
+    expect(cell.crop).toEqual({ x: 0, y: 0, width: 96, height: 64 });
+    expect(cell.width).toBeCloseTo(2, 6);
+    expect(cell.height).toBeCloseTo(expectedHeight, 6);
+    expect(cell.y).toBeCloseTo((2 - expectedHeight) / 2, 6);
+    expect(cell.height).toBeLessThan(cell.width);
+  });
+
   // 文档尺寸或纹理尺寸非法时返回空数组而不抛错
   it('非法尺寸返回空数组', () => {
     const document = createMapDocument();

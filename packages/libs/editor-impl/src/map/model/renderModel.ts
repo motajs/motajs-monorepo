@@ -1,4 +1,5 @@
 import {
+  MAP_BIG_MAP_AUTOTILE_CELL,
   MAP_BIG_MAP_DOT_CELL,
   MAP_CELL_SIZE,
   MAP_DISPLAY_CELL_SIZE,
@@ -524,6 +525,8 @@ function buildBigMapModel(
  * 同一个 contain 目标矩形，自动元件也同样拆成四块，所以缩略里的连接纹样与普通模式一致。
  * 缩略是概览，跳过空格与目录里查不到的编号（不画缺图橙块），也不跟随动画时钟——帧由画布固定取第 0 帧 / 条目固定帧。
  * 本函数不 import React / Pixi、不读图片、不建模块级缓存；只在缩略纹理重建时调用一次，结果不进 `IMapRenderModel`。
+ * 图元数口径不变：每格最多一个图元；四块展开只在每格不小于 `MAP_BIG_MAP_AUTOTILE_CELL` 时发生，
+ * 而纹理边长上限 512 ⇒ 只可能发生在文档 ≤ 128×128（≤ 16,384 格），因此「因四块展开而增加」的图元最多 65,536 个。
  * @param document 中立文档
  * @param textureWidth 缩略纹理的像素宽
  * @param textureHeight 缩略纹理的像素高
@@ -543,6 +546,7 @@ export function buildThumbnailCells(
 
   const cellWidth = textureWidth / document.width;
   const cellHeight = textureHeight / document.height;
+  const detailed = cellWidth >= MAP_BIG_MAP_AUTOTILE_CELL && cellHeight >= MAP_BIG_MAP_AUTOTILE_CELL;
   const images = buildTileImages(document);
   const current = currentLayerId === undefined ? undefined : findLayer(document, currentLayerId);
   const cells: IMapRenderCell[] = [];
@@ -561,21 +565,28 @@ export function buildThumbnailCells(
         if (value === 0) continue;
         if (!images.has(value)) continue;
 
-        cells.push(
-          createRenderCell(
-            layer.cells,
-            layer.id,
-            value,
-            x,
-            y,
-            x * cellWidth,
-            y * cellHeight,
-            cellWidth,
-            cellHeight,
-            opacity,
-            images,
-          ),
+        const cell = createRenderCell(
+          layer.cells,
+          layer.id,
+          value,
+          x,
+          y,
+          x * cellWidth,
+          y * cellHeight,
+          cellWidth,
+          cellHeight,
+          opacity,
+          images,
         );
+        const image = images.get(value)!;
+
+        if (detailed || image.group.autotile === undefined) {
+          cells.push(cell);
+          continue;
+        }
+
+        // 可见性上限而非退回旧路径：四块各不足 2px 时改用整格裁切，contain 的 x / y / width / height 保持不动
+        cells.push({ ...cell, crop: image.frame.base, autotileQuarters: undefined });
       }
     }
   }

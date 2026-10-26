@@ -37,6 +37,9 @@ export const MAP_RECENT_TILES_LIMIT = 24;
 /** 大地图模式下格边长小于该值时，通行度改用红点 */
 export const MAP_BIG_MAP_DOT_CELL = 16;
 
+/** 大地图缩略里一格边长小于该值时不拆自动元件四块（各块不足 2px 看不出，图元数却会翻四倍）；`contain` 不受影响 */
+export const MAP_BIG_MAP_AUTOTILE_CELL = 4;
+
 /** 大地图模式一次最多构建的图元数 */
 export const MAP_BIG_MAP_MAX_SPRITES = 12000;
 
