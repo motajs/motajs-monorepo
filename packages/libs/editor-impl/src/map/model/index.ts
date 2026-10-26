@@ -15,3 +15,4 @@ export * from './cellMetrics';
 export * from './thumbnail';
 export * from './tilePreferences';
 export * from './layout';
+export * from './favoriteSlot';

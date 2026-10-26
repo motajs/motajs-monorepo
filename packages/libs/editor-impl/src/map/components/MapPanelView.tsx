@@ -2,7 +2,7 @@ import '../map.css';
 import { useStore } from '@tanstack/react-store';
 import { Store } from '@tanstack/store';
 import { Button, Spin } from 'antd';
-import { ReactElement, useEffect, useRef, useState } from 'react';
+import { KeyboardEvent, ReactElement, useEffect, useRef, useState } from 'react';
 import {
   MAP_PALETTE_BASE_WIDTH,
   MAP_VIEWPORT_DEFAULT_COLUMNS,
@@ -10,6 +10,7 @@ import {
   MAP_ZOOM_DEFAULT,
 } from '../constants';
 import { IPaintWrite, isTileCatalogEmpty } from '../model/document';
+import { resolveFavoriteSlotIndex } from '../model/favoriteSlot';
 import { resolveMapLayout } from '../model/layout';
 import { buildMapRenderModel } from '../model/renderModel';
 import {
@@ -242,6 +243,19 @@ interface IMapNoticeProps {
 function noop(): void {}
 
 /**
+ * 判断键盘事件的目标是不是输入类控件：这些控件里的数字是打字，不是选槽位
+ * @param target 键盘事件的目标
+ * @returns 目标可编辑时为 true
+ */
+function isTypingTarget(target: EventTarget | null): boolean {
+  if (target instanceof HTMLInputElement) return true;
+  if (target instanceof HTMLTextAreaElement) return true;
+  if (target instanceof HTMLSelectElement) return true;
+
+  return target instanceof HTMLElement && target.isContentEditable;
+}
+
+/**
  * 取图层显示名：宿主没给名字时回退为「图层 {N}」
  * @param layer 图层
  * @param index 图层在文档里的顺序下标
@@ -406,7 +420,6 @@ function renderReadyBody(input: IMapPanelBodyProps): ReactElement {
         onPasteAt={input.props.onPasteAt ?? noop}
         onClearRegion={input.props.onClearRegion ?? noop}
         onSetViewport={input.props.onSetViewport ?? noop}
-        onSelectFavoriteSlot={(index): void => input.props.onSelectFavoriteSlot?.(index)}
         onToggleBigMap={toggleBigMap}
       />
     </div>
@@ -493,12 +506,29 @@ export function MapPanelView(props: IMapPanelViewProps): ReactElement {
   const layout = resolveViewLayout(view, availableWidth);
   const sideWidth = layout === undefined ? MAP_PALETTE_BASE_WIDTH : layout.paletteWidth;
 
+  /**
+   * 面板级数字键：`1` 选擦除、`2..9` / `0` 选收藏位；带修饰键的组合与输入控件内的按键一律放行
+   * @param event 键盘事件
+   */
+  const handlePanelKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    if (isTypingTarget(event.target)) return;
+
+    const index = resolveFavoriteSlotIndex(event.key);
+
+    if (index === undefined) return;
+
+    event.preventDefault();
+    props.onSelectFavoriteSlot?.(index);
+  };
+
   return (
     <div
       ref={panelRef}
       className={narrow ? 'emap-panel is-narrow' : 'emap-panel'}
       data-test-id="map-panel"
       data-status={statusToken(view.status)}
+      onKeyDown={handlePanelKeyDown}
     >
       <MapToolbar
         status={view.status}

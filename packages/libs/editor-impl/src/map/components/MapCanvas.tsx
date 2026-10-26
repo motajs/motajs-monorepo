@@ -1,5 +1,5 @@
 import { KeyboardEvent, PointerEvent, ReactElement, useEffect, useId, useRef, useState } from 'react';
-import { MAP_CELL_SIZE, MAP_FAVORITE_SLOT_COUNT, MAP_RULER_SIZE } from '../constants';
+import { MAP_CELL_SIZE, MAP_RULER_SIZE } from '../constants';
 import { buildFillWrites, buildRectWrites, buildStrokeWrites } from '../model/brush';
 import { resolveCellMetrics, resolvePointerCell } from '../model/cellMetrics';
 import { IPaintWrite } from '../model/document';
@@ -25,7 +25,8 @@ import { MapSurface } from './MapSurface';
 
 // 可聚焦的画布容器：手势 / 快捷键 / 行列标尺 / 状态条都在这里，Pixi 表面只负责照着渲染模型画。
 // 笔画期间只有本地预览，提交时才把写列表交给面板（一笔一条撤销）；悬停 / 预览 / 框选 / 菜单都不进面板 Store。
-// 键盘监听挂在容器上（tabIndex=0），不挂 window / document；撤销 / 重做仍由外壳统一绑定。
+// 键盘监听挂在容器上（tabIndex=0），不挂 window / document：画布只处理画布专属快捷键（Ctrl+C / Ctrl+V / Escape / F），
+// 数字键由面板根统一处理；撤销 / 重做仍由外壳统一绑定。
 
 /** 读取图块图片字节的回调 */
 type MapBytesLoader = (path: string) => Promise<Uint8Array | undefined>;
@@ -83,11 +84,6 @@ export interface IMapCanvasProps {
    * @param top 视口左上角所在的格子纵坐标
    */
   onSetViewport?(left: number, top: number): void;
-  /**
-   * 选择擦除或某个收藏位（数字键 `1..9` / `0`）
-   * @param index 0 表示擦除，1..9 对应第 1..9 个收藏格
-   */
-  onSelectFavoriteSlot?(index: number): void;
   /** 图块图片的重试计数 */
   readonly imageVersion?: number;
   /** 读取图块图片字节的回调 */
@@ -553,7 +549,7 @@ export function MapCanvas(props: IMapCanvasProps): ReactElement {
   };
 
   /**
-   * 键盘：复制 / 粘贴 / Escape / F / 数字键；只在画布聚焦时响应
+   * 键盘：复制 / 粘贴 / Escape / F；数字键由面板根统一处理
    * @param event 键盘事件
    */
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
@@ -573,12 +569,6 @@ export function MapCanvas(props: IMapCanvasProps): ReactElement {
         pasteOnCanvas();
       }
 
-      return;
-    }
-
-    if (event.key.length === 1 && event.key >= '0' && event.key <= '9') {
-      event.preventDefault();
-      props.onSelectFavoriteSlot?.(event.key === '0' ? MAP_FAVORITE_SLOT_COUNT : Number(event.key) - 1);
       return;
     }
 

@@ -877,6 +877,49 @@ describe('底部三页与收藏栏接线', () => {
     expect(harness.panel['store'].state.paletteSelection.kind).toBe(MapPaletteKind.Empty);
   });
 
+  // 焦点不在画布上也能用：聚焦素材区图块按钮后按 2 仍然选中收藏位
+  it('焦点在素材区时数字键仍然生效', async () => {
+    const harness = await openPanel(createMapDocument({ tileGroups: [createTileGroup()] }));
+
+    await renderShell(harness);
+
+    await act(async () => {
+      harness.panel.addFavorite(2);
+    });
+
+    const tile = screen.getByTestId('map-tile-2');
+
+    tile.focus();
+
+    expect(document.activeElement).toBe(tile);
+
+    expect(fireEvent.keyDown(tile, { key: '2' })).toBe(false);
+    await act(async () => {});
+
+    expect(harness.panel['store'].state.paletteSelection.primaryTileNumber).toBe(2);
+  });
+
+  // 输入框里的数字是打字：既不选槽位，也不被 preventDefault
+  it('输入框内的数字键不拦截', async () => {
+    const harness = await openPanel(createMapDocument({ tileGroups: [createTileGroup()] }));
+
+    await renderShell(harness);
+
+    await act(async () => {
+      harness.panel.addFavorite(2);
+    });
+
+    const input = screen.getByTestId<HTMLInputElement>('map-viewport-columns');
+    const before = harness.panel['store'].state.paletteSelection;
+
+    expect(input.disabled).toBe(false);
+    expect(fireEvent.keyDown(input, { key: '2' })).toBe(true);
+
+    await act(async () => {});
+
+    expect(harness.panel['store'].state.paletteSelection).toBe(before);
+  });
+
   // Tileset 编号不能进收藏，普通编号可以
   it('右键收藏只接受目录内且非 Tileset 的编号', async () => {
     const document = createMapDocument({ tileGroups: [createTileGroup(), createTilesetGroup()] });

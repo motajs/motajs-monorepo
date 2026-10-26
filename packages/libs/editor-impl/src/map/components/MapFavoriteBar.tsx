@@ -24,7 +24,7 @@ const ERASE_TEXT = '擦';
 /** 擦除格对应的数字键 */
 const ERASE_SLOT_KEY = '1';
 
-/** 第 i 个收藏格对应的数字键：依次是 `2`…`9`、`0`（与 `MapCanvas` 的键盘映射一致） */
+/** 第 i 个收藏格对应的数字键：依次是 `2`…`9`、`0`（与 `resolveFavoriteSlotIndex` 的键盘映射一致） */
 const MAP_FAVORITE_SLOT_KEYS: readonly string[] = Object.freeze(['2', '3', '4', '5', '6', '7', '8', '9', '0']);
 
 /** 编号在目录里的归属：素材组与图块条目 */
