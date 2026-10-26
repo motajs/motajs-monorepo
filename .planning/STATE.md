@@ -8,7 +8,7 @@ status: executing
 stopped_at: Completed 04.1-37-PLAN.md
 last_updated: "2026-10-26T12:50:25.592Z"
 last_activity: 2026-10-26
-last_activity_desc: 04.1-36 complete（U-26 数字键在整个面板内生效：面板根 `tabIndex={-1}` + pointerdown 落焦点 + `ownsKeyboardFocus` 让路；U-27「显示帧数」默认打开，默认值收成 `MAP_SHOW_FRAME_COUNT_DEFAULT`；editor-impl 全量 1019 tests / 88 files exit 0，typecheck exit 0）
+last_activity_desc: 04.1-37 complete（大地图缩略改吃逐格数据：自动元件四块 / contain 与普通模式逐块相等，`MAP_BIG_MAP_AUTOTILE_CELL = 4` 限制四块展开，裁切纹理按图片路径 + 矩形共享；editor-impl 全量 1026 tests / 88 files exit 0，typecheck exit 0）
 state_head: 59af6b58626a630aa71733429412be1dc9194ab8
 progress:
   total_phases: 9
@@ -32,8 +32,8 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 Phase: 04.1 (地图渲染与布局重做) — EXECUTING
 Current Plan: 37
 Total Plans in Phase: 37
-Status: Executing — 04.1-36 complete（U-26 / U-27：面板根可聚焦 + 空白点击落焦点 + 控件让路；「显示帧数」默认打开）；剩余 04.1-31（最终人工验收，含 U-26…U-29）、04.1-37（大地图逐格渲染）
-Last activity: 2026-10-26 — 04.1-36 complete（`MapPanelView.tsx` 新增 `ownsKeyboardFocus` / `handlePanelPointerDown` 与面板根 `tabIndex={-1}`、`onPointerDown`；`constants.ts` 新增 `MAP_SHOW_FRAME_COUNT_DEFAULT = true` 并由 `mapPanel.ts` 初始值与视图回退共读；三份测试新增 5 条用例（面板空白 / 工具栏空白 / 输入框 / 帧数默认与双向开关）；editor-impl 全量 1019 tests / 88 files exit 0、typecheck exit 0、prettier --check 通过）
+Status: Executing — 04.1-37 complete（U-28 / U-29：大地图缩略与普通模式共用 `createRenderCell`，自动元件拆四块、大 / 小素材按 contain 摆放，每格 <4px 不拆四块；裁切纹理按「图片路径 + 裁切矩形」共享）；剩余 04.1-31（最终人工验收，含 U-26…U-29）
+Last activity: 2026-10-26 — 04.1-37 complete（`renderModel.ts` 新增 `buildThumbnailCells`；`constants.ts` 新增 `MAP_BIG_MAP_AUTOTILE_CELL = 4`；`MapSurface.tsx` 改用 `paintThumbnailCells` + `resolveCropTextures` 并按矩形共享纹理，删除三个旧私有函数；`model.renderModel.test.ts` 新增 7 条用例；editor-impl 全量 1026 tests / 88 files exit 0、typecheck exit 0、prettier --check 通过；editor-dev 1 条既有失败记入 `deferred-items.md` 第 5 条）
 
 Progress: [███████░░░] 74%
 
