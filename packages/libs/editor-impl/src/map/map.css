@@ -950,3 +950,13 @@
   font-size: 12px;
   white-space: nowrap;
 }
+
+/* 拖动源降低不透明度，让人一眼看出正拿着这一格（D-48） */
+.emap-favorite-tile.is-dragging {
+  opacity: 0.4;
+}
+
+/* 拖拽悬停目标加一圈强调色描边，松手前就知道会放到哪里（D-48） */
+.emap-favorite-tile.is-drag-over {
+  box-shadow: 0 0 0 2px var(--editor-accent, #1677ff);
+}

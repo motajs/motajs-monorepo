@@ -51,6 +51,10 @@ interface IFavoriteSlotProps {
   readonly style: CSSProperties;
   /** 该格是否为当前选中 */
   readonly selected: boolean;
+  /** 这一格是否正在被拖动（拖动源降低不透明度，D-48） */
+  readonly dragging: boolean;
+  /** 指针是否正悬停在这一格且它不是拖动源（悬停目标加描边，D-48） */
+  readonly dragOver: boolean;
   /**
    * 选中该槽位
    * @param index 1..9 的收藏位索引（0 留给擦除格）
@@ -199,14 +203,27 @@ function favoriteSlotLabel(index: number, number: number): string {
 }
 
 /**
+ * 拼接一个收藏格的类名：基础类 + 收藏标记 + 选中 + 拖动态 + 悬停态
+ * @param props 收藏格渲染输入
+ * @returns 空格分隔的类名；空串会被过滤掉
+ */
+function favoriteSlotClassName(props: IFavoriteSlotProps): string {
+  const names = ['emap-material-cell', 'emap-favorite-tile', 'is-favorite'];
+
+  if (props.selected) names.push('is-selected');
+  if (props.dragging) names.push('is-dragging');
+  if (props.dragOver) names.push('is-drag-over');
+
+  return names.join(' ');
+}
+
+/**
  * 渲染一个收藏格：图块按钮与键位角标
  * @param props 收藏格渲染输入
  * @returns 收藏格元素
  */
 function renderFavoriteSlot(props: IFavoriteSlotProps): ReactElement {
-  const className = props.selected
-    ? 'emap-material-cell emap-favorite-tile is-favorite is-selected'
-    : 'emap-material-cell emap-favorite-tile is-favorite';
+  const className = favoriteSlotClassName(props);
 
   return (
     <div className="emap-favorite-slot" key={props.index} data-empty={String(props.number <= 0)}>
@@ -272,6 +289,8 @@ export function MapFavoriteBar(props: IMapFavoriteBarProps): ReactElement {
           number,
           style: tileBackgroundStyle(lookup, url, frameRectOf(lookup)),
           selected: isFavoriteSelected(number, props.selection),
+          dragging: drag !== undefined && drag.from === index,
+          dragOver: drag !== undefined && drag.over === index && drag.from !== index,
           onSelect: props.onSelectSlot,
           onDragStart: (from): void => {
             if (props.reorderDisabled) return;
