@@ -685,6 +685,28 @@
 
 ---
 
+## Plan 34 — 接口与命名（U-25，纯声明）
+
+**要做什么：** 给图块目录契约补一个可选字段，让宿主告诉编辑器「这张图片真实有几行图块」；只加声明与文档，不写任何逻辑，最后停下来请用户确认字段名与口径。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `IMapTileGroup.rows` | 字段（可选，本计划声明，Plan 35 只赋值） | 来源图片真实的图块行数（= 图片高 ÷ 素材格高），由宿主填入；算整张图集高度时优先用它，缺省才退回「目录最大行号 + 1」。**必须**写明它不是「目录里出现过的最大行号 + 1」，也不是 Tileset 的 `IMapTilesetMeta.rows`（U-25 / D-54） |
+
+---
+
+## Plan 35 — 图集真实行数（U-25）
+
+**要做什么：** 让宿主把「图片真实几行」填进目录，并让「算整张图集多高」改用它，从而修好底部快捷栏 / 收藏栏 / 素材区把相邻图块也画进来、还被纵向压扁的问题；只改实现，不改任何接口形状。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `buildTileCatalog` | 自由函数（改造，`editor-dev/src/backend/tileCatalog.ts`） | 给每个素材组填 `rows = max(1, floor(图片高 ÷ cellHeight))`，不管是普通网格、动画、自动元件还是 Tileset |
+| `resolveGroupAtlasRect` | 自由函数（改造，`model/tileAtlas.ts`） | 普通 Grid 与横向动画的高度改用 `group.rows`，缺省才退回旧口径；Tileset / 自动元件 / 纵向动画 / 扫描动画 / Full 不变 |
+| `model.tileAtlas.test.ts` / `tileCatalog.test.ts` / `mapDemo.test.ts` / `mapView.layout.test.tsx` / `mapView.material.test.tsx` | 测试文件（改造） | 钉住「`tiles-terrain` 只有第 0 行图块时图集仍是 128×64」「底部页 / 收藏栏 / 素材区一格只显示一个 32×32 源格」「其它布局不受影响」 |
+
+---
+
 ## 开放问题口径
 
 > 与 Phase 4 不同，本阶段进入规划时仍有未定项。三条「用户确认」已在 §全局口径 锁定；下表是其余各项的执行口径。
@@ -707,6 +729,7 @@
 | OQ14 宿主注入的 `viewportColumns/viewportRows`（含 `?mapViewport=wide`）还有没有用 | **已定（用户，第二轮）** | 只作**初始默认值**；可见格数由面板上的「地图区宽 / 高」决定，且不再有任何查询参数路径——`?mapViewport=wide` 整条删除（D-40）。 |
 | OQ15 地图区尺寸以什么为基准 | **已定（用户，第二轮）** | 以 **32×32** 为基准：画布 = 格数 × 32 × 缩放，与地图声明的 `cellWidth/cellHeight` 无关；声明格尺寸仍用于素材切分、`contain` 的源尺寸与文档数据（D-39）。 |
 | OQ16 `activeCategory` 与 Tileset 视图的关系 | **已定（用户，第四轮）** | `activeCategory === Tileset` 即 Tileset 视图；`tilesetOpen` 一族（视图状态字段、面板方法 `MapPanel.toggleTileset`、三处 props、`map-tileset-toggle` 测试标识）全部删除（D-47）。 |
+| OQ17 图集高度以什么为准 | **已定（用户，第六轮）** | 来源图片的真实行数：宿主按「图片高 ÷ 素材格高」填 `IMapTileGroup.rows`，缺省才退回「目录最大行号 + 1」（D-54）。 |
 
 ---
 
@@ -721,3 +744,4 @@
 7. **第四轮新增的名字与两处收敛**（标尺厚度常量 `MAP_RULER_SIZE`、地图区宽度含标尺的口径、宿主目录的 Tileset 编号段参数 `tilesetReserve` / `tilesetUnit`，以及删除 `tilesetOpen` 一族）—— **costly**：宿主目录契约与视图状态同时收敛（D-43 / D-47 / D-51）。
 8. **第五轮新增的三个类名**（`.emap-tileset-row` 横向排布容器、`.emap-tileset-block` 单块、`.emap-tileset-block + .emap-tileset-block` 的竖线规则）—— **reversible**：只在 `map.css` 与 `MapMaterialPanel.tsx` 内部使用，改名只影响本文件的登记与一个计划的文案（D-52 修订）。
 9. **第六轮新增的七个名字与三处收缩**（`resolveGroupAtlasRect`、`resolveTileBackgroundStyle`、`MAP_MATERIAL_CELL_SIZE`、`resolveFavoriteSlotIndex`、`resolvePassArrowLength`、`resolvePassArrowHeadLength`、`.emap-ruler-line`；常量 `MAP_PASS_ARROW_HEAD_LENGTH` / `MAP_PASS_ARROW_HEAD_HALF_WIDTH`；以及删除 `IMapCanvasProps.onSelectFavoriteSlot`、三个组件里的图集尺寸 / 偏移私有函数）—— **reversible**：全部是 `editor-impl` 内部的纯函数、常量与 CSS 类，改名只影响本文件与 `04.1-32` / `04.1-33` 的文案；删除的画布回调不改变任何对外 props（U-19 / U-23 / U-24）。
+10. **`IMapTileGroup.rows` 这个可选字段名与「图集高度取自来源图片真实行数」的口径** —— **costly**：这是宿主目录契约的新增字段，所有宿主实现都要填；改名要同步宿主与测试。
