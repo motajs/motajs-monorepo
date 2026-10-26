@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   MAP_CELL_SIZE,
+  MAP_PASS_ARROW_HEAD_HALF_WIDTH,
+  MAP_PASS_ARROW_HEAD_LENGTH,
   MAP_PASS_COLOR_DOWN,
   MAP_PASS_COLOR_LEFT,
   MAP_PASS_COLOR_RIGHT,
@@ -8,7 +10,12 @@ import {
 } from '../constants';
 import { IMapDirections, IMapDocument, IMapLayer, IMapTileEntry, IMapTilePass, MapDirection } from '../types';
 import { IMapRenderView, buildMapRenderModel } from '../model/renderModel';
-import { computePassabilityMarks, resolvePassArrowColor } from '../model/passability';
+import {
+  computePassabilityMarks,
+  resolvePassArrowColor,
+  resolvePassArrowHeadLength,
+  resolvePassArrowLength,
+} from '../model/passability';
 
 // 只读通行度的用例：覆盖空格 / 全通 / 全阻 / 单方向 / 事件层 / 未知编号 / 多图层，以及输出直接喂给渲染模型。
 
@@ -251,5 +258,44 @@ describe('computePassabilityMarks', () => {
 
     expect(model.passMarks).toHaveLength(400);
     expect(model.passMarks.every((mark) => mark.dot)).toBe(true);
+  });
+});
+
+describe('通行度箭头几何', () => {
+  // 32×32 的格子箭头伸到 15px（半个格再留 1px 余量），16×16 相应变成 7px
+  it('箭头长度按格尺寸现算', () => {
+    expect(resolvePassArrowLength(32, 32)).toBe(15);
+    expect(resolvePassArrowLength(16, 16)).toBe(7);
+  });
+
+  // 非法格尺寸不抛错，长度仍不小于 2px
+  it('非法格尺寸退回最短长度', () => {
+    expect(resolvePassArrowLength(0, 0)).toBe(2);
+    expect(resolvePassArrowLength(Number.NaN, Number.NaN)).toBe(2);
+  });
+
+  // 头长取「常量上限」与「全长一半」的较小值，保证头不会超过箭头本身
+  it('头长夹取在常量上限与全长一半之间', () => {
+    expect(resolvePassArrowHeadLength(15)).toBe(MAP_PASS_ARROW_HEAD_LENGTH);
+    expect(resolvePassArrowHeadLength(4)).toBe(2);
+    expect(resolvePassArrowHeadLength(0)).toBe(0);
+  });
+
+  // 常量落在 4..6px 区间：整头宽 5px，头长 6px
+  it('常量边界落在 4..6px 区间', () => {
+    expect(MAP_PASS_ARROW_HEAD_LENGTH).toBeGreaterThanOrEqual(4);
+    expect(MAP_PASS_ARROW_HEAD_LENGTH).toBeLessThanOrEqual(6);
+    expect(MAP_PASS_ARROW_HEAD_HALF_WIDTH * 2).toBeGreaterThanOrEqual(4);
+    expect(MAP_PASS_ARROW_HEAD_HALF_WIDTH * 2).toBeLessThanOrEqual(6);
+  });
+
+  // 32×32 下三角底离中心还有 9px，远大于半宽 2.5px：四支箭头的轴向带互不相交
+  it('32×32 格内四方向头部互不重叠', () => {
+    const length = resolvePassArrowLength(32, 32);
+    const headLength = resolvePassArrowHeadLength(length);
+
+    expect(length - headLength).toBeGreaterThan(MAP_PASS_ARROW_HEAD_HALF_WIDTH);
+    expect(MAP_PASS_ARROW_HEAD_HALF_WIDTH * 2).toBeLessThanOrEqual(6);
+    expect(MAP_PASS_ARROW_HEAD_HALF_WIDTH * 2).toBeLessThan(length);
   });
 });

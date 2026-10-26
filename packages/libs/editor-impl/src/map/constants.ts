@@ -114,3 +114,9 @@ export const MAP_PASS_COLOR_DOWN = 0x2f9e44;
 
 /** 通行度向左箭头的颜色 */
 export const MAP_PASS_COLOR_LEFT = 0xb26bd8;
+
+/** 通行度箭头头部沿方向占的长度（像素）；按 32×32 格里四支箭头互不重叠取 6，不要凭手感改大 */
+export const MAP_PASS_ARROW_HEAD_LENGTH = 6;
+
+/** 通行度箭头头部的一半宽度（像素）；整头宽 5px，落在 4..6px 区间内 */
+export const MAP_PASS_ARROW_HEAD_HALF_WIDTH = 2.5;

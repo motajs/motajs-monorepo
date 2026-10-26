@@ -1,8 +1,8 @@
 import { Application, Container, Graphics, Rectangle, RenderTexture, Sprite, Texture, UPDATE_PRIORITY } from 'pixi.js';
 import { ReactElement, useEffect, useRef, useState } from 'react';
-import { MAP_FRAME_SPEED_DEFAULT, MAP_PASS_COLOR_UP } from '../constants';
+import { MAP_FRAME_SPEED_DEFAULT, MAP_PASS_ARROW_HEAD_HALF_WIDTH, MAP_PASS_COLOR_UP } from '../constants';
 import { resolvePreviewCellRects } from '../model/cellMetrics';
-import { resolvePassArrowColor } from '../model/passability';
+import { resolvePassArrowColor, resolvePassArrowHeadLength, resolvePassArrowLength } from '../model/passability';
 import { resolveCellFrame, resolveFrameInfo, resolveFrameRect, resolveFrameTickAt } from '../model/tileFrame';
 import {
   IMapCellPosition,
@@ -549,6 +549,7 @@ function drawGrid(scene: Container, model: IMapRenderModel): void {
  * @param dx 方向的横向分量（-1 / 0 / 1）
  * @param dy 方向的纵向分量（-1 / 0 / 1）
  * @param length 箭头从格子中心伸出的长度（像素，略短于半个格）
+ * @param headLength 箭头三角头沿方向占的长度（像素）
  * @param color 箭头颜色，取自 `resolvePassArrowColor`
  */
 function drawPassArrow(
@@ -558,16 +559,15 @@ function drawPassArrow(
   dx: number,
   dy: number,
   length: number,
+  headLength: number,
   color: number,
 ): void {
   const tipX = x + dx * length;
   const tipY = y + dy * length;
-  const inset = Math.min(2, length / 3);
-  const baseX = x + dx * inset;
-  const baseY = y + dy * inset;
-  const wing = Math.max(1.5, length * 0.55);
-  const wingX = -dy * wing;
-  const wingY = dx * wing;
+  const baseX = x + dx * (length - headLength);
+  const baseY = y + dy * (length - headLength);
+  const wingX = -dy * MAP_PASS_ARROW_HEAD_HALF_WIDTH;
+  const wingY = dx * MAP_PASS_ARROW_HEAD_HALF_WIDTH;
 
   graphics
     .poly([tipX, tipY, baseX + wingX, baseY + wingY, baseX - wingX, baseY - wingY])
@@ -597,12 +597,24 @@ function drawPassMark(
     return;
   }
 
-  const length = Math.max(2, Math.min(cellWidth, cellHeight) / 2 - 1);
+  const length = resolvePassArrowLength(cellWidth, cellHeight);
+  const headLength = resolvePassArrowHeadLength(length);
 
-  if (mark.blocked.up) drawPassArrow(graphics, x, y, 0, -1, length, resolvePassArrowColor(MapDirection.Up));
-  if (mark.blocked.right) drawPassArrow(graphics, x, y, 1, 0, length, resolvePassArrowColor(MapDirection.Right));
-  if (mark.blocked.down) drawPassArrow(graphics, x, y, 0, 1, length, resolvePassArrowColor(MapDirection.Down));
-  if (mark.blocked.left) drawPassArrow(graphics, x, y, -1, 0, length, resolvePassArrowColor(MapDirection.Left));
+  if (mark.blocked.up) {
+    drawPassArrow(graphics, x, y, 0, -1, length, headLength, resolvePassArrowColor(MapDirection.Up));
+  }
+
+  if (mark.blocked.right) {
+    drawPassArrow(graphics, x, y, 1, 0, length, headLength, resolvePassArrowColor(MapDirection.Right));
+  }
+
+  if (mark.blocked.down) {
+    drawPassArrow(graphics, x, y, 0, 1, length, headLength, resolvePassArrowColor(MapDirection.Down));
+  }
+
+  if (mark.blocked.left) {
+    drawPassArrow(graphics, x, y, -1, 0, length, headLength, resolvePassArrowColor(MapDirection.Left));
+  }
 }
 
 /**

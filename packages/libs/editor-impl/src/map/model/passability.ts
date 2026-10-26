@@ -1,4 +1,10 @@
-import { MAP_PASS_COLOR_DOWN, MAP_PASS_COLOR_LEFT, MAP_PASS_COLOR_RIGHT, MAP_PASS_COLOR_UP } from '../constants';
+import {
+  MAP_PASS_ARROW_HEAD_LENGTH,
+  MAP_PASS_COLOR_DOWN,
+  MAP_PASS_COLOR_LEFT,
+  MAP_PASS_COLOR_RIGHT,
+  MAP_PASS_COLOR_UP,
+} from '../constants';
 import { IMapDirections, IMapDocument, IMapLayer, IMapPassMark, IMapTileEntry, MapDirection } from '../types';
 
 // 只读通行度：按图块目录给出的四方向属性，算出每格「不能走」的方向，交给渲染模型画箭头或红点。
@@ -37,6 +43,31 @@ export function resolvePassArrowColor(direction: MapDirection): number {
   if (direction === MapDirection.Left) return MAP_PASS_COLOR_LEFT;
 
   return MAP_PASS_COLOR_UP;
+}
+
+/**
+ * 算出一枚通行度箭头从格子中心伸出的长度（像素）
+ * @param cellWidth 一格的像素宽
+ * @param cellHeight 一格的像素高
+ * @returns 箭头长度；格尺寸非法时退回 2
+ */
+export function resolvePassArrowLength(cellWidth: number, cellHeight: number): number {
+  const size = Math.min(cellWidth, cellHeight);
+
+  if (!Number.isFinite(size)) return 2;
+
+  return Math.max(2, size / 2 - 1);
+}
+
+/**
+ * 算出通行度箭头头部的长度（像素）
+ * @param length 箭头从中心伸出的全长（像素）
+ * @returns 头部长度；不超过 `MAP_PASS_ARROW_HEAD_LENGTH`，且始终小于全长的一半
+ */
+export function resolvePassArrowHeadLength(length: number): number {
+  if (!Number.isFinite(length) || length <= 0) return 0;
+
+  return Math.min(MAP_PASS_ARROW_HEAD_LENGTH, length / 2);
 }
 
 /**
