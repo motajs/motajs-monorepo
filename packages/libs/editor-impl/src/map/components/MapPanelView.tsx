@@ -194,11 +194,6 @@ export interface IMapPanelViewProps {
    */
   onSelectCategory?(category: MapTileCategory): void;
   /**
-   * 开关 Tileset 单独视图
-   * @param open 为 true 时切到 Tileset 视图
-   */
-  onToggleTileset?(open: boolean): void;
-  /**
    * 开关素材区的帧数角标
    * @param value 为 true 时显示
    */
@@ -618,13 +613,11 @@ export function MapPanelView(props: IMapPanelViewProps): ReactElement {
               groupStatus={groupImages.status}
               imageStatus={view.recentStatus}
               activeCategory={view.activeCategory ?? MapTileCategory.Terrain}
-              tilesetOpen={view.tilesetOpen ?? false}
               selection={view.paletteSelection}
               showFrameCount={view.showFrameCount ?? false}
               onSelectPattern={props.onSelectPattern ?? noop}
               onRetryImages={props.onRetryImages ?? noop}
               onSelectCategory={props.onSelectCategory ?? noop}
-              onToggleTileset={props.onToggleTileset ?? noop}
               onToggleFrameCount={props.onToggleFrameCount ?? noop}
               onFavoriteTile={props.onFavoriteTile}
             />

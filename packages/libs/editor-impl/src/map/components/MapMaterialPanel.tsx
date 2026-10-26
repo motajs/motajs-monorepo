@@ -14,8 +14,8 @@ import {
 import { MapCategoryNav } from './MapCategoryNav';
 import { MapTilesetPicker } from './MapTilesetPicker';
 
-// 右侧素材区：顶部「显示帧数」勾选框 + 五类竖排导航 + 当前分类的普通素材网格。
-// 组件只吃 props：目录、图片地址与状态、当前分类 / 选中 / 开关与回调；它不读文件、不读字节、不持有选中。
+// 右侧素材区：顶部「显示帧数」勾选框 + 六类同一排的分类导航 + 当前分类的素材视图。
+// 组件只吃 props：目录、图片地址与状态、当前分类 / 选中 / 回调；它不读文件、不读字节、不持有选中。
 // 帧矩形一律由 model/tileFrame 现算，不读目录里的 crop（那个字段 Plan 15 会删掉）。
 
 /** 图片读取中的文案 */
@@ -352,13 +352,14 @@ function renderTilesetView(props: IMapMaterialPanelProps): ReactElement {
 }
 
 /**
- * 右侧素材区：分类导航 + 普通素材网格，Tileset 开关由导航负责
+ * 右侧素材区：六类同一排的分类导航 + 当前分类的素材视图
  * @param props 素材区 props
  * @returns 素材区元素
  */
 export function MapMaterialPanel(props: IMapMaterialPanelProps): ReactElement {
-  const tilesetOpen = props.tilesetOpen ?? false;
-  const categoryGroups = tilesetOpen ? [] : groupsOfCategory(props.groups, props.activeCategory);
+  // 当前分类就是 Tileset 视图的唯一真源：选中 Tileset 即显示 Tileset 视图（D-47）
+  const isTilesetView = props.activeCategory === MapTileCategory.Tileset;
+  const categoryGroups = isTilesetView ? [] : groupsOfCategory(props.groups, props.activeCategory);
   const ordinaryCount = countOrdinaryGroups(props.groups);
   const anyLoading = categoryGroups.some(
     (group) => groupImageStatus(group, props.groupUrls, props.groupStatus) === MapImageStatus.Loading,
@@ -385,7 +386,7 @@ export function MapMaterialPanel(props: IMapMaterialPanelProps): ReactElement {
         onSelectCategory={props.onSelectCategory}
       />
       <div className="emap-material-body">
-        {tilesetOpen ? (
+        {isTilesetView ? (
           renderTilesetView(props)
         ) : (
           <>

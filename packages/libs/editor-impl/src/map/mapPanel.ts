@@ -416,7 +416,6 @@ export class MapPanel implements IEditorPanel, IMapPanel {
       zoom: MAP_ZOOM_DEFAULT,
       bottomTab: MapBottomTab.Recent,
       activeCategory: MapTileCategory.Terrain,
-      tilesetOpen: false,
       showFrameCount: false,
       favorites: [0, 0, 0, 0, 0, 0, 0, 0, 0],
       frequentTiles: [],
@@ -464,7 +463,6 @@ export class MapPanel implements IEditorPanel, IMapPanel {
         onSetViewportSize: (columns, rows): void => this.setViewportSize(columns, rows),
         onSetBottomTab: (tab): void => this.setBottomTab(tab),
         onSelectCategory: (category): void => this.selectCategory(category),
-        onToggleTileset: (open): void => this.toggleTileset(open),
         onToggleFrameCount: (value): void => this.toggleFrameCount(value),
         onSelectFavoriteSlot: (index): void => this.selectFavoriteSlot(index),
         onReorderFavorites: (from, to): void => this.reorderFavorites(from, to),
@@ -1102,14 +1100,6 @@ export class MapPanel implements IEditorPanel, IMapPanel {
    */
   selectCategory(category: MapTileCategory): void {
     this.publish({ activeCategory: category });
-  }
-
-  /**
-   * 开关 Tileset 单独视图；只改视图状态，不置脏、不进撤销，也不碰当前调色板选择
-   * @param open 为 true 时切到 Tileset 视图
-   */
-  toggleTileset(open: boolean): void {
-    this.publish({ tilesetOpen: open });
   }
 
   /**

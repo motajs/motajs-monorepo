@@ -104,7 +104,6 @@ function createViewState(document: IMapDocument, overrides: Partial<IMapPanelVie
     zoom: MAP_ZOOM_DEFAULT,
     bottomTab: MapBottomTab.Recent,
     activeCategory: MapTileCategory.Terrain,
-    tilesetOpen: false,
     showFrameCount: false,
     favorites: [0, 0, 0, 0, 0, 0, 0, 0, 0],
     frequentTiles: [],

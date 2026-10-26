@@ -735,10 +735,8 @@ export interface IMapPanelViewState {
   readonly zoom: number;
   /** 底部当前页签 */
   readonly bottomTab: MapBottomTab;
-  /** 右侧当前分类 */
+  /** 右侧当前分类；它同时是当前素材视图的唯一真源 */
   readonly activeCategory: MapTileCategory;
-  /** 素材区是否切到 Tileset 单独视图 */
-  readonly tilesetOpen: boolean;
   /** 素材区是否显示帧数角标 */
   readonly showFrameCount: boolean;
   /** 9 格收藏的有序编号列表，空位为 0 */
@@ -783,8 +781,6 @@ export interface IMapMaterialPanelProps {
   readonly imageStatus: MapImageStatus;
   /** 当前分类 */
   readonly activeCategory: MapTileCategory;
-  /** 是否切到 Tileset 单独视图；缺省 false */
-  readonly tilesetOpen?: boolean;
   /** 当前调色板选中 */
   readonly selection: IMapPaletteSelection;
   /** 是否显示帧数角标 */
@@ -801,11 +797,6 @@ export interface IMapMaterialPanelProps {
    * @param category 目标分类
    */
   onSelectCategory(category: MapTileCategory): void;
-  /**
-   * 开关 Tileset 单独视图
-   * @param open 为 true 时切到 Tileset 视图
-   */
-  onToggleTileset(open: boolean): void;
   /**
    * 开关帧数角标
    * @param value 为 true 时显示
