@@ -5,6 +5,7 @@ import { Button, Spin } from 'antd';
 import { KeyboardEvent, PointerEvent, ReactElement, useEffect, useRef, useState } from 'react';
 import {
   MAP_PALETTE_BASE_WIDTH,
+  MAP_SHOW_FRAME_COUNT_DEFAULT,
   MAP_VIEWPORT_DEFAULT_COLUMNS,
   MAP_VIEWPORT_DEFAULT_ROWS,
   MAP_ZOOM_DEFAULT,
@@ -692,7 +693,7 @@ export function MapPanelView(props: IMapPanelViewProps): ReactElement {
               imageStatus={view.recentStatus}
               activeCategory={view.activeCategory ?? MapTileCategory.Terrain}
               selection={view.paletteSelection}
-              showFrameCount={view.showFrameCount ?? false}
+              showFrameCount={view.showFrameCount ?? MAP_SHOW_FRAME_COUNT_DEFAULT}
               onSelectPattern={props.onSelectPattern ?? noop}
               onRetryImages={props.onRetryImages ?? noop}
               onSelectCategory={props.onSelectCategory ?? noop}

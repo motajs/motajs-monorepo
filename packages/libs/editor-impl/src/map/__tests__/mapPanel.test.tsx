@@ -2,6 +2,7 @@ import { cleanup, configure } from '@testing-library/react';
 import { EditorCore, IEditorPanel, IEditorPanelFactoryParam } from '@motajs/editor-core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createMapPanelType, MAP_PANEL_TYPE_ID, MapPanel } from '..';
+import { MAP_SHOW_FRAME_COUNT_DEFAULT } from '../constants';
 import {
   IMapDocument,
   IMapEditorCapabilities,
@@ -412,6 +413,13 @@ describe('地图面板：视图动作', () => {
 
     panel.setBottomTab(MapBottomTab.Favorites);
     panel.selectCategory(MapTileCategory.Enemy);
+
+    expect(viewState(panel).showFrameCount).toBe(MAP_SHOW_FRAME_COUNT_DEFAULT);
+
+    panel.toggleFrameCount(false);
+
+    expect(viewState(panel).showFrameCount).toBe(false);
+
     panel.toggleFrameCount(true);
 
     expect(viewState(panel).bottomTab).toBe(MapBottomTab.Favorites);
@@ -436,14 +444,14 @@ describe('地图面板：视图动作', () => {
     expect(viewState(panel).activeCategory).toBe(MapTileCategory.Terrain);
   });
 
-  // 初始视图状态齐全：默认 100% 缩放、最近页签、地形分类、9 格收藏与默认 13×13 视口
+  // 初始视图状态齐全：默认 100% 缩放、最近页签、地形分类、帧数角标默认开、9 格收藏与默认 13×13 视口
   it('初始视图状态齐全', async () => {
     const { panel } = await openMapPanel(createCapabilities());
 
     expect(viewState(panel).zoom).toBe(1);
     expect(viewState(panel).bottomTab).toBe(MapBottomTab.Recent);
     expect(viewState(panel).activeCategory).toBe(MapTileCategory.Terrain);
-    expect(viewState(panel).showFrameCount).toBe(false);
+    expect(viewState(panel).showFrameCount).toBe(MAP_SHOW_FRAME_COUNT_DEFAULT);
     expect(viewState(panel).favorites).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0]);
     expect(viewState(panel).frequentTiles).toEqual([]);
     expect(viewState(panel).viewportColumns).toBe(13);

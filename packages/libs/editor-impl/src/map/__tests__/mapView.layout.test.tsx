@@ -999,6 +999,60 @@ describe('底部三页与收藏栏接线', () => {
     expect(harness.panel['store'].state.paletteSelection.primaryTileNumber).toBe(2);
   });
 
+  // 点输入框时面板根不抢焦点：焦点不搬到面板根，框里的数字也不被拦截
+  it('点输入框不会把焦点抢到面板根', async () => {
+    const harness = await openPanel(createMapDocument({ tileGroups: [createTileGroup()] }));
+
+    await renderShell(harness);
+
+    await act(async () => {
+      harness.panel.addFavorite(2);
+    });
+
+    const panel = screen.getByTestId('map-panel');
+    const input = screen.getByTestId('map-viewport-columns');
+    const before = harness.panel['store'].state.paletteSelection;
+
+    fireEvent.pointerDown(input);
+
+    expect(panel.ownerDocument.activeElement).not.toBe(panel);
+
+    expect(fireEvent.keyDown(input, { key: '2' })).toBe(true);
+
+    await act(async () => {});
+
+    expect(harness.panel['store'].state.paletteSelection).toBe(before);
+  });
+
+  // 点工具栏空白处时焦点照样落到面板根，数字键随之在整个面板内生效
+  it('点工具栏空白处后数字键仍然生效', async () => {
+    const harness = await openPanel(createMapDocument({ tileGroups: [createTileGroup()] }));
+
+    await renderShell(harness);
+
+    await act(async () => {
+      harness.panel.addFavorite(2);
+    });
+
+    const panel = screen.getByTestId('map-panel');
+
+    fireEvent.pointerDown(screen.getByTestId('map-toolbar'));
+
+    expect(panel.ownerDocument.activeElement).toBe(panel);
+
+    expect(fireEvent.keyDown(panel, { key: '2' })).toBe(false);
+
+    await act(async () => {});
+
+    expect(harness.panel['store'].state.paletteSelection.primaryTileNumber).toBe(2);
+
+    expect(fireEvent.keyDown(panel, { key: '1' })).toBe(false);
+
+    await act(async () => {});
+
+    expect(harness.panel['store'].state.paletteSelection.kind).toBe(MapPaletteKind.Empty);
+  });
+
   // Tileset 编号不能进收藏，普通编号可以
   it('右键收藏只接受目录内且非 Tileset 的编号', async () => {
     const document = createMapDocument({ tileGroups: [createTileGroup(), createTilesetGroup()] });

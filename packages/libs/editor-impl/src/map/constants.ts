@@ -10,6 +10,9 @@ export const MAP_DISPLAY_CELL_SIZE = 32;
 /** 素材格 / 收藏格的显示边长（像素）；必须与 `map.css` 里 `.emap-material-cell` 与 `.emap-favorite-slot` 的 32px 同源，改这里就要同步改 CSS */
 export const MAP_MATERIAL_CELL_SIZE = 32;
 
+/** 素材区「显示帧数」角标的默认状态：默认打开；改它就要同步改 `mapPanel.test.tsx` 与 `mapView.material.test.tsx` 的默认断言（U-27） */
+export const MAP_SHOW_FRAME_COUNT_DEFAULT = true;
+
 /** 行列标尺的厚度（像素）；地图区宽度 = 画布宽 + 它，画布用它定位标尺与可视区，两处必须同源（D-43） */
 export const MAP_RULER_SIZE = 20;
 

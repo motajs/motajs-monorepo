@@ -4,6 +4,7 @@ import { createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createMapPanelType, MAP_PANEL_TYPE_ID, MapPanel } from '..';
 import { MapMaterialPanel } from '../components/MapMaterialPanel';
+import { MAP_SHOW_FRAME_COUNT_DEFAULT } from '../constants';
 import mapCss from '../map.css?inline';
 import {
   IMapDataSection,
@@ -801,6 +802,12 @@ describe('素材区端到端接线', () => {
     fireEvent.click(screen.getByTestId('map-category-terrain'));
 
     await waitFor(() => expect(harness.panel['store'].state.activeCategory).toBe(MapTileCategory.Terrain));
+
+    expect(harness.panel['store'].state.showFrameCount).toBe(MAP_SHOW_FRAME_COUNT_DEFAULT);
+
+    fireEvent.click(screen.getByTestId('map-frame-count'));
+
+    await waitFor(() => expect(harness.panel['store'].state.showFrameCount).toBe(false));
 
     fireEvent.click(screen.getByTestId('map-frame-count'));
 
