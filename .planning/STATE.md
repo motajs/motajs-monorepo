@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.1"
 current_phase_name: 地图渲染与布局重做
-current_plan: 36
+current_plan: 37
 status: executing
-stopped_at: Completed 04.1-36-PLAN.md
-last_updated: "2026-10-26T12:31:07.737Z"
+stopped_at: Completed 04.1-37-PLAN.md
+last_updated: "2026-10-26T12:50:25.592Z"
 last_activity: 2026-10-26
 last_activity_desc: 04.1-36 complete（U-26 数字键在整个面板内生效：面板根 `tabIndex={-1}` + pointerdown 落焦点 + `ownsKeyboardFocus` 让路；U-27「显示帧数」默认打开，默认值收成 `MAP_SHOW_FRAME_COUNT_DEFAULT`；editor-impl 全量 1019 tests / 88 files exit 0，typecheck exit 0）
-state_head: b259b88346bb26b2167714137785268595813a41
+state_head: 59af6b58626a630aa71733429412be1dc9194ab8
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 159
-  completed_plans: 154
+  completed_plans: 155
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 04.1 (地图渲染与布局重做) — EXECUTING
-Current Plan: 36
+Current Plan: 37
 Total Plans in Phase: 37
 Status: Executing — 04.1-36 complete（U-26 / U-27：面板根可聚焦 + 空白点击落焦点 + 控件让路；「显示帧数」默认打开）；剩余 04.1-31（最终人工验收，含 U-26…U-29）、04.1-37（大地图逐格渲染）
 Last activity: 2026-10-26 — 04.1-36 complete（`MapPanelView.tsx` 新增 `ownsKeyboardFocus` / `handlePanelPointerDown` 与面板根 `tabIndex={-1}`、`onPointerDown`；`constants.ts` 新增 `MAP_SHOW_FRAME_COUNT_DEFAULT = true` 并由 `mapPanel.ts` 初始值与视图回退共读；三份测试新增 5 条用例（面板空白 / 工具栏空白 / 输入框 / 帧数默认与双向开关）；editor-impl 全量 1019 tests / 88 files exit 0、typecheck exit 0、prettier --check 通过）
@@ -172,6 +172,7 @@ Progress: [███████░░░] 74%
 | Phase 04.1 P34 | 188min | 3 tasks | 3 files |
 | Phase 04.1 P35 | 15min | 3 tasks | 7 files |
 | Phase 04.1 P36 | 10min | 2 tasks | 6 files |
+| Phase 04.1 P37 | 9 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -456,6 +457,9 @@ Recent decisions affecting current work:
 - [Phase 04.1]: 数字键焦点链路：面板根 tabIndex={-1} + pointerdown 落焦点，控件落点让路；数字键实现仍只有 MapPanelView.handlePanelKeyDown 一处（U-26）
 - [Phase 04.1]: ownsKeyboardFocus 的 [tabindex] 选择器必须排除 tabindex="-1"，否则面板根自己会让每次点击都判成「落点自带焦点」（U-26）
 - [Phase 04.1]: 「显示帧数」默认值单源化为 MAP_SHOW_FRAME_COUNT_DEFAULT = true，面板初始值 / 视图回退 / 测试三处同读（U-27）
+- [Phase 04.1]: 04.1-37: MAP_BIG_MAP_AUTOTILE_CELL = 4，每格小于它时自动元件只画整格裁切（四块各不足 2px 看不出、图元数翻四倍），contain 不受影响
+- [Phase 04.1]: 04.1-37: 大地图缩略复用既有 IMapRenderCell / IMapAutotileQuarters，新增纯函数 buildThumbnailCells 调 createRenderCell，不新增接口、不改 IMapRenderModel
+- [Phase 04.1]: 04.1-37: 裁切纹理按「图片路径 + 裁切矩形」共享，不按格子 key；缩略只在 stale 时重建，不跟动画时钟
 
 ### Pending Todos
 
@@ -483,6 +487,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-26T12:31:07.179Z
-Stopped at: Completed 04.1-36-PLAN.md
+Last session: 2026-10-26T12:50:24.050Z
+Stopped at: Completed 04.1-37-PLAN.md
 Resume file: None

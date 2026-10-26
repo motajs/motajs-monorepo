@@ -40,3 +40,11 @@
 - **影响：** 不影响 Plan 19 的任何 `<automated>` verify：Task 1（50 条）与 Task 2（101 条）点名用例全绿，`editor-dev` 全量 79 条全绿，两个 typecheck 与三条结构门禁全绿。仅 Plan 19 的 `verification` 里「两个包全量全绿」这一条无法达成。
 - **建议：** 由负责保存 / 切换语义的后续计划（Plan 20 之后的面板收尾）单独接手；不要在纯渲染计划里顺手改面板数据层。
 
+
+## 5. `editor-dev` 的 `devHostMap.test.tsx` 有 1 条既有失败（Plan 36 打开帧数角标后暴露，与 Plan 37 无关）
+
+- **发现于：** Plan 37 收口跑 `pnpm --filter @motajs/editor-dev test`。
+- **现象：** `src/__tests__/devHostMap.test.tsx` 里「就绪后素材区出现演示地图…属于目录的图块」失败（`expected false to be true`，第 480 行）。它用 `querySelectorAll('[data-test-id^="map-tile-"]')` 收集图块，而 `MapMaterialPanel` 的帧数角标 id 是 `map-tile-frames-{number}`（`MapMaterialPanel.tsx:246`），前缀同样命中，`Number('frames-1')` 得到 `NaN`，于是断言「编号都在目录里」失败。
+- **判定为既有问题：** Plan 36 的 `b259b88` 把 `MAP_SHOW_FRAME_COUNT_DEFAULT` 改为 `true`，角标从此默认渲染；Plan 37 只改大地图缩略逐格数据，不碰帧数角标。基线（`bb63e75`）上该角标默认不渲染，所以这条失败是在 Plan 36 之后才出现的。
+- **影响：** `editor-dev` 全量 98 条里 1 条红；`editor-impl` 全量 1026 条全绿，Plan 37 的两个 `<automated>` verify 与 `typecheck` 全绿。不阻塞 Plan 37 的验收。
+- **建议：** 由 `04.1-31` 收口时修测试选择器（改为排除 `map-tile-frames-` 前缀），或让角标 id 换一个不以 `map-tile-` 开头的前缀；本计划按 scope boundary 与「不碰 Plan 36 帧数」的约束不动它。
