@@ -14,7 +14,7 @@ import {
 } from '../types';
 import { createMapDocument, createSizedTileGroup, createTileGroup, createWideMapDocument } from './fixtures';
 import { resolveMapLayout } from '../model/layout';
-import { IMapRenderView, buildMapRenderModel } from '../model/renderModel';
+import { IMapRenderView, buildMapRenderModel, buildThumbnailCells } from '../model/renderModel';
 
 /**
  * 造一份四方向都可通行的通行属性
@@ -82,6 +82,29 @@ function createView(overrides: Partial<IMapRenderView> = {}): IMapRenderView {
     passMarks: [],
     ...overrides,
   };
+}
+
+/**
+ * 造一张 2 × 2、每格都是自动元件编号 1 的地图，用于缩略逐格数据的四块用例
+ * @returns 2 × 2 的自动元件地图
+ */
+function createAutotileDocument(): IMapDocument {
+  const group = createSizedTileGroup({
+    id: 'group-autotile',
+    autotile: { type: MapAutotileType.Small2x3, connections: [] },
+  });
+  const layer: IMapLayer = {
+    id: 'layer-base',
+    name: '基础层',
+    zIndex: 0,
+    isEventLayer: false,
+    cells: [
+      [1, 1],
+      [1, 1],
+    ],
+  };
+
+  return createMapDocument({ width: 2, height: 2, layers: [layer], tileGroups: [group] });
 }
 
 describe('buildMapRenderModel 普通模式', () => {
@@ -619,5 +642,73 @@ describe('buildMapRenderModel Tileset', () => {
     expect(model.cells).toHaveLength(1);
     expect(model.cells[0].crop).toEqual({ x: 32, y: 32, width: 32, height: 32 });
     expect(model.cells[0].autotileQuarters).toBeUndefined();
+  });
+});
+
+describe('buildThumbnailCells 大地图逐格数据', () => {
+  // 缩略里的自动元件格与普通模式一样拆四块，四块象限与裁切逐块相等（U-28）
+  it('自动元件格的四块象限与普通模式逐块相等', () => {
+    const document = createAutotileDocument();
+    const thumbnail = buildThumbnailCells(document, 64, 64, 'layer-base', 1);
+    const normal = buildMapRenderModel(document, createView({ width: 64, height: 64 }));
+
+    expect(thumbnail).toHaveLength(4);
+    expect(thumbnail.every((cell) => cell.autotileQuarters !== undefined)).toBe(true);
+
+    for (const cell of thumbnail) {
+      const reference = normal.cells.find((item) => item.key === cell.key)!;
+
+      expect(cell.autotileQuarters).toEqual(reference.autotileQuarters);
+      expect(cell.crop).toEqual(reference.crop);
+    }
+  });
+
+  // 缩略里的大素材按 contain 等比缩进格子并居中，目标矩形与普通模式相等（U-29）
+  it('大素材按 contain 摆放且目标矩形与普通模式相等', () => {
+    const group = createSizedTileGroup({ cellWidth: 96, cellHeight: 64 });
+    const document = createSingleCellDocument(1, [group]);
+    const thumbnail = buildThumbnailCells(document, 32, 32, 'layer-base', 1);
+    const normal = buildMapRenderModel(document, createView({ width: 32, height: 32 }));
+
+    expect(thumbnail).toHaveLength(1);
+
+    const cell = thumbnail[0];
+    const reference = normal.cells[0];
+
+    expect(cell.width).toBe(32);
+    expect(cell.height).toBeCloseTo(64 / 3, 6);
+    expect(cell.y).toBeCloseTo(16 / 3, 6);
+    expect(cell.x).toBeCloseTo(reference.x, 6);
+    expect(cell.y).toBeCloseTo(reference.y, 6);
+    expect(cell.width).toBeCloseTo(reference.width, 6);
+    expect(cell.height).toBeCloseTo(reference.height, 6);
+  });
+
+  // 按 zIndex 从低到高输出，高于当前层的图层套统一不透明度；空格与目录外编号不产生格子
+  it('按层序输出并区分上层不透明度', () => {
+    const document = createMapDocument();
+    const base = document.layers[0];
+    const cells = base.cells.map((row) => [...row]);
+
+    cells[2][2] = 99;
+    const withUnknown: IMapDocument = { ...document, layers: [{ ...base, cells }, document.layers[1]] };
+    const thumbnail = buildThumbnailCells(withUnknown, 64, 48, 'layer-base', 0.3);
+
+    expect(thumbnail).toHaveLength(8);
+    expect(thumbnail.slice(0, 7).every((cell) => cell.key.startsWith('layer-base:') && cell.opacity === 1)).toBe(true);
+    expect(thumbnail[7].key).toBe('layer-upper:1:1');
+    expect(thumbnail[7].opacity).toBe(0.3);
+    expect(thumbnail.some((cell) => cell.key === 'layer-base:2:0')).toBe(false);
+    expect(thumbnail.some((cell) => cell.key === 'layer-base:2:2')).toBe(false);
+  });
+
+  // 文档尺寸或纹理尺寸非法时返回空数组而不抛错
+  it('非法尺寸返回空数组', () => {
+    const document = createMapDocument();
+
+    expect(buildThumbnailCells({ ...document, width: 0 }, 64, 48, 'layer-base', 1)).toEqual([]);
+    expect(buildThumbnailCells({ ...document, height: 0 }, 64, 48, 'layer-base', 1)).toEqual([]);
+    expect(buildThumbnailCells(document, 0, 48, 'layer-base', 1)).toEqual([]);
+    expect(buildThumbnailCells(document, 64, -1, 'layer-base', 1)).toEqual([]);
   });
 });

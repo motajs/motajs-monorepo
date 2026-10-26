@@ -3,7 +3,8 @@ import { ReactElement, useEffect, useRef, useState } from 'react';
 import { MAP_FRAME_SPEED_DEFAULT, MAP_PASS_ARROW_HEAD_HALF_WIDTH, MAP_PASS_COLOR_UP } from '../constants';
 import { resolvePreviewCellRects } from '../model/cellMetrics';
 import { resolvePassArrowColor, resolvePassArrowHeadLength, resolvePassArrowLength } from '../model/passability';
-import { resolveCellFrame, resolveFrameInfo, resolveFrameRect, resolveFrameTickAt } from '../model/tileFrame';
+import { buildThumbnailCells } from '../model/renderModel';
+import { resolveCellFrame, resolveFrameRect, resolveFrameTickAt } from '../model/tileFrame';
 import {
   IMapCellPosition,
   IMapDocument,
@@ -23,6 +24,7 @@ import { useMapObjectUrl } from './useMapObjectUrl';
 // Pixi 应用、场景与纹理表都挂在组件实例的 ref 上，卸载时销毁；模块顶层没有任何可变缓存。
 // 定位只用模型给出的度量：普通模式是 `viewport` + 缩放后的格尺寸，大地图模式是缩略比例与偏移。
 // 动画只有一个时钟：ticker 的累计毫秒交给 `resolveFrameTickAt` 换全局帧号，只有动画格换帧。
+// 大地图缩略纹理改用与普通模式同一套逐格数据（自动元件四块 / contain / 第 0 帧），纹理仍然只在重建时构建一次。
 
 /** 读取图片字节的回调 */
 type MapBytesLoader = (path: string) => Promise<Uint8Array | undefined>;
@@ -801,123 +803,74 @@ function drawHover(scene: Container, model: IMapRenderModel, position: IMapCellP
 }
 
 /**
- * 收集整份目录里「编号 → 图片路径 / 裁切」，供缩略纹理逐格铺内容
- * @param mapDocument 中立文档
- * @param paths 编号 → 图片路径的输出表
- * @param crops 编号 → 裁切矩形的输出表
+ * 取一张按裁切矩形共享的纹理：同一个「图片路径 + 裁切矩形」全图只裁一张
+ * @param texture 图集纹理
+ * @param path 图片路径，参与缓存 key
+ * @param crops 这一格要用的裁切矩形（普通格 1 块、自动元件 4 块）
+ * @param cache 「图片路径 + 裁切矩形」→ 裁切纹理
+ * @param created 本次重建创建的临时纹理收集处
+ * @returns 与裁切矩形一一对应的纹理
  */
-function collectThumbnailTiles(
-  mapDocument: IMapDocument,
-  paths: Map<number, string>,
-  crops: Map<number, IMapTileCrop>,
-): void {
-  for (const group of mapDocument.tileGroups) {
-    for (const entry of group.tiles) {
-      paths.set(entry.number, group.imagePath);
-      crops.set(entry.number, resolveFrameInfo(group, entry).base);
+function resolveCropTextures(
+  texture: Texture,
+  path: string,
+  crops: readonly IMapTileCrop[],
+  cache: Map<string, Texture>,
+  created: Texture[],
+): readonly Texture[] {
+  const textures: Texture[] = [];
+
+  for (const crop of crops) {
+    const cacheKey = `${path}:${crop.x}:${crop.y}:${crop.width}:${crop.height}`;
+    const cached = cache.get(cacheKey);
+
+    if (cached !== undefined) {
+      textures.push(cached);
+      continue;
     }
+
+    const cropped = createCropTexture(texture, crop);
+
+    cache.set(cacheKey, cropped);
+    created.push(cropped);
+    textures.push(cropped);
   }
+
+  return textures;
 }
 
 /**
- * 取缩略纹理里某个图块编号的纹理：同一编号只裁一张，铺 256×256 时不会给每格都建一张
- * @param value 图块编号
- * @param paths 编号 → 图片路径
- * @param crops 编号 → 裁切矩形
- * @param textures 按图片路径缓存的图集纹理
- * @param tileTextures 编号 → 已裁好的纹理
- * @param cropped 本次重建创建的临时纹理收集处
- * @returns 该编号的裁切纹理；图片或编号缺失时为 undefined
- */
-function resolveThumbnailTileTexture(
-  value: number,
-  paths: Map<number, string>,
-  crops: Map<number, IMapTileCrop>,
-  textures: Map<string, Texture>,
-  tileTextures: Map<number, Texture>,
-  cropped: Texture[],
-): Texture | undefined {
-  const cached = tileTextures.get(value);
-
-  if (cached !== undefined) return cached;
-
-  const path = paths.get(value);
-  const crop = crops.get(value);
-
-  if (path === undefined || crop === undefined) return undefined;
-
-  const source = textures.get(path);
-
-  if (source === undefined) return undefined;
-
-  const texture = createCropTexture(source, crop);
-
-  tileTextures.set(value, texture);
-  cropped.push(texture);
-  return texture;
-}
-
-/**
- * 按 zIndex 从低到高把整份文档铺进离屏容器：每格一个 1 源像素 / 格的精灵，高于当前层的图层用统一不透明度
+ * 把逐格数据铺进缩略纹理：自动元件画四块、其余画一块，帧号固定为第 0 帧或条目的固定帧
  * @param container 离屏容器
  * @param cropped 本次重建创建的临时纹理收集处
- * @param mapDocument 中立文档
- * @param currentLayerId 当前图层标识；缺失时所有层都不透明
- * @param aboveLayerOpacity 高于当前层的图层统一不透明度
- * @param textureWidth 缩略纹理的像素宽
- * @param textureHeight 缩略纹理的像素高
+ * @param cells 逐格数据；与普通模式共用同一套算法
  * @param textures 按图片路径缓存的图集纹理
  */
-function paintThumbnailLayers(
+function paintThumbnailCells(
   container: Container,
   cropped: Texture[],
-  mapDocument: IMapDocument,
-  currentLayerId: string | undefined,
-  aboveLayerOpacity: number,
-  textureWidth: number,
-  textureHeight: number,
+  cells: readonly IMapRenderCell[],
   textures: Map<string, Texture>,
 ): void {
-  if (mapDocument.width <= 0 || mapDocument.height <= 0) return;
+  const cache: Map<string, Texture> = new Map();
 
-  const scaleX = textureWidth / mapDocument.width;
-  const scaleY = textureHeight / mapDocument.height;
-  const paths: Map<number, string> = new Map();
-  const crops: Map<number, IMapTileCrop> = new Map();
-  const tileTextures: Map<number, Texture> = new Map();
-  const current = mapDocument.layers.find((layer) => layer.id === currentLayerId);
-  const layers = [...mapDocument.layers].sort((left, right) => left.zIndex - right.zIndex);
+  for (const cell of cells) {
+    const path = cell.imagePath;
 
-  collectThumbnailTiles(mapDocument, paths, crops);
+    if (path === undefined) continue;
 
-  for (const layer of layers) {
-    const aboveCurrent = current !== undefined && layer.id !== current.id && layer.zIndex > current.zIndex;
-    const alpha = aboveCurrent ? aboveLayerOpacity : 1;
-    const rows = Math.min(layer.cells.length, mapDocument.height);
+    const source = textures.get(path);
 
-    for (let y = 0; y < rows; y += 1) {
-      const row = layer.cells[y];
-      const columns = Math.min(row.length, mapDocument.width);
+    if (source === undefined) continue;
 
-      for (let x = 0; x < columns; x += 1) {
-        const value = row[x];
+    const frame = resolveInitialFrame(cell);
+    const crops = resolveCellFrameCrops(cell, frame);
 
-        if (value === 0) continue;
+    if (crops.length === 0) continue;
 
-        const texture = resolveThumbnailTileTexture(value, paths, crops, textures, tileTextures, cropped);
+    const cellTextures = resolveCropTextures(source, path, crops, cache, cropped);
 
-        if (texture === undefined) continue;
-
-        const sprite = new Sprite(texture);
-
-        sprite.x = x * scaleX;
-        sprite.y = y * scaleY;
-        sprite.width = scaleX;
-        sprite.height = scaleY;
-        sprite.alpha = alpha;
-        container.addChild(sprite);
-      }
-    }
+    for (const sprite of createCellSprites(cell, cellTextures)) container.addChild(sprite);
   }
 }
 
@@ -955,14 +908,10 @@ function buildThumbnailTexture(
     background.rect(0, 0, textureWidth, textureHeight).fill({ color: EMPTY_LIGHT });
     container.addChild(background);
   } else {
-    paintThumbnailLayers(
+    paintThumbnailCells(
       container,
       cropped,
-      mapDocument,
-      currentLayerId,
-      aboveLayerOpacity ?? 1,
-      textureWidth,
-      textureHeight,
+      buildThumbnailCells(mapDocument, textureWidth, textureHeight, currentLayerId, aboveLayerOpacity ?? 1),
       textures,
     );
   }

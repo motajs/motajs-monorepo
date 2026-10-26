@@ -518,6 +518,72 @@ function buildBigMapModel(
 }
 
 /**
+ * 把整份文档算成大地图缩略纹理要铺的格子
+ *
+ * 逐格数据与普通模式共用 `buildTileImages` / `createRenderCell` / `layerOpacity`：同一格坐标、同一份裁切、
+ * 同一个 contain 目标矩形，自动元件也同样拆成四块，所以缩略里的连接纹样与普通模式一致。
+ * 缩略是概览，跳过空格与目录里查不到的编号（不画缺图橙块），也不跟随动画时钟——帧由画布固定取第 0 帧 / 条目固定帧。
+ * 本函数不 import React / Pixi、不读图片、不建模块级缓存；只在缩略纹理重建时调用一次，结果不进 `IMapRenderModel`。
+ * @param document 中立文档
+ * @param textureWidth 缩略纹理的像素宽
+ * @param textureHeight 缩略纹理的像素高
+ * @param currentLayerId 当前图层标识；缺失时所有层都不透明
+ * @param aboveLayerOpacity 高于当前层的图层统一不透明度，0..1
+ * @returns 要铺的格子，顺序即绘制顺序（低层在前）；文档或纹理尺寸非法时为空数组
+ */
+export function buildThumbnailCells(
+  document: IMapDocument,
+  textureWidth: number,
+  textureHeight: number,
+  currentLayerId: string | undefined,
+  aboveLayerOpacity: number,
+): readonly IMapRenderCell[] {
+  if (document.width <= 0 || document.height <= 0) return [];
+  if (!(textureWidth > 0) || !(textureHeight > 0)) return [];
+
+  const cellWidth = textureWidth / document.width;
+  const cellHeight = textureHeight / document.height;
+  const images = buildTileImages(document);
+  const current = currentLayerId === undefined ? undefined : findLayer(document, currentLayerId);
+  const cells: IMapRenderCell[] = [];
+
+  for (const layer of sortLayers(document.layers)) {
+    const opacity = layerOpacity(layer, current, aboveLayerOpacity);
+    const rows = Math.min(layer.cells.length, document.height);
+
+    for (let y = 0; y < rows; y += 1) {
+      const row = layer.cells[y];
+      const columns = Math.min(row.length, document.width);
+
+      for (let x = 0; x < columns; x += 1) {
+        const value = row[x];
+
+        if (value === 0) continue;
+        if (!images.has(value)) continue;
+
+        cells.push(
+          createRenderCell(
+            layer.cells,
+            layer.id,
+            value,
+            x,
+            y,
+            x * cellWidth,
+            y * cellHeight,
+            cellWidth,
+            cellHeight,
+            opacity,
+            images,
+          ),
+        );
+      }
+    }
+  }
+
+  return cells;
+}
+
+/**
  * 把一份中立文档与视图参数算成一帧要画的纯数据
  *
  * 唯一调用方是视图层 `MapPanelView`：面板只保存文档与视图状态，不计算也不缓存渲染模型。
