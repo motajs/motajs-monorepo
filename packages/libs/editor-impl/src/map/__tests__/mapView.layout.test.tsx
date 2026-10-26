@@ -976,6 +976,29 @@ describe('底部三页与收藏栏接线', () => {
     expect(harness.panel['store'].state.paletteSelection).toBe(before);
   });
 
+  // 点面板空白处（map-main，本身不接受焦点）后焦点落到面板根，数字键仍然生效（U-26）
+  it('点面板空白处后数字键仍然生效', async () => {
+    const harness = await openPanel(createMapDocument({ tileGroups: [createTileGroup()] }));
+
+    await renderShell(harness);
+
+    await act(async () => {
+      harness.panel.addFavorite(2);
+    });
+
+    const panel = screen.getByTestId('map-panel');
+
+    fireEvent.pointerDown(screen.getByTestId('map-main'));
+
+    expect(panel.ownerDocument.activeElement).toBe(panel);
+
+    expect(fireEvent.keyDown(document.activeElement!, { key: '2' })).toBe(false);
+
+    await act(async () => {});
+
+    expect(harness.panel['store'].state.paletteSelection.primaryTileNumber).toBe(2);
+  });
+
   // Tileset 编号不能进收藏，普通编号可以
   it('右键收藏只接受目录内且非 Tileset 的编号', async () => {
     const document = createMapDocument({ tileGroups: [createTileGroup(), createTilesetGroup()] });

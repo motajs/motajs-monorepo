@@ -2,7 +2,7 @@ import '../map.css';
 import { useStore } from '@tanstack/react-store';
 import { Store } from '@tanstack/store';
 import { Button, Spin } from 'antd';
-import { KeyboardEvent, ReactElement, useEffect, useRef, useState } from 'react';
+import { KeyboardEvent, PointerEvent, ReactElement, useEffect, useRef, useState } from 'react';
 import {
   MAP_PALETTE_BASE_WIDTH,
   MAP_VIEWPORT_DEFAULT_COLUMNS,
@@ -42,6 +42,7 @@ import { useMapElementWidth } from './useMapElementWidth';
 
 // 地图面板的装配层：工具栏 / 主体 / 保存提示行 / 弹窗 / 属性抽屉都在这里按视图状态装配。
 // 本视图只接 props，不 import 面板类；渲染模型在这里每次渲染时现算，再交给 MapSurface 消费。
+// 面板根可聚焦：点面板空白处会把焦点落到根上，数字键因此在整个面板内有效（U-26）。
 
 export interface IMapPanelViewProps {
   /** 面板视图状态的订阅源 */
@@ -253,6 +254,31 @@ function isTypingTarget(target: EventTarget | null): boolean {
   if (target instanceof HTMLSelectElement) return true;
 
   return target instanceof HTMLElement && target.isContentEditable;
+}
+
+/**
+ * 判断指针落点自己会不会接受焦点：会接受的话，面板根就不该把焦点抢过来
+ *
+ * 它回答的是「这个落点本来就有自己的键盘行为吗」，与 `isTypingTarget` 回答的「现在是不是在打字」不是同一件事，
+ * 所以两者不合并：按钮、画布、滑块手柄都会自己接受焦点，但只有输入类控件才会吃掉数字键。
+ * @param target 指针事件的目标
+ * @returns 落点会自己接受焦点时为 true
+ */
+function ownsKeyboardFocus(target: EventTarget | null): boolean {
+  if (target instanceof HTMLInputElement) return true;
+  if (target instanceof HTMLTextAreaElement) return true;
+  if (target instanceof HTMLSelectElement) return true;
+  if (target instanceof HTMLElement && target.isContentEditable) return true;
+
+  if (target instanceof Element) {
+    // `[tabindex]:not([tabindex="-1"])` 跳过面板根自己（它的 `tabIndex={-1}` 只是为了让根可被程序化聚焦）
+    return (
+      target.closest('input, textarea, select, button, a[href], [tabindex]:not([tabindex="-1"]), [contenteditable]') !==
+      null
+    );
+  }
+
+  return false;
 }
 
 /**
@@ -522,13 +548,35 @@ export function MapPanelView(props: IMapPanelViewProps): ReactElement {
     props.onSelectFavoriteSlot?.(index);
   };
 
+  /**
+   * 面板内指针按下：只把「落点不会自己接受焦点」的点击收到面板根上，其余一律放行
+   * @param event 指针按下事件
+   */
+  const handlePanelPointerDown = (event: PointerEvent<HTMLDivElement>): void => {
+    const panel = panelRef.current;
+
+    if (panel === null) return;
+    // 输入框 / 按钮 / 画布 / 滑块手柄本来就会自己拿到焦点，抢过来会破坏它们自己的键盘行为
+    if (ownsKeyboardFocus(event.target)) return;
+
+    const active = panel.ownerDocument.activeElement;
+
+    // 焦点已经落在面板里（例如滑块手柄上），不要搬回根节点
+    if (active !== null && panel.contains(active)) return;
+
+    // 地图区内部有滚动容器；聚焦不能把滚动位置带回去
+    panel.focus({ preventScroll: true });
+  };
+
   return (
     <div
       ref={panelRef}
       className={narrow ? 'emap-panel is-narrow' : 'emap-panel'}
       data-test-id="map-panel"
       data-status={statusToken(view.status)}
+      tabIndex={-1}
       onKeyDown={handlePanelKeyDown}
+      onPointerDown={handlePanelPointerDown}
     >
       <MapToolbar
         status={view.status}
