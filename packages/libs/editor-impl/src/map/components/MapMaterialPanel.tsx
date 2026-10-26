@@ -324,14 +324,15 @@ function renderLoadingStrip(): ReactElement {
 }
 
 /**
- * 渲染 Tileset 单独视图：目录里没有 Tileset 组时给空态，否则交给选择器
+ * 渲染 Tileset 单独视图：目录里每张 Tileset 图各占一块，块与块左右并排排成一行（不叠放、不折行），
+ * 每块带图名、块间靠竖线分隔；一行超出素材区宽度时由素材区主体横向滚动（D-52）。没有 Tileset 组时给空态
  * @param props 素材区 props
  * @returns Tileset 视图元素
  */
 function renderTilesetView(props: IMapMaterialPanelProps): ReactElement {
-  const group = props.groups.find((candidate) => candidate.tileset !== undefined);
+  const groups = props.groups.filter((candidate) => candidate.tileset !== undefined);
 
-  if (group === undefined) {
+  if (groups.length === 0) {
     return (
       <div className="emap-material-empty" data-test-id="map-tileset-empty">
         {TILESET_EMPTY_TEXT}
@@ -340,14 +341,23 @@ function renderTilesetView(props: IMapMaterialPanelProps): ReactElement {
   }
 
   return (
-    <MapTilesetPicker
-      group={group}
-      groupUrl={props.groupUrls[group.id]}
-      status={groupImageStatus(group, props.groupUrls, props.groupStatus)}
-      selection={props.selection}
-      onSelectPattern={props.onSelectPattern}
-      onRetryImages={props.onRetryImages}
-    />
+    <div className="emap-tileset-row">
+      {groups.map((group) => (
+        <section className="emap-tileset-block" key={group.id}>
+          <div className="emap-material-group-head" title={group.name}>
+            {group.name}
+          </div>
+          <MapTilesetPicker
+            group={group}
+            groupUrl={props.groupUrls[group.id]}
+            status={groupImageStatus(group, props.groupUrls, props.groupStatus)}
+            selection={props.selection}
+            onSelectPattern={props.onSelectPattern}
+            onRetryImages={props.onRetryImages}
+          />
+        </section>
+      ))}
+    </div>
   );
 }
 

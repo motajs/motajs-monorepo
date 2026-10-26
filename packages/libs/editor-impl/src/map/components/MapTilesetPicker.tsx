@@ -247,7 +247,7 @@ export function MapTilesetPicker(props: IMapTilesetPickerProps): ReactElement {
   const activeRect = dragRect ?? selectionRect(props.group, props.selection);
 
   return (
-    <div className="emap-tileset" data-test-id="map-tileset">
+    <div className="emap-tileset" data-test-id="map-tileset-item" data-group-id={props.group.id}>
       <div className="emap-tileset-scroll">
         <div
           className="emap-tileset-canvas"
