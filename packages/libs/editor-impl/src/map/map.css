@@ -22,6 +22,13 @@
   line-height: 1.5;
 }
 
+/* 面板根只用于接住数字键焦点（tabIndex=-1，不在 Tab 顺序里），不是可操作控件，
+   所以不画浏览器默认聚焦框；输入框 / 按钮 / 画布 / 菜单项自己的 :focus-visible 不受影响。 */
+.emap-panel:focus,
+.emap-panel:focus-visible {
+  outline: none;
+}
+
 .emap-columns {
   display: flex;
   flex: 1 1 auto;

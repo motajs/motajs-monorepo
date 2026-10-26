@@ -1046,3 +1046,18 @@ describe('标尺刻度线与纵轴标签（U-24）', () => {
     expect(rule).not.toContain('translate');
   });
 });
+
+describe('面板根聚焦框（U-32）', () => {
+  // 守护 U-32：面板根只接数字键焦点，不画默认聚焦框；真实控件的键盘焦点框仍保留
+  it('面板根不画默认聚焦框，真实控件仍有聚焦框', () => {
+    const panelRule = ruleBody(mapCss, '.emap-panel:focus,');
+
+    expect(panelRule).toBeDefined();
+    expect(panelRule).toContain('outline: none');
+
+    const canvasRule = ruleBody(mapCss, '.emap-canvas:focus-visible {');
+
+    expect(canvasRule).toBeDefined();
+    expect(canvasRule).toContain('outline:');
+  });
+});
