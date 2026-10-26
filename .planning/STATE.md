@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.1"
 current_phase_name: 地图渲染与布局重做
-current_plan: 28
+current_plan: 29
 status: executing
-stopped_at: Completed 04.1-27-PLAN.md
-last_updated: "2026-10-26T00:29:29.608Z"
+stopped_at: Completed 04.1-28-PLAN.md
+last_updated: "2026-10-26T00:42:37.652Z"
 last_activity: 2026-10-26
 last_activity_desc: 04.1-27 complete（Tileset 变成普通第六类、六类同一排等宽铺满并加相邻竖线、`activeCategory` 成为素材视图唯一真源、`tilesetOpen` 一族全部删除；editor-impl typecheck exit 0、全量 85 files / 960 tests 全绿、prettier 全绿）
-state_head: 3de3cf0c4f12b9c8974ff8b7186fcc925870bc19
+state_head: 6d6376009cbe9a6968c469e482709b39de85230f
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 153
-  completed_plans: 147
+  completed_plans: 148
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 04.1 (地图渲染与布局重做) — EXECUTING
-Current Plan: 28
+Current Plan: 29
 Total Plans in Phase: 31
 Status: Executing — 04.1-27 complete（Tileset 变普通第六类、六类同一排、`activeCategory` 单一真源）；只剩 04.1-28 未完成
 Last activity: 2026-10-26 — 04.1-27 complete（`MapCategoryNav` 六项同排 + `space-around` + `flex: 1 1 64px` + 相邻竖线；`MapMaterialPanel` 用 `activeCategory === Tileset` 判视图；删除 `MapPanel.toggleTileset` / 四处 props 成员 / `map-tileset-toggle` / `.emap-category-tileset`；`mapView.material.test.tsx` 19 passed、`mapPanel.test.tsx` 20 passed、全量 85 files / 960 tests、typecheck exit 0、prettier 全绿）
@@ -165,6 +165,7 @@ Progress: [███████░░░] 74%
 | Phase 04.1 P26 | 13min | 3 tasks | 9 files |
 | Phase 04.1 P29 | 8min | 3 tasks | 6 files |
 | Phase 04.1 P27 | 16min | 3 tasks | 11 files |
+| Phase 04.1 P28 | 7min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -434,6 +435,7 @@ Recent decisions affecting current work:
 - [Phase 04.1]: 引擎对拍以测试内私有端口函数实现（portMapAutotile / portSliceRect），不导出、不 import 仓库外路径，256 种连接 × 两种形状全量比对（D-50）
 - [Phase 04.1]: Tileset 编号段按 ceil(图片格数 / tilesetUnit) 累计，至少 1 段；缺省 reserve 100000 / unit 10000；tilesetBase 已删除（D-51）
 - [Phase 04.1]: 04.1-27: Tileset 变成普通分类，六类同一排等宽铺满；activeCategory 是素材视图唯一真源，tilesetOpen 一族全部删除
+- [Phase 04.1]: 收藏拖拽反馈：源格 is-dragging（opacity 0.4）、目标格 is-drag-over（强调色描边），dragOver 判定带 drag.from !== index 以免源格自标；两条 CSS 规则追加在 map.css 末尾以盖过 .is-selected 的 box-shadow
 
 ### Pending Todos
 
@@ -461,6 +463,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-26T00:29:28.396Z
-Stopped at: Completed 04.1-27-PLAN.md
+Last session: 2026-10-26T00:42:27.236Z
+Stopped at: Completed 04.1-28-PLAN.md
 Resume file: None
