@@ -751,6 +751,33 @@ describe('收藏栏与排序', () => {
     expect(onReorder).toHaveBeenCalledWith(0, 2);
   });
 
+  // 拖拽视觉反馈：源格降不透明度、悬停目标加描边，松手后两种类名都清掉
+  it('拖拽时源格带 is-dragging、悬停目标带 is-drag-over，松手后都消失', () => {
+    const onReorder = vi.fn();
+
+    render(<MapFavoriteBar {...createFavoriteProps({ favorites: [3, 4, 0, 0, 0, 0, 0, 0, 0], onReorder })} />);
+
+    const source = screen.getByTestId('map-favorite-0');
+    const target = screen.getByTestId('map-favorite-1');
+
+    fireEvent.pointerDown(source);
+
+    expect(source.classList.contains('is-dragging')).toBe(true);
+    expect(target.classList.contains('is-dragging')).toBe(false);
+
+    fireEvent.pointerEnter(target);
+
+    expect(target.classList.contains('is-drag-over')).toBe(true);
+    expect(source.classList.contains('is-dragging')).toBe(true);
+    expect(source.classList.contains('is-drag-over')).toBe(false);
+
+    fireEvent.pointerUp(target);
+
+    expect(onReorder).toHaveBeenCalledWith(0, 1);
+    expect(source.classList.contains('is-dragging')).toBe(false);
+    expect(target.classList.contains('is-drag-over')).toBe(false);
+  });
+
   // 空位是空格子；有编号的收藏格带真实背景矩形
   it('空位不画图块，有编号的格子带真实背景矩形', () => {
     render(<MapFavoriteBar {...createFavoriteProps({ favorites: [2, 0, 0, 0, 0, 0, 0, 0, 0] })} />);
