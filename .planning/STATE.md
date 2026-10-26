@@ -5,16 +5,16 @@ current_phase: "04.1"
 current_phase_name: 地图渲染与布局重做
 current_plan: 35
 status: executing
-stopped_at: Completed 04.1-34-PLAN.md
-last_updated: "2026-10-26T10:39:26.687Z"
+stopped_at: Completed 04.1-35-PLAN.md
+last_updated: "2026-10-26T11:09:51.344Z"
 last_activity: 2026-10-26
-last_activity_desc: 04.1-34 complete（图集真实行数接口：`IMapTileGroup.rows` 可选字段 + JSDoc、`INTERFACE-NAME.md` §Plan 34 / §Plan 35 + OQ17 + 确认清单第 10 条、`04.1-CONTEXT.md` 第六轮 + D-54；零实现改动，editor-impl / editor-dev typecheck exit 0、prettier / eslint exit 0、用户确认「全部可以」）
-state_head: 23ac0869d7a227075a4c16c48b9edb23b7d58479
+last_activity_desc: 04.1-35 complete（U-25 实现侧：宿主每个素材组填 `rows = max(1, floor(图片高 ÷ cellHeight))`，`resolveGroupAtlasRect` 的普通网格与横向动画优先用它；`tiles-terrain` 图集矩形首次为 128×64；editor-impl 1016 tests / 88 files、editor-dev 98 tests / 10 files 全绿，两个包 typecheck exit 0）
+state_head: 05b1187fd30ebbd995b164a19c2d476c9ee8f276
 progress:
   total_phases: 9
   completed_phases: 0
   total_plans: 157
-  completed_plans: 152
+  completed_plans: 153
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -32,8 +32,8 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 Phase: 04.1 (地图渲染与布局重做) — EXECUTING
 Current Plan: 35
 Total Plans in Phase: 35
-Status: Executing — 04.1-34 complete（图集真实行数：只加可选字段 `IMapTileGroup.rows` + 命名登记 + 决策 D-54，零实现改动，用户已确认「全部可以」）；剩余 04.1-31（最终人工验收，含 U-25）与 04.1-35（宿主填 `rows` + `resolveGroupAtlasRect` 消费）
-Last activity: 2026-10-26 — 04.1-34 complete（`IMapTileGroup.rows` 可选字段与 JSDoc、`INTERFACE-NAME.md` §Plan 34 / §Plan 35 + OQ17 + 确认清单第 10 条、`04.1-CONTEXT.md` 第六轮小节 + D-54；editor-impl / editor-dev typecheck 均 exit 0、prettier 与 eslint 均 exit 0、3 files changed）
+Status: Executing — 04.1-35 complete（U-25 实现侧：宿主填 `rows` + `resolveGroupAtlasRect` 消费，`tiles-terrain` 图集 128×64；实现层已收口）；剩余 04.1-31（最终人工验收，含 U-25）
+Last activity: 2026-10-26 — 04.1-35 complete（`tileCatalog.ts` 三个 `createGroup` 调用点统一填 `rows`、`tileAtlas.ts` 新增 `resolveImageRows` 并让普通网格与横向动画改用它；宿主 / 模型 / 组件 / 演示目录四处回归断言；editor-impl 全量 1016 tests、editor-dev 全量 98 tests 均 exit 0，两个包 typecheck exit 0）
 
 Progress: [███████░░░] 74%
 
@@ -170,6 +170,7 @@ Progress: [███████░░░] 74%
 | Phase 04.1 P32 | 12min | 3 tasks | 11 files |
 | Phase 04.1 P33 | 13 | 3 tasks | 14 files |
 | Phase 04.1 P34 | 188min | 3 tasks | 3 files |
+| Phase 04.1 P35 | 15min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -449,6 +450,8 @@ Recent decisions affecting current work:
 - [Phase 04.1]: 不透明度滑块用 10px 左 margin 留白；标尺每格画 .emap-ruler-line，纵轴标签顶对齐并删除半行位移
 - [Phase 04.1]: 04.1-34: 图集高度改由宿主填入的来源图片真实行数决定——IMapTileGroup 加可选字段 rows（= 图片高 ÷ 素材格高），不是「目录最大行号 + 1」；用户已确认字段名与四项口径「全部可以」（U-25 / D-54）
 - [Phase 04.1]: 04.1-34: rows 保持可选、本计划只声明不消费——宿主赋值（buildTileCatalog）与编辑器读取（resolveGroupAtlasRect）全部归 04.1-35，避免命名未确认时带着半个接口开工
+- [Phase 04.1]: 04.1-35: 宿主 buildTileCatalog 给每个组按图片高填 rows（局部变量名 imageRows，避开 tileset 分支已有的同名局部），resolveGroupAtlasRect 的普通网格与横向动画优先用它
+- [Phase 04.1]: 04.1-35: 组件侧回归用「只收录第 0 行、图片两行」的专用夹具，既有 64px 32px 断言保留，作为旧宿主不填 rows 时行为不变的证据
 
 ### Pending Todos
 
@@ -476,6 +479,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-26T10:39:25.431Z
-Stopped at: Completed 04.1-34-PLAN.md
+Last session: 2026-10-26T11:09:50.818Z
+Stopped at: Completed 04.1-35-PLAN.md
 Resume file: None
