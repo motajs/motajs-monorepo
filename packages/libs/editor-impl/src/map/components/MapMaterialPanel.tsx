@@ -381,10 +381,7 @@ export function MapMaterialPanel(props: IMapMaterialPanelProps): ReactElement {
           显示帧数
         </Checkbox>
       </div>
-      <MapCategoryNav
-        activeCategory={props.activeCategory}
-        onSelectCategory={props.onSelectCategory}
-      />
+      <MapCategoryNav activeCategory={props.activeCategory} onSelectCategory={props.onSelectCategory} />
       <div className="emap-material-body">
         {isTilesetView ? (
           renderTilesetView(props)
