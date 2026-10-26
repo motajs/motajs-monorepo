@@ -1,4 +1,4 @@
-import { MapAutotileType, MapTextureReadType, MapTileCategory } from '@motajs/editor-impl/map';
+import { MapAutotileType, MapTextureReadType, MapTileCategory, resolveGroupAtlasRect } from '@motajs/editor-impl/map';
 import { describe, expect, it } from 'vitest';
 import { buildTileCatalog } from '../tileCatalog';
 
@@ -327,5 +327,97 @@ describe('宿主图块目录解析器', () => {
     });
 
     expect(broken).toEqual([]);
+  });
+});
+
+describe('宿主图块目录的真实行数', () => {
+  // grid：图片两行高时，即使只收录第 0 行，真实行数仍是 2（不能按目录最大行号推算）
+  it('grid 按图片高交出真实行数', () => {
+    const groups = buildTileCatalog({
+      textureText: `[{ "type": "grid", "source": "a.png", "cellWidth": 32, "cellHeight": 32, "map": [1, 2] }]`,
+      tileText: TILE_TABLE_TEXT,
+      dimensions: { 'a.png': { width: 64, height: 64 } },
+      connections: {},
+    });
+
+    expect(groups[0].rows).toBe(2);
+  });
+
+  // U-25 回归：地形图集 128×64 被分类分桶后地形组只含第 0 行，图集矩形必须仍是整张 128×64
+  it('只收录第 0 行的 128×64 地形组图集矩形仍是 128×64', () => {
+    const groups = buildTileCatalog({
+      textureText: `[{ "type": "grid", "source": "terrain.png", "cellWidth": 32, "cellHeight": 32, "map": [1, 2, 3, 4] }]`,
+      tileText: `[
+        { "type": 2, "identifier": 1 },
+        { "type": 2, "identifier": 2 },
+        { "type": 2, "identifier": 3 },
+        { "type": 2, "identifier": 4 }
+      ]`,
+      dimensions: { 'terrain.png': { width: 128, height: 64 } },
+      connections: {},
+    });
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0].tiles.map((tile) => [tile.column, tile.row])).toEqual([
+      [0, 0],
+      [1, 0],
+      [2, 0],
+      [3, 0],
+    ]);
+    expect(groups[0].rows).toBe(2);
+    expect(resolveGroupAtlasRect(groups[0])).toEqual({ x: 0, y: 0, width: 128, height: 64 });
+  });
+
+  // rowAnimate：128×32 只有一行，真实行数是 1
+  it('rowAnimate 图片只有一行时 rows 为 1', () => {
+    const groups = buildTileCatalog({
+      textureText: `[{ "type": "rowAnimate", "source": "anim.png", "cellWidth": 32, "cellHeight": 32, "map": [10] }]`,
+      tileText: TILE_TABLE_TEXT,
+      dimensions: { 'anim.png': { width: 128, height: 32 } },
+      connections: {},
+    });
+
+    expect(groups[0].rows).toBe(1);
+  });
+
+  // autotile：192×128 的 Big3x4 图片是四行高
+  it('autotile 按图片高交出四行', () => {
+    const groups = buildTileCatalog({
+      textureText: `[{ "type": "autotile", "source": "auto.png", "cellWidth": 32, "cellHeight": 32, "identifier": 90, "autotileType": "Big3x4" }]`,
+      tileText: TILE_TABLE_TEXT,
+      dimensions: { 'auto.png': { width: 192, height: 128 } },
+      connections: {},
+    });
+
+    expect(groups[0].rows).toBe(4);
+  });
+
+  // tileset：128×64 的图集每一组都是两行（逐格枚举不改变真实行数）
+  it('tileset 每组都是两行', () => {
+    const groups = buildTileCatalog({
+      textureText: `[{ "type": "tileset", "source": "set.png", "cellWidth": 32, "cellHeight": 32 }]`,
+      tileText: TILE_TABLE_TEXT,
+      dimensions: { 'set.png': { width: 128, height: 64 } },
+      connections: {},
+      tilesetReserve: 100000,
+      tilesetUnit: 10000,
+    });
+
+    expect(groups.length).toBeGreaterThan(0);
+
+    for (const group of groups) expect(group.rows).toBe(2);
+  });
+
+  // 图片高小于素材格高时夹到 1 行，不出现 0 或负数
+  it('图片高小于素材格高时 rows 为 1', () => {
+    const groups = buildTileCatalog({
+      textureText: `[{ "type": "autotile", "source": "short.png", "cellWidth": 32, "cellHeight": 32, "identifier": 90, "autotileType": "Big3x4" }]`,
+      tileText: TILE_TABLE_TEXT,
+      dimensions: { 'short.png': { width: 64, height: 16 } },
+      connections: {},
+    });
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0].rows).toBe(1);
   });
 });

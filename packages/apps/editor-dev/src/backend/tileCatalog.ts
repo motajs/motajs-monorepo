@@ -58,6 +58,8 @@ interface IGroupSpec {
   readonly cellHeight: number;
   /** 素材横向的格数 */
   readonly columns: number;
+  /** 来源图片真实的图块行数（= 图片高 ÷ 素材格高）；普通网格与动画都要它来算图集高度 */
+  readonly rows: number;
   /** 每个图块的帧数 */
   readonly frames: number;
   /** 分组内的图块 */
@@ -434,6 +436,7 @@ function createGroup(spec: IGroupSpec, usedIds: Set<string>): IMapTileGroup {
     name: `${categoryLabel(spec.category)} ${sourceBaseName(spec.imagePath)}`,
     imagePath: spec.imagePath,
     columns: spec.columns,
+    rows: spec.rows,
     tiles: spec.tiles,
     category: spec.category,
     read: spec.read,
@@ -498,6 +501,9 @@ export function buildTileCatalog(source: ITileCatalogSource): readonly IMapTileG
     const cellWidth = readPositiveInt(entry.cellWidth) ?? readPositiveInt(entry.width) ?? MAP_CELL_SIZE;
     const cellHeight = readPositiveInt(entry.cellHeight) ?? readPositiveInt(entry.height) ?? MAP_CELL_SIZE;
     const columns = Math.floor(image.width / cellWidth);
+    // 真实行数只能按图片高现算：分类分桶后一组可能只收录第 0 行，
+    // 用「目录里的最大行号 + 1」会把 128×64 的地形图压成一行（U-25）。
+    const imageRows = Math.max(1, Math.floor(image.height / cellHeight));
 
     if (columns <= 0) continue;
 
@@ -519,6 +525,7 @@ export function buildTileCatalog(source: ITileCatalogSource): readonly IMapTileG
             cellWidth,
             cellHeight,
             columns,
+            rows: imageRows,
             frames: resolveFrames(kind, image, cellWidth, cellHeight, autotileType),
             tiles: [createTileEntry(identifier, 0, 0, tile)],
             autotile,
@@ -568,6 +575,7 @@ export function buildTileCatalog(source: ITileCatalogSource): readonly IMapTileG
               cellWidth,
               cellHeight,
               columns,
+              rows: imageRows,
               frames: 1,
               tiles,
               tileset: category === MapTileCategory.Tileset ? tileset : undefined,
@@ -610,6 +618,7 @@ export function buildTileCatalog(source: ITileCatalogSource): readonly IMapTileG
             cellWidth,
             cellHeight,
             columns,
+            rows: imageRows,
             frames,
             tiles,
           },
