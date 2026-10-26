@@ -701,24 +701,24 @@
   font-size: 12px;
 }
 
-/* 分类导航横排：放不下就换行，一行内两端对齐（D-32 / U-10） */
+/* 分类导航横排：六类同一排、每项等宽铺满、放不下就换行（D-47 / U-13） */
 .emap-category-nav {
   display: flex;
   flex: 0 0 auto;
   flex-direction: row;
   flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 4px;
+  justify-content: space-around;
   padding: 4px 8px;
   border-bottom: 1px solid var(--editor-border, #d0d7de);
 }
 
-/* 按内容宽的直角胶囊：宽度由文字决定，窄面板下靠换行腾地方，不裁字 */
+/* 等宽铺满的直角按钮：每项至少 64px，剩余宽度摊平，窄面板下靠换行腾地方，不裁字 */
 .emap-category-item {
   display: block;
-  flex: 0 0 auto;
+  flex: 1 1 64px;
+  min-width: 64px;
   height: 24px;
-  padding: 0 8px;
+  padding: 0 6px;
   overflow: hidden;
   border: none;
   border-radius: 0;
@@ -726,7 +726,13 @@
   color: var(--editor-fg, #202124);
   font-size: 12px;
   white-space: nowrap;
+  text-overflow: ellipsis;
   cursor: pointer;
+}
+
+/* 相邻按钮之间一条竖线，六类看着是一排等宽的格子 */
+.emap-category-item + .emap-category-item {
+  border-left: 1px solid var(--editor-border, #d0d7de);
 }
 
 .emap-category-item:hover {
@@ -742,13 +748,6 @@
 .emap-category-item:focus-visible {
   outline: 2px solid var(--editor-accent, #1677ff);
   outline-offset: -2px;
-}
-
-/* 横排时用左侧虚线把 Tileset 与五个普通分类隔开 */
-.emap-category-tileset {
-  flex: 0 0 auto;
-  margin-left: 4px;
-  border-left: 1px dashed var(--editor-border, #d0d7de);
 }
 
 .emap-material-body {

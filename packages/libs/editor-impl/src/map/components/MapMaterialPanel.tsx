@@ -382,9 +382,7 @@ export function MapMaterialPanel(props: IMapMaterialPanelProps): ReactElement {
       </div>
       <MapCategoryNav
         activeCategory={props.activeCategory}
-        tilesetOpen={tilesetOpen}
         onSelectCategory={props.onSelectCategory}
-        onToggleTileset={props.onToggleTileset}
       />
       <div className="emap-material-body">
         {tilesetOpen ? (

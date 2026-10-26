@@ -819,20 +819,13 @@ export interface IMapMaterialPanelProps {
 }
 
 export interface IMapCategoryNavProps {
-  /** 当前分类 */
+  /** 当前分类；它同时是当前素材视图的唯一真源 */
   readonly activeCategory: MapTileCategory;
-  /** Tileset 单独视图是否展开 */
-  readonly tilesetOpen: boolean;
   /**
    * 选择素材分类
    * @param category 目标分类
    */
   onSelectCategory(category: MapTileCategory): void;
-  /**
-   * 开关 Tileset 单独视图
-   * @param open 为 true 时切到 Tileset 视图
-   */
-  onToggleTileset(open: boolean): void;
 }
 
 export interface IMapTilesetPickerProps {
