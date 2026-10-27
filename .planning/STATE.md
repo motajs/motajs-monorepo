@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.1"
 current_phase_name: 地图渲染与布局重做
-current_plan: 39
+current_plan: 40
 status: executing
-stopped_at: Completed 04.1-39-PLAN.md
-last_updated: "2026-10-27T05:15:23.982Z"
+stopped_at: Completed 04.1-40-PLAN.md
+last_updated: "2026-10-27T06:10:41.444Z"
 last_activity: 2026-10-27
-last_activity_desc: "04.1-39 complete（U-35：地图区比例容器 min-width 208px、轨道 flex 0 0 96px 不再收缩；新增 .emap-toolbar-edit-row 只挂第二行，放不下时换行、顶栏 min-height 64px 可长高；第一行与缩放行为零改动；editor-impl 全量 1046 tests / 88 files exit 0，typecheck / lint / format exit 0）"
-state_head: de13e310cf8822b770ab2a9ca144beb2abaffcd3
+last_activity_desc: 04.1-40 complete（U-35 残余：.emap-zoom-label 加 margin-right: 6px，连同容器 gap: 4px 共 10px，滑块手柄最左端不再压住「地图区比例」；同步 208px 取值注释；轨道 96px / 百分比 38px / 容器 208px / 缩放行为零改动；新增 4 条静态与 DOM 断言；editor-impl 全量 1050 tests / 88 files exit 0，typecheck / lint / format exit 0）
+state_head: d645283c70f057b4eee3b2c2c522ed7f7d07ee24
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 161
-  completed_plans: 157
+  total_plans: 162
+  completed_plans: 158
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,10 +30,10 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 04.1 (地图渲染与布局重做) — EXECUTING
-Current Plan: 39
-Total Plans in Phase: 39
-Status: Executing — 04.1-39 complete（U-35：比例控件保底 208px + 第二行换行、顶栏可长高）；剩余 04.1-16 / 04.1-24 / 04.1-31（人工验收，含 U-35）
-Last activity: 2026-10-27 — 04.1-39 complete（`map.css` 的 `.emap-zoom` 改 `min-width: 208px`、`.emap-zoom-slider` 加 `flex: 0 0 96px`、标签与百分比加 `flex: 0 0 auto`；`.emap-toolbar` 改 `min-height: 64px` + `height: auto`；新增 `.emap-toolbar-edit-row` 并只挂 `MapToolbar` 第二行；editor-impl 全量 1046 tests / 88 files exit 0、typecheck exit 0、lint exit 0、format:check exit 0）
+Current Plan: 40
+Total Plans in Phase: 40
+Status: Executing — 04.1-40 complete（U-35 残余：标签右间距 6px + 容器 4px 间隙 = 10px，手柄最左不再压字）；剩余 04.1-16 / 04.1-24 / 04.1-31（人工验收，含 U-35 视觉确认）
+Last activity: 2026-10-27 — 04.1-40 complete（`map.css` 的 `.emap-zoom-label` 加 `margin-right: 6px`、`.emap-zoom` 上方 208px 注释同步为 60 + 6 + 4 + 96 + 4 + 38；测试新增 `describe('地图区比例标签的右间距（U-35）')` 4 条断言；editor-impl 全量 1050 tests / 88 files exit 0、typecheck exit 0、lint exit 0、format:check exit 0）
 
 Progress: [███████░░░] 74%
 
@@ -175,6 +175,7 @@ Progress: [███████░░░] 74%
 | Phase 04.1 P37 | 9 | 2 tasks | 4 files |
 | Phase 04.1 P38 | 13 | 3 tasks | 11 files |
 | Phase 04.1 P39 | 48min | 2 tasks | 3 files |
+| Phase 04.1 P40 | 15min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -468,6 +469,7 @@ Recent decisions affecting current work:
 - [Phase 04.1]: 04.1-39: 「地图区比例」容器由固定 160px 改为 min-width: 208px（标签 60 + 双 4px 间隙 + 轨道 96 + 百分比 38 = 202，留余量）；轨道 flex: 0 0 96px、标签与百分比 flex: 0 0 auto，不再被压窄（U-35）
 - [Phase 04.1]: 04.1-39: 换行只挂第二行的独立类 .emap-toolbar-edit-row（flex-wrap: wrap / overflow: visible / height: auto），.emap-toolbar 改 min-height: 64px + height: auto；基类 .emap-toolbar-row 与第一行零改动
 - [Phase 04.1]: 04.1-39: U-35 的宽度只用静态读 CSS + DOM 类名断言钉住，不用 getBoundingClientRect / getComputedStyle / snapshot；真实像素观感由 04.1-31 人工验收
+- [Phase 04.1]: 04.1-40（U-35）：遮挡用标签右间距解决——.emap-zoom-label 加 margin-right: 6px，连同容器 4px 间隙共 10px，与 U-22 不透明度滑块同口径；轨道 96px / 百分比 38px / 容器 208px / 缩放范围与松手才发布全部不动
 
 ### Pending Todos
 
@@ -495,6 +497,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-27T05:15:20.161Z
-Stopped at: Completed 04.1-39-PLAN.md
+Last session: 2026-10-27T06:10:40.782Z
+Stopped at: Completed 04.1-40-PLAN.md
 Resume file: None
