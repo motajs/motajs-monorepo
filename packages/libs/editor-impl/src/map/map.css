@@ -273,8 +273,9 @@
   margin: 0 0 0 10px;
 }
 
-/* 「地图区比例」容器保底宽度：标签约 60px + 两个 4px 间隙 + 滑块轨道 96px + 百分比最小 38px = 202px，
-   取 208px 留余量。必须用最小宽度撑住容器，不能靠给标签加省略号「腾地方」（U-35）。 */
+/* 「地图区比例」容器保底宽度：标签约 60px + 标签右间距 6px + 两个 4px 间隙 + 滑块轨道 96px + 百分比最小 38px = 208px，
+   正好等于最小宽度。6px 是给滑块手柄留的：手柄在最左端会向轨道左侧探出约 5px，加上原有 4px 间隙共 10px，
+   与 U-22 的不透明度滑块同口径。必须用最小宽度撑住容器，不能靠给标签加省略号「腾地方」（U-35）。 */
 .emap-zoom {
   display: flex;
   flex: 0 0 auto;
@@ -283,8 +284,10 @@
   min-width: 208px;
 }
 
+/* 手柄最左端会向轨道左侧探出约 5px：标签右侧补 6px，连同容器 4px 间隙共 10px，五个字才不被压住（U-35） */
 .emap-zoom-label {
   flex: 0 0 auto;
+  margin-right: 6px;
   color: var(--editor-muted, #656d76);
   font-size: 12px;
   white-space: nowrap;
