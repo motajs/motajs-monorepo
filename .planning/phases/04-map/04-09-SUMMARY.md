@@ -46,7 +46,7 @@ coverage:
       - kind: unit
         ref: "packages/libs/editor-impl/src/shared/schemaForm/__tests__/formMode.test.tsx#TableGrid 的表单模式"
         status: pass
-      - kind: command
+      - kind: other
         ref: "pnpm --filter @motajs/editor-impl test（表格 25 个文件 / 181 个用例 + 全量 71 个文件 / 658 个用例）"
         status: pass
     human_judgment: false

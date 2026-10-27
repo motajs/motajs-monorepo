@@ -66,7 +66,7 @@ coverage:
       - kind: unit
         ref: "packages/libs/editor-core/src/shell/__tests__/shellClose.test.ts#释放外壳不询问关闭钩子"
         status: pass
-      - kind: automated
+      - kind: other
         ref: "node -e \"...unregisterPanelType body must include discardTab and must not include this.closeTab\" → unregisterPanelType uses discardTab"
         status: pass
     human_judgment: false
