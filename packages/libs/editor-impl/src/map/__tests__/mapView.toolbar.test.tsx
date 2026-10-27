@@ -814,6 +814,87 @@ describe('不透明度滑块的标签间距（U-22）', () => {
   });
 });
 
+describe('工具栏换行与地图区比例控件宽度（U-35）', () => {
+  // 容器最小宽度 = 标签 + 两个间隙 + 轨道 + 百分比（约 202px），取 208px 留余量
+  it('比例控件容器用最小宽度撑住，不再固定 160px', () => {
+    const zoom = ruleBody(mapCss, '.emap-zoom {');
+
+    expect(zoom).toBeDefined();
+    expect(zoom).toContain('min-width: 208px');
+    expect(zoom).toContain('flex: 0 0 auto');
+  });
+
+  // 轨道是 flex 子项，不写 flex-basis 时会被压缩到五十来像素
+  it('滑块轨道固定 96px 且不允许收缩', () => {
+    const slider = ruleBody(mapCss, '.emap-zoom-slider {');
+
+    expect(slider).toBeDefined();
+    expect(slider).toContain('flex: 0 0 96px');
+    expect(slider).toContain('width: 96px');
+  });
+
+  // 百分比列不参与收缩，宽度只由轨道决定
+  it('百分比列保留最小宽度且不参与收缩', () => {
+    const value = ruleBody(mapCss, '.emap-zoom-value {');
+
+    expect(value).toBeDefined();
+    expect(value).toContain('flex: 0 0 auto');
+    expect(value).toContain('min-width: 38px');
+  });
+
+  // 两行各 32px 时仍是 64px，第二行换行后允许顶栏长高
+  it('顶栏高度改为最小 64px 以便换行后长高', () => {
+    const toolbar = ruleBody(mapCss, '.emap-toolbar {');
+
+    expect(toolbar).toBeDefined();
+    expect(toolbar).toContain('height: auto');
+    expect(toolbar).toContain('min-height: 64px');
+  });
+
+  // 编辑工具行放不下时换行，且不裁剪溢出的「宽 / 高」输入框
+  it('编辑工具行允许换行并取消裁剪', () => {
+    const editRow = ruleBody(mapCss, '.emap-toolbar-edit-row {');
+
+    expect(editRow).toBeDefined();
+    expect(editRow).toContain('flex-wrap: wrap');
+    expect(editRow).toContain('height: auto');
+    expect(editRow).toContain('overflow: visible');
+  });
+
+  // 同优先级靠源顺序覆盖基类的 flex: 0 0 32px / height: 32px / overflow: hidden
+  it('换行规则写在基类行规则之后', () => {
+    const rowIndex = mapCss.indexOf('.emap-toolbar-row {');
+    const editRowIndex = mapCss.indexOf('.emap-toolbar-edit-row {');
+
+    expect(rowIndex).toBeGreaterThanOrEqual(0);
+    expect(editRowIndex).toBeGreaterThan(rowIndex);
+  });
+
+  // 只有第二行能换行；第一行是地图身份，版面保持不变
+  it('第二行带换行类而第一行不带', () => {
+    const { container } = render(<MapToolbar {...createToolbarProps({ showEditRow: true })} />);
+    const rows = container.querySelectorAll('.emap-toolbar-row');
+
+    expect(rows).toHaveLength(2);
+    expect(rows[0].classList.contains('emap-toolbar-edit-row')).toBe(false);
+    expect(rows[1].classList.contains('emap-toolbar-row')).toBe(true);
+    expect(rows[1].classList.contains('emap-toolbar-edit-row')).toBe(true);
+  });
+
+  // 只改布局：文案、百分比与滑块可用性都不变
+  it('比例控件的文案与滑块行为不变', () => {
+    render(<MapToolbar {...createToolbarProps({ onSetZoom: vi.fn() })} />);
+
+    const zoom = screen.getByTestId('map-zoom');
+    const slider = within(zoom).getByRole('slider');
+
+    expect(zoom.textContent).toContain('地图区比例');
+    expect(zoom.textContent).toContain('100%');
+    expect(slider.getAttribute('aria-valuenow')).toBe('1');
+    expect(slider.getAttribute('aria-disabled')).toBe('false');
+  });
+});
+
 interface IPanelHarness {
   /** 已初始化的编辑器核心 */
   readonly system: EditorCore;
