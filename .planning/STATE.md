@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.1"
 current_phase_name: 地图渲染与布局重做
-current_plan: 38
+current_plan: 39
 status: executing
-stopped_at: Completed 04.1-38-PLAN.md
-last_updated: "2026-10-26T14:37:23.354Z"
-last_activity: 2026-10-26
-last_activity_desc: 04.1-38 complete（U-30 / U-31 / U-32：大地图缩略对小于格子的素材允许放大以铺满、普通模式仍只缩不放；通行度先铺纯黑 0.7 视口蒙版再画 8/7 四色箭头；面板根 :focus / :focus-visible 不再画默认框；editor-impl 全量 1038 tests / 88 files exit 0，typecheck / lint / format exit 0）
-state_head: 96bf3918a57f86b3f91b06956bf950e12e0f90db
+stopped_at: Completed 04.1-39-PLAN.md
+last_updated: "2026-10-27T05:15:23.982Z"
+last_activity: 2026-10-27
+last_activity_desc: "04.1-39 complete（U-35：地图区比例容器 min-width 208px、轨道 flex 0 0 96px 不再收缩；新增 .emap-toolbar-edit-row 只挂第二行，放不下时换行、顶栏 min-height 64px 可长高；第一行与缩放行为零改动；editor-impl 全量 1046 tests / 88 files exit 0，typecheck / lint / format exit 0）"
+state_head: de13e310cf8822b770ab2a9ca144beb2abaffcd3
 progress:
   total_phases: 9
   completed_phases: 0
-  total_plans: 160
-  completed_plans: 156
+  total_plans: 161
+  completed_plans: 157
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,10 +30,10 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 04.1 (地图渲染与布局重做) — EXECUTING
-Current Plan: 38
-Total Plans in Phase: 38
-Status: Executing — 04.1-38 complete（U-30 / U-31 / U-32：缩略允许放大铺满、通行度纯黑蒙版 + 更大箭头、面板根去掉默认聚焦框）；剩余 04.1-16 / 04.1-24 / 04.1-31（人工验收，含 U-30…U-32）
-Last activity: 2026-10-26 — 04.1-38 complete（`cellMetrics.ts` 的 `resolveTileDest` 增可选 `allowUpscale`；`renderModel.ts` 的 `createRenderCell` 透传、仅 `buildThumbnailCells` 开启；`constants.ts` 新增 `MAP_PASS_OVERLAY_COLOR` / `MAP_PASS_OVERLAY_ALPHA` 并把箭头头部改为 8 / 3.5；`passability.ts` 新增 `resolvePassOverlayRect`；`MapSurface.drawPassMarks` 先画蒙版再画标记；`map.css` 压掉面板根 outline；editor-impl 全量 1038 tests / 88 files exit 0、typecheck exit 0、lint exit 0、format:check exit 0）
+Current Plan: 39
+Total Plans in Phase: 39
+Status: Executing — 04.1-39 complete（U-35：比例控件保底 208px + 第二行换行、顶栏可长高）；剩余 04.1-16 / 04.1-24 / 04.1-31（人工验收，含 U-35）
+Last activity: 2026-10-27 — 04.1-39 complete（`map.css` 的 `.emap-zoom` 改 `min-width: 208px`、`.emap-zoom-slider` 加 `flex: 0 0 96px`、标签与百分比加 `flex: 0 0 auto`；`.emap-toolbar` 改 `min-height: 64px` + `height: auto`；新增 `.emap-toolbar-edit-row` 并只挂 `MapToolbar` 第二行；editor-impl 全量 1046 tests / 88 files exit 0、typecheck exit 0、lint exit 0、format:check exit 0）
 
 Progress: [███████░░░] 74%
 
@@ -174,6 +174,7 @@ Progress: [███████░░░] 74%
 | Phase 04.1 P36 | 10min | 2 tasks | 6 files |
 | Phase 04.1 P37 | 9 | 2 tasks | 4 files |
 | Phase 04.1 P38 | 13 | 3 tasks | 11 files |
+| Phase 04.1 P39 | 48min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -464,6 +465,9 @@ Recent decisions affecting current work:
 - [Phase 04.1]: 大地图缩略允许放大用显式开关（resolveTileDest allowUpscale 默认 false），普通模式继续只缩不放，保住 D-57 共用逐格逻辑。
 - [Phase 04.1]: 通行度叠加层先铺纯黑 0.7 整块视口蒙版再画箭头；箭头头部常量 8/3.5，32×32 实际头长受全长一半夹取为 7.5px，四向仍不重叠。
 - [Phase 04.1]: 面板根只压自身 outline（:focus / :focus-visible），不写全局 *:focus，真实控件 :focus-visible 保留。
+- [Phase 04.1]: 04.1-39: 「地图区比例」容器由固定 160px 改为 min-width: 208px（标签 60 + 双 4px 间隙 + 轨道 96 + 百分比 38 = 202，留余量）；轨道 flex: 0 0 96px、标签与百分比 flex: 0 0 auto，不再被压窄（U-35）
+- [Phase 04.1]: 04.1-39: 换行只挂第二行的独立类 .emap-toolbar-edit-row（flex-wrap: wrap / overflow: visible / height: auto），.emap-toolbar 改 min-height: 64px + height: auto；基类 .emap-toolbar-row 与第一行零改动
+- [Phase 04.1]: 04.1-39: U-35 的宽度只用静态读 CSS + DOM 类名断言钉住，不用 getBoundingClientRect / getComputedStyle / snapshot；真实像素观感由 04.1-31 人工验收
 
 ### Pending Todos
 
@@ -491,6 +495,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-26T14:37:22.774Z
-Stopped at: Completed 04.1-38-PLAN.md
+Last session: 2026-10-27T05:15:20.161Z
+Stopped at: Completed 04.1-39-PLAN.md
 Resume file: None
