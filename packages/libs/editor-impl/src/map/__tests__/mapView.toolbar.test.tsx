@@ -895,6 +895,49 @@ describe('工具栏换行与地图区比例控件宽度（U-35）', () => {
   });
 });
 
+describe('地图区比例标签的右间距（U-35）', () => {
+  // 手柄最左端会向轨道左侧探出约 5px：标签右侧必须有 6px 外边距，连同容器 4px 间隙共 10px
+  it('标签右侧留出 6px 外边距且不换行不压缩', () => {
+    const label = ruleBody(mapCss, '.emap-zoom-label {');
+
+    expect(label).toBeDefined();
+    expect(label).toContain('margin-right: 6px');
+    expect(label).toContain('flex: 0 0 auto');
+    expect(label).toContain('white-space: nowrap');
+  });
+
+  // 6px 标签右间距 + 容器 4px 间隙 = 10px；容器宽度仍由 208px 撑住，这次不用改
+  it('容器保持 4px 间隙与 208px 最小宽度', () => {
+    const zoom = ruleBody(mapCss, '.emap-zoom {');
+
+    expect(zoom).toBeDefined();
+    expect(zoom).toContain('gap: 4px');
+    expect(zoom).toContain('min-width: 208px');
+  });
+
+  // 这次只加标签间距：轨道仍是 96px 且不允许收缩
+  it('滑块轨道仍是 96px 且不允许收缩', () => {
+    const slider = ruleBody(mapCss, '.emap-zoom-slider {');
+
+    expect(slider).toBeDefined();
+    expect(slider).toContain('flex: 0 0 96px');
+    expect(slider).toContain('width: 96px');
+  });
+
+  // 间距正好落在标签与轨道之间：标签文案是「地图区比例」，紧邻的下一个兄弟就是滑块轨道
+  it('标签紧邻在滑块轨道之前', () => {
+    render(<MapToolbar {...createToolbarProps({ showEditRow: true })} />);
+
+    const label = screen.getByTestId('map-zoom').querySelector('.emap-zoom-label');
+    const next = label!.nextElementSibling;
+
+    expect(label).not.toBeNull();
+    expect(label!.textContent).toBe('地图区比例');
+    expect(next).not.toBeNull();
+    expect(next!.classList.contains('emap-zoom-slider')).toBe(true);
+  });
+});
+
 interface IPanelHarness {
   /** 已初始化的编辑器核心 */
   readonly system: EditorCore;
