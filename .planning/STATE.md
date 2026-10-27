@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.1"
 current_phase_name: 地图渲染与布局重做
-current_plan: 40
-status: executing
-stopped_at: Completed 04.1-40-PLAN.md
-last_updated: "2026-10-27T06:10:41.444Z"
+current_plan: 31
+status: phase complete
+stopped_at: Completed 04.1-31-PLAN.md（Phase 04.1 收口）
+last_updated: "2026-10-27T06:35:00.000Z"
 last_activity: 2026-10-27
-last_activity_desc: 04.1-40 complete（U-35 残余：.emap-zoom-label 加 margin-right: 6px，连同容器 gap: 4px 共 10px，滑块手柄最左端不再压住「地图区比例」；同步 208px 取值注释；轨道 96px / 百分比 38px / 容器 208px / 缩放行为零改动；新增 4 条静态与 DOM 断言；editor-impl 全量 1050 tests / 88 files exit 0，typecheck / lint / format exit 0）
-state_head: d645283c70f057b4eee3b2c2c522ed7f7d07ee24
+last_activity_desc: Phase 04.1 收口（04.1-31 complete）——12 条机器门禁全绿（lint 0 error、format 全过、editor-core 106 / editor-impl 1050 / editor-dev 98 例、三个 typecheck 与四条结构门禁 exit 0）；U-01…U-35 三十五条人工判据全部通过（U-33 / U-34 仅用户口头确认，仓库无正文）；G-04-1 / G-04-2 / G-04-3 收口；ROADMAP 记 40/40（38 已执行 + 2 被取代），04.1-16 / 04.1-24 标注 superseded by 04.1-31 且无 SUMMARY；新建地图 / 新增图层 / 地图属性与 alias / zIndex 仍未验收
+state_head: 90b9f07e59675bfd4a90dba2b886ddd5e3efaa35
 progress:
   total_phases: 9
-  completed_phases: 0
+  completed_phases: 6
   total_plans: 162
-  completed_plans: 158
+  completed_plans: 159
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -25,15 +25,16 @@ milestone_name: editor-core 空壳 + editor-impl 重做
 See: .planning/PROJECT.md (updated 2026-10-09)
 
 **Core value:** 把编辑器内核与引擎细节彻底解耦——`editor-core` 只给接口、`editor-impl` 写默认实现，让新旧引擎共用同一套编辑能力，第三方可高自由度定制。
-**Current focus:** Phase 4.1 — map-render-layout
+**Current focus:** Phase 4.1 — map-render-layout（已收口）；下一步 Phase 5 — 代码编辑
 
 ## Current Position
 
-Phase: 04.1 (地图渲染与布局重做) — EXECUTING
-Current Plan: 40
-Total Plans in Phase: 40
-Status: Executing — 04.1-40 complete（U-35 残余：标签右间距 6px + 容器 4px 间隙 = 10px，手柄最左不再压字）；剩余 04.1-16 / 04.1-24 / 04.1-31（人工验收，含 U-35 视觉确认）
-Last activity: 2026-10-27 — 04.1-40 complete（`map.css` 的 `.emap-zoom-label` 加 `margin-right: 6px`、`.emap-zoom` 上方 208px 注释同步为 60 + 6 + 4 + 96 + 4 + 38；测试新增 `describe('地图区比例标签的右间距（U-35）')` 4 条断言；editor-impl 全量 1050 tests / 88 files exit 0、typecheck exit 0、lint exit 0、format:check exit 0）
+Phase: 04.1 (地图渲染与布局重做) — **COMPLETE（2026-10-27）**
+Current Plan: 31（阶段收口计划，已完成）
+Total Plans in Phase: 40（38 已执行 + 2 被取代：`04.1-16` / `04.1-24`）
+Status: Phase complete — 触发收口的是 `04.1-31`（12 条机器门禁全绿 + U-01…U-35 三十五条人工判据全部通过）；仍欠用户验收：新建地图 / 新增图层 / 地图属性三条流程，以及有意搁置的 alias / zIndex
+Next phase: **Phase 5 — 代码编辑（Monaco）**（ROADMAP 依赖 Phase 1；尚未开始）
+Last activity: 2026-10-27 — `04.1-31` complete（机器门禁：lint 0 error / 186 条既有 warning、format:check 全过、`editor-core` 106 例、`editor-impl` 1050 例 / 88 个文件、`editor-dev` 98 例、三个包 typecheck 与 `coreEngineNeutral` / `coreModuleState` / `coreImportType` / `coreBoundaries` 四条结构门禁 exit 0；人工：U-01…U-35 全部通过，其中 U-33 / U-34 仅用户口头确认且仓库内无正文；文档：ROADMAP 记 40/40 = 38 已执行 + 2 被取代，`04.1-16` / `04.1-24` 没有 SUMMARY 也不声称通过）
 
 Progress: [███████░░░] 74%
 
@@ -176,6 +177,7 @@ Progress: [███████░░░] 74%
 | Phase 04.1 P38 | 13 | 3 tasks | 11 files |
 | Phase 04.1 P39 | 48min | 2 tasks | 3 files |
 | Phase 04.1 P40 | 15min | 2 tasks | 2 files |
+| Phase 04.1 P31 | 10min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -470,6 +472,12 @@ Recent decisions affecting current work:
 - [Phase 04.1]: 04.1-39: 换行只挂第二行的独立类 .emap-toolbar-edit-row（flex-wrap: wrap / overflow: visible / height: auto），.emap-toolbar 改 min-height: 64px + height: auto；基类 .emap-toolbar-row 与第一行零改动
 - [Phase 04.1]: 04.1-39: U-35 的宽度只用静态读 CSS + DOM 类名断言钉住，不用 getBoundingClientRect / getComputedStyle / snapshot；真实像素观感由 04.1-31 人工验收
 - [Phase 04.1]: 04.1-40（U-35）：遮挡用标签右间距解决——.emap-zoom-label 加 margin-right: 6px，连同容器 4px 间隙共 10px，与 U-22 不透明度滑块同口径；轨道 96px / 百分比 38px / 容器 208px / 缩放范围与松手才发布全部不动
+- [Phase 04.1]: 04.1-31：阶段收口只写文档、不改业务代码——12 条机器门禁结论与 U-01…U-35 判据结论落在 `04.1-31-SUMMARY.md`，同步 ROADMAP / STATE 三份文件
+- [Phase 04.1]: 04.1-31：U-33 / U-34 只记「用户口头确认」——仓库内没有这两条的正文、截图或复现步骤，宁可写得少也不虚构证据
+- [Phase 04.1]: 04.1-31：`04.1-16` / `04.1-24` 不做假 SUMMARY、不声称通过；ROADMAP 打勾并注明「superseded by 04.1-31；其人工判据已被取代」，两份 PLAN 的 frontmatter 无 `status` 字段故未改动
+- [Phase 04.1]: 04.1-31：阶段计数按「计划关闭」记 40/40（38 已执行 + 2 被取代），不按磁盘 SUMMARY 数量记 38/40——后者会把两个作废计划算成欠账，补假 SUMMARY 迎合工具才是错的
+- [Phase 04.1]: 04.1-31：新建地图 / 新增图层 / 地图属性三条流程与 alias / zIndex 两项搁置单列「未验收」一节，不计入 35 条判据，也不得被后续阶段当成已完成
+- [Phase 04.1]: 04.1-31：Phase 04.1 收口为 Complete（2026-10-27）；下一步 Phase 5（代码编辑），Phase 4 本身仍是 16/17（`04-14` 未执行）
 
 ### Pending Todos
 
@@ -497,6 +505,7 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-27T06:10:40.782Z
-Stopped at: Completed 04.1-40-PLAN.md
+Last session: 2026-10-27T06:35:00.000Z
+Stopped at: Completed 04.1-31-PLAN.md（Phase 04.1 收口）
 Resume file: None
+Next action: 简报并规划 / 执行 Phase 5（代码编辑）——需用户先批准；Phase 04.1 已 Complete，本阶段不再有待办计划
