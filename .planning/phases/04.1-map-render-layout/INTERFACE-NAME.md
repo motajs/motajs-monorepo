@@ -707,6 +707,70 @@
 
 ---
 
+## Plan 36 — 面板键盘与帧数默认（U-26 / U-27）
+
+**要做什么：** 让数字键 `1` / `2`..`9` / `0` 在整个地图面板内都生效——面板根变成可聚焦，点面板空白处把焦点落到根上；点输入框 / 按钮 / 画布 / 滑块手柄时不抢焦点。同时把素材区「显示帧数」的默认状态改成打开。**不新增任何接口字段。**
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `ownsKeyboardFocus` | 自由函数（新，`components/MapPanelView.tsx`） | 判断一个事件落点**自己会不会拿焦点**：输入框 / 文本域 / 下拉 / contenteditable，或 `closest` 到 `input, textarea, select, button, a[href], [tabindex], [contenteditable]` 的祖先。为 `true` 时面板根不抢焦点。与既有的 `isTypingTarget`（回答「在打字吗」）**并存不合并**——前者判焦点归属，后者判要不要拦截按键（U-26） |
+| `handlePanelPointerDown` | 组件内局部函数（新，`MapPanelView.tsx`） | 面板根的 `pointerdown`：控件自有焦点 → 不动；焦点已在面板内 → 不动（保护滑块手柄与按钮）；否则把焦点落到面板根（`preventScroll`）。这是「点空白处之后数字键才生效」的开关（U-26） |
+| 面板根 `tabIndex={-1}` | 属性（新，`MapPanelView.tsx` 的 `data-test-id="map-panel"` 元素） | 让面板根可以被**程序化聚焦**但不进 Tab 顺序；配合上面的 `pointerdown` 使用。不加可见聚焦样式（程序化聚焦不触发 `:focus-visible`）（U-26） |
+| `MAP_SHOW_FRAME_COUNT_DEFAULT` | 常量（新，`constants.ts`，`true`） | 素材区「显示帧数」角标的默认状态。面板初始视图状态、视图层缺省回退与测试三处都读它，是默认值的唯一来源（U-27） |
+
+---
+
+## Plan 37 — 大地图缩略逐格渲染（U-28 / U-29）
+
+**要做什么：** 大地图的缩略纹理不再「每格贴一张整格裁切」，而是吃「与普通模式同一套逐格数据」：自动元件拆四块、大 / 小素材按 `contain` 摆放、只用第 0 帧。**不新增接口类型**——缩略格子复用既有的 `IMapRenderCell` / `IMapAutotileQuarters`。
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `buildThumbnailCells` | 自由函数（新，`model/renderModel.ts`） | 把整份文档按缩略纹理的像素尺寸算成「要铺的格子」：`buildThumbnailCells(document, textureWidth, textureHeight, currentLayerId, aboveLayerOpacity)` → `readonly IMapRenderCell[]`。每格像素 = 纹理边长 ÷ 格数；逐层（zIndex 升序）复用 `createRenderCell`，因此自动元件四块、`contain` 目标矩形、帧信息与普通模式**逐个相等**；跳过空格与目录外编号；非法尺寸返回空数组。返回既有类型，**不新增接口**（U-28 / U-29 / D-57） |
+| `MAP_BIG_MAP_AUTOTILE_CELL` | 常量（新，`constants.ts`，`4`） | 大地图缩略里一格的像素边长**小于**它时，自动元件不再拆四块（四块各不足 2px，辨不出，而图元数会翻四倍）。只限制四块展开，`contain` 不受影响。命名与既有 `MAP_BIG_MAP_DOT_CELL` 同族（U-28 / D-57） |
+| `paintThumbnailCells` | 私有函数（新，`components/MapSurface.tsx`） | 把 `buildThumbnailCells` 的结果铺进离屏容器：每格取图片纹理 → `resolveCellFrameCrops`（自动元件 4 块 / 其余 1 块，帧号固定为第 0 帧或条目固定帧）→ `createCellSprites`（复用普通模式的象限拆分）（U-28） |
+| `resolveCropTextures` | 私有函数（新，`components/MapSurface.tsx`） | 取一组裁切纹理，按「图片路径 + `crop` 的 x / y / width / height」缓存并共享：同一图块、同一连接的许多格子只建一张纹理；新建的纹理推进 `created`，在缩略构建末尾统一销毁（U-28 的性能口径） |
+| `collectThumbnailTiles` / `resolveThumbnailTileTexture` / `paintThumbnailLayers` | 私有函数（**删除**，`components/MapSurface.tsx`） | 旧的「每格一张整格裁切」缩略路径，正是 U-28 的根因；保留任何一份都会让大地图重新绕过逐格管线 |
+
+---
+
+## Plan 38 — 小地图缩略铺满、通行度蒙版与面板聚焦框（U-30 / U-31 / U-32）
+
+**要做什么：** 让大地图缩略允许把小于格子的图块放大到铺满（普通模式仍然只缩不放）；给通行度叠加层先铺一层 0.7 纯黑蒙版再画更大的四色箭头；压掉面板根自己的浏览器默认聚焦框。**不新增任何接口字段。**
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `resolveTileDest` 的 `allowUpscale` | 自由函数**末尾可选参数**（`boolean`，默认 `false`；本计划新增，不是接口字段） | 为 `true` 时允许把小于格子的素材放大到贴满格；只给 `buildThumbnailCells`（大地图缩略）用。普通模式必须保持 `false`，32×32 源图块放进 52×52 格子仍居中留 10px（U-30） |
+| `createRenderCell` 的 `allowUpscale` | 模块私有函数**末尾可选参数**（`boolean`，默认 `false`） | 把上面这个开关从缩略路径透传给 `resolveTileDest`；`buildWindowModel` 不传、`buildThumbnailCells` 传 `true`。私有参数，不进入任何接口（U-30） |
+| `MAP_PASS_OVERLAY_COLOR` | 常量（新，`constants.ts`，`0x000000`） | 通行度叠加层的纯黑蒙版颜色；先铺蒙版再画箭头（U-31） |
+| `MAP_PASS_OVERLAY_ALPHA` | 常量（新，`constants.ts`，`0.7`） | 纯黑蒙版的不透明度，约 0.7（U-31） |
+| `resolvePassOverlayRect` | 自由函数（新，`model/passability.ts`） | 返回蒙版要铺的整块矩形 `{ x: 0, y: 0, width: canvasWidth, height: canvasHeight }`；宽高非有限正数时返回全 0。覆盖范围是**整个地图视口**（正常模式 = 画布宽高，大地图 = 整个画布），不是只覆盖有标记的格子（U-31 / OQ18） |
+| `MAP_PASS_ARROW_HEAD_LENGTH` | 常量**改值**（`6` → `8`） | 通行度箭头头部沿方向占的长度；比原来大约 2px，仍保证 32×32 格内四支箭头互不重叠（U-31） |
+| `MAP_PASS_ARROW_HEAD_HALF_WIDTH` | 常量**改值**（`2.5` → `3.5`） | 箭头头部的一半宽度；整头宽从 5px 改成 7px，比原来大约 2px（U-31） |
+| `.emap-panel:focus` / `.emap-panel:focus-visible` | CSS 规则（新，`map.css`） | 面板根只用于接住数字键焦点（`tabIndex=-1`），不是可操作控件，所以不画浏览器默认聚焦框；只作用于面板根自身，输入框 / 按钮 / 画布 / 菜单项的 `:focus-visible` 一律不动（U-32） |
+| `declare module '*?raw'` | 类型声明（新，`src/global.d.ts`） | 让测试能以字符串读取 `MapSurface.tsx` 源码，静态断言「蒙版命令先于标记循环」；只给测试用，不是运行时 API（U-31） |
+
+> **命名确认说明：** 以上名称均为提案，用户确认后方可写进代码；若改名，只同步本表与 `04.1-38-PLAN.md`。本计划**不新增接口字段**：`allowUpscale` 是函数签名变化，`*?raw` 是测试声明。
+
+---
+
+## Plan 39 — 工具栏换行与地图区比例控件宽度（U-35）
+
+**要做什么：** 给顶栏第二行的「地图区比例」控件定住最小宽度、让滑块轨道不再被压窄；第二行放不下时整行换行、顶栏变高，而不是继续压缩比例控件。**不新增任何接口字段、props、常量或 `data-test-id`，只加一个 CSS 类名。**
+
+| 名称 | 种类 | 用途 |
+|------|------|------|
+| `.emap-toolbar-edit-row` | CSS 类（新，`map.css`；只挂在 `MapToolbar` 的第二行） | 让「编辑工具」这一行在放不下时换行、并允许顶栏长高：`flex-wrap: wrap` + `height: auto` + `min-height: 32px` + `overflow: visible`。它必须写在 `.emap-toolbar-row` 之后，靠源顺序覆盖基类的 `flex: 0 0 32px` / `height: 32px` / `overflow: hidden`；第一行不挂这个类，所以顶栏第一行仍然单行（U-35） |
+| `.emap-zoom` | CSS 类（语义变更，`map.css`） | 由「固定 `width: 160px`」改成「`min-width: 208px`」：208 = 标签「地图区比例」约 60px + 两个 4px 间隙 + 滑块 96px + 百分比最小 38px（202px）再加余量。这是「比例控件不被别的控件压窄」的唯一落点（U-35） |
+| `.emap-zoom-slider` | CSS 类（语义变更，`map.css`） | 由「只有 `width: 96px`」改成「`flex: 0 0 96px` + `width: 96px`」：它作为 flex 子项默认允许收缩，正是轨道被压到约 54px 的直接原因（U-35） |
+| `.emap-zoom-label` / `.emap-zoom-value` | CSS 类（语义变更，`map.css`） | 各加 `flex: 0 0 auto`：标签与百分比不参与收缩，宽度只让滑块轨道决定（U-35） |
+| `.emap-toolbar` | CSS 类（语义变更，`map.css`） | 由「固定 `flex: 0 0 64px` + `height: 64px`」改成「`flex: 0 0 auto` + `height: auto` + `min-height: 64px`」：两行各 32px 时仍是 64px，第二行换行后自然长高（U-35） |
+| `MapToolbar` 第二行的 `className` | 属性值（`MapToolbar.tsx`，`emap-toolbar-row` + `emap-toolbar-edit-row`） | 把换行规则挂到唯一需要换行的那一行；其余 JSX、props、`data-test-id` 一律不动（U-35） |
+
+> **命名确认说明：** 以上名称均为提案，用户确认后方可写进代码；若改名，只同步本表与 `04.1-39-PLAN.md`。本计划**只有一个新名字** `.emap-toolbar-edit-row`（CSS 类），其余都是既有类名的语义修订；**不新增接口字段、props、TS 常量或 `data-test-id`**，`MapZoomSlider.tsx` 与 `constants.ts` 不在改动范围内。
+
+---
+
 ## 开放问题口径
 
 > 与 Phase 4 不同，本阶段进入规划时仍有未定项。三条「用户确认」已在 §全局口径 锁定；下表是其余各项的执行口径。
@@ -730,6 +794,7 @@
 | OQ15 地图区尺寸以什么为基准 | **已定（用户，第二轮）** | 以 **32×32** 为基准：画布 = 格数 × 32 × 缩放，与地图声明的 `cellWidth/cellHeight` 无关；声明格尺寸仍用于素材切分、`contain` 的源尺寸与文档数据（D-39）。 |
 | OQ16 `activeCategory` 与 Tileset 视图的关系 | **已定（用户，第四轮）** | `activeCategory === Tileset` 即 Tileset 视图；`tilesetOpen` 一族（视图状态字段、面板方法 `MapPanel.toggleTileset`、三处 props、`map-tileset-toggle` 测试标识）全部删除（D-47）。 |
 | OQ17 图集高度以什么为准 | **已定（用户，第六轮）** | 来源图片的真实行数：宿主按「图片高 ÷ 素材格高」填 `IMapTileGroup.rows`，缺省才退回「目录最大行号 + 1」（D-54）。 |
+| OQ18 通行度蒙版盖住哪里 | **已定（用户，第八轮）** | 盖**整个地图视口**：正常模式 = 整个画布，大地图 = 整个画布；不是只盖有标记的格子。理由是「先蒙版、再显示箭头」且整块压暗不会出现斑驳的补丁感；蒙版纯黑、不透明度约 0.7，画在箭头下面（U-31）。 |
 
 ---
 
@@ -745,3 +810,7 @@
 8. **第五轮新增的三个类名**（`.emap-tileset-row` 横向排布容器、`.emap-tileset-block` 单块、`.emap-tileset-block + .emap-tileset-block` 的竖线规则）—— **reversible**：只在 `map.css` 与 `MapMaterialPanel.tsx` 内部使用，改名只影响本文件的登记与一个计划的文案（D-52 修订）。
 9. **第六轮新增的七个名字与三处收缩**（`resolveGroupAtlasRect`、`resolveTileBackgroundStyle`、`MAP_MATERIAL_CELL_SIZE`、`resolveFavoriteSlotIndex`、`resolvePassArrowLength`、`resolvePassArrowHeadLength`、`.emap-ruler-line`；常量 `MAP_PASS_ARROW_HEAD_LENGTH` / `MAP_PASS_ARROW_HEAD_HALF_WIDTH`；以及删除 `IMapCanvasProps.onSelectFavoriteSlot`、三个组件里的图集尺寸 / 偏移私有函数）—— **reversible**：全部是 `editor-impl` 内部的纯函数、常量与 CSS 类，改名只影响本文件与 `04.1-32` / `04.1-33` 的文案；删除的画布回调不改变任何对外 props（U-19 / U-23 / U-24）。
 10. **`IMapTileGroup.rows` 这个可选字段名与「图集高度取自来源图片真实行数」的口径** —— **costly**：这是宿主目录契约的新增字段，所有宿主实现都要填；改名要同步宿主与测试。
+11. **第七轮新增的四个名字与三处删除**（`ownsKeyboardFocus`、`handlePanelPointerDown`、`buildThumbnailCells`、`paintThumbnailCells` / `resolveCropTextures`；常量 `MAP_SHOW_FRAME_COUNT_DEFAULT` / `MAP_BIG_MAP_AUTOTILE_CELL`；删除 `collectThumbnailTiles` / `resolveThumbnailTileTexture` / `paintThumbnailLayers`；面板根加 `tabIndex={-1}`）—— **reversible**：全部是 `editor-impl` 内部的纯函数、私有函数、常量与一个 DOM 属性，改名只影响本文件与 `04.1-36` / `04.1-37` 的文案；**不新增任何接口字段**（缩略格子复用既有 `IMapRenderCell`，因此不需要单独的接口声明计划）。
+12. **U-28 的帧与上限口径**（大地图缩略只用第 0 帧；每格小于 4px 时不拆四块但 `contain` 仍生效；「因四块展开而增加」的图元数上界 65,536，「每格一个图元」的既有口径不变）—— **reversible**：只影响大地图的绘制输入，不动数据模型、不动 `buildThumbnail` 的尺寸 / 偏移 / 重建判据。
+13. **第八轮新增的名字与三条口径**（`resolveTileDest` 的可选参数 `allowUpscale`、`MAP_PASS_OVERLAY_COLOR` / `MAP_PASS_OVERLAY_ALPHA`、`resolvePassOverlayRect`、箭头头部常量改值 8 / 3.5、`.emap-panel:focus` / `:focus-visible` 无轮廓、测试用 `*?raw` 声明；蒙版覆盖整个视口）—— **reversible**：全部是 `editor-impl` 内部的函数参数、常量与 CSS 规则，改名只影响本文件与 `04.1-38` 的文案；**不新增任何接口字段**（U-30 / U-31 / U-32）。
+14. **第九轮新增的一个类名与四处宽度口径**（`.emap-toolbar-edit-row`；`.emap-zoom` 最小宽度 208px、`.emap-zoom-slider` 不收缩、`.emap-zoom-label` / `.emap-zoom-value` 不收缩、`.emap-toolbar` 可增高）—— **reversible**：只在 `map.css` 与 `MapToolbar.tsx` 内部使用，改名只影响本文件与 `04.1-39` 的文案；**不新增接口字段、props、TS 常量或 `data-test-id`**，`MapZoomSlider.tsx` 与 `constants.ts` 不动（U-35）。
