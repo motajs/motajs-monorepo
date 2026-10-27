@@ -497,6 +497,18 @@ Then **wait for explicit user approval** before executing the next plan. Never c
 
 **实施层批量批准例外（2026-10-13 追加）：** 获批区间内，每个计划完成后仍须**照常汇报 ①②**，但**无需等待批准即可继续下一个计划**；到达区间终点、或出现偏差/阻塞时停下并等用户指示。
 
+### UAT feedback requires an explicit pause before planning (MANDATORY)
+
+When the user reports UAT results, manual-acceptance findings, or any bug/UX feedback, the orchestrator MUST **NOT start planning immediately** — no gap-closure planning, no plan revision, no file-changing workflow.
+
+Instead:
+
+1. **Restate the feedback** in plain language — list every issue heard, with its suspected root cause if known.
+2. **Ask whether the feedback is complete** — the user may still be adding items.
+3. **Wait for explicit authorization to plan** (e.g. 「可以开始规划」 / 「反馈完了」). Only then may planning begin.
+
+This applies to **all UAT rounds and all incremental feedback**, including cases where the user says "这些都是严重问题需要调整" — that states the problem, not that the feedback list is final.
+
 ### Important naming requires prior confirmation (MANDATORY)
 
 Any **important naming** — file names, interface names, method names, function names, type names, package names, exported symbol names — MUST be reported to the user and confirmed **before** it is written into code, plans, or config. Internal local variables (`let`/`const` temporaries declared inside a function body) are exempt.
