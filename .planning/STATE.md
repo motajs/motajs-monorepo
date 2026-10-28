@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.2"
 current_phase_name: 面板内容解耦与文件资源管理器
-current_plan: 1
+current_plan: 2
 status: executing
-stopped_at: 04.2-01 complete（命名已确认，2 个任务提交）
-last_updated: "2026-10-28T07:20:48.176Z"
+stopped_at: Completed 04.2-02-PLAN.md
+last_updated: "2026-10-28T07:35:35.417Z"
 last_activity: 2026-10-28
 last_activity_desc: Phase 04.2 execution started
-state_head: 2de4cfbb50da76c820156a7e4683d62d088879d0
+state_head: a599bd466385d22a0e46278fd46e5b5b64e5a0dd
 progress:
   total_phases: 10
   completed_phases: 0
   total_plans: 180
-  completed_plans: 160
+  completed_plans: 161
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,9 +30,9 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 04.2 (面板内容解耦与文件资源管理器) — EXECUTING
-Current Plan: 1
+Current Plan: 2
 Total Plans in Phase: 18
-Status: Executing Phase 04.2
+Status: Ready to execute
 Next phase: Phase 04.2 — 面板内容解耦与文件资源管理器（设计重构）；先讨论，再规划接口
 Last activity: 2026-10-28 — Phase 04.2 execution started
 
@@ -178,6 +178,7 @@ Progress: [███████░░░] 74%
 | Phase 04.1 P39 | 48min | 2 tasks | 3 files |
 | Phase 04.1 P40 | 15min | 2 tasks | 2 files |
 | Phase 04.1 P31 | 10min | 2 tasks | 3 files |
+| Phase 04.2 P02 | 8 min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -478,6 +479,8 @@ Recent decisions affecting current work:
 - [Phase 04.1]: 04.1-31：阶段计数按「计划关闭」记 40/40（38 已执行 + 2 被取代），不按磁盘 SUMMARY 数量记 38/40——后者会把两个作废计划算成欠账，补假 SUMMARY 迎合工具才是错的
 - [Phase 04.1]: 04.1-31：新建地图 / 新增图层 / 地图属性三条流程与 alias / zIndex 两项搁置单列「未验收」一节，不计入 35 条判据，也不得被后续阶段当成已完成
 - [Phase 04.1]: 04.1-31：Phase 04.1 收口为 Complete（2026-10-27）；下一步 Phase 5（代码编辑），Phase 4 本身仍是 16/17（`04-14` 未执行）
+- [Phase 04.2]: 04.2-02: 变化流只挂在 IEditorFileSystem.watch? 一条注入路径上，不引入独立 IEditorFileWatcher
+- [Phase 04.2]: 04.2-02: onBeforeClose / onUpdateResource 一字不改；新增成员一律 optional，接口波次零行为改动
 
 ### Pending Todos
 
@@ -506,7 +509,7 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-28T07:20:47.454Z
-Stopped at: 04.2-01 complete（命名已确认，2 个任务提交）
-Resume file: .planning/phases/04.2-panel-content-decoupling/04.2-02-PLAN.md
+Last session: 2026-10-28T07:35:34.858Z
+Stopped at: Completed 04.2-02-PLAN.md
+Resume file: None
 Next action: 简报并规划 / 执行 Phase 5（代码编辑）——需用户先批准；Phase 04.1 已 Complete，本阶段不再有待办计划
