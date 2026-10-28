@@ -1,5 +1,5 @@
 import { EditorCore } from '../core';
-import { EditorEntryKind, IEditorDirectoryEntry, IEditorFileSystem } from '../fs';
+import { EditorEntryKind, EditorFileChangeKind, IEditorDirectoryEntry, IEditorFileChange, IEditorFileSystem } from '../fs';
 
 // 共享测试替身：内存文件系统与装配工厂。供 editor-core / editor-impl / editor-dev 复用，收敛迁移期的改动面。
 
@@ -66,6 +66,10 @@ export class FakeFileSystem implements IEditorFileSystem {
   readonly failing: Set<string> = new Set();
   /** 读取 / 写入时应永久挂起的路径集合 */
   readonly hanging: Set<string> = new Set();
+  /** 写入 / 删除 / 移动成功后是否自动向订阅者发事件；默认关闭，避免既有用例凭空多出通知 */
+  emitOnWrite: boolean = false;
+  /** 变化流订阅者集合 */
+  private readonly watchers: Set<(change: IEditorFileChange) => void> = new Set();
 
   /**
    * 预置一个文件路径的初始内容，并保证其各级父目录可被列出
@@ -142,11 +146,45 @@ export class FakeFileSystem implements IEditorFileSystem {
     this.content.delete(source);
     this.content.set(destination, value);
     this.registerParents(destination);
+    this.notifyChange({ path: source, kind: EditorFileChangeKind.Delete });
+    this.notifyChange({ path: destination, kind: EditorFileChangeKind.Add });
   }
 
   async deleteFile(path: string): Promise<void> {
     this.assertInBounds(path);
     this.content.delete(path);
+    this.notifyChange({ path, kind: EditorFileChangeKind.Delete });
+  }
+
+  /**
+   * 订阅文件变化流
+   * @param listener 变化回调
+   * @returns 退订函数
+   */
+  watch(listener: (change: IEditorFileChange) => void): () => void {
+    this.watchers.add(listener);
+
+    return (): void => {
+      this.watchers.delete(listener);
+    };
+  }
+
+  /**
+   * 手工向全部订阅者发出一条变化事件
+   * @param change 变化事件
+   */
+  emit(change: IEditorFileChange): void {
+    for (const listener of this.watchers) listener(change);
+  }
+
+  /**
+   * 按显式开关决定是否把一次成功操作转成变化事件
+   * @param change 变化事件
+   */
+  private notifyChange(change: IEditorFileChange): void {
+    if (!this.emitOnWrite) return;
+
+    this.emit(change);
   }
 
   /**
@@ -178,8 +216,11 @@ export class FakeFileSystem implements IEditorFileSystem {
     if (this.hanging.has(path)) return new Promise<void>(() => {});
     if (this.failing.has(path)) throw new Error(`fake fs: write failed: ${path}`);
 
+    const existed = this.content.has(path);
+
     this.content.set(path, data);
     this.registerParents(path);
+    this.notifyChange({ path, kind: existed ? EditorFileChangeKind.Change : EditorFileChangeKind.Add });
   }
 
   /**
