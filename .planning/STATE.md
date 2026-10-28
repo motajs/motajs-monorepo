@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.2"
 current_phase_name: 面板内容解耦与文件资源管理器
-current_plan: 2
+current_plan: 3
 status: executing
-stopped_at: Completed 04.2-02-PLAN.md
-last_updated: "2026-10-28T07:35:35.417Z"
+stopped_at: Completed 04.2-03-PLAN.md
+last_updated: "2026-10-28T07:54:33.997Z"
 last_activity: 2026-10-28
 last_activity_desc: Phase 04.2 execution started
-state_head: a599bd466385d22a0e46278fd46e5b5b64e5a0dd
+state_head: 3385e40c664305e3a34b232e995654ed65e32333
 progress:
   total_phases: 10
   completed_phases: 0
   total_plans: 180
-  completed_plans: 161
+  completed_plans: 162
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 04.2 (面板内容解耦与文件资源管理器) — EXECUTING
-Current Plan: 2
+Current Plan: 3
 Total Plans in Phase: 18
 Status: Ready to execute
 Next phase: Phase 04.2 — 面板内容解耦与文件资源管理器（设计重构）；先讨论，再规划接口
@@ -179,6 +179,7 @@ Progress: [███████░░░] 74%
 | Phase 04.1 P40 | 15min | 2 tasks | 2 files |
 | Phase 04.1 P31 | 10min | 2 tasks | 3 files |
 | Phase 04.2 P02 | 8 min | 3 tasks | 4 files |
+| Phase 04.2 P03 | 17min | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -481,6 +482,9 @@ Recent decisions affecting current work:
 - [Phase 04.1]: 04.1-31：Phase 04.1 收口为 Complete（2026-10-27）；下一步 Phase 5（代码编辑），Phase 4 本身仍是 16/17（`04-14` 未执行）
 - [Phase 04.2]: 04.2-02: 变化流只挂在 IEditorFileSystem.watch? 一条注入路径上，不引入独立 IEditorFileWatcher
 - [Phase 04.2]: 04.2-02: onBeforeClose / onUpdateResource 一字不改；新增成员一律 optional，接口波次零行为改动
+- [Phase 04.2]: 04.2-03: 契约波次只写 types.ts 与桶、零组件零逻辑；1050 例既有测试与两条 typecheck 是唯一验收面
+- [Phase 04.2]: 04.2-03: ITableEdit 用单接口 kind/key/value/anchorKey/name/config（非对象联合），config 复用 ITableRowNode['config']；三个面板的 *PendingConflict 都是「路径或分类 id + 外部原文」的只读字段
+- [Phase 04.2]: 04.2-03: 图块地址两张表键空间分离——IMapImageSources 用图片路径、IMapTileGroupUrls 用 group.id，禁止互相查表；IMapImageSourceStore.version 用 readonly 成员而非 getter
 
 ### Pending Todos
 
@@ -509,7 +513,7 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-28T07:35:34.858Z
-Stopped at: Completed 04.2-02-PLAN.md
+Last session: 2026-10-28T07:54:33.423Z
+Stopped at: Completed 04.2-03-PLAN.md
 Resume file: None
 Next action: 简报并规划 / 执行 Phase 5（代码编辑）——需用户先批准；Phase 04.1 已 Complete，本阶段不再有待办计划
