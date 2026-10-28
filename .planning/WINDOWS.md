@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 15
+open_count: 16
 waived_count: 0
 fixed_count: 4
-total_count: 19
-last_updated: 2026-10-26T12:48:36.009Z
+total_count: 20
+last_updated: 2026-10-28T16:20:31.238Z
 ---
 
 # Broken Windows Ledger
@@ -34,6 +34,7 @@ last_updated: 2026-10-26T12:48:36.009Z
 | 17 | 04.1 | deviation | packages/libs/editor-impl/src/map/__tests__/model.tileFrame.test.ts |  | 两个 TDD 任务的 RED 均为导入解析失败（模块尚不存在，属 INVALID_RED）；已用一次性变异证明测试能盯住行为 | open |  | 2026-10-23T14:17:46.935Z |  |
 | 18 | 04.1 | deviation | packages/libs/editor-impl/src/map/model/tileFrame.ts | 196 | resolveFrameRect 增加可选第三参数 frameColumns（Scan 帧轴折行所需）；IMapFrameInfo 未新增成员（P-01） | open |  | 2026-10-23T14:17:56.083Z |  |
 | 19 | 04.1 | fixme | packages/apps/editor-dev/src/__tests__/devHostMap.test.tsx | 480 | Plan 36 默认打开帧数角标后，map-tile- 前缀选择器命中 map-tile-frames-N，devHostMap 端到端用例断言 NaN 失败；留待 04.1-31 收口修选择器 | open |  | 2026-10-26T12:48:36.009Z |  |
+| 20 | 04.2 | deviation | packages/libs/editor-impl/src/table/tablePanel.ts |  | ExternalChangeDialog 按执行器要求挂在 TablePanelView 根上（单一面板级 conflictStore），而 PLAN 任务文本写的是 TableColumn 逐栏挂载 | open |  | 2026-10-28T16:20:31.238Z |  |
 
 ````json
 [
@@ -263,6 +264,18 @@ last_updated: 2026-10-26T12:48:36.009Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-10-26T12:48:36.009Z",
+    "resolved_at": null
+  },
+  {
+    "id": 20,
+    "kind": "deviation",
+    "phase": "04.2",
+    "file": "packages/libs/editor-impl/src/table/tablePanel.ts",
+    "line": null,
+    "description": "ExternalChangeDialog 按执行器要求挂在 TablePanelView 根上（单一面板级 conflictStore），而 PLAN 任务文本写的是 TableColumn 逐栏挂载",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-28T16:20:31.238Z",
     "resolved_at": null
   }
 ]

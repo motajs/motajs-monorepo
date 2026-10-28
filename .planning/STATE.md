@@ -5,16 +5,16 @@ current_phase: "04.2"
 current_phase_name: 面板内容解耦与文件资源管理器
 current_plan: 17
 status: executing
-stopped_at: Completed 04.2-17-PLAN.md
-last_updated: "2026-10-28T15:45:18.969Z"
+stopped_at: Completed 04.2-10-PLAN.md
+last_updated: "2026-10-28T16:22:12.271Z"
 last_activity: 2026-10-28
 last_activity_desc: Phase 04.2 execution started
-state_head: 56ff78ebe918c9ca0249148ad555fb2375679609
+state_head: 82f43749b9fda0a1844e2aa1185c896ba1ccda95
 progress:
   total_phases: 10
   completed_phases: 0
   total_plans: 182
-  completed_plans: 175
+  completed_plans: 176
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -193,6 +193,7 @@ Progress: [███████░░░] 74%
 | Phase 04.2 P08 | 25 min | 3 tasks | 6 files |
 | Phase 04.2 P15 | 49 min | 3 tasks | 10 files |
 | Phase 04.2 P17 | 26 min | 3 tasks | 5 files |
+| Phase 04.2 P10 | 23 min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -529,6 +530,10 @@ Recent decisions affecting current work:
 - [Phase 04.2]: 地图关闭改走三态弹窗：保存失败留在弹窗、选不保存关闭时只清内存状态不写盘
 - [Phase 04.2]: 04.2-17: 素材清单用 baselineText 识别自身写入回声；字节变化只递增 byteVersion，不重读清单、不登记撤销 — D-15 / D-16 / D-36 要求回声与外部变化可区分，字节事件风暴不能触发清单重建
 - [Phase 04.2]: 04.2-17: 素材关闭三态由面板持有 promise 与 closeDialog 状态；onDiscard 只清脏、不写盘 — D-08 / D-09 / D-10：保存与丢弃的副作用只能由面板决定，弹窗只回报选择
+- [Phase 04.2]: 04.2-10: 每栏基线只在 loadPrimary（载入成功）与 saveDocument（写盘成功）两处更新；confirmCommentStrip 改走 loadPrimary，避免第三处基线写入
+- [Phase 04.2]: 04.2-10: 短窗口合并用「基线 / 当前 pendingConflict 内容相等即跳过」实现，不引入定时器；并发重复事件在读取后也只落地一次
+- [Phase 04.2]: 04.2-10: 冲突弹窗由 TablePanelView 根经面板级 conflictStore 只挂一处；栏级 pendingConflict 只做记录与排队，非活动面板重新切入时由订阅源恢复 — 执行器要求，PLAN 文本原为逐栏挂载
+- [Phase 04.2]: 04.2-10: 删除事件提示「外部文件已被删除」，读取失败固定提示「读取外部改动失败，已保留你的改动」；两者都不替换内容、不弹冲突框
 
 ### Pending Todos
 
@@ -557,7 +562,7 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-28T15:45:18.205Z
-Stopped at: Completed 04.2-17-PLAN.md
+Last session: 2026-10-28T16:21:30.536Z
+Stopped at: Completed 04.2-10-PLAN.md
 Resume file: None
 Next action: 简报并规划 / 执行 Phase 5（代码编辑）——需用户先批准；Phase 04.1 已 Complete，本阶段不再有待办计划
