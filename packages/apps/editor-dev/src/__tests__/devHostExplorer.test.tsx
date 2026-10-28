@@ -2,7 +2,7 @@ import { act, cleanup, configure, fireEvent, render, screen, waitFor } from '@te
 import { EditorCore, IEditorPanelType } from '@motajs/editor-core';
 import { ASSET_PANEL_TYPE_ID } from '@motajs/editor-impl/asset';
 import { createFileExplorerPanelType } from '@motajs/editor-impl/explorer';
-import { MAP_PANEL_TYPE_ID } from '@motajs/editor-impl/map';
+import { IMapEditorCapabilities, MAP_PANEL_TYPE_ID } from '@motajs/editor-impl/map';
 import { tablePanelType } from '@motajs/editor-impl/table';
 import { createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -36,6 +36,8 @@ interface IDevHost {
   readonly core: EditorCore;
   /** 内存后端，供用例读取目录与文件 */
   readonly backend: MemoryBackend;
+  /** 注入给地图面板的能力对象，供路径解析用例断言 */
+  readonly mapCapabilities: IMapEditorCapabilities;
 }
 
 // 每个用例结束后卸载已挂载的组件，避免 DOM 在用例之间累积
@@ -58,7 +60,7 @@ async function createHost(): Promise<IDevHost> {
   await seedMapDemo(backend);
   core.shellSystem.registerPanelType(tablePanelType);
   registerAssetDemo(core);
-  registerMapDemo(core, backend);
+  const mapCapabilities = registerMapDemo(core, backend);
   core.shellSystem.registerPanelType(
     createFileExplorerPanelType({
       listPanelTypes: (): readonly IEditorPanelType[] => core.shellSystem.listPanelTypes(),
@@ -74,7 +76,7 @@ async function createHost(): Promise<IDevHost> {
   );
 
   await core.initialize({ fs: backend, maxUndoStep: backend.maxUndoStep });
-  return { core, backend };
+  return { core, backend, mapCapabilities };
 }
 
 /**
@@ -219,5 +221,21 @@ describe('开发宿主资源管理器', () => {
 
     expect(screen.queryByTestId('explorer-entry-notes.txt')).toBeNull();
     expect(screen.getByTestId('explorer-entry-content')).not.toBeNull();
+  });
+
+  // 地图路径解析只认 content/map/<单段>.json：前缀、后缀、多段标识任一不符都返回 null
+  it('地图路径解析只接受 content/map/<id>.json', async () => {
+    const { mapCapabilities } = await createHost();
+    const resolveMapPath = mapCapabilities.resolveMapPath;
+
+    expect(resolveMapPath).toBeDefined();
+
+    if (resolveMapPath === undefined) return;
+
+    expect(resolveMapPath('content/map/tower.json')).toBe('tower');
+    expect(resolveMapPath('content/other/tower.json')).toBeNull();
+    expect(resolveMapPath('content/map/tower.jsonc')).toBeNull();
+    expect(resolveMapPath('content/map/a/b.json')).toBeNull();
+    expect(resolveMapPath('content/map/.json')).toBeNull();
   });
 });
