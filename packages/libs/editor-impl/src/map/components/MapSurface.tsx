@@ -20,6 +20,7 @@ import {
   IMapCellPosition,
   IMapDocument,
   IMapFrameInfo,
+  IMapImageSources,
   IMapPassMark,
   IMapRect,
   IMapRenderCell,
@@ -29,7 +30,6 @@ import {
   MapDirection,
   MapFrameAxis,
 } from '../types';
-import { useMapObjectUrl } from './useMapObjectUrl';
 
 // 唯一 import pixi.js 的文件：把渲染模型画成占位格 / 图块 / 网格 / 通行度标记。
 // Pixi 应用、场景与纹理表都挂在组件实例的 ref 上，卸载时销毁；模块顶层没有任何可变缓存。
@@ -37,33 +37,19 @@ import { useMapObjectUrl } from './useMapObjectUrl';
 // 动画只有一个时钟：ticker 的累计毫秒交给 `resolveFrameTickAt` 换全局帧号，只有动画格换帧。
 // 大地图缩略纹理改用与普通模式同一套逐格数据（自动元件四块 / contain / 第 0 帧），纹理仍然只在重建时构建一次。
 // 通行度叠加层先铺纯黑蒙版、再画箭头。
-
-/** 读取图片字节的回调 */
-type MapBytesLoader = (path: string) => Promise<Uint8Array | undefined>;
-
-/** 一个图块图片源组件的 props */
-interface IMapImageSourceProps {
-  /** 图片相对项目根的路径 */
-  readonly path: string;
-  /** 字节版本号；变化时重新读取 */
-  readonly version: number;
-  /** 读取图片字节的回调 */
-  readonly loadBytes: MapBytesLoader;
-  /**
-   * 图片地址就绪或失效时回报给画布
-   * @param path 图片路径
-   * @param url 可用的 `blob:` 地址；拿不到时为 undefined
-   */
-  onUrl(path: string, url: string | undefined): void;
-}
+// 图源只收「视图算好的图片路径键地址表」，本组件不读字节、不创建也不回收 blob 地址（D-01 / D-07）。
 
 export interface IMapSurfaceProps {
   /** 要画的这一帧渲染模型 */
   readonly model: IMapRenderModel;
-  /** 图块图片的重试计数，递增即重新读取字节 */
+  /** 图块图片的重试计数，递增即清空已建纹理并按地址表重新加载 */
   readonly imageVersion?: number;
-  /** 读取图片字节的回调 */
-  readonly loadBytes?: MapBytesLoader;
+  /**
+   * 视图算好的图源表：键是图片路径（与 `cell.imagePath` 一致），不是 `group.id`
+   *
+   * 地址由视图 / 面板创建与回收；本组件只按路径查表，查不到就按缺图渲染，不抛错、不重试。
+   */
+  readonly imageSources?: IMapImageSources;
   /** 当前地图文档；大地图缩略纹理逐格铺内容时用它，缺省时只画缩略底色 */
   readonly document?: IMapDocument;
   /** 当前图层标识；参与缩略纹理的重建判据 */
@@ -128,27 +114,6 @@ const HOVER_COLOR = 0x2a2f3a;
 const HOVER_ALPHA = 0.4;
 
 /**
- * 没有字节读取回调时使用的空实现
- * @returns 永远是 undefined
- */
-async function loadNoBytes(): Promise<undefined> {
-  return undefined;
-}
-
-/**
- * 按图片扩展名推断 MIME 类型
- * @param path 图片路径
- * @returns MIME 类型
- */
-function mimeOfImagePath(path: string): string {
-  if (/\.jpe?g$/i.test(path)) return 'image/jpeg';
-  if (/\.gif$/i.test(path)) return 'image/gif';
-  if (/\.webp$/i.test(path)) return 'image/webp';
-
-  return 'image/png';
-}
-
-/**
  * 用 blob 地址加载一张可交给 Pixi 的图片
  * @param url 图片的 `blob:` 地址
  * @returns 加载完成的图片元素
@@ -164,9 +129,9 @@ function loadImageElement(url: string): Promise<HTMLImageElement> {
 }
 
 /**
- * 收集要读取的图片路径，按首次出现顺序去重
+ * 收集本帧要用到的图片路径，按首次出现顺序去重
  *
- * 普通模式只读这一帧出现的图块；大地图没有逐格格子，缩略纹理直接按文档目录铺内容，因此补上目录里的图片。
+ * 普通模式只收这一帧出现的图块；大地图没有逐格格子，缩略纹理直接按文档目录铺内容，因此补上目录里的图片。
  * @param model 渲染模型
  * @param mapDocument 当前地图文档；大地图缩略纹理要用它的图块目录
  * @returns 图片路径列表
@@ -985,29 +950,6 @@ function drawModel(
   if (model.hover !== undefined) drawHover(scene, model, model.hover);
 }
 
-/**
- * 一个图块图片源：借用 hook 把字节变成 blob 地址，再把地址回报给画布
- * @param props 组件 props
- * @returns 不渲染任何 DOM
- */
-function MapImageSource(props: IMapImageSourceProps): null {
-  const url = useMapObjectUrl({
-    path: props.path,
-    mime: mimeOfImagePath(props.path),
-    version: props.version,
-    loadBytes: props.loadBytes,
-  });
-  const latest = useRef(props.onUrl);
-
-  latest.current = props.onUrl;
-
-  useEffect(() => {
-    latest.current(props.path, url);
-  }, [props.path, url]);
-
-  return null;
-}
-
 export function MapSurface(props: IMapSurfaceProps): ReactElement {
   const hostRef = useRef<HTMLDivElement>(null);
   const appRef = useRef<Application | null>(null);
@@ -1226,32 +1168,39 @@ export function MapSurface(props: IMapSurfaceProps): ReactElement {
     };
   }, []);
 
-  const handleUrl = (path: string, url: string | undefined): void => {
-    if (url === undefined) return;
-    if (texturesRef.current.has(path) || pendingRef.current.has(path) || failedRef.current.has(path)) return;
+  // 按图片路径查视图算好的地址表：查不到就保持占位格（缺图），不抛错、不重试；
+  // 键是图片路径而不是 `group.id`，两张地址表不能互相查表（D-01 / D-20 / D-22）
+  useEffect(() => {
+    const sources = props.imageSources;
 
-    pendingRef.current.add(path);
+    for (const path of collectImagePaths(props.model, props.document)) {
+      const url = sources === undefined ? undefined : sources.urls[path];
 
-    void loadImageElement(url)
-      .then((image) => {
-        pendingRef.current.delete(path);
+      if (url === undefined) continue;
+      if (texturesRef.current.has(path) || pendingRef.current.has(path) || failedRef.current.has(path)) continue;
 
-        if (!mountedRef.current) return;
+      pendingRef.current.add(path);
 
-        const texture = Texture.from(image);
+      void loadImageElement(url)
+        .then((image) => {
+          pendingRef.current.delete(path);
 
-        // 图块与动画帧都裁自这张基础纹理（裁切共用同一个 source），因此只在这里设一次最近邻；
-        // 像素画放大时线性插值会糊掉边缘，必须关掉平滑
-        texture.source.scaleMode = 'nearest';
-        texturesRef.current.set(path, texture);
-        setTextureVersion((value) => value + 1);
-      })
-      .catch(() => {
-        pendingRef.current.delete(path);
-        failedRef.current.add(path);
-      });
-  };
-  const imagePaths = collectImagePaths(props.model, props.document);
+          if (!mountedRef.current) return;
+
+          const texture = Texture.from(image);
+
+          // 图块与动画帧都裁自这张基础纹理（裁切共用同一个 source），因此只在这里设一次最近邻；
+          // 像素画放大时线性插值会糊掉边缘，必须关掉平滑
+          texture.source.scaleMode = 'nearest';
+          texturesRef.current.set(path, texture);
+          setTextureVersion((value) => value + 1);
+        })
+        .catch(() => {
+          pendingRef.current.delete(path);
+          failedRef.current.add(path);
+        });
+    }
+  }, [props.model, props.document, props.imageSources, imageVersion, setTextureVersion]);
 
   return (
     <div
@@ -1259,16 +1208,6 @@ export function MapSurface(props: IMapSurfaceProps): ReactElement {
       className="emap-surface"
       data-test-id="map-surface"
       style={{ position: 'relative', width: props.model.width, height: props.model.height, lineHeight: 0 }}
-    >
-      {imagePaths.map((path) => (
-        <MapImageSource
-          key={path}
-          path={path}
-          version={imageVersion}
-          loadBytes={props.loadBytes ?? loadNoBytes}
-          onUrl={handleUrl}
-        />
-      ))}
-    </div>
+    />
   );
 }

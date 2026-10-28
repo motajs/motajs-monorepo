@@ -18,16 +18,19 @@ import {
   IMapCellPosition,
   IMapCreateRequest,
   IMapDocument,
+  IMapImageSources,
   IMapLayer,
   IMapLayout,
   IMapPaletteSelection,
   IMapPanelViewState,
   IMapRect,
   IMapSizeLimit,
+  IMapTileGroup,
   IMapTileGroupUrls,
   MapBottomTab,
   MapBrushMode,
   MapDialogKind,
+  MapImageStatus,
   MapPanelStatus,
   MapTileCategory,
 } from '../types';
@@ -391,6 +394,27 @@ function renderErrorBody(error: string | undefined, onRetry: () => void): ReactE
 }
 
 /**
+ * 把分组标识键的地址表投影成图片路径键的地址表
+ *
+ * 每格的 `imagePath` 都取自某个 `group.imagePath`，同一路径的多个分组共享同一个 `blob:` 地址，
+ * 因此按分组投影到路径是完备的；两张表的键空间不同，不能互相查表（D-20 / D-22）。
+ * @param groups 当前文档的图块分组
+ * @param groupImages 以 `group.id` 为键的地址表
+ * @returns 以图片路径为键的地址表
+ */
+function toImageSources(groups: readonly IMapTileGroup[], groupImages: IMapTileGroupUrls): IMapImageSources {
+  const urls: Record<string, string | undefined> = {};
+  const status: Record<string, MapImageStatus> = {};
+
+  for (const group of groups) {
+    urls[group.imagePath] = groupImages.urls[group.id];
+    status[group.imagePath] = groupImages.status[group.id];
+  }
+
+  return { urls, status };
+}
+
+/**
  * 渲染就绪态的地图区；渲染模型在这里现算，画布只把本地叠加状态补进模型交给 Pixi 表面
  *
  * 画布尺寸与格像素都来自面板顶层算好的布局，渲染模型吃同一个 `zoom`；两边得到同一个屏幕格像素。
@@ -442,7 +466,7 @@ function renderReadyBody(input: IMapPanelBodyProps): ReactElement {
         aboveLayerOpacity={view.aboveLayerOpacity}
         cellFrameSpeed={input.props.cellFrameSpeed}
         imageVersion={view.paletteVersion}
-        loadBytes={input.props.loadBytes}
+        imageSources={toImageSources(document.tileGroups, input.groupImages)}
         onCommitCells={input.props.onCommitCells ?? noop}
         onCopyRegion={input.props.onCopyRegion ?? noop}
         onPasteAt={input.props.onPasteAt ?? noop}

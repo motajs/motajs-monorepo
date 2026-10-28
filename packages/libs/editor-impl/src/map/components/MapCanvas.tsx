@@ -11,6 +11,7 @@ import {
   IMapCellPosition,
   IMapClipboard,
   IMapDocument,
+  IMapImageSources,
   IMapLayer,
   IMapPreview,
   IMapRect,
@@ -27,9 +28,7 @@ import { MapSurface } from './MapSurface';
 // 笔画期间只有本地预览，提交时才把写列表交给面板（一笔一条撤销）；悬停 / 预览 / 框选 / 菜单都不进面板 Store。
 // 键盘监听挂在容器上（tabIndex=0），不挂 window / document：画布只处理画布专属快捷键（Ctrl+C / Ctrl+V / Escape / F），
 // 数字键由面板根统一处理；撤销 / 重做仍由外壳统一绑定。
-
-/** 读取图块图片字节的回调 */
-type MapBytesLoader = (path: string) => Promise<Uint8Array | undefined>;
+// 图源只往下透传「图片路径键地址表」，本组件不接触文件路径、不读字节（D-01）。
 
 /** 画布当前进行中的手势；没有手势时为 undefined */
 interface IMapGesture {
@@ -86,8 +85,8 @@ export interface IMapCanvasProps {
   onSetViewport?(left: number, top: number): void;
   /** 图块图片的重试计数 */
   readonly imageVersion?: number;
-  /** 读取图块图片字节的回调 */
-  readonly loadBytes?: MapBytesLoader;
+  /** 视图算好的图源表：键是图片路径，不是 `group.id`；原样透传给 Pixi 表面 */
+  readonly imageSources?: IMapImageSources;
   /**
    * 提交一笔写入；一笔只调用一次
    * @param writes 这一笔依次落下的写入
@@ -705,7 +704,7 @@ export function MapCanvas(props: IMapCanvasProps): ReactElement {
                   currentLayerId={props.currentLayerId}
                   aboveLayerOpacity={props.aboveLayerOpacity}
                   cellFrameSpeed={props.cellFrameSpeed}
-                  loadBytes={props.loadBytes}
+                  imageSources={props.imageSources}
                   imageVersion={props.imageVersion}
                   onError={(): void => setSurfaceError(true)}
                 />
