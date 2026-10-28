@@ -10,11 +10,13 @@ import {
   IFileEntry,
   IResourceIdentifier,
   IUndoContext,
+  PanelCloseChoice,
 } from '@motajs/editor-core';
 import { get } from 'es-toolkit/compat';
 import { createElement, createRef, FC, ReactElement, RefObject, useCallback, useEffect, useRef, useState } from 'react';
 import { ICodeEditorOpener, ITablePanelOpener, useTableCapabilities } from '../react';
 import {
+  ITableCloseDialogState,
   ITableDocument,
   ITableEdit,
   ITableEditableProps,
@@ -31,6 +33,7 @@ import { TableEmptyColumn } from './components/TableEmptyColumn';
 import { EditableTable } from './components/EditableTable';
 import { ContentSaveStatus, IEditableContentHandle } from '../shared/editable/types';
 import { ExternalChangeDialog } from '../shared/panelDialogs/ExternalChangeDialog';
+import { PanelCloseDialog } from '../shared/panelDialogs/PanelCloseDialog';
 import { buildTableTree } from '../shared/schemaForm/model/traversal';
 import { buildSchemaTree } from '../shared/schemaForm/model/schemaPresentation';
 import { parseTableText, serializeTableText, TableTextParseStatus } from '../shared/jsonc';
@@ -248,6 +251,10 @@ interface ITablePanelViewProps {
   readonly onConflictDiscard: () => void;
   /** 冲突弹窗选择「保留我的改动，下次保存覆盖」 */
   readonly onConflictKeep: () => void;
+  /** 面板级关闭弹窗状态的订阅源：整个面板只渲染一处，与栏数无关（D-38） */
+  readonly closeDialogStore: Store<ITableCloseDialogState>;
+  /** 关闭弹窗上的选择：三个分支都交回面板结算（构造期绑定，稳定引用） */
+  readonly onCloseChoice: (choice: PanelCloseChoice) => void;
 }
 
 /** 单栏组件的 props：把该栏序号与各回调转交给一张表格 */
@@ -552,6 +559,7 @@ function TablePanelView(props: ITablePanelViewProps): ReactElement {
 
   const count = resolveColumnCount(windowWidth, props.columnWidth);
   const conflict = useStore(props.conflictStore);
+  const closeDialog = useStore(props.closeDialogStore);
 
   // 把当前铺出的可视栏数回报给面板，供「编辑 Schema」在可视范围内寻找空栏
   useEffect((): void => {
@@ -597,6 +605,15 @@ function TablePanelView(props: ITablePanelViewProps): ReactElement {
           onDiscard: props.onConflictDiscard,
           onKeep: props.onConflictKeep,
         }),
+    // 关闭弹窗同样只在面板根上挂一处：不管此刻铺出几栏，DOM 里都只有一个（D-38）
+    closeDialog.open
+      ? createElement(PanelCloseDialog, {
+          open: true,
+          saving: closeDialog.saving,
+          error: closeDialog.error,
+          onChoose: props.onCloseChoice,
+        })
+      : null,
   );
 }
 
@@ -632,6 +649,23 @@ export class TablePanel implements IEditorPanel, ITablePanel {
 
   /** 当前显示冲突的栏序号；没有显示时为 undefined */
   private visibleConflictColumn: number | undefined = undefined;
+
+  /** 面板级关闭弹窗状态：整个面板只一份，与「哪一栏触发关闭」和栏数无关（D-38） */
+  private readonly closeDialogStore: Store<ITableCloseDialogState> = new Store<ITableCloseDialogState>({
+    open: false,
+    saving: false,
+  });
+
+  /** 等待中的关闭询问的结算函数；为 undefined 表示没有询问在等，重复点按只结算一次 */
+  private closeDialogResolve: ((choice: PanelCloseChoice) => void) | undefined = undefined;
+
+  /**
+   * 关闭弹窗上的选择：交回面板结算，取消 / 丢弃 / 保存三个分支都在面板里执行
+   * @param choice 用户的选择
+   */
+  private readonly answerCloseDialog = (choice: PanelCloseChoice): void => {
+    void this.handleCloseChoice(choice);
+  };
 
   /**
    * 某栏组件交回草稿：只覆盖面板副本与交回脏标记，绝不写盘（T-04.2-08-01）
@@ -715,6 +749,8 @@ export class TablePanel implements IEditorPanel, ITablePanel {
         conflictStore: this.conflictStore,
         onConflictDiscard: (): void => this.discardExternalConflict(),
         onConflictKeep: (): void => this.keepExternalConflict(),
+        closeDialogStore: this.closeDialogStore,
+        onCloseChoice: this.answerCloseDialog,
       });
   }
 
@@ -749,6 +785,131 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   async onFocus(): Promise<void> {}
 
   async onBlur(): Promise<void> {}
+
+  /**
+   * 用户点标签上的关闭：没有任何一栏有未保存改动就直接放行；有脏改动才在面板根上弹三态框等选择
+   *
+   * 脏判定只走 `TablePanel.isColumnDirty`（四个来源合起来看），绝不只读某一个标志位，
+   * 否则「刚编辑过但组件草稿刚被重置」会被误判成干净而静默丢改动（D-05 / D-08）。
+   * @returns 保存并关闭 / 不保存关闭 / 取消关闭
+   */
+  async onRequestClose(): Promise<PanelCloseChoice> {
+    if (!this.hasDirtyColumn()) return PanelCloseChoice.Save;
+
+    this.publishCloseDialog({ open: true, saving: false });
+
+    return new Promise<PanelCloseChoice>((resolve) => {
+      this.closeDialogResolve = resolve;
+    });
+  }
+
+  /**
+   * 用户选择「不保存关闭」时由外壳投递：清掉各栏的内存脏标记与草稿，使 `TablePanel.dispose`
+   * 的兜底保存成为空操作；不写盘、不登记撤销（D-10）
+   */
+  onDiscard(): void {
+    const count = this.columns.length;
+
+    this.closeDialogResolve = undefined;
+    this.publishCloseDialog({ open: false, saving: false });
+
+    for (let index = 0; index < count; index += 1) this.clearColumnDirty(index);
+  }
+
+  /**
+   * 结算一次关闭询问：三个分支都把关闭弹窗收回，并唤醒等待中的 `TablePanel.onRequestClose`
+   *
+   * 结算函数只取一次并立刻清空，因此重复点按不会二次结算（T-04.2-11-03）。
+   * @param choice 用户的选择
+   * @param error 保存失败的原因；有值时弹窗留在屏幕上并把原因显示出来
+   */
+  private settleCloseDialog(choice: PanelCloseChoice, error?: string): void {
+    const resolve = this.closeDialogResolve;
+
+    this.closeDialogResolve = undefined;
+    this.publishCloseDialog(error === undefined ? { open: false, saving: false } : { open: true, error });
+
+    if (resolve !== undefined) resolve(choice);
+  }
+
+  /**
+   * 响应关闭弹窗上的一个选择：保存分支先逐栏落盘，任一栏失败都留在弹窗里并结算为取消
+   * @param choice 用户的选择
+   */
+  private async handleCloseChoice(choice: PanelCloseChoice): Promise<void> {
+    if (choice !== PanelCloseChoice.Save) {
+      this.settleCloseDialog(choice);
+      return;
+    }
+
+    this.publishCloseDialog({ open: true, saving: true });
+
+    const error = await this.saveAllColumns();
+
+    if (error === undefined) {
+      this.settleCloseDialog(PanelCloseChoice.Save);
+      return;
+    }
+
+    this.settleCloseDialog(PanelCloseChoice.Cancel, error);
+  }
+
+  /**
+   * 把关闭弹窗状态写进面板级订阅源（全仓唯一写入口，保证只有一份状态）
+   * @param state 新的弹窗状态
+   */
+  private publishCloseDialog(state: ITableCloseDialogState): void {
+    this.closeDialogStore.setState(state);
+  }
+
+  /**
+   * 判断是否存在任何一栏有未保存改动
+   * @returns 至少一栏为脏时为 true
+   */
+  private hasDirtyColumn(): boolean {
+    const count = this.columns.length;
+
+    for (let index = 0; index < count; index += 1) {
+      if (this.isColumnDirty(index)) return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * 逐栏保存并返回第一条失败原因；全部成功（或本来就不用写）时返回 undefined
+   *
+   * 与 `TablePanel.onSwitchOut` 共用同一条写盘入口 `TablePanel.saveColumn`，
+   * 成功后把组件标记为已保存，使随后的 `dispose` 兜底保存成为空操作（D-09）。
+   * @returns 保存失败的原因；没有失败时为 undefined
+   */
+  private async saveAllColumns(): Promise<string | undefined> {
+    const count = this.columns.length;
+
+    for (let index = 0; index < count; index += 1) {
+      const status = await this.saveColumn(index);
+
+      if (status === ContentSaveStatus.Failed) return this.columnAt(index).store.state.error ?? '保存失败';
+
+      this.columnRefs[index]?.current?.markSaved();
+    }
+
+    return undefined;
+  }
+
+  /**
+   * 清掉某一栏的内存脏状态：把挂载中的组件标记为已保存，并作废草稿与三个脏标记，不碰基线内容
+   * @param columnIndex 栏序号（0 基）
+   */
+  private clearColumnDirty(columnIndex: number): void {
+    const column = this.columnAt(columnIndex);
+
+    this.columnRefs[columnIndex]?.current?.markSaved();
+    column.draft = null;
+    column.draftDirty = false;
+    column.unsaved = false;
+    column.unsavedSchema = false;
+  }
 
   async onSwitchIn(): Promise<void> {
     const count = this.columns.length;
