@@ -160,10 +160,10 @@ describe('打开 / 新建 / 删除端到端集成', () => {
     });
     await act(async () => {});
 
-    // 目录树只列 json / jsonc 数据文件并排除 schema 约定文件与非表格文件；预设表「预设表」可见
+    // 打开态过滤口径 = 表格能打开的所有 json / jsonc（包含 schema）；非表格文件仍不出现；预设表「预设表」可见
     expect(screen.getByTestId('table-list-entry-hero.json')).not.toBeNull();
     expect(screen.getByTestId('table-list-entry-tables')).not.toBeNull();
-    expect(screen.queryByTestId('table-list-entry-hero.schema.json')).toBeNull();
+    expect(screen.getByTestId('table-list-entry-hero.schema.json')).not.toBeNull();
     expect(screen.queryByTestId('table-list-entry-notes.txt')).toBeNull();
     expect(screen.getByTestId('table-list-preset-预设表')).not.toBeNull();
 
@@ -285,6 +285,10 @@ describe('打开 / 新建 / 删除端到端集成', () => {
       clickInColumn(container, 0, 'table-empty-delete');
     });
     await act(async () => {});
+
+    // 删除态过滤口径保持只列数据文件、不含 schema：删除只删数据 + 推导 schema，不能删任意 schema
+    expect(screen.getByTestId('table-list-delete-hero.json')).not.toBeNull();
+    expect(screen.queryByTestId('table-list-delete-hero.schema.json')).toBeNull();
 
     // 删除态默认在根目录，先进入 tables 目录
     await act(async () => {

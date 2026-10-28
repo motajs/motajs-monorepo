@@ -320,4 +320,53 @@ describe('表格面板空栏内联控件', () => {
     expect(await readText(system, tableDataPath('hero'))).toBe('{}');
     expect(await readText(system, tableSchemaPath('hero'))).toBe('{}');
   });
+
+  // 打开态只读一次目录：读目录回调引用稳定，发布导致的重复渲染不会触发第二次读取
+  it('打开态只读一次目录，重复渲染不重复读', async () => {
+    const fs = new FakeFileSystem();
+
+    fs.seed('a.json', '{}');
+    const { system } = await openEmptyColumnTablePanel(fs);
+    const listSpy = vi.spyOn(system.resourceSystem, 'listDirectory');
+
+    const { container } = renderWithCapabilities(system, {});
+
+    await act(async () => {
+      clickInColumn(container, 0, 'table-empty-open');
+    });
+    await act(async () => {});
+    await act(async () => {});
+
+    const rootCalls = listSpy.mock.calls.filter((call) => call[0] === '').length;
+
+    expect(rootCalls).toBe(1);
+  });
+
+  // 目录读取失败时浏览器显示带「重试」的错误行；点重试后条目出现、错误行消失
+  it('目录读取失败后可重试恢复', async () => {
+    const fs = new FakeFileSystem();
+
+    fs.seed('a.json', '{}');
+    const { system } = await openEmptyColumnTablePanel(fs);
+
+    vi.spyOn(system.resourceSystem, 'listDirectory').mockRejectedValueOnce(new Error('boom'));
+
+    const { container } = renderWithCapabilities(system, {});
+
+    await act(async () => {
+      clickInColumn(container, 0, 'table-empty-open');
+    });
+    await act(async () => {});
+
+    expect(inColumn(container, 0, 'table-list-error')).not.toBeNull();
+    expect(inColumn(container, 0, 'table-list-retry')).not.toBeNull();
+
+    await act(async () => {
+      clickInColumn(container, 0, 'table-list-retry');
+    });
+    await act(async () => {});
+
+    expect(inColumn(container, 0, 'table-list-entry-a.json')).not.toBeNull();
+    expect(inColumn(container, 0, 'table-list-error')).toBeNull();
+  });
 });
