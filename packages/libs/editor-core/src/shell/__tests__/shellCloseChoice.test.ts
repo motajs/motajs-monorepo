@@ -320,7 +320,7 @@ describe('ShellSystem 关闭三态', () => {
     const [firstTab, secondTab] = await openTwoPanels(shellSystem);
 
     await act(async () => {
-      shellSystem.activateTab(firstTab);
+      await shellSystem.activateTab(firstTab);
     });
 
     panels[1].choice = PanelCloseChoice.Discard;

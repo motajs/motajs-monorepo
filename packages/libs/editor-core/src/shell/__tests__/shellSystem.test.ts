@@ -296,8 +296,8 @@ describe('ShellSystem 端到端', () => {
       await system.shellSystem.openPanelInTab(thirdTab, 'table');
     });
 
-    act(() => {
-      system.shellSystem.activateTab(secondTab);
+    await act(async () => {
+      await system.shellSystem.activateTab(secondTab);
     });
 
     await act(async () => {
@@ -324,8 +324,8 @@ describe('ShellSystem 端到端', () => {
 
     system.shellSystem.openBlankTab();
 
-    act(() => {
-      system.shellSystem.activateTab(firstTab);
+    await act(async () => {
+      await system.shellSystem.activateTab(firstTab);
     });
 
     await act(async () => {
@@ -419,7 +419,9 @@ describe('ShellSystem 端到端', () => {
 
     const newTab = system.shellSystem.openBlankTab();
 
-    system.shellSystem.activateTab(newTab);
+    await act(async () => {
+      await system.shellSystem.activateTab(newTab);
+    });
 
     await act(async () => {
       await system.shellSystem.closeTab(newTab);

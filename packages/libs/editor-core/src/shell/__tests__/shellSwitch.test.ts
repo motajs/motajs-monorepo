@@ -126,7 +126,7 @@ describe('ShellSystem 切换钩子', () => {
 
     // 切回第一个标签：第二个面板切出、第一个面板再次切入
     await act(async () => {
-      shellSystem.activateTab(firstTab);
+      await shellSystem.activateTab(firstTab);
     });
 
     expect(panels[1].switchOutCount).toBe(1);

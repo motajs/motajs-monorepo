@@ -279,7 +279,7 @@ describe('ShellSystem 自动保存时序', () => {
     const errorSpy = vi.spyOn(logger, 'error');
 
     await act(async () => {
-      shellSystem.activateTab(firstTab);
+      await shellSystem.activateTab(firstTab);
     });
     await act(async () => {});
 
@@ -290,7 +290,7 @@ describe('ShellSystem 自动保存时序', () => {
 
     // 链若被 reject 污染，后续的切入会被跳过；这里再切回去证明链仍然可用
     await act(async () => {
-      shellSystem.activateTab(secondTab);
+      await shellSystem.activateTab(secondTab);
     });
     await act(async () => {});
 

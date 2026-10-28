@@ -215,7 +215,7 @@ function TabRow(props: ITabRowProps): ReactElement {
           title: name,
           'aria-label': name,
           'aria-current': isActive,
-          onClick: () => props.system.activateTab(tab.id),
+          onClick: (): void => void props.system.activateTab(tab.id),
         },
         name,
       ),
@@ -556,21 +556,28 @@ export class ShellSystem implements IShellSystem {
   }
 
   /**
-   * 在通知重渲染之前把即将离开的面板切出排进串行链
+   * 切标签的保存前缀：在改活动标签与通知 React 之前，先等即将离开的面板切出结算
    *
-   * 顺序是这条方法的全部意义：切出先入队，React 才会在切出之后提交卸载，
-   * 面板的 `IEditorPanel.onSwitchOut` 同步前缀因此仍能读到组件里的最新草稿。
-   * 目标实例与当前记录相同（重复激活同一标签）时不投递，保证一次活动变化只切出一次。
+   * 整段「判定 + 切出」排在串行切换链上执行，因此并发切换（连点两个标签、新建标签与标签内打开撞在一起）
+   * 会依次执行，后一个永远等前一个保存完。判定必须在链节点**执行时**才读 `lastActiveInstanceId`：
+   * 两个并发调用先后入链时，第二个节点看到的已经是前一个清空后的记录，同一面板因此不会被保存两次。
+   * 顺序是这条方法的全部意义：保存没结算就通知 React，旧组件会先卸载，面板就拿不到组件里的草稿。
    * @param nextInstanceId 切换后将成为活动的面板实例 id；目标标签为空白时为 null
+   * @returns 该次切出结算完成时 resolve
    */
-  private enqueueDeparture(nextInstanceId: string | null): void {
-    const previousInstanceId = this.lastActiveInstanceId;
+  private departActiveInstance(nextInstanceId: string | null): Promise<void> {
+    const step = this.switchChain.then(async (): Promise<void> => {
+      const previousInstanceId = this.lastActiveInstanceId;
 
-    if (previousInstanceId === nextInstanceId) return;
+      if (previousInstanceId === nextInstanceId) return;
 
-    this.lastActiveInstanceId = null;
+      this.lastActiveInstanceId = null;
 
-    if (previousInstanceId !== null) this.enqueueSwitchOut(previousInstanceId);
+      if (previousInstanceId !== null) await this.invokeSwitchOut(previousInstanceId);
+    });
+
+    this.switchChain = step.catch((): void => {});
+    return step;
   }
 
   openBlankTab(): string {
@@ -578,10 +585,19 @@ export class ShellSystem implements IShellSystem {
     const tabId = `tab-${this.tabCounter}`;
 
     this.tabs.push({ id: tabId, typeId: null, instanceId: null });
-    this.enqueueDeparture(null);
-    this.activeTabId = tabId;
+
+    // 没有挂载中的面板时同步切换即可；确有面板挂载时只先让标签列表出现，
+    // 保存交给随后的 activateTab：绝不能在保存完成前把旧组件卸载掉。
+    // 返回的 tabId 仍然立即可用（标签已入列表），切换完成时机由 activateTab 决定。
+    if (this.lastActiveInstanceId === null) {
+      this.activeTabId = tabId;
+      this.notify();
+      this.syncActiveInstance();
+      return tabId;
+    }
+
     this.notify();
-    this.syncActiveInstance();
+    void this.activateTab(tabId);
     return tabId;
   }
 
@@ -605,7 +621,9 @@ export class ShellSystem implements IShellSystem {
     if (created === null) return false;
 
     this.tabs[index] = { id: current.id, typeId, instanceId: created.instanceId };
-    this.enqueueDeparture(created.instanceId);
+
+    // 先等旧面板的切出保存结算，再改活动标签与通知 React（B1）
+    await this.departActiveInstance(created.instanceId);
     this.activeTabId = current.id;
     this.notify();
     await this.initializeInstance(created);
@@ -629,8 +647,9 @@ export class ShellSystem implements IShellSystem {
         instance !== undefined && (instance.onRequestClose !== undefined || instance.onBeforeClose !== undefined);
 
       // 询问前先把目标标签切成活动标签：面板的未保存对话框需要挂在自己的 DOM 上才可能 settle。
+      // 必须等切换真的完成（含旧面板保存结算），三态询问才发生在切换之后。
       // 不询问的面板保持既有行为：直接关闭、前台不变
-      if (asks && this.activeTabId !== tabId) this.activateTab(tabId);
+      if (asks && this.activeTabId !== tabId) await this.activateTab(tabId);
 
       if (instance !== undefined && instance.onRequestClose !== undefined) {
         let choice: PanelCloseChoice = PanelCloseChoice.Cancel;
@@ -673,7 +692,6 @@ export class ShellSystem implements IShellSystem {
   }
 
   async activateTab(tabId: string): Promise<void> {
-    // 先等旧面板 onSwitchOut 结算，再改活动标签并通知 React（B1，时序由 04.2-04.1 落实）
     const exists = this.tabs.some((tab) => tab.id === tabId);
 
     if (!exists) {
@@ -684,8 +702,9 @@ export class ShellSystem implements IShellSystem {
     const nextTab = this.tabs.find((tab) => tab.id === tabId);
     const nextInstanceId = nextTab === undefined ? null : nextTab.instanceId;
 
-    // 先排切出再通知重渲染：面板的同步前缀因此一定跑在组件卸载之前
-    this.enqueueDeparture(nextInstanceId);
+    // 顺序是这条方法的全部意义：先等旧面板的 onSwitchOut 结算，再改活动标签并通知 React（B1）。
+    // 保存没完成就通知，React 会先卸载旧组件，面板就拿不到组件里的草稿。
+    await this.departActiveInstance(nextInstanceId);
     this.activeTabId = tabId;
     this.notify();
     this.syncActiveInstance();
