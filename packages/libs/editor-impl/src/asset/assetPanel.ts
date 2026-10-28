@@ -1007,11 +1007,7 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
    * @param path 清单文件路径
    * @param kind 变化种类
    */
-  private async handleListChange(
-    category: IAssetCategory,
-    path: string,
-    kind: EditorFileChangeKind,
-  ): Promise<void> {
+  private async handleListChange(category: IAssetCategory, path: string, kind: EditorFileChangeKind): Promise<void> {
     const state = this.stateAt(category.id);
 
     if (kind === EditorFileChangeKind.Delete) {
@@ -1054,11 +1050,7 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
    * @param path 字节文件路径
    * @param kind 变化种类
    */
-  private async handleByteChange(
-    category: IAssetCategory,
-    path: string,
-    kind: EditorFileChangeKind,
-  ): Promise<void> {
+  private async handleByteChange(category: IAssetCategory, path: string, kind: EditorFileChangeKind): Promise<void> {
     const state = this.stateAt(category.id);
     const index = state.entries.findIndex((entry) => entry.path === path);
 
