@@ -1,4 +1,9 @@
-import { EditorEntryKind, IEditorDirectoryEntry } from '@motajs/editor-core';
+import {
+  EditorEntryKind,
+  EditorFileChangeKind,
+  IEditorDirectoryEntry,
+  IEditorFileChange,
+} from '@motajs/editor-core';
 import { IMemoryBackend } from './types';
 
 // 开发宿主的内存文件系统：按路径存内容（文本或原始字节），供宿主以 fs 注入方式驱动编辑器核心。
@@ -81,10 +86,26 @@ export class MemoryBackend implements IMemoryBackend {
   /** 显式创建的目录路径集合（空目录不在内容映射中体现） */
   private readonly directories: Set<string> = new Set();
 
+  /** 文件变化流的订阅者集合 */
+  private readonly listeners: Set<(change: IEditorFileChange) => void> = new Set();
+
   seed(path: string, content: string | Uint8Array): void {
     this.assertInBounds(path);
     this.content.set(path, content);
     this.registerParents(path);
+  }
+
+  /**
+   * 订阅文件变化；开发宿主用它把编辑器自己的写入也投递给面板
+   * @param listener 变化回调
+   * @returns 退订函数
+   */
+  watch(listener: (change: IEditorFileChange) => void): () => void {
+    this.listeners.add(listener);
+
+    return (): void => {
+      this.listeners.delete(listener);
+    };
   }
 
   async readFile(path: string): Promise<string> {
@@ -96,7 +117,10 @@ export class MemoryBackend implements IMemoryBackend {
   }
 
   async writeFile(path: string, data: string): Promise<void> {
+    const existed = this.hasFile(path);
+
     this.write(path, data);
+    this.notify(path, existed ? EditorFileChangeKind.Change : EditorFileChangeKind.Add);
   }
 
   async readBinary(path: string): Promise<Uint8Array> {
@@ -108,7 +132,10 @@ export class MemoryBackend implements IMemoryBackend {
   }
 
   async writeBinary(path: string, data: Uint8Array): Promise<void> {
+    const existed = this.hasFile(path);
+
     this.write(path, data);
+    this.notify(path, existed ? EditorFileChangeKind.Change : EditorFileChangeKind.Add);
   }
 
   async listDirectory(path: string): Promise<readonly IEditorDirectoryEntry[]> {
@@ -175,11 +202,37 @@ export class MemoryBackend implements IMemoryBackend {
       this.directories.add(nextDirectory);
       this.registerParents(nextDirectory);
     }
+
+    for (const [from, to] of files) {
+      this.notify(from, EditorFileChangeKind.Delete);
+      this.notify(to, EditorFileChangeKind.Add);
+    }
   }
 
   async deleteFile(path: string): Promise<void> {
     this.assertInBounds(path);
-    this.content.delete(path);
+
+    if (this.content.delete(path)) this.notify(path, EditorFileChangeKind.Delete);
+  }
+
+  /**
+   * 判断某路径当前是否已有内容
+   * @param path 文件路径
+   * @returns 已有内容时为 true
+   */
+  private hasFile(path: string): boolean {
+    return this.content.has(path);
+  }
+
+  /**
+   * 向所有订阅者发出一次文件变化
+   * @param path 变化文件路径
+   * @param kind 变化种类
+   */
+  private notify(path: string, kind: EditorFileChangeKind): void {
+    const listeners = [...this.listeners];
+
+    for (const listener of listeners) listener({ path, kind });
   }
 
   /**
