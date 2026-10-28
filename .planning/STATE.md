@@ -3,13 +3,13 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.2"
 current_phase_name: 面板内容解耦与文件资源管理器
-current_plan: 8
+current_plan: 9
 status: executing
-stopped_at: Completed 04.2-14-PLAN.md
-last_updated: "2026-10-28T11:00:19.278Z"
+stopped_at: Completed 04.2-16-PLAN.md
+last_updated: "2026-10-28T11:32:03.953Z"
 last_activity: 2026-10-28
 last_activity_desc: Phase 04.2 execution started
-state_head: 9e22c6b068ca44d75c9613bc13b5d3cb140e626b
+state_head: a30575d9f4133bb445a72a50040cc64094269462
 progress:
   total_phases: 10
   completed_phases: 0
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 04.2 (面板内容解耦与文件资源管理器) — EXECUTING
-Current Plan: 8
+Current Plan: 9
 Total Plans in Phase: 18
 Status: Ready to execute
 Next phase: Phase 04.2 — 面板内容解耦与文件资源管理器（设计重构）；先讨论，再规划接口
@@ -185,6 +185,7 @@ Progress: [███████░░░] 74%
 | Phase 04.2 P04.1 | 10 min | 2 tasks | 7 files |
 | Phase 04.2 P06 | 23 min | 2 tasks | 5 files |
 | Phase 04.2 P14 | 11 min | 3 tasks | 6 files |
+| Phase 04.2 P16 | 23 min | 3 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -502,6 +503,9 @@ Recent decisions affecting current work:
 - [Phase 04.2]: 重试进载入态、手动重载保留旧行：两处共用同一重读入口，但重试先清空失败态并显示载入
 - [Phase 04.2]: 地图画布只收图片路径键地址表；两张地址表各按自己的键查，禁止互相查表
 - [Phase 04.2]: 地图面板类型只信宿主注入的同步路径解析，未注入即不认领，不内置目录约定
+- [Phase 04.2]: 04.2-16: canOpen 只认领分类的清单/schema/默认值文件与分类目录下的文件，其它路径返回 false
+- [Phase 04.2]: 04.2-16: createOpenParam 的 assetName 取路径最后一段经 resolveAssetName 处理，必须与素材条目 name 一致（无 extension 分类保留后缀）
+- [Phase 04.2]: 04.2-16: mime/fontFamily 由 AssetPanelView 组合层算好；容器组件收条目闭包、叶子组件收零参闭包，路径止步于组合层
 
 ### Pending Todos
 
@@ -530,7 +534,7 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-28T11:00:18.710Z
-Stopped at: Completed 04.2-14-PLAN.md
+Last session: 2026-10-28T11:32:03.381Z
+Stopped at: Completed 04.2-16-PLAN.md
 Resume file: None
 Next action: 简报并规划 / 执行 Phase 5（代码编辑）——需用户先批准；Phase 04.1 已 Complete，本阶段不再有待办计划
