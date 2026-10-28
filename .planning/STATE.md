@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.2"
 current_phase_name: 面板内容解耦与文件资源管理器
-current_plan: 6
+current_plan: 7
 status: executing
-stopped_at: Completed 04.2-04.1-PLAN.md
-last_updated: "2026-10-28T10:31:00.000Z"
+stopped_at: Completed 04.2-06-PLAN.md
+last_updated: "2026-10-28T10:42:34.093Z"
 last_activity: 2026-10-28
 last_activity_desc: Phase 04.2 execution started
-state_head: e6ed7eba5e4cce0766bdeea21538852ee159fb0d
+state_head: a1b0480c0155306fde45c6ce24581094389c8a98
 progress:
   total_phases: 10
-  completed_phases: 6
+  completed_phases: 0
   total_plans: 182
   completed_plans: 165
 milestone_name: editor-core 空壳 + editor-impl 重做
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 04.2 (面板内容解耦与文件资源管理器) — EXECUTING
-Current Plan: 6
+Current Plan: 7
 Total Plans in Phase: 18
 Status: Ready to execute
 Next phase: Phase 04.2 — 面板内容解耦与文件资源管理器（设计重构）；先讨论，再规划接口
@@ -183,6 +183,7 @@ Progress: [███████░░░] 74%
 | Phase 04.2 P04 | 11 min | 2 tasks | 3 files |
 | Phase 04.2 P02.1 | 2 min | 2 tasks | 2 files |
 | Phase 04.2 P04.1 | 10 min | 2 tasks | 7 files |
+| Phase 04.2 P06 | 23 min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -495,6 +496,9 @@ Recent decisions affecting current work:
 - [Phase 04.2]: 04.2-04.1: ShellSystem.activateTab 改为「先 await 旧面板 onSwitchOut 结算 → 再改 activeTabId / notify() / 投递切入」（B1）；保存期间旧组件保持挂载，面板可从组件 ref 取草稿
 - [Phase 04.2]: 04.2-04.1: 新增私有 ShellSystem.departActiveInstance 作为三条活动变化入口共用的可等待保存前缀；判定在做链节点执行时才读 lastActiveInstanceId、先清记录再切出，因此并发切换串行且同一面板不重复保存
 - [Phase 04.2]: 04.2-04.1: ShellSystem.enqueueDeparture 删除；openBlankTab 仍同步返回 id（有挂载面板时只先 notify 列表），openPanelInTab 在改 activeTabId 前 await 保存，closeTab 的「先激活」补成 await activateTab，关闭三态与 skipFlush 一字不改
+- [Phase 04.2]: 读目录回调镜像进 ref，不进 effect 依赖：避免调用方内联函数导致反复重读，同时每次读目录都用最新回调
+- [Phase 04.2]: 行用 .efb-row-line 包一层：按钮本身带 efb-row 与目录/文件修饰类，动作槽放行内，避免按钮嵌套按钮
+- [Phase 04.2]: 重试进载入态、手动重载保留旧行：两处共用同一重读入口，但重试先清空失败态并显示载入
 
 ### Pending Todos
 
@@ -523,7 +527,7 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-28T10:31:00.000Z
-Stopped at: Completed 04.2-04.1-PLAN.md
+Last session: 2026-10-28T10:42:33.536Z
+Stopped at: Completed 04.2-06-PLAN.md
 Resume file: None
 Next action: 简报并规划 / 执行 Phase 5（代码编辑）——需用户先批准；Phase 04.1 已 Complete，本阶段不再有待办计划
