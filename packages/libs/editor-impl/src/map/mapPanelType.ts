@@ -67,5 +67,21 @@ export function createMapPanelType(capabilities: IMapEditorCapabilities): IEdito
 
       return panel;
     },
+    canOpen: (path: string): boolean => {
+      // 未注入解析的宿主不认领任何路径：地图因此不会进资源管理器的候选（D-33）
+      if (capabilities.resolveMapPath === undefined) return false;
+
+      return capabilities.resolveMapPath(path) !== null;
+    },
+    createOpenParam: (path: string): Record<string, unknown> => {
+      if (capabilities.resolveMapPath === undefined) return { target: null };
+
+      const mapId = capabilities.resolveMapPath(path);
+
+      // 未命中时交给既有 `isMapPanelTarget` 收窄后落回 NoTarget，不在本层猜目录约定（D-31）
+      if (mapId === null) return { target: null };
+
+      return { target: { mapId } };
+    },
   });
 }

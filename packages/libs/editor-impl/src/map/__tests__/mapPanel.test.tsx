@@ -83,6 +83,17 @@ function createCapabilities(overrides: Partial<IMapEditorCapabilities> = {}): IM
 }
 
 /**
+ * 造一个纯函数式的路径解析：只有 `content/map/<单段>.json` 属于地图
+ * @param path 完整路径
+ * @returns 地图标识；不属于本宿主的地图文件时为 null
+ */
+function resolveDemoMapPath(path: string): string | null {
+  const match = /^content\/map\/([^/]+)\.json$/.exec(path);
+
+  return match === null ? null : match[1];
+}
+
+/**
  * 装配核心、注册带实例捕获的地图面板类型，并按打开参数打开首张地图
  * @param capabilities 地图能力注入面
  * @returns 核心与面板实例
@@ -464,5 +475,42 @@ describe('地图面板：视图动作', () => {
 
     expect(viewState(panel).viewportColumns).toBe(15);
     expect(viewState(panel).viewportRows).toBe(9);
+  });
+});
+
+describe('createMapPanelType 打开能力', () => {
+  // 未注入路径解析的宿主不认领任何路径，打开参数交给 NoTarget
+  it('未注入路径解析时不认领任何路径', () => {
+    const type = createMapPanelType(createCapabilities());
+
+    expect(type.canOpen?.('content/map/tower.json')).toBe(false);
+    expect(type.createOpenParam?.('content/map/tower.json')).toEqual({ target: null });
+  });
+
+  // 注入解析后按宿主结果认领：命中为 true、非地图路径为 false
+  it('按宿主解析结果认领路径', () => {
+    const type = createMapPanelType(createCapabilities({ resolveMapPath: resolveDemoMapPath }));
+
+    expect(type.canOpen?.('content/map/tower.json')).toBe(true);
+    expect(type.canOpen?.('content/other/tower.json')).toBe(false);
+  });
+
+  // 命中时把路径转成 { target: { mapId } }，且每次都是新对象
+  it('命中时每次返回新的打开参数对象', () => {
+    const type = createMapPanelType(createCapabilities({ resolveMapPath: resolveDemoMapPath }));
+    const first = type.createOpenParam?.('content/map/tower.json');
+    const second = type.createOpenParam?.('content/map/tower.json');
+
+    expect(first).toEqual({ target: { mapId: 'tower' } });
+    expect(second).toEqual({ target: { mapId: 'tower' } });
+    expect(first).not.toBe(second);
+  });
+
+  // 判定完全由宿主解析决定：editor-impl 不内置 content/map 之类的目录约定
+  it('判定结果与宿主解析一致', () => {
+    const type = createMapPanelType(createCapabilities({ resolveMapPath: resolveDemoMapPath }));
+    const path = 'content/map/.list.jsonc';
+
+    expect(type.canOpen?.(path)).toBe(resolveDemoMapPath(path) !== null);
   });
 });
