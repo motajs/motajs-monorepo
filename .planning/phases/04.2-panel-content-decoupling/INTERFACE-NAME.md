@@ -2,12 +2,12 @@
 
 **Status:** **待用户确认** —— 本文所有名称、类型形状与口径均为**提案**。用户确认前，只允许落「纯类型声明」「常量声明」与「本文件」，不得写任何实现（项目规则：重要命名先确认）。
 
-**Scope:** 本阶段 Plan 02…17 新建 / 改动的全部对外名称：文件名、接口名、类型名、枚举名、方法名、字段名、CSS 类名前缀与 `data-test-id` 前缀，以及它们各自的用途。前序阶段已锁定的名称（`IEditorPanel` / `IEditorPanelType` / `IEditorFileSystem` / `IEditorPanelContext` / `IMapEditorCapabilities` / `IBrowser` 一族等）不重复登记，只登记它们的**新增**成员。
+**Scope:** 本阶段 Plan 02 / 02.1…17 新建 / 改动的全部对外名称：文件名、接口名、类型名、枚举名、方法名、字段名、CSS 类名前缀与 `data-test-id` 前缀，以及它们各自的用途。前序阶段已锁定的名称（`IEditorPanel` / `IEditorPanelType` / `IEditorFileSystem` / `IEditorPanelContext` / `IMapEditorCapabilities` / `IBrowser` 一族等）不重复登记，只登记它们的**新增**成员。
 
 **约定:** 类上的方法写 `类名.方法名`，接口方法写 `接口名.方法名`，自由函数写裸名（如 `deriveSchemaPath`）。每个名字先说明「它是干什么的」，再给名字。
 
 > 读法：一节一个计划。每节先一句话说明「这个计划要做什么」，再给一张「名称 / 种类 / 文件位置 / 用途」表。
-> 若某个名字不合适，直接在对话里指出；改名时先改本文，再进入 Plan 02 / Plan 03。
+> 若某个名字不合适，直接在对话里指出；改名时先改本文，再进入 Plan 02 / Plan 02.1 / Plan 03。
 
 ---
 
@@ -22,7 +22,7 @@
 | G5 | 文件头注释 | **不写文件头注释**。文件级说明写在 import 之后、正式代码之前；桶文件不写注释。 |
 | G6 | 桶文件 | 一律 `export *`，**不跨目录深路径转发**（`shared/index.ts` 只能 `export * from './fileBrowser'`）。 |
 | G7 | 打开参数 | `Record<string, unknown>` 作为面板打开参数是本仓库**既有例外**（`IEditorPanelFactoryParam.openParam` / 现在新增的 `IEditorPanelType.createOpenParam`），不视为「内联对象类型」。 |
-| G8 | 接口波次边界 | Plan 02 / Plan 03 只做**纯类型声明**，一行实现都不写；Plan 04…17 只引用这里的声音，不另造同义形状（Plan 03 一节有完整表述）。 |
+| G8 | 接口波次边界 | Plan 02 / Plan 02.1 / Plan 03 只做**纯类型声明**，一行实现都不写（Plan 02.1 额外把 `ShellSystem.activateTab` 的方法签名对齐，方法体不改）；Plan 04…17 只引用这里的声音，不另造同义形状（Plan 03 一节有完整表述）。 |
 | G9 | 路径口径 | 全部路径都是「相对项目根、以 `/` 分隔、无前导斜线、不含 `..` 段」的规范化相对路径；面板类型不再自己 normalize。 |
 
 ---
@@ -44,12 +44,27 @@
 | `IEditorPanelType.canOpen` | 可选接口方法，`(path: string): boolean` | `packages/libs/editor-core/src/panel/types.ts` | 面板类型判断「这个完整路径我能不能打开」；判定依据是完整路径而不是后缀列表。 |
 | `IEditorPanelType.createOpenParam` | 可选接口方法，`(path: string): Record<string, unknown>` | 同上 | 面板类型自己把完整路径转成本类型的打开参数；必须是纯函数、每次返回新对象，资源管理器不解释参数形状。 |
 
+**不在此节的名字：** `IShellSystem.activateTab` 的返回类型改造（`void` → `Promise<void>`）改由 **§Plan 02.1** 落地——Plan 02 在执行后才发现需要这条 B1 接口变更，而已完成计划的追加任务不会被执行，故单独成节。
+
 **两条保留约束（本计划明确不改旧签名）：**
 
 - `IEditorPanel.onBeforeClose` **保留旧的布尔语义、签名不变**（`(): Promise<boolean>`）；外壳优先 `IEditorPanel.onRequestClose`，没有它时才退回旧路径。这样既有 7 条关闭测试与 `MapPanel.onBeforeClose` 都不用改。
 - `IEditorPanel.onUpdateResource` **仍是必选成员、签名不变**；新通道只是并列的可选入口，第三方旧面板继续走它。
 
 **未被采纳的提案：** 研究中曾出现的独立 `IEditorFileWatcher` 接口**不引入**——变化流直接挂在 `IEditorFileSystem.watch` 上，避免同时存在两条注入路径。
+
+---
+
+## Plan 02.1 — editor-core 的切标签签名（纯接口）
+
+**要做什么：** 只把「切标签」声明成一个可等待的保存点：`IShellSystem.activateTab` 的返回类型从 `void` 改为 `Promise<void>`，实现类 `ShellSystem.activateTab` 加 `async` 与返回类型（**方法体一字不改**）。不含任何行为、不含测试。
+
+| 名称 | 种类 | 文件位置 | 用途 |
+|------|------|----------|------|
+| `IShellSystem.activateTab` | 既有接口方法（返回类型改造），`(tabId: string): Promise<void>` | `packages/libs/editor-core/src/shell/types.ts` | 切换活动标签。外壳**先 `await` 即将离开面板的 `IEditorPanel.onSwitchOut` 结算完成**，再修改活动标签并通知 React 重渲染——因此保存期间旧面板的组件仍然挂载，面板可以在钩子里直接读取组件 ref。这是 B1 决议，**不新增**第二个保存钩子。 |
+| `ShellSystem.activateTab` | 既有公开方法（签名对齐），`async (tabId: string): Promise<void>` | `packages/libs/editor-core/src/shell/shellSystem.ts` | 满足新接口；方法体仍是 Plan 04 的顺序，真正的「先等保存再切换」由 §Plan 04.1 落实。 |
+
+**为什么单独一节：** 这条接口变更原本被追加为 Plan 02 的 Task 4，但 Plan 02 已 complete（执行器跳过有 SUMMARY 的计划），追加任务永远不会跑。因此拆成独立的接口计划 `04.2-02.1`（wave 3，`depends_on: 04.2-02`），`04.2-04.1` 的 `depends_on` 补上它。
 
 ---
 
@@ -109,10 +124,34 @@ Plan 03 定稿的是**新增**的文件级 props 与**新增**的具名状态形
 | `ShellSystem.closeTab` | 既有公开方法（改造） | `packages/libs/editor-core/src/shell/shellSystem.ts` | 关闭标签的唯一用户入口；新增 Save / Discard / Cancel 三条分支，Discard 先调 `IEditorPanel.onDiscard` 再跳过落盘释放。 |
 | `ShellSystem.discardTab` | 既有私有方法（改造） | 同上 | 真正移除标签的地方；新增 `skipFlush` 参数，为真时不投递 `onSwitchOut`，但**仍必须清掉 `lastActiveInstanceId`**。 |
 | `ShellSystem.leaveActiveInstance` | 既有私有方法（拆分） | 同上 | 现在同时做「清记录」与「排切出」；拆开后 `skipFlush` 只跳过「排切出」，不跳过「清记录」，否则邻居拿不到 `onSwitchIn`。 |
-| `ShellSystem.enqueueSwitchOut` / `ShellSystem.enqueueSwitchIn` | 既有私有方法（拆出） | 同上 | 把「先投递切出、再投递切入」拆成两半，切成活动标签时先排切出再 `notify()`，作为「组件已被卸载」的第二道保险。 |
-| `ShellSystem.activateTab` | 既有公开方法（改造） | 同上 | 切换活动标签；改为先排切出再通知 React，降低「面板拿 ref 时组件已卸载」的概率。 |
+| `ShellSystem.enqueueSwitchOut` / `ShellSystem.enqueueSwitchIn` | 既有私有方法（拆出） | 同上 | 把「先投递切出、再投递切入」拆成两步排进串行链，保证切入一定排在切出结算之后（B1 之后仍保留）。 |
+| `ShellSystem.activateTab` | 既有公开方法（改造） | 同上 | **B1 修订后：**返回 `Promise<void>`，切换前先 `await` 旧面板的 `IEditorPanel.onSwitchOut`，保存完成后再改活动标签并通知 React。原「先排切出再通知」的写法已被 `04.2-04.1` 取代。 |
 | `shellCloseChoice.test.ts` | 测试文件（新建） | `packages/libs/editor-core/src/shell/__tests__/` | 钉死四条语义：Save 跳落盘、Discard 调 `onDiscard` 且不落盘、Cancel 保持标签、注销类型 / 释放 core 不询问。 |
 | `shellSwitchOrder.test.ts` | 测试文件（新建） | 同上 | 钉死「切出时组件已卸载也不丢最后一次编辑」与「`onSwitchOut` 同步前缀可读到最后一次输入」。 |
+
+> **B1 修订（2026-10-28）：** 本节的「切出投递提前到状态通知之前」已被 `## Plan 04.1` 取代——用户否决了「先排队再通知」的补丁，也否决新增 `onBeforeSwitchOut`。关闭三态（`ShellSystem.closeTab` / `ShellSystem.discardTab` 的 `skipFlush`）**全部保留**。
+
+---
+
+## Plan 04.1 — B1：切标签先等保存、再通知卸载
+
+**要做什么：** 把 Plan 04 的「先排队再通知」补丁改成 B1：外壳在改活动标签、通知 React、投递切入**之前**就 `await` 旧面板的 `IEditorPanel.onSwitchOut`；保存完成前旧组件仍挂载。删除 `ShellSystem.enqueueDeparture`，三条活动变化入口共用同一个可等待的保存前缀。**不新增任何接口名**（`onSwitchOut` 语义不变，`activateTab` 的返回类型在 §Plan 02.1 已改）。
+
+| 名称 | 种类 | 文件位置 | 用途 |
+|------|------|----------|------|
+| `ShellSystem.activateTab` | 既有公开方法（B1 实现） | `packages/libs/editor-core/src/shell/shellSystem.ts` | 先 `await` 旧面板切出保存，再改 `activeTabId` → `notify()` → `syncActiveInstance()`。 |
+| `ShellSystem.departActiveInstance` | 新增私有方法，`(nextInstanceId: string \| null) => Promise<void>` | 同上 | 三条入口共用的可等待保存前缀：整段「判定 + 切出」排在 `switchChain` 上串行执行，执行时才读 `lastActiveInstanceId`（目标实例未变直接返回），先清记录再 `await` 该实例的切出。 |
+| `ShellSystem.openBlankTab` | 既有公开方法（B1 调整） | 同上 | 仍同步返回新标签 id；当确有面板挂载时，只先追加标签并通知列表，随后走同一条 `activateTab` 完成切换。 |
+| `ShellSystem.openPanelInTab` | 既有公开方法（B1 调整） | 同上 | 在改 `activeTabId` 之前 `await` 旧面板的切出保存；标签内替换分支保持原样。 |
+| `ShellSystem.closeTab` | 既有公开方法（B1 调整） | 同上 | 「先切到目标标签」改为 `await this.activateTab(tabId)`；三态分支与 `skipFlush` 一字不改。 |
+| `ShellSystem.enqueueDeparture` | 删除 | 同上 | 「先排队再通知」的时序补丁退场。 |
+| `shellSwitchOrder.test.ts` | 测试文件（重写） | `packages/libs/editor-core/src/shell/__tests__/` | 钉死「保存结算前组件不 unmount」「结算后才 unmount」「同一次切换只切出一次」「`onSwitchOut` 里能读到组件内容」。 |
+
+**B1 的口径（写死，后续计划只引用）：**
+1. `IEditorPanel.onSwitchOut` 是**唯一**的切出保存点；不新增 `onBeforeSwitchOut` 或第二个保存钩子。
+2. 切标签的顺序固定为：`await` 旧面板 `onSwitchOut` → 改 `activeTabId` → `notify()`（React 此时才卸载）→ 投递切入。
+3. `IShellSystem.activateTab` 返回 `Promise<void>`；`openBlankTab` 仍同步返回 `string`。
+4. 关闭三态与 `skipFlush` 语义不变，只把「先激活目标标签」补成 `await`。
 
 ---
 
@@ -389,7 +428,7 @@ Plan 03 定稿的是**新增**的文件级 props 与**新增**的具名状态形
 
 **改名记录：无。** 本阶段没有发生任何改名，下文列出的即为最终名称，全文只有最终名，不存在「原名 → 现名」条目。
 
-### 最终名称 · editor-core（Plan 02）
+### 最终名称 · editor-core（Plan 02 / Plan 02.1）
 
 | 名称 | 最终形态 |
 |------|----------|
@@ -403,6 +442,7 @@ Plan 03 定稿的是**新增**的文件级 props 与**新增**的具名状态形
 | `IResourceSystemHooks.onResourceChange` | 可选方法，`(identifier, kind): Promise<void>` |
 | `IEditorPanelType.canOpen` | 可选方法，`(path: string): boolean` |
 | `IEditorPanelType.createOpenParam` | 可选方法，`(path: string): Record<string, unknown>` |
+| `IShellSystem.activateTab` | 既有方法，返回类型改为 `Promise<void>`：先 `await` 旧面板 `IEditorPanel.onSwitchOut`，再改活动标签并通知 React（B1；不新增 `onBeforeSwitchOut`）。**由 Plan 02.1 落地，不属于 Plan 02** |
 
 保留不变：`IEditorPanel.onBeforeClose` 仍是布尔语义；`IEditorPanel.onUpdateResource` 仍是必选成员、签名不变。
 
