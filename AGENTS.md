@@ -646,3 +646,15 @@ Any command that performs a network request — `git fetch` / `git pull` / `git 
 - 每个 plan 执行前的简报**以纯文字呈现**（plan id / 目标 / 大致内容 / 验证方式），然后**结束本轮、等用户用文字回复**；**不要**用提问工具（`question`）去问「是否批准执行」（仅限批准计划执行，其他的地方该用提问工具就用）。
 - 每次计划执行完毕后，**汇报完即结束本轮**，等用户文字回复；**不要**用提问工具追问下一步。
 - （「执行前必须简报并等待批准」「执行后必须汇报」这两条门禁本身不变，只是**改用文字**表达，不再用提问工具。）
+
+### GSD 流程必须加载 skill 并由子代理执行 (MANDATORY — HIGHEST PRIORITY) / 必须按 skill 走
+
+- **执行任何 GSD 流程前，必须先加载对应 skill**（discuss / plan / ui / execute / verify / debug / quick 等），并严格按该 skill 的 workflow 执行；不得凭记忆、摘要或「看起来差不多」的方式替代 skill。没有加载 skill 就开始执行，视为流程未执行。
+- **不得自行发明例外。** 「这个计划只是文档」「这个任务只是命名」「这只是人工确认门禁」「这个文件很小」都不是跳过 skill 的理由；skill 没写的例外就是不允许。
+- **所有代码编辑与计划规划必须在子代理中完成**：
+  - 执行计划 → `gsd-executor`（由 `gsd-execute-phase` 编排 / 派发）；
+  - 写计划 → `gsd-planner`；
+  - 研究 / 模式映射 / UI 契约 / 计划检查 → 对应的 `gsd-phase-researcher` / `gsd-pattern-mapper` / `gsd-ui-researcher` / `gsd-ui-checker` / `gsd-plan-checker`。
+  - 编排器只负责简报、派发、验收和汇报，**不得内联写计划里的代码或计划文件**。
+- **只有 GSD 明确说可以内联修改的文件才可以内联修改。** 除此之外，用户说「可以执行」「按流程执行」「继续」后，必须派发执行器，而不是直接 `Edit` / `Write`。
+- **违反本条的产出一律视为未执行**：必须撤销（源码回退、删除非流程产物、重置状态），再按 skill 从头执行；不得把「结果看起来是对的」当作流程已完成的理由。
