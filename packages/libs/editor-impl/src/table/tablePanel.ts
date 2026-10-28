@@ -3,10 +3,12 @@ import { useStore } from '@tanstack/react-store';
 import { Button, Modal } from 'antd';
 import {
   EditorEntryKind,
+  EditorFileChangeKind,
   IEditorPanel,
   IEditorPanelContext,
   IEditorPanelFactoryParam,
   IFileEntry,
+  IResourceIdentifier,
   IUndoContext,
 } from '@motajs/editor-core';
 import { get } from 'es-toolkit/compat';
@@ -133,6 +135,10 @@ interface ITablePanelColumn {
   data: unknown;
   /** 该栏最近读取到的 schema 内容 */
   schema: unknown;
+  /** 该栏数据文件上一次载入 / 写盘成功的原文；与外部内容逐字比较，相同即视为自写回声（D-15 / D-36） */
+  baselineText: string | undefined;
+  /** 该栏 schema 文件上一次载入 / 写盘成功的原文；与 `baselineText` 同口径 */
+  baselineSchemaText: string | undefined;
   /** 该栏主文件记住的系统前缀原文，写回时逐字还原；无前缀时为 `''` */
   prefix: string;
   /** 该栏待确认剥离注释时暂存的宽松解析值；无需确认时为 undefined */
@@ -735,6 +741,28 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     this.refreshAwaitingPickers();
   }
 
+  /**
+   * 资源层确认某个路径发生变化后，逐栏按目标路径匹配并处理（D-15 / D-16 / D-36）
+   *
+   * 只有本面板某栏目标的数据文件、或由它推导出的 schema 文件才处理，其它路径直接忽略且不读内容；
+   * 处理时先读外部原文并与该栏「上次载入 / 写盘成功的基线」比较，相同即视为编辑器自己的写入回声，
+   * 既不刷新也不弹框。读取失败降级为该栏提示，绝不覆盖内存内容。
+   * @param identifier 资源统一标识符
+   * @param kind 变化种类
+   */
+  async onResourceChange(identifier: IResourceIdentifier, kind: EditorFileChangeKind): Promise<void> {
+    const count = this.columns.length;
+
+    for (let index = 0; index < count; index += 1) {
+      const target = this.columns[index].target;
+
+      if (target === null) continue;
+      if (target.dataPath !== identifier && deriveSchemaPath(target.dataPath) !== identifier) continue;
+
+      await this.handleResourceChange(index, identifier, kind);
+    }
+  }
+
   async onUpdateResourceList(): Promise<void> {}
 
   async undo(context: IUndoContext<unknown>): Promise<void> {
@@ -755,6 +783,8 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     column.target = target;
     column.unsaved = false;
     column.unsavedSchema = false;
+    column.baselineText = undefined;
+    column.baselineSchemaText = undefined;
 
     // 版本号自增与草稿作废必须成对发生：换表后组件不能从上一张表的草稿重置（T-04.2-08-05）
     this.resetColumnDraft(columnIndex);
@@ -790,6 +820,8 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     column.target = null;
     column.data = null;
     column.schema = null;
+    column.baselineText = undefined;
+    column.baselineSchemaText = undefined;
     column.prefix = '';
     column.pendingStrip = undefined;
     column.unsaved = false;
@@ -1202,6 +1234,12 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     // 写盘期间换了目标：内容已写回原文件，但不能再拿旧表的内容覆盖新表的面板状态
     if (column.target !== target) return ContentSaveStatus.Saved;
 
+    // 写盘成功后把基线同步为刚写出的原文：之后宿主回声与基线相同，被判为无变化（D-15 / D-36）
+    if (wroteData) column.baselineText = serializeTableText(document.data, prefix);
+    if (wroteSchema && isRecord(document.schema)) {
+      column.baselineSchemaText = serializeTableText(document.schema, prefix);
+    }
+
     column.data = document.data;
     column.schema = document.schema;
     column.draft = document;
@@ -1342,15 +1380,9 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     column.stripConfirmed.set(target.dataPath, rememberedText);
     column.unsaved = true;
 
-    if (this.isSchemaView(columnIndex)) {
-      this.applySchemaLoaded(columnIndex, value);
-      return;
-    }
+    const token = this.nextToken(columnIndex);
 
-    const schemaText = await this.readSchemaText(deriveSchemaPath(target.dataPath));
-    const schema = schemaText === undefined ? undefined : parseTableText(schemaText).value;
-
-    this.applyLoaded(columnIndex, schema, value);
+    await this.loadPrimary(columnIndex, target, value, token, rememberedText);
   }
 
   /**
@@ -1368,6 +1400,8 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     column.target = null;
     column.data = null;
     column.schema = null;
+    column.baselineText = undefined;
+    column.baselineSchemaText = undefined;
     this.nextToken(columnIndex);
     this.publish(columnIndex, TablePanelStatus.NoTarget);
   }
@@ -1397,6 +1431,8 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       target: null,
       data: null,
       schema: null,
+      baselineText: undefined,
+      baselineSchemaText: undefined,
       prefix: '',
       pendingStrip: undefined,
       emptyMode: TableEmptyMode.Buttons,
@@ -1534,6 +1570,17 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   }
 
   /**
+   * 保留某栏当前状态、仅更新其面板级提示文案（成功 / 提示位，不是错误位）
+   * @param columnIndex 栏序号（0 基）
+   * @param message 提示文案
+   */
+  private publishMessage(columnIndex: number, message: string): void {
+    const state = this.columnAt(columnIndex).store.state;
+
+    this.publish(columnIndex, state.status, message);
+  }
+
+  /**
    * 保留某栏当前状态、仅更新其面板级错误提示
    * @param columnIndex 栏序号（0 基）
    * @param message 错误提示文案
@@ -1630,19 +1677,28 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   }
 
   /**
-   * 以已解析的主文件值重算某栏视图：schema 视图直接落 schema 呈现，数据视图再读 schema 后落数据行树
+   * 以已解析的主文件值重算某栏视图，并把该栏基线更新为本次载入的原文
+   *
+   * schema 视图直接落 schema 呈现，数据视图再读 schema 后落数据行树；基线只在这里（载入成功）
+   * 与 `TablePanel.saveDocument`（写盘成功）两处更新，是判断「外部内容有没有真的变」的唯一依据。
    * @param columnIndex 栏序号（0 基）
    * @param target 该栏目标
    * @param value 主文件解析出的值
    * @param token 本次刷新的请求序号，用于丢弃在途结果
+   * @param text 本次载入的主文件原文
    */
   private async loadPrimary(
     columnIndex: number,
     target: ITablePanelTarget,
     value: unknown,
     token: number,
+    text: string | undefined,
   ): Promise<void> {
+    const column = this.columnAt(columnIndex);
+
     if (this.isSchemaView(columnIndex)) {
+      column.baselineText = text;
+      column.baselineSchemaText = undefined;
       this.applySchemaLoaded(columnIndex, value);
       return;
     }
@@ -1653,6 +1709,8 @@ export class TablePanel implements IEditorPanel, ITablePanel {
 
     const schema = schemaText === undefined ? undefined : parseTableText(schemaText).value;
 
+    column.baselineText = text;
+    column.baselineSchemaText = schemaText;
     this.applyLoaded(columnIndex, schema, value);
   }
 
@@ -1910,6 +1968,73 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   }
 
   /**
+   * 处理某一栏的一次外部变化：读原文、比对基线，再按「忽略 / 自动刷新 / 冲突」分流
+   *
+   * 读原文走既有的两步资源读取（先拿句柄、再取内容）；读取失败与非法内容都降级为提示并保留内存内容。
+   * 与基线相同即自写回声 / 空变化，什么都不做；基线不同且本栏不脏时替换内容并递增版本号。
+   * @param columnIndex 栏序号（0 基）
+   * @param path 变化路径（数据文件或该栏推导出的 schema 文件）
+   * @param kind 变化种类
+   */
+  private async handleResourceChange(
+    columnIndex: number,
+    path: string,
+    kind: EditorFileChangeKind,
+  ): Promise<void> {
+    const column = this.columnAt(columnIndex);
+    const target = column.target;
+
+    if (target === null) return;
+
+    if (kind === EditorFileChangeKind.Delete) {
+      this.publishMessage(columnIndex, '外部文件已被删除，已保留你的改动。');
+      return;
+    }
+
+    let text: string | undefined;
+
+    try {
+      text = await this.readText(path);
+    } catch {
+      text = undefined;
+    }
+
+    if (text === undefined) {
+      this.publishMessage(columnIndex, '读取外部改动失败，已保留你的改动。');
+      return;
+    }
+
+    const mirroredSchema = !isSchemaPath(target.dataPath) && path === deriveSchemaPath(target.dataPath);
+
+    if ((mirroredSchema ? column.baselineSchemaText : column.baselineText) === text) return;
+
+    const parsed = parseTableText(text);
+
+    if (parsed.status !== TableTextParseStatus.Conforming) {
+      this.publishMessage(columnIndex, '外部改动包含注释或格式非法，已保留你的改动。');
+      return;
+    }
+
+    if (this.isColumnDirty(columnIndex)) return;
+
+    if (mirroredSchema) {
+      column.baselineSchemaText = text;
+      this.applyLoaded(columnIndex, parsed.value, column.data);
+      return;
+    }
+
+    if (this.isSchemaView(columnIndex)) {
+      column.baselineText = text;
+      this.applySchemaLoaded(columnIndex, parsed.value);
+      return;
+    }
+
+    column.prefix = parsed.prefix;
+    column.baselineText = text;
+    this.applyLoaded(columnIndex, column.schema, parsed.value);
+  }
+
+  /**
    * 请求某一栏目标表的原文并解析后重算行树；该栏无目标时落回未设目标态
    *
    * 刷新原则上**原地更新**：该栏已就绪且已有行树时不再先切成加载态，避免整棵行树卸载后重挂
@@ -1943,7 +2068,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
 
       if (primaryText === undefined) {
         column.prefix = '';
-        await this.loadPrimary(columnIndex, target, undefined, token);
+        await this.loadPrimary(columnIndex, target, undefined, token, undefined);
         return;
       }
 
@@ -1954,7 +2079,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
 
         if (remembered === primaryText) {
           column.prefix = '';
-          await this.loadPrimary(columnIndex, target, parsed.value, token);
+          await this.loadPrimary(columnIndex, target, parsed.value, token, primaryText);
           return;
         }
 
@@ -1971,7 +2096,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       }
 
       column.prefix = parsed.prefix;
-      await this.loadPrimary(columnIndex, target, parsed.value, token);
+      await this.loadPrimary(columnIndex, target, parsed.value, token, primaryText);
     } catch {
       if (this.requestTokens[columnIndex] !== token) return;
 
