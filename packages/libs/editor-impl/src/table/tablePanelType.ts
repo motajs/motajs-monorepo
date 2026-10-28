@@ -1,6 +1,7 @@
 import { IEditorPanelFactoryParam, IEditorPanelType } from '@motajs/editor-core';
 import { createElement, ReactNode } from 'react';
 import { TablePanel } from './tablePanel';
+import { isTableOpenablePath } from './resourceType';
 import { ITablePanelTarget } from './types';
 
 /**
@@ -58,4 +59,6 @@ export const tablePanelType: IEditorPanelType = Object.freeze({
 
     return panel;
   },
+  canOpen: (path: string): boolean => isTableOpenablePath(path),
+  createOpenParam: (path: string): Record<string, unknown> => ({ target: { dataPath: path } }),
 });

@@ -25,7 +25,22 @@ export function deriveSchemaPath(dataPath: string): string {
 }
 
 /**
- * 判断一个路径是否可作为表格打开的数据文件
+ * 判断一个路径能否由表格面板打开：只看扩展名，schema 约定文件同样算「能打开」
+ *
+ * 与 `isTableDataPath` 的差别：本函数是「能否打开」的口径（D-25 / D-31），供面板类型的
+ * `canOpen` 与空栏打开态的过滤使用；`isTableDataPath` 是「能否直接删除」的口径，排除 schema。
+ * @param path 相对项目根、以 `/` 分隔、无前导斜线的文件路径
+ * @returns 扩展名为 `json` / `jsonc`（含 schema 约定文件）时为 true
+ */
+export function isTableOpenablePath(path: string): boolean {
+  return path.endsWith('.json') || path.endsWith('.jsonc');
+}
+
+/**
+ * 判断一个路径是否可作为表格直接删除的数据文件：排除 schema 约定文件
+ *
+ * 删除只删「数据文件 + 由它推导出的 schema」，不允许直接删掉任意 schema 文件，故本函数比
+ * `isTableOpenablePath` 更严格；删除态的浏览器过滤用它（D-25 的删除态边界）。
  * @param path 相对项目根、以 `/` 分隔、无前导斜线的文件路径
  * @returns 扩展名为 `json` / `jsonc` 且不是 schema 约定文件时为 true
  */
