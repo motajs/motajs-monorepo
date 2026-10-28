@@ -602,6 +602,20 @@ export function createMapCapabilities(
 ): IMapEditorCapabilities {
   const listMaps = async (): Promise<readonly IMapSummary[]> => readSummaries(backend);
 
+  const resolveMapPath = (path: string): string | null => {
+    const prefix = `${MAP_DIRECTORY_PATH}/`;
+
+    if (!path.startsWith(prefix)) return null;
+    if (!path.endsWith('.json')) return null;
+
+    const mapId = path.slice(prefix.length, path.length - '.json'.length);
+
+    if (mapId.length === 0) return null;
+    if (mapId.includes('/') || mapId.includes('\\')) return null;
+
+    return mapId;
+  };
+
   const openMap = async (mapId: string): Promise<IMapDocument> => {
     const tileGroups = requireTileGroups(options);
     const record = await readMapRecord(backend, mapId);
@@ -668,6 +682,7 @@ export function createMapCapabilities(
     addLayer,
     readProperties,
     saveMapProperties,
+    resolveMapPath,
     propertiesSchema: options.propertiesSchema,
     maxMapSize: options.maxMapSize,
   };

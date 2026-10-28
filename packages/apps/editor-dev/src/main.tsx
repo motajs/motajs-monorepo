@@ -1,7 +1,8 @@
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
-import { EditorCore } from '@motajs/editor-core';
+import { EditorCore, IEditorPanelType } from '@motajs/editor-core';
 import { AssetCapabilityProvider } from '@motajs/editor-impl/asset';
+import { createFileExplorerPanelType } from '@motajs/editor-impl/explorer';
 import { tablePanelType } from '@motajs/editor-impl/table';
 import { MemoryBackend } from './backend/memoryBackend';
 import { ASSET_DEMO_CATEGORIES, registerAssetDemo, seedAssetDemo, seedUnregisteredAssetDemo } from './demo/assetDemo';
@@ -43,6 +44,19 @@ core.shellSystem.registerPanelType(tablePanelType);
 registerDevMenu(core);
 registerAssetDemo(core);
 registerMapDemo(core, backend);
+core.shellSystem.registerPanelType(
+  createFileExplorerPanelType({
+    listPanelTypes: (): readonly IEditorPanelType[] => core.shellSystem.listPanelTypes(),
+    openPanel: async (typeId: string, openParam: Record<string, unknown>): Promise<boolean> => {
+      const tabId = core.shellSystem.openBlankTab();
+      const opened = await core.shellSystem.openPanelInTab(tabId, typeId, openParam);
+
+      if (!opened) await core.shellSystem.closeTab(tabId);
+
+      return opened;
+    },
+  }),
+);
 
 await core.initialize({ fs: backend, maxUndoStep: backend.maxUndoStep, ignore: ['node_modules', '.git'] });
 
