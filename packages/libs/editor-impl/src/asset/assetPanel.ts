@@ -5,10 +5,13 @@ import { useStore } from '@tanstack/react-store';
 import { get } from 'es-toolkit/compat';
 import { createElement, FC, ReactElement } from 'react';
 import {
+  EditorFileChangeKind,
   IEditorPanel,
   IEditorPanelContext,
   IEditorPanelFactoryParam,
+  IFileEntry,
   IResource,
+  IResourceIdentifier,
   IUndoContext,
 } from '@motajs/editor-core';
 import { AssetCategoryKind, AssetListFormat, IAssetCategory, IAssetEditorCapabilities } from '../react';
@@ -52,6 +55,7 @@ import {
   IAssetPanel,
   IAssetPanelTarget,
   IAssetPanelViewState,
+  IAssetPendingConflict,
   IAssetTranscodeService,
   IAssetUpload,
 } from './types';
@@ -76,6 +80,8 @@ interface IAssetPanelState {
   loaded: boolean;
   /** 该分类最近一次加载的请求序号，用于丢弃过期结果 */
   token: number;
+  /** 清单文件上次载入 / 写盘成功的原文，用于把编辑器自己的写入回声识别成空变化 */
+  baselineText: string | undefined;
 }
 
 /** 一次配置改动的撤销载荷（配置回放用） */
@@ -280,6 +286,15 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
   /** 各转码种类的探测结果缓存，切换分类时不必重新探测 */
   private readonly transcodeCapability: Map<AssetTranscodeKind, boolean> = new Map<AssetTranscodeKind, boolean>();
 
+  /** 待用户决定的清单文件外部改动；没有冲突时为 undefined */
+  private pendingConflict: IAssetPendingConflict | undefined;
+
+  /** 每条路径最近一次处理的变化摘要，用来把同一事件重复投递压成一次 */
+  private readonly handledChanges: Map<string, string> = new Map<string, string>();
+
+  /** 面板当前是否处于活动标签；非活动面板不弹看不见的冲突框 */
+  private active = true;
+
   constructor(
     param: IEditorPanelFactoryParam,
     capabilities: IAssetEditorCapabilities,
@@ -305,6 +320,7 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
       transcodeOpen: false,
       transcoding: false,
       transcodeCapable: false,
+      pendingConflict: undefined,
     });
     const initialCategory = categories.length === 0 ? undefined : categories[0];
 
@@ -410,22 +426,49 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
   }
 
   async onSwitchIn(): Promise<void> {
+    this.active = true;
+
     const categoryId = this.currentCategoryId;
 
     if (categoryId === undefined) return;
 
     await this.loadCategory(categoryId);
+    this.publish(this.store.state.status);
   }
 
   async onSwitchOut(): Promise<void> {
     // 面板失去当前状态时把各分类未落盘的改动统一写盘，避免「切走就丢」；没读过的分类由
     // AssetPanel.writeCategory 的守卫挡掉，写失败由它保留未保存标记并提示（§J）
+    this.active = false;
     await this.save();
   }
 
   async onFocus(): Promise<void> {}
 
   async onBlur(): Promise<void> {}
+
+  /**
+   * 资源层确认某个路径发生变化后，按「清单文件 / 分类目录内字节」两类各自处理；其它路径直接忽略
+   *
+   * 清单文件读不到时提示并保留内存改动；字节变化只递增该条目的字节版本，不重读清单、不登记撤销。
+   * @param identifier 资源统一标识符
+   * @param kind 变化种类
+   */
+  async onResourceChange(identifier: IResourceIdentifier, kind: EditorFileChangeKind): Promise<void> {
+    const listCategory = this.categoryList().find((category) => category.listPath === identifier);
+
+    if (listCategory !== undefined) {
+      await this.handleListChange(listCategory, identifier, kind);
+      return;
+    }
+
+    for (const category of this.categoryList()) {
+      if (!this.isCategoryBytePath(category, identifier)) continue;
+
+      await this.handleByteChange(category, identifier, kind);
+      return;
+    }
+  }
 
   async onUpdateResource(): Promise<void> {}
 
@@ -476,48 +519,17 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
 
       for (const entry of directoryEntries) paths.add(entry.path);
 
-      let listEntries: readonly IAssetListEntry[] = [];
+      const text = paths.has(category.listPath)
+        ? await this.readListText(await this.context.requestResource(category.listPath))
+        : undefined;
 
-      if (paths.has(category.listPath)) {
-        const text = await this.readListText(await this.context.requestResource(category.listPath));
+      if (state.token !== token) return;
 
-        if (state.token !== token) return;
-
-        if (text === undefined) {
-          state.prefix = '';
-          state.listDocument = undefined;
-        } else {
-          const parsed = parseTableText(text);
-
-          if (parsed.status !== TableTextParseStatus.Conforming) {
-            this.setError(categoryId, '列表文件内容无法解析。');
-            return;
-          }
-
-          state.prefix = parsed.prefix;
-          state.listDocument = parsed.value;
-          listEntries = readAssetList(category, parsed.value);
-        }
-      } else {
-        state.prefix = '';
-        state.listDocument = undefined;
+      if (!this.rebuildFromListText(category, state, text, paths, directoryEntries)) {
+        this.setError(categoryId, '列表文件内容无法解析。');
+        return;
       }
 
-      // 已登记条目在前、未登记条目在后：列表文件缺失或为空时同样要扫描，否则界面永远看不到目录里的游离文件
-      const registeredEntries = this.buildEntries(category, listEntries, paths);
-      const registeredNames = registeredEntries.map((entry) => entry.name);
-      const unregisteredEntries = collectUnregisteredAssetNames(category, directoryEntries, registeredNames).map(
-        (name) => ({
-          name,
-          path: resolveAssetBytePath(category, name),
-          config: undefined,
-          exists: true,
-          registered: false,
-        }),
-      );
-
-      state.entries = [...registeredEntries, ...unregisteredEntries];
-      state.loaded = true;
       this.publish(state.entries.length === 0 ? AssetPanelStatus.Empty : AssetPanelStatus.Ready);
     } catch {
       if (state.token !== token) return;
@@ -939,6 +951,309 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
   }
 
   /**
+   * 处理「某个分类的清单文件」发生变化：原文与基线相同视为回声，脏则弹冲突，否则重读该分类
+   * @param category 清单所属分类
+   * @param path 清单文件路径
+   * @param kind 变化种类
+   */
+  private async handleListChange(
+    category: IAssetCategory,
+    path: string,
+    kind: EditorFileChangeKind,
+  ): Promise<void> {
+    const state = this.stateAt(category.id);
+
+    if (kind === EditorFileChangeKind.Delete) {
+      if (!this.shouldHandleChange(path, `${kind}:deleted`)) return;
+
+      if (state.unsaved) {
+        this.pendingConflict = { categoryId: category.id, text: '' };
+        this.publish(this.store.state.status);
+        return;
+      }
+
+      await this.applyExternalList(category, state, undefined);
+      return;
+    }
+
+    const text = await this.readExternalListText(path);
+
+    if (text === undefined) {
+      antdMessage.warning('读取外部改动失败，已保留你的改动');
+      return;
+    }
+
+    if (!this.shouldHandleChange(path, `${kind}:${text}`)) return;
+
+    // 与上次载入 / 写盘成功的原文一致：这是编辑器自己的写入回声，不刷新也不弹框
+    if (text === state.baselineText) return;
+
+    if (state.unsaved) {
+      this.pendingConflict = { categoryId: category.id, text };
+      this.publish(this.store.state.status);
+      return;
+    }
+
+    await this.applyExternalList(category, state, text);
+  }
+
+  /**
+   * 处理「分类目录内的素材字节」发生变化：只递增该条目的字节版本，不重读清单、不登记撤销
+   * @param category 字节所属分类
+   * @param path 字节文件路径
+   * @param kind 变化种类
+   */
+  private async handleByteChange(
+    category: IAssetCategory,
+    path: string,
+    kind: EditorFileChangeKind,
+  ): Promise<void> {
+    const state = this.stateAt(category.id);
+    const index = state.entries.findIndex((entry) => entry.path === path);
+
+    if (index === -1) return;
+
+    let digest = `${kind}:deleted`;
+
+    if (kind !== EditorFileChangeKind.Delete) {
+      const bytesDigest = await this.readBytesDigest(path);
+
+      if (bytesDigest === undefined) {
+        antdMessage.warning('读取外部改动失败，已保留你的改动');
+        return;
+      }
+
+      digest = `${kind}:${bytesDigest}`;
+    }
+
+    if (!this.shouldHandleChange(path, digest)) return;
+
+    const entry = state.entries[index];
+    const entries = state.entries.slice();
+
+    // 删除事件只标「文件不在了」；新增 / 修改让字节版本加一，预览与卡片据此按需重读
+    entries[index] = {
+      name: entry.name,
+      path: entry.path,
+      config: entry.config,
+      exists: kind !== EditorFileChangeKind.Delete,
+      registered: entry.registered,
+      byteVersion: kind === EditorFileChangeKind.Delete ? entry.byteVersion : (entry.byteVersion ?? 0) + 1,
+    };
+    state.entries = entries;
+    this.publish(this.store.state.status);
+  }
+
+  /**
+   * 判断一个路径是否属于某分类的素材字节：清单 / schema / 默认值文件由各自分支处理，不按字节对待
+   * @param category 素材分类
+   * @param path 变化路径
+   * @returns 位于分类目录下且不是保留文件时为 true
+   */
+  private isCategoryBytePath(category: IAssetCategory, path: string): boolean {
+    if (category.listPath === path) return false;
+    if (category.defaultsPath === path) return false;
+    if (resolveAssetSchemaPath(category) === path) return false;
+
+    return path.startsWith(`${category.dir}/`);
+  }
+
+  /**
+   * 判断这次变化是否已在同一摘要下处理过；没有处理过就记下摘要
+   * @param path 变化路径
+   * @param digest 本次变化的内容摘要
+   * @returns 需要处理时为 true
+   */
+  private shouldHandleChange(path: string, digest: string): boolean {
+    if (this.handledChanges.get(path) === digest) return false;
+
+    this.handledChanges.set(path, digest);
+    return true;
+  }
+
+  /**
+   * 给一段字节算一个廉价的摘要，用来识别「同一次变化」
+   * @param bytes 文件字节
+   * @returns 长度与滚动校验和拼成的摘要
+   */
+  private digestBytes(bytes: Uint8Array): string {
+    let checksum = 0;
+
+    for (let index = 0; index < bytes.length; index += 1) checksum = (checksum * 31 + bytes[index]) % 0x7fffffff;
+
+    return `${bytes.length}:${checksum}`;
+  }
+
+  /**
+   * 经资源层读取一个外部变化文件的字节摘要
+   * @param path 文件的项目内相对路径
+   * @returns 字节摘要；资源不存在、不是字节或读取失败时为 undefined
+   */
+  private async readBytesDigest(path: string): Promise<string | undefined> {
+    try {
+      const resource = await this.context.requestResource(path);
+
+      if (resource === null) return undefined;
+
+      const bytes = await resource.requestBinary();
+
+      return bytes === undefined ? undefined : this.digestBytes(bytes);
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
+   * 经资源层读取一个外部变化文件的文本
+   * @param path 文件的项目内相对路径
+   * @returns 文本内容；资源不存在或读取失败时为 undefined
+   */
+  private async readExternalListText(path: string): Promise<string | undefined> {
+    try {
+      return await this.readListText(await this.context.requestResource(path));
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
+   * 用给定的清单原文重建某分类的条目，并更新该分类的基线；不发布视图状态
+   * @param category 素材分类
+   * @param state 该分类的内部状态
+   * @param text 清单原文；undefined 或空串表示清单文件不存在
+   * @param paths 该分类目录下的文件路径集合
+   * @param directoryEntries 该分类目录的直接子条目
+   * @returns 原文无法解析时为 false（此时状态不变）
+   */
+  private rebuildFromListText(
+    category: IAssetCategory,
+    state: IAssetPanelState,
+    text: string | undefined,
+    paths: ReadonlySet<string>,
+    directoryEntries: readonly IFileEntry[],
+  ): boolean {
+    let listEntries: readonly IAssetListEntry[] = [];
+
+    if (text === undefined || text.length === 0) {
+      state.prefix = '';
+      state.listDocument = undefined;
+    } else {
+      const parsed = parseTableText(text);
+
+      if (parsed.status !== TableTextParseStatus.Conforming) return false;
+
+      state.prefix = parsed.prefix;
+      state.listDocument = parsed.value;
+      listEntries = readAssetList(category, parsed.value);
+    }
+
+    state.baselineText = text;
+
+    // 已登记条目在前、未登记条目在后：列表文件缺失或为空时同样要扫描，否则界面永远看不到目录里的游离文件
+    const registeredEntries = this.buildEntries(category, listEntries, paths);
+    const registeredNames = registeredEntries.map((entry) => entry.name);
+    const unregisteredEntries = collectUnregisteredAssetNames(category, directoryEntries, registeredNames).map(
+      (name) => ({
+        name,
+        path: resolveAssetBytePath(category, name),
+        config: undefined,
+        exists: true,
+        registered: false,
+      }),
+    );
+
+    state.entries = [...registeredEntries, ...unregisteredEntries];
+    state.loaded = true;
+    return true;
+  }
+
+  /**
+   * 按外部原文重读某分类：目录列不出或原文无法解析时提示并保留内存改动
+   * @param category 素材分类
+   * @param state 该分类的内部状态
+   * @param text 外部原文；undefined 表示清单文件已被删除
+   * @returns 是否成功替换内存内容
+   */
+  private async applyExternalList(
+    category: IAssetCategory,
+    state: IAssetPanelState,
+    text: string | undefined,
+  ): Promise<boolean> {
+    const token = state.token + 1;
+
+    state.token = token;
+
+    let directoryEntries: readonly IFileEntry[];
+
+    try {
+      directoryEntries = await this.context.listDirectory(category.dir);
+    } catch {
+      antdMessage.warning('读取外部改动失败，已保留你的改动');
+      return false;
+    }
+
+    if (state.token !== token) return false;
+
+    const paths = new Set<string>();
+
+    for (const entry of directoryEntries) paths.add(entry.path);
+
+    if (!this.rebuildFromListText(category, state, text, paths, directoryEntries)) {
+      antdMessage.warning('读取外部改动失败，已保留你的改动');
+      return false;
+    }
+
+    state.unsaved = false;
+
+    if (category.id === this.currentCategoryId) {
+      this.publish(state.entries.length === 0 ? AssetPanelStatus.Empty : AssetPanelStatus.Ready);
+    }
+
+    return true;
+  }
+
+  /**
+   * 外部变化冲突里选择「放弃我的改动并刷新」：按外部原文重读该分类，丢弃内存改动
+   */
+  private async discardExternalChange(): Promise<void> {
+    const conflict = this.pendingConflict;
+
+    this.pendingConflict = undefined;
+
+    if (conflict === undefined) {
+      this.publish(this.store.state.status);
+      return;
+    }
+
+    const category = this.findCategory(conflict.categoryId);
+
+    if (category === undefined) {
+      this.publish(this.store.state.status);
+      return;
+    }
+
+    await this.applyExternalList(category, this.stateAt(conflict.categoryId), conflict.text);
+    this.publish(this.store.state.status);
+  }
+
+  /**
+   * 外部变化冲突里选择「保留我的改动，下次保存覆盖」：只把基线更新为外部原文，不动内存内容
+   */
+  private keepExternalChange(): void {
+    const conflict = this.pendingConflict;
+
+    this.pendingConflict = undefined;
+
+    if (conflict !== undefined) {
+      const state = this.states.get(conflict.categoryId);
+
+      if (state !== undefined) state.baselineText = conflict.text;
+    }
+
+    this.publish(this.store.state.status);
+  }
+
+  /**
    * 取装配方注入的分类清单
    * @returns 可用的分类清单；未注入时为空数组
    */
@@ -984,6 +1299,7 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
       unsaved: false,
       loaded: false,
       token: 0,
+      baselineText: undefined,
     };
 
     this.states.set(categoryId, created);
@@ -1293,6 +1609,7 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
       transcodeOpen: this.transcodeOpen,
       transcoding: this.transcoding,
       transcodeCapable: this.transcodeCapable,
+      pendingConflict: this.active ? this.pendingConflict : undefined,
     });
   }
 
@@ -1372,6 +1689,7 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
 
       state.unsaved = false;
       state.listDocument = document;
+      state.baselineText = text;
 
       if (categoryId === this.currentCategoryId) {
         this.publish(state.entries.length === 0 ? AssetPanelStatus.Empty : AssetPanelStatus.Ready, successNotice);

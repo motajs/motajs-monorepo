@@ -138,6 +138,8 @@ export interface IAssetPanelViewState {
   readonly transcoding: boolean;
   /** 当前分类在当前环境能否转码（由转码服务探测；未探测或不可转码时为 false） */
   readonly transcodeCapable: boolean;
+  /** 待用户决定的清单文件外部改动；没有冲突时为 undefined */
+  readonly pendingConflict?: IAssetPendingConflict;
 }
 
 export interface IAssetPendingConflict {
