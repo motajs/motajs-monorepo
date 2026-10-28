@@ -17,6 +17,10 @@ export interface IAssetDetailProps {
   readonly entry?: IAssetEntry;
   /** 当前分类的大分类，决定预览形态 */
   readonly kind: AssetCategoryKind;
+  /** 由面板推导好的字节 MIME 类型；缺省时按空 MIME 交给预览 */
+  readonly mime?: string;
+  /** 由面板生成且不含路径的稳定 CSS 字体族名；非字体分类可省略 */
+  readonly fontFamily?: string;
   /**
    * 用本地文件替换当前素材
    * @param upload 上传的原始文件名与字节
@@ -95,7 +99,8 @@ export function AssetDetail(props: IAssetDetailProps): ReactElement {
         <AssetPreview
           key={entry.path}
           kind={props.kind}
-          path={entry.path}
+          mime={props.mime ?? ''}
+          fontFamily={props.fontFamily}
           byteVersion={entry.byteVersion ?? 0}
           loadBytes={(): Promise<Uint8Array | undefined> => props.loadBytes(entry.path)}
         />

@@ -2,7 +2,7 @@ import { Button, Spin } from 'antd';
 import { ReactElement, useState } from 'react';
 import { AssetCategoryKind, IAssetCategory } from '../../react';
 import { DEFAULT_ASSET_CARD_WIDTH } from '../constants';
-import { resolveTranscodedPath } from '../model';
+import { resolveAssetMime, resolveTranscodedPath } from '../model';
 import {
   isAssetFileAccepted,
   resolveAssetFileExtensions,
@@ -90,6 +90,30 @@ export interface IAssetPanelViewProps {
    * @returns 字节；文件不存在或读取失败时为 undefined
    */
   loadBytes(path: string): Promise<Uint8Array | undefined>;
+}
+
+/** FNV-1a 哈希的初始值 */
+const FNV_OFFSET_BASIS = 0x811c9dc5;
+
+/** FNV-1a 哈希的乘数 */
+const FNV_PRIME = 0x01000193;
+
+/**
+ * 由素材路径生成 CSS 字体族名（面板侧算好后再交给样例组件，组件不接触路径）
+ *
+ * 族名不携带原始路径：原始路径会进入 `<style>` 文本，一旦含引号 / 分号就会变成样式注入面（T-04.2-16-02）。
+ * @param path 字体文件的资源路径
+ * @returns 形如 `asset-font-1a2b3c4d` 的族名
+ */
+function resolveAssetFontFamily(path: string): string {
+  let hash = FNV_OFFSET_BASIS;
+
+  for (let index = 0; index < path.length; index += 1) {
+    hash ^= path.charCodeAt(index);
+    hash = Math.imul(hash, FNV_PRIME) >>> 0;
+  }
+
+  return `asset-font-${hash.toString(16).padStart(8, '0')}`;
 }
 
 /**
@@ -233,6 +257,8 @@ function renderContent(
   }
 
   const selected = view.entries.find((entry) => entry.name === view.selectedName);
+  const selectedMime = selected === undefined ? '' : resolveAssetMime(selected.path, category.kind);
+  const selectedFontFamily = selected === undefined ? '' : resolveAssetFontFamily(selected.path);
 
   return (
     <div className="asset-content">
@@ -243,10 +269,14 @@ function renderContent(
         selectedName={view.selectedName}
         onSelect={props.onSelectAsset ?? noopSelectAsset}
         loadBytes={props.loadBytes}
+        mimeOf={(entry): string => resolveAssetMime(entry.path, category.kind)}
+        fontFamilyOf={(entry): string => resolveAssetFontFamily(entry.path)}
       />
       <AssetDetail
         entry={selected}
         kind={category.kind}
+        mime={selectedMime}
+        fontFamily={selectedFontFamily}
         onReplace={(upload): void => {
           const rejection = uploadRejection(category, upload);
 

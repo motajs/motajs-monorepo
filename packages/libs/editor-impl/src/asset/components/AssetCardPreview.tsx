@@ -1,6 +1,5 @@
 import { ReactElement } from 'react';
 import { AssetCategoryKind } from '../../react';
-import { resolveAssetMime } from '../model';
 import { AssetFontSample } from './AssetFontSample';
 import { useAssetObjectUrl } from './useAssetObjectUrl';
 
@@ -9,6 +8,10 @@ export interface IAssetCardPreviewProps {
   readonly kind: AssetCategoryKind;
   /** 素材字节文件的资源路径 */
   readonly path: string;
+  /** 由面板推导好的字节 MIME 类型 */
+  readonly mime: string;
+  /** 由面板生成且不含路径的稳定 CSS 字体族名 */
+  readonly fontFamily: string;
   /** 该素材的字节文件是否存在 */
   readonly exists: boolean;
   /** 素材字节的版本号，变化时重新读取字节 */
@@ -21,10 +24,14 @@ export interface IAssetCardPreviewProps {
   loadBytes(path: string): Promise<Uint8Array | undefined>;
 }
 
-/** 卡片内图片预览的 props */
+/** 卡片内读字节预览的 props */
 interface IAssetCardBytesProps {
   /** 素材字节文件的资源路径 */
   readonly path: string;
+  /** 由面板推导好的字节 MIME 类型 */
+  readonly mime: string;
+  /** 由面板生成且不含路径的稳定 CSS 字体族名 */
+  readonly fontFamily: string;
   /** 素材字节的版本号，变化时重新读取字节 */
   readonly byteVersion: number;
   /**
@@ -84,10 +91,9 @@ function AssetCardWaveform(): ReactElement {
  * @returns 位图元素；字节不可用时为 null
  */
 function AssetCardImage(props: IAssetCardBytesProps): ReactElement | null {
-  const mime = resolveAssetMime(props.path, AssetCategoryKind.Image);
   const url = useAssetObjectUrl(
     (): Promise<Uint8Array | undefined> => props.loadBytes(props.path),
-    mime,
+    props.mime,
     props.byteVersion,
   );
 
@@ -110,14 +116,13 @@ function AssetCardImage(props: IAssetCardBytesProps): ReactElement | null {
  * @returns 字体样例元素
  */
 function AssetCardFont(props: IAssetCardBytesProps): ReactElement {
-  const mime = resolveAssetMime(props.path, AssetCategoryKind.Font);
   const url = useAssetObjectUrl(
     (): Promise<Uint8Array | undefined> => props.loadBytes(props.path),
-    mime,
+    props.mime,
     props.byteVersion,
   );
 
-  return <AssetFontSample path={props.path} url={url} text="ABC" />;
+  return <AssetFontSample fontFamily={props.fontFamily} url={url} text="ABC" />;
 }
 
 /**
@@ -132,7 +137,15 @@ export function AssetCardPreview(props: IAssetCardPreviewProps): ReactElement | 
   if (!props.exists) return <span className="asset-card-preview-missing" />;
 
   if (props.kind === AssetCategoryKind.Image) {
-    return <AssetCardImage path={props.path} byteVersion={props.byteVersion} loadBytes={props.loadBytes} />;
+    return (
+      <AssetCardImage
+        path={props.path}
+        mime={props.mime}
+        fontFamily={props.fontFamily}
+        byteVersion={props.byteVersion}
+        loadBytes={props.loadBytes}
+      />
+    );
   }
 
   if (props.kind === AssetCategoryKind.Audio) return <AssetCardWaveform />;
@@ -140,7 +153,13 @@ export function AssetCardPreview(props: IAssetCardPreviewProps): ReactElement | 
   if (props.kind === AssetCategoryKind.Font) {
     return (
       <span className="asset-card-preview-font" data-test-id="asset-card-preview-font">
-        <AssetCardFont path={props.path} byteVersion={props.byteVersion} loadBytes={props.loadBytes} />
+        <AssetCardFont
+          path={props.path}
+          mime={props.mime}
+          fontFamily={props.fontFamily}
+          byteVersion={props.byteVersion}
+          loadBytes={props.loadBytes}
+        />
       </span>
     );
   }

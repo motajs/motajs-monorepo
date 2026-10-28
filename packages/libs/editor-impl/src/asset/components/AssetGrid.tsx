@@ -32,6 +32,18 @@ export interface IAssetGridProps {
    * @returns 字节；文件不存在或读取失败时为 undefined
    */
   loadBytes(path: string): Promise<Uint8Array | undefined>;
+  /**
+   * 取某素材字节由面板推导好的 MIME 类型
+   * @param entry 该卡片对应的素材条目
+   * @returns 该素材字节的 MIME 类型
+   */
+  mimeOf(entry: IAssetEntry): string;
+  /**
+   * 取某素材由面板生成且不含路径的稳定 CSS 字体族名
+   * @param entry 该卡片对应的素材条目
+   * @returns 字体族名
+   */
+  fontFamilyOf(entry: IAssetEntry): string;
 }
 
 /**
@@ -87,6 +99,8 @@ export function AssetGrid(props: IAssetGridProps): ReactElement {
             <AssetCardPreview
               kind={props.kind}
               path={entry.path}
+              mime={props.mimeOf(entry)}
+              fontFamily={props.fontFamilyOf(entry)}
               exists={entry.exists}
               byteVersion={entry.byteVersion ?? 0}
               loadBytes={props.loadBytes}
