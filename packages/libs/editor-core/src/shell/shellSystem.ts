@@ -1,6 +1,7 @@
 import './shell.css';
 import { Store } from '@tanstack/store';
 import { createElement, FC, ReactElement, useEffect, useSyncExternalStore } from 'react';
+import { EditorFileChangeKind } from '../fs';
 import { IHookController } from '../hook';
 import { logger } from '../log';
 import { IEditorPanel, IEditorPanelContext, IEditorPanelType, PanelCloseChoice, PanelContext } from '../panel';
@@ -991,5 +992,19 @@ export class ShellPanelHooks implements IResourceSystemHooks {
     if (data === undefined) return;
 
     await this.panel.onUpdateResource(id, data);
+  }
+
+  /**
+   * 把一条宿主变化转给面板：面板实现了新通道时只转发路径与种类，未实现时退回预读通道
+   * @param id 资源标识（纯路径）
+   * @param kind 变化种类
+   */
+  async onResourceChange(id: IResourceIdentifier, kind: EditorFileChangeKind): Promise<void> {
+    if (this.panel.onResourceChange !== undefined) {
+      await this.panel.onResourceChange(id, kind);
+      return;
+    }
+
+    await this.onUpdateResource(id);
   }
 }
