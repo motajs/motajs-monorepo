@@ -1,5 +1,5 @@
 import { IHookable, IHookBase } from '../hook';
-import { EditorEntryKind, IEditorFileSystem } from '../fs';
+import { EditorEntryKind, EditorFileChangeKind, IEditorFileSystem } from '../fs';
 
 /** 资源的唯一标识，即相对项目根、以 `/` 分隔、无前导斜线的文件路径；资源相等即路径相等 */
 export type IResourceIdentifier = string;
@@ -180,6 +180,15 @@ export interface IResourceSystemHooks extends IHookBase {
    * @param identifier 资源标识（纯路径）
    */
   onUpdateResource?(identifier: IResourceIdentifier): Promise<void>;
+
+  /**
+   * 当宿主报告某个路径发生变化时触发；面板按需自行读取需要的内容，资源层**不预读**内容
+   *
+   * 资源层会在投递前更新文件索引与内容缓存，因此删除事件不会因读取失败而中断通知。
+   * @param identifier 资源标识（纯路径）
+   * @param kind 变化种类
+   */
+  onResourceChange?(identifier: IResourceIdentifier, kind: EditorFileChangeKind): Promise<void>;
 }
 
 export interface IResourceSystemOptions {

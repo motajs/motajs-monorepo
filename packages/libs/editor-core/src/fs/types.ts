@@ -5,11 +5,27 @@ export const enum EditorEntryKind {
   Directory,
 }
 
+export const enum EditorFileChangeKind {
+  /** 新增文件 */
+  Add,
+  /** 文件内容变化 */
+  Change,
+  /** 删除文件 */
+  Delete,
+}
+
 export interface IEditorDirectoryEntry {
   /** 条目名（末段），以 `/` 分隔、无前导斜线 */
   readonly name: string;
   /** 条目是文件还是目录 */
   readonly kind: EditorEntryKind;
+}
+
+export interface IEditorFileChange {
+  /** 变化文件的路径：相对项目根、以 `/` 分隔、无前导斜线、不含 `..` 段 */
+  readonly path: string;
+  /** 变化种类 */
+  readonly kind: EditorFileChangeKind;
 }
 
 export interface IEditorFileSystem {
@@ -66,4 +82,14 @@ export interface IEditorFileSystem {
    * @param path 文件路径：相对项目根、以 `/` 分隔、无前导斜线
    */
   deleteFile(path: string): Promise<void>;
+
+  /**
+   * 订阅宿主文件变化流；宿主不提供时省略此成员，core 退化为只在切入时重读
+   *
+   * 每条事件对应一个文件，不保证顺序；路径必须是规范化相对路径（无前导 `/`、不含 `..` 段）。
+   * 变化流需覆盖宿主观测到的全部变化，包括编辑器自己的写入。
+   * @param listener 变化回调
+   * @returns 退订函数
+   */
+  watch?(listener: (change: IEditorFileChange) => void): () => void;
 }
