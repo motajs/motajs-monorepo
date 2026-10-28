@@ -385,4 +385,77 @@ Plan 03 定稿的是**新增**的文件级 props 与**新增**的具名状态形
 
 ## 确认状态
 
-尚未确认：等待用户用文字回复。
+**已确认：2026-10-28** —— 用户以文字回复「确认」。
+
+**改名记录：无。** 本阶段没有发生任何改名，下文列出的即为最终名称，全文只有最终名，不存在「原名 → 现名」条目。
+
+### 最终名称 · editor-core（Plan 02）
+
+| 名称 | 最终形态 |
+|------|----------|
+| `PanelCloseChoice` | `const enum`，成员 `Save` / `Discard` / `Cancel` |
+| `IEditorPanel.onRequestClose` | 可选方法，`(): Promise<PanelCloseChoice>` |
+| `IEditorPanel.onDiscard` | 可选方法，`(): void` |
+| `IEditorPanel.onResourceChange` | 可选方法，`(id: IResourceIdentifier, kind: EditorFileChangeKind): Promise<void>` |
+| `EditorFileChangeKind` | `const enum`，成员 `Add` / `Change` / `Delete` |
+| `IEditorFileChange` | interface，成员 `readonly path` / `readonly kind` |
+| `IEditorFileSystem.watch` | 可选方法，`(listener) => () => void` |
+| `IResourceSystemHooks.onResourceChange` | 可选方法，`(identifier, kind): Promise<void>` |
+| `IEditorPanelType.canOpen` | 可选方法，`(path: string): boolean` |
+| `IEditorPanelType.createOpenParam` | 可选方法，`(path: string): Record<string, unknown>` |
+
+保留不变：`IEditorPanel.onBeforeClose` 仍是布尔语义；`IEditorPanel.onUpdateResource` 仍是必选成员、签名不变。
+
+### 最终名称 · editor-impl（Plan 03…17）
+
+| 名称 | 最终形态 |
+|------|----------|
+| `IEditableContentHandle` | interface，成员 `getData` / `setData` / `isDirty` / `markSaved`（`shared/editable/types.ts`） |
+| `IEditableContentProps` | interface，成员 `content` / `contentVersion` / `ref` / `onSave` / `onDraftChange`（同文件） |
+| `ContentSaveStatus` | `const enum`，成员 `Saved` / `Failed`（同文件） |
+| `IFileBrowserProps` | interface（`shared/fileBrowser/types.ts`） |
+| `IPanelCloseDialogProps` / `IExternalChangeDialogProps` | interface（`shared/panelDialogs/types.ts`） |
+| `IFileExplorerCapabilities` | interface，成员 `listPanelTypes` / `openPanel`（`explorer/types.ts`） |
+| `IFileExplorerPanel` | interface，成员 `id` / `openPath` / `loadChildren` / `filterPath` / `selectCandidate` / `cancelCandidate`（同文件） |
+| `IFileExplorerViewState` / `IFileExplorerViewProps` / `IPanelCandidateModalProps` | interface（同文件） |
+| `ITableDocument` | interface，成员 `data` / `schema` / `schemaMode`（`table/types.ts`） |
+| `TableEditKind` | `const enum`，成员 `Change` / `Add` / `Delete`（同文件） |
+| `ITableEdit` | interface（同文件） |
+| `ITableEditableProps` | interface，继承 `IEditableContentProps<ITableDocument>`（同文件） |
+| `ITablePendingConflict` / `ITableCloseDialogState` | interface（同文件） |
+| `IAssetPendingConflict` / `IAssetCloseDialogState` | interface（`asset/types.ts`） |
+| `IMapPendingConflict` / `IMapCloseDialogState` | interface（`map/types.ts`） |
+| `IMapEditorCapabilities.resolveMapPath` | 可选方法，`(path: string): string \| null`（同文件） |
+| `IMapImageSources` / `IMapImageSourceStore` | interface（同文件） |
+| `MapImageBytesLoader` / `IMapTileGroupUrls` | type / interface（同文件，从 `components/useMapObjectUrl.ts` 上移） |
+| `FileBrowser` / `FileExplorerPanel` / `FileExplorerView` / `PanelCloseDialog` / `ExternalChangeDialog` / `PanelCandidateModal` / `EditableTable` / `MapImageSourceStore` | 组件 / 类 / 工厂的最终名，落点见各计划小节 |
+| `createFileExplorerPanelType` | 工厂函数（`explorer/fileExplorerPanelType.ts`） |
+| `isTableOpenablePath` | 自由函数（`table/resourceType.ts`） |
+| `TablePanel.applyEdit` / `TablePanel.saveDocument` / `TablePanel.isColumnDirty` / `TablePanel.resetColumnDraft` / `TablePanel.bumpContentVersion` / `TablePanel.loadPickerChildren` / `TablePanel.navigatePicker` | 表格面板方法 |
+| `FileExplorerPanel.openPath` / `FileExplorerPanel.loadChildren` / `FileExplorerPanel.filterPath` / `FileExplorerPanel.selectCandidate` / `FileExplorerPanel.cancelCandidate` | 资源管理器面板方法 |
+| `MapPanel.refreshTileImageSources` / `MapPanel.onResourceChange` / `MapPanel.onRequestClose` / `MapPanel.onDiscard` | 地图面板方法 |
+| `AssetPanel.saveAll` / `AssetPanel.onResourceChange` / `AssetPanel.onRequestClose` / `AssetPanel.onDiscard` | 素材面板方法 |
+| `TranscodeModal.probeEntry` | 转码弹窗 props 成员 |
+
+### 最终口径 · 样式与测试标识
+
+| 名称 | 最终形态 |
+|------|----------|
+| `efb-` | 共用文件浏览器类名前缀，样式表 `file-browser.css` |
+| `efx-` | 资源管理器类名前缀，样式表 `explorer.css` |
+| `edlg-` | 共享面板弹窗类名前缀，样式表 `panel-dialogs.css` |
+| `file-browser` | 浏览器缺省 `data-test-id` 前缀 |
+| `table-list` | 表格空栏传入的 `data-test-id` 前缀（保住约 56 处既有断言） |
+| `explorer` | 资源管理器传入的 `data-test-id` 前缀 |
+
+### O1 分层取舍（最终口径）
+
+**采纳研究推荐值：分层。**
+
+- **表格**走字面契约：组件持草稿，卸载时把草稿与当时的脏标记交回面板，面板保留交回副本用于撤销与保存。
+- **地图 / 素材**由面板持权威文档（含基线与按域保存），功能块组件只接收内容 + 回调，不自己保留第二份草稿。
+- 三者都遵守「组件接收内容、发出保存请求」，差别只在「谁持有权威内容」。
+
+**该口径约束 Plan 08（表格组件持草稿）、Plan 14 / 15（地图面板持文档）、Plan 16 / 17（素材面板持文档）。** 替代方案（三者一律组件持草稿）已否决：需要把地图的 `document` / `dataBaseline` 与素材的 `states` 一并搬进 React 并重做撤销载荷，回归面过大。
+
+**`## D-22 组件清单` 的结论同时生效：** 地图侧 `MapSurface` / `MapCanvas` 去路径，素材侧 `AssetDetail` / `AssetGrid` / `AssetCardPreview` / `AssetFileInfo` / `AssetPreview` / `AssetFontSample` / `TranscodeModal` 去路径；`MapMaterialPanel` / `MapBottomTabs` / `MapFavoriteBar` / `MapPropertiesDrawer` / `CategoryNav` / `AssetToolbar` / `AssetConfigView` 本轮只登记边界、不改。
