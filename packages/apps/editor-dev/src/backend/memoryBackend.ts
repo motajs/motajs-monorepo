@@ -226,13 +226,18 @@ export class MemoryBackend implements IMemoryBackend {
 
   /**
    * 向所有订阅者发出一次文件变化
+   *
+   * 投递推迟到下一个宏任务：写入方在 `await` 返回后还要推进自己的基线，
+   * 同步回调会让面板把编辑器的自写误判成外部改动（D-15 / D-18）。
    * @param path 变化文件路径
    * @param kind 变化种类
    */
   private notify(path: string, kind: EditorFileChangeKind): void {
-    const listeners = [...this.listeners];
+    setTimeout((): void => {
+      const listeners = [...this.listeners];
 
-    for (const listener of listeners) listener({ path, kind });
+      for (const listener of listeners) listener({ path, kind });
+    }, 0);
   }
 
   /**
