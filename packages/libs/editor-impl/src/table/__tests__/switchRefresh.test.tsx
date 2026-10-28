@@ -95,7 +95,7 @@ describe('切入时刷新（D-15 修订版 / D-31）', () => {
     const first = system.shellSystem.listTabs()[0].id;
 
     await act(async () => {
-      system.shellSystem.activateTab(first);
+      await system.shellSystem.activateTab(first);
     });
     await act(async () => {});
 

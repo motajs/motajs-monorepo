@@ -294,7 +294,7 @@ describe('阶段集成：完整流程与安全边界', () => {
 
     // 切回数据面板：外壳切入触发 onSwitchIn 重新请求 schema 并重算，注释更新为新值
     await act(async () => {
-      system.shellSystem.activateTab(firstTab);
+      await system.shellSystem.activateTab(firstTab);
     });
     await act(async () => {});
 

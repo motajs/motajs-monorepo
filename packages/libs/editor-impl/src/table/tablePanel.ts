@@ -10,18 +10,23 @@ import {
   IUndoContext,
 } from '@motajs/editor-core';
 import { get } from 'es-toolkit/compat';
-import { createElement, FC, ReactElement, useCallback, useEffect, useRef, useState } from 'react';
+import { createElement, createRef, FC, ReactElement, RefObject, useCallback, useEffect, useRef, useState } from 'react';
 import { ICodeEditorOpener, ITablePanelOpener, useTableCapabilities } from '../react';
-import { ITablePanel, ITablePanelParam, ITablePanelTarget, ITableRowNode, TableEmptyMode } from './types';
 import {
-  ITableGridProps,
-  TableGrid,
-  TableGridAddHandler,
-  TableGridChangeHandler,
-  TableGridDeleteHandler,
-  TablePanelStatus,
-} from '../shared/schemaForm/components/TableGrid';
+  ITableDocument,
+  ITableEdit,
+  ITableEditableProps,
+  ITablePanel,
+  ITablePanelParam,
+  ITablePanelTarget,
+  ITableRowNode,
+  TableEditKind,
+  TableEmptyMode,
+} from './types';
+import { TablePanelStatus } from '../shared/schemaForm/components/TableGrid';
 import { TableEmptyColumn } from './components/TableEmptyColumn';
+import { EditableTable } from './components/EditableTable';
+import { ContentSaveStatus, IEditableContentHandle } from '../shared/editable/types';
 import { buildTableTree } from '../shared/schemaForm/model/traversal';
 import { buildSchemaTree } from '../shared/schemaForm/model/schemaPresentation';
 import { parseTableText, serializeTableText, TableTextParseStatus } from '../shared/jsonc';
@@ -72,6 +77,16 @@ interface ITableUndoData {
   readonly previousSchema?: unknown;
   /** 新增后 schema 的整份内容；非新增操作缺省 */
   readonly nextSchema?: unknown;
+}
+
+/**
+ * 一次编辑落成的结果：新文档，以及需要在该栏提示位发布的成功文案
+ */
+interface ITableEditOutcome {
+  /** 编辑后的文档 */
+  readonly document: ITableDocument;
+  /** 成功提示文案；缺省表示不提示（改值不弹文案） */
+  readonly notice?: string;
 }
 
 /**
@@ -134,6 +149,12 @@ interface ITablePanelColumn {
   unsaved: boolean;
   /** 该栏是否有未落盘的镜像 schema 改动（数据视图新增字段会同步改镜像 schema） */
   unsavedSchema: boolean;
+  /** 该栏「换内容」的版本号：只在载入 / 外部刷新 / 撤销重做 / 换表 / 保存回写五处递增，本地编辑绝不递增 */
+  contentVersion: number;
+  /** 该栏组件交回或面板现算的文档副本；为空表示面板只有基线内容 */
+  draft: ITableDocument | null;
+  /** 该栏交回的草稿是否脏；与 `draft` 成对写入、成对作废 */
+  draftDirty: boolean;
   /** 该栏已确认「剥离注释后打开」的路径 → 确认时的原文；原文未变时不再重弹 */
   readonly stripConfirmed: Map<string, string>;
   /** 该栏待确认剥离时暂存的原文，供 `TablePanel.confirmCommentStrip` 登记进 `stripConfirmed` */
@@ -145,8 +166,10 @@ interface ITablePanelColumn {
 export interface ITablePanelViewState {
   /** 当前数据加载状态 */
   readonly status: TablePanelStatus;
-  /** 当前行树 */
-  readonly rows: readonly ITableRowNode[];
+  /** 面板下发给该栏组件的文档：草稿副本优先，没有草稿时用面板基线拼一份 */
+  readonly content: ITableDocument;
+  /** 面板「换内容」的版本号；只有它变化时组件才重置草稿 */
+  readonly contentVersion: number;
   /** 当前目标是否为 schema（schema 专用呈现模式） */
   readonly schemaMode: boolean;
   /** 面板级成功提示，缺省时不显示 */
@@ -179,12 +202,14 @@ interface ITablePanelViewProps {
   readonly onLayout: (columnCount: number) => void;
   /** 某栏加载失败态下的重试回调 */
   readonly onRetry: (columnIndex: number) => void;
-  /** 某栏的字段提交回调 */
-  readonly onChange: (columnIndex: number, key: string, value: unknown) => void;
-  /** 某栏的新增子项回调（锚点行键 + 新名称） */
-  readonly onAdd: (columnIndex: number, anchorKey: string, name: string) => void;
-  /** 某栏的删除子项回调 */
-  readonly onDelete: (columnIndex: number, key: string) => void;
+  /** 某栏的组件句柄归属：面板为该栏建立的唯一 `RefObject`，视图只转交不自建 */
+  readonly getColumnRef: (columnIndex: number) => RefObject<IEditableContentHandle<ITableDocument> | null>;
+  /** 面板侧唯一的编辑入口：组件把一次编辑意图交给面板，面板落成新文档 */
+  readonly applyEdit: (columnIndex: number, edit: ITableEdit, document: ITableDocument) => ITableDocument | null;
+  /** 面板侧唯一的写盘入口：组件请求保存与面板切走保存都走它 */
+  readonly saveDocument: (columnIndex: number, document: ITableDocument) => Promise<ContentSaveStatus>;
+  /** 某栏组件交回草稿：面板据此持有一份副本与交回脏标记 */
+  readonly onDraftChange: (columnIndex: number, content: ITableDocument, dirty: boolean) => void;
   /** 某栏的「编辑 Schema」回调 */
   readonly onOpenSchema: (columnIndex: number, opener: ITablePanelOpener) => void;
   /** 某栏的「在代码编辑器中打开」回调 */
@@ -205,8 +230,6 @@ interface ITablePanelViewProps {
   readonly onEmptyCreate: (columnIndex: number, directory: string, name: string) => void;
   /** 某栏内联删除某表格回调 */
   readonly onEmptyDelete: (columnIndex: number, dataPath: string) => void;
-  /** 某栏的「保存」回调 */
-  readonly onSave?: (columnIndex: number) => void;
 }
 
 /** 单栏组件的 props：把该栏序号与各回调转交给一张表格 */
@@ -217,12 +240,14 @@ interface ITableColumnProps {
   readonly getStore: (columnIndex: number) => Store<ITablePanelViewState>;
   /** 该栏加载失败态下的重试回调 */
   readonly onRetry: (columnIndex: number) => void;
-  /** 该栏的字段提交回调 */
-  readonly onChange: (columnIndex: number, key: string, value: unknown) => void;
-  /** 该栏的新增子项回调（锚点行键 + 新名称） */
-  readonly onAdd: (columnIndex: number, anchorKey: string, name: string) => void;
-  /** 该栏的删除子项回调 */
-  readonly onDelete: (columnIndex: number, key: string) => void;
+  /** 该栏的组件句柄归属：面板为该栏建立的唯一 `RefObject`，单栏只把它转交给可编辑组件 */
+  readonly getColumnRef: (columnIndex: number) => RefObject<IEditableContentHandle<ITableDocument> | null>;
+  /** 面板侧唯一的编辑入口 */
+  readonly applyEdit: (columnIndex: number, edit: ITableEdit, document: ITableDocument) => ITableDocument | null;
+  /** 面板侧唯一的写盘入口 */
+  readonly saveDocument: (columnIndex: number, document: ITableDocument) => Promise<ContentSaveStatus>;
+  /** 某栏组件交回草稿 */
+  readonly onDraftChange: (columnIndex: number, content: ITableDocument, dirty: boolean) => void;
   /** 该栏的「编辑 Schema」回调 */
   readonly onOpenSchema: (columnIndex: number, opener: ITablePanelOpener) => void;
   /** 该栏的「在代码编辑器中打开」回调 */
@@ -243,8 +268,6 @@ interface ITableColumnProps {
   readonly onEmptyCreate: (columnIndex: number, directory: string, name: string) => void;
   /** 该栏内联删除某表格回调 */
   readonly onEmptyDelete: (columnIndex: number, dataPath: string) => void;
-  /** 该栏的「保存」回调 */
-  readonly onSave?: (columnIndex: number) => void;
 }
 
 /**
@@ -369,10 +392,11 @@ function renderCommentStripModal(onConfirm: () => void, onCancel: () => void): R
 }
 
 /**
- * 单栏组件：订阅该栏视图状态，未设目标时渲染空栏内联控件，否则渲染一张表格
+ * 单栏组件：订阅该栏视图状态，未设目标时渲染空栏内联控件，否则渲染一个可编辑表格组件
  *
  * 各回调经 `useCallback` 稳定身份（依赖为来自视图根、本身稳定的 props），配合 `React.memo(TableGrid)`
- * 的浅比较，使该栏状态未实质变化时不重渲染整张表（P26）。
+ * 的浅比较，使该栏状态未实质变化时不重渲染整张表（P26）。本组件**不自建 ref**：组件句柄的唯一归属是
+ * `TablePanel.columnRefs`，这里只把面板给的那个 `RefObject` 转交给 `EditableTable`（D-03 / D-05）。
  * @param props 单栏 props
  * @returns 该栏的空栏控件或表格元素
  */
@@ -380,17 +404,18 @@ function TableColumn(props: ITableColumnProps): ReactElement {
   const view = useStore(props.getStore(props.columnIndex));
   const capabilities = useTableCapabilities();
   const onRetry = useCallback((): void => props.onRetry(props.columnIndex), [props.onRetry, props.columnIndex]);
-  const onChange = useCallback(
-    (key: string, value: unknown): void => props.onChange(props.columnIndex, key, value),
-    [props.onChange, props.columnIndex],
+  const applyEdit = useCallback(
+    (edit: ITableEdit, document: ITableDocument): ITableDocument | null =>
+      props.applyEdit(props.columnIndex, edit, document),
+    [props.applyEdit, props.columnIndex],
   );
-  const onAdd = useCallback(
-    (anchorKey: string, name: string): void => props.onAdd(props.columnIndex, anchorKey, name),
-    [props.onAdd, props.columnIndex],
+  const onSave = useCallback(
+    (document: ITableDocument): Promise<ContentSaveStatus> => props.saveDocument(props.columnIndex, document),
+    [props.saveDocument, props.columnIndex],
   );
-  const onDelete = useCallback(
-    (key: string): void => props.onDelete(props.columnIndex, key),
-    [props.onDelete, props.columnIndex],
+  const onDraftChange = useCallback(
+    (content: ITableDocument, dirty: boolean): void => props.onDraftChange(props.columnIndex, content, dirty),
+    [props.onDraftChange, props.columnIndex],
   );
   const onOpenSchema = useCallback(
     (opener: ITablePanelOpener): void => props.onOpenSchema(props.columnIndex, opener),
@@ -432,7 +457,6 @@ function TableColumn(props: ITableColumnProps): ReactElement {
     (dataPath: string): void => props.onEmptyDelete(props.columnIndex, dataPath),
     [props.onEmptyDelete, props.columnIndex],
   );
-  const onSave = useCallback((): void => props.onSave?.(props.columnIndex), [props.onSave, props.columnIndex]);
 
   if (view.status === TablePanelStatus.NoTarget) {
     return createElement(
@@ -453,22 +477,21 @@ function TableColumn(props: ITableColumnProps): ReactElement {
     );
   }
 
-  const gridProps: ITableGridProps = {
+  const editableProps: ITableEditableProps = {
+    content: view.content,
+    contentVersion: view.contentVersion,
     status: view.status,
-    rows: view.rows,
+    title: view.title,
     message: view.message,
     error: view.error,
-    schemaMode: view.schemaMode,
-    title: view.title,
     onRetry,
-    onChange,
-    onAdd,
-    onDelete,
+    applyEdit,
+    onSave,
+    onDraftChange,
     onOpenSchema,
     onOpenInCodeEditor,
     onCloseColumn,
-    unsaved: view.unsaved ?? false,
-    onSave,
+    ref: props.getColumnRef(props.columnIndex),
   };
   const stripModal =
     view.commentStripPending === true ? renderCommentStripModal(onConfirmCommentStrip, onCancelCommentStrip) : null;
@@ -476,7 +499,7 @@ function TableColumn(props: ITableColumnProps): ReactElement {
   return createElement(
     'div',
     { className: 'etable-column', style: { flexGrow: 1, flexShrink: 1, flexBasis: 0 } },
-    createElement(TableGrid, gridProps),
+    createElement(EditableTable, editableProps),
     stripModal,
   );
 }
@@ -525,9 +548,10 @@ function TablePanelView(props: ITablePanelViewProps): ReactElement {
         columnIndex: index,
         getStore: props.getStore,
         onRetry: props.onRetry,
-        onChange: props.onChange,
-        onAdd: props.onAdd,
-        onDelete: props.onDelete,
+        getColumnRef: props.getColumnRef,
+        applyEdit: props.applyEdit,
+        saveDocument: props.saveDocument,
+        onDraftChange: props.onDraftChange,
         onOpenSchema: props.onOpenSchema,
         onOpenInCodeEditor: props.onOpenInCodeEditor,
         onCloseColumn: props.onCloseColumn,
@@ -538,7 +562,6 @@ function TablePanelView(props: ITablePanelViewProps): ReactElement {
         onEmptyOpen: props.onEmptyOpen,
         onEmptyCreate: props.onEmptyCreate,
         onEmptyDelete: props.onEmptyDelete,
-        onSave: props.onSave,
       }),
     );
   }
@@ -572,6 +595,33 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   /** 各栏的请求序号，用于丢弃过期请求的异步结果 */
   private readonly requestTokens: number[] = [];
 
+  /** 各栏可编辑组件的句柄归属；与 `columns` 在同一处同步增长，第 N 栏恰好对应第 N 个 ref */
+  private readonly columnRefs: RefObject<IEditableContentHandle<ITableDocument> | null>[] = [];
+
+  /**
+   * 某栏组件交回草稿：只覆盖面板副本与交回脏标记，绝不写盘（T-04.2-08-01）
+   * @param columnIndex 栏序号（0 基）
+   * @param content 组件交回的草稿
+   * @param dirty 交回时刻的脏标记
+   */
+  private readonly updateColumnDraft = (columnIndex: number, content: ITableDocument, dirty: boolean): void => {
+    const column = this.columnAt(columnIndex);
+
+    column.draft = content;
+    column.draftDirty = dirty;
+  };
+
+  /**
+   * 取某栏的组件句柄引用：缺失时按需补建该栏，保证「第 N 栏 ↔ 第 N 个 ref」一一对应
+   * @param columnIndex 栏序号（0 基）
+   * @returns 该栏唯一的组件句柄引用
+   */
+  private readonly columnRefAt = (columnIndex: number): RefObject<IEditableContentHandle<ITableDocument> | null> => {
+    this.columnAt(columnIndex);
+
+    return this.columnRefs[columnIndex];
+  };
+
   /**
    * 读取某栏空栏浏览区的目录子条目：成功时清掉该栏读取错误，失败时记下可读文案并重新抛出
    *
@@ -588,7 +638,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
 
       if (column.pickerError !== undefined) {
         column.pickerError = undefined;
-        this.publish(columnIndex, TablePanelStatus.NoTarget, []);
+        this.publish(columnIndex, TablePanelStatus.NoTarget);
       }
 
       return entries;
@@ -596,7 +646,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       const column = this.columnAt(columnIndex);
 
       column.pickerError = '目录读取失败，请重试。';
-      this.publish(columnIndex, TablePanelStatus.NoTarget, []);
+      this.publish(columnIndex, TablePanelStatus.NoTarget);
       throw error;
     }
   };
@@ -613,9 +663,10 @@ export class TablePanel implements IEditorPanel, ITablePanel {
           this.visibleColumnCount = columnCount;
         },
         onRetry: (columnIndex): void => void this.refresh(columnIndex),
-        onChange: (columnIndex, key, value): void => void this.commitValue(key, value, columnIndex),
-        onAdd: (columnIndex, anchorKey, name): void => void this.addItem(anchorKey, name, columnIndex),
-        onDelete: (columnIndex, key): void => void this.deleteItem(key, columnIndex),
+        getColumnRef: this.columnRefAt,
+        applyEdit: (columnIndex, edit, document): ITableDocument | null => this.applyEdit(columnIndex, edit, document),
+        saveDocument: (columnIndex, document): Promise<ContentSaveStatus> => this.saveDocument(columnIndex, document),
+        onDraftChange: this.updateColumnDraft,
         onOpenSchema: (columnIndex, opener): void => void this.openSchemaPanel(opener, columnIndex),
         onOpenInCodeEditor: (columnIndex, opener): void => void this.openCurrentViewInCodeEditor(opener, columnIndex),
         onCloseColumn: (columnIndex): void => this.closeColumn(columnIndex),
@@ -626,7 +677,6 @@ export class TablePanel implements IEditorPanel, ITablePanel {
         onEmptyOpen: (columnIndex, dataPath): void => this.openIntoColumn(columnIndex, dataPath),
         onEmptyCreate: (columnIndex, directory, name): void => void this.createIntoColumn(columnIndex, directory, name),
         onEmptyDelete: (columnIndex, dataPath): void => void this.deleteFromColumn(columnIndex, dataPath),
-        onSave: (columnIndex): void => void this.save(columnIndex),
       });
   }
 
@@ -671,7 +721,14 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   }
 
   async onSwitchOut(): Promise<void> {
-    await this.saveDirtyColumns();
+    const count = this.columns.length;
+
+    // B1：外壳在通知 React 之前就 await 了本方法，保存期间组件仍然挂载，因此这里可以直接读 ref 取草稿
+    for (let index = 0; index < count; index += 1) {
+      const status = await this.saveColumn(index);
+
+      if (status === ContentSaveStatus.Saved) this.columnRefs[index]?.current?.markSaved();
+    }
   }
 
   async onUpdateResource(): Promise<void> {
@@ -693,40 +750,26 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     const previous = column.target;
 
     // 换目标前先把该栏未落盘改动同步快照后异步写回，避免切换后丢掉内存改动（T-02.1-20-01）
-    if (previous !== null && (column.unsaved || column.unsavedSchema)) void this.flushColumn(columnIndex);
+    if (previous !== null && this.isColumnDirty(columnIndex)) void this.flushColumn(columnIndex);
 
     column.target = target;
     column.unsaved = false;
     column.unsavedSchema = false;
 
+    // 版本号自增与草稿作废必须成对发生：换表后组件不能从上一张表的草稿重置（T-04.2-08-05）
+    this.resetColumnDraft(columnIndex);
+    this.bumpContentVersion(columnIndex);
+
     // 换到另一张表（或此前无目标）时先清掉旧表行树：不同表的旧行在新表加载期间不能继续显示（P26）
     if (previous === null || previous.dataPath !== target.dataPath) {
-      this.publish(columnIndex, TablePanelStatus.Loading, []);
+      this.publish(columnIndex, TablePanelStatus.Loading);
     }
 
     void this.refresh(columnIndex);
   }
 
   async save(columnIndex: number = 0): Promise<void> {
-    const column = this.columnAt(columnIndex);
-    const target = column.target;
-
-    if (target === null) return;
-    if (!column.unsaved && !column.unsavedSchema) return;
-
-    const wroteData = column.unsaved;
-    const wroteSchema = column.unsavedSchema;
-
-    if (wroteData && !(await this.persist(columnIndex, column.data))) return;
-    if (wroteSchema && !(await this.persistSchema(columnIndex, column.schema))) return;
-
-    column.unsaved = false;
-    column.unsavedSchema = false;
-
-    if (wroteData) this.refreshDependents(columnIndex, target.dataPath);
-    if (wroteSchema) this.refreshDependents(columnIndex, deriveSchemaPath(target.dataPath));
-
-    this.publish(columnIndex, column.store.state.status, column.store.state.rows, '已保存');
+    await this.saveColumn(columnIndex);
   }
 
   /**
@@ -742,7 +785,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   private closeColumn(columnIndex: number): void {
     const column = this.columnAt(columnIndex);
 
-    if (column.unsaved || column.unsavedSchema) void this.flushColumn(columnIndex);
+    if (this.isColumnDirty(columnIndex)) void this.flushColumn(columnIndex);
 
     column.target = null;
     column.data = null;
@@ -755,8 +798,9 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     column.emptyMode = TableEmptyMode.Buttons;
     column.directory = '';
     column.pickerError = undefined;
+    this.resetColumnDraft(columnIndex);
     this.nextToken(columnIndex);
-    this.publish(columnIndex, TablePanelStatus.NoTarget, []);
+    this.publish(columnIndex, TablePanelStatus.NoTarget);
   }
 
   /**
@@ -775,7 +819,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       column.pickerReloadToken += 1;
     }
 
-    this.publish(columnIndex, TablePanelStatus.NoTarget, []);
+    this.publish(columnIndex, TablePanelStatus.NoTarget);
   }
 
   /**
@@ -804,7 +848,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
 
     if (!validation.valid) {
       column.pickerError = validation.error ?? '名称未通过校验';
-      this.publish(columnIndex, TablePanelStatus.NoTarget, []);
+      this.publish(columnIndex, TablePanelStatus.NoTarget);
       return;
     }
 
@@ -852,7 +896,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       if (column.emptyMode !== TableEmptyMode.Open && column.emptyMode !== TableEmptyMode.Delete) continue;
 
       column.pickerReloadToken += 1;
-      this.publish(index, TablePanelStatus.NoTarget, []);
+      this.publish(index, TablePanelStatus.NoTarget);
     }
   }
 
@@ -928,66 +972,98 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   }
 
   /**
-   * 提交某栏一次字段值变更：先按 schema 校验，再写入资源并记录一次可逆撤销操作
-   * @param key 字段路径
-   * @param value 新值
-   * @param columnIndex 目标栏序号（0 基），省略为第 0 栏
+   * 一次编辑落成的结果：新文档，以及需要在该栏提示位发布的成功文案
    */
-  async commitValue(key: string, value: unknown, columnIndex: number = 0): Promise<void> {
+
+  /**
+   * 唯一的编辑实现：接住组件的一次编辑意图，产出新文档并登记撤销
+   *
+   * 本地编辑与「面板换内容」是两个信号：这里只更新面板副本与脏标记，**不**调
+   * `TablePanel.applyData`、**不**递增版本号、**不**发布行树（D-02 / D-06 / T-04.2-08-04）。
+   * 行树由组件按自己的草稿重算，因此本地编辑不会把面板内容整块换掉。
+   * @param columnIndex 栏序号（0 基）
+   * @param edit 组件这次要执行的编辑意图
+   * @param document 组件提交时的文档（草稿可能比面板副本新一帧）
+   * @returns 编辑后的新文档；为 null 表示这次编辑被拒绝且面板已发布错误
+   */
+  applyEdit(columnIndex: number, edit: ITableEdit, document: ITableDocument): ITableDocument | null {
     const column = this.columnAt(columnIndex);
 
-    if (column.target === null) return;
+    if (column.target === null) return null;
 
-    const row = this.findRow(column.store.state.rows, key);
-    const config = row === undefined ? undefined : row.config;
+    const outcome =
+      edit.kind === TableEditKind.Change
+        ? this.computeChange(columnIndex, edit, document)
+        : edit.kind === TableEditKind.Add
+          ? this.computeAdd(columnIndex, edit, document)
+          : this.computeDelete(columnIndex, edit, document);
 
-    if (!validateValue(config, value)) {
-      this.publishError(columnIndex, `${key} : 输入的值不合要求，请鼠标放置在注释上查看说明`);
-      return;
+    if (outcome === null) return null;
+
+    column.draft = outcome.document;
+    column.draftDirty = true;
+    this.publish(columnIndex, column.store.state.status, outcome.notice);
+
+    return outcome.document;
+  }
+
+  /**
+   * 计算一次改值后的文档：按行内配置校验新值，并登记一步可逆撤销
+   * @param columnIndex 栏序号（0 基）
+   * @param edit 改值意图
+   * @param document 组件提交时的文档
+   * @returns 新文档；校验未通过时为 null
+   */
+  private computeChange(columnIndex: number, edit: ITableEdit, document: ITableDocument): ITableEditOutcome | null {
+    const column = this.columnAt(columnIndex);
+
+    if (!validateValue(edit.config, edit.value)) {
+      this.publishError(columnIndex, `${edit.key} : 输入的值不合要求，请鼠标放置在注释上查看说明`);
+      return null;
     }
 
-    const previousValue = this.readField(columnIndex, key);
-    const next = setByFieldPath(column.data, key, value);
+    const previousValue = readAt(document.data, edit.key);
+    const next = setByFieldPath(document.data, edit.key, edit.value);
 
     column.unsaved = true;
     this.context.addUndoContext(this, {
       type: TableUndoType.Change,
-      data: { columnIndex, path: key, previousValue, nextValue: value },
+      data: { columnIndex, path: edit.key, previousValue, nextValue: edit.value },
     });
-    this.applyData(columnIndex, next);
+
+    return { document: { data: next, schema: document.schema, schemaMode: document.schemaMode } };
   }
 
   /**
-   * 在某栏新增一项：新字段插到锚点行**之后**（不是末尾），并把新名称同步写进该层 schema 的
-   * `x-order`（数据表视图写 schema 资源，schema 视图写在自身）；先用 `validateId` 校验名称，
-   * 再写入资源并记录一次可逆撤销操作
-   * @param anchorKey 锚点行的字段路径（新字段插在其后）；无锚点时追加到末尾
-   * @param name 新项名称
-   * @param columnIndex 目标栏序号（0 基），省略为第 0 栏
+   * 计算一次新增后的文档：新字段插到锚点行**之后**（不是末尾），并把新名称同步写进该层 schema 的
+   * `x-order`（数据表视图写文档里的 schema 副本，schema 视图写在自身）
+   * @param columnIndex 栏序号（0 基）
+   * @param edit 新增意图（`anchorKey` / `key` 为锚点路径，`name` 为新字段名）
+   * @param document 组件提交时的文档
+   * @returns 新文档；名称未通过校验或写入被拒绝时为 null
    */
-  async addItem(anchorKey: string, name: string, columnIndex: number = 0): Promise<void> {
+  private computeAdd(columnIndex: number, edit: ITableEdit, document: ITableDocument): ITableEditOutcome | null {
     const column = this.columnAt(columnIndex);
-
-    if (column.target === null) return;
-
+    const anchorKey = edit.anchorKey === undefined ? edit.key : edit.anchorKey;
+    const name = edit.name === undefined ? '' : edit.name;
     const parentPath = getParentFieldPath(anchorKey);
-    const parentObject = readAt(column.data, parentPath);
+    const parentObject = readAt(document.data, parentPath);
     const existingKeys = isRecord(parentObject) ? Object.keys(parentObject) : [];
     const validation = validateId(name, existingKeys, false);
 
     if (!validation.valid) {
       this.publishError(columnIndex, validation.error ?? '名称未通过校验');
-      return;
+      return null;
     }
 
-    const schemaView = this.isSchemaView(columnIndex);
+    const schemaView = document.schemaMode;
     const anchor = getShortField(anchorKey);
     const path = `${parentPath}['${name}']`;
-    const next = insertAfterFieldPath(column.data, path, anchor, schemaView ? {} : null);
+    const next = insertAfterFieldPath(document.data, path, anchor, schemaView ? {} : null);
 
     if (!this.wasAdded(next, parentPath, name)) {
       this.publishError(columnIndex, '名称不合法，未添加。');
-      return;
+      return null;
     }
 
     const ownerPath = schemaView ? this.schemaOwnerPath(parentPath) : this.schemaMirrorPath(parentPath);
@@ -1000,48 +1076,244 @@ export class TablePanel implements IEditorPanel, ITablePanel {
         type: TableUndoType.Add,
         data: { columnIndex, path, previousValue: undefined, nextValue: {}, anchor },
       });
-      this.applyData(columnIndex, ordered, '添加成功');
-      return;
+      return { document: { data: ordered, schema: document.schema, schemaMode: true }, notice: '添加成功' };
     }
 
-    const previousSchema = column.schema;
+    const previousSchema = document.schema;
     const nextSchema = isRecord(previousSchema)
       ? this.withOrder(previousSchema, ownerPath, parentObject, anchor, name)
       : undefined;
 
     column.unsaved = true;
 
-    if (nextSchema !== undefined) {
-      column.schema = nextSchema;
-      column.unsavedSchema = true;
-    }
+    if (nextSchema !== undefined) column.unsavedSchema = true;
 
     this.context.addUndoContext(this, {
       type: TableUndoType.Add,
       data: { columnIndex, path, previousValue: undefined, nextValue: null, anchor, previousSchema, nextSchema },
     });
-    this.applyData(columnIndex, next, '添加成功');
+
+    return {
+      document: { data: next, schema: nextSchema === undefined ? previousSchema : nextSchema, schemaMode: false },
+      notice: '添加成功',
+    };
   }
 
   /**
-   * 删除某栏的一项：写入资源并记录一次可逆撤销操作；是否允许删除由行内的空值校验决定
-   * @param key 字段路径
-   * @param columnIndex 目标栏序号（0 基），省略为第 0 栏
+   * 计算一次删除后的文档：是否允许删除由行内的空值校验在组件侧决定，这里只登记一步可逆撤销
+   * @param columnIndex 栏序号（0 基）
+   * @param edit 删除意图
+   * @param document 组件提交时的文档
+   * @returns 新文档
    */
-  async deleteItem(key: string, columnIndex: number = 0): Promise<void> {
+  private computeDelete(columnIndex: number, edit: ITableEdit, document: ITableDocument): ITableEditOutcome {
     const column = this.columnAt(columnIndex);
-
-    if (column.target === null) return;
-
-    const previousValue = this.readField(columnIndex, key);
-    const next = deleteByFieldPath(column.data, key);
+    const previousValue = readAt(document.data, edit.key);
+    const next = deleteByFieldPath(document.data, edit.key);
 
     column.unsaved = true;
     this.context.addUndoContext(this, {
       type: TableUndoType.Delete,
-      data: { columnIndex, path: key, previousValue, nextValue: undefined },
+      data: { columnIndex, path: edit.key, previousValue, nextValue: undefined },
     });
-    this.applyData(columnIndex, next, '删除成功');
+
+    return {
+      document: { data: next, schema: document.schema, schemaMode: document.schemaMode },
+      notice: '删除成功',
+    };
+  }
+
+  /**
+   * 兼容薄壳：按旧三参数（字段路径 + 新值 + 栏号）组装一次改值意图后转调 `TablePanel.applyEdit`
+   *
+   * `undo.test.ts` / `panelSync.uat.test.tsx` / `schemaMode.test.tsx` 仍以具体 `TablePanel`
+   * 类型调用本方法，因此保留；它自身没有编辑语义、不写盘，也不是第二套编辑实现。
+   * @param key 字段路径
+   * @param value 新值
+   * @param columnIndex 目标栏序号（0 基），省略为第 0 栏
+   */
+  async commitValue(key: string, value: unknown, columnIndex: number = 0): Promise<void> {
+    if (this.columnAt(columnIndex).target === null) return;
+
+    const document = this.currentDocument(columnIndex);
+    const row = this.findRow(this.rowsForDocument(document), key);
+
+    this.applyEdit(
+      columnIndex,
+      { kind: TableEditKind.Change, key, value, config: row === undefined ? undefined : row.config },
+      document,
+    );
+  }
+
+  /**
+   * 兼容薄壳：按旧三参数（锚点路径 + 新名称 + 栏号）组装一次新增意图后转调 `TablePanel.applyEdit`
+   * @param anchorKey 锚点行的字段路径（新字段插在其后）；无锚点时追加到末尾
+   * @param name 新项名称
+   * @param columnIndex 目标栏序号（0 基），省略为第 0 栏
+   */
+  async addItem(anchorKey: string, name: string, columnIndex: number = 0): Promise<void> {
+    if (this.columnAt(columnIndex).target === null) return;
+
+    this.applyEdit(
+      columnIndex,
+      { kind: TableEditKind.Add, key: anchorKey, anchorKey, name },
+      this.currentDocument(columnIndex),
+    );
+  }
+
+  /**
+   * 兼容薄壳：按旧两参数（字段路径 + 栏号）组装一次删除意图后转调 `TablePanel.applyEdit`
+   * @param key 字段路径
+   * @param columnIndex 目标栏序号（0 基），省略为第 0 栏
+   */
+  async deleteItem(key: string, columnIndex: number = 0): Promise<void> {
+    if (this.columnAt(columnIndex).target === null) return;
+
+    this.applyEdit(columnIndex, { kind: TableEditKind.Delete, key }, this.currentDocument(columnIndex));
+  }
+
+  /**
+   * 唯一的写盘入口：把组件草稿（或面板副本）写回资源，返回可观察的保存结果
+   *
+   * 进入方法时先同步拍下目标与前缀：换表 / 关栏可能在写盘进行中改掉 `column.target`，
+   * 快照保证内容仍写回原文件。失败时**保留脏标记**并发布错误，绝不静默丢改动（T-04.2-08-02）。
+   * @param columnIndex 栏序号（0 基）
+   * @param document 要写回的文档
+   * @returns 保存结果：已保存或失败
+   */
+  async saveDocument(columnIndex: number, document: ITableDocument): Promise<ContentSaveStatus> {
+    const column = this.columnAt(columnIndex);
+    const target = column.target;
+    const prefix = column.prefix;
+
+    if (target === null) return ContentSaveStatus.Saved;
+
+    const wroteData = column.unsaved;
+    const wroteSchema = column.unsavedSchema;
+
+    // 面板侧没有待写内容（脏只来自组件尚未同步的标记）：不写盘、也不改写基线
+    if (!wroteData && !wroteSchema) return ContentSaveStatus.Saved;
+
+    if (wroteData && !(await this.persist(columnIndex, target, document.data, prefix))) return ContentSaveStatus.Failed;
+    if (wroteSchema && !(await this.persistSchema(columnIndex, target, document.schema, prefix))) {
+      return ContentSaveStatus.Failed;
+    }
+
+    // 写盘期间换了目标：内容已写回原文件，但不能再拿旧表的内容覆盖新表的面板状态
+    if (column.target !== target) return ContentSaveStatus.Saved;
+
+    column.data = document.data;
+    column.schema = document.schema;
+    column.draft = document;
+    column.unsaved = false;
+    column.unsavedSchema = false;
+    column.draftDirty = false;
+    this.bumpContentVersion(columnIndex);
+    this.publish(columnIndex, column.store.state.status, '已保存');
+
+    if (wroteData) this.refreshDependents(columnIndex, target.dataPath);
+    if (wroteSchema) this.refreshDependents(columnIndex, deriveSchemaPath(target.dataPath));
+
+    return ContentSaveStatus.Saved;
+  }
+
+  /**
+   * 唯一的脏判定：四个来源中任一为真即视为脏
+   *
+   * 供保存、切走、换表、关栏与后续外部变化 / 关闭三态共用；**不要**再直接读某一个标志位，
+   * 否则「刚编辑过但面板状态刚变过」这类组合会漏判（D-04 / D-05 / D-11）。
+   * @param columnIndex 栏序号（0 基），省略为第 0 栏
+   * @returns 该栏有未落盘改动时为 true
+   */
+  isColumnDirty(columnIndex: number = 0): boolean {
+    const column = this.columnAt(columnIndex);
+
+    if (column.unsaved || column.unsavedSchema || column.draftDirty) return true;
+
+    return this.columnRefs[columnIndex]?.current?.isDirty() ?? false;
+  }
+
+  /**
+   * 取面板要下发给组件的文档：草稿副本优先，没有草稿时用面板基线拼一份
+   *
+   * 与 `TablePanel.currentDocument` 的差别：这里**不读组件 ref**。面板主动换内容时必须发布
+   * 面板自己刚算出的新基线，否则会把组件里还没重置的旧草稿当成新内容发回去（D-02 / §Q2.4）。
+   * @param columnIndex 栏序号（0 基）
+   * @returns 要下发给该栏组件的文档
+   */
+  private publishedDocument(columnIndex: number): ITableDocument {
+    const column = this.columnAt(columnIndex);
+
+    if (column.draft !== null) return column.draft;
+
+    return { data: column.data, schema: column.schema, schemaMode: this.isSchemaView(columnIndex) };
+  }
+
+  /**
+   * 按三级顺序取该栏当前文档：组件 ref（已挂载且脏）→ 面板草稿副本（已卸载但有交回、或面板侧刚算出的新值）→ 面板基线
+   *
+   * 组件只有在自己脏时才比面板副本新（编辑必经 `TablePanel.applyEdit`）；组件干净时它的内容就是面板
+   * 上一次发布的基线，此时若面板副本更新（兼容薄壳、撤销在未挂载 / 干净组件上落的新值），必须用副本。
+   * 第三级不能省：撤销 / 重做在面板未挂载时改的是面板副本，`applyData` 会把 `column.draft`
+   * 作废，此时新内容只在 `column.data` / `column.schema` 上（§R2）。
+   * @param columnIndex 栏序号（0 基）
+   * @returns 该栏当前应被保存 / 呈现的文档
+   */
+  private currentDocument(columnIndex: number): ITableDocument {
+    const column = this.columnAt(columnIndex);
+    const handle = this.columnRefs[columnIndex]?.current;
+
+    if (handle !== undefined && handle !== null && handle.isDirty()) return handle.getData();
+    if (column.draft !== null) return column.draft;
+    if (handle !== undefined && handle !== null) return handle.getData();
+
+    return { data: column.data, schema: column.schema, schemaMode: this.isSchemaView(columnIndex) };
+  }
+
+  /**
+   * 按文档自身的 schemaMode 算出呈现行树，供兼容薄壳取出字段的行内配置
+   * @param document 要计算行树的文档
+   * @returns 行树
+   */
+  private rowsForDocument(document: ITableDocument): readonly ITableRowNode[] {
+    return document.schemaMode ? buildSchemaTree(document.data) : buildTableTree(document.schema, document.data);
+  }
+
+  /**
+   * 版本号唯一自增点：只由载入 / 外部刷新 / 换表 / 保存回写四个显式入口调用
+   * （撤销与外部刷新经 `applyData` 落到载入路径）
+   * @param columnIndex 栏序号（0 基）
+   */
+  private bumpContentVersion(columnIndex: number): void {
+    this.columnAt(columnIndex).contentVersion += 1;
+  }
+
+  /**
+   * 草稿的唯一作废入口：把该栏草稿与交回脏标记一起清掉，不碰基线内容与两个未落盘标志
+   *
+   * 调用点固定四处（载入 / schema 载入 / 换表 / 关栏）；`TablePanel.saveDocument` 成功后不调用它，
+   * 因为此时草稿已等于刚写盘的内容（D-02 / D-06 / D-17）。
+   * @param columnIndex 栏序号（0 基）
+   */
+  private resetColumnDraft(columnIndex: number): void {
+    const column = this.columnAt(columnIndex);
+
+    column.draft = null;
+    column.draftDirty = false;
+  }
+
+  /**
+   * 取数 + 判脏 + 转调写盘入口：`TablePanel.save` 与切走保存共用这一条
+   * @param columnIndex 栏序号（0 基）
+   * @returns 保存结果
+   */
+  private async saveColumn(columnIndex: number): Promise<ContentSaveStatus> {
+    const column = this.columnAt(columnIndex);
+
+    if (column.target === null) return ContentSaveStatus.Saved;
+    if (!this.isColumnDirty(columnIndex)) return ContentSaveStatus.Saved;
+
+    return this.saveDocument(columnIndex, this.currentDocument(columnIndex));
   }
 
   /**
@@ -1063,7 +1335,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     const target = column.target;
 
     if (target === null) {
-      this.publish(columnIndex, TablePanelStatus.NoTarget, []);
+      this.publish(columnIndex, TablePanelStatus.NoTarget);
       return;
     }
 
@@ -1097,16 +1369,21 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     column.data = null;
     column.schema = null;
     this.nextToken(columnIndex);
-    this.publish(columnIndex, TablePanelStatus.NoTarget, []);
+    this.publish(columnIndex, TablePanelStatus.NoTarget);
   }
 
   /**
    * 取第 columnIndex 栏的运行时状态，缺失时按需补建空栏
+   *
+   * 栏位与组件句柄引用在同一处增长，因此「第 N 栏 ↔ 第 N 个 ref」一一对应、每栏恰好一个（D-03 / D-05）。
    * @param columnIndex 栏序号（0 基）
    * @returns 该栏的运行时状态
    */
   private columnAt(columnIndex: number): ITablePanelColumn {
-    while (this.columns.length <= columnIndex) this.columns.push(this.createColumn());
+    while (this.columns.length <= columnIndex) {
+      this.columns.push(this.createColumn());
+      this.columnRefs.push(createRef<IEditableContentHandle<ITableDocument> | null>());
+    }
 
     return this.columns[columnIndex];
   }
@@ -1128,9 +1405,17 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       pickerError: undefined,
       unsaved: false,
       unsavedSchema: false,
+      contentVersion: 0,
+      draft: null,
+      draftDirty: false,
       stripConfirmed: new Map<string, string>(),
       pendingStripText: '',
-      store: new Store<ITablePanelViewState>({ status: TablePanelStatus.NoTarget, rows: [], schemaMode: false }),
+      store: new Store<ITablePanelViewState>({
+        status: TablePanelStatus.NoTarget,
+        content: { data: null, schema: null, schemaMode: false },
+        contentVersion: 0,
+        schemaMode: false,
+      }),
     };
   }
 
@@ -1195,19 +1480,15 @@ export class TablePanel implements IEditorPanel, ITablePanel {
 
   /**
    * 把某栏新的视图状态写入其订阅源；空栏（无目标）时一并带上空栏内联视图与目录数据
+   *
+   * 视图不再携带行树：行树的唯一来源是该栏组件的草稿。这里只发布「面板下发的文档 + 版本号」，
+   * 组件按版本号决定是否重置自己的草稿。
    * @param columnIndex 栏序号（0 基）
    * @param status 新的加载状态
-   * @param rows 新的行树
    * @param message 面板级成功提示
    * @param error 面板级错误提示
    */
-  private publish(
-    columnIndex: number,
-    status: TablePanelStatus,
-    rows: readonly ITableRowNode[],
-    message?: string,
-    error?: string,
-  ): void {
+  private publish(columnIndex: number, status: TablePanelStatus, message?: string, error?: string): void {
     const column = this.columnAt(columnIndex);
     const target = column.target;
     const emptyState =
@@ -1222,7 +1503,8 @@ export class TablePanel implements IEditorPanel, ITablePanel {
 
     column.store.setState({
       status,
-      rows,
+      content: this.publishedDocument(columnIndex),
+      contentVersion: column.contentVersion,
       schemaMode: target !== null && isSchemaPath(target.dataPath),
       title: target === null ? undefined : target.dataPath,
       message,
@@ -1237,31 +1519,36 @@ export class TablePanel implements IEditorPanel, ITablePanel {
    * @param columnIndex 栏序号（0 基）
    */
   private publishCommentStrip(columnIndex: number): void {
-    const target = this.columnAt(columnIndex).target;
+    const column = this.columnAt(columnIndex);
+    const target = column.target;
 
-    this.columnAt(columnIndex).store.setState({
+    column.store.setState({
       status: TablePanelStatus.Loading,
-      rows: [],
+      content: this.publishedDocument(columnIndex),
+      contentVersion: column.contentVersion,
       schemaMode: target !== null && isSchemaPath(target.dataPath),
       title: target === null ? undefined : target.dataPath,
       commentStripPending: true,
-      unsaved: this.columnAt(columnIndex).unsaved,
+      unsaved: column.unsaved,
     });
   }
 
   /**
-   * 保留某栏当前行树、仅更新其面板级错误提示
+   * 保留某栏当前状态、仅更新其面板级错误提示
    * @param columnIndex 栏序号（0 基）
    * @param message 错误提示文案
    */
   private publishError(columnIndex: number, message: string): void {
     const state = this.columnAt(columnIndex).store.state;
 
-    this.publish(columnIndex, state.status, state.rows, undefined, message);
+    this.publish(columnIndex, state.status, undefined, message);
   }
 
   /**
-   * 依据已读取的 schema 与数据计算某栏行树并写入视图状态：有字段则就绪，否则落回空态
+   * 依据已读取的 schema 与数据重算某栏基线并推进版本号：有字段则就绪，否则落回空态
+   *
+   * 这是「面板换内容」的五处入口之一：基线替换、草稿作废、版本号自增必须成对发生，
+   * 否则换表 / 外部刷新后组件会从上一份草稿重置、或把旧内容写进新文件（D-02 / D-06 / D-17）。
    * @param columnIndex 栏序号（0 基）
    * @param schema schema 内容
    * @param data 数据内容
@@ -1276,18 +1563,21 @@ export class TablePanel implements IEditorPanel, ITablePanel {
 
     const rows = buildTableTree(schema, data);
 
+    this.resetColumnDraft(columnIndex);
+    this.bumpContentVersion(columnIndex);
+
     if (rows.length > 0) {
-      this.publish(columnIndex, TablePanelStatus.Ready, rows, message, error);
+      this.publish(columnIndex, TablePanelStatus.Ready, message, error);
       return;
     }
 
     const hasSchema = isRecord(schema);
 
-    this.publish(columnIndex, hasSchema ? TablePanelStatus.Empty : TablePanelStatus.EmptySchema, [], message, error);
+    this.publish(columnIndex, hasSchema ? TablePanelStatus.Empty : TablePanelStatus.EmptySchema, message, error);
   }
 
   /**
-   * 依据 schema 文档计算某栏 schema 呈现行树并写入视图状态：有关键字则就绪，否则落回空态
+   * 依据 schema 文档重算某栏基线并推进版本号：有关键字则就绪，否则落回空态
    * @param columnIndex 栏序号（0 基）
    * @param schema schema 文档内容
    * @param message 面板级成功提示
@@ -1301,12 +1591,15 @@ export class TablePanel implements IEditorPanel, ITablePanel {
 
     const rows = buildSchemaTree(schema);
 
+    this.resetColumnDraft(columnIndex);
+    this.bumpContentVersion(columnIndex);
+
     if (rows.length > 0) {
-      this.publish(columnIndex, TablePanelStatus.Ready, rows, message, error);
+      this.publish(columnIndex, TablePanelStatus.Ready, message, error);
       return;
     }
 
-    this.publish(columnIndex, TablePanelStatus.EmptySchema, [], message, error);
+    this.publish(columnIndex, TablePanelStatus.EmptySchema, message, error);
   }
 
   /**
@@ -1375,55 +1668,28 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   }
 
   /**
-   * 同步快照某栏当前目标与内存内容后异步写回并清该栏未落盘标记
+   * 换表 / 关栏前的同步快照 + 异步写回：取数顺序与 `TablePanel.save` 完全一致
    *
    * 快照先于 `TablePanel.setTable` / `TablePanel.closeColumn` 的目标替换 / 清空发生，故换目标 / 关栏
-   * 不会丢改动；写入失败用本栏面板级错误提示隔离，不抛穿。`unsavedSchema` 为真时把捕获的 schema 一并
-   * 写回推导出的 schema 路径。
+   * 不会丢改动；脏判定用 `TablePanel.isColumnDirty`，草稿在手也算脏。
    * @param columnIndex 栏序号（0 基）
    */
   private async flushColumn(columnIndex: number): Promise<void> {
     const column = this.columnAt(columnIndex);
-    const target = column.target;
 
-    if (target === null) return;
-    if (!column.unsaved && !column.unsavedSchema) return;
+    if (column.target === null) return;
+    if (!this.isColumnDirty(columnIndex)) return;
 
-    const data = column.data;
-    const schema = column.schema;
-    const prefix = column.prefix;
-    const writeSchema = column.unsavedSchema;
-
-    column.unsaved = false;
-    column.unsavedSchema = false;
-
-    try {
-      const dataResource = await this.context.requestResource(target.dataPath);
-
-      if (dataResource !== null) await dataResource.write(serializeTableText(data, prefix));
-
-      if (writeSchema) {
-        const schemaResource = await this.context.requestResource(deriveSchemaPath(target.dataPath));
-
-        if (schemaResource !== null) await schemaResource.write(serializeTableText(schema, prefix));
-      }
-    } catch {
-      this.publishError(columnIndex, '写入失败，请重试。');
-    }
+    await this.saveDocument(columnIndex, this.currentDocument(columnIndex));
   }
 
   /**
-   * 把某栏变更后的数据写入其目标表的资源
-   * @param columnIndex 栏序号（0 基）
+   * 把某栏的数据写入指定目标的资源（目标由调用方同步快照传入，避免写盘途中换表串到新文件）
+   * @param target 该栏写盘时快照下的目标
    * @param data 变更后的完整数据
+   * @param prefix 该栏写盘时快照下的系统前缀原文
    */
-  private async writeData(columnIndex: number, data: unknown): Promise<void> {
-    const column = this.columnAt(columnIndex);
-    const target = column.target;
-
-    if (target === null) return;
-
-    const prefix = column.prefix;
+  private async writeData(target: ITablePanelTarget, data: unknown, prefix: string): Promise<void> {
     const resource = await this.context.requestResource(target.dataPath);
 
     if (resource === null) return;
@@ -1434,12 +1700,19 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   /**
    * 写入某栏数据并把失败隔离成该栏面板级错误提示，成功时返回 true
    * @param columnIndex 栏序号（0 基）
+   * @param target 该栏写盘时快照下的目标
    * @param data 变更后的完整数据
+   * @param prefix 该栏写盘时快照下的系统前缀原文
    * @returns 写入成功时为 true
    */
-  private async persist(columnIndex: number, data: unknown): Promise<boolean> {
+  private async persist(
+    columnIndex: number,
+    target: ITablePanelTarget,
+    data: unknown,
+    prefix: string,
+  ): Promise<boolean> {
     try {
-      await this.writeData(columnIndex, data);
+      await this.writeData(target, data, prefix);
       return true;
     } catch {
       this.publishError(columnIndex, '写入失败，请重试。');
@@ -1448,23 +1721,25 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   }
 
   /**
-   * 把某栏变更后的 schema 写入其目标的 schema 资源，并把失败隔离成该栏面板级错误提示
+   * 把某栏变更后的 schema 写入指定目标的 schema 资源，并把失败隔离成该栏面板级错误提示
    * @param columnIndex 栏序号（0 基）
+   * @param target 该栏写盘时快照下的目标
    * @param schema 变更后的 schema 内容
+   * @param prefix 该栏写盘时快照下的系统前缀原文
    * @returns 写入成功时为 true
    */
-  private async persistSchema(columnIndex: number, schema: unknown): Promise<boolean> {
-    const column = this.columnAt(columnIndex);
-    const target = column.target;
-
-    if (target === null) return true;
-
+  private async persistSchema(
+    columnIndex: number,
+    target: ITablePanelTarget,
+    schema: unknown,
+    prefix: string,
+  ): Promise<boolean> {
     const resource = await this.context.requestResource(deriveSchemaPath(target.dataPath));
 
     if (resource === null) return true;
 
     try {
-      if (isRecord(schema)) await resource.write(serializeTableText(schema, column.prefix));
+      if (isRecord(schema)) await resource.write(serializeTableText(schema, prefix));
 
       return true;
     } catch {
@@ -1538,16 +1813,6 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   }
 
   /**
-   * 读取某栏某字段路径在当前数据中的值
-   * @param columnIndex 栏序号（0 基）
-   * @param key 字段路径
-   * @returns 字段值；路径不存在时为 undefined
-   */
-  private readField(columnIndex: number, key: string): unknown {
-    return get(this.columnAt(columnIndex).data, parseFieldPath(key));
-  }
-
-  /**
    * 在行树中按字段路径查找一个行节点
    * @param rows 行树节点列表
    * @param key 字段路径
@@ -1583,22 +1848,23 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     payload: ITableUndoData,
     isUndo: boolean,
   ): Record<string, unknown> | undefined {
+    // 草稿在手时以草稿为撤销基底：本地编辑只推进草稿，面板基线可能落后一帧（§R2）
+    const base = column.draft === null ? column.data : column.draft.data;
+
     if (type === TableUndoType.Change) {
-      return setByFieldPath(column.data, payload.path, isUndo ? payload.previousValue : payload.nextValue);
+      return setByFieldPath(base, payload.path, isUndo ? payload.previousValue : payload.nextValue);
     }
 
     if (type === TableUndoType.Add) {
-      if (isUndo) return deleteByFieldPath(column.data, payload.path);
+      if (isUndo) return deleteByFieldPath(base, payload.path);
 
       return payload.anchor === undefined
-        ? setByFieldPath(column.data, payload.path, payload.nextValue)
-        : insertAfterFieldPath(column.data, payload.path, payload.anchor, payload.nextValue);
+        ? setByFieldPath(base, payload.path, payload.nextValue)
+        : insertAfterFieldPath(base, payload.path, payload.anchor, payload.nextValue);
     }
 
     if (type === TableUndoType.Delete) {
-      return isUndo
-        ? setByFieldPath(column.data, payload.path, payload.previousValue)
-        : deleteByFieldPath(column.data, payload.path);
+      return isUndo ? setByFieldPath(base, payload.path, payload.previousValue) : deleteByFieldPath(base, payload.path);
     }
 
     if (type === TableUndoType.Replace) {
@@ -1656,18 +1922,18 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     const target = column.target;
 
     if (target === null) {
-      this.publish(columnIndex, TablePanelStatus.NoTarget, []);
+      this.publish(columnIndex, TablePanelStatus.NoTarget);
       return;
     }
 
     // 该栏有未落盘改动时不重读覆盖内存，保住手动保存下的内存改动（T-02.1-20-01）
-    if (column.unsaved || column.unsavedSchema) return;
+    if (column.unsaved || column.unsavedSchema || column.draftDirty) return;
 
     const current = column.store.state;
-    const hasContent = current.status === TablePanelStatus.Ready && current.rows.length > 0;
+    const hasContent = current.status === TablePanelStatus.Ready;
     const token = this.nextToken(columnIndex);
 
-    if (!hasContent) this.publish(columnIndex, TablePanelStatus.Loading, []);
+    if (!hasContent) this.publish(columnIndex, TablePanelStatus.Loading);
 
     // 资源读取失败是行为关键路径：落回固定错误态而非抛穿，面板保持打开（D-29）
     try {
@@ -1700,7 +1966,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       }
 
       if (parsed.status === TableTextParseStatus.Invalid) {
-        this.publish(columnIndex, TablePanelStatus.Error, []);
+        this.publish(columnIndex, TablePanelStatus.Error);
         return;
       }
 
@@ -1709,7 +1975,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     } catch {
       if (this.requestTokens[columnIndex] !== token) return;
 
-      this.publish(columnIndex, TablePanelStatus.Error, []);
+      this.publish(columnIndex, TablePanelStatus.Error);
     }
   }
 
