@@ -1,0 +1,185 @@
+/* 共用文件浏览器的样式：类名一律 `efb-` 前缀，颜色只读 --editor-* 变量（含字面量 fallback）。 */
+
+.efb {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  border: 1px solid var(--editor-border, #d0d7de);
+  background: var(--editor-surface, #ffffff);
+  color: var(--editor-fg, #202124);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.efb-toolbar {
+  display: flex;
+  flex: 0 0 32px;
+  align-items: center;
+  box-sizing: border-box;
+  height: 32px;
+  padding: 0 8px;
+  gap: 8px;
+  border-bottom: 1px solid var(--editor-border, #d0d7de);
+  background: var(--editor-toolbar-bg, #f5f6f8);
+}
+
+.efb-crumbs {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  min-width: 0;
+  gap: 4px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+}
+
+.efb-crumbs::-webkit-scrollbar {
+  height: 4px;
+}
+
+.efb-crumbs::-webkit-scrollbar-thumb {
+  border-radius: 2px;
+  background: var(--editor-border, #d0d7de);
+}
+
+.efb-crumb {
+  flex: 0 0 auto;
+  max-width: 160px;
+  padding: 0 4px;
+  color: var(--editor-muted, #656d76);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.efb-crumb > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.efb-crumb:focus-visible {
+  outline: 2px solid var(--editor-accent, #1677ff);
+  outline-offset: -2px;
+}
+
+.efb-crumb-sep {
+  flex: 0 0 auto;
+  color: var(--editor-muted, #656d76);
+}
+
+.efb-crumb-current {
+  flex: 0 1 auto;
+  max-width: 160px;
+  padding: 0 4px;
+  color: var(--editor-accent, #1677ff);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.efb-reload {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--editor-muted, #656d76);
+  cursor: pointer;
+}
+
+.efb-reload:hover {
+  background: var(--editor-hover, rgba(0, 0, 0, 0.04));
+}
+
+.efb-reload:focus-visible {
+  outline: 2px solid var(--editor-accent, #1677ff);
+  outline-offset: -2px;
+}
+
+.efb-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.efb-row-line {
+  display: flex;
+  align-items: center;
+}
+
+.efb-row {
+  display: block;
+  flex: 1 1 auto;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 28px;
+  padding: 4px 12px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.efb-row:hover {
+  background: var(--editor-hover, rgba(0, 0, 0, 0.04));
+}
+
+.efb-row:focus-visible {
+  outline: 2px solid var(--editor-accent, #1677ff);
+  outline-offset: -2px;
+}
+
+.efb-row-directory {
+  font-weight: 600;
+}
+
+.efb-row-file {
+  font-weight: 400;
+}
+
+.efb-row-action-slot {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  padding: 4px 8px;
+  color: #cf1322;
+}
+
+.efb-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 96px;
+  padding: 24px;
+  gap: 8px;
+  color: var(--editor-muted, #656d76);
+  font-size: 12px;
+}
+
+.efb-status-loading {
+  flex-direction: row;
+}
+
+.efb-status-error {
+  color: #cf1322;
+}
