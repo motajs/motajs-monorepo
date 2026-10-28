@@ -1,6 +1,16 @@
 import { FC, ReactNode } from 'react';
+import { EditorFileChangeKind } from '../fs';
 import { IUndoable, IUndoContext } from '../undo';
 import { IFileEntry, IResource, IResourceIdentifier, ResourceContent } from '../resource';
+
+export const enum PanelCloseChoice {
+  /** 保存并关闭：面板已保存成功，外壳跳过普通切走落盘 */
+  Save,
+  /** 不保存关闭：外壳先投递 `IEditorPanel.onDiscard`，再跳过落盘释放 */
+  Discard,
+  /** 取消关闭：标签保持打开 */
+  Cancel,
+}
 
 export interface IEditorPanelContext {
   /**
@@ -57,9 +67,28 @@ export interface IEditorPanel extends IUndoable {
   getTitle?(): string | undefined;
 
   /**
-   * 当用户主动关闭承载此面板的标签时，外壳在释放面板实例前询问是否允许关闭
+   * 当用户主动关闭承载此面板的标签时，外壳询问这一次关闭该怎么办
    *
-   * 返回 `true` 表示允许关闭；返回 `false` 表示取消关闭，标签保留且实例不释放。
+   * 外壳在询问前会先把目标标签切换为活动标签。返回 `Cancel` 时标签保持打开；
+   * `Save` 表示面板已自行保存成功，外壳跳过普通切走落盘；
+   * `Discard` 表示丢弃内存改动，外壳会先投递 `IEditorPanel.onDiscard` 再跳过落盘释放。
+   * 钩子抛错时外壳记录日志并按取消关闭处理。未实现本方法的旧面板继续走 `IEditorPanel.onBeforeClose`。
+   * @returns 保存并关闭 / 不保存关闭 / 取消关闭
+   */
+  onRequestClose?(): Promise<PanelCloseChoice>;
+
+  /**
+   * 用户选择「不保存关闭」时，外壳在释放实例之前投递
+   *
+   * 面板据此清掉内存里的脏状态，使 `IEditorPanel.dispose` 的兜底保存成为空操作。
+   * 只有「不保存关闭」会投递；注销面板类型、释放整个编辑器等内部路径永不投递。
+   */
+  onDiscard?(): void;
+
+  /**
+   * 旧语义：用户主动关闭标签时询问是否允许关闭；外壳优先 `IEditorPanel.onRequestClose`，没有它时才退回这里
+   *
+   * 返回 `true` 表示允许关闭（仍会走普通切走落盘）；返回 `false` 表示取消关闭，标签保留且实例不释放。
    * 未保存改动由 `IEditorPanel.onSwitchOut` 自动落盘覆盖，因此此方法**不再**用于询问「要不要保存」，
    * 只允许用于确实不该继续的破坏性场景（例如面板内正在执行不可中断的流程）。
    * 外壳在询问前会先把目标标签切换为活动标签；钩子抛错时外壳记录日志并按取消关闭处理。
@@ -110,6 +139,16 @@ export interface IEditorPanel extends IUndoable {
   onSwitchOut(): Promise<void>;
 
   /**
+   * 当资源层确认某个路径发生变化时投递；面板据此自行读取需要的内容，外壳不预读
+   *
+   * 与既有的 `IEditorPanel.onUpdateResource` 并存：外壳优先投递本钩子，未实现时才退回预读通道。
+   * 变化种类包含新增 / 修改 / 删除，删除事件的路径同样会被投递。
+   * @param identifier 资源统一标识符
+   * @param kind 变化种类
+   */
+  onResourceChange?(identifier: IResourceIdentifier, kind: EditorFileChangeKind): Promise<void>;
+
+  /**
    * 当资源数据更新时执行
    * @param id 资源统一标识符
    * @param data 更新后的资源数据
@@ -144,4 +183,24 @@ export interface IEditorPanelType {
 
   /** 创建此类型面板实例的工厂 */
   readonly create: EditorPanelFactory;
+
+  /**
+   * 判断一个完整路径能否由此面板类型打开
+   *
+   * 入参是索引里的规范化相对路径（无前导 `/`、以 `/` 分隔、不含 `..` 段）。
+   * 与 `IEditorPanelType.createOpenParam` 同时声明时，此面板类型才会成为资源管理器的候选。
+   * @param path 完整路径：相对项目根、以 `/` 分隔、无前导斜线
+   * @returns 能打开时为 true
+   */
+  canOpen?(path: string): boolean;
+
+  /**
+   * 把完整路径转成本面板类型的打开参数
+   *
+   * 必须是同步纯函数、禁止 I/O，且每次返回新对象；参数形状由面板类型自己解释，
+   * `IEditorPanelType.create` 收到的 `openParam` 即此返回值，core 不校验其形状。
+   * @param path 完整路径：相对项目根、以 `/` 分隔、无前导斜线
+   * @returns 交给外壳的打开参数
+   */
+  createOpenParam?(path: string): Record<string, unknown>;
 }
