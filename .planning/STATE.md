@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.2"
 current_phase_name: 面板内容解耦与文件资源管理器
-current_plan: 7
+current_plan: 8
 status: executing
-stopped_at: Completed 04.2-06-PLAN.md
-last_updated: "2026-10-28T10:42:34.093Z"
+stopped_at: Completed 04.2-14-PLAN.md
+last_updated: "2026-10-28T11:00:19.278Z"
 last_activity: 2026-10-28
 last_activity_desc: Phase 04.2 execution started
-state_head: a1b0480c0155306fde45c6ce24581094389c8a98
+state_head: 9e22c6b068ca44d75c9613bc13b5d3cb140e626b
 progress:
   total_phases: 10
   completed_phases: 0
   total_plans: 182
-  completed_plans: 165
+  completed_plans: 167
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 04.2 (面板内容解耦与文件资源管理器) — EXECUTING
-Current Plan: 7
+Current Plan: 8
 Total Plans in Phase: 18
 Status: Ready to execute
 Next phase: Phase 04.2 — 面板内容解耦与文件资源管理器（设计重构）；先讨论，再规划接口
@@ -184,6 +184,7 @@ Progress: [███████░░░] 74%
 | Phase 04.2 P02.1 | 2 min | 2 tasks | 2 files |
 | Phase 04.2 P04.1 | 10 min | 2 tasks | 7 files |
 | Phase 04.2 P06 | 23 min | 2 tasks | 5 files |
+| Phase 04.2 P14 | 11 min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -499,6 +500,8 @@ Recent decisions affecting current work:
 - [Phase 04.2]: 读目录回调镜像进 ref，不进 effect 依赖：避免调用方内联函数导致反复重读，同时每次读目录都用最新回调
 - [Phase 04.2]: 行用 .efb-row-line 包一层：按钮本身带 efb-row 与目录/文件修饰类，动作槽放行内，避免按钮嵌套按钮
 - [Phase 04.2]: 重试进载入态、手动重载保留旧行：两处共用同一重读入口，但重试先清空失败态并显示载入
+- [Phase 04.2]: 地图画布只收图片路径键地址表；两张地址表各按自己的键查，禁止互相查表
+- [Phase 04.2]: 地图面板类型只信宿主注入的同步路径解析，未注入即不认领，不内置目录约定
 
 ### Pending Todos
 
@@ -527,7 +530,7 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-28T10:42:33.536Z
-Stopped at: Completed 04.2-06-PLAN.md
+Last session: 2026-10-28T11:00:18.710Z
+Stopped at: Completed 04.2-14-PLAN.md
 Resume file: None
 Next action: 简报并规划 / 执行 Phase 5（代码编辑）——需用户先批准；Phase 04.1 已 Complete，本阶段不再有待办计划
