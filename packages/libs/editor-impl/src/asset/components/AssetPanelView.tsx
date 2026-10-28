@@ -86,6 +86,8 @@ export interface IAssetPanelViewProps {
   onRetry?(): void;
   /**
    * 读取某素材字节，供预览使用
+   *
+   * 这是路径能到达的最内层：本组件属于面板侧组合层，向下传给可复用组件时一律收成按条目或零参闭包（D-01）。
    * @param path 素材字节文件路径
    * @returns 字节；文件不存在或读取失败时为 undefined
    */
@@ -268,7 +270,7 @@ function renderContent(
         cardWidth={cardWidth}
         selectedName={view.selectedName}
         onSelect={props.onSelectAsset ?? noopSelectAsset}
-        loadBytes={props.loadBytes}
+        loadBytes={(entry): Promise<Uint8Array | undefined> => props.loadBytes(entry.path)}
         mimeOf={(entry): string => resolveAssetMime(entry.path, category.kind)}
         fontFamilyOf={(entry): string => resolveAssetFontFamily(entry.path)}
       />
@@ -298,7 +300,7 @@ function renderContent(
         onUnregister={(): void => {
           if (selected !== undefined) props.onUnregister?.(selected.name);
         }}
-        loadBytes={props.loadBytes}
+        loadBytes={(entry): Promise<Uint8Array | undefined> => props.loadBytes(entry.path)}
       />
     </div>
   );
@@ -387,7 +389,7 @@ export function AssetPanelView(props: IAssetPanelViewProps): ReactElement {
           open
           kind={category.kind}
           entries={transcodeCandidates(category, state.entries)}
-          loadBytes={props.loadBytes}
+          loadBytes={(entry): Promise<Uint8Array | undefined> => props.loadBytes(entry.path)}
           busy={state.transcoding}
           onCancel={props.onCancelTranscode ?? noopTranscodeCancel}
           onStart={props.onStartTranscode ?? noopTranscodeStart}

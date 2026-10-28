@@ -16,8 +16,8 @@ configure({ testIdAttribute: 'data-test-id' });
 // 界面单位（kbps / kHz）、实际参数与说明文案、不覆盖时的改名提示，以及开始转换时换算出的内部参数。
 // 弹窗挂在 body 上，查找一律走 screen，不使用全局 document（editor-impl 全树禁用 document）。
 
-/** 按素材字节路径读字节的回调 */
-type LoadBytes = (path: string) => Promise<Uint8Array | undefined>;
+/** 按素材条目读字节的回调 */
+type LoadBytes = (entry: IAssetEntry) => Promise<Uint8Array | undefined>;
 
 /** 开始转换回调 */
 type StartHandler = (names: readonly string[], options: IAssetTranscodeOptions) => void;

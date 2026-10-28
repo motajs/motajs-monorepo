@@ -56,9 +56,9 @@ function createPng(width: number, height: number, byteLength: number = 29): Uint
 /**
  * 造一个永远返回固定字节的读取器
  * @param bytes 要返回的字节
- * @returns 按路径读取字节的回调
+ * @returns 按条目读取字节的回调
  */
-function alwaysBytes(bytes: Uint8Array | undefined): (path: string) => Promise<Uint8Array | undefined> {
+function alwaysBytes(bytes: Uint8Array | undefined): (entry: IAssetEntry) => Promise<Uint8Array | undefined> {
   return (): Promise<Uint8Array | undefined> => Promise.resolve(bytes);
 }
 
@@ -76,15 +76,17 @@ function textOf(container: HTMLElement, testId: string): string | null {
  * 直接渲染详情栏
  * @param entry 要显示的素材条目
  * @param kind 素材的大分类
- * @param loadBytes 按路径读取字节的回调
+ * @param loadBytes 按条目读取字节的回调
  * @returns 渲染结果
  */
 function renderDetail(
   entry: IAssetEntry,
   kind: AssetCategoryKind,
-  loadBytes: (path: string) => Promise<Uint8Array | undefined>,
+  loadBytes: (entry: IAssetEntry) => Promise<Uint8Array | undefined>,
 ): ReturnType<typeof render> {
-  return render(createElement(AssetDetail, { entry, kind, loadBytes }));
+  return render(
+    createElement(AssetDetail, { entry, kind, mime: 'image/png', fontFamily: 'asset-font-test', loadBytes }),
+  );
 }
 
 describe('素材详情文件大小', () => {
@@ -147,6 +149,8 @@ describe('素材详情文件大小', () => {
       createElement(AssetDetail, {
         entry: HERO_REPLACED_ENTRY,
         kind: AssetCategoryKind.Image,
+        mime: 'image/png',
+        fontFamily: 'asset-font-test',
         loadBytes: alwaysBytes(createPng(192, 128, 60)),
       }),
     );
@@ -161,8 +165,8 @@ describe('素材详情文件大小', () => {
     const loadBytes = vi.fn((): Promise<Uint8Array | undefined> => Promise.resolve(createPng(192, 128)));
     const { container } = render(
       createElement(AssetFileInfo, {
+        key: HERO_ENTRY.path,
         kind: AssetCategoryKind.Image,
-        path: HERO_ENTRY.path,
         byteVersion: 0,
         loadBytes,
       }),

@@ -17,10 +17,10 @@ export interface IAssetDetailProps {
   readonly entry?: IAssetEntry;
   /** 当前分类的大分类，决定预览形态 */
   readonly kind: AssetCategoryKind;
-  /** 由面板推导好的字节 MIME 类型；缺省时按空 MIME 交给预览 */
-  readonly mime?: string;
-  /** 由面板生成且不含路径的稳定 CSS 字体族名；非字体分类可省略 */
-  readonly fontFamily?: string;
+  /** 由面板推导好的字节 MIME 类型 */
+  readonly mime: string;
+  /** 由面板生成且不含路径的稳定 CSS 字体族名 */
+  readonly fontFamily: string;
   /**
    * 用本地文件替换当前素材
    * @param upload 上传的原始文件名与字节
@@ -40,11 +40,11 @@ export interface IAssetDetailProps {
   /** 注销当前已登记素材（只改列表与配置，不删文件） */
   onUnregister?(): void;
   /**
-   * 读取某素材字节，供预览使用
-   * @param path 素材字节文件路径
+   * 读取某素材字节，供文件信息与预览使用
+   * @param entry 要读取字节的素材条目
    * @returns 字节；文件不存在或读取失败时为 undefined
    */
-  loadBytes(path: string): Promise<Uint8Array | undefined>;
+  loadBytes(entry: IAssetEntry): Promise<Uint8Array | undefined>;
 }
 
 /**
@@ -85,9 +85,8 @@ export function AssetDetail(props: IAssetDetailProps): ReactElement {
         <AssetFileInfo
           key={entry.path}
           kind={props.kind}
-          path={entry.path}
           byteVersion={entry.byteVersion ?? 0}
-          loadBytes={props.loadBytes}
+          loadBytes={(): Promise<Uint8Array | undefined> => props.loadBytes(entry)}
         />
       ) : null}
       {entry.exists ? null : (
@@ -99,10 +98,10 @@ export function AssetDetail(props: IAssetDetailProps): ReactElement {
         <AssetPreview
           key={entry.path}
           kind={props.kind}
-          mime={props.mime ?? ''}
+          mime={props.mime}
           fontFamily={props.fontFamily}
           byteVersion={entry.byteVersion ?? 0}
-          loadBytes={(): Promise<Uint8Array | undefined> => props.loadBytes(entry.path)}
+          loadBytes={(): Promise<Uint8Array | undefined> => props.loadBytes(entry)}
         />
       </div>
       <div className="asset-detail-actions">

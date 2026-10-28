@@ -28,10 +28,10 @@ export interface IAssetGridProps {
   onSelect(name: string): void;
   /**
    * 读取某素材字节，供卡片预览使用
-   * @param path 素材字节文件路径
+   * @param entry 要读取字节的素材条目
    * @returns 字节；文件不存在或读取失败时为 undefined
    */
-  loadBytes(path: string): Promise<Uint8Array | undefined>;
+  loadBytes(entry: IAssetEntry): Promise<Uint8Array | undefined>;
   /**
    * 取某素材字节由面板推导好的 MIME 类型
    * @param entry 该卡片对应的素材条目
@@ -98,12 +98,11 @@ export function AssetGrid(props: IAssetGridProps): ReactElement {
           >
             <AssetCardPreview
               kind={props.kind}
-              path={entry.path}
               mime={props.mimeOf(entry)}
               fontFamily={props.fontFamilyOf(entry)}
               exists={entry.exists}
               byteVersion={entry.byteVersion ?? 0}
-              loadBytes={props.loadBytes}
+              loadBytes={(): Promise<Uint8Array | undefined> => props.loadBytes(entry)}
             />
           </span>
           <span className="asset-card-name">{entry.name}</span>

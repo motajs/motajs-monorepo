@@ -6,8 +6,6 @@ import { useAssetObjectUrl } from './useAssetObjectUrl';
 export interface IAssetCardPreviewProps {
   /** 当前分类的大分类，决定卡片预览形态 */
   readonly kind: AssetCategoryKind;
-  /** 素材字节文件的资源路径 */
-  readonly path: string;
   /** 由面板推导好的字节 MIME 类型 */
   readonly mime: string;
   /** 由面板生成且不含路径的稳定 CSS 字体族名 */
@@ -17,17 +15,14 @@ export interface IAssetCardPreviewProps {
   /** 素材字节的版本号，变化时重新读取字节 */
   readonly byteVersion: number;
   /**
-   * 读取某素材字节
-   * @param path 素材字节文件路径
+   * 读取当前素材字节
    * @returns 字节；文件不存在或读取失败时为 undefined
    */
-  loadBytes(path: string): Promise<Uint8Array | undefined>;
+  loadBytes(): Promise<Uint8Array | undefined>;
 }
 
 /** 卡片内读字节预览的 props */
 interface IAssetCardBytesProps {
-  /** 素材字节文件的资源路径 */
-  readonly path: string;
   /** 由面板推导好的字节 MIME 类型 */
   readonly mime: string;
   /** 由面板生成且不含路径的稳定 CSS 字体族名 */
@@ -35,11 +30,10 @@ interface IAssetCardBytesProps {
   /** 素材字节的版本号，变化时重新读取字节 */
   readonly byteVersion: number;
   /**
-   * 读取某素材字节
-   * @param path 素材字节文件路径
+   * 读取当前素材字节
    * @returns 字节；文件不存在或读取失败时为 undefined
    */
-  loadBytes(path: string): Promise<Uint8Array | undefined>;
+  loadBytes(): Promise<Uint8Array | undefined>;
 }
 
 /** 卡片内波形图标的每根竖条高度（像素，对应 `viewBox` 的 32 高）；冻结以免成为可变的模块级容器 */
@@ -91,11 +85,7 @@ function AssetCardWaveform(): ReactElement {
  * @returns 位图元素；字节不可用时为 null
  */
 function AssetCardImage(props: IAssetCardBytesProps): ReactElement | null {
-  const url = useAssetObjectUrl(
-    (): Promise<Uint8Array | undefined> => props.loadBytes(props.path),
-    props.mime,
-    props.byteVersion,
-  );
+  const url = useAssetObjectUrl(props.loadBytes, props.mime, props.byteVersion);
 
   if (url === undefined) return null;
 
@@ -116,11 +106,7 @@ function AssetCardImage(props: IAssetCardBytesProps): ReactElement | null {
  * @returns 字体样例元素
  */
 function AssetCardFont(props: IAssetCardBytesProps): ReactElement {
-  const url = useAssetObjectUrl(
-    (): Promise<Uint8Array | undefined> => props.loadBytes(props.path),
-    props.mime,
-    props.byteVersion,
-  );
+  const url = useAssetObjectUrl(props.loadBytes, props.mime, props.byteVersion);
 
   return <AssetFontSample fontFamily={props.fontFamily} url={url} text="ABC" />;
 }
@@ -139,7 +125,6 @@ export function AssetCardPreview(props: IAssetCardPreviewProps): ReactElement | 
   if (props.kind === AssetCategoryKind.Image) {
     return (
       <AssetCardImage
-        path={props.path}
         mime={props.mime}
         fontFamily={props.fontFamily}
         byteVersion={props.byteVersion}
@@ -154,7 +139,6 @@ export function AssetCardPreview(props: IAssetCardPreviewProps): ReactElement | 
     return (
       <span className="asset-card-preview-font" data-test-id="asset-card-preview-font">
         <AssetCardFont
-          path={props.path}
           mime={props.mime}
           fontFamily={props.fontFamily}
           byteVersion={props.byteVersion}

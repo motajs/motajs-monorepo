@@ -57,36 +57,38 @@ function createPng(width: number, height: number): Uint8Array {
 /**
  * 造一个永远返回固定字节的读取器
  * @param bytes 要返回的字节
- * @returns 按路径读取字节的回调
+ * @returns 按条目读取字节的回调
  */
-function alwaysBytes(bytes: Uint8Array | undefined): (path: string) => Promise<Uint8Array | undefined> {
+function alwaysBytes(bytes: Uint8Array | undefined): (entry: IAssetEntry) => Promise<Uint8Array | undefined> {
   return (): Promise<Uint8Array | undefined> => Promise.resolve(bytes);
 }
 
 /**
- * 造一个按路径返回不同字节的读取器
- * @param bytesByPath 路径到字节的映射
- * @returns 按路径读取字节的回调
+ * 造一个按条目路径返回不同字节的读取器
+ * @param bytesByPathMap 路径到字节的映射
+ * @returns 按条目读取字节的回调
  */
 function bytesByPath(
   bytesByPathMap: ReadonlyMap<string, Uint8Array>,
-): (path: string) => Promise<Uint8Array | undefined> {
-  return (path: string): Promise<Uint8Array | undefined> => Promise.resolve(bytesByPathMap.get(path));
+): (entry: IAssetEntry) => Promise<Uint8Array | undefined> {
+  return (entry: IAssetEntry): Promise<Uint8Array | undefined> => Promise.resolve(bytesByPathMap.get(entry.path));
 }
 
 /**
  * 直接渲染详情栏
  * @param entry 要显示的素材条目
  * @param kind 素材的大分类
- * @param loadBytes 按路径读取字节的回调
+ * @param loadBytes 按条目读取字节的回调
  * @returns 渲染结果
  */
 function renderDetail(
   entry: IAssetEntry,
   kind: AssetCategoryKind,
-  loadBytes: (path: string) => Promise<Uint8Array | undefined>,
+  loadBytes: (entry: IAssetEntry) => Promise<Uint8Array | undefined>,
 ): ReturnType<typeof render> {
-  return render(createElement(AssetDetail, { entry, kind, loadBytes }));
+  return render(
+    createElement(AssetDetail, { entry, kind, mime: 'image/png', fontFamily: 'asset-font-test', loadBytes }),
+  );
 }
 
 describe('素材详情尺寸', () => {
@@ -142,7 +144,15 @@ describe('素材详情尺寸', () => {
       expect(container.querySelector('[data-test-id="asset-detail-size"]')?.textContent).toBe('192 × 128');
     });
 
-    rerender(createElement(AssetDetail, { entry: TILE_ENTRY, kind: AssetCategoryKind.Image, loadBytes: reader }));
+    rerender(
+      createElement(AssetDetail, {
+        entry: TILE_ENTRY,
+        kind: AssetCategoryKind.Image,
+        mime: 'image/png',
+        fontFamily: 'asset-font-test',
+        loadBytes: reader,
+      }),
+    );
 
     await waitFor(() => {
       expect(container.querySelector('[data-test-id="asset-detail-size"]')?.textContent).toBe('64 × 32');

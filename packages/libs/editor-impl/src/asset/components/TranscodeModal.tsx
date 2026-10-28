@@ -43,11 +43,11 @@ export interface ITranscodeModalProps {
   /** 是否正在批量转码 */
   readonly busy: boolean;
   /**
-   * 按素材字节路径读字节，供探测源音频参数使用
-   * @param path 素材字节文件路径
+   * 读取某素材字节，供探测源音频参数使用
+   * @param entry 要读取字节的素材条目
    * @returns 字节；读取失败时为 undefined
    */
-  loadBytes(path: string): Promise<Uint8Array | undefined>;
+  loadBytes(entry: IAssetEntry): Promise<Uint8Array | undefined>;
   /** 取消并关闭弹窗 */
   onCancel(): void;
   /**
@@ -143,15 +143,15 @@ export function TranscodeModal(props: ITranscodeModalProps): ReactElement {
   const showAudioInputs = !isImage && audioPreset === AssetAudioPreset.Custom;
 
   const firstSelected = props.entries.find((entry) => selected.includes(entry.name));
-  const probePath = !isImage && firstSelected !== undefined ? firstSelected.path : undefined;
+  const probeEntry = !isImage && firstSelected !== undefined ? firstSelected : undefined;
 
   useEffect((): (() => void) => {
-    if (probePath === undefined) return (): void => undefined;
+    if (probeEntry === undefined) return (): void => undefined;
 
     let cancelled = false;
 
     Promise.resolve()
-      .then(() => loadBytesRef.current(probePath))
+      .then(() => loadBytesRef.current(probeEntry))
       .then((bytes) => {
         if (bytes === undefined || cancelled) return undefined;
 
@@ -172,7 +172,7 @@ export function TranscodeModal(props: ITranscodeModalProps): ReactElement {
     return (): void => {
       cancelled = true;
     };
-  }, [probePath]);
+  }, [probeEntry]);
 
   const toggleItem = (name: string): void => {
     setSelected(selected.includes(name) ? selected.filter((member) => member !== name) : [...selected, name]);
