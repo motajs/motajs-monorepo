@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.2"
 current_phase_name: 面板内容解耦与文件资源管理器
-current_plan: 9
+current_plan: 10
 status: executing
-stopped_at: Completed 04.2-16-PLAN.md
-last_updated: "2026-10-28T11:32:03.953Z"
+stopped_at: Completed 04.2-05-PLAN.md
+last_updated: "2026-10-28T12:11:59.724Z"
 last_activity: 2026-10-28
 last_activity_desc: Phase 04.2 execution started
-state_head: a30575d9f4133bb445a72a50040cc64094269462
+state_head: 8567cb708ed3f3fda3b9b4dd3b5065b2eeffc2f7
 progress:
   total_phases: 10
   completed_phases: 0
   total_plans: 182
-  completed_plans: 167
+  completed_plans: 169
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 04.2 (面板内容解耦与文件资源管理器) — EXECUTING
-Current Plan: 9
+Current Plan: 10
 Total Plans in Phase: 18
 Status: Ready to execute
 Next phase: Phase 04.2 — 面板内容解耦与文件资源管理器（设计重构）；先讨论，再规划接口
@@ -186,6 +186,7 @@ Progress: [███████░░░] 74%
 | Phase 04.2 P06 | 23 min | 2 tasks | 5 files |
 | Phase 04.2 P14 | 11 min | 3 tasks | 6 files |
 | Phase 04.2 P16 | 23 min | 3 tasks | 13 files |
+| Phase 04.2 P05 | 5 min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -506,6 +507,8 @@ Recent decisions affecting current work:
 - [Phase 04.2]: 04.2-16: canOpen 只认领分类的清单/schema/默认值文件与分类目录下的文件，其它路径返回 false
 - [Phase 04.2]: 04.2-16: createOpenParam 的 assetName 取路径最后一段经 resolveAssetName 处理，必须与素材条目 name 一致（无 extension 分类保留后缀）
 - [Phase 04.2]: 04.2-16: mime/fontFamily 由 AssetPanelView 组合层算好；容器组件收条目闭包、叶子组件收零参闭包，路径止步于组合层
+- [Phase 04.2]: 04.2-05: change-stream paths are validated at the resource layer entry (empty/absolute/drive/backslash/dot segments rejected) before touching the index
+- [Phase 04.2]: 04.2-05: resource layer calls only IResourceSystemHooks.onResourceChange; manual updateResource keeps the old pre-read onUpdateResource path
 
 ### Pending Todos
 
@@ -534,7 +537,7 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-28T11:32:03.381Z
-Stopped at: Completed 04.2-16-PLAN.md
+Last session: 2026-10-28T12:11:59.148Z
+Stopped at: Completed 04.2-05-PLAN.md
 Resume file: None
 Next action: 简报并规划 / 执行 Phase 5（代码编辑）——需用户先批准；Phase 04.1 已 Complete，本阶段不再有待办计划
