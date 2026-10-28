@@ -5,16 +5,16 @@ current_phase: "04.2"
 current_phase_name: 面板内容解耦与文件资源管理器
 current_plan: 17
 status: executing
-stopped_at: Completed 04.2-10-PLAN.md
-last_updated: "2026-10-28T16:22:12.271Z"
+stopped_at: Completed 04.2-11-PLAN.md
+last_updated: "2026-10-28T16:38:38.004Z"
 last_activity: 2026-10-28
 last_activity_desc: Phase 04.2 execution started
-state_head: 82f43749b9fda0a1844e2aa1185c896ba1ccda95
+state_head: 73be7db22d16081f690175bbefca6537e3d234b8
 progress:
   total_phases: 10
   completed_phases: 0
   total_plans: 182
-  completed_plans: 176
+  completed_plans: 177
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -194,6 +194,7 @@ Progress: [███████░░░] 74%
 | Phase 04.2 P15 | 49 min | 3 tasks | 10 files |
 | Phase 04.2 P17 | 26 min | 3 tasks | 5 files |
 | Phase 04.2 P10 | 23 min | 2 tasks | 2 files |
+| Phase 04.2 P11 | 21 min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -534,6 +535,8 @@ Recent decisions affecting current work:
 - [Phase 04.2]: 04.2-10: 短窗口合并用「基线 / 当前 pendingConflict 内容相等即跳过」实现，不引入定时器；并发重复事件在读取后也只落地一次
 - [Phase 04.2]: 04.2-10: 冲突弹窗由 TablePanelView 根经面板级 conflictStore 只挂一处；栏级 pendingConflict 只做记录与排队，非活动面板重新切入时由订阅源恢复 — 执行器要求，PLAN 文本原为逐栏挂载
 - [Phase 04.2]: 04.2-10: 删除事件提示「外部文件已被删除」，读取失败固定提示「读取外部改动失败，已保留你的改动」；两者都不替换内容、不弹冲突框
+- [Phase 04.2]: 表格关闭弹窗状态只放面板级 closeDialogStore，ITablePanelViewState 不加 closeDialog* 字段，保证整块面板只有一份弹窗
+- [Phase 04.2]: 关闭的保存由 TablePanel.onRequestClose 自己做，普通切走仍走 TablePanel.onSwitchOut，不新增第二个保存钩子
 
 ### Pending Todos
 
@@ -562,7 +565,7 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-28T16:21:30.536Z
-Stopped at: Completed 04.2-10-PLAN.md
+Last session: 2026-10-28T16:38:22.337Z
+Stopped at: Completed 04.2-11-PLAN.md
 Resume file: None
 Next action: 简报并规划 / 执行 Phase 5（代码编辑）——需用户先批准；Phase 04.1 已 Complete，本阶段不再有待办计划
