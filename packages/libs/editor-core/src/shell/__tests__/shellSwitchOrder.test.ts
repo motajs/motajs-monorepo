@@ -7,15 +7,16 @@ import { ResourceSystem } from '../../resource/resourceSystem';
 import { UndoSystem } from '../../undo/undoSystem';
 import { ShellSystem } from '../shellSystem';
 
-// 切出投递顺序的测试：外壳必须在通知 React 重渲染之前就把切出排进串行链，
-// 这样面板 `IEditorPanel.onSwitchOut` 的同步前缀一定跑在组件卸载之前；且一次活动变化只切出一次。
+// 切标签保存时序的测试（B1）：外壳必须等旧面板 `IEditorPanel.onSwitchOut` 结算之后，
+// 才改活动标签并通知 React，因此保存期间旧组件一直挂载、面板能从组件里取到草稿；
+// 同一次活动变化只切出一次，切入仍排在前一个面板切出结算之后。
 
 // 每个用例结束后卸载已挂载的组件，避免 DOM 在用例之间累积
 afterEach(() => {
   cleanup();
 });
 
-// 手工门闩：切出钩子 await 它，由测试决定何时结算，用来证明切入确实排在切出结算之后
+// 手工门闩：切出钩子 await 它，由测试决定何时结算，用来证明保存确实把切换卡住了
 class SaveGate {
   /** 门闩对应的 promise，切出钩子 await 它 */
   readonly promise: Promise<void>;
@@ -34,12 +35,20 @@ class SaveGate {
   }
 }
 
+/** 组件挂载标记：渲染体置真、cleanup 置假，供面板判断「保存时组件还在不在」 */
+interface IMountFlag {
+  /** 组件当前是否处于挂载状态 */
+  value: boolean;
+}
+
 /** 记录渲染与卸载的组件 props */
 interface IOrderComponentProps {
   /** 面板实例 id */
   readonly id: string;
   /** 与外壳共享的事件顺序记录 */
   readonly events: string[];
+  /** 组件挂载标记，与所属面板共享 */
+  readonly mountFlag: IMountFlag;
 }
 
 /**
@@ -48,29 +57,35 @@ interface IOrderComponentProps {
  * @returns 固定显示实例 id 的元素
  */
 function OrderComponent(props: IOrderComponentProps): ReactElement {
+  props.mountFlag.value = true;
+  props.events.push(`${props.id}.render`);
+
   useEffect((): (() => void) => {
     return (): void => {
+      props.mountFlag.value = false;
       props.events.push(`${props.id}.unmount`);
     };
-  }, [props.id, props.events]);
-
-  props.events.push(`${props.id}.render`);
+  }, [props.id, props.events, props.mountFlag]);
 
   return createElement('div', null, props.id);
 }
 
-// 记录事件顺序的面板：切换钩子可被门闩卡住，渲染组件自己报告挂载与卸载
+// 记录事件顺序的面板：切出钩子可被门闩卡住，渲染组件自己报告挂载与卸载
 class OrderPanel implements IEditorPanel {
   readonly id: string;
 
   /** 与外壳共享的事件顺序记录 */
   readonly events: string[];
+  /** 组件挂载标记，切出钩子据此判断组件是否还在 */
+  readonly mountFlag: IMountFlag = { value: false };
   /** 切出钩子卡住用的门闩；为空表示立刻结算 */
   gate: SaveGate | null = null;
   /** 切入次数 */
   switchInCount = 0;
   /** 切出次数 */
   switchOutCount = 0;
+  /** 切出钩子开始执行那一刻的组件挂载标记快照 */
+  mountedAtSwitchOut = false;
 
   private readonly component: FC;
 
@@ -82,7 +97,8 @@ class OrderPanel implements IEditorPanel {
   constructor(id: string, events: string[]) {
     this.id = id;
     this.events = events;
-    this.component = () => createElement(OrderComponent, { id: this.id, events: this.events });
+    this.component = () =>
+      createElement(OrderComponent, { id: this.id, events: this.events, mountFlag: this.mountFlag });
   }
 
   getTitle(): string {
@@ -110,6 +126,7 @@ class OrderPanel implements IEditorPanel {
 
   async onSwitchOut(): Promise<void> {
     this.switchOutCount += 1;
+    this.mountedAtSwitchOut = this.mountFlag.value;
     this.events.push(`${this.id}.onSwitchOut 开始`);
 
     if (this.gate !== null) await this.gate.promise;
@@ -117,11 +134,11 @@ class OrderPanel implements IEditorPanel {
     this.events.push(`${this.id}.onSwitchOut 结束`);
   }
 
-  async onUpdateResource(): Promise<void> {}
+  async onUpdateResource<T>(): Promise<void> {}
 
-  async undo(): Promise<void> {}
+  async undo<T>(): Promise<void> {}
 
-  async redo(): Promise<void> {}
+  async redo<T>(): Promise<void> {}
 }
 
 interface TestSystem {
@@ -165,7 +182,7 @@ async function createSystem(): Promise<TestSystem> {
   return { shellSystem, panels, events };
 }
 
-// 打开两个同类型面板，返回两个标签 id
+// 打开两个同类型面板，返回两个标签 id；结束时第二个标签为活动标签
 async function openTwoPanels(shellSystem: ShellSystem): Promise<readonly [string, string]> {
   const firstTab = shellSystem.listTabs()[0].id;
 
@@ -186,86 +203,186 @@ async function openTwoPanels(shellSystem: ShellSystem): Promise<readonly [string
   return [firstTab, secondTab];
 }
 
-describe('ShellSystem 切出投递顺序', () => {
-  // 切标签时切出排在组件卸载之前：面板在被卸载前仍能完成同步快照
-  it('切出排在组件卸载之前', async () => {
-    const { shellSystem, events } = await createSystem();
+describe('ShellSystem 切标签保存时序', () => {
+  // 保存结算之前旧组件一直挂载：门闩卡住切出时不得出现该实例的 unmount，也不得投递切入
+  it('保存结算之前旧组件仍然挂载', async () => {
+    const { shellSystem, panels, events } = await createSystem();
 
     render(createElement(shellSystem.render()));
 
-    const firstTab = shellSystem.listTabs()[0].id;
+    const [firstTab, secondTab] = await openTwoPanels(shellSystem);
 
     await act(async () => {
-      await shellSystem.openPanelInTab(firstTab, 'order');
+      await shellSystem.activateTab(firstTab);
     });
 
+    const gate = new SaveGate();
+
+    panels[0].gate = gate;
+    events.length = 0;
+
+    await act(async () => {
+      void shellSystem.activateTab(secondTab);
+    });
+
+    expect(events).toContain('instance-1.onSwitchOut 开始');
+    expect(events).not.toContain('instance-1.unmount');
+    expect(events).not.toContain('instance-2.onSwitchIn');
+
+    gate.release();
+
+    await act(async () => {});
+  });
+
+  // 保存结算之后才卸载：切出「结束」事件必须排在旧组件的 unmount 之前
+  it('保存结算之后才卸载旧组件', async () => {
+    const { shellSystem, panels, events } = await createSystem();
+
+    render(createElement(shellSystem.render()));
+
+    const [firstTab, secondTab] = await openTwoPanels(shellSystem);
+
+    await act(async () => {
+      await shellSystem.activateTab(firstTab);
+    });
+
+    const gate = new SaveGate();
+
+    panels[0].gate = gate;
+    events.length = 0;
+
+    await act(async () => {
+      void shellSystem.activateTab(secondTab);
+    });
+
+    gate.release();
+
+    await act(async () => {});
+
+    const switchOutEndIndex = events.indexOf('instance-1.onSwitchOut 结束');
+    const unmountIndex = events.indexOf('instance-1.unmount');
+
+    expect(switchOutEndIndex).toBeGreaterThanOrEqual(0);
+    expect(unmountIndex).toBeGreaterThanOrEqual(0);
+    expect(switchOutEndIndex).toBeLessThan(unmountIndex);
+  });
+
+  // 切入在切出结算之后：前一个面板没写完，下一个面板拿不到切入通知
+  it('切入排在旧面板切出结算之后', async () => {
+    const { shellSystem, panels, events } = await createSystem();
+
+    render(createElement(shellSystem.render()));
+
+    const [firstTab, secondTab] = await openTwoPanels(shellSystem);
+
+    await act(async () => {
+      await shellSystem.activateTab(firstTab);
+    });
+
+    const gate = new SaveGate();
+
+    panels[0].gate = gate;
+    events.length = 0;
+
+    await act(async () => {
+      void shellSystem.activateTab(secondTab);
+    });
+
+    gate.release();
+
+    await act(async () => {});
+
+    const switchOutEndIndex = events.indexOf('instance-1.onSwitchOut 结束');
+    const switchInIndex = events.indexOf('instance-2.onSwitchIn');
+
+    expect(switchOutEndIndex).toBeGreaterThanOrEqual(0);
+    expect(switchInIndex).toBeGreaterThan(switchOutEndIndex);
+  });
+
+  // 不重复保存：重复激活当前标签不增加切出次数，切到另一个标签恰好增加一次
+  it('重复激活当前标签时不重复保存', async () => {
+    const { shellSystem, panels } = await createSystem();
+
+    render(createElement(shellSystem.render()));
+
+    const [firstTab, secondTab] = await openTwoPanels(shellSystem);
+    const switchOutBefore = panels[1].switchOutCount;
+
+    await act(async () => {
+      await shellSystem.activateTab(secondTab);
+    });
+
+    await act(async () => {
+      await shellSystem.activateTab(secondTab);
+    });
+
+    expect(panels[1].switchOutCount).toBe(switchOutBefore);
+
+    await act(async () => {
+      await shellSystem.activateTab(firstTab);
+    });
+
+    expect(panels[1].switchOutCount).toBe(switchOutBefore + 1);
+  });
+
+  // 新建标签走同一条保存前缀：保存完成前旧组件不卸载，结算之后才卸载
+  it('新建标签时同样先保存再卸载旧组件', async () => {
+    const { shellSystem, panels, events } = await createSystem();
+
+    render(createElement(shellSystem.render()));
+
+    const [firstTab] = await openTwoPanels(shellSystem);
+
+    await act(async () => {
+      await shellSystem.activateTab(firstTab);
+    });
+
+    const gate = new SaveGate();
+
+    panels[0].gate = gate;
     events.length = 0;
 
     await act(async () => {
       shellSystem.openBlankTab();
     });
 
-    const switchOutIndex = events.indexOf('instance-1.onSwitchOut 开始');
-    const unmountIndex = events.indexOf('instance-1.unmount');
+    expect(events).toContain('instance-1.onSwitchOut 开始');
+    expect(events).not.toContain('instance-1.unmount');
 
-    expect(switchOutIndex).toBeGreaterThanOrEqual(0);
-    expect(unmountIndex).toBeGreaterThanOrEqual(0);
-    expect(switchOutIndex).toBeLessThan(unmountIndex);
+    gate.release();
+
+    await act(async () => {});
+
+    expect(events).toContain('instance-1.unmount');
   });
 
-  // 一次活动变化恰好投递一次切出：重复激活同一标签不重复投递
-  it('每次切换只投递一次切出', async () => {
+  // 切出钩子开始执行时组件仍然挂载：面板可以在钩子里直接读取组件里的草稿
+  it('切出钩子开始执行时组件仍然挂载', async () => {
     const { shellSystem, panels } = await createSystem();
 
     render(createElement(shellSystem.render()));
 
     const [firstTab, secondTab] = await openTwoPanels(shellSystem);
 
-    expect(panels[0].switchOutCount).toBe(1);
-
     await act(async () => {
-      shellSystem.activateTab(firstTab);
+      await shellSystem.activateTab(firstTab);
     });
 
-    // 重复激活已是活动的标签：不得再投递一次切出
-    await act(async () => {
-      shellSystem.activateTab(firstTab);
-    });
-
-    expect(panels[0].switchOutCount).toBe(1);
-
-    await act(async () => {
-      shellSystem.activateTab(secondTab);
-    });
-
-    expect(panels[0].switchOutCount).toBe(2);
-  });
-
-  // 切入排在切出结算之后：前一个面板没写完，下一个面板拿不到切入通知
-  it('切入排在前一个面板切出结算之后', async () => {
-    const { shellSystem, panels, events } = await createSystem();
-
-    render(createElement(shellSystem.render()));
-
-    const [firstTab] = await openTwoPanels(shellSystem);
     const gate = new SaveGate();
 
-    panels[1].gate = gate;
-    events.length = 0;
+    panels[0].gate = gate;
 
     await act(async () => {
-      shellSystem.activateTab(firstTab);
+      void shellSystem.activateTab(secondTab);
     });
 
-    // 外壳停在切出上：只有「切出开始」，切入还没有投递
-    expect(events).toContain('instance-2.onSwitchOut 开始');
-    expect(events).not.toContain('instance-1.onSwitchIn');
+    expect(panels[0].mountedAtSwitchOut).toBe(true);
+    expect(panels[0].mountFlag.value).toBe(true);
 
     gate.release();
 
     await act(async () => {});
 
-    expect(events.indexOf('instance-2.onSwitchOut 结束')).toBeGreaterThanOrEqual(0);
-    expect(events.indexOf('instance-2.onSwitchOut 结束')).toBeLessThan(events.indexOf('instance-1.onSwitchIn'));
+    expect(panels[0].mountFlag.value).toBe(false);
   });
 });
