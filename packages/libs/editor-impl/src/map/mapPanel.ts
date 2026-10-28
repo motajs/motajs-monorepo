@@ -9,6 +9,7 @@ import {
   IEditorPanelFactoryParam,
   IResourceIdentifier,
   IUndoContext,
+  PanelCloseChoice,
 } from '@motajs/editor-core';
 import {
   MAP_ABOVE_LAYER_DEFAULT_OPACITY,
@@ -401,6 +402,9 @@ export class MapPanel implements IEditorPanel, IMapPanel {
   /** 已处理过的外部变化摘要：路径 → 上次处理时的种类与内容摘要，用来识别同一次变化 */
   private readonly handledChanges: Map<string, string> = new Map();
 
+  /** 关闭三态弹窗的兑现函数；没有等待中的关闭询问时为 undefined */
+  private closeDialogResolve?: (choice: PanelCloseChoice) => void;
+
   constructor(param: IEditorPanelFactoryParam, capabilities: IMapEditorCapabilities) {
     this.id = param.instanceId;
     this.context = param.context;
@@ -468,6 +472,9 @@ export class MapPanel implements IEditorPanel, IMapPanel {
           void this.discardExternalChange();
         },
         onConflictKeep: (): void => this.keepExternalChange(),
+        onCloseChoice: (choice): void => {
+          void this.answerCloseDialog(choice);
+        },
         canCreateMap: this.capabilities.createMap !== undefined,
         canAddLayer: this.capabilities.addLayer !== undefined,
         canOpenProperties:
@@ -770,7 +777,7 @@ export class MapPanel implements IEditorPanel, IMapPanel {
   }
 
   /**
-   * 外壳在关闭标签前先保存：成功才允许关闭，失败保留标签并把错误交给提示行
+   * 旧语义，保留兼容：外壳优先 `IEditorPanel.onRequestClose`，只有未实现它时才退回这里
    *
    * 还没有打开任何地图时没有可保存的内容，直接放行，避免空面板的标签关不掉。
    * @returns 允许关闭时为 true
@@ -779,6 +786,67 @@ export class MapPanel implements IEditorPanel, IMapPanel {
     if (this.document === undefined) return true;
 
     return await this.save();
+  }
+
+  /**
+   * 用户点标签上的关闭：没有打开地图或没有脏改动就直接放行；有脏改动弹三态并等用户选择
+   * @returns 保存并关闭 / 不保存关闭 / 取消关闭
+   */
+  async onRequestClose(): Promise<PanelCloseChoice> {
+    if (this.document === undefined) return PanelCloseChoice.Save;
+    if (!this.isDirty()) return PanelCloseChoice.Save;
+
+    this.publish({ closeDialog: { open: true } });
+
+    return new Promise<PanelCloseChoice>((resolve) => {
+      this.closeDialogResolve = resolve;
+    });
+  }
+
+  /**
+   * 用户选择「不保存关闭」时由外壳投递：把内存改动清成基线状态，`dispose` 因此不写盘
+   */
+  onDiscard(): void {
+    this.closeDialogResolve = undefined;
+    this.publish({ closeDialog: undefined });
+    this.captureBaseline();
+    this.refreshUnsaved();
+  }
+
+  /**
+   * 结算一次关闭询问：三个分支都把关闭弹窗收回，并唤醒等待中的 `onRequestClose`
+   * @param choice 用户的选择
+   * @param error 保存失败的原因；有值时弹窗留在屏幕上并把原因显示出来
+   */
+  private settleCloseDialog(choice: PanelCloseChoice, error?: string): void {
+    const resolve = this.closeDialogResolve;
+
+    this.closeDialogResolve = undefined;
+
+    if (error === undefined) this.publish({ closeDialog: undefined });
+    else this.publish({ closeDialog: { open: true, error } });
+
+    if (resolve !== undefined) resolve(choice);
+  }
+
+  /**
+   * 响应关闭弹窗上的一个选择：保存分支先落盘，失败时留在弹窗里并结算为取消
+   * @param choice 用户的选择
+   */
+  private async answerCloseDialog(choice: PanelCloseChoice): Promise<void> {
+    if (choice !== PanelCloseChoice.Save) {
+      this.settleCloseDialog(choice);
+      return;
+    }
+
+    this.publish({ closeDialog: { open: true, saving: true } });
+
+    if (await this.save()) {
+      this.settleCloseDialog(PanelCloseChoice.Save);
+      return;
+    }
+
+    this.settleCloseDialog(PanelCloseChoice.Cancel, this.store.state.error ?? '保存失败');
   }
 
   /**

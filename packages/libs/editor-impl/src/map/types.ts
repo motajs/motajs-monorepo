@@ -805,6 +805,8 @@ export interface IMapPanelViewState {
   readonly tileImageSourcesVersion?: number;
   /** 待决的外部改动冲突；没有冲突时为 undefined */
   readonly pendingConflict?: IMapPendingConflict;
+  /** 关闭三态的展示态；没有等待中的关闭询问时为 undefined */
+  readonly closeDialog?: IMapCloseDialogState;
   /** 地图属性抽屉是否打开 */
   readonly propertiesOpen: boolean;
   /** 属性域的加载状态；`TablePanelStatus.NoTarget` 表示尚未读取 */

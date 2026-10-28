@@ -3,6 +3,7 @@ import { useStore } from '@tanstack/react-store';
 import { Store } from '@tanstack/store';
 import { Button, Spin } from 'antd';
 import { KeyboardEvent, PointerEvent, ReactElement, useEffect, useRef, useState } from 'react';
+import { PanelCloseChoice } from '@motajs/editor-core';
 import {
   MAP_PALETTE_BASE_WIDTH,
   MAP_SHOW_FRAME_COUNT_DEFAULT,
@@ -28,6 +29,7 @@ import {
   MapBottomTab,
   MapBrushMode,
   MapDialogKind,
+  MapImageStatus,
   MapPanelStatus,
   MapTileCategory,
 } from '../types';
@@ -40,7 +42,7 @@ import { MapMaterialPanel } from './MapMaterialPanel';
 import { MapPropertiesDrawer } from './MapPropertiesDrawer';
 import { MapToolbar } from './MapToolbar';
 import { useMapElementWidth } from './useMapElementWidth';
-import { ExternalChangeDialog } from '../../shared/panelDialogs';
+import { ExternalChangeDialog, PanelCloseDialog } from '../../shared/panelDialogs';
 
 // 地图面板的装配层：工具栏 / 主体 / 保存提示行 / 弹窗 / 属性抽屉都在这里按视图状态装配。
 // 本视图只接 props，不 import 面板类；渲染模型在这里每次渲染时现算，再交给 MapSurface 消费。
@@ -83,6 +85,11 @@ export interface IMapPanelViewProps {
   onConflictDiscard?(): void;
   /** 外部变化冲突里选择「保留我的改动，下次保存覆盖」 */
   onConflictKeep?(): void;
+  /**
+   * 关闭弹窗上用户点了哪一个选择
+   * @param choice 保存并关闭 / 不保存关闭 / 取消关闭
+   */
+  onCloseChoice?(choice: PanelCloseChoice): void;
   /**
    * 提交一次调色板选择
    * @param selection 新的选中
@@ -237,7 +244,10 @@ interface IMapNoticeProps {
 function noop(): void {}
 
 /** 面板还没发布地址表时用的空分组表；两张表都为空，等价于「一张图都还没读到」 */
-const EMPTY_GROUP_URLS: IMapTileGroupUrls = { urls: {}, status: {} };
+const EMPTY_GROUP_URLS: IMapTileGroupUrls = Object.freeze({
+  urls: Object.freeze<Record<string, string | undefined>>({}),
+  status: Object.freeze<Record<string, MapImageStatus>>({}),
+});
 
 /**
  * 判断键盘事件的目标是不是输入类控件：这些控件里的数字是打字，不是选槽位
@@ -725,6 +735,14 @@ export function MapPanelView(props: IMapPanelViewProps): ReactElement {
       {view.pendingConflict === undefined ? null : (
         <ExternalChangeDialog open onDiscard={props.onConflictDiscard ?? noop} onKeep={props.onConflictKeep ?? noop} />
       )}
+      {view.closeDialog?.open === true ? (
+        <PanelCloseDialog
+          open
+          saving={view.closeDialog.saving}
+          error={view.closeDialog.error}
+          onChoose={props.onCloseChoice ?? noop}
+        />
+      ) : null}
       <MapPropertiesDrawer
         open={view.propertiesOpen}
         status={view.propertiesStatus}
