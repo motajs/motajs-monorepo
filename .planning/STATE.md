@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.2"
 current_phase_name: 面板内容解耦与文件资源管理器
-current_plan: 14
+current_plan: 15
 status: executing
-stopped_at: Completed 04.2-08-PLAN.md
-last_updated: "2026-10-28T14:14:14.092Z"
+stopped_at: Completed 04.2-15-PLAN.md, ready for 04.2-17
+last_updated: "2026-10-28T15:18:08.355Z"
 last_activity: 2026-10-28
 last_activity_desc: Phase 04.2 execution started
-state_head: 0324ca635e8c9592ad942c7199ca681e380c81d1
+state_head: e7d1b0cc97faf25678b08ab5fd913cb2445ba763
 progress:
   total_phases: 10
   completed_phases: 0
   total_plans: 182
-  completed_plans: 173
+  completed_plans: 174
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 04.2 (面板内容解耦与文件资源管理器) — EXECUTING
-Current Plan: 14
+Current Plan: 15
 Total Plans in Phase: 18
 Status: Ready to execute
 Next phase: Phase 04.2 — 面板内容解耦与文件资源管理器（设计重构）；先讨论，再规划接口
@@ -191,6 +191,7 @@ Progress: [███████░░░] 74%
 | Phase 04.2 P09 | 8 min | 3 tasks | 6 files |
 | Phase 04.2 P12 | 13min | 3 tasks | 10 files |
 | Phase 04.2 P08 | 25 min | 3 tasks | 6 files |
+| Phase 04.2 P15 | 49 min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -522,6 +523,9 @@ Recent decisions affecting current work:
 - [Phase 04.2]: Explorer candidates require both canOpen and createOpenParam; select/cancel clear pendingPath and candidateTypeIds together
 - [Phase 04.2]: 表格每栏的草稿归组件：`EditableTable` 自算行树、用 `contentVersion` 重置草稿、脏标记镜像进 `dirtyRef`；面板只按下发的文档版本决定是否重置
 - [Phase 04.2]: `TablePanel.currentDocument` 取数改为「组件脏则读 ref → 面板草稿副本 → 面板基线」：组件干净时它的内容就是面板上次发布的基线，面板侧（兼容薄壳 / 撤销）刚算出的新值必须优先，否则保存会写回旧内容
+- [Phase 04.2]: 图块图片地址的生命周期留在面板：组件只读面板发布的两张地址表，重试按钮真的重读字节
+- [Phase 04.2]: 同一张图块图片内容没变就复用旧地址，变了才换新的并回收旧的；关闭面板时统一回收
+- [Phase 04.2]: 地图关闭改走三态弹窗：保存失败留在弹窗、选不保存关闭时只清内存状态不写盘
 
 ### Pending Todos
 
@@ -550,7 +554,7 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-28T14:14:14.092Z
-Stopped at: Completed 04.2-08-PLAN.md
+Last session: 2026-10-28T15:18:07.695Z
+Stopped at: Completed 04.2-15-PLAN.md, ready for 04.2-17
 Resume file: None
 Next action: 简报并规划 / 执行 Phase 5（代码编辑）——需用户先批准；Phase 04.1 已 Complete，本阶段不再有待办计划
