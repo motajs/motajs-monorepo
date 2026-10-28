@@ -626,7 +626,7 @@ Plans:
   6. 表格面板保持三栏；表格空栏复用同一个文件浏览器，过滤规则与表格的「能否打开」判断一致。
   7. 表格、地图、素材三个面板均按现有功能区拆成可复用组件；既有行为不回归，开发宿主可持续手动验收。
 
-**Plans:** 3/18 plans executed（8 个波次：命名 → 接口 → 实现 → 收口）
+**Plans:** 4/18 plans executed（8 个波次：命名 → 接口 → 实现 → 收口）
 **UI hint**: yes
 
 Plans:
@@ -642,7 +642,7 @@ Plans:
 
 **Wave 3 — 外壳语义与共用浏览器**
 
-- [ ] 04.2-04-PLAN.md — core 关闭三态 + 跳过落盘 + 切出提前投递（两条时序测试）
+- [x] 04.2-04-PLAN.md — core 关闭三态 + 跳过落盘 + 切出提前投递（两条时序测试）
 - [ ] 04.2-06-PLAN.md — 共用文件浏览器 `FileBrowser`（单目录 + 面包屑 + 四态 + 可换 test id 前缀）
 - [ ] 04.2-14-PLAN.md — 地图去路径（可复用组件只收 URL 表）+ 地图面板类型 `canOpen` / `createOpenParam`
 - [ ] 04.2-16-PLAN.md — 素材去路径（预览收 `mime`、字体收 `fontFamily`、字节改零参加载器）+ 素材面板类型打开能力
@@ -712,6 +712,6 @@ Phases execute in numeric order: 1 → 1.1 → 2 → 2.1 → 3 → 4 → 4.1 →
 | 3. 素材管理 | 31/31 | Complete    | 2026-10-20 |
 | 4. 地图编辑 | 16/17 | In Progress|  |
 | 4.1. 地图渲染与布局重做 (INSERTED) | 40/40 | Complete | 2026-10-27 |
-| 4.2. 面板内容解耦与文件资源管理器 (INSERTED) | 3/18 | In Progress|  |
+| 4.2. 面板内容解耦与文件资源管理器 (INSERTED) | 4/18 | In Progress|  |
 | 5. 代码编辑 | 0/TBD | Not started | - |
 | 6. 事件编辑器 | 0/TBD | Not started | - |

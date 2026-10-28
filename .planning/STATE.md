@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.2"
 current_phase_name: 面板内容解耦与文件资源管理器
-current_plan: 3
+current_plan: 4
 status: executing
-stopped_at: Completed 04.2-03-PLAN.md
-last_updated: "2026-10-28T07:54:33.997Z"
+stopped_at: Completed 04.2-04-PLAN.md
+last_updated: "2026-10-28T09:03:43.861Z"
 last_activity: 2026-10-28
 last_activity_desc: Phase 04.2 execution started
-state_head: 3385e40c664305e3a34b232e995654ed65e32333
+state_head: b0fba8751127a4eac84084f8ca1ea1dd256dcd41
 progress:
   total_phases: 10
   completed_phases: 0
   total_plans: 180
-  completed_plans: 162
+  completed_plans: 163
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 04.2 (面板内容解耦与文件资源管理器) — EXECUTING
-Current Plan: 3
+Current Plan: 4
 Total Plans in Phase: 18
 Status: Ready to execute
 Next phase: Phase 04.2 — 面板内容解耦与文件资源管理器（设计重构）；先讨论，再规划接口
@@ -180,6 +180,7 @@ Progress: [███████░░░] 74%
 | Phase 04.1 P31 | 10min | 2 tasks | 3 files |
 | Phase 04.2 P02 | 8 min | 3 tasks | 4 files |
 | Phase 04.2 P03 | 17min | 3 tasks | 11 files |
+| Phase 04.2 P04 | 11 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -485,6 +486,8 @@ Recent decisions affecting current work:
 - [Phase 04.2]: 04.2-03: 契约波次只写 types.ts 与桶、零组件零逻辑；1050 例既有测试与两条 typecheck 是唯一验收面
 - [Phase 04.2]: 04.2-03: ITableEdit 用单接口 kind/key/value/anchorKey/name/config（非对象联合），config 复用 ITableRowNode['config']；三个面板的 *PendingConflict 都是「路径或分类 id + 外部原文」的只读字段
 - [Phase 04.2]: 04.2-03: 图块地址两张表键空间分离——IMapImageSources 用图片路径、IMapTileGroupUrls 用 group.id，禁止互相查表；IMapImageSourceStore.version 用 readonly 成员而非 getter
+- [Phase 04.2]: 04.2-04: 关闭三态只认 PanelCloseChoice 三个枚举值，未知值与 onRequestClose 抛错一律按取消处理；Discard 先投递 IEditorPanel.onDiscard 再以 skipFlush 释放，使 IEditorPanel.dispose 的兜底保存成为空操作
+- [Phase 04.2]: 04.2-04: 切出投递提前到 notify 之前，抽出私有 ShellSystem.enqueueDeparture 供 activateTab / openBlankTab / openPanelInTab 共用，目标实例未变即返回，保证一次活动变化只切出一次
 
 ### Pending Todos
 
@@ -513,7 +516,7 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-28T07:54:33.423Z
-Stopped at: Completed 04.2-03-PLAN.md
+Last session: 2026-10-28T09:03:43.269Z
+Stopped at: Completed 04.2-04-PLAN.md
 Resume file: None
 Next action: 简报并规划 / 执行 Phase 5（代码编辑）——需用户先批准；Phase 04.1 已 Complete，本阶段不再有待办计划
