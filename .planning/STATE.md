@@ -1,20 +1,20 @@
 ---
 gsd_state_version: "1.0"
 milestone: v1.0
-current_phase: "04.1"
-current_phase_name: 地图渲染与布局重做
-current_plan: 31
-status: phase complete
-stopped_at: Completed 04.1-31-PLAN.md（Phase 04.1 收口）
-last_updated: "2026-10-27T06:35:00.000Z"
-last_activity: 2026-10-27
-last_activity_desc: Phase 04.1 收口（04.1-31 complete）——12 条机器门禁全绿（lint 0 error、format 全过、editor-core 106 / editor-impl 1050 / editor-dev 98 例、三个 typecheck 与四条结构门禁 exit 0）；U-01…U-35 三十五条人工判据全部通过（U-33 / U-34 仅用户口头确认，仓库无正文）；G-04-1 / G-04-2 / G-04-3 收口；ROADMAP 记 40/40（38 已执行 + 2 被取代），04.1-16 / 04.1-24 标注 superseded by 04.1-31 且无 SUMMARY；新建地图 / 新增图层 / 地图属性与 alias / zIndex 仍未验收
-state_head: 90b9f07e59675bfd4a90dba2b886ddd5e3efaa35
+current_phase: "04.2"
+current_phase_name: 面板内容解耦与文件资源管理器
+current_plan: 1
+status: executing
+stopped_at: 04.2-01 complete（命名已确认，2 个任务提交）
+last_updated: "2026-10-28T07:20:48.176Z"
+last_activity: 2026-10-28
+last_activity_desc: Phase 04.2 execution started
+state_head: 2de4cfbb50da76c820156a7e4683d62d088879d0
 progress:
-  total_phases: 9
-  completed_phases: 6
-  total_plans: 162
-  completed_plans: 159
+  total_phases: 10
+  completed_phases: 0
+  total_plans: 180
+  completed_plans: 160
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -25,16 +25,16 @@ milestone_name: editor-core 空壳 + editor-impl 重做
 See: .planning/PROJECT.md (updated 2026-10-09)
 
 **Core value:** 把编辑器内核与引擎细节彻底解耦——`editor-core` 只给接口、`editor-impl` 写默认实现，让新旧引擎共用同一套编辑能力，第三方可高自由度定制。
-**Current focus:** Phase 4.1 — map-render-layout（已收口）；下一步 Phase 5 — 代码编辑
+**Current focus:** Phase 04.2 — 面板内容解耦与文件资源管理器
 
 ## Current Position
 
-Phase: 04.1 (地图渲染与布局重做) — **COMPLETE（2026-10-27）**
-Current Plan: 31（阶段收口计划，已完成）
-Total Plans in Phase: 40（38 已执行 + 2 被取代：`04.1-16` / `04.1-24`）
-Status: Phase complete — 触发收口的是 `04.1-31`（12 条机器门禁全绿 + U-01…U-35 三十五条人工判据全部通过）；仍欠用户验收：新建地图 / 新增图层 / 地图属性三条流程，以及有意搁置的 alias / zIndex
-Next phase: **Phase 5 — 代码编辑（Monaco）**（ROADMAP 依赖 Phase 1；尚未开始）
-Last activity: 2026-10-27 — `04.1-31` complete（机器门禁：lint 0 error / 186 条既有 warning、format:check 全过、`editor-core` 106 例、`editor-impl` 1050 例 / 88 个文件、`editor-dev` 98 例、三个包 typecheck 与 `coreEngineNeutral` / `coreModuleState` / `coreImportType` / `coreBoundaries` 四条结构门禁 exit 0；人工：U-01…U-35 全部通过，其中 U-33 / U-34 仅用户口头确认且仓库内无正文；文档：ROADMAP 记 40/40 = 38 已执行 + 2 被取代，`04.1-16` / `04.1-24` 没有 SUMMARY 也不声称通过）
+Phase: 04.2 (面板内容解耦与文件资源管理器) — EXECUTING
+Current Plan: 1
+Total Plans in Phase: 18
+Status: Executing Phase 04.2
+Next phase: Phase 04.2 — 面板内容解耦与文件资源管理器（设计重构）；先讨论，再规划接口
+Last activity: 2026-10-28 — Phase 04.2 execution started
 
 Progress: [███████░░░] 74%
 
@@ -494,6 +494,7 @@ None yet.
 - Phase 1.1 inserted after Phase 1: 编辑器开发宿主（最小可运行整合，用于验证 editor-core/editor-impl） (URGENT)
 - Phase 02.1 inserted after Phase 2: 资源层重构与表格文件管理 (URGENT)
 - Phase 4.1 inserted after Phase 4: 地图渲染与布局重做 (URGENT)
+- Phase 04.2 inserted after Phase 4: 面板内容解耦与文件资源管理器（设计重构） (URGENT)
 
 ## Deferred Items
 
@@ -505,7 +506,7 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-27T06:35:00.000Z
-Stopped at: Completed 04.1-31-PLAN.md（Phase 04.1 收口）
-Resume file: None
+Last session: 2026-10-28T07:20:47.454Z
+Stopped at: 04.2-01 complete（命名已确认，2 个任务提交）
+Resume file: .planning/phases/04.2-panel-content-decoupling/04.2-02-PLAN.md
 Next action: 简报并规划 / 执行 Phase 5（代码编辑）——需用户先批准；Phase 04.1 已 Complete，本阶段不再有待办计划
