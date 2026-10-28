@@ -797,6 +797,12 @@ export interface IMapPanelViewState {
   readonly dialogError?: string;
   /** 图块图片重试计数，递增即重新读取字节 */
   readonly paletteVersion: number;
+  /** 面板算好的图片路径键地址表，给地图画布用；尚未读过时为 undefined */
+  readonly tileImageSources?: IMapImageSources;
+  /** 面板算好的 `group.id` 键地址表，给素材区 / 底栏 / 收藏栏用；尚未读过时为 undefined */
+  readonly tileGroupUrls?: IMapTileGroupUrls;
+  /** 地址表的发布代次；每次重读图块图片都递增，驱动画布重建纹理 */
+  readonly tileImageSourcesVersion?: number;
   /** 地图属性抽屉是否打开 */
   readonly propertiesOpen: boolean;
   /** 属性域的加载状态；`TablePanelStatus.NoTarget` 表示尚未读取 */

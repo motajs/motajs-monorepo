@@ -16,3 +16,4 @@ export * from './thumbnail';
 export * from './tilePreferences';
 export * from './layout';
 export * from './favoriteSlot';
+export * from './mapImageSources';

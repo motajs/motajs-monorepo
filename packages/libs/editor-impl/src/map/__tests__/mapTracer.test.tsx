@@ -1,9 +1,8 @@
-import { act, cleanup, configure, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, configure, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { EditorCore, IEditorPanel, IEditorPanelFactoryParam } from '@motajs/editor-core';
 import { createElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createMapPanelType, MAP_PANEL_TYPE_ID, MapPanel } from '..';
-import { useMapObjectUrl } from '../components/useMapObjectUrl';
 import { applyCellChanges } from '../model/document';
 import { IMapDataSection, IMapDocument, IMapEditorCapabilities, IMapRenderModel } from '../types';
 import { createMapDocument, createMapHarness, createTileGroup, FakeFileSystem } from './fixtures';
@@ -33,6 +32,8 @@ interface IOpenResult {
   readonly system: EditorCore;
   /** 被捕获的地图面板实例 */
   readonly panel: MapPanel;
+  /** 注入的内存文件系统，便于用例预置图片与统计读取次数 */
+  readonly fs: FakeFileSystem;
 }
 
 /**
@@ -70,10 +71,13 @@ function createCapabilities(
 /**
  * 装配核心、注册带实例捕获的地图面板类型，并按打开参数打开面板
  * @param capabilities 地图能力注入面
- * @returns 核心与面板实例
+ * @param fs 注入的内存文件系统；缺省时新建一个空文件系统
+ * @returns 核心、面板实例与所用的文件系统
  */
-async function openMapPanel(capabilities: IMapEditorCapabilities): Promise<IOpenResult> {
-  const fs = new FakeFileSystem();
+async function openMapPanel(
+  capabilities: IMapEditorCapabilities,
+  fs: FakeFileSystem = new FakeFileSystem(),
+): Promise<IOpenResult> {
   const system = await createMapHarness(fs);
   const panels: MapPanel[] = [];
   const type = createMapPanelType(capabilities);
@@ -97,7 +101,7 @@ async function openMapPanel(capabilities: IMapEditorCapabilities): Promise<IOpen
   });
   await act(async () => {});
 
-  return { system, panel: panels[0] };
+  return { system, panel: panels[0], fs };
 }
 
 /**
@@ -241,68 +245,30 @@ describe('地图 tracer：宿主 → 面板 → 画布 → 落笔 → 宿主', (
   });
 });
 
-describe('useMapObjectUrl：图片路径 → 资源层字节 → blob 地址', () => {
-  // 合法路径读出字节后生成对应 MIME 的 blob 地址
-  it('把资源层字节变成 blob 地址', async () => {
+describe('图块图片重试：真的重读字节并递增地址版本', () => {
+  // 首次读不到图片时记失败；补上文件后点重试会重新请求字节、建出新地址并递增发布代次
+  it('点重试会再次读取字节并递增地址版本', async () => {
     const fs = new FakeFileSystem();
+    const readBinary = vi.spyOn(fs, 'readBinary');
+    const { system, panel } = await openMapPanel(createCapabilities(createEmptyDocument()), fs);
+
+    render(createElement(system.shellSystem.render()));
+    await act(async () => {});
+
+    const readsBefore = readBinary.mock.calls.length;
+    const versionBefore = panel['store'].state.tileImageSourcesVersion ?? 0;
     const png = Uint8Array.from([137, 80, 78, 71, 13, 10, 26, 10]);
 
     fs.seed('content/map/tiles-a.png', png);
-
-    const loadBytes = async (path: string): Promise<Uint8Array | undefined> => {
-      try {
-        return await fs.readBinary(path);
-      } catch {
-        return undefined;
-      }
-    };
-    const hook = renderHook(() =>
-      useMapObjectUrl({ path: 'content/map/tiles-a.png', mime: 'image/png', version: 0, loadBytes }),
-    );
-
-    await waitFor(() => {
-      expect(hook.result.current).toBe('blob:map-test');
-    });
-
-    expect(createObjectUrl).toHaveBeenCalledTimes(1);
-    expect(createObjectUrl.mock.calls[0][0].type).toBe('image/png');
-    expect(createObjectUrl.mock.calls[0][0].size).toBe(png.length);
-  });
-
-  // 绝对路径与含 `..` 的路径被守卫拒绝，资源层一次都不被请求
-  it('拒绝绝对路径与含 .. 的路径且不请求资源层', async () => {
-    const loadBytes = vi.fn(async (_path: string): Promise<Uint8Array | undefined> => Uint8Array.from([1]));
-    const absolute = renderHook(() =>
-      useMapObjectUrl({ path: '/etc/a.png', mime: 'image/png', version: 0, loadBytes }),
-    );
-    const relative = renderHook(() =>
-      useMapObjectUrl({ path: 'content/../../a.png', mime: 'image/png', version: 0, loadBytes }),
-    );
+    fs.seed('content/map/tiles-b.png', png);
 
     await act(async () => {
-      await Promise.resolve();
+      panel.reloadTileImages();
     });
+    await waitFor(() => expect(readBinary.mock.calls.length).toBeGreaterThan(readsBefore));
 
-    expect(loadBytes).not.toHaveBeenCalled();
-    expect(createObjectUrl).not.toHaveBeenCalled();
-    expect(absolute.result.current).toBeUndefined();
-    expect(relative.result.current).toBeUndefined();
-  });
-
-  // 字节读取失败时 hook 保持 undefined，不抛错也不生成地址
-  it('字节读取失败时返回 undefined 而不抛错', async () => {
-    const loadBytes = vi.fn(async (_path: string): Promise<Uint8Array | undefined> => {
-      throw new Error('读取失败');
-    });
-    const hook = renderHook(() =>
-      useMapObjectUrl({ path: 'content/map/tiles-a.png', mime: 'image/png', version: 0, loadBytes }),
-    );
-
-    await act(async () => {
-      await Promise.resolve();
-    });
-
-    expect(hook.result.current).toBeUndefined();
-    expect(createObjectUrl).not.toHaveBeenCalled();
+    expect(panel['store'].state.tileImageSourcesVersion).toBeGreaterThan(versionBefore);
+    expect(panel['store'].state.tileImageSources?.urls['content/map/tiles-a.png']).toBe('blob:map-test');
+    expect(createObjectUrl).toHaveBeenCalledTimes(2);
   });
 });

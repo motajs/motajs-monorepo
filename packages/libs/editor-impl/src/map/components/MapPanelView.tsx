@@ -18,19 +18,16 @@ import {
   IMapCellPosition,
   IMapCreateRequest,
   IMapDocument,
-  IMapImageSources,
   IMapLayer,
   IMapLayout,
   IMapPaletteSelection,
   IMapPanelViewState,
   IMapRect,
   IMapSizeLimit,
-  IMapTileGroup,
   IMapTileGroupUrls,
   MapBottomTab,
   MapBrushMode,
   MapDialogKind,
-  MapImageStatus,
   MapPanelStatus,
   MapTileCategory,
 } from '../types';
@@ -42,12 +39,12 @@ import { MapEmptyState } from './MapEmptyState';
 import { MapMaterialPanel } from './MapMaterialPanel';
 import { MapPropertiesDrawer } from './MapPropertiesDrawer';
 import { MapToolbar } from './MapToolbar';
-import { useMapTileGroupUrls } from './useMapObjectUrl';
 import { useMapElementWidth } from './useMapElementWidth';
 
 // 地图面板的装配层：工具栏 / 主体 / 保存提示行 / 弹窗 / 属性抽屉都在这里按视图状态装配。
 // 本视图只接 props，不 import 面板类；渲染模型在这里每次渲染时现算，再交给 MapSurface 消费。
 // 面板根可聚焦：点面板空白处会把焦点落到根上，数字键因此在整个面板内有效（U-26）。
+// 图块地址由面板统一创建与回收，本视图只原样下发面板发布的两张地址表（D-01 / D-40）。
 
 export interface IMapPanelViewProps {
   /** 面板视图状态的订阅源 */
@@ -81,18 +78,6 @@ export interface IMapPanelViewProps {
   onSave(): void;
   /** 重新打开当前地图 */
   onRetry(): void;
-  /**
-   * 读取图块图片的字节
-   * @param path 图片相对项目根的路径
-   * @returns 字节；读取失败时为 undefined
-   */
-  loadBytes?(path: string): Promise<Uint8Array | undefined>;
-  /**
-   * 读取图块图片的字节，供调色板分组图使用
-   * @param path 图片相对项目根的路径
-   * @returns 字节；读取失败时为 undefined
-   */
-  loadTileBytes?(path: string): Promise<Uint8Array | undefined>;
   /**
    * 提交一次调色板选择
    * @param selection 新的选中
@@ -230,8 +215,6 @@ interface IMapPanelBodyProps {
   readonly view: IMapPanelViewState;
   /** 是否为窄布局 */
   readonly narrow: boolean;
-  /** 分组图片地址与读取状态 */
-  readonly groupImages: IMapTileGroupUrls;
   /** 面板顶层算好的布局；未打开地图时为 undefined */
   readonly layout?: IMapLayout;
 }
@@ -247,6 +230,9 @@ interface IMapNoticeProps {
  * 不做任何事的缺省回调，供可选 props 缺省时使用
  */
 function noop(): void {}
+
+/** 面板还没发布地址表时用的空分组表；两张表都为空，等价于「一张图都还没读到」 */
+const EMPTY_GROUP_URLS: IMapTileGroupUrls = { urls: {}, status: {} };
 
 /**
  * 判断键盘事件的目标是不是输入类控件：这些控件里的数字是打字，不是选槽位
@@ -394,27 +380,6 @@ function renderErrorBody(error: string | undefined, onRetry: () => void): ReactE
 }
 
 /**
- * 把分组标识键的地址表投影成图片路径键的地址表
- *
- * 每格的 `imagePath` 都取自某个 `group.imagePath`，同一路径的多个分组共享同一个 `blob:` 地址，
- * 因此按分组投影到路径是完备的；两张表的键空间不同，不能互相查表（D-20 / D-22）。
- * @param groups 当前文档的图块分组
- * @param groupImages 以 `group.id` 为键的地址表
- * @returns 以图片路径为键的地址表
- */
-function toImageSources(groups: readonly IMapTileGroup[], groupImages: IMapTileGroupUrls): IMapImageSources {
-  const urls: Record<string, string | undefined> = {};
-  const status: Record<string, MapImageStatus> = {};
-
-  for (const group of groups) {
-    urls[group.imagePath] = groupImages.urls[group.id];
-    status[group.imagePath] = groupImages.status[group.id];
-  }
-
-  return { urls, status };
-}
-
-/**
  * 渲染就绪态的地图区；渲染模型在这里现算，画布只把本地叠加状态补进模型交给 Pixi 表面
  *
  * 画布尺寸与格像素都来自面板顶层算好的布局，渲染模型吃同一个 `zoom`；两边得到同一个屏幕格像素。
@@ -465,8 +430,8 @@ function renderReadyBody(input: IMapPanelBodyProps): ReactElement {
         narrow={input.narrow}
         aboveLayerOpacity={view.aboveLayerOpacity}
         cellFrameSpeed={input.props.cellFrameSpeed}
-        imageVersion={view.paletteVersion}
-        imageSources={toImageSources(document.tileGroups, input.groupImages)}
+        imageVersion={view.tileImageSourcesVersion ?? 0}
+        imageSources={view.tileImageSources}
         onCommitCells={input.props.onCommitCells ?? noop}
         onCopyRegion={input.props.onCopyRegion ?? noop}
         onPasteAt={input.props.onPasteAt ?? noop}
@@ -554,7 +519,7 @@ export function MapPanelView(props: IMapPanelViewProps): ReactElement {
   const layers = document?.layers ?? [];
   const layerNames = layers.map((layer, index) => resolveLayerName(layer, index));
   const tileGroups = document?.tileGroups;
-  const groupImages = useMapTileGroupUrls(tileGroups, props.loadTileBytes, view.paletteVersion);
+  const groupImages = view.tileGroupUrls ?? EMPTY_GROUP_URLS;
   const layout = resolveViewLayout(view, availableWidth);
   const sideWidth = layout === undefined ? MAP_PALETTE_BASE_WIDTH : layout.paletteWidth;
 
@@ -683,7 +648,7 @@ export function MapPanelView(props: IMapPanelViewProps): ReactElement {
       />
       <div className="emap-columns" data-test-id="map-columns">
         <div className="emap-main" data-test-id="map-main">
-          <MapPanelBody props={props} view={view} narrow={narrow} groupImages={groupImages} layout={layout} />
+          <MapPanelBody props={props} view={view} narrow={narrow} layout={layout} />
           <div className="emap-bottom" data-test-id="map-bottom">
             <MapFavoriteBar
               favorites={view.favorites ?? []}

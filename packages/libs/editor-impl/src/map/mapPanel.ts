@@ -33,6 +33,7 @@ import { ITableRowNode, ITableSchemaNode } from '../shared/schemaForm/types';
 import { MapPanelView } from './components/MapPanelView';
 import { buildClearWrites, buildPasteWrites, copyMapRegion } from './model/clipboard';
 import { isMapDataDirty, isMapPropertiesDirty } from './model/dirty';
+import { MapImageSourceStore } from './model/mapImageSources';
 import {
   applyCellChanges,
   collectNetCellChanges,
@@ -389,6 +390,12 @@ export class MapPanel implements IEditorPanel, IMapPanel {
   /** 进入大地图之前的视口；不在大地图时为 undefined */
   private preBigMapViewport?: IMapViewport;
 
+  /** 图块图片地址的生命周期管理者；面板构造期创建，释放时回收 */
+  private readonly imageSourceStore: MapImageSourceStore = new MapImageSourceStore();
+
+  /** 地址表的发布代次；每次重读图块图片都递增，驱动画布重建纹理 */
+  private imageSourcesVersion: number = 0;
+
   constructor(param: IEditorPanelFactoryParam, capabilities: IMapEditorCapabilities) {
     this.id = param.instanceId;
     this.context = param.context;
@@ -426,8 +433,6 @@ export class MapPanel implements IEditorPanel, IMapPanel {
     this.component = (): ReactElement =>
       createElement(MapPanelView, {
         store: this.store,
-        loadBytes: (path: string): Promise<Uint8Array | undefined> => this.readBytes(path),
-        loadTileBytes: (path: string): Promise<Uint8Array | undefined> => this.readBytes(path),
         onPaintCell: (position): void => {
           const layerId = this.currentLayerId;
 
@@ -515,6 +520,54 @@ export class MapPanel implements IEditorPanel, IMapPanel {
     } catch {
       return undefined;
     }
+  }
+
+  /**
+   * 收集当前文档需要的图片路径：按 `document.tileGroups[].imagePath` 首次出现顺序去重，跳过空串
+   * @param document 当前地图文档
+   * @returns 去重后的图片路径列表
+   */
+  private collectTileImagePaths(document: IMapDocument): string[] {
+    const paths: string[] = [];
+    const seen: Set<string> = new Set();
+
+    for (const group of document.tileGroups) {
+      const path = group.imagePath;
+
+      if (path.length === 0) continue;
+      if (seen.has(path)) continue;
+
+      seen.add(path);
+      paths.push(path);
+    }
+
+    return paths;
+  }
+
+  /**
+   * 图块图片地址的唯一刷新入口：读字节、发布两张地址表并递增发布代次
+   *
+   * 文档载入 / 保存成功后、图块图片被外部替换后、以及「图块加载失败」的重试都走这里，
+   * 因此重试是真的重读字节，而不是只递增一个没人消费的版本号。
+   */
+  private async refreshTileImageSources(): Promise<void> {
+    const document = this.document;
+
+    if (document === undefined) return;
+
+    await this.imageSourceStore.refresh(this.collectTileImagePaths(document), document.tileGroups, (path) =>
+      this.readBytes(path),
+    );
+
+    if (this.document !== document) return;
+
+    this.imageSourcesVersion += 1;
+    this.publish({
+      tileImageSources: this.imageSourceStore.getSources(),
+      tileGroupUrls: this.imageSourceStore.getGroupUrls(),
+      tileImageSourcesVersion: this.imageSourcesVersion,
+      paletteVersion: this.imageSourcesVersion,
+    });
   }
 
   /**
@@ -643,6 +696,7 @@ export class MapPanel implements IEditorPanel, IMapPanel {
       });
       this.refreshPassMarks();
       void this.loadTilePreferences();
+      await this.refreshTileImageSources();
     } catch {
       return;
     }
@@ -800,6 +854,7 @@ export class MapPanel implements IEditorPanel, IMapPanel {
       });
       this.refreshPassMarks();
       void this.loadTilePreferences();
+      await this.refreshTileImageSources();
       await this.loadSummaries();
     } catch (error) {
       if (token === this.loadToken) this.publish({ dialogError: toErrorMessage(error) });
@@ -868,6 +923,7 @@ export class MapPanel implements IEditorPanel, IMapPanel {
         error: undefined,
       });
       this.refreshPassMarks();
+      await this.refreshTileImageSources();
     } catch (error) {
       if (token === this.loadToken) this.publish({ dialogError: toErrorMessage(error) });
     } finally {
@@ -1061,12 +1117,13 @@ export class MapPanel implements IEditorPanel, IMapPanel {
   }
 
   /**
-   * 「图块加载失败」的重试入口：只递增图片版本，视图据此重新读取字节
+   * 「图块加载失败」的重试入口：重读全部图块图片字节并重新发布两张地址表
    *
-   * 不读图片、不改文档、不置脏、不登记撤销。
+   * 重读是主体，版本号（`tileImageSourcesVersion` / `paletteVersion`）在刷新入口内部随发布一起递增。
+   * 不改文档、不置脏、不登记撤销。
    */
   reloadTileImages(): void {
-    this.publish({ paletteVersion: this.store.state.paletteVersion + 1 });
+    void this.refreshTileImageSources();
   }
 
   /**
@@ -1391,6 +1448,7 @@ export class MapPanel implements IEditorPanel, IMapPanel {
       });
       this.refreshPassMarks();
       void this.loadTilePreferences();
+      await this.refreshTileImageSources();
 
       if (previousMapId !== undefined && previousMapId !== mapId) {
         this.registerBarrier({ action: MapBarrierAction.Switch, mapId });
@@ -1666,6 +1724,7 @@ export class MapPanel implements IEditorPanel, IMapPanel {
 
       this.refreshUnsaved();
       this.publish({ notice: MAP_SAVED_MESSAGE, error: undefined });
+      await this.refreshTileImageSources();
       return true;
     } catch (error) {
       this.refreshUnsaved();
@@ -1690,6 +1749,7 @@ export class MapPanel implements IEditorPanel, IMapPanel {
 
   async dispose(): Promise<void> {
     this.creating = false;
+    this.imageSourceStore.dispose();
     this.document = undefined;
     this.currentLayerId = undefined;
     this.dataBaseline = undefined;
