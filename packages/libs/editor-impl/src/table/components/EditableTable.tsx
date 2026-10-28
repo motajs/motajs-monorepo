@@ -83,6 +83,9 @@ function resolveStatus(
  */
 export function EditableTable(props: ITableEditableProps): ReactElement {
   const draftRef = useRef<ITableDocument>(props.content);
+  const draftState = useState<ITableDocument>(props.content);
+  const draft = draftState[0];
+  const setDraft = draftState[1];
   const dirtyRef = useRef(false);
   const savingRef = useRef(false);
   const dirtyState = useState(false);
@@ -97,9 +100,15 @@ export function EditableTable(props: ITableEditableProps): ReactElement {
     setDirtyState(next);
   };
 
+  // 草稿同时写进 ref 与渲染态：ref 供空依赖的句柄与 cleanup 读当前值，渲染态保证行树随草稿重算
+  const writeDraft = (next: ITableDocument): void => {
+    draftRef.current = next;
+    setDraft(next);
+  };
+
   // 只认版本号：props.content 的引用在每次面板发布时都会换新，依赖引用会让本地草稿被反复覆盖（D-02 / §Q2.4）
   useEffect((): void => {
-    draftRef.current = props.content;
+    writeDraft(props.content);
     setDirty(false);
   }, [props.contentVersion]);
 
@@ -110,6 +119,7 @@ export function EditableTable(props: ITableEditableProps): ReactElement {
       getData: (): ITableDocument => draftRef.current,
       setData: (next: ITableDocument): void => {
         draftRef.current = next;
+        setDraft(next);
         dirtyRef.current = false;
         setDirtyState(false);
       },
@@ -129,7 +139,6 @@ export function EditableTable(props: ITableEditableProps): ReactElement {
     };
   }, [props.onDraftChange]);
 
-  const draft = draftRef.current;
   const rows = buildRows(draft);
   const status = resolveStatus(props.status, rows, draft);
 
@@ -138,7 +147,7 @@ export function EditableTable(props: ITableEditableProps): ReactElement {
 
     if (next === null) return;
 
-    draftRef.current = next;
+    writeDraft(next);
     setDirty(true);
     props.onDraftChange?.(next, true);
   };
