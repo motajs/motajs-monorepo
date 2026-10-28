@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.2"
 current_phase_name: 面板内容解耦与文件资源管理器
-current_plan: 5
+current_plan: 6
 status: executing
-stopped_at: Completed 04.2-02.1-PLAN.md
-last_updated: "2026-10-28T10:20:12.651Z"
+stopped_at: Completed 04.2-04.1-PLAN.md
+last_updated: "2026-10-28T10:31:00.000Z"
 last_activity: 2026-10-28
 last_activity_desc: Phase 04.2 execution started
-state_head: 730ecd27ff5c6323b220b15916b2f0e63e97bc24
+state_head: e6ed7eba5e4cce0766bdeea21538852ee159fb0d
 progress:
   total_phases: 10
   completed_phases: 6
   total_plans: 182
-  completed_plans: 164
+  completed_plans: 165
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 04.2 (面板内容解耦与文件资源管理器) — EXECUTING
-Current Plan: 5
+Current Plan: 6
 Total Plans in Phase: 18
 Status: Ready to execute
 Next phase: Phase 04.2 — 面板内容解耦与文件资源管理器（设计重构）；先讨论，再规划接口
@@ -182,6 +182,7 @@ Progress: [███████░░░] 74%
 | Phase 04.2 P03 | 17min | 3 tasks | 11 files |
 | Phase 04.2 P04 | 11 min | 2 tasks | 3 files |
 | Phase 04.2 P02.1 | 2 min | 2 tasks | 2 files |
+| Phase 04.2 P04.1 | 10 min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -491,6 +492,9 @@ Recent decisions affecting current work:
 - [Phase 04.2]: 04.2-04: 切出投递提前到 notify 之前，抽出私有 ShellSystem.enqueueDeparture 供 activateTab / openBlankTab / openPanelInTab 共用，目标实例未变即返回，保证一次活动变化只切出一次
 - [Phase 04.2]: IShellSystem.activateTab 返回 void -> Promise<void>，把切标签声明成可等待的保存点；不新增 onBeforeSwitchOut 一类的第二个保存钩子
 - [Phase 04.2]: ShellSystem.activateTab 只加 async 与 Promise<void>，方法体与调用点一字不改；B1 的「先 await 切出保存再通知」时序留给 04.2-04.1
+- [Phase 04.2]: 04.2-04.1: ShellSystem.activateTab 改为「先 await 旧面板 onSwitchOut 结算 → 再改 activeTabId / notify() / 投递切入」（B1）；保存期间旧组件保持挂载，面板可从组件 ref 取草稿
+- [Phase 04.2]: 04.2-04.1: 新增私有 ShellSystem.departActiveInstance 作为三条活动变化入口共用的可等待保存前缀；判定在做链节点执行时才读 lastActiveInstanceId、先清记录再切出，因此并发切换串行且同一面板不重复保存
+- [Phase 04.2]: 04.2-04.1: ShellSystem.enqueueDeparture 删除；openBlankTab 仍同步返回 id（有挂载面板时只先 notify 列表），openPanelInTab 在改 activeTabId 前 await 保存，closeTab 的「先激活」补成 await activateTab，关闭三态与 skipFlush 一字不改
 
 ### Pending Todos
 
@@ -519,7 +523,7 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-28T10:19:51.670Z
-Stopped at: Completed 04.2-02.1-PLAN.md
+Last session: 2026-10-28T10:31:00.000Z
+Stopped at: Completed 04.2-04.1-PLAN.md
 Resume file: None
 Next action: 简报并规划 / 执行 Phase 5（代码编辑）——需用户先批准；Phase 04.1 已 Complete，本阶段不再有待办计划
