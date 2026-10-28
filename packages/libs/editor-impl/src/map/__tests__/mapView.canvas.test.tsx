@@ -8,7 +8,7 @@ import { IMapCanvasProps, MapCanvas } from '../components/MapCanvas';
 import { IPaintWrite } from '../model/document';
 import { resolveMapLayout } from '../model/layout';
 import { buildMapRenderModel, IMapRenderView } from '../model/renderModel';
-import { IMapDocument, IMapEditorCapabilities, IMapRenderModel, MapBrushMode } from '../types';
+import { IMapDocument, IMapEditorCapabilities, IMapRenderModel, MapBrushMode, MapImageStatus } from '../types';
 import mapCss from '../map.css?inline';
 import {
   createMapDocument,
@@ -165,6 +165,43 @@ function ruleBody(css: string, selector: string): string | undefined {
  */
 function cellPoint(x: number, y: number): { x: number; y: number } {
   return { x: x * MAP_CELL_SIZE + MAP_CELL_SIZE / 2, y: y * MAP_CELL_SIZE + MAP_CELL_SIZE / 2 };
+}
+
+/** 图片地址拦截结果：被请求的地址与还原入口 */
+interface IImageSourceProbe {
+  /** 组件真正请求加载的图片地址，按请求顺序 */
+  readonly requested: string[];
+
+  /** 还原 `HTMLImageElement.prototype.src` */
+  readonly restore: () => void;
+}
+
+/**
+ * 拦截图片地址赋值：组件每请求加载一张图，就记下它拿到的地址
+ *
+ * jsdom 不会真的加载图片，因此「是否发起加载」是这一层唯一可观察的出图信号；地址为空则保持缺图占位。
+ * @returns 记录数组与还原入口
+ */
+function interceptImageSources(): IImageSourceProbe {
+  const requested: string[] = [];
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src');
+
+  Object.defineProperty(HTMLImageElement.prototype, 'src', {
+    configurable: true,
+    get: (): string => '',
+    set: (value: string): void => {
+      requested.push(value);
+    },
+  });
+
+  return {
+    requested,
+    restore: (): void => {
+      if (descriptor === undefined) return;
+
+      Object.defineProperty(HTMLImageElement.prototype, 'src', descriptor);
+    },
+  };
 }
 
 /**
@@ -1059,5 +1096,52 @@ describe('面板根聚焦框（U-32）', () => {
 
     expect(canvasRule).toBeDefined();
     expect(canvasRule).toContain('outline:');
+  });
+});
+
+describe('地图画布图源键空间（D-20 / D-22）', () => {
+  // 防回归闸门：同一张图，用 group.id 当键取不到地址（缺图），用 imagePath 当键才发起加载（出图）
+  it('按图片路径查地址表，group.id 键取不到图', async () => {
+    const actual = await vi.importActual<typeof import('../components/MapSurface')>('../components/MapSurface');
+    const document = createMapDocument();
+    const model = createModel(document);
+    const group = document.tileGroups[0];
+    const probe = interceptImageSources();
+
+    try {
+      const byGroupId = render(
+        createElement(actual.MapSurface, {
+          model,
+          document,
+          imageSources: {
+            urls: { [group.id]: 'blob:by-group-id' },
+            status: { [group.id]: MapImageStatus.Ready },
+          },
+        }),
+      );
+
+      await act(async () => {});
+
+      expect(probe.requested).toEqual([]);
+
+      byGroupId.unmount();
+
+      render(
+        createElement(actual.MapSurface, {
+          model,
+          document,
+          imageSources: {
+            urls: { [group.imagePath]: 'blob:by-image-path' },
+            status: { [group.imagePath]: MapImageStatus.Ready },
+          },
+        }),
+      );
+
+      await act(async () => {});
+
+      expect(probe.requested).toContain('blob:by-image-path');
+    } finally {
+      probe.restore();
+    }
   });
 });
