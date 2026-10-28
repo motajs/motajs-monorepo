@@ -52,11 +52,11 @@ module.exports = {
     },
     {
       name: 'capabilities-must-not-import-each-other',
-      comment: 'D-06：四大能力之间互不依赖（$1 为 from 捕获到的能力目录）。',
+      comment: 'D-06：能力之间互不依赖（$1 为 from 捕获到的能力目录）。',
       severity: 'error',
-      from: { path: '^packages/libs/editor-impl/src/(code|table|map|asset)/.+' },
+      from: { path: '^packages/libs/editor-impl/src/(code|table|map|asset|explorer)/.+' },
       to: {
-        path: '^packages/libs/editor-impl/src/(code|table|map|asset)/.+',
+        path: '^packages/libs/editor-impl/src/(code|table|map|asset|explorer)/.+',
         pathNot: '^packages/libs/editor-impl/src/$1/.+',
       },
     },
