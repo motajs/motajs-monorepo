@@ -35,7 +35,12 @@ export function PanelCandidateModal(props: IPanelCandidateModalProps): ReactElem
       onCancel={props.onCancel}
       footer={
         <div className="eimodal-footer">
-          <Button size="small" autoInsertSpace={false} data-test-id="explorer-candidate-cancel" onClick={props.onCancel}>
+          <Button
+            size="small"
+            autoInsertSpace={false}
+            data-test-id="explorer-candidate-cancel"
+            onClick={props.onCancel}
+          >
             取消
           </Button>
         </div>
