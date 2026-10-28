@@ -3,7 +3,7 @@ import { Store } from '@tanstack/store';
 import { createElement, FC, ReactElement, useEffect, useSyncExternalStore } from 'react';
 import { IHookController } from '../hook';
 import { logger } from '../log';
-import { IEditorPanel, IEditorPanelContext, IEditorPanelType, PanelContext } from '../panel';
+import { IEditorPanel, IEditorPanelContext, IEditorPanelType, PanelCloseChoice, PanelContext } from '../panel';
 import { IResourceIdentifier, IResourceSystemAccess, IResourceSystemHooks } from '../resource';
 import { IUndoSystem } from '../undo';
 import { IEditorMenuItem, IEditorTab, IShellSystem } from './types';
@@ -488,7 +488,7 @@ export class ShellSystem implements IShellSystem {
 
     const tabIds = this.tabs.filter((tab) => tab.typeId === typeId).map((tab) => tab.id);
 
-    for (const tabId of tabIds) await this.discardTab(tabId);
+    for (const tabId of tabIds) await this.discardTab(tabId, false);
 
     const leftover = [...this.instanceTypes.entries()].filter((entry) => entry[1] === typeId).map((entry) => entry[0]);
 
@@ -605,11 +605,36 @@ export class ShellSystem implements IShellSystem {
     if (tab.instanceId !== null) {
       const instanceId = tab.instanceId;
       const instance = this.instances.get(instanceId);
+      const asks =
+        instance !== undefined && (instance.onRequestClose !== undefined || instance.onBeforeClose !== undefined);
+
+      // 询问前先把目标标签切成活动标签：面板的未保存对话框需要挂在自己的 DOM 上才可能 settle。
+      // 不询问的面板保持既有行为：直接关闭、前台不变
+      if (asks && this.activeTabId !== tabId) this.activateTab(tabId);
+
+      if (instance !== undefined && instance.onRequestClose !== undefined) {
+        let choice: PanelCloseChoice = PanelCloseChoice.Cancel;
+
+        try {
+          choice = await instance.onRequestClose();
+        } catch {
+          // 钩子自身出错时按「取消关闭」处理：数据安全优先，绝不把异常抛给点击关闭的人
+          logger.error('shell.beforeCloseFailed', this.instanceTypes.get(instanceId) ?? '');
+          return;
+        }
+
+        // 只认三态枚举的三个值：未知值一律按取消处理
+        if (choice !== PanelCloseChoice.Save && choice !== PanelCloseChoice.Discard) return;
+
+        // 面板自己要保存的那一态已自行写完，丢弃那一态必须先把内存改动清掉，
+        // 否则 dispose 的兜底保存会把「不保存关闭」变成一次写盘
+        if (choice === PanelCloseChoice.Discard) instance.onDiscard?.();
+
+        await this.discardTab(tabId, true);
+        return;
+      }
 
       if (instance !== undefined && instance.onBeforeClose !== undefined) {
-        // 询问前先把目标标签切成活动标签：面板的未保存对话框需要挂在自己的 DOM 上才可能 settle
-        if (this.activeTabId !== tabId) this.activateTab(tabId);
-
         let allowed = false;
 
         try {
@@ -624,7 +649,7 @@ export class ShellSystem implements IShellSystem {
       }
     }
 
-    await this.discardTab(tabId);
+    await this.discardTab(tabId, false);
   }
 
   activateTab(tabId: string): void {
@@ -762,10 +787,11 @@ export class ShellSystem implements IShellSystem {
   /**
    * 释放实例、移除标签并按需切邻，全程不询问面板：这是唯一真正移除标签的一段逻辑，
    * `ShellSystem.closeTab` 在用户询问通过后复用它，`ShellSystem.unregisterPanelType` 直接复用它，
-   * 因此注销类型与释放 core 永远拿不到 `IEditorPanel.onBeforeClose`
+   * 因此注销类型与释放 core 永远拿不到关闭询问钩子
    * @param tabId 要移除的标签 id
+   * @param skipFlush 为真时跳过活动面板的普通切走落盘：调用方要么已自行保存，要么已丢弃内存改动
    */
-  private async discardTab(tabId: string): Promise<void> {
+  private async discardTab(tabId: string, skipFlush: boolean): Promise<void> {
     const index = this.tabs.findIndex((tab) => tab.id === tabId);
 
     if (index === -1) {
@@ -778,7 +804,11 @@ export class ShellSystem implements IShellSystem {
     const wasActive = this.activeTabId === tabId;
 
     if (tab.instanceId !== null) {
-      if (wasActive) await this.leaveActiveInstance(tab.instanceId);
+      if (wasActive) {
+        // 跳过落盘只跳过「排切出」，不能跳过「清记录」：否则移除标签后邻居拿不到切入通知
+        if (skipFlush) this.clearActiveInstance();
+        else await this.leaveActiveInstance(tab.instanceId);
+      }
       await this.closePanelInstance(tab.instanceId);
     }
 
@@ -802,12 +832,19 @@ export class ShellSystem implements IShellSystem {
   }
 
   /**
+   * 清空「最近一次投递过切入通知」的记录：只断开对齐，不投递切出
+   */
+  private clearActiveInstance(): void {
+    this.lastActiveInstanceId = null;
+  }
+
+  /**
    * 在活动面板即将被销毁时立即中断其切入状态：清空记录并把切出排进串行切换链
    * @param instanceId 即将销毁的面板实例 id
    * @returns 该切出结算完成时 resolve，供调用方在释放实例前等待
    */
   private leaveActiveInstance(instanceId: string): Promise<void> {
-    this.lastActiveInstanceId = null;
+    this.clearActiveInstance();
     return this.enqueueSwitchOut(instanceId);
   }
 
