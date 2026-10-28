@@ -3,6 +3,7 @@ import { EditorCore } from '@motajs/editor-core';
 import { createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { ASSET_PANEL_TYPE_ID, AssetPanel, AssetUndoType, createAssetPanelType } from '..';
+import { AssetCategoryKind, AssetListFormat, IAssetCategory } from '../../react';
 import { ASSET_TEST_CATEGORIES, createAssetHarness, FakeFileSystem, listText } from './fixtures';
 
 configure({ testIdAttribute: 'data-test-id' });
@@ -80,6 +81,70 @@ function entryExists(container: HTMLElement, name: string): boolean {
 
   return node !== null && node.getAttribute('data-exists') === 'true';
 }
+
+// 打开能力用例使用的分类清单：图片带 schema / 默认值文件，动画带 `.anim` 后缀，用来钉住「按分类 extension 去后缀」
+const OPEN_CATEGORIES: readonly IAssetCategory[] = [
+  {
+    id: 'texture',
+    label: '图片',
+    kind: AssetCategoryKind.Image,
+    dir: 'content/texture',
+    listPath: 'content/texture/.list.jsonc',
+    listFormat: AssetListFormat.ObjectList,
+    listKey: 'textures',
+    schemaPath: 'content/texture/.schema.jsonc',
+    defaultsPath: 'content/texture/defaults.jsonc',
+  },
+  {
+    id: 'animation',
+    label: '动画',
+    kind: AssetCategoryKind.Animation,
+    dir: 'content/animation',
+    listPath: 'content/animation/.list.jsonc',
+    listFormat: AssetListFormat.StringList,
+    extension: '.anim',
+  },
+];
+
+describe('createAssetPanelType 打开能力', () => {
+  // 分类目录之内的字节文件、清单文件、schema 文件、默认值文件都由该分类认领
+  it('认领分类目录内文件与清单 / schema / 默认值文件', () => {
+    const type = createAssetPanelType({ categories: OPEN_CATEGORIES });
+
+    expect(type.canOpen?.('content/texture/hero.png')).toBe(true);
+    expect(type.canOpen?.('content/texture/.list.jsonc')).toBe(true);
+    expect(type.canOpen?.('content/texture/.schema.jsonc')).toBe(true);
+    expect(type.canOpen?.('content/texture/defaults.jsonc')).toBe(true);
+  });
+
+  // 分类目录之外的路径不被认领：canOpen 为 false，打开参数交回 null 目标让别的面板认领
+  it('不认领分类目录之外的路径', () => {
+    const type = createAssetPanelType({ categories: OPEN_CATEGORIES });
+
+    expect(type.canOpen?.('content/other/x.png')).toBe(false);
+    expect(type.createOpenParam?.('content/other/x.png')).toEqual({ target: null });
+  });
+
+  // 每次都返回新对象，且没有 extension 的分类不去后缀：assetName 与素材条目的 name 一致
+  it('每次返回新对象且无 extension 的分类保留后缀', () => {
+    const type = createAssetPanelType({ categories: OPEN_CATEGORIES });
+    const first = type.createOpenParam?.('content/texture/hero.png');
+    const second = type.createOpenParam?.('content/texture/hero.png');
+
+    expect(first).toEqual({ target: { categoryId: 'texture', assetName: 'hero.png' } });
+    expect(second).toEqual({ target: { categoryId: 'texture', assetName: 'hero.png' } });
+    expect(first).not.toBe(second);
+  });
+
+  // 配了 extension 的分类才去后缀：`.anim` 文件得到条目名 `slime`
+  it('配了 extension 的分类去掉后缀', () => {
+    const type = createAssetPanelType({ categories: OPEN_CATEGORIES });
+
+    expect(type.createOpenParam?.('content/animation/slime.anim')).toEqual({
+      target: { categoryId: 'animation', assetName: 'slime' },
+    });
+  });
+});
 
 describe('素材面板数据层', () => {
   // 有列表且目录里有字节：加载后状态就绪，条目数与名字正确
