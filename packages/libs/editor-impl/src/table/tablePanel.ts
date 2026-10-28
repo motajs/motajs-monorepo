@@ -21,6 +21,7 @@ import {
   ITablePanel,
   ITablePanelParam,
   ITablePanelTarget,
+  ITablePendingConflict,
   ITableRowNode,
   TableEditKind,
   TableEmptyMode,
@@ -29,6 +30,7 @@ import { TablePanelStatus } from '../shared/schemaForm/components/TableGrid';
 import { TableEmptyColumn } from './components/TableEmptyColumn';
 import { EditableTable } from './components/EditableTable';
 import { ContentSaveStatus, IEditableContentHandle } from '../shared/editable/types';
+import { ExternalChangeDialog } from '../shared/panelDialogs/ExternalChangeDialog';
 import { buildTableTree } from '../shared/schemaForm/model/traversal';
 import { buildSchemaTree } from '../shared/schemaForm/model/schemaPresentation';
 import { parseTableText, serializeTableText, TableTextParseStatus } from '../shared/jsonc';
@@ -161,6 +163,8 @@ interface ITablePanelColumn {
   draft: ITableDocument | null;
   /** 该栏交回的草稿是否脏；与 `draft` 成对写入、成对作废 */
   draftDirty: boolean;
+  /** 该栏待用户选择的外部改动冲突；为 undefined 表示没有待决冲突（D-17 / D-37） */
+  pendingConflict: ITablePendingConflict | undefined;
   /** 该栏已确认「剥离注释后打开」的路径 → 确认时的原文；原文未变时不再重弹 */
   readonly stripConfirmed: Map<string, string>;
   /** 该栏待确认剥离时暂存的原文，供 `TablePanel.confirmCommentStrip` 登记进 `stripConfirmed` */
@@ -188,6 +192,8 @@ export interface ITablePanelViewState {
   readonly commentStripPending?: boolean;
   /** 该栏当前是否有未落盘的改动（视图据此显示「未保存」标记并启用「保存」按钮） */
   readonly unsaved?: boolean;
+  /** 该栏待决的外部改动冲突；缺省表示无冲突（弹窗只在有待决冲突时出现） */
+  readonly pendingConflict?: ITablePendingConflict;
   /** 该栏空栏当前的内联视图；缺省视作 `TableEmptyMode.Buttons` */
   readonly emptyMode?: TableEmptyMode;
   /** 内联浏览区的初始目录路径；根目录为空串 */
@@ -202,6 +208,8 @@ export interface ITablePanelViewState {
 interface ITablePanelViewProps {
   /** 按栏序号取该栏的视图状态订阅源（缺失时按需补建空栏） */
   readonly getStore: (columnIndex: number) => Store<ITablePanelViewState>;
+  /** 面板级「当前可见的外部改动冲突」订阅源：同一时刻只渲染一个弹窗（D-37） */
+  readonly conflictStore: Store<ITablePendingConflict | undefined>;
   /** 每栏的像素宽度 */
   readonly columnWidth: number;
   /** 视图把当前铺出的可视栏数回报给面板（供「编辑 Schema」复用空栏） */
@@ -236,6 +244,10 @@ interface ITablePanelViewProps {
   readonly onEmptyCreate: (columnIndex: number, directory: string, name: string) => void;
   /** 某栏内联删除某表格回调 */
   readonly onEmptyDelete: (columnIndex: number, dataPath: string) => void;
+  /** 冲突弹窗选择「放弃我的改动并刷新」 */
+  readonly onConflictDiscard: () => void;
+  /** 冲突弹窗选择「保留我的改动，下次保存覆盖」 */
+  readonly onConflictKeep: () => void;
 }
 
 /** 单栏组件的 props：把该栏序号与各回调转交给一张表格 */
@@ -539,6 +551,7 @@ function TablePanelView(props: ITablePanelViewProps): ReactElement {
   }, []);
 
   const count = resolveColumnCount(windowWidth, props.columnWidth);
+  const conflict = useStore(props.conflictStore);
 
   // 把当前铺出的可视栏数回报给面板，供「编辑 Schema」在可视范围内寻找空栏
   useEffect((): void => {
@@ -576,6 +589,14 @@ function TablePanelView(props: ITablePanelViewProps): ReactElement {
     'div',
     { className: 'etable-columns', ref: containerRef, 'data-test-id': 'table-columns' },
     columns,
+    // 冲突弹窗在面板根上只挂一处：非活动面板不渲染，重新切入时由订阅源把待决冲突带回（D-37）
+    conflict === undefined
+      ? null
+      : createElement(ExternalChangeDialog, {
+          open: true,
+          onDiscard: props.onConflictDiscard,
+          onKeep: props.onConflictKeep,
+        }),
   );
 }
 
@@ -603,6 +624,14 @@ export class TablePanel implements IEditorPanel, ITablePanel {
 
   /** 各栏可编辑组件的句柄归属；与 `columns` 在同一处同步增长，第 N 栏恰好对应第 N 个 ref */
   private readonly columnRefs: RefObject<IEditableContentHandle<ITableDocument> | null>[] = [];
+
+  /** 面板级「当前可见的外部改动冲突」；同一时刻只显示一个，其余留在各栏状态里排队（D-37） */
+  private readonly conflictStore: Store<ITablePendingConflict | undefined> = new Store<
+    ITablePendingConflict | undefined
+  >(undefined);
+
+  /** 当前显示冲突的栏序号；没有显示时为 undefined */
+  private visibleConflictColumn: number | undefined = undefined;
 
   /**
    * 某栏组件交回草稿：只覆盖面板副本与交回脏标记，绝不写盘（T-04.2-08-01）
@@ -683,6 +712,9 @@ export class TablePanel implements IEditorPanel, ITablePanel {
         onEmptyOpen: (columnIndex, dataPath): void => this.openIntoColumn(columnIndex, dataPath),
         onEmptyCreate: (columnIndex, directory, name): void => void this.createIntoColumn(columnIndex, directory, name),
         onEmptyDelete: (columnIndex, dataPath): void => void this.deleteFromColumn(columnIndex, dataPath),
+        conflictStore: this.conflictStore,
+        onConflictDiscard: (): void => this.discardExternalConflict(),
+        onConflictKeep: (): void => this.keepExternalConflict(),
       });
   }
 
@@ -785,6 +817,12 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     column.unsavedSchema = false;
     column.baselineText = undefined;
     column.baselineSchemaText = undefined;
+    column.pendingConflict = undefined;
+
+    if (this.visibleConflictColumn === columnIndex) {
+      this.visibleConflictColumn = undefined;
+      this.conflictStore.setState(undefined);
+    }
 
     // 版本号自增与草稿作废必须成对发生：换表后组件不能从上一张表的草稿重置（T-04.2-08-05）
     this.resetColumnDraft(columnIndex);
@@ -795,6 +833,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       this.publish(columnIndex, TablePanelStatus.Loading);
     }
 
+    this.showNextConflict();
     void this.refresh(columnIndex);
   }
 
@@ -827,12 +866,20 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     column.unsaved = false;
     column.unsavedSchema = false;
     column.pendingStripText = '';
+    column.pendingConflict = undefined;
     column.emptyMode = TableEmptyMode.Buttons;
     column.directory = '';
     column.pickerError = undefined;
+
+    if (this.visibleConflictColumn === columnIndex) {
+      this.visibleConflictColumn = undefined;
+      this.conflictStore.setState(undefined);
+    }
+
     this.resetColumnDraft(columnIndex);
     this.nextToken(columnIndex);
     this.publish(columnIndex, TablePanelStatus.NoTarget);
+    this.showNextConflict();
   }
 
   /**
@@ -1444,6 +1491,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       contentVersion: 0,
       draft: null,
       draftDirty: false,
+      pendingConflict: undefined,
       stripConfirmed: new Map<string, string>(),
       pendingStripText: '',
       store: new Store<ITablePanelViewState>({
@@ -1546,6 +1594,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       message,
       error,
       unsaved: column.unsaved,
+      pendingConflict: column.pendingConflict,
       ...emptyState,
     });
   }
@@ -1976,11 +2025,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
    * @param path 变化路径（数据文件或该栏推导出的 schema 文件）
    * @param kind 变化种类
    */
-  private async handleResourceChange(
-    columnIndex: number,
-    path: string,
-    kind: EditorFileChangeKind,
-  ): Promise<void> {
+  private async handleResourceChange(columnIndex: number, path: string, kind: EditorFileChangeKind): Promise<void> {
     const column = this.columnAt(columnIndex);
     const target = column.target;
 
@@ -2015,7 +2060,10 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       return;
     }
 
-    if (this.isColumnDirty(columnIndex)) return;
+    if (this.isColumnDirty(columnIndex)) {
+      this.recordPendingConflict(columnIndex, path, text);
+      return;
+    }
 
     if (mirroredSchema) {
       column.baselineSchemaText = text;
@@ -2032,6 +2080,130 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     column.prefix = parsed.prefix;
     column.baselineText = text;
     this.applyLoaded(columnIndex, column.schema, parsed.value);
+  }
+
+  /**
+   * 记录某栏的待决冲突并在面板根发布它；同栏同路径同原文只入队一次（D-17 / D-37）
+   * @param columnIndex 栏序号（0 基）
+   * @param path 变化路径
+   * @param text 读到的外部原文
+   */
+  private recordPendingConflict(columnIndex: number, path: string, text: string): void {
+    const column = this.columnAt(columnIndex);
+    const current = column.pendingConflict;
+
+    if (current !== undefined && current.path === path && current.text === text) return;
+
+    column.pendingConflict = { path, text };
+    this.publish(columnIndex, column.store.state.status);
+
+    if (this.visibleConflictColumn === columnIndex) {
+      this.conflictStore.setState(column.pendingConflict);
+      return;
+    }
+
+    this.showNextConflict();
+  }
+
+  /**
+   * 在一处发布最靠前的待决冲突；已有可见冲突时不抢占，保证同一变化只弹一次
+   */
+  private showNextConflict(): void {
+    if (this.visibleConflictColumn !== undefined) return;
+
+    const count = this.columns.length;
+
+    for (let index = 0; index < count; index += 1) {
+      const conflict = this.columns[index].pendingConflict;
+
+      if (conflict === undefined) continue;
+
+      this.visibleConflictColumn = index;
+      this.conflictStore.setState(conflict);
+      return;
+    }
+  }
+
+  /**
+   * 冲突弹窗选「放弃我的改动并刷新」：用外部原文替换内容、清掉脏标记并推进版本号（D-17）
+   */
+  private discardExternalConflict(): void {
+    const columnIndex = this.visibleConflictColumn;
+
+    if (columnIndex === undefined) return;
+
+    const column = this.columnAt(columnIndex);
+    const conflict = column.pendingConflict;
+
+    this.visibleConflictColumn = undefined;
+    column.pendingConflict = undefined;
+    this.conflictStore.setState(undefined);
+
+    if (conflict === undefined) {
+      this.showNextConflict();
+      return;
+    }
+
+    const target = column.target;
+    const parsed = parseTableText(conflict.text);
+
+    if (target === null || parsed.status !== TableTextParseStatus.Conforming) {
+      this.publishMessage(columnIndex, '读取外部改动失败，已保留你的改动。');
+      this.showNextConflict();
+      return;
+    }
+
+    const mirroredSchema = !isSchemaPath(target.dataPath) && conflict.path === deriveSchemaPath(target.dataPath);
+
+    column.unsaved = false;
+    column.unsavedSchema = false;
+
+    if (mirroredSchema) {
+      column.baselineSchemaText = conflict.text;
+      this.applyLoaded(columnIndex, parsed.value, column.data);
+    } else if (this.isSchemaView(columnIndex)) {
+      column.baselineText = conflict.text;
+      this.applySchemaLoaded(columnIndex, parsed.value);
+    } else {
+      column.prefix = parsed.prefix;
+      column.baselineText = conflict.text;
+      this.applyLoaded(columnIndex, column.schema, parsed.value);
+    }
+
+    this.showNextConflict();
+  }
+
+  /**
+   * 冲突弹窗选「保留我的改动，下次保存覆盖」：内容不动，只把基线推进到外部原文（D-17）
+   */
+  private keepExternalConflict(): void {
+    const columnIndex = this.visibleConflictColumn;
+
+    if (columnIndex === undefined) return;
+
+    const column = this.columnAt(columnIndex);
+    const conflict = column.pendingConflict;
+
+    this.visibleConflictColumn = undefined;
+    column.pendingConflict = undefined;
+    this.conflictStore.setState(undefined);
+
+    if (conflict === undefined) {
+      this.showNextConflict();
+      return;
+    }
+
+    const target = column.target;
+
+    if (target !== null) {
+      const mirroredSchema = !isSchemaPath(target.dataPath) && conflict.path === deriveSchemaPath(target.dataPath);
+
+      if (mirroredSchema) column.baselineSchemaText = conflict.text;
+      else column.baselineText = conflict.text;
+    }
+
+    this.publish(columnIndex, column.store.state.status);
+    this.showNextConflict();
   }
 
   /**
