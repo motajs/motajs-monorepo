@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.2"
 current_phase_name: 面板内容解耦与文件资源管理器
-current_plan: 12
+current_plan: 13
 status: executing
-stopped_at: Completed 04.2-09-PLAN.md
-last_updated: "2026-10-28T12:44:54.727Z"
+stopped_at: Completed 04.2-12-PLAN.md
+last_updated: "2026-10-28T13:00:04.599Z"
 last_activity: 2026-10-28
 last_activity_desc: Phase 04.2 execution started
-state_head: d3cead3b7496068063e28cc74b7915a053d41598
+state_head: 8fc16a1411d6621d3168e31274167c67445b8ddf
 progress:
   total_phases: 10
   completed_phases: 0
   total_plans: 182
-  completed_plans: 171
+  completed_plans: 172
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 04.2 (面板内容解耦与文件资源管理器) — EXECUTING
-Current Plan: 12
+Current Plan: 13
 Total Plans in Phase: 18
 Status: Ready to execute
 Next phase: Phase 04.2 — 面板内容解耦与文件资源管理器（设计重构）；先讨论，再规划接口
@@ -189,6 +189,7 @@ Progress: [███████░░░] 74%
 | Phase 04.2 P05 | 5 min | 3 tasks | 5 files |
 | Phase 04.2-panel-content-decoupling P07 | 13 min | 3 tasks | 9 files |
 | Phase 04.2 P09 | 8 min | 3 tasks | 6 files |
+| Phase 04.2 P12 | 13min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -517,6 +518,7 @@ Recent decisions affecting current work:
 - [Phase 04.2]: 两个共享弹窗只做展示与回调：不判断脏、不调保存、不读资源
 - [Phase 04.2]: 冲突弹窗 keyboard=false 且无主按钮，必须显式点选；关闭弹窗 Esc 等同取消，保存中忽略 Esc
 - [Phase 04.2]: test id 挂在弹窗正文容器（antd ModalProps 不声明 data-*），名称照 UI-SPEC 逐字一致
+- [Phase 04.2]: Explorer candidates require both canOpen and createOpenParam; select/cancel clear pendingPath and candidateTypeIds together
 
 ### Pending Todos
 
@@ -545,7 +547,7 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-28T12:44:54.147Z
-Stopped at: Completed 04.2-09-PLAN.md
+Last session: 2026-10-28T13:00:04.041Z
+Stopped at: Completed 04.2-12-PLAN.md
 Resume file: None
 Next action: 简报并规划 / 执行 Phase 5（代码编辑）——需用户先批准；Phase 04.1 已 Complete，本阶段不再有待办计划
