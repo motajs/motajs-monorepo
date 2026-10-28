@@ -140,6 +140,25 @@ export interface IAssetPanelViewState {
   readonly transcodeCapable: boolean;
 }
 
+export interface IAssetPendingConflict {
+  /** 清单文件被外部改动、且该分类有脏改动时，出现冲突的分类标识 */
+  readonly categoryId: string;
+
+  /** 读到的外部原文 */
+  readonly text: string;
+}
+
+export interface IAssetCloseDialogState {
+  /** 关闭弹窗是否打开 */
+  readonly open: boolean;
+
+  /** 是否正在保存 */
+  readonly saving?: boolean;
+
+  /** 保存失败的原因 */
+  readonly error?: string;
+}
+
 export interface IAssetTranscodeService {
   /**
    * 探测当前环境能否执行指定种类的转码

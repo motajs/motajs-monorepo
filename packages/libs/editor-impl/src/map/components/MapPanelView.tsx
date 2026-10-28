@@ -24,6 +24,7 @@ import {
   IMapPanelViewState,
   IMapRect,
   IMapSizeLimit,
+  IMapTileGroupUrls,
   MapBottomTab,
   MapBrushMode,
   MapDialogKind,
@@ -38,7 +39,7 @@ import { MapEmptyState } from './MapEmptyState';
 import { MapMaterialPanel } from './MapMaterialPanel';
 import { MapPropertiesDrawer } from './MapPropertiesDrawer';
 import { MapToolbar } from './MapToolbar';
-import { IMapTileGroupUrls, useMapTileGroupUrls } from './useMapObjectUrl';
+import { useMapTileGroupUrls } from './useMapObjectUrl';
 import { useMapElementWidth } from './useMapElementWidth';
 
 // 地图面板的装配层：工具栏 / 主体 / 保存提示行 / 弹窗 / 属性抽屉都在这里按视图状态装配。

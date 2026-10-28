@@ -3,6 +3,8 @@ import { ITableRowNode, ITableSchemaNode } from '../shared/schemaForm/types';
 
 // 地图能力的类型集中地：中立文档 / 图块目录 / 宿主注入面 / 面板状态 / 撤销载荷 / 渲染模型。
 // 本文件只有声明，没有任何逻辑；实现由后续计划补齐。
+// 图块图片地址有两张各自键空间的表：IMapImageSources 以图片路径为键（画布用），
+// IMapTileGroupUrls 以 `IMapTileGroup.id` 为键（素材区 / 底栏 / 收藏栏用），两者禁止互相查表（D-01 / D-20）。
 
 export const enum MapPanelStatus {
   /** 面板还没有打开过地图，也没有读过清单 */
@@ -262,6 +264,64 @@ export interface IMapTileGroup {
   readonly tileset?: IMapTilesetMeta;
 }
 
+/**
+ * 按图片相对路径读取字节；由面板闭包提供，组件与面板共用这一份声明
+ * @param path 图片相对项目根的路径
+ * @returns 图片字节；读取失败时为 undefined
+ */
+export type MapImageBytesLoader = (path: string) => Promise<Uint8Array | undefined>;
+
+export interface IMapTileGroupUrls {
+  /** 分组标识（`IMapTileGroup.id`）→ 该组图片的 `blob:` 地址；键是 `group.id`，不是图片路径 */
+  readonly urls: Readonly<Record<string, string | undefined>>;
+
+  /** 分组标识（`IMapTileGroup.id`）→ 该组图片的读取状态；键是 `group.id`，不是图片路径 */
+  readonly status: Readonly<Record<string, MapImageStatus>>;
+}
+
+export interface IMapImageSources {
+  /** 图片相对项目根的路径（`cell.imagePath` / `group.imagePath`）→ `blob:` 地址；键是图片路径，不是 `group.id` */
+  readonly urls: Readonly<Record<string, string | undefined>>;
+
+  /** 图片相对项目根的路径 → 该图片的读取状态；键是图片路径，不是 `group.id` */
+  readonly status: Readonly<Record<string, MapImageStatus>>;
+}
+
+export interface IMapImageSourceStore {
+  /** 每次真正更新地址表后递增的版本号；普通成员，不是 getter */
+  readonly version: number;
+
+  /**
+   * 按当前文档重建两张地址表；同一路径内容未变时复用旧地址
+   * @param imagePaths 本帧需要的图片路径集合
+   * @param groups 当前文档的图块分组集合
+   * @param loadBytes 按图片相对路径读字节的回调
+   * @returns 重建完成后的异步结果
+   */
+  refresh(
+    imagePaths: readonly string[],
+    groups: readonly IMapTileGroup[],
+    loadBytes: MapImageBytesLoader,
+  ): Promise<void>;
+
+  /**
+   * 取图片路径键的快照，给地图画布用
+   * @returns 以图片相对路径为键的地址与状态表
+   */
+  getSources(): IMapImageSources;
+
+  /**
+   * 取 `group.id` 键的快照，给素材区 / 底栏 / 收藏栏用
+   * @returns 以分组标识为键的地址与状态表
+   */
+  getGroupUrls(): IMapTileGroupUrls;
+
+  /**
+   * 回收全部 `blob:` 地址；面板释放时调用
+   */
+  dispose(): void;
+}
+
 export interface IMapLayer {
   /** 图层标识，撤销载荷与当前层选择都用它 */
   readonly id: string;
@@ -401,6 +461,19 @@ export interface IMapEditorCapabilities {
 
   /** 宿主覆盖动画帧速（毫秒 / 帧）；缺省 `MAP_FRAME_SPEED_DEFAULT` */
   readonly frameSpeed?: number;
+
+  /**
+   * 把完整路径解析成地图标识；由宿主注入，`editor-impl` 不内置任何目录约定（D-31 / D-32）
+   *
+   * 必须同步返回：调用方（面板类型的 `IEditorPanelType.canOpen`）不能等异步清单。
+   * 调用约定：先判 `capabilities.resolveMapPath === undefined`，命中「未注入」分支就按不认领处理
+   * （`canOpen` 返回 false、`createOpenParam` 返回 `{ target: null }`）；在该早退之后直接调用
+   * `capabilities.resolveMapPath(path)`，此时类型已窄化掉 undefined。不要先把函数赋给局部变量或常量，
+   * 也不要写成 `capabilities.resolveMapPath?.(path)` 再用断言抹平 undefined。
+   * @param path 完整路径：相对项目根、以 `/` 分隔、无前导斜线
+   * @returns 地图标识；该路径不是本宿主的地图文件时为 null
+   */
+  resolveMapPath?(path: string): string | null;
 }
 
 export interface IMapPanelTarget {
@@ -678,6 +751,25 @@ export interface IMapRenderModel {
   readonly preview?: IMapPreview;
   /** 当前悬停的格子；指针不在画布上时为 undefined */
   readonly hover?: IMapCellPosition;
+}
+
+export interface IMapPendingConflict {
+  /** 外部改动的地图文件路径，用于与当前地图匹配 */
+  readonly path: string;
+
+  /** 读到的外部原文 */
+  readonly text: string;
+}
+
+export interface IMapCloseDialogState {
+  /** 关闭弹窗是否打开 */
+  readonly open: boolean;
+
+  /** 是否正在保存 */
+  readonly saving?: boolean;
+
+  /** 保存失败的原因 */
+  readonly error?: string;
 }
 
 export interface IMapPanelViewState {

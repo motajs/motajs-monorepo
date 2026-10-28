@@ -1,11 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { IMapTileGroup, MapImageStatus } from '../types';
+import { IMapTileGroup, IMapTileGroupUrls, MapImageBytesLoader, MapImageStatus } from '../types';
 
 // 把图块图片的字节变成可回收的 blob 地址：字节由调用方经资源层读取，本 hook 不做 I/O。
 // 路径先经过守卫：绝对路径与含 `..` 段的路径直接拒绝，不请求资源层。
-
-/** 读取图片字节的回调 */
-type MapImageBytesLoader = (path: string) => Promise<Uint8Array | undefined>;
 
 export interface IMapObjectUrlOptions {
   /** 图片相对项目根的路径 */
@@ -83,13 +80,6 @@ export function useMapObjectUrl(options: IMapObjectUrlOptions): string | undefin
   }, [options.path, options.mime, options.version, setUrl]);
 
   return url;
-}
-
-export interface IMapTileGroupUrls {
-  /** 分组标识 → 该组图片的 blob 地址 */
-  readonly urls: Readonly<Record<string, string | undefined>>;
-  /** 分组标识 → 该组图片的读取状态 */
-  readonly status: Readonly<Record<string, MapImageStatus>>;
 }
 
 /**
