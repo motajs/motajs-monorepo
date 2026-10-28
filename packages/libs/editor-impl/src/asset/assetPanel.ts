@@ -13,6 +13,7 @@ import {
   IResource,
   IResourceIdentifier,
   IUndoContext,
+  PanelCloseChoice,
 } from '@motajs/editor-core';
 import { AssetCategoryKind, AssetListFormat, IAssetCategory, IAssetEditorCapabilities } from '../react';
 import { parseTableText, serializeTableText, TableTextParseStatus } from '../shared/jsonc';
@@ -50,6 +51,7 @@ import {
   AssetPanelMode,
   AssetPanelStatus,
   AssetUndoType,
+  IAssetCloseDialogState,
   IAssetEntry,
   IAssetListEntry,
   IAssetPanel,
@@ -196,6 +198,15 @@ interface IAssetPanelContainerProps {
   onBack(): void;
   /** 重新读取当前分类 */
   onRetry(): void;
+  /**
+   * 关闭弹窗上用户点了哪一个选择
+   * @param choice 保存并关闭 / 不保存关闭 / 取消关闭
+   */
+  onCloseChoice(choice: PanelCloseChoice): void;
+  /** 外部变化冲突里选择「放弃我的改动并刷新」 */
+  onConflictDiscard(): void;
+  /** 外部变化冲突里选择「保留我的改动，下次保存覆盖」 */
+  onConflictKeep(): void;
 }
 
 /**
@@ -225,6 +236,9 @@ function AssetPanelContainer(props: IAssetPanelContainerProps): ReactElement {
     onChange: props.onChange,
     onBack: props.onBack,
     onRetry: props.onRetry,
+    onCloseChoice: props.onCloseChoice,
+    onConflictDiscard: props.onConflictDiscard,
+    onConflictKeep: props.onConflictKeep,
   });
 }
 
@@ -295,6 +309,12 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
   /** 面板当前是否处于活动标签；非活动面板不弹看不见的冲突框 */
   private active = true;
 
+  /** 关闭三态弹窗的展示状态；没有打开时为 undefined */
+  private closeDialogState: IAssetCloseDialogState | undefined;
+
+  /** 关闭三态弹窗等待中的结算回调；没有弹窗时为 undefined */
+  private closeDialogResolve?: (choice: PanelCloseChoice) => void;
+
   constructor(
     param: IEditorPanelFactoryParam,
     capabilities: IAssetEditorCapabilities,
@@ -321,6 +341,7 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
       transcoding: false,
       transcodeCapable: false,
       pendingConflict: undefined,
+      closeDialog: undefined,
     });
     const initialCategory = categories.length === 0 ? undefined : categories[0];
 
@@ -387,6 +408,13 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
 
           if (categoryId !== undefined) void this.loadCategory(categoryId);
         },
+        onCloseChoice: (choice: PanelCloseChoice): void => {
+          void this.answerCloseDialog(choice);
+        },
+        onConflictDiscard: (): void => {
+          void this.discardExternalChange();
+        },
+        onConflictKeep: (): void => this.keepExternalChange(),
       });
   }
 
@@ -472,6 +500,45 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
 
   async onUpdateResource(): Promise<void> {}
 
+  /**
+   * 用户点标签上的关闭：没有脏改动就直接放行；有脏改动弹三态并等用户选择
+   * @returns 保存并关闭 / 不保存关闭 / 取消关闭
+   */
+  async onRequestClose(): Promise<PanelCloseChoice> {
+    if (!this.hasUnsaved()) return PanelCloseChoice.Save;
+
+    this.closeDialogState = { open: true };
+    this.publish(this.store.state.status);
+
+    return new Promise<PanelCloseChoice>((resolve) => {
+      this.closeDialogResolve = resolve;
+    });
+  }
+
+  /**
+   * 用户选择「不保存关闭」时由外壳投递：清掉各分类脏标记并把基线置为当前内容，`dispose` 因此不写盘
+   */
+  onDiscard(): void {
+    this.closeDialogResolve = undefined;
+    this.closeDialogState = undefined;
+    this.pendingConflict = undefined;
+
+    for (const [categoryId, state] of this.states) {
+      state.unsaved = false;
+
+      const category = this.findCategory(categoryId);
+
+      if (category === undefined || !state.loaded) continue;
+
+      state.baselineText = serializeTableText(
+        writeAssetList(category, this.toListEntries(state.entries), state.listDocument),
+        state.prefix,
+      );
+    }
+
+    this.publish(this.store.state.status);
+  }
+
   async undo(context: IUndoContext<unknown>): Promise<void> {
     if (context.type !== AssetUndoType.Config) return;
 
@@ -539,23 +606,7 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
   }
 
   async save(): Promise<void> {
-    const ids = [...this.states.keys()];
-    let written = false;
-
-    for (const categoryId of ids) {
-      const state = this.states.get(categoryId);
-
-      if (state === undefined || !state.unsaved) continue;
-
-      const category = this.findCategory(categoryId);
-
-      if (category === undefined) continue;
-
-      // 被守卫跳过与写盘失败都返回 false，因此「什么都没写却弹已保存」不可能出现
-      if (await this.writeCategory(categoryId, category, state)) written = true;
-    }
-
-    if (written) antdMessage.success('已保存');
+    if (await this.saveAll()) antdMessage.success('已保存');
   }
 
   /**
@@ -1610,6 +1661,7 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
       transcoding: this.transcoding,
       transcodeCapable: this.transcodeCapable,
       pendingConflict: this.active ? this.pendingConflict : undefined,
+      closeDialog: this.closeDialogState,
     });
   }
 
@@ -1651,6 +1703,78 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
     }
 
     if (data.categoryId === this.currentCategoryId) this.publish(AssetPanelStatus.Ready);
+  }
+
+  /**
+   * 判断是否还有任何分类存在未落盘改动
+   * @returns 至少一个分类为脏时为 true
+   */
+  private hasUnsaved(): boolean {
+    for (const state of this.states.values()) {
+      if (state.unsaved) return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * 把所有脏分类写盘，成功与否交给调用方决定是否提示
+   * @returns 至少真正写入一份列表时为 true
+   */
+  private async saveAll(): Promise<boolean> {
+    const ids = [...this.states.keys()];
+    let written = false;
+
+    for (const categoryId of ids) {
+      const state = this.states.get(categoryId);
+
+      if (state === undefined || !state.unsaved) continue;
+
+      const category = this.findCategory(categoryId);
+
+      if (category === undefined) continue;
+
+      // 被守卫跳过与写盘失败都返回 false，因此「什么都没写却弹已保存」不可能出现
+      if (await this.writeCategory(categoryId, category, state)) written = true;
+    }
+
+    return written;
+  }
+
+  /**
+   * 结算一次关闭询问：三个分支都把关闭弹窗收回，并唤醒等待中的 `onRequestClose`
+   * @param choice 用户的选择
+   * @param error 保存失败的原因；有值时弹窗留在屏幕上并把原因显示出来
+   */
+  private settleCloseDialog(choice: PanelCloseChoice, error?: string): void {
+    const resolve = this.closeDialogResolve;
+
+    this.closeDialogResolve = undefined;
+    this.closeDialogState = error === undefined ? undefined : { open: true, error };
+    this.publish(this.store.state.status);
+
+    if (resolve !== undefined) resolve(choice);
+  }
+
+  /**
+   * 响应关闭弹窗上的一个选择：保存分支先落盘，失败时留在弹窗里并结算为取消
+   * @param choice 用户的选择
+   */
+  private async answerCloseDialog(choice: PanelCloseChoice): Promise<void> {
+    if (choice !== PanelCloseChoice.Save) {
+      this.settleCloseDialog(choice);
+      return;
+    }
+
+    this.closeDialogState = { open: true, saving: true };
+    this.publish(this.store.state.status);
+
+    if (await this.saveAll()) {
+      this.settleCloseDialog(PanelCloseChoice.Save);
+      return;
+    }
+
+    this.settleCloseDialog(PanelCloseChoice.Cancel, this.store.state.error ?? '保存失败');
   }
 
   /**

@@ -140,6 +140,8 @@ export interface IAssetPanelViewState {
   readonly transcodeCapable: boolean;
   /** 待用户决定的清单文件外部改动；没有冲突时为 undefined */
   readonly pendingConflict?: IAssetPendingConflict;
+  /** 关闭三态弹窗的展示状态；没有打开时为 undefined */
+  readonly closeDialog?: IAssetCloseDialogState;
 }
 
 export interface IAssetPendingConflict {

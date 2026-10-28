@@ -1,6 +1,8 @@
+import { PanelCloseChoice } from '@motajs/editor-core';
 import { Button, Spin } from 'antd';
 import { ReactElement, useState } from 'react';
 import { AssetCategoryKind, IAssetCategory } from '../../react';
+import { ExternalChangeDialog, PanelCloseDialog } from '../../shared/panelDialogs';
 import { DEFAULT_ASSET_CARD_WIDTH } from '../constants';
 import { resolveAssetMime, resolveTranscodedPath } from '../model';
 import {
@@ -84,6 +86,15 @@ export interface IAssetPanelViewProps {
   onBack?(): void;
   /** 重新读取当前分类 */
   onRetry?(): void;
+  /**
+   * 关闭弹窗上用户点了哪一个选择
+   * @param choice 保存并关闭 / 不保存关闭 / 取消关闭
+   */
+  onCloseChoice?(choice: PanelCloseChoice): void;
+  /** 外部变化冲突里选择「放弃我的改动并刷新」 */
+  onConflictDiscard?(): void;
+  /** 外部变化冲突里选择「保留我的改动，下次保存覆盖」 */
+  onConflictKeep?(): void;
   /**
    * 读取某素材字节，供预览使用
    *
@@ -207,6 +218,15 @@ function noopTranscodeCancel(): void {}
 
 /** 未接入转码开始回调时的缺省实现：不做任何事 */
 function noopTranscodeStart(): void {}
+
+/** 未接入关闭选择回调时的缺省实现：不做任何事 */
+function noopCloseChoice(): void {}
+
+/** 未接入冲突放弃回调时的缺省实现：不做任何事 */
+function noopConflictDiscard(): void {}
+
+/** 未接入冲突保留回调时的缺省实现：不做任何事 */
+function noopConflictKeep(): void {}
 
 /**
  * 渲染面板主区：加载 / 错误 / 空都给出固定呈现，就绪时渲染网格与详情
@@ -393,6 +413,21 @@ export function AssetPanelView(props: IAssetPanelViewProps): ReactElement {
           busy={state.transcoding}
           onCancel={props.onCancelTranscode ?? noopTranscodeCancel}
           onStart={props.onStartTranscode ?? noopTranscodeStart}
+        />
+      ) : null}
+      {state.pendingConflict === undefined ? null : (
+        <ExternalChangeDialog
+          open
+          onDiscard={props.onConflictDiscard ?? noopConflictDiscard}
+          onKeep={props.onConflictKeep ?? noopConflictKeep}
+        />
+      )}
+      {state.closeDialog?.open === true ? (
+        <PanelCloseDialog
+          open
+          saving={state.closeDialog.saving}
+          error={state.closeDialog.error}
+          onChoose={props.onCloseChoice ?? noopCloseChoice}
         />
       ) : null}
     </div>
