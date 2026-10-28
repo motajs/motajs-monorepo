@@ -26,6 +26,8 @@ export interface ITableToolbarProps {
   readonly closeButtonEnabled?: boolean;
   /** 本栏是否有未落盘的改动；为真时显示「未保存」标记并启用「保存」 */
   readonly unsaved?: boolean;
+  /** 保存请求是否进行中；为真时保存按钮禁用并显示「保存中…」，缺省为 false 时渲染不变 */
+  readonly saving?: boolean;
   /** 「保存」按钮的点击回调 */
   readonly onSave?: () => void;
 }
@@ -84,11 +86,12 @@ export function TableToolbar(props: ITableToolbarProps): ReactElement {
       <Button
         size="small"
         autoInsertSpace={false}
-        disabled={props.unsaved !== true || props.onSave === undefined}
+        disabled={props.unsaved !== true || props.onSave === undefined || props.saving === true}
+        loading={props.saving === true}
         data-test-id="table-save"
         onClick={(): void => props.onSave?.()}
       >
-        保存
+        {props.saving === true ? '保存中…' : '保存'}
       </Button>
       {props.unsaved === true ? (
         <span className="etable-toolbar-unsaved" data-test-id="table-unsaved">

@@ -80,6 +80,8 @@ export interface ITableGridProps {
   readonly unsaved?: boolean;
   /** 保存本栏未落盘改动的回调 */
   readonly onSave?: () => void;
+  /** 保存请求是否进行中；为真时工具栏保存按钮禁用并显示「保存中…」，缺省为 false 时渲染与既有调用点一致 */
+  readonly saving?: boolean;
   /** 表单模式：为 true 时只渲染字段行与值控件，不渲染表格工具栏与 Schema 横幅；缺省为 false，既有调用点不受影响 */
   readonly formMode?: boolean;
 }
@@ -580,6 +582,7 @@ export const TableGrid = memo(function TableGrid(props: ITableGridProps): ReactE
         onCloseColumn: props.onCloseColumn,
         closeButtonEnabled: props.onCloseColumn !== undefined && props.status !== TablePanelStatus.NoTarget,
         unsaved: props.unsaved,
+        saving: props.saving,
         onSave: props.onSave,
       });
   const banner = schemaMode && !formMode ? createElement(SchemaBanner, {}) : null;
