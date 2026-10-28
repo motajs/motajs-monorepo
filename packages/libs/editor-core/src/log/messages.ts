@@ -9,6 +9,7 @@ export const messages: LogMessages = Object.freeze({
   'core.initializeAfterDispose': 'EditorCore cannot be initialized after dispose',
   'system.notInitialized': '$1 system is not initialized',
   'resource.hookFailed': 'Resource update hook failed: $1',
+  'resource.invalidChangePath': 'Rejected invalid file change path: $1',
   'log.unknownId': 'Unknown log id: $1',
   'shell.duplicatePanelType': 'Duplicate panel type identifier: $1',
   'shell.panelTypeNotRegistered': 'Panel type not registered: $1',

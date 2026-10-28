@@ -1,4 +1,4 @@
-import { EditorEntryKind, IEditorFileSystem } from '../fs';
+import { EditorEntryKind, EditorFileChangeKind, IEditorFileChange, IEditorFileSystem } from '../fs';
 import { Hookable, HookController, IHookController } from '../hook';
 import { logger } from '../log';
 import { ContentCache } from './contentCache';
@@ -14,6 +14,20 @@ import {
   ResourceContent,
 } from './types';
 
+/**
+ * 校验宿主报告的变化路径是否为规范化相对路径
+ * @param path 待校验的变化路径
+ * @returns 路径合法时为 true
+ */
+function isValidChangePath(path: string): boolean {
+  if (path === '') return false;
+  if (path.startsWith('/')) return false;
+  if (path.includes('\\')) return false;
+  if (path.includes(':')) return false;
+
+  return path.split('/').every((segment) => segment !== '' && segment !== '.' && segment !== '..');
+}
+
 export class ResourceSystem extends Hookable<IResourceSystemHooks> implements IResourceSystemAccess {
   /** 宿主注入的文件系统实现，未初始化时为空 */
   private fs: IEditorFileSystem | null = null;
@@ -21,6 +35,8 @@ export class ResourceSystem extends Hookable<IResourceSystemHooks> implements IR
   private readonly index: FileIndex = new FileIndex();
   /** 内容缓存池，按字节上限 + LRU 缓存已读内容 */
   private readonly cache: ContentCache = new ContentCache();
+  /** 宿主文件变化流的退订函数，未订阅时为空 */
+  private unwatch: (() => void) | null = null;
 
   protected createController(hook: Partial<IResourceSystemHooks>): IHookController<IResourceSystemHooks> {
     return new HookController(this, hook);
@@ -30,6 +46,10 @@ export class ResourceSystem extends Hookable<IResourceSystemHooks> implements IR
     this.fs = fs;
 
     await this.index.initialize(fs, options?.ignore ?? []);
+
+    // 重复 initialize 也只保留一条订阅，绝不叠加
+    this.unwatch?.();
+    this.unwatch = fs.watch?.((change) => void this.handleFileChange(change)) ?? null;
   }
 
   async requestResource(id: IResourceIdentifier): Promise<IResource | null> {
@@ -153,8 +173,42 @@ export class ResourceSystem extends Hookable<IResourceSystemHooks> implements IR
   }
 
   async dispose(): Promise<void> {
+    this.unwatch?.();
+    this.unwatch = null;
     this.index.clear();
     this.cache.clear();
     this.fs = null;
+  }
+
+  /**
+   * 处理一条宿主文件变化：先校验路径，再按种类更新索引与缓存，最后原样通知钩子
+   * @param change 宿主报告的变化事件
+   */
+  private async handleFileChange(change: IEditorFileChange): Promise<void> {
+    const path = change.path;
+
+    if (!isValidChangePath(path)) {
+      logger.error('resource.invalidChangePath', path);
+      return;
+    }
+
+    if (change.kind === EditorFileChangeKind.Add) {
+      this.index.insert(path, EditorEntryKind.File);
+    } else if (change.kind === EditorFileChangeKind.Delete) {
+      this.index.remove(path);
+      this.cache.invalidate(path);
+    } else {
+      this.cache.invalidate(path);
+    }
+
+    await Promise.all(
+      this.forEachHook((hook) =>
+        Promise.resolve()
+          .then(() => hook.onResourceChange?.(path, change.kind))
+          .catch((error: unknown) => {
+            logger.error('resource.hookFailed', String(error));
+          }),
+      ),
+    );
   }
 }
