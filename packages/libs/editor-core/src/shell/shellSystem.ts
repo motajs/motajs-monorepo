@@ -555,11 +555,30 @@ export class ShellSystem implements IShellSystem {
     return [...this.menuItems];
   }
 
+  /**
+   * 在通知重渲染之前把即将离开的面板切出排进串行链
+   *
+   * 顺序是这条方法的全部意义：切出先入队，React 才会在切出之后提交卸载，
+   * 面板的 `IEditorPanel.onSwitchOut` 同步前缀因此仍能读到组件里的最新草稿。
+   * 目标实例与当前记录相同（重复激活同一标签）时不投递，保证一次活动变化只切出一次。
+   * @param nextInstanceId 切换后将成为活动的面板实例 id；目标标签为空白时为 null
+   */
+  private enqueueDeparture(nextInstanceId: string | null): void {
+    const previousInstanceId = this.lastActiveInstanceId;
+
+    if (previousInstanceId === nextInstanceId) return;
+
+    this.lastActiveInstanceId = null;
+
+    if (previousInstanceId !== null) this.enqueueSwitchOut(previousInstanceId);
+  }
+
   openBlankTab(): string {
     this.tabCounter += 1;
     const tabId = `tab-${this.tabCounter}`;
 
     this.tabs.push({ id: tabId, typeId: null, instanceId: null });
+    this.enqueueDeparture(null);
     this.activeTabId = tabId;
     this.notify();
     this.syncActiveInstance();
@@ -586,6 +605,7 @@ export class ShellSystem implements IShellSystem {
     if (created === null) return false;
 
     this.tabs[index] = { id: current.id, typeId, instanceId: created.instanceId };
+    this.enqueueDeparture(created.instanceId);
     this.activeTabId = current.id;
     this.notify();
     await this.initializeInstance(created);
@@ -660,6 +680,11 @@ export class ShellSystem implements IShellSystem {
       return;
     }
 
+    const nextTab = this.tabs.find((tab) => tab.id === tabId);
+    const nextInstanceId = nextTab === undefined ? null : nextTab.instanceId;
+
+    // 先排切出再通知重渲染：面板的同步前缀因此一定跑在组件卸载之前
+    this.enqueueDeparture(nextInstanceId);
     this.activeTabId = tabId;
     this.notify();
     this.syncActiveInstance();
