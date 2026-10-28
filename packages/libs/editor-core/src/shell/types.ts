@@ -106,10 +106,10 @@ export interface IShellSystem {
   closeTab(tabId: string): Promise<void>;
 
   /**
-   * 激活指定的标签页
+   * 激活指定的标签页。外壳会**先 `await` 即将离开的面板 `IEditorPanel.onSwitchOut` 结算完成**，再修改活动标签并通知 React 重渲染——因此保存期间旧面板的组件仍然挂载，面板可以在钩子里直接读取组件 ref。`IEditorPanel.onSwitchOut` 是唯一的切出保存点，不存在第二个保存钩子。
    * @param tabId 标签标识符
    */
-  activateTab(tabId: string): void;
+  activateTab(tabId: string): Promise<void>;
 
   /**
    * 列出当前的全部标签页

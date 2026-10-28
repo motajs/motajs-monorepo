@@ -672,7 +672,8 @@ export class ShellSystem implements IShellSystem {
     await this.discardTab(tabId, false);
   }
 
-  activateTab(tabId: string): void {
+  async activateTab(tabId: string): Promise<void> {
+    // 先等旧面板 onSwitchOut 结算，再改活动标签并通知 React（B1，时序由 04.2-04.1 落实）
     const exists = this.tabs.some((tab) => tab.id === tabId);
 
     if (!exists) {
