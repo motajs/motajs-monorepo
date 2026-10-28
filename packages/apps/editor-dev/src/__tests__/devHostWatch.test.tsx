@@ -1,5 +1,5 @@
 import { act, cleanup, configure, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { EditorCore, ShellSystem } from '@motajs/editor-core';
+import { EditorCore, EditorFileChangeKind, ShellSystem } from '@motajs/editor-core';
 import { CapabilityProvider } from '@motajs/editor-impl/react';
 import { TableEditKind, TablePanel, tablePanelType } from '@motajs/editor-impl/table';
 import { createElement } from 'react';
@@ -262,5 +262,42 @@ describe('开发宿主两标签同步', () => {
     await clickSave();
 
     expect(await readTitle(backend)).toBe('B 保留的草稿');
+  }, 20000);
+});
+
+describe('开发宿主内存后端变化流', () => {
+  // seed 静默；新建发 Add、覆盖发 Change、删除发 Delete、移动发 Delete + Add；退订后不再收到事件
+  it('写入 / 删除 / 移动发出正确事件且 seed 静默', async () => {
+    const backend = new MemoryBackend();
+    const events: string[] = [];
+
+    backend.seed('seed.txt', 'a');
+    const unwatch = backend.watch((change) => events.push(`${change.kind}:${change.path}`));
+
+    await backend.writeFile('new.txt', 'n');
+    await backend.writeFile('new.txt', 'n2');
+    await backend.writeBinary('bin.dat', new Uint8Array([1]));
+    await backend.deleteFile('new.txt');
+    await backend.moveFile('bin.dat', 'moved/bin.dat');
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 0);
+    });
+
+    expect(events).toEqual([
+      `${EditorFileChangeKind.Add}:new.txt`,
+      `${EditorFileChangeKind.Change}:new.txt`,
+      `${EditorFileChangeKind.Add}:bin.dat`,
+      `${EditorFileChangeKind.Delete}:new.txt`,
+      `${EditorFileChangeKind.Delete}:bin.dat`,
+      `${EditorFileChangeKind.Add}:moved/bin.dat`,
+    ]);
+
+    unwatch();
+    await backend.writeFile('after.txt', 'x');
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 0);
+    });
+
+    expect(events).toHaveLength(6);
   }, 20000);
 });
