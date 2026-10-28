@@ -124,14 +124,12 @@ interface ITablePanelColumn {
   pendingStrip: unknown;
   /** 该栏空栏当前的内联视图；初值为 `TableEmptyMode.Buttons` */
   emptyMode: TableEmptyMode;
-  /** 该栏内联浏览器当前所在目录路径；根目录为空串 */
+  /** 该栏内联浏览区的初始目录路径；根目录为空串，进入浏览区后由浏览器 / 新建表单自持当前目录 */
   directory: string;
-  /** 该栏内联浏览器当前目录的直接子条目 */
-  entries: readonly IFileEntry[];
-  /** 该栏内联浏览器目录读取失败提示；无错误时为 undefined */
+  /** 该栏内联浏览区的重列令牌；递增时让浏览器 / 新建表单重读当前目录 */
+  pickerReloadToken: number;
+  /** 该栏内联浏览区目录读取失败提示；无错误时为 undefined */
   pickerError: string | undefined;
-  /** 该栏内联浏览器目录请求序号，用于丢弃过期结果 */
-  pickerToken: number;
   /** 该栏是否有未落盘的数据改动（编辑 / 新增 / 删除 / 代码编辑器写回 / 撤销重做 / 确认剥离注释都会置真） */
   unsaved: boolean;
   /** 该栏是否有未落盘的镜像 schema 改动（数据视图新增字段会同步改镜像 schema） */
@@ -163,10 +161,10 @@ export interface ITablePanelViewState {
   readonly unsaved?: boolean;
   /** 该栏空栏当前的内联视图；缺省视作 `TableEmptyMode.Buttons` */
   readonly emptyMode?: TableEmptyMode;
-  /** 内联浏览器当前所在目录路径；根目录为空串 */
+  /** 内联浏览区的初始目录路径；根目录为空串 */
   readonly pickerDirectory?: string;
-  /** 该目录的直接子条目 */
-  readonly pickerEntries?: readonly IFileEntry[];
+  /** 内联浏览区的重列令牌；变化时浏览器 / 新建表单重读当前目录 */
+  readonly pickerReloadToken?: number;
   /** 目录读取失败时的提示文案；缺省表示无错误 */
   readonly pickerError?: string;
 }
@@ -199,8 +197,8 @@ interface ITablePanelViewProps {
   readonly onCancelCommentStrip: (columnIndex: number) => void;
   /** 某栏空栏内联视图切换回调 */
   readonly onEmptyModeChange: (columnIndex: number, mode: TableEmptyMode) => void;
-  /** 某栏内联浏览器进入某目录回调 */
-  readonly onEmptyNavigate: (columnIndex: number, path: string) => void;
+  /** 某栏内联浏览区读取某目录的直接子条目（稳定引用，浏览器 / 新建表单据此自持目录） */
+  readonly onEmptyLoadChildren: (columnIndex: number, path: string) => Promise<readonly IFileEntry[]>;
   /** 某栏内联浏览器打开某数据表回调（在本栏打开） */
   readonly onEmptyOpen: (columnIndex: number, dataPath: string) => void;
   /** 某栏内联新建某表格回调（在本栏新建并打开） */
@@ -237,8 +235,8 @@ interface ITableColumnProps {
   readonly onCancelCommentStrip: (columnIndex: number) => void;
   /** 该栏空栏内联视图切换回调 */
   readonly onEmptyModeChange: (columnIndex: number, mode: TableEmptyMode) => void;
-  /** 该栏内联浏览器进入某目录回调 */
-  readonly onEmptyNavigate: (columnIndex: number, path: string) => void;
+  /** 该栏内联浏览区读取某目录的直接子条目（稳定引用，浏览器 / 新建表单据此自持目录） */
+  readonly onEmptyLoadChildren: (columnIndex: number, path: string) => Promise<readonly IFileEntry[]>;
   /** 该栏内联浏览器打开某数据表回调（在本栏打开） */
   readonly onEmptyOpen: (columnIndex: number, dataPath: string) => void;
   /** 该栏内联新建某表格回调（在本栏新建并打开） */
@@ -418,9 +416,9 @@ function TableColumn(props: ITableColumnProps): ReactElement {
     (mode: TableEmptyMode): void => props.onEmptyModeChange(props.columnIndex, mode),
     [props.onEmptyModeChange, props.columnIndex],
   );
-  const onEmptyNavigate = useCallback(
-    (path: string): void => props.onEmptyNavigate(props.columnIndex, path),
-    [props.onEmptyNavigate, props.columnIndex],
+  const onEmptyLoadChildren = useCallback(
+    (path: string): Promise<readonly IFileEntry[]> => props.onEmptyLoadChildren(props.columnIndex, path),
+    [props.onEmptyLoadChildren, props.columnIndex],
   );
   const onEmptyOpen = useCallback(
     (dataPath: string): void => props.onEmptyOpen(props.columnIndex, dataPath),
@@ -444,10 +442,10 @@ function TableColumn(props: ITableColumnProps): ReactElement {
         mode: view.emptyMode ?? TableEmptyMode.Buttons,
         presets: capabilities.tablePresets,
         directory: view.pickerDirectory ?? '',
-        entries: view.pickerEntries ?? [],
+        loadChildren: onEmptyLoadChildren,
         error: view.pickerError,
+        reloadToken: view.pickerReloadToken,
         onModeChange: onEmptyModeChange,
-        onNavigate: onEmptyNavigate,
         onOpen: onEmptyOpen,
         onCreate: onEmptyCreate,
         onDelete: onEmptyDelete,
@@ -536,7 +534,7 @@ function TablePanelView(props: ITablePanelViewProps): ReactElement {
         onConfirmCommentStrip: props.onConfirmCommentStrip,
         onCancelCommentStrip: props.onCancelCommentStrip,
         onEmptyModeChange: props.onEmptyModeChange,
-        onEmptyNavigate: props.onEmptyNavigate,
+        onEmptyLoadChildren: props.onEmptyLoadChildren,
         onEmptyOpen: props.onEmptyOpen,
         onEmptyCreate: props.onEmptyCreate,
         onEmptyDelete: props.onEmptyDelete,
@@ -574,6 +572,35 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   /** 各栏的请求序号，用于丢弃过期请求的异步结果 */
   private readonly requestTokens: number[] = [];
 
+  /**
+   * 读取某栏空栏浏览区的目录子条目：成功时清掉该栏读取错误，失败时记下可读文案并重新抛出
+   *
+   * 构造期绑定一次，作为浏览器 / 新建表单的稳定 `loadChildren` 引用，避免每次渲染换新函数；
+   * 失败时重新抛出，让浏览器进入带「重试」的错误态（UI-SPEC）。
+   * @param columnIndex 栏序号（0 基）
+   * @param path 要读取的目录路径；根目录为空串
+   * @returns 该目录的直接子条目
+   */
+  private readonly loadPickerChildren = async (columnIndex: number, path: string): Promise<readonly IFileEntry[]> => {
+    try {
+      const entries = await this.context.listDirectory(path);
+      const column = this.columnAt(columnIndex);
+
+      if (column.pickerError !== undefined) {
+        column.pickerError = undefined;
+        this.publish(columnIndex, TablePanelStatus.NoTarget, []);
+      }
+
+      return entries;
+    } catch (error) {
+      const column = this.columnAt(columnIndex);
+
+      column.pickerError = '目录读取失败，请重试。';
+      this.publish(columnIndex, TablePanelStatus.NoTarget, []);
+      throw error;
+    }
+  };
+
   constructor(param: IEditorPanelFactoryParam) {
     this.id = param.instanceId;
     this.context = param.context;
@@ -595,7 +622,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
         onConfirmCommentStrip: (columnIndex): void => void this.confirmCommentStrip(columnIndex),
         onCancelCommentStrip: (columnIndex): void => this.cancelCommentStrip(columnIndex),
         onEmptyModeChange: (columnIndex, mode): void => this.setEmptyMode(columnIndex, mode),
-        onEmptyNavigate: (columnIndex, path): void => this.navigatePicker(columnIndex, path),
+        onEmptyLoadChildren: this.loadPickerChildren,
         onEmptyOpen: (columnIndex, dataPath): void => this.openIntoColumn(columnIndex, dataPath),
         onEmptyCreate: (columnIndex, directory, name): void => void this.createIntoColumn(columnIndex, directory, name),
         onEmptyDelete: (columnIndex, dataPath): void => void this.deleteFromColumn(columnIndex, dataPath),
@@ -708,7 +735,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
    * 关闭后本栏 `target` 归空，`findEmptyColumnIndex` 随后即可把它当作空栏供「编辑 Schema」复用；
    * 同时递增本栏请求序号以丢弃在途读取结果，避免关闭后旧结果再写回本栏。关栏前若本栏有未落盘改动，
    * 先同步快照后异步写回，避免丢改动（T-02.1-20-01）。空栏内联视图一并复位为三个按钮态（`emptyMode`
-   * 归 `Buttons`、目录归根 `''`、条目与读取错误清空），使「打开表格 → 开进本栏 → ✕ 关栏 → 回到三个
+   * 归 `Buttons`、目录归根 `''`、读取错误清空），使「打开表格 → 开进本栏 → ✕ 关栏 → 回到三个
    * 按钮」成立；其它栏的目标与状态不受影响。
    * @param columnIndex 要关闭的栏序号（0 基）
    */
@@ -727,14 +754,14 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     column.pendingStripText = '';
     column.emptyMode = TableEmptyMode.Buttons;
     column.directory = '';
-    column.entries = [];
     column.pickerError = undefined;
     this.nextToken(columnIndex);
     this.publish(columnIndex, TablePanelStatus.NoTarget, []);
   }
 
   /**
-   * 切换某栏空栏的内联视图；进入打开 / 新建 / 删除态时顺带取该栏当前目录的直接子条目
+   * 切换某栏空栏的内联视图；进入打开 / 新建 / 删除态时清掉读取错误并递增重列令牌，
+   * 让浏览器 / 新建表单按初始目录自己读一次
    * @param columnIndex 栏序号（0 基）
    * @param mode 目标内联视图
    */
@@ -742,21 +769,13 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     const column = this.columnAt(columnIndex);
 
     column.emptyMode = mode;
-    this.publish(columnIndex, TablePanelStatus.NoTarget, []);
 
     if (mode === TableEmptyMode.Open || mode === TableEmptyMode.Create || mode === TableEmptyMode.Delete) {
-      void this.refreshPicker(columnIndex);
+      column.pickerError = undefined;
+      column.pickerReloadToken += 1;
     }
-  }
 
-  /**
-   * 让某栏内联浏览器切换到某目录并重取该目录的直接子条目
-   * @param columnIndex 栏序号（0 基）
-   * @param path 目标目录路径；根目录传空串
-   */
-  private navigatePicker(columnIndex: number, path: string): void {
-    this.columnAt(columnIndex).directory = path;
-    void this.refreshPicker(columnIndex);
+    this.publish(columnIndex, TablePanelStatus.NoTarget, []);
   }
 
   /**
@@ -802,7 +821,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   }
 
   /**
-   * 删除某栏内联浏览器中的一张表：删数据 + schema 一对文件后重取该栏浏览器目录
+   * 删除某栏内联浏览器中的一张表：删数据 + schema 一对文件后让该栏浏览器重读当前目录
    *
    * 删除不可撤销（D-13）——本方法不登记任何 `IUndoContext`；二次确认由空栏控件在调用本方法前完成。
    * 删除后该栏仍是空栏、`emptyMode` 保持删除态以支持连续删除。
@@ -813,44 +832,15 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     await this.context.deleteResource(dataPath);
     await this.context.deleteResource(deriveSchemaPath(dataPath));
 
-    await this.refreshPicker(columnIndex);
+    this.columnAt(columnIndex).pickerError = undefined;
     this.refreshAwaitingPickers();
   }
 
   /**
-   * 重取某栏内联浏览器当前目录的直接子条目并发布；用请求序号丢弃过期结果
-   *
-   * 读取失败时把该栏内联错误提示置为固定文案，仍保持空栏态（不抛穿面板）。
-   * @param columnIndex 栏序号（0 基）
-   */
-  private async refreshPicker(columnIndex: number): Promise<void> {
-    const column = this.columnAt(columnIndex);
-    const token = column.pickerToken + 1;
-
-    column.pickerToken = token;
-
-    try {
-      const entries = await this.context.listDirectory(column.directory);
-
-      if (column.pickerToken !== token) return;
-
-      column.entries = entries;
-      column.pickerError = undefined;
-      this.publish(columnIndex, TablePanelStatus.NoTarget, []);
-    } catch {
-      if (column.pickerToken !== token) return;
-
-      column.entries = [];
-      column.pickerError = '目录读取失败，请重试。';
-      this.publish(columnIndex, TablePanelStatus.NoTarget, []);
-    }
-  }
-
-  /**
-   * 重取本面板**所有**处于打开 / 删除态栏的目录，使「打开表格」列表实时同步
+   * 让本面板**所有**处于打开 / 删除态栏的浏览器重读当前目录，使「打开表格」列表实时同步
    *
    * 供面板内建 / 删表格后、`TablePanel.onSwitchIn` 与 `TablePanel.onUpdateResource` 复用；
-   * 仅重取内联浏览器处于 `Open` / `Delete` 态且尚未设目标的栏，其余栏不受影响。
+   * 仅递增内联浏览区处于 `Open` / `Delete` 态且尚未设目标的栏的重列令牌，其余栏不受影响。
    */
   private refreshAwaitingPickers(): void {
     const count = this.columns.length;
@@ -861,7 +851,8 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       if (column.target !== null) continue;
       if (column.emptyMode !== TableEmptyMode.Open && column.emptyMode !== TableEmptyMode.Delete) continue;
 
-      void this.refreshPicker(index);
+      column.pickerReloadToken += 1;
+      this.publish(index, TablePanelStatus.NoTarget, []);
     }
   }
 
@@ -1133,9 +1124,8 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       pendingStrip: undefined,
       emptyMode: TableEmptyMode.Buttons,
       directory: '',
-      entries: [],
+      pickerReloadToken: 0,
       pickerError: undefined,
-      pickerToken: 0,
       unsaved: false,
       unsavedSchema: false,
       stripConfirmed: new Map<string, string>(),
@@ -1225,7 +1215,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
         ? ({
             emptyMode: column.emptyMode,
             pickerDirectory: column.directory,
-            pickerEntries: column.entries,
+            pickerReloadToken: column.pickerReloadToken,
             pickerError: column.pickerError,
           } as const)
         : {};

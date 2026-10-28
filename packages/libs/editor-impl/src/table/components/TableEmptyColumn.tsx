@@ -16,16 +16,16 @@ export interface ITableEmptyStateProps {
   readonly mode: TableEmptyMode;
   /** 预设表清单；缺省时打开态不渲染预设区 */
   readonly presets?: readonly ITablePreset[];
-  /** 当前目录路径；根目录为空串 */
+  /** 初始目录路径；根目录为空串，进入浏览区后由浏览器 / 新建表单自持当前目录 */
   readonly directory: string;
-  /** 该目录的直接子条目 */
-  readonly entries: readonly IFileEntry[];
-  /** 目录读取失败时的提示文案；缺省时不显示 */
+  /** 读取某目录的直接子条目；浏览区不接触文件系统 */
+  readonly loadChildren: (path: string) => Promise<readonly IFileEntry[]>;
+  /** 目录读取失败时的提示文案；缺省时显示浏览器的缺省文案 */
   readonly error?: string;
+  /** 外部重列令牌；变化时浏览区重读当前目录 */
+  readonly reloadToken?: number;
   /** 切换内联视图，含「返回」到按钮态 */
   onModeChange(mode: TableEmptyMode): void;
-  /** 进入某目录 */
-  onNavigate(path: string): void;
   /** 在该栏内打开某数据表 */
   onOpen(dataPath: string): void;
   /** 在该栏内新建某表格 */
@@ -179,9 +179,9 @@ export function TableEmptyColumn(props: ITableEmptyStateProps): ReactElement {
       createElement(TablePicker, {
         presets: props.presets,
         directory: props.directory,
-        entries: props.entries,
+        loadChildren: props.loadChildren,
         error: props.error,
-        onNavigate: props.onNavigate,
+        reloadToken: props.reloadToken,
         onSelect: props.onOpen,
       }),
     );
@@ -194,9 +194,9 @@ export function TableEmptyColumn(props: ITableEmptyStateProps): ReactElement {
       renderBackButton(back),
       createElement(TableCreateForm, {
         directory: props.directory,
-        entries: props.entries,
+        loadChildren: props.loadChildren,
         error: props.error,
-        onNavigate: props.onNavigate,
+        reloadToken: props.reloadToken,
         onCreate: props.onCreate,
       }),
     );
@@ -211,10 +211,10 @@ export function TableEmptyColumn(props: ITableEmptyStateProps): ReactElement {
       renderBackButton(back),
       createElement(TablePicker, {
         directory: props.directory,
-        entries: props.entries,
+        loadChildren: props.loadChildren,
         error: props.error,
+        reloadToken: props.reloadToken,
         deletable: true,
-        onNavigate: props.onNavigate,
         onSelect: ignoreSelect,
         onRequestDelete: requestDelete,
       }),

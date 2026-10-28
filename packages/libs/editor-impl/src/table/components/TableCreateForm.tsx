@@ -1,22 +1,35 @@
 import { EditorEntryKind, IFileEntry } from '@motajs/editor-core';
 import { Button, Input } from 'antd';
-import { ChangeEvent, createElement, Fragment, KeyboardEvent, ReactElement, useCallback, useState } from 'react';
+import {
+  ChangeEvent,
+  createElement,
+  Fragment,
+  KeyboardEvent,
+  ReactElement,
+  useCallback,
+  useEffect,
+  useState,
+} from 'react';
 import '../../shared/schemaForm/schemaForm.css';
 
-// 可复用的新建表格表单契约：收集一个表格名并在当前选中目录下建一对文件。
+// 可复用的新建表格表单契约：收集一个表格名，并在表单自己选定的目录下建一对文件。
+// 目录区由表单自持当前目录与「该目录的直接子条目」，面板只提供初始目录与读目录回调（D-24）。
 
 export interface ITableCreateFormProps {
-  /** 新建所在目录路径；根目录为空串 */
+  /** 初始目录路径；根目录为空串，进入目录区后由表单自持当前目录 */
   readonly directory: string;
-  /** 当前目录的直接子条目；缺省时不列出子目录供选择新建位置 */
-  readonly entries?: readonly IFileEntry[];
-  /** 名称校验 / 写入失败时的提示文案；缺省时不显示 */
+  /** 读取某目录的直接子条目；表单不接触文件系统 */
+  readonly loadChildren: (path: string) => Promise<readonly IFileEntry[]>;
+  /** 外部重列令牌；变化时重读当前目录 */
+  readonly reloadToken?: number;
+  /** 名称校验 / 写入失败 / 目录读取失败时的提示文案；缺省时不显示 */
   readonly error?: string;
-  /** 进入某子目录作为新建位置的回调；含 `..` 上行由面板侧目录态承担 */
-  onNavigate?(path: string): void;
   /** 确认新建回调，携带所在目录与表格名 */
   onCreate(directory: string, name: string): void;
 }
+
+/** 目录读取失败时表单自己显示的一行文案 */
+const LOAD_ERROR_TEXT = '目录读取失败，请重试。';
 
 /**
  * 取路径的父目录路径，根目录下返回空串
@@ -59,20 +72,17 @@ function renderDirectoryRow(
 /**
  * 渲染「新建位置」区：当前目录路径、非根目录时的一行「..」上行与各子目录行
  *
- * `entries` 或 `onNavigate` 缺省时返回 null（不渲染目录区，仅保留名称输入，保持向后兼容）；
- * 子目录行从 `entries` 过滤目录条目得到，点击均经 `onNavigate` 切换新建位置。
+ * 子目录行从 `entries` 过滤目录条目得到，点击均经 `onNavigate` 切换表单内部的新建位置。
  * @param directory 当前目录路径；根目录为空串
- * @param entries 当前目录的直接子条目；缺省时不渲染目录区
- * @param onNavigate 进入某目录的回调；缺省时不渲染目录区
- * @returns 新建位置区元素；缺省时为 null
+ * @param entries 当前目录的直接子条目
+ * @param onNavigate 进入某目录的回调
+ * @returns 新建位置区元素
  */
 function renderCurrentDirectory(
   directory: string,
-  entries: readonly IFileEntry[] | undefined,
-  onNavigate: ((path: string) => void) | undefined,
-): ReactElement | null {
-  if (entries === undefined || onNavigate === undefined) return null;
-
+  entries: readonly IFileEntry[],
+  onNavigate: (path: string) => void,
+): ReactElement {
   const rows: ReactElement[] = [];
 
   if (directory !== '') {
@@ -101,7 +111,8 @@ function renderCurrentDirectory(
  * 可复用的新建表格表单组件：可在目录树中选定新建位置，点「新建表格」内联输入名称，回车确认、
  * Escape 或失焦取消
  *
- * 不使用浏览器原生对话框；名称合法性由调用方（面板）承担，组件只把去空白后的名称回调出去。
+ * 目录状态（当前目录与直接子条目）由组件自持，经 `loadChildren` 读取；不使用浏览器原生对话框。
+ * 名称合法性由调用方（面板）承担，组件只把去空白后的名称与当前目录回调出去。
  * @param props 组件 props
  * @returns 新建按钮（或名称输入）、新建位置区与错误提示
  */
@@ -112,6 +123,39 @@ export function TableCreateForm(props: ITableCreateFormProps): ReactElement {
   const nameState = useState('');
   const name = nameState[0];
   const setName = nameState[1];
+  const directoryState = useState(props.directory);
+  const directory = directoryState[0];
+  const setDirectory = directoryState[1];
+  const entriesState = useState<readonly IFileEntry[]>([]);
+  const entries = entriesState[0];
+  const setEntries = entriesState[1];
+  const loadErrorState = useState<string | undefined>(undefined);
+  const loadError = loadErrorState[0];
+  const setLoadError = loadErrorState[1];
+
+  // 当前目录或重列令牌变化时重读该目录；卸载或换目录后丢弃过期结果
+  useEffect((): (() => void) => {
+    let active = true;
+
+    props.loadChildren(directory).then(
+      (next): void => {
+        if (!active) return;
+
+        setEntries(next);
+        setLoadError(undefined);
+      },
+      (): void => {
+        if (!active) return;
+
+        setEntries([]);
+        setLoadError(LOAD_ERROR_TEXT);
+      },
+    );
+
+    return (): void => {
+      active = false;
+    };
+  }, [directory, props.reloadToken, props.loadChildren]);
 
   const open = useCallback((): void => setAdding(true), []);
   const cancel = useCallback((): void => {
@@ -124,8 +168,8 @@ export function TableCreateForm(props: ITableCreateFormProps): ReactElement {
     setAdding(false);
     setName('');
 
-    if (trimmed !== '') props.onCreate(props.directory, trimmed);
-  }, [name, props]);
+    if (trimmed !== '') props.onCreate(directory, trimmed);
+  }, [name, directory, props]);
   const change = useCallback((event: ChangeEvent<HTMLInputElement>): void => setName(event.target.value), []);
   const keydown = useCallback(
     (event: KeyboardEvent<HTMLInputElement>): void => {
@@ -135,7 +179,7 @@ export function TableCreateForm(props: ITableCreateFormProps): ReactElement {
     [submit, cancel],
   );
 
-  const location = renderCurrentDirectory(props.directory, props.entries, props.onNavigate);
+  const location = renderCurrentDirectory(directory, entries, setDirectory);
   const control = adding
     ? createElement(Input, {
         autoFocus: true,
@@ -159,10 +203,11 @@ export function TableCreateForm(props: ITableCreateFormProps): ReactElement {
         },
         '新建表格',
       );
+  const message = props.error ?? loadError;
   const error =
-    props.error === undefined
+    message === undefined
       ? null
-      : createElement('div', { className: 'etable-list-error', 'data-test-id': 'table-list-error' }, props.error);
+      : createElement('div', { className: 'etable-list-error', 'data-test-id': 'table-list-error' }, message);
 
   return createElement(Fragment, null, control, location, error);
 }

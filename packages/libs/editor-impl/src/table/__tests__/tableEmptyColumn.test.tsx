@@ -127,8 +127,8 @@ describe('表格面板空栏内联控件', () => {
     expect(inColumn(container, 0, 'table-empty-delete')).not.toBeNull();
   });
 
-  // 打开态目录树只列 json / jsonc 数据文件并排除 schema 约定文件与非表格文件
-  it('打开态目录树只列 json / jsonc 数据文件并排除 schema 文件', async () => {
+  // 打开态目录树列出所有 json / jsonc（包含 schema 约定文件），并排除非表格文件
+  it('打开态目录树列出 json / jsonc（包含 schema）并排除非表格文件', async () => {
     const fs = new FakeFileSystem();
 
     fs.seed('a.json', '{}');
@@ -149,8 +149,8 @@ describe('表格面板空栏内联控件', () => {
     expect(inColumn(container, 0, 'table-list-entry-a.json')).not.toBeNull();
     expect(inColumn(container, 0, 'table-list-entry-b.jsonc')).not.toBeNull();
     expect(inColumn(container, 0, 'table-list-entry-sub')).not.toBeNull();
-    expect(inColumn(container, 0, 'table-list-entry-a.schema.json')).toBeNull();
-    expect(inColumn(container, 0, 'table-list-entry-b.schema.jsonc')).toBeNull();
+    expect(inColumn(container, 0, 'table-list-entry-a.schema.json')).not.toBeNull();
+    expect(inColumn(container, 0, 'table-list-entry-b.schema.jsonc')).not.toBeNull();
     expect(inColumn(container, 0, 'table-list-entry-note.txt')).toBeNull();
   });
 
@@ -260,6 +260,7 @@ describe('表格面板空栏内联控件', () => {
     });
     await act(async () => {});
 
+    // 删除态过滤口径保持只列数据文件、不含 schema：删除只删数据 + 推导 schema，不能删任意 schema
     // 删除态浏览器不渲染预设区：与打开态的唯一差异就是是否注入预设表
     expect(inColumn(container, 0, 'table-list-preset-示例表')).toBeNull();
 
