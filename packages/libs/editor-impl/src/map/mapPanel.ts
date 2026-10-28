@@ -3,9 +3,11 @@ import { isEqual } from 'es-toolkit';
 import { createElement, FC, ReactElement } from 'react';
 import {
   EditorEntryKind,
+  EditorFileChangeKind,
   IEditorPanel,
   IEditorPanelContext,
   IEditorPanelFactoryParam,
+  IResourceIdentifier,
   IUndoContext,
 } from '@motajs/editor-core';
 import {
@@ -396,6 +398,9 @@ export class MapPanel implements IEditorPanel, IMapPanel {
   /** 地址表的发布代次；每次重读图块图片都递增，驱动画布重建纹理 */
   private imageSourcesVersion: number = 0;
 
+  /** 已处理过的外部变化摘要：路径 → 上次处理时的种类与内容摘要，用来识别同一次变化 */
+  private readonly handledChanges: Map<string, string> = new Map();
+
   constructor(param: IEditorPanelFactoryParam, capabilities: IMapEditorCapabilities) {
     this.id = param.instanceId;
     this.context = param.context;
@@ -459,6 +464,10 @@ export class MapPanel implements IEditorPanel, IMapPanel {
 
           void this.loadSummaries();
         },
+        onConflictDiscard: (): void => {
+          void this.discardExternalChange();
+        },
+        onConflictKeep: (): void => this.keepExternalChange(),
         canCreateMap: this.capabilities.createMap !== undefined,
         canAddLayer: this.capabilities.addLayer !== undefined,
         canOpenProperties:
@@ -833,6 +842,7 @@ export class MapPanel implements IEditorPanel, IMapPanel {
       this.document = document;
       this.currentLayerId = document.layers[0]?.id;
       this.paletteSelection = selectFirstTile(document);
+      this.handledChanges.clear();
       this.resetProperties();
       this.targetMapId = document.id;
       this.captureBaseline();
@@ -851,6 +861,7 @@ export class MapPanel implements IEditorPanel, IMapPanel {
         unsaved: false,
         notice: `已创建地图「${name}」`,
         error: undefined,
+        pendingConflict: undefined,
       });
       this.refreshPassMarks();
       void this.loadTilePreferences();
@@ -1406,6 +1417,7 @@ export class MapPanel implements IEditorPanel, IMapPanel {
     this.currentLayerId = undefined;
     this.dataBaseline = undefined;
     this.preBigMapViewport = undefined;
+    this.handledChanges.clear();
     this.resetProperties();
     this.publish({
       status: MapPanelStatus.Loading,
@@ -1417,6 +1429,7 @@ export class MapPanel implements IEditorPanel, IMapPanel {
       unsaved: false,
       error: undefined,
       notice: undefined,
+      pendingConflict: undefined,
     });
 
     try {
@@ -1782,4 +1795,217 @@ export class MapPanel implements IEditorPanel, IMapPanel {
   }
 
   async onUpdateResource(): Promise<void> {}
+
+  /**
+   * 资源层确认某个路径发生变化后，按三类已知路径各自处理；其它路径直接忽略
+   *
+   * 地图文件：不脏就重读文档并重置基线，脏就弹冲突；图块图片：只重建地址表，不动文档；
+   * 偏好文件：重读最近使用 / 收藏。删除事件不预读文本内容。
+   * @param identifier 资源统一标识符
+   * @param kind 变化种类
+   */
+  async onResourceChange(identifier: IResourceIdentifier, kind: EditorFileChangeKind): Promise<void> {
+    const document = this.document;
+
+    if (document === undefined) return;
+    if (await this.handleMapFileChange(identifier, kind)) return;
+
+    if (this.isTileImagePath(identifier, document)) {
+      await this.handleTileImageChange(identifier, kind);
+      return;
+    }
+
+    if (identifier === MAP_TILE_PREFS_PATH) await this.handleTilePreferencesChange(kind);
+  }
+
+  /**
+   * 判断某个路径是不是当前文档的图块图片：与刷新入口用同一份路径集合（空串跳过）
+   * @param path 变化路径
+   * @param document 当前地图文档
+   * @returns 是当前文档某组的图片路径时为 true
+   */
+  private isTileImagePath(path: string, document: IMapDocument): boolean {
+    for (const group of document.tileGroups) {
+      if (group.imagePath.length === 0) continue;
+      if (group.imagePath === path) return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * 判断这次变化是否已在同一摘要下处理过；没有处理过就记下摘要
+   * @param path 变化路径
+   * @param kind 变化种类
+   * @param digest 本次变化的内容摘要
+   * @returns 需要处理时为 true
+   */
+  private shouldHandleChange(path: string, kind: EditorFileChangeKind, digest: string): boolean {
+    const value = `${kind}:${digest}`;
+
+    if (this.handledChanges.get(path) === value) return false;
+
+    this.handledChanges.set(path, value);
+    return true;
+  }
+
+  /**
+   * 给一段字节算一个廉价的摘要，用来识别「同一次变化」
+   * @param bytes 图片字节；读不到时为 undefined
+   * @returns 长度与滚动校验和拼成的摘要
+   */
+  private digestBytes(bytes: Uint8Array | undefined): string {
+    if (bytes === undefined) return 'missing';
+
+    let checksum = 0;
+
+    for (let index = 0; index < bytes.length; index += 1) checksum = (checksum * 31 + bytes[index]) % 0x7fffffff;
+
+    return `${bytes.length}:${checksum}`;
+  }
+
+  /**
+   * 经资源层读取一个项目内文件的文本
+   * @param path 文件的项目内相对路径
+   * @returns 文本内容；路径非法、资源不存在、不是文本或读取失败时为 null
+   */
+  private async readText(path: string): Promise<string | null> {
+    if (!isSafeProjectPath(path)) return null;
+
+    try {
+      const resource = await this.context.requestResource(path);
+
+      if (resource === null) return null;
+
+      const content = await resource.request();
+
+      return typeof content === 'string' ? content : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * 处理「当前地图对应的宿主文件」发生变化；不是本图的文件返回 false
+   * @param path 变化路径
+   * @param kind 变化种类
+   * @returns 这个路径属于本图时为 true（无论最终是否做了动作）
+   */
+  private async handleMapFileChange(path: string, kind: EditorFileChangeKind): Promise<boolean> {
+    const document = this.document;
+
+    if (document === undefined) return false;
+    if (this.capabilities.resolveMapPath === undefined) return false;
+    if (this.capabilities.resolveMapPath(path) !== document.id) return false;
+
+    if (kind === EditorFileChangeKind.Delete) {
+      if (!this.shouldHandleChange(path, kind, 'deleted')) return true;
+
+      this.publish({ error: '地图文件已被外部删除。' });
+      return true;
+    }
+
+    const text = await this.readText(path);
+
+    if (text === null) return true;
+    if (!this.shouldHandleChange(path, kind, text)) return true;
+
+    if (this.isDirty()) {
+      this.publish({ pendingConflict: { path, text } });
+      return true;
+    }
+
+    await this.applyExternalMapDocument();
+    return true;
+  }
+
+  /**
+   * 处理图块图片变化：按字节摘要去重后重读全部图片，不动文档、不登记撤销
+   * @param path 变化路径
+   * @param kind 变化种类
+   */
+  private async handleTileImageChange(path: string, kind: EditorFileChangeKind): Promise<void> {
+    const bytes = await this.readBytes(path);
+
+    if (!this.shouldHandleChange(path, kind, this.digestBytes(bytes))) return;
+
+    await this.refreshTileImageSources();
+  }
+
+  /**
+   * 处理偏好文件变化：按文本摘要去重后重读最近使用 / 收藏；读取失败静默降级
+   * @param kind 变化种类
+   */
+  private async handleTilePreferencesChange(kind: EditorFileChangeKind): Promise<void> {
+    if (kind === EditorFileChangeKind.Delete) {
+      if (!this.shouldHandleChange(MAP_TILE_PREFS_PATH, kind, 'deleted')) return;
+
+      await this.loadTilePreferences();
+      return;
+    }
+
+    const text = await this.readText(MAP_TILE_PREFS_PATH);
+
+    if (text === null) return;
+    if (!this.shouldHandleChange(MAP_TILE_PREFS_PATH, kind, text)) return;
+
+    await this.loadTilePreferences();
+  }
+
+  /**
+   * 按宿主重读当前地图并重置基线；重读结果与内存内容完全相同时只更新基线（自写回声不重载）
+   */
+  private async applyExternalMapDocument(): Promise<void> {
+    const document = this.document;
+
+    if (document === undefined) return;
+
+    const token = ++this.loadToken;
+
+    try {
+      const next = await this.capabilities.openMap(document.id);
+
+      if (token !== this.loadToken) return;
+      if (!isMapDocumentValid(next)) return;
+
+      if (isEqual(next, document)) {
+        this.captureBaseline();
+        this.publish({ unsaved: false });
+        return;
+      }
+
+      this.document = next;
+      this.currentLayerId = next.layers[0]?.id;
+      this.captureBaseline();
+      this.publish({
+        status: MapPanelStatus.Ready,
+        document: next,
+        currentLayerId: this.currentLayerId,
+        selection: undefined,
+        preview: undefined,
+        hover: undefined,
+        unsaved: false,
+        error: undefined,
+      });
+      this.refreshPassMarks();
+      await this.refreshTileImageSources();
+    } catch {
+      return;
+    }
+  }
+
+  /**
+   * 外部变化冲突里选择「放弃我的改动并刷新」：按宿主重读当前地图，丢弃内存改动
+   */
+  private async discardExternalChange(): Promise<void> {
+    this.publish({ pendingConflict: undefined });
+    await this.applyExternalMapDocument();
+  }
+
+  /**
+   * 外部变化冲突里选择「保留我的改动，下次保存覆盖」：只关掉弹窗，下次保存会写回内存版本
+   */
+  private keepExternalChange(): void {
+    this.publish({ pendingConflict: undefined });
+  }
 }

@@ -803,6 +803,8 @@ export interface IMapPanelViewState {
   readonly tileGroupUrls?: IMapTileGroupUrls;
   /** 地址表的发布代次；每次重读图块图片都递增，驱动画布重建纹理 */
   readonly tileImageSourcesVersion?: number;
+  /** 待决的外部改动冲突；没有冲突时为 undefined */
+  readonly pendingConflict?: IMapPendingConflict;
   /** 地图属性抽屉是否打开 */
   readonly propertiesOpen: boolean;
   /** 属性域的加载状态；`TablePanelStatus.NoTarget` 表示尚未读取 */

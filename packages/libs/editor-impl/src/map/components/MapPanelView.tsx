@@ -40,6 +40,7 @@ import { MapMaterialPanel } from './MapMaterialPanel';
 import { MapPropertiesDrawer } from './MapPropertiesDrawer';
 import { MapToolbar } from './MapToolbar';
 import { useMapElementWidth } from './useMapElementWidth';
+import { ExternalChangeDialog } from '../../shared/panelDialogs';
 
 // 地图面板的装配层：工具栏 / 主体 / 保存提示行 / 弹窗 / 属性抽屉都在这里按视图状态装配。
 // 本视图只接 props，不 import 面板类；渲染模型在这里每次渲染时现算，再交给 MapSurface 消费。
@@ -78,6 +79,10 @@ export interface IMapPanelViewProps {
   onSave(): void;
   /** 重新打开当前地图 */
   onRetry(): void;
+  /** 外部变化冲突里选择「放弃我的改动并刷新」 */
+  onConflictDiscard?(): void;
+  /** 外部变化冲突里选择「保留我的改动，下次保存覆盖」 */
+  onConflictKeep?(): void;
   /**
    * 提交一次调色板选择
    * @param selection 新的选中
@@ -717,6 +722,9 @@ export function MapPanelView(props: IMapPanelViewProps): ReactElement {
           onCancel={(): void => props.onCloseDialog?.()}
         />
       ) : null}
+      {view.pendingConflict === undefined ? null : (
+        <ExternalChangeDialog open onDiscard={props.onConflictDiscard ?? noop} onKeep={props.onConflictKeep ?? noop} />
+      )}
       <MapPropertiesDrawer
         open={view.propertiesOpen}
         status={view.propertiesStatus}
