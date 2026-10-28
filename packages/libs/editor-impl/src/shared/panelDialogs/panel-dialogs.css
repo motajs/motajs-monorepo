@@ -1,0 +1,29 @@
+.edlg-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.edlg-text {
+  margin-bottom: 8px;
+  color: var(--editor-fg, #202124);
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.edlg-note {
+  color: var(--editor-muted, #656d76);
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.edlg-error {
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
