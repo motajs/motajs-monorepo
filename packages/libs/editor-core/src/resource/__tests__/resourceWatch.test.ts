@@ -120,10 +120,7 @@ describe('ResourceSystem 变化流订阅', () => {
     fs.emit({ path: 'assets/deep/icon.png', kind: EditorFileChangeKind.Add });
     await flush();
 
-    expect((await system.listDirectory('')).map((entry) => entry.name).sort()).toEqual([
-      'assets',
-      'tables',
-    ]);
+    expect((await system.listDirectory('')).map((entry) => entry.name).sort()).toEqual(['assets', 'tables']);
     expect((await system.listDirectory('assets')).map((entry) => entry.name)).toEqual(['deep']);
     expect((await system.listDirectory('assets/deep')).map((entry) => entry.name)).toEqual(['icon.png']);
   });

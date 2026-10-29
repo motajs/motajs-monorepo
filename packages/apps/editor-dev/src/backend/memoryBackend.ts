@@ -1,9 +1,4 @@
-import {
-  EditorEntryKind,
-  EditorFileChangeKind,
-  IEditorDirectoryEntry,
-  IEditorFileChange,
-} from '@motajs/editor-core';
+import { EditorEntryKind, EditorFileChangeKind, IEditorDirectoryEntry, IEditorFileChange } from '@motajs/editor-core';
 import { IMemoryBackend } from './types';
 
 // 开发宿主的内存文件系统：按路径存内容（文本或原始字节），供宿主以 fs 注入方式驱动编辑器核心。

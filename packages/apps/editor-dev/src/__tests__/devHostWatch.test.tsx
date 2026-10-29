@@ -5,12 +5,7 @@ import { TableEditKind, TablePanel, tablePanelType } from '@motajs/editor-impl/t
 import { createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { MemoryBackend } from '../backend/memoryBackend';
-import {
-  TABLE_DEMO_DATA,
-  TABLE_DEMO_DATA_PATH,
-  TABLE_DEMO_SCHEMA,
-  TABLE_DEMO_SCHEMA_PATH,
-} from '../demo/tableDemo';
+import { TABLE_DEMO_DATA, TABLE_DEMO_DATA_PATH, TABLE_DEMO_SCHEMA, TABLE_DEMO_SCHEMA_PATH } from '../demo/tableDemo';
 
 // 开发宿主文件变化流的集成用例：两个标签打开同一张表，验证「一边保存 → 另一边自动刷新」与「另一边脏时弹冲突框」。
 // 变化事件由 MemoryBackend.watch 真实投递，写盘经真实资源层；用例只在「A 保存」一步直接调用面板的 save，
@@ -92,8 +87,7 @@ async function activateTab(core: EditorCore, tabId: string): Promise<void> {
 function panelOf(core: EditorCore, tabId: string): TablePanel {
   const tab = core.shellSystem.listTabs().find((candidate) => candidate.id === tabId);
   const instanceId = tab === undefined ? null : tab.instanceId;
-  const instance =
-    instanceId === null ? undefined : (core.shellSystem as ShellSystem)['instances'].get(instanceId);
+  const instance = instanceId === null ? undefined : (core.shellSystem as ShellSystem)['instances'].get(instanceId);
 
   if (!(instance instanceof TablePanel)) throw new Error('表格面板实例缺失');
 

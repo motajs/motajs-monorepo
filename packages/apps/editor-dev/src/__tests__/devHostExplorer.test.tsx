@@ -9,12 +9,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryBackend } from '../backend/memoryBackend';
 import { registerAssetDemo, seedAssetDemo } from '../demo/assetDemo';
 import { registerMapDemo, seedMapDemo } from '../demo/mapDemo';
-import {
-  TABLE_DEMO_DATA,
-  TABLE_DEMO_DATA_PATH,
-  TABLE_DEMO_SCHEMA,
-  TABLE_DEMO_SCHEMA_PATH,
-} from '../demo/tableDemo';
+import { TABLE_DEMO_DATA, TABLE_DEMO_DATA_PATH, TABLE_DEMO_SCHEMA, TABLE_DEMO_SCHEMA_PATH } from '../demo/tableDemo';
 
 // 开发宿主资源管理器的集成用例：按 main.tsx 的装配重建组合根，经真实外壳打开三类文件，断言各自落在正确面板。
 // Pixi 表面换成空壳，jsdom 不初始化 WebGL；图片与素材预览需要 `URL.createObjectURL`，这里只补两个静态方法。

@@ -1,5 +1,11 @@
 import { EditorCore } from '../core';
-import { EditorEntryKind, EditorFileChangeKind, IEditorDirectoryEntry, IEditorFileChange, IEditorFileSystem } from '../fs';
+import {
+  EditorEntryKind,
+  EditorFileChangeKind,
+  IEditorDirectoryEntry,
+  IEditorFileChange,
+  IEditorFileSystem,
+} from '../fs';
 
 // 共享测试替身：内存文件系统与装配工厂。供 editor-core / editor-impl / editor-dev 复用，收敛迁移期的改动面。
 
