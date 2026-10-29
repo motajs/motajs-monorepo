@@ -3,18 +3,18 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.2"
 current_phase_name: 面板内容解耦与文件资源管理器
-current_plan: 13
+current_plan: 19
 status: executing
-stopped_at: Completed 04.2-13-PLAN.md
-last_updated: "2026-10-28T17:27:19.076Z"
+stopped_at: Completed 04.2-19-PLAN.md; 04.2-18-PLAN.md pending
+last_updated: "2026-10-29T15:41:04.125Z"
 last_activity: 2026-10-29
-last_activity_desc: Completed 04.2-13 execution
-state_head: b007f7969498b69f00ab5e0668f643082343ecaf
+last_activity_desc: Completed 04.2-19 execution
+state_head: 612911a108a454b92de95bea49b480d48994ed38
 progress:
   total_phases: 10
   completed_phases: 0
   total_plans: 182
-  completed_plans: 178
+  completed_plans: 179
 milestone_name: editor-core 空壳 + editor-impl 重做
 ---
 
@@ -30,11 +30,11 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 04.2 (面板内容解耦与文件资源管理器) — EXECUTING
-Current Plan: 13
-Total Plans in Phase: 20
-Status: Ready to execute
-Next phase: Phase 04.2 — 面板内容解耦与文件资源管理器（设计重构）；先讨论，再规划接口
-Last activity: 2026-10-28 — Phase 04.2 execution started
+Current Plan: 19
+Total Plans in Phase: 21
+Status: 04.2-19 已完成；04.2-18（三包 + 四门禁 + lint/format 整验）待执行
+Next phase: Phase 04.2 — 先执行 04.2-18 收口，再进 verify-work
+Last activity: 2026-10-29 — Completed 04.2-19（修开发宿主 5 条红项）
 
 Progress: [█████████░] 95%
 
@@ -196,6 +196,7 @@ Progress: [█████████░] 95%
 | Phase 04.2 P10 | 23 min | 2 tasks | 2 files |
 | Phase 04.2 P11 | 21 min | 2 tasks | 2 files |
 | Phase 04.2 P13 | 35 min | 3 tasks | 5 files |
+| Phase 04.2 P19 | 14 min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -540,6 +541,8 @@ Recent decisions affecting current work:
 - [Phase 04.2]: 关闭的保存由 TablePanel.onRequestClose 自己做，普通切走仍走 TablePanel.onSwitchOut，不新增第二个保存钩子
 - [Phase 04.2]: 开发宿主变化事件延后到下一宏任务投递，避免面板把编辑器自写误判成外部改动
 - [Phase 04.2]: resolveMapPath 做成同步纯路径判定，不查异步地图清单
+- [Phase 04.2]: 04.2-19: 表格工具栏脏状态取「组件草稿脏 或 面板侧未保存」（`ITableEditableProps.unsaved`）：撤销 / 代码编辑器写回后保存按钮可用且能落盘，保存成功后两个来源同时变干净、按钮回到禁用
+- [Phase 04.2]: 04.2-19: `MapPanel.addLayer` 先 `saveMapData` 写盘再把带用户层名的文档设为内存，宿主自写回声因内存与宿主一致而只更新基线、不重载也不改当前层；两条地图关闭用例改走三态弹窗
 
 ### Pending Todos
 
@@ -568,7 +571,7 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-28T17:27:18.321Z
-Stopped at: Completed 04.2-13-PLAN.md
-Resume file: None
-Next action: 简报并规划 / 执行 Phase 5（代码编辑）——需用户先批准；Phase 04.1 已 Complete，本阶段不再有待办计划
+Last session: 2026-10-29T15:41:04.125Z
+Stopped at: Completed 04.2-19-PLAN.md
+Resume file: 04.2-18-PLAN.md
+Next action: 执行 04.2-18（三包 + 四门禁 + lint/format 整验，含本计划记录的 5 个既有格式漂移文件）——需用户先批准
