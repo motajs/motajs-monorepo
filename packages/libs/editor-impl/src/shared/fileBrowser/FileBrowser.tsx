@@ -225,12 +225,17 @@ export function FileBrowser(props: IFileBrowserProps): ReactElement {
               {segments.map((segment, index) => {
                 const path = segments.slice(0, index + 1).join('/');
                 const isCurrent = index === segments.length - 1;
-
-                return (
-                  <Fragment key={path}>
+                // 根段已经输出了 `/`，第一个目录段前不再补分隔符
+                const separator =
+                  index === 0 ? null : (
                     <span className="efb-crumb-sep" aria-hidden="true">
                       {CRUMB_SEPARATOR}
                     </span>
+                  );
+
+                return (
+                  <Fragment key={path}>
+                    {separator}
                     {isCurrent ? (
                       <span
                         className="efb-crumb-current"

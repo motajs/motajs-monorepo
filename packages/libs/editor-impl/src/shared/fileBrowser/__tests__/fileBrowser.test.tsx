@@ -7,7 +7,7 @@ import { FileBrowser } from '../FileBrowser';
 
 configure({ testIdAttribute: 'data-test-id' });
 
-// 共用文件浏览器的行为契约：四个状态、面包屑导航、可换前缀与刷新不闪空态，共 14 条
+// 共用文件浏览器的行为契约：四个状态、面包屑导航（含一级 / 多级目录分隔符）、可换前缀与刷新不闪空态，共 16 条
 afterEach(() => {
   cleanup();
 });
@@ -276,6 +276,47 @@ describe('FileBrowser 的面包屑', () => {
 
     expect(screen.getByTestId('file-browser-crumb-content').getAttribute('title')).toBe('content');
     expect(screen.getByTestId('file-browser-current').getAttribute('title')).toBe('content/map');
+  });
+
+  // 根目录下的一级文件夹：根段自带 `/`，此前多渲染一个分隔符导致显示成 `/ /demo`
+  it('一级目录的面包屑是 /demo，段前不再多出一个分隔符', async () => {
+    const loader = createLoader({ demo: [] }, []);
+
+    const view = render(<FileBrowser directory="demo" loadChildren={loader} onOpen={noopOpen} />);
+    await act(async () => undefined);
+
+    const crumbs = view.container.querySelector('.efb-crumbs')!;
+
+    expect(crumbs.textContent).toBe('/demo');
+    expect(crumbs.querySelectorAll('.efb-crumb-sep').length).toBe(0);
+    expect(screen.getByTestId('file-browser-current').textContent).toBe('demo');
+    expect(screen.getByTestId('file-browser-crumb-root')).not.toBeNull();
+  });
+
+  // 多级目录：分隔符只在根段与第一段之间、以及相邻目录段之间各出现一个
+  it('多级目录的面包屑是 /content/map，分隔符只在段与段之间', async () => {
+    const requested: string[] = [];
+    const loader = createLoader({}, requested);
+
+    const view = render(<FileBrowser directory="content/map" loadChildren={loader} onOpen={noopOpen} />);
+    await act(async () => undefined);
+
+    const crumbs = view.container.querySelector('.efb-crumbs')!;
+
+    expect(crumbs.textContent).toBe('/content/map');
+    expect(crumbs.querySelectorAll('.efb-crumb-sep').length).toBe(1);
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('file-browser-crumb-content'));
+    });
+
+    expect(requested[requested.length - 1]).toBe('content');
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('file-browser-crumb-root'));
+    });
+
+    expect(requested[requested.length - 1]).toBe('');
   });
 });
 
