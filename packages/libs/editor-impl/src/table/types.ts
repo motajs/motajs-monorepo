@@ -137,6 +137,9 @@ export interface ITableEditableProps extends IEditableContentProps<ITableDocumen
    * 透传给表格网格的「关闭本栏」回调
    */
   onCloseColumn?(): void;
+
+  /** 面板侧是否还有未落盘的改动：撤销、代码编辑器写回、确认剥离注释这类不经组件草稿的改动会置真 */
+  readonly unsaved?: boolean;
 }
 
 export interface ITablePendingConflict {

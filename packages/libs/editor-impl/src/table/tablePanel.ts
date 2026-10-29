@@ -516,6 +516,7 @@ function TableColumn(props: ITableColumnProps): ReactElement {
     onOpenSchema,
     onOpenInCodeEditor,
     onCloseColumn,
+    unsaved: view.unsaved === true,
     ref: props.getColumnRef(props.columnIndex),
   };
   const stripModal =

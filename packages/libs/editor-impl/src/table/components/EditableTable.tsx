@@ -94,6 +94,7 @@ export function EditableTable(props: ITableEditableProps): ReactElement {
   const savingState = useState(false);
   const saving = savingState[0];
   const setSavingState = savingState[1];
+  const panelUnsaved = props.unsaved === true;
 
   const setDirty = (next: boolean): void => {
     dirtyRef.current = next;
@@ -197,7 +198,7 @@ export function EditableTable(props: ITableEditableProps): ReactElement {
     onOpenSchema: props.onOpenSchema,
     onOpenInCodeEditor: props.onOpenInCodeEditor,
     onCloseColumn: props.onCloseColumn,
-    unsaved: dirty,
+    unsaved: dirty || panelUnsaved,
     saving,
     onSave: handleSave,
   });

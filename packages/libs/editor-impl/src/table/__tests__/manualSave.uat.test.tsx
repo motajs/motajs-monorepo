@@ -168,6 +168,53 @@ describe('表格面板手动保存（G-02.1-3）', () => {
     expect((inColumn(container, 0, 'table-save') as Element).hasAttribute('disabled')).toBe(true);
   });
 
+  // 撤销一次已保存的改值后，本栏仍标记未保存且保存按钮可点；再保存把文件写回撤销后的值
+  it('撤销后再保存能把文件写回撤销后的值', async () => {
+    const fs = new FakeFileSystem();
+
+    seed(fs, 'hero', { name: 'a' }, { type: 'object', properties: { name: { type: 'string', description: '名字' } } });
+    const system = await createTableHarness(fs);
+    const created: TablePanel[] = [];
+    const panel = await openTablePanel(system, created);
+
+    panel.setTable({ dataPath: tableDataPath('hero') });
+
+    await act(async () => {
+      await panel.onSwitchIn();
+    });
+
+    const { container } = render(createElement(system.shellSystem.render()));
+
+    await commitText(container, 'name', '"b"');
+
+    await act(async () => {
+      clickInColumn(container, 0, 'table-save');
+    });
+    await act(async () => {});
+
+    expect(await readData(system, tableDataPath('hero'))).toEqual({ name: 'b' });
+    expect(inColumn(container, 0, 'table-unsaved')).toBeNull();
+    expect((inColumn(container, 0, 'table-save') as Element).hasAttribute('disabled')).toBe(true);
+
+    // 撤销只改面板侧内容：组件草稿被版本号重置成干净态，工具栏必须靠面板侧未保存重新亮起
+    await act(async () => {
+      await system.undoSystem.undo();
+    });
+    await act(async () => {});
+
+    expect(inColumn(container, 0, 'table-unsaved')).not.toBeNull();
+    expect((inColumn(container, 0, 'table-save') as Element).hasAttribute('disabled')).toBe(false);
+
+    await act(async () => {
+      clickInColumn(container, 0, 'table-save');
+    });
+    await act(async () => {});
+
+    expect(await readData(system, tableDataPath('hero'))).toEqual({ name: 'a' });
+    expect(inColumn(container, 0, 'table-unsaved')).toBeNull();
+    expect((inColumn(container, 0, 'table-save') as Element).hasAttribute('disabled')).toBe(true);
+  });
+
   // 切出面板自动保存：改值不点保存，切出后资源内容已变为新值
   it('切出面板时自动保存已修改的栏', async () => {
     const fs = new FakeFileSystem();
