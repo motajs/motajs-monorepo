@@ -433,7 +433,7 @@ describe('面板：新建地图与新增图层', () => {
     expect(viewState(panel).document?.id).toBe('m1');
   });
 
-  // 新增图层成功后新层成为当前层，用户输入的层名写进文档，且不置脏、不进撤销
+  // 新增图层成功后新层成为当前层，用户输入的层名写进文档并立刻写回宿主，且不置脏、不进撤销
   it('新增图层成功后新层成为当前层且名字写进文档', async () => {
     const addLayer = vi.fn(async (): Promise<IMapDocument> => {
       const base = createEmptyDocument('m1');
@@ -447,7 +447,8 @@ describe('面板：新建地图与新增图层', () => {
 
       return { ...base, layers: [...base.layers, layer] };
     });
-    const { system, panel } = await openMapPanel(createCapabilities({ addLayer }));
+    const saveMapData = vi.fn(async (_data: IMapDataSection): Promise<void> => {});
+    const { system, panel } = await openMapPanel(createCapabilities({ addLayer, saveMapData }));
     const addUndo = vi.spyOn(system.undoSystem, 'addUndoContext');
 
     panel.openDialog(MapDialogKind.Layer);
@@ -457,6 +458,10 @@ describe('面板：新建地图与新增图层', () => {
 
     expect(addLayer).toHaveBeenCalledWith('m1');
     expect(document?.layers.at(-1)?.name).toBe('新图层');
+    // 层名立刻落盘：载荷最后一层是用户起的名字，宿主默认名不许留在里边
+    expect(saveMapData).toHaveBeenCalledTimes(1);
+    expect(saveMapData.mock.calls[0][0].layers.at(-1)?.name).toBe('新图层');
+    expect(saveMapData.mock.calls[0][0].layers.some((layer) => layer.name === '宿主默认名')).toBe(false);
     expect(viewState(panel).currentLayerId).toBe('layer-new');
     expect(viewState(panel).unsaved).toBe(false);
     expect(panel.isDirty()).toBe(false);

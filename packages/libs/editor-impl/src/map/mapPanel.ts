@@ -943,7 +943,7 @@ export class MapPanel implements IEditorPanel, IMapPanel {
   }
 
   /**
-   * 调宿主新增图层；成功后把新层设为当前层、补上用户填写的名字并登记屏障
+   * 调宿主新增图层；成功后把用户起的层名立刻写回宿主，再把新层设为当前层并登记屏障
    * @param layerName 用户填写的图层名
    */
   async addLayer(layerName: string): Promise<void> {
@@ -986,6 +986,19 @@ export class MapPanel implements IEditorPanel, IMapPanel {
 
       const named = nameLastLayer(next, name);
       const lastLayer = named.layers[named.layers.length - 1];
+      let persistError: string | undefined;
+
+      // 先写盘、后改内存：宿主文件里立刻是用户起的层名，宿主自己的写盘回声才会与内存一致、不再重载
+      try {
+        await this.capabilities.saveMapData({
+          id: named.id,
+          width: named.width,
+          height: named.height,
+          layers: named.layers,
+        });
+      } catch (error) {
+        persistError = toErrorMessage(error);
+      }
 
       this.document = named;
       this.currentLayerId = lastLayer?.id;
@@ -999,7 +1012,7 @@ export class MapPanel implements IEditorPanel, IMapPanel {
         currentLayerId: this.currentLayerId,
         unsaved: false,
         notice: `已新增图层「${name}」`,
-        error: undefined,
+        error: persistError,
       });
       this.refreshPassMarks();
       await this.refreshTileImageSources();
