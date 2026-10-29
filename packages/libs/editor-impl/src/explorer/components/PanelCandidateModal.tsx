@@ -5,7 +5,7 @@ import '../../react/modal.css';
 import '../explorer.css';
 
 /** 弹窗根节点的数据属性：antd `Modal` 会把 `data-*` 透传到对话框根元素 */
-const DIALOG_ATTRS: Record<string, string> = { 'data-test-id': 'explorer-candidate-dialog' };
+const DIALOG_ATTRS: Record<string, string> = Object.freeze({ 'data-test-id': 'explorer-candidate-dialog' });
 
 /**
  * 候选面板弹窗：列出能打开该文件的全部面板类型，用户点选后才继续打开
