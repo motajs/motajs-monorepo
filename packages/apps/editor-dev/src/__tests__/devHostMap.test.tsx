@@ -379,8 +379,8 @@ describe('开发宿主地图端到端', () => {
     expect(reopened.layers[2].name).toBe('测试层');
   });
 
-  // 有未保存改动时点关闭标签 → 先自动保存再关闭，文件里已经是新值，全程不弹确认框
-  it('未保存时关闭标签会先保存再关闭', async () => {
+  // 有未保存改动时点关闭标签 → 弹三态确认框；选「保存并关闭」后才落盘并关闭标签
+  it('未保存时关闭标签弹三态，选「保存并关闭」后落盘并关闭', async () => {
     const { core, backend } = await createHost();
 
     await openMapTab(core, 'small');
@@ -402,19 +402,32 @@ describe('开发宿主地图端到端', () => {
     await act(async () => {
       fireEvent.click(closeButton);
     });
-    await act(async () => {});
 
-    expect(core.shellSystem.listTabs()).toHaveLength(tabsBefore);
-    expect(core.shellSystem.listTabs()[0].typeId).toBeNull();
-    expect(screen.queryByTestId('map-unsaved-dialog')).toBeNull();
+    await waitFor(() => {
+      expect(screen.getByTestId('panel-close-dialog')).not.toBeNull();
+    });
+
+    expect(screen.getByTestId('panel-close-cancel')).not.toBeNull();
+    expect(screen.getByTestId('panel-close-discard')).not.toBeNull();
+    expect(screen.getByTestId('panel-close-save')).not.toBeNull();
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('panel-close-save'));
+    });
+
+    await waitFor(() => {
+      expect(core.shellSystem.listTabs()).toHaveLength(tabsBefore);
+      expect(core.shellSystem.listTabs()[0].typeId).toBeNull();
+      expect(screen.queryByTestId('panel-close-dialog')).toBeNull();
+    });
 
     const file = await readRecord(backend, 'small');
 
     expect(file.layers[0][2 * 8 + 1]).toBe(1);
   });
 
-  // 保存失败时点关闭标签 → 拒绝关闭，标签与面板都还在，错误写在提示行
-  it('保存失败时关闭标签被拒绝并显示错误', async () => {
+  // 保存失败时点关闭 → 三态弹窗留在屏幕上并显示失败原因，标签与面板都还在
+  it('保存失败时关闭被拒绝，原因显示在关闭弹窗里', async () => {
     const { core, capabilities } = await createHost();
 
     await openMapTab(core, 'small');
@@ -440,9 +453,18 @@ describe('开发宿主地图端到端', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId('map-notice').textContent).toContain('磁盘已满');
+      expect(screen.getByTestId('panel-close-dialog')).not.toBeNull();
     });
 
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('panel-close-save'));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('panel-close-error').textContent).toContain('磁盘已满');
+    });
+
+    expect(screen.getByTestId('panel-close-dialog')).not.toBeNull();
     expect(core.shellSystem.listTabs()).toHaveLength(tabsBefore);
     expect(container.querySelector('[data-test-id="map-panel"]')).not.toBeNull();
   });

@@ -17,3 +17,19 @@
 - 本计划新增的 7 条用例（`devHostExplorer.test.tsx` 4 条、`devHostWatch.test.tsx` 3 条）单独运行全绿。
 - `pnpm --filter @motajs/editor-impl test` 全量 1148 条通过，确认开发宿主改动没有反向影响实现包。
 - 上述 5 条建议由对应计划（表格撤销、地图保存 / 关闭、代码编辑器回写）单独修复，不在 04.2-13 的文件范围内。
+
+## 04.2-19（修开发宿主 5 条红项）
+
+5 条红项已在本计划内按任务修完（表格工具栏接面板侧未保存、地图加层写盘、两条关闭用例改走三态），见 `04.2-19-SUMMARY.md`。
+
+执行 `pnpm format:check` 仍为 **5 files** 不通过，全部是本计划改动之前就已存在、且不在本计划 `files_modified` 内的文件：
+
+| 文件 | 最近改动提交 | 说明 |
+|------|--------------|------|
+| `packages/apps/editor-dev/src/__tests__/devHostExplorer.test.tsx` | 04.2-13 | Prettier 格式漂移，未在本计划修改 |
+| `packages/apps/editor-dev/src/__tests__/devHostWatch.test.tsx` | 04.2-13 | 同上 |
+| `packages/apps/editor-dev/src/backend/memoryBackend.ts` | 04.2-13 | 同上 |
+| `packages/libs/editor-core/src/__tests__/fixtures.ts` | 04.2-13 | 同上 |
+| `packages/libs/editor-core/src/resource/__tests__/resourceWatch.test.ts` | 04.2-13 | 同上 |
+
+本计划改动的文件（含 `devHostMap.test.tsx`）单独经 Prettier 检查均为干净。按执行器「范围边界」规则未修改上述 5 个无关文件，交由 `04.2-18`（lint/format 整验收口）处理。
