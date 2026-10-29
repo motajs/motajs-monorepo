@@ -696,12 +696,43 @@ Plans:
   5. 有 pending 时右上角显示「正在等待保存，请勿关闭页面或浏览器」；`beforeunload` 弹原生确认。
   6. 地图 / 素材保存时机不变；既有 04.2 面包屑修复与三包门禁不回归。
 
-**Plans:** 0/TBD（先讨论，再排接口计划）
+**Plans:** 13 plans
 **UI hint**: yes
 
 Plans:
+**Wave 1**
 
-- [ ] TBD (run /gsd-plan-phase 04.3 to break down)
+- [ ] 04.3-01-PLAN.md — 命名与接口契约确认（INTERFACE-NAME.md，零源码改动）
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 04.3-02-PLAN.md — editor-core 纯类型声明（缓冲条目 / 写盘与待写成员 / 面板上下文 / 外壳待写布尔）
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 04.3-03-PLAN.md — editor-impl 纯声明（每栏待写布尔 / 数字输入提交契约）
+- [ ] 04.3-04-PLAN.md — 写缓冲本体：写只进缓冲、读穿透、5 秒防抖、立刻 / 全量写盘、释放顺序
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 04.3-05-PLAN.md — 写入后 50ms 合并通知，丢弃与释放时取消
+- [ ] 04.3-06-PLAN.md — 外壳落盘点（切标签 / 关标签 / 释放）与页面生命周期（关闭页面 / 页面卸载 / 窗口失焦）
+- [ ] 04.3-08-PLAN.md — 表格字段确认即写缓冲、保存按钮立即写盘、未保存两来源
+- [ ] 04.3-09-PLAN.md — 数字输入与成对数字框改为失焦 / 回车提交
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 04.3-07-PLAN.md — 右上角「正在等待保存，请勿关闭页面或浏览器」提示
+- [ ] 04.3-10-PLAN.md — 同一张表两栏同步、最后写盘者胜、同面板不弹冲突
+- [ ] 04.3-11-PLAN.md — 迁移「保存后读磁盘」断言（表格 / 素材 / 地图）
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
+- [ ] 04.3-12-PLAN.md — 宿主端到端（改一格不点保存 → 5 秒后落盘 / 切标签立刻落盘 / 关标签正在保存）
+
+**Wave 7** *(blocked on Wave 6 completion)*
+
+- [ ] 04.3-13-PLAN.md — 收口：三包全量 + 四条结构门禁 + lint / 格式 + 人工验收清单
 
 ### Phase 5: 代码编辑
 
