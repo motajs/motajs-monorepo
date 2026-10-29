@@ -3,12 +3,12 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: "04.2"
 current_phase_name: 面板内容解耦与文件资源管理器
-current_plan: 18
+current_plan: 20
 status: executing
-stopped_at: 04.2-18 执行到人工验收门禁（Task 1 完成；Task 2 待用户回复 UAT 结论）
-last_updated: "2026-10-29T08:21:49.823Z"
+stopped_at: 04.2-20 已完成（面包屑多一个斜杠）；04.2-21…24 待批准执行，04.2-18 Task 2 仍需在该批之后重新人工验收
+last_updated: "2026-10-29T17:33:00.000Z"
 last_activity: 2026-10-29
-last_activity_desc: 04.2-18 门禁整验 12 条全绿，停在人工验收门禁
+last_activity_desc: 04.2-20 gap-closure 完成：面包屑改回 /demo，16 例全绿
 state_head: edffd0b27f2f2fdaf7c3bf334c65123d6dd25e19
 progress:
   total_phases: 10
@@ -30,11 +30,11 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 ## Current Position
 
 Phase: 04.2 (面板内容解耦与文件资源管理器) — EXECUTING
-Current Plan: 18
-Total Plans in Phase: 21
-Status: 04.2-18 的 Task 1（12 条门禁）已完成并记入 VALIDATION；Task 2 停在人工验收门禁，等用户按 `04.2-UAT.md` 逐条回复。阶段**未**收口。
-Next phase: Phase 04.2 — 收到 UAT 结论后回填「验收结果」；有未通过项则开 gap-closure，全部通过才由 verify-work 收口
-Last activity: 2026-10-29 — 04.2-18 门禁整验：12 条全绿，VALIDATION 置 validated，UAT 清单已交付
+Current Plan: 20
+Total Plans in Phase: 26
+Status: `04.2-18` 的 Task 1（12 条门禁）已完成并记入 VALIDATION；Task 2 停在人工验收门禁。UAT gap closure 已启动：`04.2-20`（U-01 面包屑）**已完成**，`04.2-21…24`（U-07 表格自动保存 / 同表两栏）待逐个简报批准后执行。阶段**未**收口。
+Next phase: Phase 04.2 — 执行 `04.2-21…24` 后用 `04.2-24` 重写的 UAT 口径复验 U-01…U-07；全部通过才由 verify-work 收口
+Last activity: 2026-10-29 — 04.2-20：面包屑只在段与段之间渲染分隔符，`demo` 显示 `/demo`，16 例全绿、typecheck exit 0
 
 Progress: [█████████░] 95%
 
@@ -197,6 +197,7 @@ Progress: [█████████░] 95%
 | Phase 04.2 P11 | 21 min | 2 tasks | 2 files |
 | Phase 04.2 P13 | 35 min | 3 tasks | 5 files |
 | Phase 04.2 P19 | 14 min | 3 tasks | 9 files |
+| Phase 04.2 P20 | 5 min | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -543,6 +544,8 @@ Recent decisions affecting current work:
 - [Phase 04.2]: resolveMapPath 做成同步纯路径判定，不查异步地图清单
 - [Phase 04.2]: 04.2-19: 表格工具栏脏状态取「组件草稿脏 或 面板侧未保存」（`ITableEditableProps.unsaved`）：撤销 / 代码编辑器写回后保存按钮可用且能落盘，保存成功后两个来源同时变干净、按钮回到禁用
 - [Phase 04.2]: 04.2-19: `MapPanel.addLayer` 先 `saveMapData` 写盘再把带用户层名的文档设为内存，宿主自写回声因内存与宿主一致而只更新基线、不重载也不改当前层；两条地图关闭用例改走三态弹窗
+- [Phase 04.2]: 04.2-20: 面包屑分隔符只在段与段之间渲染——根段自带 `/`，第一个目录段前不再补，`demo` 由 `/ /demo` 变回 `/demo`；只改这一处条件，不动切分 / 导航 / test id / CSS
+- [Phase 04.2]: 04.2-20: 面包屑回归断言同时钉 `.efb-crumbs` 文本精确值（`/demo`、`/content/map`）与 `.efb-crumb-sep` 数量（0、1），能同时抓住多一个与漏一个
 
 ### Pending Todos
 
@@ -571,7 +574,7 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-29T08:21:49.072Z
-Stopped at: 04.2-18 执行到人工验收门禁（Task 1 完成；Task 2 待用户回复 UAT 结论）
+Last session: 2026-10-29T17:33:00.000Z
+Stopped at: 04.2-20 完成（面包屑 `/demo`）；04.2-21…24 待逐个简报批准，之后才重跑 UAT
 Resume file: .planning/phases/04.2-panel-content-decoupling/04.2-UAT.md
 Next action: 等用户按 `04.2-UAT.md` 六项逐条回复「通过 / 未通过 + 现象」；收到后回填「验收结果」一节，全部通过才把阶段收口（ROADMAP 目前**未**置 Complete）
