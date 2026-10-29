@@ -715,6 +715,6 @@ Phases execute in numeric order: 1 → 1.1 → 2 → 2.1 → 3 → 4 → 4.1 →
 | 3. 素材管理 | 31/31 | Complete    | 2026-10-20 |
 | 4. 地图编辑 | 16/17 | In Progress|  |
 | 4.1. 地图渲染与布局重做 (INSERTED) | 40/40 | Complete | 2026-10-27 |
-| 4.2. 面板内容解耦与文件资源管理器 (INSERTED) | 19/20 | In Progress|  |
+| 4.2. 面板内容解耦与文件资源管理器 (INSERTED) | 20/21 | In Progress|  |
 | 5. 代码编辑 | 0/TBD | Not started | - |
 | 6. 事件编辑器 | 0/TBD | Not started | - |
