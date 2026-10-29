@@ -84,6 +84,16 @@
   white-space: nowrap;
 }
 
+.efb-crumb,
+.efb-crumb-current {
+  /* 两个选择器共用 24px 行盒，否则 small 按钮（24px）与普通 span（13px × 1.5 ≈ 19.5px）的文字基线对不齐 */
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  min-height: 24px;
+  line-height: 24px;
+}
+
 .efb-reload {
   display: inline-flex;
   flex: 0 0 auto;

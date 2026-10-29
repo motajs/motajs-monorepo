@@ -4,10 +4,11 @@ import { Button } from 'antd';
 import { ReactNode } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { FileBrowser } from '../FileBrowser';
+import fileBrowserCss from '../file-browser.css?raw';
 
 configure({ testIdAttribute: 'data-test-id' });
 
-// 共用文件浏览器的行为契约：四个状态、面包屑导航（含一级 / 多级目录分隔符）、可换前缀与刷新不闪空态，共 16 条
+// 共用文件浏览器的行为契约：四个状态、面包屑导航（含一级 / 多级目录分隔符）、可换前缀与刷新不闪空态，共 17 条
 afterEach(() => {
   cleanup();
 });
@@ -50,6 +51,28 @@ function createLoader(
 
     return Promise.resolve(routes[path] ?? []);
   };
+}
+
+/**
+ * 从 CSS 源码里取出某个选择器的有效声明，后出现的规则覆盖先出现的
+ * @param source CSS 源码
+ * @param selector 目标选择器，按逗号拆分并 trim 后精确相等才命中
+ * @returns 属性名到取值的映射
+ */
+function readDeclarations(source: string, selector: string): Record<string, string> {
+  const declarations: Record<string, string> = {};
+
+  for (const rule of source.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const selectors = rule[1].split(',').map((item) => item.trim());
+
+    if (!selectors.includes(selector)) continue;
+
+    for (const declaration of rule[2].matchAll(/([a-z-]+)\s*:\s*([^;]+);/g)) {
+      declarations[declaration[1].trim()] = declaration[2].trim();
+    }
+  }
+
+  return declarations;
 }
 
 describe('FileBrowser 的四种状态', () => {
@@ -317,6 +340,20 @@ describe('FileBrowser 的面包屑', () => {
     });
 
     expect(requested[requested.length - 1]).toBe('');
+  });
+
+  // 当前段与上级段共用同一个 24px 行盒（jsdom 不算布局，只能断言 CSS 源码），且工具栏仍为 32px
+  it('当前段与上级段共用 24px 行盒，工具栏仍为 32px', () => {
+    const crumb = readDeclarations(fileBrowserCss, '.efb-crumb');
+    const current = readDeclarations(fileBrowserCss, '.efb-crumb-current');
+
+    expect(crumb['line-height']).toBe('24px');
+    expect(current['line-height']).toBe('24px');
+    expect(crumb['line-height']).toBe(current['line-height']);
+    expect(crumb['min-height']).toBe('24px');
+    expect(current['min-height']).toBe('24px');
+    expect(crumb['min-height']).toBe(current['min-height']);
+    expect(readDeclarations(fileBrowserCss, '.efb-toolbar')['height']).toBe('32px');
   });
 });
 
