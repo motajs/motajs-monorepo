@@ -1,6 +1,6 @@
 # Phase 04.3 — 接口与命名提案 / 资源写入缓冲与表格自动保存
 
-**Status:** **待确认** —— 本文出现的文件名、接口名、类型名、类名、方法名、字段名、常量名、CSS 类名、`data-test-id`、日志 id、测试文件名，**全部是提案，不是锁定契约**。用户以文字确认之前，不改任何一行源码；改名先改本文，再进实现计划。
+**Status: 已确认** —— 用户于 2026-10-30 以文字回复「确认」，未提出任何改名。本文记录的是**最终名称**，Plan 02…13 只按这些名字落地，不再另造同义形状。
 
 **Scope:** 本阶段 Plan 02…13 会新建 / 改动的全部对外名称，以及研究点名、留给接口计划拍板的七组契约结论。前序阶段已锁定的名称（`IResourceSystem` / `IResourceSystemAccess` / `IResourceStore` / `IResourceAccess` / `IResource` / `IEditorPanelContext` / `IEditorPanel` / `IResourceSystemHooks` / `IEditorFileChange` 等）不重复登记，只登记它们的**新增**成员。
 
@@ -406,21 +406,21 @@
 
 ## 待用户确认的取舍
 
-> 以下五项需要用户点头。每项都给出**研究推荐值**与**替代方案的代价**；「状态」一列在用户文字确认之前一律是 `待确认`。
+> 以下五项已于 2026-10-30 经用户文字确认「确认」，**全部按研究推荐值采用**。每项都保留**研究推荐值**与**替代方案的代价**，供后续回看「当时为什么不选另一条」。
 
 | # | 取舍 | 研究推荐值 | 替代方案与代价 | 状态 |
 |---|------|-----------|----------------|------|
-| 1 | 同面板两栏与外部写入靠什么区分（来源判定） | **不引入来源标识**：写者自己那一栏靠「写盘返回后立刻推进基线」，同面板其它栏靠 `TablePanel.isSamePanelWrite` 比「本面板刚写出的那一份」，内容不同才算外部写入（④） | 走「资源层写日志 + 通知携带是否自写」：要新类型与新状态，二进制只能「尽力而为」；走「宿主 `origin` 字段」：只有 `MemoryBackend` 能填，真实宿主（Node / chokidar）填不了，等于没加 | **待确认** |
-| 2 | 页面事件集合 | **`window` 上的 `pagehide` + `window` 失焦 + `beforeunload`**；不用 `visibilitychange`、不用 `document`（⑤ / O3） | 坚持 `visibilitychange`：要读 `document.hidden`，会破 `editor-core` / `editor-impl` 的结构门禁（含测试）；给门禁加白名单等于降低门禁，不建议 | **待确认** |
-| 3 | 两栏同表时「未确认的输入可能被另一栏的写入刷新掉」 | **接受为已知行为**，并在人工验收里记录（研究 §Q8.3 方案 A）：另一栏确认后 50 毫秒通知会让本栏 `contentVersion` 递增、组件重置草稿，正在敲但未失焦的字可能被吞 | 选「本栏聚焦时跳过自动刷新」：需要新增回调 / 新栏位、扩大契约（方案 B），实现与测试面都更大；选「只在同面板两栏之间跳过刷新」：仍会走 `contentVersion` 重置，解决不了问题（方案 C） | **待确认** |
-| 4 | 50 毫秒合并通知的形态 | **首次排程不重置**：第一次写入起 50 毫秒必发一次，期间写入并进去（③） | 用研究 §Q3.3 伪代码的「每次写入都重排」：持续写入下通知会被无限推迟，两栏同步迟迟不发生。通知只是同步节奏、不是落盘时机，因此选不重置 | **待确认** |
-| 5 | 外部冲突的处置 | **已由用户 2026-10-29 拍板，本文按定稿写**：「停手才弹」+ 两个动作点了立刻生效（「保存编辑器的」= 立刻写盘覆盖外部修改 / 「保存外部修改」= 丢弃待写并重载外部那份）+ 没表态就不写盘 | 先前「保留后不自动落盘、只能等下一次显式保存」与「保留时重新写一次缓冲、让 5 秒定时器装回来」两个口径**已作废**，不再作为备选 | **待确认（复述定稿，非新选项）** |
+| 1 | 同面板两栏与外部写入靠什么区分（来源判定） | **不引入来源标识**：写者自己那一栏靠「写盘返回后立刻推进基线」，同面板其它栏靠 `TablePanel.isSamePanelWrite` 比「本面板刚写出的那一份」，内容不同才算外部写入（④） | 走「资源层写日志 + 通知携带是否自写」：要新类型与新状态，二进制只能「尽力而为」；走「宿主 `origin` 字段」：只有 `MemoryBackend` 能填，真实宿主（Node / chokidar）填不了，等于没加 | **已确认（2026-10-30）** |
+| 2 | 页面事件集合 | **`window` 上的 `pagehide` + `window` 失焦 + `beforeunload`**；不用 `visibilitychange`、不用 `document`（⑤ / O3） | 坚持 `visibilitychange`：要读 `document.hidden`，会破 `editor-core` / `editor-impl` 的结构门禁（含测试）；给门禁加白名单等于降低门禁，不建议 | **已确认（2026-10-30）** |
+| 3 | 两栏同表时「未确认的输入可能被另一栏的写入刷新掉」 | **接受为已知行为**，并在人工验收里记录（研究 §Q8.3 方案 A）：另一栏确认后 50 毫秒通知会让本栏 `contentVersion` 递增、组件重置草稿，正在敲但未失焦的字可能被吞 | 选「本栏聚焦时跳过自动刷新」：需要新增回调 / 新栏位、扩大契约（方案 B），实现与测试面都更大；选「只在同面板两栏之间跳过刷新」：仍会走 `contentVersion` 重置，解决不了问题（方案 C） | **已确认（2026-10-30）** |
+| 4 | 50 毫秒合并通知的形态 | **首次排程不重置**：第一次写入起 50 毫秒必发一次，期间写入并进去（③） | 用研究 §Q3.3 伪代码的「每次写入都重排」：持续写入下通知会被无限推迟，两栏同步迟迟不发生。通知只是同步节奏、不是落盘时机，因此选不重置 | **已确认（2026-10-30）** |
+| 5 | 外部冲突的处置 | **已由用户 2026-10-29 拍板，本文按定稿写**：「停手才弹」+ 两个动作点了立刻生效（「保存编辑器的」= 立刻写盘覆盖外部修改 / 「保存外部修改」= 丢弃待写并重载外部那份）+ 没表态就不写盘 | 先前「保留后不自动落盘、只能等下一次显式保存」与「保留时重新写一次缓冲、让 5 秒定时器装回来」两个口径**已作废**，不再作为备选 | **已确认（2026-10-30，复述定稿）** |
 
 **这五项分别约束：** 第 1 项 → Plan 04 / 10；第 2 项 → Plan 06；第 3 项 → Plan 10（并进人工验收）；第 4 项 → Plan 05；第 5 项 → Plan 04 / 08。
 
 ### 与 `04.3-RESEARCH.md` 命名不一致的地方（一律以本文 / PLAN 为准）
 
-> 计划文本与研究稿在下列几处给了不同名字或不同归属。PLAN 是检查器核对过的契约，因此**本文按 PLAN 采用**；差异登记在这里，供用户确认时一并看到。
+> 计划文本与研究稿在下列几处给了不同名字或不同归属。PLAN 是检查器核对过的契约，因此**本文按 PLAN 采用**；这四处差异已于 2026-10-30 随「确认」一并接受，一律以本文 / PLAN 的名字为准，不再作为待定项。
 
 | # | 研究稿的说法 | 本文采用 | 说明 |
 |---|--------------|----------|------|
@@ -433,4 +433,60 @@
 
 ## 确认状态
 
-（本节暂空。用户以文字表示「确认」或列出要改的名字之后，才在这里写入确认日期与最终名称清单；在此之前本文所有名称都还是提案，源码一行未改。）
+**已确认：2026-10-30** —— 用户以文字回复「确认」。全部提案按原文接受：七组契约的结论、全部新增名称、九个新测试文件名、两句定稿文案、五项取舍的推荐值，以及四处「研究稿与 PLAN 命名不一致」按 PLAN 采用。**未提出任何改名。**
+
+**改名记录：无。** 本阶段没有发生任何改名，下文列出的即为最终名称，全文只有最终名，不存在「原名 → 现名」条目。
+
+### 最终名称 · editor-core（Plan 02 / 04 / 05 / 06 / 07）
+
+| 名称 | 最终形态 |
+|------|----------|
+| `writeBuffer.ts` | 新文件，`packages/libs/editor-core/src/resource/writeBuffer.ts` |
+| `IWriteBufferEntry` | interface，成员 `content` / `version` / `timer` / `inFlight` / `error` / `externallyChanged`（前四类中 `content` / `version` / `externallyChanged` 只读，`timer` / `inFlight` / `error` 可回写） |
+| `WriteBufferWriter` | type，`(path: string, content: ResourceContent) => Promise<void>` |
+| `IWriteBuffer` | interface，待写表的对外契约 |
+| `WriteBuffer` | class，`implements IWriteBuffer` |
+| `WriteBuffer.schedule` / `WriteBuffer.flush` / `WriteBuffer.flushAll` / `WriteBuffer.has` / `WriteBuffer.paths` / `WriteBuffer.size` / `WriteBuffer.readPending` / `WriteBuffer.discard` / `WriteBuffer.clear` / `WriteBuffer.dispose` / `WriteBuffer.noteExternalWrite` | 缓冲成员（一经确认即为最终名） |
+| `WriteBuffer.lastWritten` | 私有实例字段，`Map<string, ResourceContent>` |
+| `PendingChangeListener` | type，`(paths: readonly string[]) => void` |
+| `IResourceSystemAccess.flushContent` / `IResourceSystemAccess.discardPendingContent` / `IResourceSystemAccess.watchPendingChange` | 资源访问口三个新成员 |
+| `IResourceSystem.flushAllContent` / `IResourceSystem.hasAnyPendingContent` / `IResourceSystem.listPendingPaths` | 资源系统三个新成员 |
+| `IResourceSystemHooks.onPendingChange` | 可选接口方法 |
+| `ResourceSystem.bufferContent` / `ResourceSystem.scheduleFlush` / `ResourceSystem.flushOneContent` / `ResourceSystem.clearFlushTimers` / `ResourceSystem.noteExternalWrite` | 私有方法 |
+| `FLUSH_DEBOUNCE_MS` / `NOTIFY_COALESCE_MS` | 模块级数字字面量常量，`5000` / `50` |
+| `isSameResourceContent` | 自由函数，`(left, right) => boolean` |
+| `resource.flushFailed` / `resource.pendingDiscarded` | 日志 id |
+| `IEditorPanelContext.flushResource` / `IEditorPanelContext.discardPendingResource` / `IEditorPanelContext.watchPendingChange` | 面板上下文三个转发成员 |
+| `IShellViewState.hasPendingWrite` / `IMenuRowProps.hasPendingWrite` | 外壳布尔视图字段 / 菜单行 props 成员 |
+| `ShellSystem.flushPendingContent` / `ShellSystem.beforeUnloadHandler` / `ShellSystem.pageHideHandler` / `ShellSystem.windowBlurHandler` | 外壳写盘辅助 + 三个页面事件处理函数 |
+| `editor-shell-pending` | 提示的 CSS 类名与 `data-test-id` |
+| `正在等待保存，请勿关闭页面或浏览器` | 右上角提示的固定文案（逐字） |
+
+### 最终名称 · editor-impl（Plan 03 / 08 / 09 / 10）
+
+| 名称 | 最终形态 |
+|------|----------|
+| `ITablePanelColumn.pendingWrite` | 栏状态字段，`boolean` |
+| `ITablePanelViewProps.onFieldEditingChange` | 可选 props 成员，`(editing: boolean) => void` |
+| `TablePanel.saveAfterEdit` / `TablePanel.refreshPendingWrites` / `TablePanel.setFieldEditing` / `TablePanel.keepExternalConflict` / `TablePanel.discardExternalConflict` | 表格面板新增方法 |
+| `TablePanel.isSamePanelWrite` | 私有方法，判「是不是本面板另一栏刚写出的那一份」 |
+| `TablePanel.saveDocument` 的 `quiet` / `TablePanel.saveColumn` 的 `quiet` | 长期参数名，`boolean`（缺省假） |
+| `isEditableFieldElement` | 模块级自由函数，`(element) => boolean` |
+| `IExternalChangeDialogProps.keepLabel` / `.discardLabel` / `.noteText` | 可选文案参数 |
+| `保存编辑器的` / `保存外部修改` | 冲突弹窗两个动作的定稿文案（逐字） |
+| `NumberInput` | 既有组件，提交契约改为「失焦 / 回车 / 清空后提交一次」，不新增导出符号 |
+
+### 最终名称 · 九个新测试文件
+
+| 测试文件 | 所在包 |
+|----------|--------|
+| `resourceBuffer.test.ts` / `resourceBufferConcurrency.test.ts` / `resourceNotifyCoalesce.test.ts` | `editor-core`（`src/resource/__tests__/`） |
+| `shellFlush.test.ts` / `shellPageLifecycle.test.ts` / `shellPendingIndicator.test.tsx` | `editor-core`（`src/shell/__tests__/`） |
+| `tableAutoSave.test.tsx` / `twoColumnsSameTable.test.tsx` | `editor-impl`（`src/table/__tests__/`） |
+| `devHostAutoSave.test.tsx` | `editor-dev`（`src/__tests__/`） |
+
+### 最终取舍（五项）与四处命名差异
+
+- 五项取舍的最终结论写在 `## 待用户确认的取舍` 一节，状态列已全部标 `已确认（2026-10-30）`；它们分别约束 Plan 04 / 05 / 06 / 08 / 10。
+- 四处「研究稿与 PLAN 命名不一致」已按 PLAN 采用（`## 待用户确认的取舍 › 与 04.3-RESEARCH.md 命名不一致的地方`），不再作为待定项。
+- `## 不缓冲的边界（写死）` 与 `## 七组契约的落实决策（先读这一节）` 的结论同样随本次确认生效。
