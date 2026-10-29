@@ -54,6 +54,8 @@ interface IShellViewState {
   readonly activePanel: IEditorPanel | null;
   /** 活动面板实例的初始化状态 */
   readonly activePanelStatus: ShellInstanceStatus;
+  /** 现在是否还有内容在等待写盘；右上角提示据此显示 */
+  readonly hasPendingWrite: boolean;
 }
 
 /** 外壳根组件的 props */
@@ -78,6 +80,8 @@ interface IMenuRowProps {
   readonly system: IShellSystem;
   /** 要渲染的菜单项，按注册顺序 */
   readonly items: readonly IEditorMenuItem[];
+  /** 现在是否还有内容在等待写盘；右上角提示据此显示 */
+  readonly hasPendingWrite: boolean;
 }
 
 /** 标签行组件的 props */
@@ -363,7 +367,11 @@ function ShellRoot(props: IShellRootProps): ReactElement {
   return createElement(
     'div',
     { className: 'editor-shell' },
-    createElement(MenuRow, { system: props.system, items: view.menuItems }),
+    createElement(MenuRow, {
+      system: props.system,
+      items: view.menuItems,
+      hasPendingWrite: view.hasPendingWrite,
+    }),
     createElement(TabRow, {
       system: props.system,
       tabs: view.tabs,
@@ -817,6 +825,7 @@ export class ShellSystem implements IShellSystem {
       panelTypes: [...this.panelTypes.values()],
       activePanel,
       activePanelStatus,
+      hasPendingWrite: this.resourceSystem.hasAnyPendingContent(),
     };
   }
 

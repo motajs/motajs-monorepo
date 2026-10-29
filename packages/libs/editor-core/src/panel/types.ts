@@ -1,7 +1,7 @@
 import { FC, ReactNode } from 'react';
 import { EditorFileChangeKind } from '../fs';
 import { IUndoable, IUndoContext } from '../undo';
-import { IFileEntry, IResource, IResourceIdentifier, ResourceContent } from '../resource';
+import { IFileEntry, IResource, IResourceIdentifier, PendingChangeListener, ResourceContent } from '../resource';
 
 export const enum PanelCloseChoice {
   /** 保存并关闭：面板已保存成功，外壳跳过普通切走落盘 */
@@ -47,6 +47,33 @@ export interface IEditorPanelContext {
    * @returns 目录下的直接子条目列表
    */
   listDirectory(path: string): Promise<readonly IFileEntry[]>;
+
+  /**
+   * 把指定路径的待写内容立刻写进磁盘
+   *
+   * 面板的保存按钮用它把本栏的待写内容写到磁盘。
+   * @param identifier 资源标识（纯路径）
+   */
+  flushResource(identifier: IResourceIdentifier): Promise<void>;
+
+  /**
+   * 丢弃指定路径还没落盘的待写内容
+   *
+   * 用户选「不保存关闭」时用它把该路径还没落盘的内容丢掉，避免 5 秒后又被写回磁盘；
+   * 丢弃同时会让资源层忘掉该路径的缓存内容。
+   * @param identifier 资源标识（纯路径）
+   */
+  discardPendingResource(identifier: IResourceIdentifier): void;
+
+  /**
+   * 订阅「当前全部待写路径」的变化
+   *
+   * 回调会收到当前全部待写路径，且订阅时立刻用当前值回调一次（之后每次「有待写」这件事变化再回调）；
+   * 面板据此维护每栏的未保存标记。
+   * @param listener 待写路径变化的回调
+   * @returns 退订函数
+   */
+  watchPendingChange(listener: PendingChangeListener): () => void;
 
   /**
    * 添加某个面板的撤回操作

@@ -1,4 +1,11 @@
-import { IFileEntry, IResource, IResourceAccess, IResourceIdentifier, ResourceContent } from '../resource';
+import {
+  IFileEntry,
+  IResource,
+  IResourceAccess,
+  IResourceIdentifier,
+  PendingChangeListener,
+  ResourceContent,
+} from '../resource';
 import { IUndoContext, IUndoSystem } from '../undo';
 import { IEditorPanel, IEditorPanelContext } from './types';
 
@@ -31,6 +38,18 @@ export class PanelContext implements IEditorPanelContext {
 
   listDirectory(path: string): Promise<readonly IFileEntry[]> {
     return this.resourceAccess.listDirectory(path);
+  }
+
+  flushResource(id: IResourceIdentifier): Promise<void> {
+    return this.resourceAccess.flushContent(id);
+  }
+
+  discardPendingResource(id: IResourceIdentifier): void {
+    this.resourceAccess.discardPendingContent(id);
+  }
+
+  watchPendingChange(listener: PendingChangeListener): () => void {
+    return this.resourceAccess.watchPendingChange(listener);
   }
 
   addUndoContext(panel: IEditorPanel, context: IUndoContext<unknown>): void {
