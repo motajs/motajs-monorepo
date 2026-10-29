@@ -11,6 +11,7 @@ import {
   IResourceSystemAccess,
   IResourceSystemHooks,
   IResourceSystemOptions,
+  PendingChangeListener,
   ResourceContent,
 } from './types';
 
@@ -156,6 +157,36 @@ export class ResourceSystem extends Hookable<IResourceSystemHooks> implements IR
     }
 
     return this.index.list(path);
+  }
+
+  flushContent(): Promise<void> {
+    // 当前没有任何待写内容，把待写写进磁盘是空操作；接入缓冲后改由缓冲承接
+    return Promise.resolve();
+  }
+
+  discardPendingContent(): void {
+    // 当前没有待写可丢；接入缓冲后要连同内容缓存一起失效
+  }
+
+  watchPendingChange(listener: PendingChangeListener): () => void {
+    // 当前没有任何待写，订阅瞬间用空列表回调一次就是「当前值」
+    listener([]);
+    return (): void => {};
+  }
+
+  flushAllContent(): Promise<void> {
+    // 当前没有任何待写内容，全量写盘是空操作
+    return Promise.resolve();
+  }
+
+  hasAnyPendingContent(): boolean {
+    // 当前没有任何待写内容
+    return false;
+  }
+
+  listPendingPaths(): readonly string[] {
+    // 当前没有任何待写路径；返回新数组，调用方可以安全持有
+    return [];
   }
 
   async updateResource(id: IResourceIdentifier): Promise<void> {
