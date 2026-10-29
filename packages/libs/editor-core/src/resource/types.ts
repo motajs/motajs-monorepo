@@ -74,6 +74,33 @@ export interface IResourceAccess {
    * @returns 目录下的直接子条目列表，供打开列表 / 目录树读取
    */
   listDirectory(path: string): Promise<readonly IFileEntry[]>;
+
+  /**
+   * 把指定路径的待写内容立刻写进磁盘
+   *
+   * 幂等：这条路径没有待写时直接成功，调用方不必先查 `IResourceSystem.hasAnyPendingContent`。
+   * 面板的保存按钮与冲突弹窗的「保存编辑器的」用它把本栏的待写内容写到磁盘。
+   * @param identifier 资源标识（纯路径）
+   */
+  flushContent(identifier: IResourceIdentifier): Promise<void>;
+
+  /**
+   * 丢弃指定路径还没落盘的待写内容
+   *
+   * 用于「不保存关闭」与冲突弹窗的「保存外部修改」，避免 5 秒后又被写回磁盘；
+   * 丢弃同时会让资源层忘掉该路径的缓存内容。
+   * @param identifier 资源标识（纯路径）
+   */
+  discardPendingContent(identifier: IResourceIdentifier): void;
+
+  /**
+   * 订阅「当前全部待写路径」的变化
+   *
+   * 订阅时立刻用当前值回调一次（之后每次待写集合变化再回调），面板据此维护每栏的未保存标记。
+   * @param listener 待写路径变化的回调
+   * @returns 退订函数
+   */
+  watchPendingChange(listener: PendingChangeListener): () => void;
 }
 
 export interface IResourceStore {
@@ -174,6 +201,133 @@ export interface IContentCache {
   clear(): void;
 }
 
+/** 把一条路径的待写内容真正写进磁盘的动作；由资源层提供，缓冲自身不碰文件系统 */
+export type WriteBufferWriter = (path: string, content: ResourceContent) => Promise<void>;
+
+/** 「当前全部待写路径」变化的回调；订阅时资源层会先回调一次当前待写路径列表 */
+export type PendingChangeListener = (paths: readonly string[]) => void;
+
+export interface IWriteBufferEntry {
+  /**
+   * 最近一次排入的待写内容；成功写盘、丢弃或整条替换后随之更新或消失。
+   * 条目是只读的：缓冲每次修改都整条替换条目，避免二进制内容靠引用比较漏判
+   */
+  readonly content: ResourceContent;
+  /**
+   * 自增版本号，每次 `WriteBuffer.schedule` 排入新内容时递增。
+   * 版本号是数字比较，能可靠判出「写盘期间又写了一次」；`Uint8Array` 的 `!==` 是引用比较，不能依赖
+   */
+  readonly version: number;
+  /** 5 秒防抖定时器句柄；已被写盘取消、或该条目被标成「外部已改」时为空 */
+  timer: ReturnType<typeof setTimeout> | null;
+  /**
+   * 该路径正在进行的写盘；没有在途写盘时为空。
+   * 整条替换条目时必须原样保留本字段，否则同一路径会另起一次写盘、`dispose` 也看不到前一个
+   */
+  inFlight: Promise<void> | null;
+  /** 上一次写盘失败的原文，供调用方与日志使用；写盘成功后清空；整条替换条目时必须原样保留本字段 */
+  error: string | undefined;
+  /**
+   * 这条待写是否已被外部写入挡住：为真时读取回落到磁盘、该条目不再自动落盘。
+   *
+   * 它是条目自己的字段，不是缓冲另开的一张「外部已改路径集合」——排入新内容时整条替换自然回到假，
+   * 成功写盘与丢弃也清零，因此一次外部冲突不会让该路径永久读不到待写。
+   * 为真时没有定时器：这条路径只能由用户在两动作弹窗上显式 flush 或丢弃来结算
+   */
+  readonly externallyChanged: boolean;
+}
+
+export interface IWriteBuffer {
+  /**
+   * 现在一共有多少条待写
+   * @returns 待写条目数量
+   */
+  size(): number;
+
+  /**
+   * 把一条路径的最新内容排进待写表，并重排它的 5 秒写盘
+   *
+   * 该路径已有待写时整条替换条目（「外部已改」标记随之回到假），但原样保留在途写盘与上次失败原因；
+   * 缓冲不设上限、不做淘汰，只在成功写盘或丢弃时删除条目。
+   * @param path 资源标识（纯路径）
+   * @param content 要写入的资源内容
+   */
+  schedule(path: string, content: ResourceContent): void;
+
+  /**
+   * 把某一条路径的待写内容立刻写进磁盘，可以 await
+   *
+   * 幂等：这条路径没有待写时直接成功，调用方不必先查 `has`。同一路径同时只允许一个在途写盘，
+   * 并发调用复用同一次写盘。写盘失败时保留待写，再把错误抛给调用方。
+   * @param path 资源标识（纯路径）
+   */
+  flush(path: string): Promise<void>;
+
+  /**
+   * 把所有待写内容逐条尝试写进磁盘
+   *
+   * 某一条失败不阻止其它路径写盘；全部尝试完再把第一条失败抛给调用方，由调用方自己 catch 并记日志。
+   */
+  flushAll(): Promise<void>;
+
+  /**
+   * 这条路径现在还有没有内容没写盘
+   * @param path 资源标识（纯路径）
+   * @returns 存在待写时为 true
+   */
+  has(path: string): boolean;
+
+  /**
+   * 现在还有哪些路径没写盘
+   * @returns 待写路径列表；返回新数组，不外泄内部引用
+   */
+  paths(): readonly string[];
+
+  /**
+   * 取该路径当前可读的待写内容，不触发写盘
+   *
+   * 这是 `ResourceSystem.readContent` / `ResourceSystem.readBinary` 判断要不要命中缓冲的唯一入口，
+   * 别在读取方另写一份判定。没有待写、或该条目的 `externallyChanged` 为真时返回 undefined（读取方应回落到磁盘）；
+   * 其余情况返回条目内容。判据只在这个条目的字段上：排入新内容会整条替换条目（标记自然清假），
+   * 所以一次外部冲突之后该路径仍能重新成为可读的待写。
+   * @param path 资源标识（纯路径）
+   * @returns 当前可读的待写内容；没有待写或已被外部挡住时为 undefined
+   */
+  readPending(path: string): ResourceContent | undefined;
+
+  /**
+   * 丢弃某条路径的待写内容（连同它的定时器）
+   *
+   * 由「不保存关闭」「保存外部修改」与删除 / 移动资源使用；丢弃同时由资源层失效该路径的内容缓存。
+   * @param path 资源标识（纯路径）
+   */
+  discard(path: string): void;
+
+  /**
+   * 外部变化到达时给这条待写给「外部已改」标记
+   *
+   * 没有待写时什么都不做。磁盘内容与本缓冲最近一次自己写出去的内容相同 → 视为自己写盘的回声：
+   * 不置标记、不改内容、不改版本号，但重排一次 5 秒定时器（先清后装）。
+   * 其余情况（内容不同或外部删除）→ 把条目 `externallyChanged` 置真、清掉它的 5 秒定时器且不再重排，
+   * 条目保留、读取回落到磁盘；这条路径从此不会自动落盘，只能由用户在冲突弹窗上显式 flush 或丢弃来结算。
+   * 整条替换该条目时必须原样保留 `inFlight` 与 `error`；在途写盘允许完成，若标记是在这次写盘期间才变真，
+   * 结算时标记优先（不删条目、不重排定时器）。标记的清除只发生在 `schedule`、成功写盘与丢弃三处。
+   * @param path 资源标识（纯路径）
+   * @param diskContent 磁盘上现在的内容；读不到磁盘（外部删除）时传 undefined
+   */
+  noteExternalWrite(path: string, diskContent: ResourceContent | undefined): void;
+
+  /**
+   * 清空整张待写表，不写盘（只用于释放）
+   */
+  clear(): void;
+
+  /**
+   * 释放缓冲：清掉所有定时器与内部表，避免测试与热重载留下悬挂定时器
+   */
+  dispose(): void;
+}
+
 export interface IResourceSystemHooks extends IHookBase {
   /**
    * 当资源更新时触发，需要重新手动申请指定资源以获取更新后的资源内容
@@ -189,6 +343,13 @@ export interface IResourceSystemHooks extends IHookBase {
    * @param kind 变化种类
    */
   onResourceChange?(identifier: IResourceIdentifier, kind: EditorFileChangeKind): Promise<void>;
+
+  /**
+   * 当「是否有待写」这件事发生变化时触发
+   *
+   * 只表达「有待写」这件事变了，不携带任何路径，供外壳刷新右上角提示。
+   */
+  onPendingChange?(): Promise<void>;
 }
 
 export interface IResourceSystemOptions {
@@ -214,6 +375,30 @@ export interface IResourceSystem extends IHookable<IResourceSystemHooks> {
    * 释放此资源系统
    */
   dispose(): Promise<void>;
+
+  /**
+   * 把所有待写内容逐条尝试写进磁盘
+   *
+   * 切标签、关标签、释放与页面离开都用它；某一条失败不阻止其它路径写盘，
+   * 全部尝试完再把第一条失败抛给调用方，由调用方自己 catch 并记日志。
+   */
+  flushAllContent(): Promise<void>;
+
+  /**
+   * 当前是否还有任意内容在等待写盘
+   *
+   * 右上角提示与 `beforeunload` 只看这一个布尔，不读取任何路径。
+   * @returns 存在待写时为 true
+   */
+  hasAnyPendingContent(): boolean;
+
+  /**
+   * 列出当前全部待写路径
+   *
+   * 仅供内部与外壳使用，不把任何路径渲染到界面。
+   * @returns 待写路径列表；返回新数组
+   */
+  listPendingPaths(): readonly string[];
 }
 
 export interface IResourceSystemAccess extends IResourceSystem, IResourceAccess, IResourceStore {}
