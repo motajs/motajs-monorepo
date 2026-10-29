@@ -1,0 +1,436 @@
+# Phase 04.3 — 接口与命名提案 / 资源写入缓冲与表格自动保存
+
+**Status:** **待确认** —— 本文出现的文件名、接口名、类型名、类名、方法名、字段名、常量名、CSS 类名、`data-test-id`、日志 id、测试文件名，**全部是提案，不是锁定契约**。用户以文字确认之前，不改任何一行源码；改名先改本文，再进实现计划。
+
+**Scope:** 本阶段 Plan 02…13 会新建 / 改动的全部对外名称，以及研究点名、留给接口计划拍板的七组契约结论。前序阶段已锁定的名称（`IResourceSystem` / `IResourceSystemAccess` / `IResourceStore` / `IResourceAccess` / `IResource` / `IEditorPanelContext` / `IEditorPanel` / `IResourceSystemHooks` / `IEditorFileChange` 等）不重复登记，只登记它们的**新增**成员。
+
+**约定:** 类上的方法写 `类名.方法名`（如 `WriteBuffer.schedule`），接口方法写 `接口名.方法名`（如 `IResourceSystem.flushAllContent`），自由函数写裸名（如 `isSameResourceContent`、`deriveSchemaPath`）。每个名字先说明「它是干什么的」，再给名字。
+
+> 读法：一节一个计划。每节先一句话说明「这个计划要做什么」，再给一张「名称 / 种类 / 文件位置 / 用途」表。
+> 若某个名字不合适，直接在对话里指出；改名时先改本文，再进入 Plan 02 / Plan 03。
+
+---
+
+## 全局约定（先读这一节）
+
+| # | 约定 | 具体口径 |
+|---|------|----------|
+| G1 | 方法引用 | 一律 `类名.方法名` 或 `接口名.方法名`（例如 `WriteBuffer.schedule`、`IEditorPanelContext.flushResource`）；只有**自由函数**写裸名（例如 `isSameResourceContent`、`isEditableFieldElement`、`deriveSchemaPath`）。禁止出现裸方法名。 |
+| G2 | 接口成员只读 | 接口成员**默认 `readonly`**；只有外部确实需要直接修改的才非 `readonly`。本阶段唯一的例外是缓冲条目的 `timer` / `inFlight` / `error` 三个成员——它们要在写盘结算时回写，其余（含 `content` / `version` / `externallyChanged`）全部 `readonly`，改动时整条替换。 |
+| G3 | 枚举形态 | 一律 `const enum` + **数字**成员 + **大驼峰**成员名（照 `EditorFileChangeKind` / `PanelCloseChoice`）；不用字符串枚举、不用全大写成员。本阶段不新增枚举，但若实现时确实需要（例如表示某个动作的结果），必须照此形态。 |
+| G4 | 类型导入 | **禁止 `import type`**；类型再导出用 `export type`。 |
+| G5 | 文件头注释 | **不写文件头注释**。文件级说明写在 import 之后、正式代码之前；桶文件不写注释。 |
+| G6 | 桶文件 | 一律 `export *`，**不跨目录深路径转发**；`resource/index.ts` 只加一行 `export * from './writeBuffer';`。 |
+| G7 | 模块级状态 | 模块级只允许**字面量**常量（`FLUSH_DEBOUNCE_MS = 5000` 合规，对象 / 数组字面量要 `Object.freeze(...)`）；`Map` / `Set` / 定时器表**必须是实例字段**，不得出现在模块级（结构门禁会拦）。 |
+| G8 | 页面事件 | `editor-core` 与 `editor-impl` 的任何文件（**含测试**）都不得出现 `document` / `navigator` 全局；页面事件一律挂在 `window` 上（`beforeunload` / `pagehide` / `blur`），这是 O3 的结论。 |
+| G9 | 路径口径 | 全部路径都是「相对项目根、以 `/` 分隔、无前导斜线、不含 `..` 段」的规范化相对路径；缓冲的键就是 `IResourceIdentifier`，**不新增任何路径来源**。 |
+| G10 | 换行与命名 | 全部新文件用 **LF**；代码文件名小驼峰；测试文件名 `xxx.test.ts` / `xxx.test.tsx`；Markdown 文件名连字符。 |
+| G11 | 纯函数与类 | 纯函数保持裸函数（`isSameResourceContent` / `isEditableFieldElement`），只有有状态的缓冲才写成类（`WriteBuffer implements IWriteBuffer`）；每个类都必须先有 `interface` 再 `implements`。 |
+| G12 | 不用字符串做键 | 状态 / 种类 / 结果一律用枚举或数字；只有「字符串本身就是内容」（路径、事件名、`data-test-id`、日志 id）才用字符串字面量。 |
+
+---
+
+## 七组契约的落实决策（先读这一节）
+
+> 这一节把研究点名、D-xx 明确留给接口计划拍板的七件事一次给定。每条先给一句外行看得懂的话，再给「为什么这样定」。Plan 02 / 04 / 05 / 06 / 07 / 08 / 10 只按这一节落地，不再二次拍板。
+
+### ① 缓冲条目与它的类型
+
+**人话：** 一条路径的待写内容不散着放，而是打包成一条记录：内容、自增版本号、5 秒定时器句柄、正在写的那一次、上次失败原因，外加一个「外部已经改过它」的标记。改动时**整条替换**，不就地改字段。
+
+**为什么这样定：** 整条替换能让「写盘期间又写了一次」这件事靠版本号判出来——`ResourceContent` 是 `string | Uint8Array`，`!==` 对字节是**引用比较**，如果复用同一个 `Uint8Array` 实例就会漏判（研究 §Q2.3 第 1 条）。版本号是数字，比较可靠。整条替换还让「外部已改」标记自然回到假，不需要额外的清理代码。
+
+### ② 立刻写盘 / 全量写盘 / 待写查询的签名与归属
+
+**人话：** 面板只需要两个动作——「这条路径立刻写盘」（`IResourceSystemAccess.flushContent`，面板通过 `IEditorPanelContext.flushResource` 转发看到）与「丢掉这条路径的待写」（`IResourceSystemAccess.discardPendingContent` / `IEditorPanelContext.discardPendingResource`）；再加上「订阅待写变化」（`IResourceSystemAccess.watchPendingChange` / `IEditorPanelContext.watchPendingChange`）。外壳与收口路径只需要三个——「全部写盘」（`IResourceSystem.flushAllContent`）、「有没有待写」（`IResourceSystem.hasAnyPendingContent`）、「有哪些路径待写」（`IResourceSystem.listPendingPaths`）。
+
+**返回形态（现在定死）：**
+
+- `IResourceSystemAccess.flushContent` → `Promise<void>`；幂等：这条路径没有待写时直接成功，调用方不必先查 `IResourceSystem.hasAnyPendingContent`。
+- `IResourceSystem.flushAllContent` → `Promise<void>`：逐条尝试，**失败不阻止其它路径写盘**；全部尝试完再把**第一条**失败抛给调用方。外壳与释放路径自己 catch 并记 `resource.flushFailed`。
+- `IResourceSystem.hasAnyPendingContent` → `boolean`；`IResourceSystem.listPendingPaths` → `readonly string[]`（返回新数组，不外泄内部引用）。
+
+**为什么这样定：** 三者都**不挂在单个资源句柄上**——`IResource` 只有一个实现（`Resource`），在它上面再挂一个写盘入口就会出现两个落盘通道。全量写盘刻意不挂在「某条路径」上，因为它天生是跨路径的。`IResourceSystem.flushAllContent` 用「全部尝试 + 抛第一条」而不是 `Promise.all`，是因为一条磁盘写失败不该让别的路径的改动一起卡在缓冲里。
+
+### ③ 合并通知走哪条钩子
+
+**人话：** 一次写入之后不要立刻喊「文件变了」，攒 50 毫秒喊一次；这条通知**复用既有的两条通道**（`IResourceSystemHooks.onResourceChange` 与 `IResourceSystemHooks.onUpdateResource`），**不新增第三条钩子**，一次定时器里只投递一次、只投递 `EditorFileChangeKind.Change` 这一种变化。合并定时器「首次排程后不重置」：从第一次写入起 50 毫秒必发一次，期间的写入并进去。
+
+**为什么这样定：** 新增第三条钩子会让每个面板面临「三条通道该实现哪一条」的选择，而地图 / 素材的 `IResourceSystemHooks.onUpdateResource` 目前就是空实现；复用既有通道则 `core.test.ts` 的旧断言继续成立，表格 / 资源管理器本来就用 `IResourceSystemHooks.onResourceChange`。**这条通知取代 04.2 的 D-14「自己写完不再通知」**（仅限「缓冲写入」这一条路径），04.2 的基线比较去重继续保留（它仍然吞掉重复通知）。地图 / 素材**没有**实现 `IEditorPanel.onResourceChange`，外壳的既有回退分支继续负责它们（研究 §Q3.2 / §Q3.4），因此合并通知**只投给声明了 `IEditorPanel.onResourceChange` 的面板**，不退化成预读——否则对二进制路径调 `IEditorFileSystem.readFile` 会抛错、被 `resource.hookFailed` 吞掉，变成日志噪音。定时器不重置的理由见第五项取舍。
+
+### ④ 外部写入来源判定（方案 A：不引入来源标识）
+
+**人话：** 不引入「这条写入是谁写的」这种标记，也不改宿主文件变化事件的载荷。同面板两栏与外部写入靠两条**既有事实**区分：
+
+- **(a) 写者自己那一栏：** 写入返回后立刻把该栏基线推成刚写出的原文，50 毫秒通知到达时内容与基线相同即被吞掉。
+- **(b) 同面板其它栏：** 若收到的内容与「本面板其它栏刚刚写出的那一份」相同，判为同面板自写，只刷新或保留草稿、**永不弹冲突**；内容不同才是外部写入，仍按既有规则「脏则提示、不脏则正常载入」。
+
+**为什么这样定：** 这**不是**「用字符串比较冒充来源」（D-25 禁止的是后者）：比较的是「这内容是不是本面板刚刚写出去的那一份」，而不是猜「是谁写的」。它同时保住了 04.2 已落地并测试过的基线去重机制（研究 §Q4.4），也与 `04.2-19` 已定的「不要新增『自写标记』之类的旁路状态」同向。**本条取代 `04.3-RESEARCH.md` 责任图第 145 行「来源判定在资源层写日志」**：分层没有变化——资源层仍负责缓冲、落盘与通知，面板只消费通知并做内容比较——只是把判定从「写日志」换成「比对最近一次自己写出的内容」。判定落在面板上，不落到资源层，也不新增第二条钩子。
+
+### 外部写入不得被待写遮蔽（D-16 的落实机制）
+
+**人话：** 外部把文件改了的时候，内存里那份还没落盘的旧内容不能挡在前面让编辑器看不见外部变化；但也**不能**直接丢掉它（丢掉就等于把用户刚确认的改动扔了）。
+
+**机制：** 外部变化到达（宿主的文件变化事件，以及测试里模拟外部变化的「失效缓存 + 通知」入口）时，若该路径还有待写内容，就**在这条待写自己的条目上**把 `IWriteBufferEntry.externallyChanged` 置真（由 `ResourceSystem.noteExternalWrite` 调 `WriteBuffer.noteExternalWrite` 完成）。这个标记是**条目上的一个布尔字段**，不是另开一个「已被标记的路径集合」——条目每次被自己的写入整条替换时标记自然回到假，因此一次外部冲突不会让该路径永久读不到待写。
+
+条目本身**保留**（它仍然是「有内容没落盘」的证据，面板据此仍算未保存），但两件事同时生效：
+
+1. **取消它的 5 秒自动落盘**，免得 5 秒后把外部写入静默覆盖；
+2. **读取回落到磁盘**（`WriteBuffer.readPending` 对已标记条目返回空），于是面板拿到的是外部内容，既有的冲突规则（脏则提示、不脏则正常载入）原样生效。
+
+自己写盘引起的宿主回声要能识别出来并**不标记**：判据是「磁盘上的内容等于本缓冲最近一次自己写出去的内容」（`WriteBuffer.lastWritten` + `isSameResourceContent`）。
+
+**标记清掉 5 秒定时器之后不会自己装回来。** 这条路径的自动落盘到此为止，只能由用户在冲突弹窗上明确表态来结算（用户 2026-10-29 定稿，取代先前的「保留后重新写一次缓冲」）。两个动作点哪个都立刻生效：
+
+- **(1)「保存编辑器的」** —— 表格面板把该栏内容重新排进缓冲，并**立刻**把该路径待写写盘（显式覆盖外部修改），待写条目与「外部已改」标记一起消失，右上角提示随之更新。实现落点：`TablePanel.keepExternalConflict`；实现要点是先按冲突路径把该栏放回「未落盘」（`TablePanel.saveDocument` 在 `wroteData` / `wroteSchema` 都为假时提前返回，不先放回就是空转），再走 `TablePanel.saveColumn` 写缓冲，再 `IEditorPanelContext.flushResource`。基线由 `TablePanel.saveDocument` 既有那一句推进，随后的宿主回声继续被忽略。
+- **(2)「保存外部修改」** —— 丢弃该路径待写、同时失效该路径内容缓存，面板按收到变化时记下的外部原文重新载入。**不要**在这一支里重新读磁盘：磁盘可能已被在途写盘覆盖。实现落点：`TablePanel.discardExternalConflict` → `IEditorPanelContext.discardPendingResource`。
+
+用户没表态之前**一个字节都不写**：待写条目保留、面板仍算未保存、右上角提示与 `beforeunload` 继续生效、该路径没有 5 秒自动落盘。因此不存在「保留之后定时器装不回来」的中间态——冲突路径只由弹窗结算。
+
+**弹窗不在用户打字时抢焦点：** 冲突到达时立刻记进栏状态（未保存标记必须马上正确），但若该面板正有字段处于「已聚焦未失焦 / 未回车确认」，弹窗推迟；字段失焦或回车确认的那一刻立刻弹。机制落在 `editor-impl` 的面板视图上：根 `etable-columns` 的 React 焦点事件属性 `onFocus` / `onBlur` 经视图回调报给面板（`ITablePanelViewProps.onFieldEditingChange` → `TablePanel.setFieldEditing`），判定元素是否为可编辑字段用模块级裸函数 `isEditableFieldElement`；只用一个布尔，不碰 `document` / `navigator`（两个包都禁），也不动表格组件的 props。两个解除入口：① 失焦经视图回调；② **一次确认提交**由 `TablePanel.applyEdit` 自己解除——数字框按回车确认后不失焦，只靠失焦事件永远等不到「停手」；文本域里回车是换行、不算停手，所以不能改用按键判定。焦点在工具栏按钮或表格空白上不算「正在打字」。
+
+**其余两条恢复路径不变：**
+
+1. **任何一次自己的写入** —— `WriteBuffer.schedule` 整条替换条目，标记随替换清假、新定时器装上。
+2. **回声分支** —— 不改内容、不改版本号、不置标记，但**重排一次 5 秒定时器**（先清后装），免得一次回声把自动落盘弄丢。
+3. **成功写盘** —— 版本号未变则删条目（标记随之消失）；版本号已变则保留条目、清假标记并重排定时器。
+4. **在途写盘** —— 期间到达的外部变化不取消那次写盘；整条替换条目时必须原样保留 `inFlight` 与 `error` 两个字段（否则同一个路径会出现第二个在途写盘），结算时标记优先（见 `## Plan 04`）。
+
+**为什么不选「丢掉待写再重读」（一句话）：** 自动保存之后草稿已经不脏，丢掉待写会让这一栏被当成干净而静默载入外部内容，用户刚确认的改动直接消失，同时「脏则提示」也永远触发不了；保留待写正是为了让「有待写 = 未保存」这条 D-11 口径在外部变化时依然成立。**为什么不选「先落盘再比较」：** 那等于用本地内容覆盖外部写入，D-16 要求外部写入必须被看到。
+
+**与决策的关系：** 落实 D-16；与 D-03（5 秒）、D-07（失败保留待写）、D-08（关闭三态）、D-14（打字时不打断）、D-11（有待写即未保存）、D-25（不得用字符串比较冒充来源）同时生效。
+
+### ⑤ 页面生命周期事件集合
+
+**人话：** 三个事件，全挂在 `window` 上——关闭页面时若有待写就弹浏览器原生确认（`beforeunload`，处理函数 `ShellSystem.beforeUnloadHandler`）；页面即将卸载 / 进往返缓存时尽力写一次盘（`pagehide`，处理函数 `ShellSystem.pageHideHandler`）；窗口失焦时也尽力写一次盘（`blur`，处理函数 `ShellSystem.windowBlurHandler`）。**不使用 `document`，不使用 `visibilitychange`。**
+
+**为什么这样定：** `document` 在 `editor-core` 与 `editor-impl` 的结构门禁里被禁（含测试），而判断「页面是否隐藏」最直接的写法要读 `document.hidden`；`pagehide` 是 `window` 上的等价意图（覆盖「离开页面 / 进往返缓存」），不破门禁（O3 / D-18 / D-19）。写盘在缓冲为空时是空操作，因此失焦带来的噪声可忽略。`beforeunload` **只承诺「弹框」、不承诺「写完」**——浏览器不会等异步写盘，这一点必须写进 UAT，不能讲成「保证不丢数据」。
+
+### ⑥ 外壳待写视图状态与刷新触发
+
+**人话：** 外壳视图状态加一个布尔 `IShellViewState.hasPendingWrite`（菜单行 props 对应 `IMenuRowProps.hasPendingWrite`）；资源层在「有待写」这件事发生变化时通过 `IResourceSystemHooks.onPendingChange` 通知一次，外壳订阅后重渲染。
+
+**为什么这样定：** 外壳根组件只收纯 props（组件不直接问资源系统），所以字段必须走 `ShellSystem.buildViewState` → props → `MenuRow` 这条既有链。`ShellSystem.notify()` 只在标签 / 面板 / 菜单变化时调用，缓冲状态变化不会触发它，因此必须由资源层主动通知一次，否则提示永远不出现。提示文案固定一条、不拼任何路径、无待写时不渲染任何元素（不是渲染空串——空串会占位并让 `getByTestId` 恒命中），见 D-17。
+
+### ⑦ 表格「未保存」的第二来源
+
+**人话：** 每一栏加一个布尔 `ITablePanelColumn.pendingWrite`，表示「本栏目标路径现在还有待写内容」；它与组件草稿脏取「或」后作为工具栏的未保存状态。
+
+**为什么这样定：** D-11 要求「未保存」同时覆盖「组件草稿脏」和「缓冲有 pending」。这条布尔与 `TablePanel.isColumnDirty` 共用同一份数据（待写也算脏），面板通过 `IEditorPanelContext.watchPendingChange` 订阅「待写变化」并重发视图；订阅时资源层会立刻回调一次当前待写集合（见 `PendingChangeListener` 的契约），5 秒自动写盘完成后该标记会自动消失。
+
+---
+
+## 不缓冲的边界（写死）
+
+| 动作 | 是否走缓冲 | 依据 |
+|------|------------|------|
+| 新建资源（`ResourceSystem.createResource` / `IEditorPanelContext.createResource`） | **不走缓冲，立刻碰磁盘** | O5：新建后紧接着要核对文件是否存在（索引 / 目录列举 / `IEditorFileSystem.fileExists`），「新建后 5 秒内崩掉、文件不见了」比「内容晚 5 秒」难解释得多。 |
+| 删除资源（`ResourceSystem.deleteResource`） | **不走缓冲，立刻碰磁盘**；同时丢弃该路径待写并记 `resource.pendingDiscarded` | 否则删掉的文件会在 5 秒后被 `WriteBuffer.flush` 重新写出来。 |
+| 移动资源（`ResourceSystem.moveResource`） | **不走缓冲，立刻碰磁盘**；同时丢弃**源路径**待写并记 `resource.pendingDiscarded` | 移动一个「刚改还没落盘」的文件语义本就模糊，丢弃比迁移更可解释（研究 §Q1.3）。 |
+| 内容修改（`ResourceSystem.writeContent` / `IResource.write`） | **走 5 秒缓冲** | D-01 / D-03。 |
+
+另外两条一起写死：
+
+- 缓冲只接受**已经过既有路径校验**的资源标识，不新增任何路径来源（`WriteBuffer.flush` 只写缓冲里已有的键）。
+- **禁止的修法：** 给 `FakeFileSystem` / `MemoryBackend` 加「写入即同步落盘」后门——那会让缓冲在自动化里永不被验证，bug 会跑到生产。
+
+---
+
+## 九个新测试文件一览
+
+| 测试文件 | 所在包 | 钉住什么 |
+|----------|--------|----------|
+| `resourceBuffer.test.ts` | `editor-core` | 写入只进缓冲、读命中缓冲、5 秒后磁盘才变、写盘幂等、全量写盘覆盖多路径、查询口径。 |
+| `resourceBufferConcurrency.test.ts` | `editor-core` | 并发写盘复用在途那一次、写盘期间再写不丢、失败保留待写可重试。 |
+| `resourceNotifyCoalesce.test.ts` | `editor-core` | 50 毫秒内同一路径多次写入只通知一次；两个路径各一次；通知到达时读到的已是缓冲内容。 |
+| `shellFlush.test.ts` | `editor-core` | 切标签 / 关标签 / 释放都会把缓冲打到磁盘；写盘失败不影响标签状态机。 |
+| `shellPageLifecycle.test.ts` | `editor-core` | `pagehide` 触发写盘；`beforeunload` 在有 / 无待写时分别阻止 / 不阻止卸载。 |
+| `shellPendingIndicator.test.tsx` | `editor-core` | 有待写时渲染提示并逐字断言文案；无待写时不渲染任何元素。 |
+| `tableAutoSave.test.tsx` | `editor-impl` | 失焦确认后 50 毫秒内别处读得到、5 秒后磁盘才变、保存按钮 = 立即写盘、「未保存」覆盖两个来源。 |
+| `twoColumnsSameTable.test.tsx` | `editor-impl` | 同路径两栏：一栏确认后另一栏 50 毫秒内更新；同时确认最后写盘者胜且不弹冲突；另一栏脏时保留自己的草稿。 |
+| `devHostAutoSave.test.tsx` | `editor-dev` | 真实宿主端到端：改一格不点保存 → 5 秒后磁盘变；切标签立刻变；关标签显示「正在保存…」后关闭且磁盘是新值。 |
+
+---
+
+## Plan 02 — editor-core 的纯类型声明
+
+**要做什么：** 在 `@motajs/editor-core` 里只加类型、只加语义正确的空实现，一行行为都不接：缓冲条目、缓冲契约、写盘回调类型、资源访问口 / 资源系统 / 资源钩子 / 面板上下文上的新成员、外壳视图状态里的待写布尔。这些成员在缓冲尚未接入时以语义正确的空实现交付（没有待写 → 立刻写盘是空操作、有无待写返回假、路径列表为空、取可读待写内容返回空、外部变化标记是空操作），因此**零行为改动**。
+
+| 名称 | 种类 | 文件位置 | 用途 |
+|------|------|----------|------|
+| `IWriteBufferEntry` | interface（成员 `readonly content` / `readonly version` / `timer` / `inFlight` / `error` / `readonly externallyChanged`） | `packages/libs/editor-core/src/resource/types.ts` | 把一条路径的待写内容、自增版本号、5 秒定时器句柄、在途写盘与上次失败原因打包成一条只读记录；改动时整条替换，不就地改字段。 |
+| `IWriteBufferEntry.externallyChanged` | 条目字段，`boolean` | 同上 | 这条待写是否已经被外部写入挡住：为真时读取回落到磁盘、取消它的 5 秒自动落盘，面板据此仍算未保存；它是**条目上的布尔**，不是另开的路径集合。 |
+| `WriteBufferWriter` | type（`(path: string, content: ResourceContent) => Promise<void>`） | 同上 | 把一份内容真正写进磁盘的回调类型；缓冲自己不碰文件系统，只调用注入进来的这个函数。 |
+| `IWriteBuffer` | interface | 同上 | 待写表的对外契约：排入、立刻写盘、全量写盘、查询、取可读内容、丢弃、清空、释放、标记外部已改。 |
+| `WriteBuffer` | class（`implements IWriteBuffer`） | `packages/libs/editor-core/src/resource/writeBuffer.ts`（新建） | 持有「路径 → 待写条目」那张表的类；不设上限、不做 LRU，只在成功写盘后删条目。 |
+| `WriteBuffer.schedule` | 方法，`(path: string, content: ResourceContent) => void` | 同上 | 把一条路径的最新内容排进待写表，并重排它的 5 秒定时器；已存在就整条替换（标记随之回到假）。 |
+| `WriteBuffer.flush` | 方法，`(path: string) => Promise<void>` | 同上 | 把某一条路径的待写内容立刻写进磁盘，可以 `await`；没有待写时是空操作。 |
+| `WriteBuffer.flushAll` | 方法，`() => Promise<void>` | 同上 | 把所有待写内容逐条尝试写盘，全部尝试完再把第一条失败抛给调用方。 |
+| `WriteBuffer.has` | 方法，`(path: string) => boolean` | 同上 | 这条路径现在还有没有内容没写盘。 |
+| `WriteBuffer.paths` | 方法，`() => readonly string[]` | 同上 | 现在还有哪些路径没写盘；返回新数组，不外泄内部引用。 |
+| `WriteBuffer.size` | 方法，`() => number` | 同上 | 现在一共有多少条待写。 |
+| `WriteBuffer.readPending` | 方法，`(path: string) => ResourceContent \| undefined` | 同上 | 只读取待写内容、不触发写盘；该条被标「外部已改」时返回空，让读取回落到磁盘。 |
+| `WriteBuffer.discard` | 方法，`(path: string) => void` | 同上 | 丢弃某条路径的待写内容（连同它的定时器），用于「不保存关闭」「保存外部修改」与删除资源。 |
+| `WriteBuffer.clear` | 方法，`() => void` | 同上 | 清空整张待写表，不写盘（只用于释放）。 |
+| `WriteBuffer.dispose` | 方法，`() => void` | 同上 | 释放缓冲：清掉所有定时器与内部表，避免测试与热重载留下悬挂定时器。 |
+| `WriteBuffer.noteExternalWrite` | 方法，`(path: string) => void` | 同上 | 外部内容到达时给这条待写打「外部已改」标记；没有待写时是空操作。 |
+| `PendingChangeListener` | type（`(paths: readonly string[]) => void`） | `packages/libs/editor-core/src/resource/types.ts` | 「待写集合变了」的回调类型；订阅时资源层会先回调一次当前待写路径列表。 |
+| `IResourceSystemAccess.flushContent` | 接口方法，`(identifier: IResourceIdentifier) => Promise<void>` | 同上 | 资源访问口上的「按路径立刻写盘」：面板与外壳都用这一个入口，不再各自找写盘通道。 |
+| `IResourceSystemAccess.discardPendingContent` | 接口方法，`(identifier: IResourceIdentifier) => void` | 同上 | 资源访问口上的「丢弃这条路径的待写」，用于「不保存关闭」与冲突弹窗的「保存外部修改」。 |
+| `IResourceSystemAccess.watchPendingChange` | 接口方法，`(listener: PendingChangeListener) => () => void` | 同上 | 资源访问口上的「订阅待写变化」；返回退订函数，订阅瞬间立刻回调一次当前待写路径列表。 |
+| `IResourceSystem.flushAllContent` | 接口方法，`() => Promise<void>` | 同上 | 资源系统上的「全量写盘」：切标签、关标签、释放、页面离开都用它；逐条尝试、失败不阻止其它路径。 |
+| `IResourceSystem.hasAnyPendingContent` | 接口方法，`() => boolean` | 同上 | 资源系统上的「有没有待写」；右上角提示与 `beforeunload` 只看这一个布尔。 |
+| `IResourceSystem.listPendingPaths` | 接口方法，`() => readonly string[]` | 同上 | 资源系统上的「待写路径列表」，只给内部与外壳使用，不把任何路径渲染到界面。 |
+| `IResourceSystemHooks.onPendingChange` | 可选接口方法，`() => Promise<void>` | 同上 | 「待写有无」发生变化时通知一次，外壳订阅后重渲染；不新增第二条变化通道。 |
+| `IEditorPanelContext.flushResource` | 接口方法，`(identifier: IResourceIdentifier) => Promise<void>` | `packages/libs/editor-core/src/panel/types.ts` | 面板侧「按路径立刻写盘」的转发入口（资源访问口 `IResourceSystemAccess.flushContent` 的一对一转发），表格保存按钮与冲突弹窗用它。 |
+| `IEditorPanelContext.discardPendingResource` | 接口方法，`(identifier: IResourceIdentifier) => void` | 同上 | 面板侧「丢弃待写」的转发入口（对应 `IResourceSystemAccess.discardPendingContent`），用于「不保存关闭」与「保存外部修改」。 |
+| `IEditorPanelContext.watchPendingChange` | 接口方法，`(listener: PendingChangeListener) => () => void` | 同上 | 面板侧「订阅待写变化」的转发入口（同名转发），表格据此维护每栏「未保存」的第二来源。 |
+| `IShellViewState.hasPendingWrite` | 视图状态字段，`boolean` | `packages/libs/editor-core/src/shell/shellSystem.ts` | 外壳视图状态里的待写布尔，决定右上角提示渲染不渲染。 |
+| `IMenuRowProps.hasPendingWrite` | props 字段，`boolean` | 同上 | 菜单行新增的 props 成员，由外壳根透传，决定提示元素的出现。 |
+
+**归属与命名口径（写死）：**
+
+- 面板侧刻意用 `IEditorPanelContext.flushResource` / `IEditorPanelContext.discardPendingResource` 两个名字，**不与**资源层的 `IResourceSystemAccess.flushContent` / `IResourceSystemAccess.discardPendingContent` 同名——同义不同层，读代码时能立刻看出「这是面板在请求，不是资源层在实现」。第三项 `IEditorPanelContext.watchPendingChange` 与 `IResourceSystemAccess.watchPendingChange` 逐字同名转发。
+- `IResourceSystemAccess` 同时继承 `IResourceSystem` / `IResourceAccess` / `IResourceStore`，因此 `IResourceSystem.flushAllContent` / `IResourceSystem.hasAnyPendingContent` / `IResourceSystem.listPendingPaths` 在访问口上同样可见；这不构成第二个入口，它们都转发到同一个缓冲。
+- 缓冲的 `WriteBuffer.flushAll` / `WriteBuffer.discard` / `WriteBuffer.clear` / `WriteBuffer.dispose` / `WriteBuffer.readPending` / `WriteBuffer.noteExternalWrite` 六个名字**一经本文确认即为最终名**，后续计划不再改。
+
+---
+
+## Plan 03 — editor-impl 的纯声明
+
+**要做什么：** 在 `@motajs/editor-impl` 里只追加类型与注释，不接任何行为：表格每栏状态上的待写布尔、面板渲染根上「某个字段正在输入」的可选回调、数字输入控件的提交契约。
+
+| 名称 | 种类 | 文件位置 | 用途 |
+|------|------|----------|------|
+| `pendingWrite`（`ITablePanelColumn.pendingWrite`） | 栏状态字段，`boolean` | `packages/libs/editor-impl/src/table/tablePanel.ts` | 这一栏的目标路径现在还有没有内容没写盘；初值假，本计划只声明、不读取。 |
+| `ITablePanelViewProps.onFieldEditingChange` | 可选 props 成员，`(editing: boolean) => void` | 同上 | 面板渲染根新增的视图参数：视图把「某个可编辑字段正在输入」的布尔报给面板；它是**面板自己的视图参数**，不是 `ITableEditableProps` 的成员，`EditableTable` / `TableGrid` 的 props 一字不改。 |
+| `INumberInputProps` 的提交契约 | 既有 props 的 JSDoc（形状不变） | `packages/libs/editor-impl/src/shared/schemaForm/components/inputs/NumberInput.tsx` | 把注释改成「失焦 / 回车 / 清空后才提交一次」，先把契约写清楚；实现留到 Plan 09。 |
+
+---
+
+## Plan 04 — 缓冲本体与读写穿透
+
+**要做什么：** 落 `writeBuffer.ts` 的实现，把 `ResourceSystem.writeContent` 改成「写缓冲 + 写缓存 + 排通知 + 排定时器」，让读取先命中缓冲，接上删除 / 移动 / 释放时与缓冲的联动，并落地「外部已改」标记与两条新日志。
+
+| 名称 | 种类 | 文件位置 | 用途 |
+|------|------|----------|------|
+| `writeBuffer.ts` | 新文件 | `packages/libs/editor-core/src/resource/writeBuffer.ts` | 待写缓冲本体的落地文件：Plan 02 在这里定契约，本计划在这里写实现。 |
+| `WriteBuffer`（实现本体） | 类（`implements IWriteBuffer`，Plan 02 已登记，此处只落实现） | 同上 | 缓冲表、5 秒定时器、在途写盘、失败原因的持有者；所有 `Map` 都是实例字段。 |
+| `FLUSH_DEBOUNCE_MS` | 模块级不变常量，`5000` | 同上 | 内容改动后最多等多久把待写写进磁盘。 |
+| `NOTIFY_COALESCE_MS` | 模块级不变常量，`50` | 同上 | 一次写入之后最多等多久把「这个路径变了」通知发出去。 |
+| `WriteBuffer.lastWritten` | 私有实例字段（`Map<string, ResourceContent>`） | 同上 | 每条路径最近一次自己写出去的原文；宿主回声到达时用它判断「这次变化是不是我的写盘引起的」（配合 `isSameResourceContent`）。 |
+| `isSameResourceContent` | 自由函数，`(left: ResourceContent, right: ResourceContent) => boolean` | 同上 | 判断两份内容是不是同一份：字符串按值比、字节按长度 + 逐字节比；不引入哈希库（D-24）。 |
+| `ResourceSystem.bufferContent` | 私有方法，`(identifier: IResourceIdentifier, data: ResourceContent) => void` | `packages/libs/editor-core/src/resource/resourceSystem.ts` | 排入待写（同步返回、不碰磁盘），由 `ResourceSystem.writeContent` 调用。 |
+| `ResourceSystem.scheduleFlush` | 私有方法，`(identifier: IResourceIdentifier) => void` | 同上 | 安排 / 重排这条路径的 5 秒写盘；每次写入都重排（D-03）。 |
+| `ResourceSystem.flushOneContent` | 私有方法，`(identifier: IResourceIdentifier) => Promise<void>` | 同上 | 单路径写盘：拍快照、写盘、写盘期间又写入就保留待写并重排；同一路径复用同一在途写盘。 |
+| `ResourceSystem.clearFlushTimers` | 私有方法，`() => void` | 同上 | 释放时清掉所有定时器，避免悬挂定时器与测试泄漏。 |
+| `ResourceSystem.noteExternalWrite` | 私有方法，`(identifier: IResourceIdentifier) => void` | 同上 | 外部变化到达时把这条待写标成「外部已改」（条目保留、取消自动落盘、读取回落磁盘）；自己写盘的回声不标记。 |
+| `ResourceSystem.writeContent` | 既有方法（改造） | 同上 | 从「立刻 `IEditorFileSystem.writeFile` / `IEditorFileSystem.writeBinary`」改成「写缓冲 + `cache.set` + 排合并通知 + 排 5 秒写盘」，不再 await 磁盘。 |
+| `ResourceSystem.readContent` / `ResourceSystem.readBinary` | 既有方法（改造） | 同上 | 读取先查缓冲（`WriteBuffer.readPending`），再查内容缓存，最后回源；字节读取只在缓冲条目类型一致时命中。 |
+| `ResourceSystem.deleteResource` / `ResourceSystem.moveResource` | 既有方法（改造） | 同上 | 删除丢弃该路径待写；移动丢弃源路径待写；两者都记 `resource.pendingDiscarded`。 |
+| `ResourceSystem.dispose` | 既有方法（改造） | 同上 | 顺序写死：先全量写盘（失败只记日志），再清定时器与表，最后清索引 / 缓存 / `fs` 引用。 |
+| `resource.flushFailed` | 日志 id | 同上 | 写盘失败时记的那条日志（没有面板上下文的路径只记日志、不把异常抛给定时器）。 |
+| `resource.pendingDiscarded` | 日志 id | 同上 | 删除 / 移动资源时丢弃待写内容所记的日志。 |
+| `resourceBuffer.test.ts` | 测试文件（新建） | `packages/libs/editor-core/src/resource/__tests__/` | 钉住「写入只进缓冲、读命中缓冲、5 秒后磁盘才变、写盘幂等、全量写盘覆盖多路径、三种查询口径」。 |
+| `resourceBufferConcurrency.test.ts` | 测试文件（新建） | 同上 | 钉住「并发写盘复用在途那一次、写盘期间再写不丢、失败保留待写可重试」。 |
+| `externalChange.test.tsx` | 既有测试（迁移） | `packages/libs/editor-impl/src/table/__tests__/` | 把「保存后宿主回声被忽略」改成「点保存 → 显式写盘 → 回送变化」，并补「有待写时外部改文件不被缓冲遮蔽且仍弹冲突框」。 |
+
+**两条实现真值（写死，后续计划只引用）：**
+
+1. 整条替换待写条目时**原样保留** `inFlight` 与 `error`：在途写盘照常完成，结算时标记优先（不删条目、不重排定时器），同一个路径不会出现第二个在途写盘。
+2. `WriteBuffer.discard` **同时**失效该路径内容缓存（由 `ResourceSystem` 一侧完成），否则「丢弃后读到的还是旧的待写」。
+
+---
+
+## Plan 05 — 合并通知
+
+**要做什么：** 让写入后的通知按 50 毫秒合并一次，一次定时器只投递一次，走既有通道；并钉住「首次排程不重置」。
+
+| 名称 | 种类 | 文件位置 | 用途 |
+|------|------|----------|------|
+| `ResourceSystem.scheduleNotify` | 私有方法，`(identifier: IResourceIdentifier) => void` | `packages/libs/editor-core/src/resource/resourceSystem.ts` | 安排一次 50 毫秒的合并通知：首次排程后不重置，期间同路径的写入并进这一次。 |
+| `ResourceSystem.emitBufferedChange` | 私有方法，`(identifier: IResourceIdentifier) => Promise<void>` | 同上 | 定时器到点后只投递一次「这个路径的内容变了」（`EditorFileChangeKind.Change`），并沿用 `Hookable.forEachHook` + `resource.hookFailed` 的吞错口径。 |
+| `NOTIFY_COALESCE_MS` | 常量（已在 Plan 04 登记，此处只引用） | `packages/libs/editor-core/src/resource/writeBuffer.ts` | 50 毫秒合并窗口。 |
+| `resourceNotifyCoalesce.test.ts` | 测试文件（新建） | `packages/libs/editor-core/src/resource/__tests__/` | 50 毫秒内同一路径多次写入只通知一次；两个路径各通知一次；通知到达时读到的已是缓冲内容。 |
+
+**投递范围（写死）：** 合并通知只投给声明了 `IEditorPanel.onResourceChange` 的面板；未声明的（地图 / 素材）**不**退回预读通道，避免对二进制路径 `IEditorFileSystem.readFile` 产生日志噪音。旧通道 `IResourceSystemHooks.onUpdateResource` 的既有语义不变、也不新增第三条钩子。
+
+---
+
+## Plan 06 — 外壳落盘点与页面生命周期
+
+**要做什么：** 把切标签 / 关标签 / 释放这三个既有落盘点接到「全量写盘」上，并在 `ShellSystem.initialize` / `ShellSystem.dispose` 注册 / 注销三个 `window` 页面事件。
+
+| 名称 | 种类 | 文件位置 | 用途 |
+|------|------|----------|------|
+| `ShellSystem.flushPendingContent` | 私有方法，`() => Promise<void>` | `packages/libs/editor-core/src/shell/shellSystem.ts` | 外壳的「把缓冲写盘」辅助：调 `IResourceSystem.flushAllContent`，失败自己吞掉并记 `resource.flushFailed`，绝不打断标签状态机。 |
+| `ShellSystem.beforeUnloadHandler` | 私有字段，`(event: BeforeUnloadEvent) => void` | 同上 | 关闭页面时若有待写（`IResourceSystem.hasAnyPendingContent` 为真）就 `preventDefault` + `returnValue = ''`，弹浏览器原生确认。 |
+| `ShellSystem.pageHideHandler` | 私有字段，`() => void` | 同上 | 页面即将卸载 / 进往返缓存时发起一次尽力写盘（不 await、失败只记日志）。 |
+| `ShellSystem.windowBlurHandler` | 私有字段，`() => void` | 同上 | 窗口失焦时发起一次尽力写盘；缓冲为空时是空操作，噪声可忽略。 |
+| `ShellSystem.initialize` | 既有方法（改造） | 同上 | 注册上面三个 `window` 事件并保存引用；放在这里而不是 React 组件里，避免重挂重复注册。 |
+| `ShellSystem.dispose` | 既有方法（改造） | 同上 | 注销三个 `window` 事件；字段形态与 `ResourceSystem` 的退订函数对称。 |
+| `ShellSystem.invokeSwitchOut` | 既有私有方法（改造） | 同上 | 顺序铁律「面板 → 缓冲 → 磁盘」：先 await 面板的 `IEditorPanel.onSwitchOut`，随后调 `ShellSystem.flushPendingContent`。 |
+| `shellFlush.test.ts` | 测试文件（新建） | `packages/libs/editor-core/src/shell/__tests__/` | 切标签 / 关标签 / 释放都会把缓冲打到磁盘；写盘失败不影响标签状态机。 |
+| `shellPageLifecycle.test.ts` | 测试文件（新建） | 同上 | `pagehide` 触发写盘；`beforeunload` 在有 / 无待写时分别阻止 / 不阻止卸载（断言 `defaultPrevented`）。 |
+
+---
+
+## Plan 07 — 右上角待写提示
+
+**要做什么：** 在菜单行末尾追加一条固定文案的待写提示，有 pending 才渲染，无 pending 不渲染任何元素。
+
+| 名称 | 种类 | 文件位置 | 用途 |
+|------|------|----------|------|
+| `editor-shell-pending` | CSS 类名（`.editor-shell-pending`）与 `data-test-id` 共用的前缀值 | `packages/libs/editor-core/src/shell/shell.css`（样式）+ `packages/libs/editor-core/src/shell/shellSystem.ts`（元素） | 右上角待写提示的样式类与测试标识；样式用 `margin-left: auto` 右对齐、`--editor-muted` 颜色、不换行并省略溢出。 |
+| `正在等待保存，请勿关闭页面或浏览器` | 固定文案（逐字） | `packages/libs/editor-core/src/shell/shellSystem.ts` | 有待写时右上角显示这一条；不拼任何路径，无待写时不渲染任何元素。 |
+| `shellPendingIndicator.test.tsx` | 测试文件（新建） | `packages/libs/editor-core/src/shell/__tests__/` | 有待写时渲染提示并逐字断言文案；无待写时 `queryByTestId` 为 null（不能渲染空串）。 |
+
+**放置理由（写死）：** 放菜单行不放标签行——标签行 `overflow: hidden` 且标签可压缩，长标签会把提示挤没；菜单按钮是固定宽度，右侧空间稳定。组件里**不直接调资源系统**，`hasPendingWrite` 走 `ShellSystem.buildViewState` → props → 菜单行。
+
+---
+
+## Plan 08 — 表格自动保存与保存按钮
+
+**要做什么：** 字段确认后自动写一次缓冲，保存按钮改成「立刻写盘」，「未保存」接上缓冲待写这个第二来源，并把外部冲突弹窗的两个动作与「停手才弹」落到表格面板上。
+
+| 名称 | 种类 | 文件位置 | 用途 |
+|------|------|----------|------|
+| `TablePanel.saveAfterEdit` | 方法，`(columnIndex: number) => void` | `packages/libs/editor-impl/src/table/tablePanel.ts` | 字段确认（失焦 / 回车 / 选中）之后把这一栏写一次缓冲；自动保存的唯一入口，内部复用 `TablePanel.saveColumn`（安静模式），不另写一套序列化。 |
+| `TablePanel.refreshPendingWrites` | 方法，`(paths?: readonly string[]) => void` | 同上 | 按待写路径刷新每栏的 `pendingWrite` 布尔并重发视图；订阅待写变化时先拿一次当前路径列表。 |
+| `TablePanel.isColumnDirty` | 既有方法（改造） | 同上 | 脏判定新增第三来源：本栏目标路径还有待写内容也算脏（与 `pendingWrite` 共用同一份数据，D-11）。 |
+| `TablePanel.saveDocument` 的 `quiet` 参数 | 方法参数，`boolean`（缺省假） | 同上 | 安静模式：自动保存调用它时不刷「已保存」提示；手动保存仍刷。 |
+| `TablePanel.saveColumn` 的 `quiet` 参数 | 方法参数，`boolean`（缺省假） | 同上 | 安静模式，向上转交给 `TablePanel.saveDocument`。 |
+| `TablePanel.save` | 既有方法（改造） | 同上 | 保存按钮 = 立即写盘：先保存本栏，再对数据 / 推导出的 schema 两条路径调 `IEditorPanelContext.flushResource`；**不**用全量写盘（那会把别的面板还没确认的内容一起写盘）。 |
+| `TablePanel.saveAllColumns` | 既有方法（改造） | 同上 | 「全部保存」在返回前等到这些路径的待写真正落盘，再报成功。 |
+| `TablePanel.setFieldEditing` | 方法，`(editing: boolean) => void` | 同上 | 视图报「有字段正在输入」；为真时冲突弹窗推迟，为假的那一刻立刻弹。 |
+| `ITablePanelViewProps.onFieldEditingChange` | 可选 props 成员（Plan 03 已声明） | 同上 | 视图回调，对应 `TablePanel.setFieldEditing`；根 `etable-columns` 的 React 焦点事件属性 `onFocus` / `onBlur` 转成这个布尔。 |
+| `TablePanel.applyEdit` | 既有方法（改造） | 同上 | 一次确认提交成功后解除「正在输入」，覆盖数字框回车确认后不失焦的情形；同时触发 `TablePanel.saveAfterEdit`。 |
+| `isEditableFieldElement` | 模块级自由函数，`(element: EventTarget \| null) => boolean` | 同上 | 判断焦点落在的是不是 input / textarea / select / contenteditable；工具栏按钮、表格空白都不算「正在打字」。 |
+| `TablePanel.keepExternalConflict` | 方法，`(columnIndex: number) => Promise<void>` | 同上 | 冲突弹窗的「保存编辑器的」：先把该栏放回未落盘、排进缓冲，再立刻写盘覆盖外部修改；失败保留待写与弹窗，走既有错误通道。 |
+| `TablePanel.discardExternalConflict` | 方法，`(columnIndex: number) => void` | 同上 | 冲突弹窗的「保存外部修改」：丢弃该路径待写（同时失效内容缓存），按收到变化时记下的外部原文重新载入，不重新读磁盘。 |
+| `IExternalChangeDialogProps.keepLabel` | 可选 props 成员，`string` | `packages/libs/editor-impl/src/shared/panelDialogs/types.ts` | 「要编辑器这一份」按钮的文案；表格传「保存编辑器的」，地图 / 素材不传、保持原文案。 |
+| `IExternalChangeDialogProps.discardLabel` | 可选 props 成员，`string` | 同上 | 「要外部那一份」按钮的文案；表格传「保存外部修改」。 |
+| `IExternalChangeDialogProps.noteText` | 可选 props 成员，`string` | 同上 | 弹窗正文下方的一句补充说明；表格用它讲清「点哪个都立刻生效、没表态就不写盘」，地图 / 素材不传。 |
+| `保存编辑器的` | 定稿文案（逐字） | `packages/libs/editor-impl/src/table/tablePanel.ts` | 冲突弹窗的「要编辑器这一份」：用编辑器里的内容覆盖外部修改，并立刻写盘。 |
+| `保存外部修改` | 定稿文案（逐字） | 同上 | 冲突弹窗的「要外部那一份」：丢掉编辑器里的待写，重新载入外部那份。 |
+| `ExternalChangeDialog` | 既有组件（改造） | `packages/libs/editor-impl/src/shared/panelDialogs/ExternalChangeDialog.tsx` | 读三个新文案参数；不传时用默认文案，地图 / 素材行为与文案一律不变。 |
+| `panelDialogs.test.tsx` | 既有测试（改写 + 新增） | `packages/libs/editor-impl/src/shared/panelDialogs/__tests__/` | 传文案时逐字断言两句「保存编辑器的」/「保存外部修改」；不传时断言默认文案仍在。 |
+| `closeChoice.test.tsx` | 既有测试（被接管） | `packages/libs/editor-impl/src/table/__tests__/` | 随自动保存改三处断言：取消后读资源层是新值、spy 的含义改成「缓冲写入次数」、保存并关闭保持原样。 |
+| `tableAutoSave.test.tsx` | 测试文件（新建） | 同上 | 失焦确认后 50 毫秒内别处读得到、5 秒后磁盘才变、保存按钮 = 立即写盘、「未保存」覆盖两个来源。 |
+
+**口径（写死）：**
+
+- 两个既有回调 `IExternalChangeDialogProps.onKeep` / `IExternalChangeDialogProps.onDiscard` **不改名**：前者仍是「要编辑器这一份」（落点 `TablePanel.keepExternalConflict`），后者仍是「要外部这一份」（落点 `TablePanel.discardExternalConflict`）。地图 / 素材面板不传新文案、行为不变（D-21）。
+- 「不保存关闭」与「保存外部修改」两处丢弃待写都调 `IEditorPanelContext.discardPendingResource`，不许各写一套清表逻辑。
+- 两个动作都不把异常抛给点击处理器：「保存编辑器的」任一步失败时待写保留、弹窗不关、未保存标记仍在，失败走既有错误通道（既有文案「写入失败，请重试。」与 `resource.flushFailed` 日志），**不新增任何失败提示界面**（O2）。
+
+---
+
+## Plan 09 — 数字输入控件改为失焦 / 回车提交
+
+**要做什么：** 把数字输入从「每敲一个键提交一次」改成「失焦 / 回车 / 清空后提交一次」，并把 schema 视图里绕过通用控件的成对数字框一起对齐（`TableGrid` 里内联的 antd `InputNumber`）。
+
+**本计划不新增导出符号**：`NumberInput` 名字不变、props 形状不变、`TableRow` 的调用点不变。
+
+| 名称 | 种类 | 文件位置 | 用途 |
+|------|------|----------|------|
+| `NumberInput` | 既有组件（行为契约变更，不新增导出符号） | `packages/libs/editor-impl/src/shared/schemaForm/components/inputs/NumberInput.tsx` | 组件内部持一份本地输入值，回车或失焦时提交一次，按 Escape 回退；不再逐键 `onChange`。 |
+| `TableGrid` 的成对数字框 | 既有组件（改造，不新增导出符号） | `packages/libs/editor-impl/src/shared/schemaForm/components/TableGrid.tsx` | schema 视图里成对的最小 / 最大值输入绕过了 `NumberInput`，必须一起改成「确认一次才提交一次」，否则 D-09 在 schema 视图里不成立。 |
+| `behaviour.uat.test.tsx` | 既有测试（改写数字框用例） | `packages/libs/editor-impl/src/table/__tests__/` | 从「change 后立即提交」改为三条：只输入不提交读回旧值、失焦提交、回车提交。 |
+
+---
+
+## Plan 10 — 两栏同一张表
+
+**要做什么：** 让同一张表在同一表格面板的两栏同时打开时，一栏确认后另一栏 50 毫秒内更新；同面板两栏之间永不弹冲突；「另一栏脏」时保留它自己的草稿。
+
+**本计划不新增导出符号**，只登记「同面板冲突抑制」的判定依据与测试。
+
+| 名称 | 种类 | 文件位置 | 用途 |
+|------|------|----------|------|
+| `TablePanel.isSamePanelWrite` | 私有方法，`(columnIndex: number, text: string) => boolean` | `packages/libs/editor-impl/src/table/tablePanel.ts` | 判断收到的内容是不是本面板另一栏刚写出去的那一份；是就只刷新或保留草稿、永不弹冲突。 |
+| `twoColumnsSameTable.test.tsx` | 测试文件（新建） | `packages/libs/editor-impl/src/table/__tests__/` | 同路径两栏：一栏确认后另一栏 50 毫秒内更新；同时确认最后写盘者胜且不弹冲突；另一栏脏时保留自己的草稿。 |
+| `panelSync.uat.test.tsx` | 既有测试（改写） | 同上 | 从「点保存后同面板同步」改为「确认后 50 毫秒内同步」。 |
+
+**与 ④ 的关系（写死）：** 这条判定**取代 `04.3-RESEARCH.md` 责任图第 145 行「来源判定在资源层写日志」**，因此它是定稿而不是偏离。判定依据只有两条既有事实：本面板另一栏刚写出的内容（`TablePanel.isSamePanelWrite`）与既有基线原文比较；不比时间戳、不比来源位、不新增自写标记。
+
+---
+
+## Plan 11 — 迁移「保存后读磁盘」断言
+
+**要做什么：** 把写盘延后 5 秒之后会变红的既有断言逐个对齐；要求是**显式补一次写盘**，断言文案尽量不变。
+
+**本计划不新增源码符号。**
+
+| 名称 | 种类 | 文件位置 | 用途 |
+|------|------|----------|------|
+| `resourceSystem.test.ts` | 既有测试（改断言） | `packages/libs/editor-core/src/resource/__tests__/` | 把「写完磁盘立刻变」拆成「读缓冲是新值 + 磁盘仍是旧值」与「显式写盘后磁盘才变」两条。 |
+| `tracer.test.ts` | 既有测试（补显式写盘） | `packages/libs/editor-core/src/__tests__/` | 写后读磁盘前先显式写盘一次。 |
+| `editableContract.test.tsx` | 既有测试（补显式写盘） | `packages/libs/editor-impl/src/table/__tests__/` | 两处读裸磁盘的断言（约第 305 / 385 行）前各补一次显式写盘。 |
+| `assetAutoSave.test.tsx` / `assetExternalChange.test.tsx` / `assetLifecycle.uat.test.tsx` | 既有测试（补显式写盘） | `packages/libs/editor-impl/src/asset/__tests__/` | 读回辅助前补一次显式写盘；`assetLifecycle.uat.test.tsx` 里已经走资源层的那一条不改。 |
+| `mapDialogs.test.tsx` | 既有测试（补显式写盘 + 依赖删除丢待写） | `packages/libs/editor-impl/src/map/__tests__/` | 保存后读回前补写盘；「删除后文件不存在」靠实现丢弃待写保证，不靠测试兜。 |
+| `manualSave.uat.test.tsx` | 既有测试（**整体重写**） | `packages/libs/editor-impl/src/table/__tests__/` | 从「必须点保存才落盘」改为「确认即写缓冲 / 5 秒后落盘 / 保存按钮立即写盘 / 切出立即写盘」。 |
+
+**明确不用改（容易误列）：** `transcode.uat.test.tsx` 的二进制断言、`assetRegistration.test.tsx` 的二进制断言、`assetLifecycle.uat.test.tsx` 里已走资源层的那一条——它们走 `ResourceSystem.createResource`（O5：新建立刻落盘）；`mapDemo.test.ts` 的那两条读的是测试自己播种的产物，不走编辑器写入；`panelSync.uat.test.tsx` 由 Plan 10 改写。
+
+---
+
+## Plan 12 — 宿主端到端
+
+**要做什么：** 在开发宿主上用真实 `EditorCore` + 真实 `MemoryBackend` 做端到端验收，并给三个既有宿主测试补显式写盘。
+
+| 名称 | 种类 | 文件位置 | 用途 |
+|------|------|----------|------|
+| `devHostAutoSave.test.tsx` | 测试文件（新建） | `packages/apps/editor-dev/src/__tests__/` | 真实宿主端到端：改一格不点保存 → 5 秒后磁盘变；切标签立刻变；关标签显示「正在保存…」后关闭且磁盘是新值。 |
+| `devHostAssetAdd.test.tsx` | 既有测试（补显式写盘） | 同上 | 读裸后端前补一次显式写盘。 |
+| `devHostMap.test.tsx` | 既有测试（补显式写盘） | 同上 | 读裸后端前补一次显式写盘。 |
+| `devHostWatch.test.tsx` | 既有测试（条件确认） | 同上 | 若「保存按钮 = 立即写盘」成立则不用改，只需跑一遍确认；不成立才补写盘。 |
+
+---
+
+## Plan 13 — 收口
+
+**要做什么：** 跑完整验证、回填阶段状态，不留红。
+
+**本计划不新增符号。**
+
+| 名称 | 种类 | 文件位置 | 用途 |
+|------|------|----------|------|
+| 验证命令组 | 命令清单 | 三个包 + `scripts/verify/` | 三包全量 `test` 与 `typecheck`、四条结构门禁（`coreEngineNeutral` / `coreModuleState` / `coreImportType` / `coreBoundaries`）、`pnpm lint`、`pnpm format:check`。 |
+| `04.3-VALIDATION.md` | 文档（回填） | `.planning/phases/04.3-resource-write-buffer/` | 回填每条门禁的实跑结果，并置 `nyquist_compliant`。 |
+| `04.3-UAT.md` | 文档（新建 / 回填） | 同上 | 记录必须人工验收的项：`beforeunload` 原生弹框、切后台的真实写盘、5 秒防抖手感、两栏同表可能刷新掉未确认输入、冲突弹窗停手才弹、「保存编辑器的」真的覆盖了外部修改、右上角提示排版。 |
+| `04.3-*-SUMMARY.md` | 文档（各计划产出） | 同上 | 每个计划的执行记录：任务、验证证据、偏差、提交。 |
+| `STATE.md` / `ROADMAP.md` | 既有状态文件（由编排器更新） | `.planning/` | 阶段收口时回填进度与下一步；执行器不自行改写。 |
+
+---
+
+## 待用户确认的取舍
+
+> 以下五项需要用户点头。每项都给出**研究推荐值**与**替代方案的代价**；「状态」一列在用户文字确认之前一律是 `待确认`。
+
+| # | 取舍 | 研究推荐值 | 替代方案与代价 | 状态 |
+|---|------|-----------|----------------|------|
+| 1 | 同面板两栏与外部写入靠什么区分（来源判定） | **不引入来源标识**：写者自己那一栏靠「写盘返回后立刻推进基线」，同面板其它栏靠 `TablePanel.isSamePanelWrite` 比「本面板刚写出的那一份」，内容不同才算外部写入（④） | 走「资源层写日志 + 通知携带是否自写」：要新类型与新状态，二进制只能「尽力而为」；走「宿主 `origin` 字段」：只有 `MemoryBackend` 能填，真实宿主（Node / chokidar）填不了，等于没加 | **待确认** |
+| 2 | 页面事件集合 | **`window` 上的 `pagehide` + `window` 失焦 + `beforeunload`**；不用 `visibilitychange`、不用 `document`（⑤ / O3） | 坚持 `visibilitychange`：要读 `document.hidden`，会破 `editor-core` / `editor-impl` 的结构门禁（含测试）；给门禁加白名单等于降低门禁，不建议 | **待确认** |
+| 3 | 两栏同表时「未确认的输入可能被另一栏的写入刷新掉」 | **接受为已知行为**，并在人工验收里记录（研究 §Q8.3 方案 A）：另一栏确认后 50 毫秒通知会让本栏 `contentVersion` 递增、组件重置草稿，正在敲但未失焦的字可能被吞 | 选「本栏聚焦时跳过自动刷新」：需要新增回调 / 新栏位、扩大契约（方案 B），实现与测试面都更大；选「只在同面板两栏之间跳过刷新」：仍会走 `contentVersion` 重置，解决不了问题（方案 C） | **待确认** |
+| 4 | 50 毫秒合并通知的形态 | **首次排程不重置**：第一次写入起 50 毫秒必发一次，期间写入并进去（③） | 用研究 §Q3.3 伪代码的「每次写入都重排」：持续写入下通知会被无限推迟，两栏同步迟迟不发生。通知只是同步节奏、不是落盘时机，因此选不重置 | **待确认** |
+| 5 | 外部冲突的处置 | **已由用户 2026-10-29 拍板，本文按定稿写**：「停手才弹」+ 两个动作点了立刻生效（「保存编辑器的」= 立刻写盘覆盖外部修改 / 「保存外部修改」= 丢弃待写并重载外部那份）+ 没表态就不写盘 | 先前「保留后不自动落盘、只能等下一次显式保存」与「保留时重新写一次缓冲、让 5 秒定时器装回来」两个口径**已作废**，不再作为备选 | **待确认（复述定稿，非新选项）** |
+
+**这五项分别约束：** 第 1 项 → Plan 04 / 10；第 2 项 → Plan 06；第 3 项 → Plan 10（并进人工验收）；第 4 项 → Plan 05；第 5 项 → Plan 04 / 08。
+
+### 与 `04.3-RESEARCH.md` 命名不一致的地方（一律以本文 / PLAN 为准）
+
+> 计划文本与研究稿在下列几处给了不同名字或不同归属。PLAN 是检查器核对过的契约，因此**本文按 PLAN 采用**；差异登记在这里，供用户确认时一并看到。
+
+| # | 研究稿的说法 | 本文采用 | 说明 |
+|---|--------------|----------|------|
+| 1 | `ResourceSystem.hasPendingContent`（§Q2.1） | `IResourceSystem.hasAnyPendingContent` | 只是一个名字差异；语义相同（「现在还有待写吗」）。 |
+| 2 | 待写表与写盘能力直接写在 `ResourceSystem` 上（§Q2.3） | 独立成 `WriteBuffer` 类 + `IWriteBuffer` 接口，`ResourceSystem` 转发 | 独立文件后定时器表与「整条替换」的规则有单一归属；`resourceSystem.ts` 现有 214 行、6 个职责，再塞会难读。 |
+| 3 | 研究只提过 `IEditorPanelContext.flushResource`，没有给缓冲层的方法名 | 缓冲层新增 `WriteBuffer.flushAll` / `WriteBuffer.discard` / `WriteBuffer.clear` / `WriteBuffer.dispose` / `WriteBuffer.readPending` / `WriteBuffer.noteExternalWrite` | 这六个名字是本文补的，一经确认即为最终名。 |
+| 4 | 研究未区分面板侧与资源层的丢弃 / 写盘名字 | 资源层 `IResourceSystemAccess.flushContent` / `IResourceSystemAccess.discardPendingContent`，面板侧 `IEditorPanelContext.flushResource` / `IEditorPanelContext.discardPendingResource` | 同义不同层，读代码时能立刻看出调用方是谁。 |
+
+---
+
+## 确认状态
+
+（本节暂空。用户以文字表示「确认」或列出要改的名字之后，才在这里写入确认日期与最终名称清单；在此之前本文所有名称都还是提案，源码一行未改。）
