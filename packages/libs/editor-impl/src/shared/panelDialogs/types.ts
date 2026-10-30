@@ -21,9 +21,30 @@ export interface IExternalChangeDialogProps {
   /** 弹窗是否打开 */
   readonly open: boolean;
 
-  /** 选择「放弃我的改动并刷新」 */
+  /**
+   * 「要编辑器这一份」按钮的文案
+   *
+   * 表格面板传定稿的「保存编辑器的」；地图 / 素材面板不传，继续用默认那一套（本阶段不改它们的冲突处置，D-21）。
+   */
+  readonly keepLabel?: string;
+
+  /**
+   * 「要外部那一份」按钮的文案
+   *
+   * 表格面板传定稿的「保存外部修改」；地图 / 素材面板不传，保持默认文案。
+   */
+  readonly discardLabel?: string;
+
+  /**
+   * 正文下方的一句补充说明
+   *
+   * 表格面板用它讲清「点哪个都立刻生效、没表态就不写盘」；地图 / 素材面板不传，保持默认那一句。
+   */
+  readonly noteText?: string;
+
+  /** 选择「要外部那一份」：落点是 `TablePanel.discardExternalConflict` */
   readonly onDiscard: () => void;
 
-  /** 选择「保留我的改动，下次保存覆盖」 */
+  /** 选择「要编辑器这一份」：落点是 `TablePanel.keepExternalConflict` */
   readonly onKeep: () => void;
 }

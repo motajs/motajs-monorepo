@@ -1229,6 +1229,9 @@ export class TablePanel implements IEditorPanel, ITablePanel {
    * 本地编辑与「面板换内容」是两个信号：这里只更新面板副本与脏标记，**不**调
    * `TablePanel.applyData`、**不**递增版本号、**不**发布行树（D-02 / D-06 / T-04.2-08-04）。
    * 行树由组件按自己的草稿重算，因此本地编辑不会把面板内容整块换掉。
+   *
+   * 一次确认之后还要顺手做两件事（都在成功分支末尾）：把内容写进缓冲（`TablePanel.saveAfterEdit`，
+   * 即发即忘，不改变本方法的同步签名），以及解除「正在打字」推迟（数字框回车确认后不失焦也算停手）。
    * @param columnIndex 栏序号（0 基）
    * @param edit 组件这次要执行的编辑意图
    * @param document 组件提交时的文档（草稿可能比面板副本新一帧）
@@ -1251,6 +1254,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     column.draft = outcome.document;
     column.draftDirty = true;
     this.publish(columnIndex, column.store.state.status, outcome.notice);
+    this.saveAfterEdit(columnIndex);
 
     return outcome.document;
   }
@@ -1427,9 +1431,11 @@ export class TablePanel implements IEditorPanel, ITablePanel {
    * 快照保证内容仍写回原文件。失败时**保留脏标记**并发布错误，绝不静默丢改动（T-04.2-08-02）。
    * @param columnIndex 栏序号（0 基）
    * @param document 要写回的文档
+   * @param quiet 安静模式：只把内容排进缓冲、不刷「已保存」提示也不清已有提示位；它只由字段确认后的自动保存传真，
+   * 避免每 5 秒刷一次提示
    * @returns 保存结果：已保存或失败
    */
-  async saveDocument(columnIndex: number, document: ITableDocument): Promise<ContentSaveStatus> {
+  async saveDocument(columnIndex: number, document: ITableDocument, quiet: boolean = false): Promise<ContentSaveStatus> {
     const column = this.columnAt(columnIndex);
     const target = column.target;
     const prefix = column.prefix;
@@ -1463,7 +1469,12 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     column.unsavedSchema = false;
     column.draftDirty = false;
     this.bumpContentVersion(columnIndex);
-    this.publish(columnIndex, column.store.state.status, '已保存');
+    this.publish(
+      columnIndex,
+      column.store.state.status,
+      quiet ? column.store.state.message : '已保存',
+      quiet ? column.store.state.error : undefined,
+    );
 
     if (wroteData) this.refreshDependents(columnIndex, target.dataPath);
     if (wroteSchema) this.refreshDependents(columnIndex, deriveSchemaPath(target.dataPath));
@@ -1559,15 +1570,28 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   /**
    * 取数 + 判脏 + 转调写盘入口：`TablePanel.save` 与切走保存共用这一条
    * @param columnIndex 栏序号（0 基）
+   * @param quiet 安静模式：转交给 `TablePanel.saveDocument`，字段确认后的自动保存用它避免刷「已保存」
    * @returns 保存结果
    */
-  private async saveColumn(columnIndex: number): Promise<ContentSaveStatus> {
+  private async saveColumn(columnIndex: number, quiet: boolean = false): Promise<ContentSaveStatus> {
     const column = this.columnAt(columnIndex);
 
     if (column.target === null) return ContentSaveStatus.Saved;
     if (!this.isColumnDirty(columnIndex)) return ContentSaveStatus.Saved;
 
-    return this.saveDocument(columnIndex, this.currentDocument(columnIndex));
+    return this.saveDocument(columnIndex, this.currentDocument(columnIndex), quiet);
+  }
+
+  /**
+   * 字段确认之后把该栏自动写进缓冲：取数、判脏、转调 `TablePanel.saveColumn`（安静模式）
+   *
+   * 这是「一次确认 = 一次缓冲写入」的唯一入口，与手动保存共用同一条写盘链，不另写一套序列化。
+   * 它是一条即发即忘的旁路：失败由既有的错误通道发布，绝不向外抛，因此不改变
+   * `TablePanel.applyEdit` 的同步签名。
+   * @param columnIndex 栏序号（0 基）
+   */
+  private saveAfterEdit(columnIndex: number): void {
+    void this.saveColumn(columnIndex, true);
   }
 
   /**
