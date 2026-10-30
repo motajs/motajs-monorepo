@@ -10,6 +10,8 @@ export const messages: LogMessages = Object.freeze({
   'system.notInitialized': '$1 system is not initialized',
   'resource.hookFailed': 'Resource update hook failed: $1',
   'resource.invalidChangePath': 'Rejected invalid file change path: $1',
+  'resource.flushFailed': 'Resource write flush failed: $1',
+  'resource.pendingDiscarded': 'Discarded pending resource content: $1',
   'log.unknownId': 'Unknown log id: $1',
   'shell.duplicatePanelType': 'Duplicate panel type identifier: $1',
   'shell.panelTypeNotRegistered': 'Panel type not registered: $1',

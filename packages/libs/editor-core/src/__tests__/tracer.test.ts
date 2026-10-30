@@ -33,7 +33,7 @@ class ProbePanel implements IEditorPanel {
 }
 
 describe('editor-core 端到端 tracer', () => {
-  // 注入内存文件系统后，面板经上下文按路径读取原文，写回后底层 fs 内该路径内容随之更新
+  // 注入内存文件系统后，面板经上下文按路径读取原文；写回先进缓冲，显式写盘后底层 fs 内容更新
   it('按路径读 / 写落到底层文件系统', async () => {
     const fs = new FakeFileSystem();
 
@@ -69,6 +69,9 @@ describe('editor-core 端到端 tracer', () => {
     const second = await resource?.request();
 
     expect(second).toBe('{"a":2}');
+
+    await core.resourceSystem.flushAllContent();
+
     expect(await fs.readFile('tables/demo.json')).toBe('{"a":2}');
   });
 });

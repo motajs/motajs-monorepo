@@ -7,7 +7,7 @@ import { ResourceSystem } from '../resourceSystem';
 const PATH = 'tables/demo.json';
 
 describe('ResourceSystem 路径化读写', () => {
-  // 按路径读委托后端，写后底层 fs 内容更新，再次读取拿到新值
+  // 写入只进缓冲：写后立刻读资源层是新值，底层 fs 仍是旧值；显式写盘后底层 fs 才更新
   test('readContent / writeContent 委托注入 fs 并写后更新', async () => {
     const fs = new FakeFileSystem();
 
@@ -24,8 +24,12 @@ describe('ResourceSystem 路径化读写', () => {
 
     await resource?.write('v2');
 
-    expect(await fs.readFile(PATH)).toBe('v2');
     expect(await resource?.request()).toBe('v2');
+    expect(await fs.readFile(PATH)).toBe('v1');
+
+    await system.flushContent(PATH);
+
+    expect(await fs.readFile(PATH)).toBe('v2');
   });
 
   // 未在 fs 中预置的路径，createResource 委托后端写入并返回可用句柄
@@ -300,7 +304,7 @@ describe('ResourceSystem 索引与缓存接线', () => {
     expect(await system.readContent('tables/renamed.json')).toBe('v1');
   });
 
-  // 二进制读写走 readBinary / writeBinary，与文本分离且同样入缓存
+  // 二进制读写走 readBinary / writeBinary，与文本分离且同样入缓存；底层 fs 要显式写盘后才更新
   test('二进制读写与文本分离并入缓存', async () => {
     const fs = new FakeFileSystem();
     const payload = new Uint8Array([1, 2, 3]);
@@ -318,6 +322,10 @@ describe('ResourceSystem 索引与缓存接线', () => {
     await system.writeContent('assets/icon.bin', written);
 
     expect(await system.readBinary('assets/icon.bin')).toBe(written);
+    expect(await fs.readBinary('assets/icon.bin')).toBe(payload);
+
+    await system.flushContent('assets/icon.bin');
+
     expect(await fs.readBinary('assets/icon.bin')).toBe(written);
   });
 

@@ -40,8 +40,12 @@ export class ResourceSystem extends Hookable<IResourceSystemHooks> implements IR
   /** 按路径的待写缓冲：内容改动先进这里，5 秒防抖到期后才写磁盘 */
   private readonly buffer: WriteBuffer = new WriteBuffer(
     (path, content) => this.writeToDisk(path, content),
-    () => {},
+    (paths) => this.handlePendingChange(paths),
   );
+  /** 待写路径变化的订阅者集合 */
+  private readonly pendingListeners: Set<PendingChangeListener> = new Set();
+  /** 上一次「是否有待写」的通知值：只在有无变化时通知钩子，避免每次写入都刷新外壳 */
+  private pendingNotified: boolean = false;
   /** 宿主文件变化流的退订函数，未订阅时为空 */
   private unwatch: (() => void) | null = null;
 
@@ -146,6 +150,11 @@ export class ResourceSystem extends Hookable<IResourceSystemHooks> implements IR
 
     await this.fs.deleteFile(id);
 
+    if (this.buffer.has(id)) {
+      this.buffer.discard(id);
+      logger.warn('resource.pendingDiscarded', id);
+    }
+
     this.index.remove(id);
     this.cache.invalidate(id);
   }
@@ -157,6 +166,11 @@ export class ResourceSystem extends Hookable<IResourceSystemHooks> implements IR
     }
 
     await this.fs.moveFile(source, destination);
+
+    if (this.buffer.has(source)) {
+      this.buffer.discard(source);
+      logger.warn('resource.pendingDiscarded', source);
+    }
 
     this.index.move(source, destination);
     this.cache.invalidate(source);
@@ -181,14 +195,16 @@ export class ResourceSystem extends Hookable<IResourceSystemHooks> implements IR
   }
 
   watchPendingChange(listener: PendingChangeListener): () => void {
-    // 当前没有任何待写，订阅瞬间用空列表回调一次就是「当前值」
-    listener([]);
-    return (): void => {};
+    this.pendingListeners.add(listener);
+    listener(this.buffer.paths());
+
+    return (): void => {
+      this.pendingListeners.delete(listener);
+    };
   }
 
   flushAllContent(): Promise<void> {
-    // 当前没有任何待写内容，全量写盘是空操作
-    return Promise.resolve();
+    return this.buffer.flushAll();
   }
 
   hasAnyPendingContent(): boolean {
@@ -200,6 +216,7 @@ export class ResourceSystem extends Hookable<IResourceSystemHooks> implements IR
   }
 
   async updateResource(id: IResourceIdentifier): Promise<void> {
+    await this.noteExternalWrite(id);
     this.cache.invalidate(id);
 
     await Promise.all(
@@ -214,11 +231,75 @@ export class ResourceSystem extends Hookable<IResourceSystemHooks> implements IR
   }
 
   async dispose(): Promise<void> {
+    try {
+      await this.buffer.flushAll();
+    } catch (error: unknown) {
+      logger.error('resource.flushFailed', String(error));
+    }
+
+    this.buffer.clear();
+    this.pendingListeners.clear();
+    this.pendingNotified = false;
     this.unwatch?.();
     this.unwatch = null;
     this.index.clear();
     this.cache.clear();
     this.fs = null;
+  }
+
+  /**
+   * 待写集合变化时先通知订阅者，再在「有没有待写」发生变化时通知一次钩子
+   * @param paths 当前全部待写路径
+   */
+  private handlePendingChange(paths: readonly string[]): void {
+    for (const listener of [...this.pendingListeners]) listener(paths);
+
+    const hasPending = paths.length > 0;
+
+    if (hasPending === this.pendingNotified) return;
+
+    this.pendingNotified = hasPending;
+    void this.emitPendingChange();
+  }
+
+  /** 通知钩子「有没有待写」发生了变化；单个钩子失败只记日志，不打断其余钩子 */
+  private async emitPendingChange(): Promise<void> {
+    await Promise.all(
+      this.forEachHook((hook) =>
+        Promise.resolve()
+          .then(() => hook.onPendingChange?.())
+          .catch((error: unknown) => {
+            logger.error('resource.hookFailed', String(error));
+          }),
+      ),
+    );
+  }
+
+  /**
+   * 外部内容发生变化时，把该路径的待写标记成「外部已改」，保证待写不遮蔽外部写入
+   *
+   * 用文件系统裸读磁盘内容（不能走 `readContent`，它优先命中缓冲，等于拿待写内容跟自己比）；
+   * 读失败或文件已被外部删除时按「不同内容」处理，让标记生效。
+   * @param path 资源标识（纯路径）
+   */
+  private async noteExternalWrite(path: IResourceIdentifier): Promise<void> {
+    const pending = this.buffer.readPending(path);
+
+    if (pending === undefined) return;
+
+    const fs = this.fs;
+
+    if (!fs) return;
+
+    let diskContent: ResourceContent | undefined;
+
+    try {
+      diskContent = typeof pending === 'string' ? await fs.readFile(path) : await fs.readBinary(path);
+    } catch {
+      diskContent = undefined;
+    }
+
+    this.buffer.noteExternalWrite(path, diskContent);
   }
 
   /**
@@ -249,6 +330,8 @@ export class ResourceSystem extends Hookable<IResourceSystemHooks> implements IR
       logger.error('resource.invalidChangePath', path);
       return;
     }
+
+    await this.noteExternalWrite(path);
 
     if (change.kind === EditorFileChangeKind.Add) {
       this.index.insert(path, EditorEntryKind.File);
