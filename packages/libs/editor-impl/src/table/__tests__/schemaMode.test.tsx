@@ -430,6 +430,78 @@ describe('schema 关键字 x-order 的编辑（P21）', () => {
   });
 });
 
+describe('schema 成对数字框的确认语义', () => {
+  // 成对数字框只改不提交：只派发 change、不失焦，内容不变；失焦后才变（左右各覆盖一次）
+  it('成对数字框只改不提交：只派发 change、不失焦，内容不变；失焦后才变', async () => {
+    const fs = new FakeFileSystem();
+    const schemaDoc = { type: 'object', properties: { level: { type: 'integer', minimum: 0, maximum: 100 } } };
+
+    fs.seed(tableSchemaPath('t'), JSON.stringify(schemaDoc));
+    const system = await createTableHarness(fs);
+    const panel = await openPanel(system);
+
+    await setSchemaTarget(panel, 't');
+    const { container } = renderWithCapabilities(system, {});
+
+    const pair = container.querySelector('[data-test-id="schema-pair-minimum"]');
+
+    if (pair === null) throw new Error('成对数字框缺失');
+
+    const inputs = pair.querySelectorAll('input');
+
+    expect(inputs.length).toBe(2);
+
+    const left = inputs[0];
+    const right = inputs[1];
+
+    // 左侧（minimum）：只派发 change、不失焦，文档不变
+    await act(async () => {
+      fireEvent.change(left, { target: { value: '5' } });
+    });
+    await savePanel(panel);
+
+    const unchanged = (await readContent(system, tableSchemaPath('t'))) as Record<string, unknown>;
+    const unchangedProperties = unchanged.properties as Record<string, Record<string, unknown>>;
+
+    expect(unchangedProperties.level.minimum).toBe(0);
+
+    // 左侧（minimum）：失焦后才提交
+    await act(async () => {
+      fireEvent.change(left, { target: { value: '5' } });
+      fireEvent.blur(left);
+    });
+    await savePanel(panel);
+
+    const leftCommitted = (await readContent(system, tableSchemaPath('t'))) as Record<string, unknown>;
+    const leftCommittedProperties = leftCommitted.properties as Record<string, Record<string, unknown>>;
+
+    expect(leftCommittedProperties.level.minimum).toBe(5);
+
+    // 右侧（maximum）：只派发 change、不失焦，文档不变
+    await act(async () => {
+      fireEvent.change(right, { target: { value: '50' } });
+    });
+    await savePanel(panel);
+
+    const rightUnchanged = (await readContent(system, tableSchemaPath('t'))) as Record<string, unknown>;
+    const rightUnchangedProperties = rightUnchanged.properties as Record<string, Record<string, unknown>>;
+
+    expect(rightUnchangedProperties.level.maximum).toBe(100);
+
+    // 右侧（maximum）：失焦后才提交
+    await act(async () => {
+      fireEvent.change(right, { target: { value: '50' } });
+      fireEvent.blur(right);
+    });
+    await savePanel(panel);
+
+    const rightCommitted = (await readContent(system, tableSchemaPath('t'))) as Record<string, unknown>;
+    const rightCommittedProperties = rightCommitted.properties as Record<string, Record<string, unknown>>;
+
+    expect(rightCommittedProperties.level.maximum).toBe(50);
+  });
+});
+
 describe('schema 关键字 type 的取值（P22）', () => {
   // 非法 type 文本（textarea）提交被拒，schema 文档保持原值并给出错误提示
   it('type 非法取值被挡且文档不变', async () => {

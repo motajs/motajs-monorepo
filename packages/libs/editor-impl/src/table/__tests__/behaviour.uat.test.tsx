@@ -210,8 +210,8 @@ describe('B3 成功提示文案与常驻预留', () => {
 });
 
 describe('B2 数字字段的单行数字控件', () => {
-  // 数字字段渲染 antd InputNumber 而非多行文本域，输入后提交数字值
-  it('数字字段渲染 InputNumber 并提交数字', async () => {
+  // 数字字段渲染 antd InputNumber 而非多行文本域；只输入不失焦时内容仍是原值
+  it('数字字段只改不提交：输入后不失焦，内容仍是原值', async () => {
     const fs = new FakeFileSystem();
 
     seed(fs, 't', { level: 1 }, { type: 'object', properties: { level: { type: 'number' } } });
@@ -232,7 +232,56 @@ describe('B2 数字字段的单行数字控件', () => {
 
     await act(async () => {
       fireEvent.change(input, { target: { value: '5' } });
+    });
+    await savePanel(panel);
+
+    expect(await readData(system, 't')).toEqual({ level: 1 });
+  });
+
+  // 数字字段失焦后才提交一次，内容变成新值
+  it('数字字段失焦提交：改后失焦，内容变成新值', async () => {
+    const fs = new FakeFileSystem();
+
+    seed(fs, 't', { level: 1 }, { type: 'object', properties: { level: { type: 'number' } } });
+    const system = await createTableHarness(fs);
+    const panel = await openPanel(system);
+
+    await setTarget(panel, 't');
+    const { container } = renderWithCapabilities(system, {});
+
+    const cell = container.querySelector('[data-test-id="table-input-level"]');
+    const input = cell === null ? null : cell.querySelector('input');
+
+    if (!(input instanceof HTMLInputElement)) throw new Error('数字输入框缺失');
+
+    await act(async () => {
+      fireEvent.change(input, { target: { value: '5' } });
       fireEvent.blur(input);
+    });
+    await savePanel(panel);
+
+    expect(await readData(system, 't')).toEqual({ level: 5 });
+  });
+
+  // 数字字段回车即提交一次；提交后刻意不失焦，这里不补 blur，专门测回车这条路
+  it('数字字段回车提交：改后按回车，内容变成新值', async () => {
+    const fs = new FakeFileSystem();
+
+    seed(fs, 't', { level: 1 }, { type: 'object', properties: { level: { type: 'number' } } });
+    const system = await createTableHarness(fs);
+    const panel = await openPanel(system);
+
+    await setTarget(panel, 't');
+    const { container } = renderWithCapabilities(system, {});
+
+    const cell = container.querySelector('[data-test-id="table-input-level"]');
+    const input = cell === null ? null : cell.querySelector('input');
+
+    if (!(input instanceof HTMLInputElement)) throw new Error('数字输入框缺失');
+
+    await act(async () => {
+      fireEvent.change(input, { target: { value: '5' } });
+      fireEvent.keyDown(input, { key: 'Enter' });
     });
     await savePanel(panel);
 
