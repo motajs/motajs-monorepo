@@ -14,6 +14,7 @@ import {
   PendingChangeListener,
   ResourceContent,
 } from './types';
+import { WriteBuffer } from './writeBuffer';
 
 /**
  * 校验宿主报告的变化路径是否为规范化相对路径
@@ -36,6 +37,11 @@ export class ResourceSystem extends Hookable<IResourceSystemHooks> implements IR
   private readonly index: FileIndex = new FileIndex();
   /** 内容缓存池，按字节上限 + LRU 缓存已读内容 */
   private readonly cache: ContentCache = new ContentCache();
+  /** 按路径的待写缓冲：内容改动先进这里，5 秒防抖到期后才写磁盘 */
+  private readonly buffer: WriteBuffer = new WriteBuffer(
+    (path, content) => this.writeToDisk(path, content),
+    () => {},
+  );
   /** 宿主文件变化流的退订函数，未订阅时为空 */
   private unwatch: (() => void) | null = null;
 
@@ -68,6 +74,10 @@ export class ResourceSystem extends Hookable<IResourceSystemHooks> implements IR
       return undefined;
     }
 
+    const pending = this.buffer.readPending(id);
+
+    if (pending !== undefined) return pending;
+
     const cached = this.cache.get(id);
 
     if (cached !== undefined) return cached;
@@ -89,6 +99,10 @@ export class ResourceSystem extends Hookable<IResourceSystemHooks> implements IR
       return undefined;
     }
 
+    const pending = this.buffer.readPending(id);
+
+    if (pending instanceof Uint8Array) return pending;
+
     const cached = this.cache.get(id);
 
     if (cached instanceof Uint8Array) return cached;
@@ -105,9 +119,7 @@ export class ResourceSystem extends Hookable<IResourceSystemHooks> implements IR
       return;
     }
 
-    if (typeof data === 'string') await this.fs.writeFile(id, data);
-    else await this.fs.writeBinary(id, data);
-
+    this.buffer.schedule(id, data);
     this.cache.set(id, data);
   }
 
@@ -159,13 +171,13 @@ export class ResourceSystem extends Hookable<IResourceSystemHooks> implements IR
     return this.index.list(path);
   }
 
-  flushContent(): Promise<void> {
-    // 当前没有任何待写内容，把待写写进磁盘是空操作；接入缓冲后改由缓冲承接
-    return Promise.resolve();
+  flushContent(identifier: IResourceIdentifier): Promise<void> {
+    return this.buffer.flush(identifier);
   }
 
-  discardPendingContent(): void {
-    // 当前没有待写可丢；接入缓冲后要连同内容缓存一起失效
+  discardPendingContent(identifier: IResourceIdentifier): void {
+    this.buffer.discard(identifier);
+    this.cache.invalidate(identifier);
   }
 
   watchPendingChange(listener: PendingChangeListener): () => void {
@@ -180,13 +192,11 @@ export class ResourceSystem extends Hookable<IResourceSystemHooks> implements IR
   }
 
   hasAnyPendingContent(): boolean {
-    // 当前没有任何待写内容
-    return false;
+    return this.buffer.size() > 0;
   }
 
   listPendingPaths(): readonly string[] {
-    // 当前没有任何待写路径；返回新数组，调用方可以安全持有
-    return [];
+    return this.buffer.paths();
   }
 
   async updateResource(id: IResourceIdentifier): Promise<void> {
@@ -209,6 +219,23 @@ export class ResourceSystem extends Hookable<IResourceSystemHooks> implements IR
     this.index.clear();
     this.cache.clear();
     this.fs = null;
+  }
+
+  /**
+   * 把一份内容真正写进磁盘；文件系统引用为空时只记日志、不抛出
+   * @param path 资源标识（纯路径）
+   * @param content 要写进磁盘的内容
+   */
+  private async writeToDisk(path: string, content: ResourceContent): Promise<void> {
+    const fs = this.fs;
+
+    if (!fs) {
+      logger.error('system.notInitialized', 'Resource');
+      return;
+    }
+
+    if (typeof content === 'string') await fs.writeFile(path, content);
+    else await fs.writeBinary(path, content);
   }
 
   /**
