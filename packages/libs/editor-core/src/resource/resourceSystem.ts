@@ -16,6 +16,9 @@ import {
 } from './types';
 import { WriteBuffer } from './writeBuffer';
 
+/** 一次写入之后最多等多久把这条路径的「内容变化」通知发出去 */
+export const NOTIFY_COALESCE_MS = 50;
+
 /**
  * 校验宿主报告的变化路径是否为规范化相对路径
  * @param path 待校验的变化路径
@@ -42,10 +45,13 @@ export class ResourceSystem extends Hookable<IResourceSystemHooks> implements IR
     (path, content) => this.writeToDisk(path, content),
     (paths) => this.handlePendingChange(paths),
   );
+
   /** 待写路径变化的订阅者集合 */
   private readonly pendingListeners: Set<PendingChangeListener> = new Set();
   /** 上一次「是否有待写」的通知值：只在有无变化时通知钩子，避免每次写入都刷新外壳 */
   private pendingNotified: boolean = false;
+  /** 按路径的待发「内容变化」通知定时器：同一路径只排一次，首次排程后不重置 */
+  private readonly notifyTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
   /** 宿主文件变化流的退订函数，未订阅时为空 */
   private unwatch: (() => void) | null = null;
 
@@ -125,6 +131,7 @@ export class ResourceSystem extends Hookable<IResourceSystemHooks> implements IR
 
     this.buffer.schedule(id, data);
     this.cache.set(id, data);
+    this.scheduleNotify(id);
   }
 
   async createResource(id: IResourceIdentifier, content: ResourceContent): Promise<IResource | null> {
@@ -192,6 +199,13 @@ export class ResourceSystem extends Hookable<IResourceSystemHooks> implements IR
   discardPendingContent(identifier: IResourceIdentifier): void {
     this.buffer.discard(identifier);
     this.cache.invalidate(identifier);
+
+    const timer = this.notifyTimers.get(identifier);
+
+    if (timer === undefined) return;
+
+    clearTimeout(timer);
+    this.notifyTimers.delete(identifier);
   }
 
   watchPendingChange(listener: PendingChangeListener): () => void {
@@ -238,6 +252,10 @@ export class ResourceSystem extends Hookable<IResourceSystemHooks> implements IR
     }
 
     this.buffer.clear();
+
+    for (const timer of this.notifyTimers.values()) clearTimeout(timer);
+
+    this.notifyTimers.clear();
     this.pendingListeners.clear();
     this.pendingNotified = false;
     this.unwatch?.();
@@ -268,6 +286,37 @@ export class ResourceSystem extends Hookable<IResourceSystemHooks> implements IR
       this.forEachHook((hook) =>
         Promise.resolve()
           .then(() => hook.onPendingChange?.())
+          .catch((error: unknown) => {
+            logger.error('resource.hookFailed', String(error));
+          }),
+      ),
+    );
+  }
+
+  /**
+   * 安排一次 50 毫秒的合并通知：该路径已有待发定时器时直接返回，首次排程后不重置
+   * @param identifier 资源标识（纯路径）
+   */
+  private scheduleNotify(identifier: IResourceIdentifier): void {
+    if (this.notifyTimers.has(identifier)) return;
+
+    const timer = setTimeout((): void => {
+      this.notifyTimers.delete(identifier);
+      void this.emitBufferedChange(identifier);
+    }, NOTIFY_COALESCE_MS);
+
+    this.notifyTimers.set(identifier, timer);
+  }
+
+  /**
+   * 投递一次「这个路径的内容变了」；不预读内容、不携带写入来源，单个钩子失败只记日志
+   * @param identifier 资源标识（纯路径）
+   */
+  private async emitBufferedChange(identifier: IResourceIdentifier): Promise<void> {
+    await Promise.all(
+      this.forEachHook((hook) =>
+        Promise.resolve()
+          .then(() => hook.onResourceChange?.(identifier, EditorFileChangeKind.Change))
           .catch((error: unknown) => {
             logger.error('resource.hookFailed', String(error));
           }),
