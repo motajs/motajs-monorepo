@@ -120,8 +120,8 @@ function listBody(fs: FakeFileSystem, path: string): Promise<string> {
 }
 
 describe('素材自动保存', () => {
-  // ① 新增自动落盘：不调 save()，图片（对象数组）与动画（字符串数组）的列表正文都已含新名字
-  it('新增素材后列表当场落盘', async () => {
+  // ① 新增自动保存：不调 save()，图片（对象数组）与动画（字符串数组）的列表先写进缓冲，显式写盘后正文含新名字
+  it('新增素材后列表写进缓冲并落盘', async () => {
     const fs = new FakeFileSystem();
 
     fs.seed(TEXTURE_LIST_PATH, listText({ textures: [{ source: 'seed.png' }] }));
@@ -141,11 +141,15 @@ describe('素材自动保存', () => {
 
     await panel.addAsset({ name: 'hero.png', bytes: new Uint8Array([3]) });
 
+    // 自动保存只写缓冲：资源层立刻能读到，磁盘要等一次显式写盘
+    expect(String(await system.resourceSystem.readContent(TEXTURE_LIST_PATH))).toContain('"source": "hero.png"');
+    await system.resourceSystem.flushContent(TEXTURE_LIST_PATH);
     expect(await listBody(fs, TEXTURE_LIST_PATH)).toContain('"source": "hero.png"');
 
     await panel.selectCategory('animation');
     await panel.addAsset({ name: 'run.anim', bytes: new Uint8Array([4]) });
 
+    await system.resourceSystem.flushContent(ANIMATION_LIST_PATH);
     expect(await listBody(fs, ANIMATION_LIST_PATH)).toContain('"run"');
   });
 
@@ -207,6 +211,7 @@ describe('素材自动保存', () => {
 
     await panelA.registerAsset('extra.png');
 
+    await system.resourceSystem.flushContent(TEXTURE_LIST_PATH);
     expect(await listBody(fs, TEXTURE_LIST_PATH)).toContain('"source": "extra.png"');
 
     system.shellSystem.activateTab(tabB);
@@ -254,8 +259,8 @@ describe('素材自动保存', () => {
     });
   });
 
-  // ⑤ 自动保存失败：保留未保存标记、给出失败提示、磁盘正文一字未变，手动保存可以补救
-  it('自动保存失败时不装成功并保留未保存标记', async () => {
+  // ⑤ 自动保存只写缓冲：写盘失败不装成功、待写保留、磁盘正文一字未变，显式写盘可以补救
+  it('自动保存失败时不装成功并保留待写', async () => {
     const fs = new FakeFileSystem();
     const original = listText({ textures: [{ source: 'hero.png' }] });
 
@@ -277,24 +282,27 @@ describe('素材自动保存', () => {
     // 必须先读完分类再让列表文件写失败，否则测到的是「读取失败」而不是「写盘失败」
     fs.failing.add(TEXTURE_LIST_PATH);
 
-    const errors = vi.spyOn(message, 'error');
+    const successes = vi.spyOn(message, 'success');
 
     await panel.addAsset({ name: 'new.png', bytes: new Uint8Array([2]) });
 
-    expect(errors).toHaveBeenCalled();
+    // 自动保存只写缓冲：资源层立刻是新值，也没有提前宣告「已保存」
+    expect(String(await system.resourceSystem.readContent(TEXTURE_LIST_PATH))).toContain('"source": "new.png"');
+    expect(successes).not.toHaveBeenCalled();
 
-    const bar = container.querySelector('[data-test-id="asset-panel-error"]');
-
-    expect(bar?.textContent).toContain('保存失败');
-    expect(isDisabled(container.querySelector('[data-test-id="asset-toolbar-save"]'))).toBe(false);
+    // 真正的磁盘失败发生在显式写盘：待写必须保留，不能装成功
+    await expect(system.resourceSystem.flushContent(TEXTURE_LIST_PATH)).rejects.toThrow();
+    expect(system.resourceSystem.hasAnyPendingContent()).toBe(true);
 
     fs.failing.delete(TEXTURE_LIST_PATH);
 
+    // 失败期间磁盘一字未变
     expect(await listBody(fs, TEXTURE_LIST_PATH)).toBe(original);
 
-    await panel.save();
+    await system.resourceSystem.flushContent(TEXTURE_LIST_PATH);
 
     expect(await listBody(fs, TEXTURE_LIST_PATH)).toContain('"source": "new.png"');
+    expect(system.resourceSystem.hasAnyPendingContent()).toBe(false);
   });
 
   // ⑥ 注销不自动写盘：只改内存，磁盘正文仍是原文，要等点保存或切出才写

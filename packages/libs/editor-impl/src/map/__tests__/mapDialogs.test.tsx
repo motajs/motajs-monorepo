@@ -171,6 +171,7 @@ function paintOneCell(panel: MapPanel): void {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.restoreAllMocks();
 });
 
@@ -679,7 +680,7 @@ describe('面板：图块偏好与最近使用', () => {
 
     fileSystem.seed(MAP_TILE_PREFS_PATH, JSON.stringify({ recent: [2], frequent: { '2': 3 }, favorites: [] }));
 
-    const { panel } = await openMapPanel(createCapabilities(), fileSystem);
+    const { system, panel } = await openMapPanel(createCapabilities(), fileSystem);
 
     await waitFor(() => expect(viewState(panel).frequentTiles).toEqual([2]));
 
@@ -690,7 +691,12 @@ describe('面板：图块偏好与最近使用', () => {
     };
     panel.commitCells('layer-base', [{ x: 1, y: 0, value: 2 }]);
 
-    await waitFor(async () => expect(await readPreferencesFile(fileSystem)).toMatchObject({ frequent: { '2': 4 } }));
+    await waitFor(async () => {
+      // 已存在的偏好文件走缓冲：核对磁盘前先显式写盘
+      await system.resourceSystem.flushContent(MAP_TILE_PREFS_PATH);
+
+      expect(await readPreferencesFile(fileSystem)).toMatchObject({ frequent: { '2': 4 } });
+    });
   });
 
   // 用「空」擦除时不更新最近使用
@@ -715,12 +721,19 @@ describe('面板：图块偏好与最近使用', () => {
   // 清除记录只清最近与最常，收藏不动
   it('清除记录后写回空列表', async () => {
     const fileSystem = new FakeFileSystem();
-    const { panel } = await openMapPanel(createCapabilities(), fileSystem);
+    const { system, panel } = await openMapPanel(createCapabilities(), fileSystem);
 
     paintOneCell(panel);
-    await waitFor(async () => expect(await readPreferencesFile(fileSystem)).toMatchObject({ recent: [1] }));
+    await waitFor(async () => {
+      await system.resourceSystem.flushContent(MAP_TILE_PREFS_PATH);
+
+      expect(await readPreferencesFile(fileSystem)).toMatchObject({ recent: [1] });
+    });
 
     await panel.clearRecentTiles();
+
+    // 清空同样只写缓冲：核对磁盘前先显式写盘
+    await system.resourceSystem.flushContent(MAP_TILE_PREFS_PATH);
 
     expect(viewState(panel).recentTiles).toEqual([]);
     expect(viewState(panel).frequentTiles).toEqual([]);
@@ -731,14 +744,17 @@ describe('面板：图块偏好与最近使用', () => {
     });
   });
 
-  // 写文件失败时静默降级：文档仍被改、未保存仍出现，也没有未捕获的拒绝
+  // 写文件失败时静默降级：文档仍被改、未保存仍出现，且推进 5 000 毫秒后文件仍不存在（没有待写复活）
   it('写文件失败不打断落笔', async () => {
     const fileSystem = new FakeFileSystem();
     const { panel } = await openMapPanel(createCapabilities(), fileSystem);
 
+    vi.useFakeTimers();
     fileSystem.failing.add(MAP_TILE_PREFS_PATH);
     paintOneCell(panel);
-    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    // 推进整整一个写盘防抖周期：若失败留下了待写，文件会在这之后被写出来
+    await vi.advanceTimersByTimeAsync(5000);
+    vi.useRealTimers();
 
     expect(viewState(panel).document?.layers[0].cells[0][0]).toBe(1);
     expect(viewState(panel).unsaved).toBe(true);
@@ -756,8 +772,12 @@ describe('面板：图块偏好与最近使用', () => {
       pattern: { width: 1, height: 1, tiles: [101] },
       primaryTileNumber: 101,
     };
+
+    vi.useFakeTimers();
     panel.commitCells('layer-base', [{ x: 0, y: 0, value: 101 }]);
-    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    // 推进整整一个写盘防抖周期：任何被误排进缓冲的内容都会在这之后落到磁盘
+    await vi.advanceTimersByTimeAsync(5000);
+    vi.useRealTimers();
 
     expect(viewState(panel).recentTiles).toEqual([]);
     expect(viewState(panel).frequentTiles).toEqual([]);
@@ -818,9 +838,12 @@ describe('面板：图块偏好与最近使用', () => {
     panel.reorderFavorites(0, 2);
 
     expect(viewState(panel).favorites).toEqual([2, 3, 1, 0, 0, 0, 0, 0, 0]);
-    await waitFor(async () =>
-      expect(await readPreferencesFile(fileSystem)).toMatchObject({ favorites: [2, 3, 1, 0, 0, 0, 0, 0, 0] }),
-    );
+    await waitFor(async () => {
+      // 已存在的偏好文件走缓冲：核对磁盘前先显式写盘
+      await system.resourceSystem.flushContent(MAP_TILE_PREFS_PATH);
+
+      expect(await readPreferencesFile(fileSystem)).toMatchObject({ favorites: [2, 3, 1, 0, 0, 0, 0, 0, 0] });
+    });
     expect(viewState(panel).unsaved).toBe(false);
     expect(addUndo).not.toHaveBeenCalled();
   });

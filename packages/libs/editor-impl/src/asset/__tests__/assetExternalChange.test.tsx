@@ -217,6 +217,8 @@ describe('素材面板：外部变化', () => {
 
     await act(async () => {
       await harness.panel.save();
+      // 保存只写缓冲：要核对磁盘就必须显式写盘
+      await harness.system.resourceSystem.flushContent(TEXTURE_LIST_PATH);
     });
 
     expect(await fs.readFile(TEXTURE_LIST_PATH)).not.toContain('foe.png');
@@ -272,6 +274,8 @@ describe('素材面板：外部变化', () => {
     await harness.panel.unregisterAsset('foe.png');
     await act(async () => {
       await harness.panel.save();
+      // 显式写盘后，宿主回声才能与「最近一次成功写出的内容」对上而被识别
+      await harness.system.resourceSystem.flushContent(TEXTURE_LIST_PATH);
     });
 
     const entriesAfterSave = harness.panel['store'].state.entries;

@@ -108,6 +108,10 @@ describe('素材字节生命周期', () => {
     const bytes = await fs.readBinary('content/texture/hero.png');
 
     expect(Array.from(bytes)).toEqual([1, 2, 3]);
+
+    // 列表自动写回走缓冲：核对磁盘前先显式写盘
+    await system.resourceSystem.flushContent('content/texture/.list.jsonc');
+
     expect(await fs.readFile('content/texture/.list.jsonc')).toContain('"source": "hero.png"');
 
     const container = renderPanel(panel);

@@ -212,8 +212,8 @@ describe('素材面板：关闭三态', () => {
     expect(harness.system.shellSystem.listTabs().some((tab) => tab.id === harness.tabId)).toBe(false);
   });
 
-  // 保存失败：弹窗仍在并显示失败原因，标签保持打开、内存改动不丢
-  it('保存失败时保持打开并显示原因', async () => {
+  // 写盘失败：面板这一层只把改动排进缓冲（因此结算为保存），但待写必须保留，清掉故障后仍能落盘
+  it('保存失败时改动不丢且重试可落盘', async () => {
     const fs = createTextureFileSystem();
     const harness = await openTexturePanel(fs);
 
@@ -222,8 +222,8 @@ describe('素材面板：关闭三态', () => {
 
     fs.failing.add(TEXTURE_LIST_PATH);
 
-    let choice: PanelCloseChoice = PanelCloseChoice.Save;
-    let closing: Promise<PanelCloseChoice> = Promise.resolve(PanelCloseChoice.Cancel);
+    let choice: PanelCloseChoice = PanelCloseChoice.Cancel;
+    let closing: Promise<PanelCloseChoice> = Promise.resolve(PanelCloseChoice.Save);
 
     await act(async () => {
       closing = harness.panel.onRequestClose();
@@ -236,10 +236,18 @@ describe('素材面板：关闭三态', () => {
       choice = await closing;
     });
 
-    expect(choice).toBe(PanelCloseChoice.Cancel);
-    expect(screen.queryByTestId('panel-close-dialog')).not.toBeNull();
-    expect(screen.getByTestId('panel-close-error').textContent).toContain('保存失败');
-    expect(harness.system.shellSystem.listTabs()).toHaveLength(1);
-    expect(harness.panel['store'].state.unsaved).toBe(true);
+    // 保存只写缓冲，面板层必然结算为「保存」；真正的磁盘失败由外壳 flush 承担
+    expect(choice).toBe(PanelCloseChoice.Save);
+    expect(screen.queryByTestId('panel-close-dialog')).toBeNull();
+    expect(harness.system.resourceSystem.hasAnyPendingContent()).toBe(true);
+
+    fs.failing.delete(TEXTURE_LIST_PATH);
+
+    await act(async () => {
+      await harness.system.resourceSystem.flushAllContent();
+    });
+
+    expect(harness.system.resourceSystem.hasAnyPendingContent()).toBe(false);
+    expect(await fs.readFile(TEXTURE_LIST_PATH)).not.toContain('hero.png');
   });
 });
