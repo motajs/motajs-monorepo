@@ -12,6 +12,22 @@ import { IEditorMenuItem, IEditorTab, IShellSystem } from './types';
 // 浏览器式外壳的唯一实现：统管面板类型注册表、面板实例生命周期、标签状态机、菜单项与渲染根。
 // 所有的状态都保存在实例字段内，模块层只放纯函数组件，因此不产生任何模块级可变绑定。
 
+/**
+ * 把一条打开路径归一成去重键：去掉全部前导 `/`、折叠重复的 `/`、去掉尾随 `/`
+ *
+ * 只做这三件事，**不**解析 `.` / `..`（资源层已保证路径里没有这些段）。
+ * 空串归一后仍是空串，调用方据此判定「这次打开没有路径」，绝不把空串当登记键。
+ * 登记与查找共用这一个函数，`/foo` 与 `foo` 因此命中同一个标签。
+ * @param path 调用方传入的文件路径
+ * @returns 归一后的去重键
+ */
+function normalizeResourcePath(path: string): string {
+  return path
+    .replace(/\/{2,}/g, '/')
+    .replace(/^\/+/, '')
+    .replace(/\/+$/, '');
+}
+
 /** 面板实例的初始化状态 */
 const enum ShellInstanceStatus {
   /** 工厂已创建、IEditorPanel.initialize 尚未完成 */
@@ -417,6 +433,8 @@ export class ShellSystem implements IShellSystem {
   private tabs: IEditorTab[] = [];
   /** 当前活动标签 id */
   private activeTabId: string | null = null;
+  /** 标签 id 到它正在打开的文件路径（已归一）的登记表：按路径去重的唯一数据来源 */
+  private readonly tabPaths: Map<string, string> = new Map();
   /** 最近一次投递过切入通知的面板实例 id，用于判定活动面板是否真正变化 */
   private lastActiveInstanceId: string | null = null;
   /** 串行切换链：切出与切入按投递顺序依次结算，链本身永不 reject */
@@ -640,6 +658,65 @@ export class ShellSystem implements IShellSystem {
     return step;
   }
 
+  /**
+   * 反查哪个标签已经把这条路径开在手里：路径去重的唯一判据
+   * @param path 已归一的去重键
+   * @returns 登记了该路径的标签 id；没有标签登记时为 undefined
+   */
+  private findTabByPath(path: string): string | undefined {
+    for (const [tabId, registered] of this.tabPaths) {
+      if (registered === path) return tabId;
+    }
+
+    return undefined;
+  }
+
+  /**
+   * 登记或改写某个标签的路径：同一标签换成另一条路径时覆盖旧登记，旧路径因此自然释放
+   * @param tabId 标签 id
+   * @param path 已归一的去重键
+   */
+  private rememberTabPath(tabId: string, path: string): void {
+    this.tabPaths.set(tabId, path);
+  }
+
+  /**
+   * 清掉某个标签的路径登记：换成不带路径的面板、关标签、释放外壳时调用
+   * @param tabId 标签 id
+   */
+  private forgetTabPath(tabId: string): void {
+    this.tabPaths.delete(tabId);
+  }
+
+  /**
+   * 去重命中时收掉调用方刚建出来的空白标签：只对 `typeId` 与 `instanceId` 都为 null 的标签动手
+   *
+   * 动手前先等串行切换链结算——`ShellSystem.openBlankTab` 可能已经为这个标签排了一次切换。
+   * 全程不经过 `ShellSystem.activateTab`，因此不会再有第二次切出落盘；调用方自己已在用的标签不会被销毁。
+   * @param tabId 候选空白标签 id
+   */
+  private async dropBlankTab(tabId: string): Promise<void> {
+    await this.switchChain;
+
+    const index = this.tabs.findIndex((tab) => tab.id === tabId);
+
+    if (index === -1) return;
+
+    const tab = this.tabs[index];
+
+    if (tab.typeId !== null || tab.instanceId !== null) return;
+
+    this.tabs.splice(index, 1);
+
+    // 活动标签指向刚被收掉的空标签时先清掉：否则视图状态会短暂指向一个已移除的标签
+    if (this.activeTabId === tabId) {
+      this.activeTabId = null;
+      this.clearActiveInstance();
+    }
+
+    this.notify();
+  }
+
   openBlankTab(): string {
     this.tabCounter += 1;
     const tabId = `tab-${this.tabCounter}`;
@@ -661,12 +738,36 @@ export class ShellSystem implements IShellSystem {
     return tabId;
   }
 
-  async openPanelInTab(tabId: string, typeId: string, openParam?: Record<string, unknown>): Promise<boolean> {
+  async openPanelInTab(
+    tabId: string,
+    typeId: string,
+    openParam?: Record<string, unknown>,
+    path?: string,
+  ): Promise<boolean> {
     const index = this.tabs.findIndex((tab) => tab.id === tabId);
 
     if (index === -1) {
       logger.error('shell.tabNotFound', tabId);
       return false;
+    }
+
+    // 去重判定必须在任何关闭 / 创建动作之前：命中时这次调用本身不碰面板、不写盘
+    const key = path === undefined ? '' : normalizeResourcePath(path);
+
+    if (key !== '') {
+      const ownerTabId = this.findTabByPath(key);
+
+      if (ownerTabId === tabId) {
+        await this.activateTab(tabId);
+        return true;
+      }
+
+      if (ownerTabId !== undefined) {
+        // 命中别的标签：先收掉调用方刚建的空标签（只对真正的空标签动手），再切到已有标签
+        await this.dropBlankTab(tabId);
+        await this.activateTab(ownerTabId);
+        return true;
+      }
     }
 
     const current = this.tabs[index];
@@ -681,6 +782,11 @@ export class ShellSystem implements IShellSystem {
     if (created === null) return false;
 
     this.tabs[index] = { id: current.id, typeId, instanceId: created.instanceId };
+
+    // 登记写在标签记录之后、初始化之前：初始化失败时这条路径仍被这个标签占着，重开只会聚焦它。
+    // 换成不带路径的面板则清掉登记，避免旧路径继续指向这个标签
+    if (key === '') this.forgetTabPath(current.id);
+    else this.rememberTabPath(current.id, key);
 
     // 先等旧面板的切出保存结算，再改活动标签与通知 React（B1）
     await this.departActiveInstance(created.instanceId);
@@ -801,6 +907,7 @@ export class ShellSystem implements IShellSystem {
 
     this.pendingInstances.length = 0;
     this.tabs = [];
+    this.tabPaths.clear();
     this.activeTabId = null;
     this.lastActiveInstanceId = null;
     this.initialized = false;
@@ -935,6 +1042,7 @@ export class ShellSystem implements IShellSystem {
     }
 
     this.tabs.splice(index, 1);
+    this.forgetTabPath(tabId);
 
     if (this.tabs.length === 0) {
       this.openBlankTab();

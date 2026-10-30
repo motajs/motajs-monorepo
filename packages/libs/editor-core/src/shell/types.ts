@@ -92,12 +92,17 @@ export interface IShellSystem {
 
   /**
    * 在指定标签页中打开一个面板实例
+   *
+   * 调用方可以再交一条文件路径用于去重：外壳把路径归一后当键，同一路径已经开在另一个标签里时，
+   * 外壳切到那个标签并返回成功，不创建新实例、也不保留调用方刚建出来的空白标签。
+   * 路径只用来去重，外壳**不解释** `openParam` 的形状。
    * @param tabId 标签标识符
    * @param typeId 面板类型标识符
    * @param openParam 打开面板时顺带携带的可选参数；内核只透传，不解释其内容
+   * @param path 调用方正在打开的那条文件路径；不传或传空串表示这次打开不对应任何文件，外壳因此不去重
    * @returns 是否打开成功
    */
-  openPanelInTab(tabId: string, typeId: string, openParam?: Record<string, unknown>): Promise<boolean>;
+  openPanelInTab(tabId: string, typeId: string, openParam?: Record<string, unknown>, path?: string): Promise<boolean>;
 
   /**
    * 关闭指定的标签页
