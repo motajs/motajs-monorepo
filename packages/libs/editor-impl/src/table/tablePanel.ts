@@ -1269,7 +1269,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
 
     const param: ITablePanelParam = { target: schemaTarget };
 
-    await opener.open(param);
+    await opener.open(param, schemaTarget.dataPath);
   }
 
   /**

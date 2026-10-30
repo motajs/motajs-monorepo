@@ -47,9 +47,9 @@ registerMapDemo(core, backend);
 core.shellSystem.registerPanelType(
   createFileExplorerPanelType({
     listPanelTypes: (): readonly IEditorPanelType[] => core.shellSystem.listPanelTypes(),
-    openPanel: async (typeId: string, openParam: Record<string, unknown>): Promise<boolean> => {
+    openPanel: async (typeId: string, openParam: Record<string, unknown>, path: string): Promise<boolean> => {
       const tabId = core.shellSystem.openBlankTab();
-      const opened = await core.shellSystem.openPanelInTab(tabId, typeId, openParam);
+      const opened = await core.shellSystem.openPanelInTab(tabId, typeId, openParam, path);
 
       if (!opened) await core.shellSystem.closeTab(tabId);
 

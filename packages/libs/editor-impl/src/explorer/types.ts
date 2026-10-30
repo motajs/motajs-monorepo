@@ -9,8 +9,17 @@ export interface IFileExplorerCapabilities {
   /** 列出当前已注册的面板类型；由宿主在创建面板类型时注入，core 不因此扩大面板上下文（D-29） */
   readonly listPanelTypes: () => readonly IEditorPanelType[];
 
-  /** 新开一个标签并打开指定面板类型；返回 false 表示打开失败，面板据此关掉刚开的空白标签 */
-  readonly openPanel: (typeId: string, openParam: Record<string, unknown>) => Promise<boolean>;
+  /**
+   * 新开一个标签并打开指定面板类型；返回 false 表示打开失败，面板据此关掉刚开的空白标签
+   *
+   * 路径**只用于去重**：宿主必须把它原样交给 `IShellSystem.openPanelInTab`，让外壳认出「这条文件已经开在
+   * 某个标签里」从而切过去；宿主不得用它决定打开什么（打开什么仍由 `openParam` 决定），也不得据此写盘。
+   * @param typeId 要打开的面板类型标识
+   * @param openParam 交给该面板类型的打开参数，资源管理器只透传
+   * @param path 资源管理器正在打开的那条文件路径，原样交给外壳做去重键
+   * @returns 是否打开成功
+   */
+  readonly openPanel: (typeId: string, openParam: Record<string, unknown>, path: string) => Promise<boolean>;
 }
 
 export interface IFileExplorerPanel extends IEditorPanel {

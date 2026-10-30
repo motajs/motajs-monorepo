@@ -140,10 +140,10 @@ export const TABLE_PRESETS: readonly ITablePreset[] = [
  */
 export function createTablePanelOpener(core: EditorCore): ITablePanelOpener {
   return {
-    open: async (param: Record<string, unknown>): Promise<void> => {
+    open: async (param: Record<string, unknown>, path: string): Promise<void> => {
       const tabId = core.shellSystem.openBlankTab();
 
-      await core.shellSystem.openPanelInTab(tabId, tablePanelType.id, param);
+      await core.shellSystem.openPanelInTab(tabId, tablePanelType.id, param, path);
     },
   };
 }

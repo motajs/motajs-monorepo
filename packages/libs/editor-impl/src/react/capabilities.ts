@@ -54,9 +54,13 @@ export interface IPointSelectOpener {
 export interface ITablePanelOpener {
   /**
    * 打开一个已经设好目标的表格面板
+   *
+   * 路径**只用于去重**：宿主必须把它原样交给外壳的打开入口，让外壳认出「这份内容已经开在某个标签里」；
+   * 宿主不得用它决定打开什么（打开什么仍由 `param` 决定），也不得据此写盘。
    * @param param 打开参数，具体形状由表格面板声明、组合根收窄
+   * @param path 要打开的那份内容对应的文件路径，原样交给外壳做去重键
    */
-  open(param: Record<string, unknown>): Promise<void>;
+  open(param: Record<string, unknown>, path: string): Promise<void>;
 }
 
 export interface ICopyCapability {

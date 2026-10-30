@@ -170,7 +170,7 @@ export class FileExplorerPanel implements IFileExplorerPanel {
   private async openWith(type: IEditorPanelType, path: string): Promise<void> {
     if (type.createOpenParam === undefined) return;
 
-    const opened = await this.capabilities.openPanel(type.id, type.createOpenParam(path));
+    const opened = await this.capabilities.openPanel(type.id, type.createOpenParam(path), path);
 
     if (!opened) message.error('打开失败，请稍后重试');
   }

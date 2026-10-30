@@ -59,9 +59,9 @@ async function createHost(): Promise<IDevHost> {
   core.shellSystem.registerPanelType(
     createFileExplorerPanelType({
       listPanelTypes: (): readonly IEditorPanelType[] => core.shellSystem.listPanelTypes(),
-      openPanel: async (typeId: string, openParam: Record<string, unknown>): Promise<boolean> => {
+      openPanel: async (typeId: string, openParam: Record<string, unknown>, path: string): Promise<boolean> => {
         const tabId = core.shellSystem.openBlankTab();
-        const opened = await core.shellSystem.openPanelInTab(tabId, typeId, openParam);
+        const opened = await core.shellSystem.openPanelInTab(tabId, typeId, openParam, path);
 
         if (!opened) await core.shellSystem.closeTab(tabId);
 
@@ -205,6 +205,57 @@ describe('开发宿主资源管理器', () => {
       expect(tabCount(core, ASSET_PANEL_TYPE_ID)).toBe(1);
     });
     expect(screen.queryByTestId('explorer-candidate-dialog')).toBeNull();
+  });
+
+  // 同一个表格文件连点两次：仍只有一个表格标签，第二次只把原标签切回前台、不新建实例
+  it('同一文件连点两次只得到一个表格标签，第二次激活原标签', async () => {
+    const { core } = await createHost();
+
+    const explorerTab = await openExplorer(core);
+
+    await renderExplorer(core);
+    await clickEntry('explorer-entry-tables');
+    await waitFor(() => {
+      expect(screen.getByTestId('explorer-entry-tables/demo.json')).not.toBeNull();
+    });
+
+    await clickEntry('explorer-entry-tables/demo.json');
+
+    await waitFor(() => {
+      expect(tabCount(core, tablePanelType.id)).toBe(1);
+    });
+
+    const tabsAfterFirstOpen = core.shellSystem.listTabs();
+    const tableTabAfterFirstOpen = tabsAfterFirstOpen.find((tab) => tab.typeId === tablePanelType.id);
+
+    expect(tableTabAfterFirstOpen?.instanceId).toBeTruthy();
+
+    if (tableTabAfterFirstOpen === undefined) return;
+
+    // 回到资源管理器标签，再点同一个文件：路径已开在表格标签里，外壳应当切回去而不是再开一个
+    await act(async () => {
+      await core.shellSystem.activateTab(explorerTab);
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId('explorer-entry-tables')).not.toBeNull();
+    });
+    await clickEntry('explorer-entry-tables');
+    await waitFor(() => {
+      expect(screen.getByTestId('explorer-entry-tables/demo.json')).not.toBeNull();
+    });
+
+    await clickEntry('explorer-entry-tables/demo.json');
+
+    // 资源管理器退出前台（表格标签被激活）就是「命中已有标签」的可见证据
+    await waitFor(() => {
+      expect(screen.queryByTestId('explorer-entry-tables/demo.json')).toBeNull();
+    });
+
+    expect(core.shellSystem.listTabs()).toHaveLength(tabsAfterFirstOpen.length);
+    expect(tabCount(core, tablePanelType.id)).toBe(1);
+    expect(core.shellSystem.listTabs().find((tab) => tab.typeId === tablePanelType.id)?.instanceId).toBe(
+      tableTabAfterFirstOpen.instanceId,
+    );
   });
 
   // 没有任何面板认领的文件（如 .txt）被资源管理器整行过滤，界面上不存在可点击的行
