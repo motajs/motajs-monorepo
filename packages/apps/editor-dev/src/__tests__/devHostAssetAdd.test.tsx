@@ -184,10 +184,14 @@ function pickFile(container: HTMLElement, fileName: string, type = 'image/png'):
 
 /**
  * 选一个文件、等新卡片出现，并等列表真的自动落盘
+ *
+ * 列表写入走资源层缓冲，最多晚 5 秒才进磁盘；因此读宿主磁盘之前先显式写一次盘，
+ * 断言证明的是「新增确实被保存了」，而不是「碰巧还没到 5 秒」。
  * @param container 渲染容器
  * @param backend 注入的内存后端
+ * @param core 编辑器核心，用来显式写盘
  */
-async function addAssetFile(container: HTMLElement, backend: MemoryBackend): Promise<void> {
+async function addAssetFile(container: HTMLElement, backend: MemoryBackend, core: EditorCore): Promise<void> {
   await waitFor((): void => {
     expect(cardOf(container, 'hero.png')).not.toBeNull();
   });
@@ -196,6 +200,10 @@ async function addAssetFile(container: HTMLElement, backend: MemoryBackend): Pro
 
   await waitFor((): void => {
     expect(cardOf(container, PICKED_TEXTURE_NAME)).not.toBeNull();
+  });
+
+  await act(async (): Promise<void> => {
+    await core.resourceSystem.flushContent(TEXTURE_LIST_PATH);
   });
 
   await waitFor(async (): Promise<void> => {
@@ -233,7 +241,7 @@ describe('开发宿主新增素材', () => {
     const { core, backend } = await createHost();
     const container = await openAssetPanel(core);
 
-    await addAssetFile(container, backend);
+    await addAssetFile(container, backend, core);
 
     const text = await backend.readFile(TEXTURE_LIST_PATH);
     const written = Array.from(await backend.readBinary(`content/texture/${PICKED_TEXTURE_NAME}`));
@@ -251,7 +259,7 @@ describe('开发宿主新增素材', () => {
     const container = await openAssetPanel(core);
     const tabId = core.shellSystem.listTabs()[0].id;
 
-    await addAssetFile(container, backend);
+    await addAssetFile(container, backend, core);
 
     await act(async (): Promise<void> => {
       await core.shellSystem.closeTab(tabId);
@@ -275,7 +283,7 @@ describe('开发宿主新增素材', () => {
     const { core, backend } = await createHost();
     const container = await openAssetPanel(core);
 
-    await addAssetFile(container, backend);
+    await addAssetFile(container, backend, core);
 
     const second = new EditorCore();
 
