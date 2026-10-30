@@ -158,6 +158,8 @@ interface ITablePanelColumn {
   pickerError: string | undefined;
   /** 该栏是否有未落盘的数据改动（编辑 / 新增 / 删除 / 代码编辑器写回 / 撤销重做 / 确认剥离注释都会置真） */
   unsaved: boolean;
+  /** 该栏目标路径现在是否还有内容在等待写盘；与组件草稿脏、面板侧未落盘标记一起决定工具栏的「未保存」，5 秒自动写盘完成后会自动变回假 */
+  pendingWrite: boolean;
   /** 该栏是否有未落盘的镜像 schema 改动（数据视图新增字段会同步改镜像 schema） */
   unsavedSchema: boolean;
   /** 该栏「换内容」的版本号：只在载入 / 外部刷新 / 撤销重做 / 换表 / 保存回写五处递增，本地编辑绝不递增 */
@@ -247,6 +249,11 @@ interface ITablePanelViewProps {
   readonly onEmptyCreate: (columnIndex: number, directory: string, name: string) => void;
   /** 某栏内联删除某表格回调 */
   readonly onEmptyDelete: (columnIndex: number, dataPath: string) => void;
+  /**
+   * 用户是否正在某个字段里输入：真表示焦点在某个可编辑字段（input / textarea / select / contenteditable）上且尚未失焦 / 尚未确认提交，
+   * 外部冲突弹窗据此推迟到停手后再弹；实现方必须同步、不返回 Promise（一次焦点变化只报一次，不需要等待任何异步结果）
+   */
+  readonly onFieldEditingChange?: (editing: boolean) => void;
   /** 冲突弹窗选择「放弃我的改动并刷新」 */
   readonly onConflictDiscard: () => void;
   /** 冲突弹窗选择「保留我的改动，下次保存覆盖」 */
@@ -1649,6 +1656,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       pickerReloadToken: 0,
       pickerError: undefined,
       unsaved: false,
+      pendingWrite: false,
       unsavedSchema: false,
       contentVersion: 0,
       draft: null,
