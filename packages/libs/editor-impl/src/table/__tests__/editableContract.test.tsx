@@ -257,8 +257,8 @@ describe('可编辑表格组件契约（D-01 / D-03 / D-04 / D-06）', () => {
     expect(onDraftChange.mock.calls[0][1]).toBe(false);
   });
 
-  // 面板侧：一次本地编辑之后组件与面板都判脏，且该栏版本号不动
-  it('本地编辑后面板判脏但版本号不变', async () => {
+  // 面板侧：一次本地编辑即写进缓冲，脏判定来自待写，且一次自动保存只推进一档版本号
+  it('本地编辑后面板判脏，自动保存只推进一档版本号', async () => {
     const fs = new FakeFileSystem();
 
     seed(fs, 'hero', { name: 'a' }, { type: 'object', properties: { name: { type: 'string', description: '名字' } } });
@@ -277,9 +277,11 @@ describe('可编辑表格组件契约（D-01 / D-03 / D-04 / D-06）', () => {
 
     await commitText(container, 'name', '"b"');
 
+    // 确认即写缓冲：脏判定由「该栏还有待写」撑着，草稿已经交给面板，版本号只涨一档
     expect(panel.isColumnDirty(0)).toBe(true);
-    expect(contentVersionOf(panel, 0)).toBe(versionBefore);
-    expect(draftDirtyOf(panel, 0)).toBe(true);
+    expect(contentVersionOf(panel, 0)).toBe(versionBefore + 1);
+    expect(draftDirtyOf(panel, 0)).toBe(false);
+    expect(system.resourceSystem.listPendingPaths()).toContain(tableDataPath('hero'));
     expect(valueOf(container, 'name')).toBe('"b"');
   });
 
@@ -313,7 +315,7 @@ describe('可编辑表格组件契约（D-01 / D-03 / D-04 / D-06）', () => {
     expect(await readData(system, tableDataPath('hero'))).toEqual({ name: 'b' });
   });
 
-  // 面板侧：点保存走组件契约，onSave 恰好一次且参数是草稿快照；成功后清脏并落盘
+  // 面板侧：确认时自动保存一次、点保存再走一次，最后一次参数是草稿快照；成功后清脏并落盘
   it('保存按钮把草稿快照交给面板并在成功后清脏', async () => {
     const fs = new FakeFileSystem();
 
@@ -338,8 +340,9 @@ describe('可编辑表格组件契约（D-01 / D-03 / D-04 / D-06）', () => {
     });
     await act(async () => {});
 
-    expect(saveSpy).toHaveBeenCalledTimes(1);
-    expect(saveSpy.mock.calls[0][1].data).toEqual({ name: 'b' });
+    // 第一次是字段确认后的自动保存（安静模式），第二次才是保存按钮；两次交出的都是草稿快照
+    expect(saveSpy).toHaveBeenCalledTimes(2);
+    expect(saveSpy.mock.calls[1][1].data).toEqual({ name: 'b' });
     expect(await readData(system, tableDataPath('hero'))).toEqual({ name: 'b' });
     expect(panel.isColumnDirty(0)).toBe(false);
     expect(inColumn(container, 0, 'table-unsaved')).toBeNull();
