@@ -438,6 +438,12 @@ export class ShellSystem implements IShellSystem {
   private readonly undoSystem: IUndoSystem;
   /** 资源系统 */
   private readonly resourceSystem: IResourceSystemAccess;
+  /** 关闭页面时的 window 监听器：有待写就弹浏览器原生确认并尽力发起一次写盘；未注册时为空 */
+  private beforeUnloadHandler: ((event: BeforeUnloadEvent) => void) | null = null;
+  /** 页面即将卸载 / 进往返缓存时的 window 监听器：尽力发起一次写盘；未注册时为空 */
+  private pageHideHandler: (() => void) | null = null;
+  /** 窗口失焦时的 window 监听器：尽力发起一次写盘；未注册时为空 */
+  private windowBlurHandler: (() => void) | null = null;
   /** 缓存一次的渲染根组件，避免每次 render() 返回新组件导致反复重挂 */
   private readonly RootComponent: FC;
 
@@ -465,6 +471,31 @@ export class ShellSystem implements IShellSystem {
     if (this.initialized || this.disposed) return;
 
     this.initialized = true;
+
+    // 页面级事件只挂在 window 上（禁止 document）；重复初始化时先注销再注册，保证只有一条监听
+    if (this.beforeUnloadHandler !== null) window.removeEventListener('beforeunload', this.beforeUnloadHandler);
+    if (this.pageHideHandler !== null) window.removeEventListener('pagehide', this.pageHideHandler);
+    if (this.windowBlurHandler !== null) window.removeEventListener('blur', this.windowBlurHandler);
+
+    this.beforeUnloadHandler = (event: BeforeUnloadEvent): void => {
+      if (!this.resourceSystem.hasAnyPendingContent()) return;
+
+      // 浏览器不允许在这里 await 异步写盘：处理函数返回后页面就继续卸载，因此这里只做两件事——
+      // 弹原生确认（两个属性都写，缺一个可能不弹框），再「发起」一次写盘，不承诺写完
+      event.preventDefault();
+      event.returnValue = '';
+      void this.flushPendingContent();
+    };
+    this.pageHideHandler = (): void => {
+      void this.flushPendingContent();
+    };
+    this.windowBlurHandler = (): void => {
+      void this.flushPendingContent();
+    };
+
+    window.addEventListener('beforeunload', this.beforeUnloadHandler);
+    window.addEventListener('pagehide', this.pageHideHandler);
+    window.addEventListener('blur', this.windowBlurHandler);
 
     if (this.tabs.length === 0) this.openBlankTab();
 
@@ -732,6 +763,15 @@ export class ShellSystem implements IShellSystem {
   }
 
   async dispose(): Promise<void> {
+    // 先注销页面级监听：释放过程中不再响应页面事件，注册与注销逐条对称
+    if (this.beforeUnloadHandler !== null) window.removeEventListener('beforeunload', this.beforeUnloadHandler);
+    if (this.pageHideHandler !== null) window.removeEventListener('pagehide', this.pageHideHandler);
+    if (this.windowBlurHandler !== null) window.removeEventListener('blur', this.windowBlurHandler);
+
+    this.beforeUnloadHandler = null;
+    this.pageHideHandler = null;
+    this.windowBlurHandler = null;
+
     const instanceIds = [...this.instances.keys()].reverse();
 
     for (const instanceId of instanceIds) await this.closePanelInstance(instanceId);
