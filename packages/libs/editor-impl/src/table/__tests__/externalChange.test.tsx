@@ -174,6 +174,25 @@ describe('表格面板外部变化（D-15 / D-16 / D-17 / D-36 / D-37）', () =>
     expect(screen.queryByTestId('panel-conflict-dialog')).not.toBeNull();
   });
 
+  // 有待写时外部改文件：读取回落到外部内容、冲突框记录外部原文而不是待写草稿
+  it('有待写时外部改文件不被缓冲遮蔽且仍弹冲突框', async () => {
+    const fs = new FakeFileSystem();
+    const { system, panel, container } = await openRenderedTable(fs);
+
+    await commitText(container, 'name', '"draft"');
+
+    await act(async () => {
+      await system.resourceSystem.writeContent(tableDataPath('t'), JSON.stringify({ name: 'draft' }));
+    });
+
+    fs.seed(tableDataPath('t'), JSON.stringify({ name: 'external' }));
+    await dispatchChange(system, panel, tableDataPath('t'));
+
+    expect(await readData(system, tableDataPath('t'))).toEqual({ name: 'external' });
+    expect(JSON.parse(panel['columns'][0].pendingConflict?.text ?? 'null')).toEqual({ name: 'external' });
+    expect(screen.queryByTestId('panel-conflict-dialog')).not.toBeNull();
+  });
+
   // 选「放弃我的改动并刷新」：内容换成外部内容，未保存标记消失
   it('选放弃后用外部内容替换并清掉脏标记', async () => {
     const fs = new FakeFileSystem();
@@ -220,7 +239,7 @@ describe('表格面板外部变化（D-15 / D-16 / D-17 / D-36 / D-37）', () =>
     expect(await readData(system, tableDataPath('t'))).toEqual({ name: 'draft' });
   });
 
-  // 保存后宿主回送同内容：基线相同，判为自写回声，不刷新、不弹框
+  // 保存后宿主回声被忽略：点保存 -> 显式写盘 -> 回送同内容变化，版本号与内容都不变、不弹框
   it('保存后宿主回声被忽略', async () => {
     const fs = new FakeFileSystem();
     const { system, panel, container } = await openRenderedTable(fs);
@@ -231,6 +250,11 @@ describe('表格面板外部变化（D-15 / D-16 / D-17 / D-36 / D-37）', () =>
       clickInColumn(container, 0, 'table-save');
     });
     await act(async () => {});
+
+    // 保存只进缓冲，显式写盘之后回落的变化才算宿主回声
+    await act(async () => {
+      await system.resourceSystem.flushContent(tableDataPath('t'));
+    });
 
     const versionAfterSave = panel['columns'][0].contentVersion;
 
