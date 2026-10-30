@@ -491,6 +491,8 @@
 - 四处「研究稿与 PLAN 命名不一致」已按 PLAN 采用（`## 待用户确认的取舍 › 与 04.3-RESEARCH.md 命名不一致的地方`），不再作为待定项。
 - `## 不缓冲的边界（写死）` 与 `## 七组契约的落实决策（先读这一节）` 的结论同样随本次确认生效。
 
+**Plan 14 / 15 追加确认：2026-10-30** —— 按路径去重的形状与全部新名称已获用户第二次文字确认（原话「批准命名，可以执行计划」），详见本文末尾 `## 追加确认（Plan 14 / 15，2026-10-30）`。
+
 ---
 
 ## Plan 14 — 同文件多标签去重的接口与命名
@@ -561,18 +563,18 @@
 
 | 名称 | 种类 | 文件位置 | 用途 | 状态 |
 |------|------|----------|------|------|
-| `IShellSystem.openPanelInTab` | 既有接口方法**新增第 4 个可选参数** `path?: string` | `packages/libs/editor-core/src/shell/types.ts` | 让调用方把「它正在打开的那条文件路径」一并交给外壳；不传或传空串表示这次打开不对应任何文件，外壳因此不去重。JSDoc 写在接口源头，写明外壳只把路径归一后当键、不解释 `openParam` 的形状。 | 待确认 |
-| `normalizeResourcePath` | 自由函数，`(path: string) => string` | `packages/libs/editor-core/src/shell/shellSystem.ts` | 把 `/foo`、`foo`、`foo/`、`foo//bar` 归一成同一个去重键；空串归一后仍是空串，调用方据此判定「没有路径」。 | 待确认 |
-| `ShellSystem.tabPaths` | 私有实例字段，`Map<string, string>` | `packages/libs/editor-core/src/shell/shellSystem.ts` | 记住每个标签是被哪条文件路径打开的（标签 id → 归一后的路径），是去重判定的唯一数据来源。 | 待确认 |
-| `ShellSystem.findTabByPath` | 私有方法，`(path: string) => string \| undefined` | `packages/libs/editor-core/src/shell/shellSystem.ts` | 反查哪个标签已经登记这条（已归一的）路径；它是去重的唯一判据。 | 待确认 |
-| `ShellSystem.rememberTabPath` | 私有方法，`(tabId: string, path: string) => void` | `packages/libs/editor-core/src/shell/shellSystem.ts` | 登记或改写某个标签的路径，入参必须是已经归一的键；同一标签换成另一条路径时由它覆盖旧登记。 | 待确认 |
-| `ShellSystem.forgetTabPath` | 私有方法，`(tabId: string) => void` | `packages/libs/editor-core/src/shell/shellSystem.ts` | 清掉某个标签的路径登记；关标签、释放外壳、以及换成不带路径的面板时调用。 | 待确认 |
-| `ShellSystem.dropBlankTab` | 私有方法，`(tabId: string) => Promise<void>` | `packages/libs/editor-core/src/shell/shellSystem.ts` | 去重命中时把调用方刚建出来的空白标签收掉；只在 `typeId` 与 `instanceId` 都为 null 时动手，并先等 `ShellSystem.switchChain` 结算，绝不销毁调用方自己在用的标签。 | 待确认 |
-| `IFileExplorerCapabilities.openPanel` | 既有能力接缝**新增第 3 个参数** `path: string` | `packages/libs/editor-impl/src/explorer/types.ts` | 让资源管理器把它正在打开的文件路径一并交给宿主，宿主再原样交给 `IShellSystem.openPanelInTab`。JSDoc 要写明「路径只用于去重，宿主的打开实现不得用它决定打开什么」。 | 待确认 |
-| `ITablePanelOpener.open` | 既有能力接缝**新增第 2 个参数** `path: string` | `packages/libs/editor-impl/src/react/capabilities.ts` | 让表格「编辑 Schema」把派生出的 schema 文件路径一并交给宿主，使那个入口也参与去重。 | 待确认 |
-| `shellPathDedupe.test.ts` | 测试文件（新建） | `packages/libs/editor-core/src/shell/__tests__/` | 钉住去重行为（八条用例，详见下一节 `## Plan 15`），让「同一路径只有一个标签」成为一条真的能失败的断言。 | 待确认 |
+| `IShellSystem.openPanelInTab` | 既有接口方法**新增第 4 个可选参数** `path?: string` | `packages/libs/editor-core/src/shell/types.ts` | 让调用方把「它正在打开的那条文件路径」一并交给外壳；不传或传空串表示这次打开不对应任何文件，外壳因此不去重。JSDoc 写在接口源头，写明外壳只把路径归一后当键、不解释 `openParam` 的形状。 | 已确认（2026-10-30） |
+| `normalizeResourcePath` | 自由函数，`(path: string) => string` | `packages/libs/editor-core/src/shell/shellSystem.ts` | 把 `/foo`、`foo`、`foo/`、`foo//bar` 归一成同一个去重键；空串归一后仍是空串，调用方据此判定「没有路径」。 | 已确认（2026-10-30） |
+| `ShellSystem.tabPaths` | 私有实例字段，`Map<string, string>` | `packages/libs/editor-core/src/shell/shellSystem.ts` | 记住每个标签是被哪条文件路径打开的（标签 id → 归一后的路径），是去重判定的唯一数据来源。 | 已确认（2026-10-30） |
+| `ShellSystem.findTabByPath` | 私有方法，`(path: string) => string \| undefined` | `packages/libs/editor-core/src/shell/shellSystem.ts` | 反查哪个标签已经登记这条（已归一的）路径；它是去重的唯一判据。 | 已确认（2026-10-30） |
+| `ShellSystem.rememberTabPath` | 私有方法，`(tabId: string, path: string) => void` | `packages/libs/editor-core/src/shell/shellSystem.ts` | 登记或改写某个标签的路径，入参必须是已经归一的键；同一标签换成另一条路径时由它覆盖旧登记。 | 已确认（2026-10-30） |
+| `ShellSystem.forgetTabPath` | 私有方法，`(tabId: string) => void` | `packages/libs/editor-core/src/shell/shellSystem.ts` | 清掉某个标签的路径登记；关标签、释放外壳、以及换成不带路径的面板时调用。 | 已确认（2026-10-30） |
+| `ShellSystem.dropBlankTab` | 私有方法，`(tabId: string) => Promise<void>` | `packages/libs/editor-core/src/shell/shellSystem.ts` | 去重命中时把调用方刚建出来的空白标签收掉；只在 `typeId` 与 `instanceId` 都为 null 时动手，并先等 `ShellSystem.switchChain` 结算，绝不销毁调用方自己在用的标签。 | 已确认（2026-10-30） |
+| `IFileExplorerCapabilities.openPanel` | 既有能力接缝**新增第 3 个参数** `path: string` | `packages/libs/editor-impl/src/explorer/types.ts` | 让资源管理器把它正在打开的文件路径一并交给宿主，宿主再原样交给 `IShellSystem.openPanelInTab`。JSDoc 要写明「路径只用于去重，宿主的打开实现不得用它决定打开什么」。 | 已确认（2026-10-30） |
+| `ITablePanelOpener.open` | 既有能力接缝**新增第 2 个参数** `path: string` | `packages/libs/editor-impl/src/react/capabilities.ts` | 让表格「编辑 Schema」把派生出的 schema 文件路径一并交给宿主，使那个入口也参与去重。 | 已确认（2026-10-30） |
+| `shellPathDedupe.test.ts` | 测试文件（新建） | `packages/libs/editor-core/src/shell/__tests__/` | 钉住去重行为（八条用例，详见下一节 `## Plan 15`），让「同一路径只有一个标签」成为一条真的能失败的断言。 | 已确认（2026-10-30） |
 
-以上名称全部标 `待确认`：用户用文字确认前不改任何源码。
+以上名称已于 2026-10-30 由用户文字确认（用户原话：「批准命名，可以执行计划」），即为最终名；Plan 15 只按这些名字实现，不再另造同义形状。
 
 **命名与代码风格口径（与项目规则一致）：** 方法一律写成 `InterfaceName.methodName` / `ClassName.methodName`；自由函数写裸名；接口成员默认 `readonly`；枚举（若实现时确需）用 `const enum` + 数字成员；JSDoc 只写在接口源头、实现类不重复；禁止 `import type`；文件用 LF、无 BOM。
 
@@ -599,7 +601,7 @@
 
 | 名称 | 种类 | 文件位置 | 用途 | 状态 |
 |------|------|----------|------|------|
-| `shellPathDedupe.test.ts` | 测试文件（新建） | `packages/libs/editor-core/src/shell/__tests__/` | 钉住这些行为：同一路径开两次只有一个标签且第二次激活它、两条不同路径得两个标签、关标签后路径被释放可重新打开、`/foo` 与 `foo` 命中同一个标签、空串按没有路径处理、调用方不传路径时照旧打开、同一条路径按两种不同面板类型打开仍只有一个标签、同一标签换成另一条路径后旧路径被释放、工厂抛错时这条路径不被误判为空闲。 | 待确认 |
+| `shellPathDedupe.test.ts` | 测试文件（新建） | `packages/libs/editor-core/src/shell/__tests__/` | 钉住这些行为：同一路径开两次只有一个标签且第二次激活它、两条不同路径得两个标签、关标签后路径被释放可重新打开、`/foo` 与 `foo` 命中同一个标签、空串按没有路径处理、调用方不传路径时照旧打开、同一条路径按两种不同面板类型打开仍只有一个标签、同一标签换成另一条路径后旧路径被释放、工厂抛错时这条路径不被误判为空闲。 | 已确认（2026-10-30） |
 
 其余名称（`ShellSystem.*` / `normalizeResourcePath` / `IShellSystem.openPanelInTab` 的新参数 / 两个能力接缝的新参数）**已在 Plan 14 登记，此处只引用**，不重复造同义名。
 
@@ -609,16 +611,18 @@
 
 ## 追加确认（Plan 14 / 15，2026-10-30）
 
-**状态：待确认**
+**状态：已确认（2026-10-30）**
 
-本节列出的名字与形状需要用户第二次用文字确认后，才会落进源码；确认前不改任何源码。
+本节列出的名字与形状已于 2026-10-30 获得用户第二次文字确认。用户原话：「批准命名，可以执行计划」——十个名称全部批准，未提出任何改名。`已确认：2026-10-30`。
 
-### 需要用户拍板的两件事
+### 用户已拍板的两件事（结论）
 
-1. **形状：** 是否同意 (c)「调用方在打开时把路径交给外壳」。
-2. **命中时收掉刚建的空白标签：** 第二次打开来自一个刚建的空白标签时，由外壳把那个空白标签收掉（本提案的做法）。若不同意，就保留空白标签，Plan 15 的「恰好一个标签」断言改成「恰好一个已打开面板的标签」。
+1. **形状：** 按 (c)「调用方在打开时把路径交给外壳」实现；不选 (a) 面板类型反推路径、不选 (b) 先造面板再问它。
+2. **命中时收掉刚建的空白标签：** 同意由外壳把那个空白标签收掉（本提案的做法）；Plan 15 的「恰好一个标签」断言按此写法，不改写成「恰好一个已打开面板的标签」。
 
-### 本节提议的两个附带取舍
+### 本节附带的两个取舍（已采用）
 
 - **命中时收掉调用方刚建的空标签**：保证命中后恰好一个标签；只对真正的空标签（`typeId` 与 `instanceId` 都为 null）动手，调用方自己在用的标签不得替它销毁。
 - **空串一律当「没有路径」**：绝不作为登记键。
+
+用户批准命名时对这两条取舍**未提出异议**，因此按提案采用，Plan 15 不再二次拍板。
