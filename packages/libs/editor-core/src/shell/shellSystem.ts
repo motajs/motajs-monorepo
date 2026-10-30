@@ -678,6 +678,10 @@ export class ShellSystem implements IShellSystem {
         // 否则 dispose 的兜底保存会把「不保存关闭」变成一次写盘
         if (choice === PanelCloseChoice.Discard) instance.onDiscard?.();
 
+        // 「保存并关闭」：面板刚把草稿写进缓冲，外壳这时才把缓冲打到磁盘，写完才真正关标签；
+        // 「不保存关闭」不写盘——丢弃钩子已经把该路径待写丢掉，再写盘等于把丢弃变成一次写盘
+        if (choice === PanelCloseChoice.Save) await this.flushPendingContent();
+
         await this.discardTab(tabId, true);
         return;
       }
@@ -976,6 +980,20 @@ export class ShellSystem implements IShellSystem {
       await instance.onSwitchOut();
     } catch {
       logger.error('shell.callbackFailed', this.instanceTypes.get(instanceId) ?? '');
+    }
+
+    // 顺序铁律：面板先把草稿写进缓冲，外壳随后才把缓冲打到磁盘；反过来会漏掉刚写进缓冲的内容
+    await this.flushPendingContent();
+  }
+
+  /**
+   * 把缓冲里全部待写内容打到磁盘；写盘失败只记日志，绝不打断标签状态机或抛给点标签的人
+   */
+  private async flushPendingContent(): Promise<void> {
+    try {
+      await this.resourceSystem.flushAllContent();
+    } catch (error: unknown) {
+      logger.error('resource.flushFailed', String(error));
     }
   }
 }
