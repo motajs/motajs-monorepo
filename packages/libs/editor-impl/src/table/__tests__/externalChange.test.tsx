@@ -14,6 +14,7 @@ configure({ testIdAttribute: 'data-test-id' });
 // 每个用例结束后卸载已挂载的组件，避免 DOM 在用例之间累积
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
 });
 
 // 数据文件路径（`xxx.json`）
@@ -104,6 +105,11 @@ async function readData(system: EditorCore, path: string): Promise<unknown> {
   return typeof text === 'string' ? JSON.parse(text) : undefined;
 }
 
+// 读取某路径数据文件的裸磁盘内容：`FakeFileSystem.readFile` 不经缓冲，用来证明「磁盘上到底是什么」
+async function readDisk(fs: FakeFileSystem, path: string): Promise<unknown> {
+  return JSON.parse(await fs.readFile(path));
+}
+
 // 投递一次外部变化：先让资源层失效缓存（真实宿主在变化事件里做同一件事），再交给面板
 async function dispatchChange(
   system: EditorCore,
@@ -118,13 +124,17 @@ async function dispatchChange(
   await act(async () => {});
 }
 
-// 装配一个打开了一张表并已渲染的表格面板
-async function openRenderedTable(fs: FakeFileSystem): Promise<{
+// 装配一个打开了一张表并已渲染的表格面板（缺省是单字段 `name` 的表，可换用带数字字段的表）
+async function openRenderedTable(
+  fs: FakeFileSystem,
+  data: unknown = { name: 'a' },
+  schema: unknown = { type: 'object', properties: { name: { type: 'string' } } },
+): Promise<{
   system: EditorCore;
   panel: TablePanel;
   container: HTMLElement;
 }> {
-  seed(fs, 't', { name: 'a' }, { type: 'object', properties: { name: { type: 'string' } } });
+  seed(fs, 't', data, schema);
 
   const system = await createTableHarness(fs);
   const panels: TablePanel[] = [];
@@ -213,8 +223,8 @@ describe('表格面板外部变化（D-15 / D-16 / D-17 / D-36 / D-37）', () =>
     expect(inColumn(container, 0, 'table-unsaved')).toBeNull();
   });
 
-  // 选「保留我的改动」：内容仍是草稿、基线已推进，下一次保存把草稿写回并覆盖外部内容
-  it('选保留后内容不变且下一次保存覆盖外部内容', async () => {
+  // 选「保存编辑器的」：立刻把编辑器内容写盘覆盖外部修改，待写与未保存标记一起消失，全程不推进定时器
+  it('选「保存编辑器的」：磁盘立刻变成编辑器内容、待写清空、未保存标记消失', async () => {
     const fs = new FakeFileSystem();
     const { system, panel, container } = await openRenderedTable(fs);
 
@@ -223,20 +233,18 @@ describe('表格面板外部变化（D-15 / D-16 / D-17 / D-36 / D-37）', () =>
     fs.seed(tableDataPath('t'), JSON.stringify({ name: 'external' }));
     await dispatchChange(system, panel, tableDataPath('t'));
 
+    expect(screen.queryByTestId('panel-conflict-dialog')).not.toBeNull();
+
     await act(async () => {
       fireEvent.click(screen.getByTestId('panel-conflict-keep'));
     });
     await act(async () => {});
 
     expect(valueOf(container, 'name')).toBe('"draft"');
+    expect(await readDisk(fs, tableDataPath('t'))).toEqual({ name: 'draft' });
+    expect(system.resourceSystem.hasAnyPendingContent()).toBe(false);
+    expect(inColumn(container, 0, 'table-unsaved')).toBeNull();
     expect(screen.queryByTestId('panel-conflict-dialog')).toBeNull();
-
-    await act(async () => {
-      clickInColumn(container, 0, 'table-save');
-    });
-    await act(async () => {});
-
-    expect(await readData(system, tableDataPath('t'))).toEqual({ name: 'draft' });
   });
 
   // 保存后宿主回声被忽略：点保存 -> 显式写盘 -> 回送同内容变化，版本号与内容都不变、不弹框
@@ -332,5 +340,142 @@ describe('表格面板外部变化（D-15 / D-16 / D-17 / D-36 / D-37）', () =>
     expect(readSpy).not.toHaveBeenCalled();
     expect(panel['columns'][0].contentVersion).toBe(versionBefore);
     expect(valueOf(container, 'name')).toBe('"a"');
+  });
+
+  // 有待写时外部改文件：立刻记冲突并弹窗，但用户没表态之前一个字节都不写
+  it('有待写时外部改文件：弹冲突、磁盘仍是外部内容、一个字节都没写', async () => {
+    const fs = new FakeFileSystem();
+    const { system, panel, container } = await openRenderedTable(fs);
+
+    await commitText(container, 'name', '"draft"');
+
+    fs.seed(tableDataPath('t'), JSON.stringify({ name: 'external' }));
+    await dispatchChange(system, panel, tableDataPath('t'));
+
+    expect(screen.queryByTestId('panel-conflict-dialog')).not.toBeNull();
+    expect(await readDisk(fs, tableDataPath('t'))).toEqual({ name: 'external' });
+    expect(system.resourceSystem.hasAnyPendingContent()).toBe(true);
+    expect(inColumn(container, 0, 'table-unsaved')).not.toBeNull();
+  });
+
+  // 正在输入时不弹：焦点在可编辑字段里时冲突只记进栏状态，失焦那一刻才弹
+  it('正在输入时不弹、失焦后立刻弹', async () => {
+    const fs = new FakeFileSystem();
+    const { system, panel, container } = await openRenderedTable(fs);
+
+    await commitText(container, 'name', '"draft"');
+
+    const cell = container.querySelector('[data-test-id="table-input-name"]');
+    const textarea = cell === null ? null : cell.querySelector('textarea');
+
+    if (!(textarea instanceof HTMLTextAreaElement)) throw new Error('字段文本域缺失');
+
+    await act(async () => {
+      fireEvent.focusIn(textarea);
+    });
+
+    fs.seed(tableDataPath('t'), JSON.stringify({ name: 'external' }));
+    await dispatchChange(system, panel, tableDataPath('t'));
+
+    expect(screen.queryByTestId('panel-conflict-dialog')).toBeNull();
+    expect(panel['columns'][0].pendingConflict?.path).toBe(tableDataPath('t'));
+
+    await act(async () => {
+      fireEvent.focusOut(textarea);
+    });
+    await act(async () => {});
+
+    expect(screen.queryByTestId('panel-conflict-dialog')).not.toBeNull();
+  });
+
+  // 选「保存外部修改」：丢弃本栏待写（同时失效内容缓存）后按外部原文换内容，磁盘一个字节都不动
+  it('选「保存外部修改」：磁盘不变、待写清空、面板显示外部内容', async () => {
+    const fs = new FakeFileSystem();
+    const { system, panel, container } = await openRenderedTable(fs);
+
+    await commitText(container, 'name', '"draft"');
+
+    fs.seed(tableDataPath('t'), JSON.stringify({ name: 'external' }));
+    await dispatchChange(system, panel, tableDataPath('t'));
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('panel-conflict-discard'));
+    });
+    await act(async () => {});
+
+    expect(await readDisk(fs, tableDataPath('t'))).toEqual({ name: 'external' });
+    expect(system.resourceSystem.hasAnyPendingContent()).toBe(false);
+    expect(valueOf(container, 'name')).toBe('"external"');
+    expect(screen.queryByTestId('panel-conflict-dialog')).toBeNull();
+  });
+
+  // 回车确认后立刻弹：数字框按回车提交后不失焦，也算「停手」，推迟必须由这次确认解除
+  it('回车确认后立刻弹：数字框不失焦也解除推迟', async () => {
+    const fs = new FakeFileSystem();
+    const { system, panel, container } = await openRenderedTable(
+      fs,
+      { name: 'a', level: 1 },
+      { type: 'object', properties: { name: { type: 'string' }, level: { type: 'number' } } },
+    );
+
+    const cell = container.querySelector('[data-test-id="table-input-level"]');
+    const input = cell === null ? null : cell.querySelector('input');
+
+    if (!(input instanceof HTMLInputElement)) throw new Error('数字输入框缺失');
+
+    // 一、回车确认一次，先让本栏有内容进缓冲
+    await act(async () => {
+      fireEvent.focusIn(input);
+      fireEvent.change(input, { target: { value: '2' } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+    });
+    await act(async () => {});
+
+    expect(system.resourceSystem.hasAnyPendingContent()).toBe(true);
+
+    // 二、再点回字段并改值：这次只改不提交，焦点仍在输入框里
+    await act(async () => {
+      fireEvent.focusIn(input);
+      fireEvent.change(input, { target: { value: '3' } });
+    });
+
+    // 三、外部改文件：冲突只记进栏状态，弹窗推迟
+    fs.seed(tableDataPath('t'), JSON.stringify({ name: 'external', level: 9 }));
+    await dispatchChange(system, panel, tableDataPath('t'));
+
+    expect(screen.queryByTestId('panel-conflict-dialog')).toBeNull();
+    expect(panel['columns'][0].pendingConflict?.path).toBe(tableDataPath('t'));
+
+    // 四、只按回车、不移动焦点：这一次确认提交就是「停手」，弹窗立刻出现
+    await act(async () => {
+      fireEvent.keyDown(input, { key: 'Enter' });
+    });
+    await act(async () => {});
+
+    expect(screen.queryByTestId('panel-conflict-dialog')).not.toBeNull();
+  });
+
+  // 「保存编辑器的」写盘失败：确定性结算，待写与弹窗都保留、磁盘仍是外部内容，点击处理器不抛异常
+  it('「保存编辑器的」写盘失败：待写保留、弹窗不关、磁盘仍是外部内容', async () => {
+    const fs = new FakeFileSystem();
+    const { system, panel, container } = await openRenderedTable(fs);
+
+    await commitText(container, 'name', '"draft"');
+
+    fs.seed(tableDataPath('t'), JSON.stringify({ name: 'external' }));
+    await dispatchChange(system, panel, tableDataPath('t'));
+
+    // 只让这一次落盘失败，读取仍然正常，否则裸磁盘断言会被连带的读失败污染
+    vi.spyOn(fs, 'writeFile').mockRejectedValueOnce(new Error('write failed'));
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('panel-conflict-keep'));
+    });
+    await act(async () => {});
+
+    expect(screen.queryByTestId('panel-conflict-dialog')).not.toBeNull();
+    expect(await readDisk(fs, tableDataPath('t'))).toEqual({ name: 'external' });
+    expect(system.resourceSystem.hasAnyPendingContent()).toBe(true);
+    expect(inColumn(container, 0, 'table-unsaved')).not.toBeNull();
   });
 });

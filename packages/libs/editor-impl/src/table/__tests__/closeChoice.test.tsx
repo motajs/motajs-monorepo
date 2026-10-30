@@ -117,11 +117,16 @@ async function commitTextIn(container: HTMLElement, index: number, field: string
   });
 }
 
-// 读取某路径数据文件的解析值（面板以文本写回）
+// 读取某路径数据文件的解析值（资源层优先命中缓冲）
 async function readData(system: EditorCore, path: string): Promise<unknown> {
   const text = await system.resourceSystem.readContent(path);
 
   return typeof text === 'string' ? JSON.parse(text) : undefined;
+}
+
+// 读取某路径数据文件的裸磁盘内容：`FakeFileSystem.readFile` 不经缓冲
+async function readDisk(fs: FakeFileSystem, path: string): Promise<unknown> {
+  return JSON.parse(await fs.readFile(path));
 }
 
 // 判断某个标签是否还在外壳里
@@ -221,11 +226,14 @@ describe('表格面板：关闭三态', () => {
 
     expect(hasTab(system, harness.tabId)).toBe(true);
     expect(screen.queryByTestId('panel-close-dialog')).toBeNull();
-    expect(await readData(system, tableDataPath('hero'))).toEqual({ name: 'a' });
+    // 取消后资源层读到新值（缓冲命中），磁盘仍是旧值
+    expect(await readData(system, tableDataPath('hero'))).toEqual({ name: 'b' });
+    expect(await readDisk(fs, tableDataPath('hero'))).toEqual({ name: 'a' });
+    // 脏依据换成「本栏还有待写」：字段确认时草稿已被自动保存清掉，缓冲里那一条还在
     expect(harness.panel.isColumnDirty(0)).toBe(true);
   });
 
-  // 不保存关闭：标签消失、磁盘仍是旧内容，写盘次数必须为 0（证明 dispose 兜底保存没写）
+  // 不保存关闭：标签消失、磁盘仍是旧内容，缓冲写入次数必须为 0（证明 dispose 兜底保存没写）
   it('不保存关闭时标签消失且一次盘都没写', async () => {
     const fs = new FakeFileSystem();
 
@@ -242,6 +250,7 @@ describe('表格面板：关闭三态', () => {
 
     await commitTextIn(container, 0, 'name', '"b"');
 
+    // 这里数的是「缓冲写入次数」：字段确认那一次已经写过缓冲，之后的「不保存关闭」必须一次都不再写
     const writes = vi.spyOn(system.resourceSystem, 'writeContent');
     let closing: Promise<void> = Promise.resolve();
 

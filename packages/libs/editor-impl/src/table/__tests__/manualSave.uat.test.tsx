@@ -8,9 +8,10 @@ import { createTableHarness, FakeFileSystem } from './fixtures';
 
 configure({ testIdAttribute: 'data-test-id' });
 
-// 每个用例结束后卸载已挂载组件并还原被替换的实现，避免 DOM 与替身在用例之间累积
+// 每个用例结束后卸载已挂载组件、恢复真定时器并还原被替换的实现，避免 DOM 与替身在用例之间累积
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.restoreAllMocks();
 });
 
@@ -89,11 +90,16 @@ async function commitText(container: HTMLElement, field: string, text: string): 
   });
 }
 
-// 读取某路径数据文件的解析值（面板以文本写回）
+// 读取某路径数据文件的解析值（资源层优先命中缓冲）
 async function readData(system: EditorCore, path: string): Promise<unknown> {
   const text = await system.resourceSystem.readContent(path);
 
   return typeof text === 'string' ? JSON.parse(text) : undefined;
+}
+
+// 读取某路径数据文件的裸磁盘内容：`FakeFileSystem.readFile` 不经缓冲
+async function readDisk(fs: FakeFileSystem, path: string): Promise<unknown> {
+  return JSON.parse(await fs.readFile(path));
 }
 
 // 用能力 Provider 包裹外壳渲染根（打开列表实时同步用例可注入预设等能力）
@@ -112,49 +118,81 @@ function seed(fs: FakeFileSystem, name: string, data: unknown, schema: unknown):
   fs.seed(tableSchemaPath(name), JSON.stringify(schema));
 }
 
-describe('表格面板手动保存（G-02.1-3）', () => {
-  // 行内改值只改内存不落盘：资源内容仍是旧值，本栏出现「未保存」标记且「保存」可点
-  it('编辑只改内存并在本栏标记未保存、保存按钮可点', async () => {
+// 装配一个已打开并在首个标签页设置好目标表的表格面板
+async function openHeroPanel(fs: FakeFileSystem): Promise<{
+  system: EditorCore;
+  panel: TablePanel;
+  container: HTMLElement;
+}> {
+  seed(fs, 'hero', { name: 'a' }, { type: 'object', properties: { name: { type: 'string', description: '名字' } } });
+
+  const system = await createTableHarness(fs);
+  const created: TablePanel[] = [];
+  const panel = await openTablePanel(system, created);
+
+  panel.setTable({ dataPath: tableDataPath('hero') });
+
+  await act(async () => {
+    await panel.onSwitchIn();
+  });
+
+  const { container } = render(createElement(system.shellSystem.render()));
+
+  return { system, panel, container };
+}
+
+describe('表格面板自动保存（D-09 / D-10 / D-11）', () => {
+  // 编辑后不点保存：确认那一刻已经写进缓冲，资源层读到新值，磁盘仍是旧值
+  it('编辑后不点保存：资源层已是新值、磁盘仍是旧值', async () => {
     const fs = new FakeFileSystem();
-
-    seed(fs, 'hero', { name: 'a' }, { type: 'object', properties: { name: { type: 'string', description: '名字' } } });
-    const system = await createTableHarness(fs);
-    const created: TablePanel[] = [];
-    const panel = await openTablePanel(system, created);
-
-    panel.setTable({ dataPath: tableDataPath('hero') });
-
-    await act(async () => {
-      await panel.onSwitchIn();
-    });
-
-    const { container } = render(createElement(system.shellSystem.render()));
+    const { system, container } = await openHeroPanel(fs);
 
     await commitText(container, 'name', '"b"');
 
-    // 未点保存：资源内容仍是旧值
-    expect(await readData(system, tableDataPath('hero'))).toEqual({ name: 'a' });
-    // 本栏标记「未保存」，「保存」按钮可点
+    expect(await readData(system, tableDataPath('hero'))).toEqual({ name: 'b' });
+    expect(await readDisk(fs, tableDataPath('hero'))).toEqual({ name: 'a' });
+    // 「未保存」同时看组件草稿与缓冲待写，因此这一刻仍然亮着
     expect(inColumn(container, 0, 'table-unsaved')).not.toBeNull();
-    expect((inColumn(container, 0, 'table-save') as Element).hasAttribute('disabled')).toBe(false);
   });
 
-  // 点「保存」才落盘：资源内容变为新值，「未保存」消失且保存按钮禁用
-  it('点保存才写回资源并清未保存标记', async () => {
+  // 推进 5 000 毫秒后防抖到期，磁盘自动变成新值，未保存标记随之消失
+  it('推进 5 000 毫秒后磁盘自动变成新值', async () => {
     const fs = new FakeFileSystem();
+    const { container } = await openHeroPanel(fs);
 
-    seed(fs, 'hero', { name: 'a' }, { type: 'object', properties: { name: { type: 'string', description: '名字' } } });
-    const system = await createTableHarness(fs);
-    const created: TablePanel[] = [];
-    const panel = await openTablePanel(system, created);
+    vi.useFakeTimers();
 
-    panel.setTable({ dataPath: tableDataPath('hero') });
+    await commitText(container, 'name', '"b"');
+
+    expect(await readDisk(fs, tableDataPath('hero'))).toEqual({ name: 'a' });
+
+    await vi.advanceTimersByTimeAsync(5000);
+    await act(async () => {});
+
+    expect(await readDisk(fs, tableDataPath('hero'))).toEqual({ name: 'b' });
+    expect(inColumn(container, 0, 'table-unsaved')).toBeNull();
+  });
+
+  // 切走面板时立刻写盘：外壳在面板切出钩子结算之后把缓冲打到磁盘
+  it('切走面板时立刻写盘', async () => {
+    const fs = new FakeFileSystem();
+    const { system, container } = await openHeroPanel(fs);
+
+    await commitText(container, 'name', '"b"');
+
+    const blankTabId = system.shellSystem.openBlankTab();
 
     await act(async () => {
-      await panel.onSwitchIn();
+      await system.shellSystem.activateTab(blankTabId);
     });
 
-    const { container } = render(createElement(system.shellSystem.render()));
+    expect(await readDisk(fs, tableDataPath('hero'))).toEqual({ name: 'b' });
+  });
+
+  // 撤销后再确认：撤销只改面板内容，再点一次保存才把撤销后的内容写回磁盘
+  it('撤销后再确认：磁盘是撤销后的内容', async () => {
+    const fs = new FakeFileSystem();
+    const { system, panel, container } = await openHeroPanel(fs);
 
     await commitText(container, 'name', '"b"');
 
@@ -163,82 +201,23 @@ describe('表格面板手动保存（G-02.1-3）', () => {
     });
     await act(async () => {});
 
-    expect(await readData(system, tableDataPath('hero'))).toEqual({ name: 'b' });
-    expect(inColumn(container, 0, 'table-unsaved')).toBeNull();
-    expect((inColumn(container, 0, 'table-save') as Element).hasAttribute('disabled')).toBe(true);
-  });
+    expect(await readDisk(fs, tableDataPath('hero'))).toEqual({ name: 'b' });
 
-  // 撤销一次已保存的改值后，本栏仍标记未保存且保存按钮可点；再保存把文件写回撤销后的值
-  it('撤销后再保存能把文件写回撤销后的值', async () => {
-    const fs = new FakeFileSystem();
-
-    seed(fs, 'hero', { name: 'a' }, { type: 'object', properties: { name: { type: 'string', description: '名字' } } });
-    const system = await createTableHarness(fs);
-    const created: TablePanel[] = [];
-    const panel = await openTablePanel(system, created);
-
-    panel.setTable({ dataPath: tableDataPath('hero') });
-
-    await act(async () => {
-      await panel.onSwitchIn();
-    });
-
-    const { container } = render(createElement(system.shellSystem.render()));
-
-    await commitText(container, 'name', '"b"');
-
-    await act(async () => {
-      clickInColumn(container, 0, 'table-save');
-    });
-    await act(async () => {});
-
-    expect(await readData(system, tableDataPath('hero'))).toEqual({ name: 'b' });
-    expect(inColumn(container, 0, 'table-unsaved')).toBeNull();
-    expect((inColumn(container, 0, 'table-save') as Element).hasAttribute('disabled')).toBe(true);
-
-    // 撤销只改面板侧内容：组件草稿被版本号重置成干净态，工具栏必须靠面板侧未保存重新亮起
     await act(async () => {
       await system.undoSystem.undo();
     });
     await act(async () => {});
 
-    expect(inColumn(container, 0, 'table-unsaved')).not.toBeNull();
-    expect((inColumn(container, 0, 'table-save') as Element).hasAttribute('disabled')).toBe(false);
+    expect(valueOf(container, 'name')).toBe('"a"');
+    expect(panel.isColumnDirty(0)).toBe(true);
 
     await act(async () => {
       clickInColumn(container, 0, 'table-save');
     });
     await act(async () => {});
 
-    expect(await readData(system, tableDataPath('hero'))).toEqual({ name: 'a' });
+    expect(await readDisk(fs, tableDataPath('hero'))).toEqual({ name: 'a' });
     expect(inColumn(container, 0, 'table-unsaved')).toBeNull();
-    expect((inColumn(container, 0, 'table-save') as Element).hasAttribute('disabled')).toBe(true);
-  });
-
-  // 切出面板自动保存：改值不点保存，切出后资源内容已变为新值
-  it('切出面板时自动保存已修改的栏', async () => {
-    const fs = new FakeFileSystem();
-
-    seed(fs, 'hero', { name: 'a' }, { type: 'object', properties: { name: { type: 'string', description: '名字' } } });
-    const system = await createTableHarness(fs);
-    const created: TablePanel[] = [];
-    const panel = await openTablePanel(system, created);
-
-    panel.setTable({ dataPath: tableDataPath('hero') });
-
-    await act(async () => {
-      await panel.onSwitchIn();
-    });
-
-    const { container } = render(createElement(system.shellSystem.render()));
-
-    await commitText(container, 'name', '"b"');
-
-    await act(async () => {
-      await panel.onSwitchOut();
-    });
-
-    expect(await readData(system, tableDataPath('hero'))).toEqual({ name: 'b' });
   });
 });
 

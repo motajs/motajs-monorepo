@@ -7,7 +7,7 @@ import panelDialogsCss from '../panel-dialogs.css?inline';
 
 configure({ testIdAttribute: 'data-test-id' });
 
-// 两个共享面板弹窗的可见状态与回调：保存中 / 保存失败 / 超长原因 / 关闭三态 / 冲突两选项，共五条
+// 两个共享面板弹窗的可见状态与回调：保存中 / 保存失败 / 超长原因 / 关闭三态 / 冲突弹窗的定稿文案与默认文案，共六条
 afterEach(() => {
   cleanup();
 });
@@ -69,15 +69,23 @@ describe('PanelCloseDialog', () => {
 });
 
 describe('ExternalChangeDialog', () => {
-  // 两个选项分别回传 onDiscard / onKeep，且弹窗里没有第三个按钮
-  it('两个选项分别回传 onDiscard / onKeep 且没有第三个按钮', () => {
+  // 表格面板传定稿文案：两个按钮逐字是「保存编辑器的」/「保存外部修改」，仍只有两个按钮、各自回传自己的回调
+  it('传文案时两个选项逐字是定稿文案且仍只有两个按钮', () => {
     const onDiscard = vi.fn();
     const onKeep = vi.fn();
 
-    render(<ExternalChangeDialog open onDiscard={onDiscard} onKeep={onKeep} />);
+    render(
+      <ExternalChangeDialog
+        open
+        keepLabel="保存编辑器的"
+        discardLabel="保存外部修改"
+        onDiscard={onDiscard}
+        onKeep={onKeep}
+      />,
+    );
 
-    expect(screen.getByTestId('panel-conflict-discard').textContent).toBe('放弃我的改动并刷新');
-    expect(screen.getByTestId('panel-conflict-keep').textContent).toBe('保留我的改动，下次保存覆盖');
+    expect(screen.getByTestId('panel-conflict-discard').textContent).toBe('保存外部修改');
+    expect(screen.getByTestId('panel-conflict-keep').textContent).toBe('保存编辑器的');
     expect(screen.getAllByRole('button')).toHaveLength(2);
     expect(screen.queryByTestId('panel-conflict-cancel')).toBeNull();
 
@@ -90,5 +98,15 @@ describe('ExternalChangeDialog', () => {
 
     expect(onKeep).toHaveBeenCalledTimes(1);
     expect(onDiscard).toHaveBeenCalledTimes(1);
+  });
+
+  // 不传文案时保持地图 / 素材面板用的默认文案（本阶段不改它们的冲突处置，D-21）
+  it('不传文案时保持地图 / 素材面板用的默认文案', () => {
+    render(<ExternalChangeDialog open onDiscard={ignoreChoice} onKeep={ignoreChoice} />);
+
+    expect(screen.getByTestId('panel-conflict-discard').textContent).toBe('放弃我的改动并刷新');
+    expect(screen.getByTestId('panel-conflict-keep').textContent).toBe('保留我的改动，下次保存覆盖');
+    expect(screen.getAllByRole('button')).toHaveLength(2);
+    expect(screen.queryByTestId('panel-conflict-cancel')).toBeNull();
   });
 });
