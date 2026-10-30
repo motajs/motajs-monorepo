@@ -21,9 +21,10 @@ beforeEach(() => {
   setWindowWidth(1000);
 });
 
-// 每个用例结束后卸载已挂载组件、复位窗口宽度并还原被替换的读取方法
+// 每个用例结束后卸载已挂载组件、恢复真定时器、复位窗口宽度并还原被替换的读取方法
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   setWindowWidth(ORIGINAL_INNER_WIDTH);
   vi.restoreAllMocks();
 });
@@ -94,6 +95,13 @@ async function flush(): Promise<void> {
   });
 }
 
+// 推进 50 毫秒的合并通知并冲刷 React 更新：同面板同步改由「字段确认后 50 毫秒内」驱动
+async function advance(milliseconds: number): Promise<void> {
+  await act(async (): Promise<void> => {
+    await vi.advanceTimersByTimeAsync(milliseconds);
+  });
+}
+
 // 按渲染顺序取第 index 栏的容器
 function columnAt(container: HTMLElement, index: number): HTMLElement {
   const columns = container.querySelectorAll<HTMLElement>('.etable-column');
@@ -113,7 +121,7 @@ function selectText(column: HTMLElement, testId: string): string | null {
 }
 
 describe('同面板依赖栏即时同步（P18 / P20）', () => {
-  // 同一面板内改 schema 后，另一 schema 栏与主数据表都立即跟随，不再需要切入 / focus
+  // 同一面板内改 schema 后，另一 schema 栏与主数据表在确认后的 50 毫秒内跟随，不再需要点保存或切入 / focus
   it('改 schema 后同面板的其它 schema 栏与主数据表立即同步', async () => {
     const fs = new FakeFileSystem();
 
@@ -133,11 +141,12 @@ describe('同面板依赖栏即时同步（P18 / P20）', () => {
     expect(selectText(columnAt(container, 2), 'table-input-properties-a-type')).toBe('string');
     expect(columnAt(container, 0).querySelector('[data-test-id="table-input-a"] textarea')).not.toBeNull();
 
+    vi.useFakeTimers();
+
     await act(async () => {
       await panel.commitValue("['properties']['a']['type']", 'number', 1);
     });
-    await panel.save(1);
-    await flush();
+    await advance(50);
 
     expect(selectText(columnAt(container, 2), 'table-input-properties-a-type')).toBe('number');
     expect(columnAt(container, 0).querySelector('[data-test-id="table-input-a"] .ant-input-number')).not.toBeNull();
@@ -168,7 +177,6 @@ describe('同面板依赖栏即时同步（P18 / P20）', () => {
     await act(async () => {
       await panel.commitValue("['properties']['a']['type']", 'number', 1);
     });
-    await panel.save(1);
     await flush();
 
     const unrelatedReads = readSpy.mock.calls.filter(
@@ -233,7 +241,6 @@ describe('代码编辑器写回与撤销 / 重做也走同面板同步（P18 / P
     await act(async () => {
       await panel.addItem("['a']", 'mid', 0);
     });
-    await panel.save(0);
     await flush();
 
     expect(await readContent(system, tableDataPath('t'))).toEqual({ a: '1', mid: null });
@@ -243,7 +250,6 @@ describe('代码编辑器写回与撤销 / 重做也走同面板同步（P18 / P
     await act(async () => {
       await system.undoSystem.undo();
     });
-    await panel.save(0);
     await flush();
 
     expect(columnAt(container, 0).querySelector('[data-test-id="table-row-mid"]')).toBeNull();
