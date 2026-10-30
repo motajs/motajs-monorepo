@@ -231,7 +231,7 @@ describe('同一张表在同一个面板的两栏（D-12 / D-13 / D-15 / D-16）
     const fs = new FakeFileSystem();
 
     seed(fs, 't', { a: '1', b: '2' });
-    const { system, panel, container } = await openRenderedPanel(fs, 't');
+    const { panel, container } = await openRenderedPanel(fs, 't');
 
     vi.useFakeTimers();
 
@@ -260,7 +260,7 @@ describe('同一张表在同一个面板的两栏（D-12 / D-13 / D-15 / D-16）
     const fs = new FakeFileSystem();
 
     seed(fs, 't', { a: '1', b: '2' });
-    const { system, panel, container } = await openRenderedPanel(fs, 't');
+    const { panel, container } = await openRenderedPanel(fs, 't');
 
     vi.useFakeTimers();
 
