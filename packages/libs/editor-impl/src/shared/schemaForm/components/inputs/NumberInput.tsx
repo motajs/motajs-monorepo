@@ -1,5 +1,5 @@
 import { InputNumber } from 'antd';
-import { ReactElement } from 'react';
+import { KeyboardEvent, ReactElement, useEffect, useState } from 'react';
 
 export interface INumberInputProps {
   /** 当前值；非数字时按空值呈现 */
@@ -24,15 +24,52 @@ export interface INumberInputProps {
  * @returns 数字输入元素
  */
 export function NumberInput(props: INumberInputProps): ReactElement {
-  const value = typeof props.value === 'number' ? props.value : undefined;
+  const current = typeof props.value === 'number' ? props.value : null;
+  const [draft, setDraft] = useState<number | null>(current);
+  const [editing, setEditing] = useState(false);
+
+  useEffect((): void => {
+    setDraft(typeof props.value === 'number' ? props.value : null);
+    setEditing(false);
+  }, [props.value]);
+
+  const confirm = (): void => {
+    setEditing(false);
+
+    if (draft !== current) props.onChange(draft);
+  };
 
   return (
     <InputNumber
       size="small"
       className="etable-input-number"
-      value={value}
+      value={editing ? draft : current}
       disabled={props.disabled}
-      onChange={(next): void => props.onChange(next)}
+      onChange={(next): void => {
+        if (next === null) {
+          // 清空即确认：先让草稿呈现为空，再提交空值；被拒绝时失焦会把草稿回填成当前值
+          setDraft(null);
+          setEditing(true);
+
+          if (current !== null) props.onChange(null);
+
+          return;
+        }
+
+        setDraft(next);
+        setEditing(true);
+      }}
+      onBlur={(): void => {
+        if (editing) confirm();
+      }}
+      onKeyDown={(event: KeyboardEvent<HTMLInputElement>): void => {
+        if (event.key === 'Enter') {
+          if (editing) confirm();
+          return;
+        }
+
+        if (event.key === 'Escape') setEditing(false);
+      }}
     />
   );
 }
