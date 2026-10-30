@@ -1,4 +1,4 @@
-import { Button, Input, InputNumber, Spin } from 'antd';
+import { Button, Input, Spin } from 'antd';
 import { createElement, memo, ReactElement, useMemo, useState } from 'react';
 import { ICodeEditorOpener, ITablePanelOpener, useTableCapabilities } from '../../../react';
 import { ITableRowNode, TableEditMode } from '../types';
@@ -9,6 +9,7 @@ import { GapRow } from './GapRow';
 import { SchemaBanner } from './SchemaBanner';
 import { TableRow } from './TableRow';
 import { TableToolbar } from './TableToolbar';
+import { NumberInput } from './inputs/NumberInput';
 import '../schemaForm.css';
 
 /** 层级缩进步长（像素），约旧缩进 12px 的 3/4 */
@@ -447,8 +448,6 @@ function renderPairedRow(
   level: number,
 ): ReactElement {
   const disabled = context.mode === TableEditMode.Delete;
-  const leftValue = typeof left.value === 'number' ? left.value : undefined;
-  const rightValue = typeof right.value === 'number' ? right.value : undefined;
   const dataAttr = parseFieldPath(left.key).join('-');
   const guides = Array.from({ length: level }, (_, index) =>
     createElement('span', { key: index, className: 'etable-tree-guide', style: { width: TREE_INDENT_STEP } }),
@@ -472,17 +471,15 @@ function renderPairedRow(
     createElement(
       'div',
       { className: 'etable-cell etable-cell-value etable-pair-value', 'data-test-id': `table-input-${dataAttr}` },
-      createElement(InputNumber, {
-        size: 'small',
-        value: leftValue,
+      createElement(NumberInput, {
+        value: left.value,
         disabled,
-        onChange: (value): void => context.onChange?.(left.key, value),
+        onChange: (value: number | null): void => context.onChange?.(left.key, value),
       }),
-      createElement(InputNumber, {
-        size: 'small',
-        value: rightValue,
+      createElement(NumberInput, {
+        value: right.value,
         disabled,
-        onChange: (value): void => context.onChange?.(right.key, value),
+        onChange: (value: number | null): void => context.onChange?.(right.key, value),
       }),
     ),
     createElement('div', { className: 'etable-cell etable-cell-action' }),
