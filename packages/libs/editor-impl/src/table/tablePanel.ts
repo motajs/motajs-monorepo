@@ -13,7 +13,18 @@ import {
   PanelCloseChoice,
 } from '@motajs/editor-core';
 import { get } from 'es-toolkit/compat';
-import { createElement, createRef, FC, ReactElement, RefObject, useCallback, useEffect, useRef, useState } from 'react';
+import {
+  createElement,
+  createRef,
+  FC,
+  FocusEvent,
+  ReactElement,
+  RefObject,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import { ICodeEditorOpener, ITablePanelOpener, useTableCapabilities } from '../react';
 import {
   ITableCloseDialogState,
@@ -254,9 +265,9 @@ interface ITablePanelViewProps {
    * 外部冲突弹窗据此推迟到停手后再弹；实现方必须同步、不返回 Promise（一次焦点变化只报一次，不需要等待任何异步结果）
    */
   readonly onFieldEditingChange?: (editing: boolean) => void;
-  /** 冲突弹窗选择「放弃我的改动并刷新」 */
+  /** 冲突弹窗选择「保存外部修改」：丢掉编辑器里的待写、重新载入外部那一份 */
   readonly onConflictDiscard: () => void;
-  /** 冲突弹窗选择「保留我的改动，下次保存覆盖」 */
+  /** 冲突弹窗选择「保存编辑器的」：用编辑器里的内容覆盖外部修改并立刻写盘 */
   readonly onConflictKeep: () => void;
   /** 面板级关闭弹窗状态的订阅源：整个面板只渲染一处，与栏数无关（D-38） */
   readonly closeDialogStore: Store<ITableCloseDialogState>;
@@ -321,6 +332,21 @@ function readAt(source: unknown, path: string): unknown {
   const segments = parseFieldPath(path);
 
   return segments.length === 0 ? source : get(source, segments);
+}
+
+/**
+ * 判断焦点落在的是不是一个「可编辑字段」
+ *
+ * 只认 input / textarea / select 与可编辑的 contenteditable 元素：焦点落在工具栏按钮、行或表格空白上
+ * 并不等于有人在打字，冲突弹窗不该因此被推迟。这里只看事件目标自身，绝不去读浏览器当前聚焦的元素
+ * （editor-core / editor-impl 都禁 `document`）。
+ * @param target 焦点事件的 `event.target` 或 `event.relatedTarget`
+ * @returns 是可编辑字段时为 true
+ */
+function isEditableFieldElement(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+
+  return target.matches('input, textarea, select, [contenteditable]:not([contenteditable="false"])');
 }
 
 /**
@@ -603,7 +629,20 @@ function TablePanelView(props: ITablePanelViewProps): ReactElement {
 
   return createElement(
     'div',
-    { className: 'etable-columns', ref: containerRef, 'data-test-id': 'table-columns' },
+    {
+      className: 'etable-columns',
+      ref: containerRef,
+      'data-test-id': 'table-columns',
+      // 「正在打字」只按可编辑字段算：焦点落到工具栏 / 行 / 空白上不推迟冲突弹窗（D-14 的手感要求）
+      onFocus: (event: FocusEvent<HTMLDivElement>): void => {
+        if (isEditableFieldElement(event.target)) props.onFieldEditingChange?.(true);
+      },
+      onBlur: (event: FocusEvent<HTMLDivElement>): void => {
+        if (isEditableFieldElement(event.relatedTarget)) return;
+
+        props.onFieldEditingChange?.(false);
+      },
+    },
     columns,
     // 冲突弹窗在面板根上只挂一处：非活动面板不渲染，重新切入时由订阅源把待决冲突带回（D-37）
     conflict === undefined
@@ -612,6 +651,10 @@ function TablePanelView(props: ITablePanelViewProps): ReactElement {
           open: true,
           onDiscard: props.onConflictDiscard,
           onKeep: props.onConflictKeep,
+          keepLabel: '保存编辑器的',
+          discardLabel: '保存外部修改',
+          noteText:
+            '保存编辑器的会立刻用编辑器里的内容覆盖磁盘上的外部修改；保存外部修改会丢弃编辑器里还没写盘的内容，并重新载入外部那一份。',
         }),
     // 关闭弹窗同样只在面板根上挂一处：不管此刻铺出几栏，DOM 里都只有一个（D-38）
     closeDialog.open
@@ -657,6 +700,12 @@ export class TablePanel implements IEditorPanel, ITablePanel {
 
   /** 当前显示冲突的栏序号；没有显示时为 undefined */
   private visibleConflictColumn: number | undefined = undefined;
+
+  /** 是否有可编辑字段正在输入（已聚焦未失焦 / 未确认提交）；为真时待决冲突只记进栏状态、不弹窗 */
+  private fieldEditing: boolean = false;
+
+  /** 待写路径变化的退订函数；未订阅时为空 */
+  private pendingUnwatch: (() => void) | undefined = undefined;
 
   /** 面板级关闭弹窗状态：整个面板只一份，与「哪一栏触发关闭」和栏数无关（D-38） */
   private readonly closeDialogStore: Store<ITableCloseDialogState> = new Store<ITableCloseDialogState>({
@@ -755,16 +804,29 @@ export class TablePanel implements IEditorPanel, ITablePanel {
         onEmptyCreate: (columnIndex, directory, name): void => void this.createIntoColumn(columnIndex, directory, name),
         onEmptyDelete: (columnIndex, dataPath): void => void this.deleteFromColumn(columnIndex, dataPath),
         conflictStore: this.conflictStore,
-        onConflictDiscard: (): void => this.discardExternalConflict(),
-        onConflictKeep: (): void => this.keepExternalConflict(),
+        onConflictDiscard: (): void => {
+          void this.discardExternalConflict();
+        },
+        onConflictKeep: (): void => {
+          void this.keepExternalConflict();
+        },
+        onFieldEditingChange: (editing): void => this.setFieldEditing(editing),
         closeDialogStore: this.closeDialogStore,
         onCloseChoice: this.answerCloseDialog,
       });
   }
 
-  async initialize(): Promise<void> {}
+  async initialize(): Promise<void> {
+    if (this.pendingUnwatch !== undefined) return;
+
+    // 订阅时会立刻用当前全部待写路径回调一次，因此不必另外查一遍
+    this.pendingUnwatch = this.context.watchPendingChange((paths): void => this.refreshPendingWrites(paths));
+  }
 
   async dispose(): Promise<void> {
+    this.pendingUnwatch?.();
+    this.pendingUnwatch = undefined;
+
     await this.saveDirtyColumns();
   }
 
@@ -797,8 +859,10 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   /**
    * 用户点标签上的关闭：没有任何一栏有未保存改动就直接放行；有脏改动才在面板根上弹三态框等选择
    *
-   * 脏判定只走 `TablePanel.isColumnDirty`（四个来源合起来看），绝不只读某一个标志位，
+   * 脏判定只走 `TablePanel.isColumnDirty`（三个来源合起来看），绝不只读某一个标志位，
    * 否则「刚编辑过但组件草稿刚被重置」会被误判成干净而静默丢改动（D-05 / D-08）。
+   * 三个来源里的「本栏还有待写」让「只有待写、没有草稿」的情况也会弹三态框，于是关闭时能看到
+   * 既有的「正在保存…」态并等写盘结算（D-20）。
    * @returns 保存并关闭 / 不保存关闭 / 取消关闭
    */
   async onRequestClose(): Promise<PanelCloseChoice> {
@@ -814,6 +878,9 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   /**
    * 用户选择「不保存关闭」时由外壳投递：清掉各栏的内存脏标记与草稿，使 `TablePanel.dispose`
    * 的兜底保存成为空操作；不写盘、不登记撤销（D-10）
+   *
+   * 本栏涉及的路径（数据文件与由它推导出的 schema 文件）还要各丢弃一次待写，否则 5 秒后定时器会把
+   * 刚被丢弃的改动写回磁盘（D-08 / T-04.3-11）。
    */
   onDiscard(): void {
     const count = this.columns.length;
@@ -822,6 +889,15 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     this.publishCloseDialog({ open: false, saving: false });
 
     for (let index = 0; index < count; index += 1) this.clearColumnDirty(index);
+
+    for (let index = 0; index < count; index += 1) {
+      const target = this.columns[index].target;
+
+      if (target === null) continue;
+
+      this.context.discardPendingResource(target.dataPath);
+      this.context.discardPendingResource(deriveSchemaPath(target.dataPath));
+    }
   }
 
   /**
@@ -887,7 +963,9 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   /**
    * 逐栏保存并返回第一条失败原因；全部成功（或本来就不用写）时返回 undefined
    *
-   * 与 `TablePanel.onSwitchOut` 共用同一条写盘入口 `TablePanel.saveColumn`，
+   * 与 `TablePanel.onSwitchOut` 共用同一条写盘入口 `TablePanel.saveColumn`：它会转调
+   * `TablePanel.saveDocument` 的非安静分支，因此这一轮等到的是「按该栏路径真正写盘」结算完毕，
+   * 而不是只排进缓冲。「保存并关闭」的「正在保存…」态就等这一轮（D-20）。
    * 成功后把组件标记为已保存，使随后的 `dispose` 兜底保存成为空操作（D-09）。
    * @returns 保存失败的原因；没有失败时为 undefined
    */
@@ -1006,6 +1084,14 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     void this.refresh(columnIndex);
   }
 
+  /**
+   * 保存某一栏：先按同一条链把内容排进缓冲，再由写入路径按该栏两条路径立刻写盘
+   *
+   * 「保存按钮 = 立刻写盘」就落在这一条上：`TablePanel.saveColumn` 转调
+   * `TablePanel.saveDocument` 的非安静分支，后者把数据文件与由它推导出的 schema 文件各 flush 一次。
+   * 这里**不**用全量写盘，否则会把别的面板还没确认的内容一起写掉（D-11 / T-04.3-01）。
+   * @param columnIndex 目标栏的序号（0 基），省略为第 0 栏
+   */
   async save(columnIndex: number = 0): Promise<void> {
     await this.saveColumn(columnIndex);
   }
@@ -1255,6 +1341,8 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     column.draftDirty = true;
     this.publish(columnIndex, column.store.state.status, outcome.notice);
     this.saveAfterEdit(columnIndex);
+    // 一次成功的确认提交也算「停手」：数字框按回车确认后不失焦，只靠失焦事件永远等不到这一刻
+    this.setFieldEditing(false);
 
     return outcome.document;
   }
@@ -1429,71 +1517,95 @@ export class TablePanel implements IEditorPanel, ITablePanel {
    *
    * 进入方法时先同步拍下目标与前缀：换表 / 关栏可能在写盘进行中改掉 `column.target`，
    * 快照保证内容仍写回原文件。失败时**保留脏标记**并发布错误，绝不静默丢改动（T-04.2-08-02）。
+   *
+   * 两条语义按 `quiet` 分开：安静模式只把内容排进缓冲（字段确认后的自动保存走这一条，5 秒后才落盘、
+   * 也不刷「已保存」）；其余入口（保存按钮 / 切走 / 关闭 / 释放）写缓冲之后会按该栏两条路径各 flush
+   * 一次，因此「保存按钮 = 立刻写盘」成立，写盘失败走既有的错误通道并返回 `Failed`。
    * @param columnIndex 栏序号（0 基）
    * @param document 要写回的文档
-   * @param quiet 安静模式：只把内容排进缓冲、不刷「已保存」提示也不清已有提示位；它只由字段确认后的自动保存传真，
-   * 避免每 5 秒刷一次提示
+   * @param quiet 安静模式：只把内容排进缓冲、不刷「已保存」提示也不清已有提示位、也不立刻写盘
    * @returns 保存结果：已保存或失败
    */
-  async saveDocument(columnIndex: number, document: ITableDocument, quiet: boolean = false): Promise<ContentSaveStatus> {
+  async saveDocument(
+    columnIndex: number,
+    document: ITableDocument,
+    quiet: boolean = false,
+  ): Promise<ContentSaveStatus> {
     const column = this.columnAt(columnIndex);
     const target = column.target;
     const prefix = column.prefix;
 
     if (target === null) return ContentSaveStatus.Saved;
 
+    const startVersion = column.contentVersion;
     const wroteData = column.unsaved;
     const wroteSchema = column.unsavedSchema;
 
-    // 面板侧没有待写内容（脏只来自组件尚未同步的标记）：不写盘、也不改写基线
-    if (!wroteData && !wroteSchema) return ContentSaveStatus.Saved;
+    if (wroteData && !(await this.persist(columnIndex, target, document.data, prefix))) {
+      return ContentSaveStatus.Failed;
+    }
 
-    if (wroteData && !(await this.persist(columnIndex, target, document.data, prefix))) return ContentSaveStatus.Failed;
     if (wroteSchema && !(await this.persistSchema(columnIndex, target, document.schema, prefix))) {
       return ContentSaveStatus.Failed;
     }
 
-    // 写盘期间换了目标：内容已写回原文件，但不能再拿旧表的内容覆盖新表的面板状态
-    if (column.target !== target) return ContentSaveStatus.Saved;
+    // 写盘期间换了目标 / 换了内容（撤销、外部刷新）：内容已写回原文件，但不能再拿这份快照覆盖更新的面板状态
+    // 面板侧没有待写内容（脏只来自组件尚未同步的标记）时同样不写内容、也不改写基线。
+    if (column.target === target && column.contentVersion === startVersion && (wroteData || wroteSchema)) {
+      // 写盘成功后把基线同步为刚写出的原文：之后宿主回声与基线相同，被判为无变化（D-15 / D-36）。
+      // 这一步必须早于 50 毫秒合并通知，也不能挪到写盘之后，否则写者自己每次编辑都会弹冲突框。
+      if (wroteData) column.baselineText = serializeTableText(document.data, prefix);
+      if (wroteSchema && isRecord(document.schema)) {
+        column.baselineSchemaText = serializeTableText(document.schema, prefix);
+      }
 
-    // 写盘成功后把基线同步为刚写出的原文：之后宿主回声与基线相同，被判为无变化（D-15 / D-36）
-    if (wroteData) column.baselineText = serializeTableText(document.data, prefix);
-    if (wroteSchema && isRecord(document.schema)) {
-      column.baselineSchemaText = serializeTableText(document.schema, prefix);
+      column.data = document.data;
+      column.schema = document.schema;
+      column.draft = document;
+      column.unsaved = false;
+      column.unsavedSchema = false;
+      column.draftDirty = false;
+      this.bumpContentVersion(columnIndex);
+      this.publish(
+        columnIndex,
+        column.store.state.status,
+        quiet ? column.store.state.message : '已保存',
+        quiet ? column.store.state.error : undefined,
+      );
+
+      if (wroteData) this.refreshDependents(columnIndex, target.dataPath);
+      if (wroteSchema) this.refreshDependents(columnIndex, deriveSchemaPath(target.dataPath));
     }
 
-    column.data = document.data;
-    column.schema = document.schema;
-    column.draft = document;
-    column.unsaved = false;
-    column.unsavedSchema = false;
-    column.draftDirty = false;
-    this.bumpContentVersion(columnIndex);
-    this.publish(
-      columnIndex,
-      column.store.state.status,
-      quiet ? column.store.state.message : '已保存',
-      quiet ? column.store.state.error : undefined,
-    );
+    if (quiet) return ContentSaveStatus.Saved;
 
-    if (wroteData) this.refreshDependents(columnIndex, target.dataPath);
-    if (wroteSchema) this.refreshDependents(columnIndex, deriveSchemaPath(target.dataPath));
+    // 按路径立刻写盘：只写本栏这两条路径，绝不使用全量写盘（那会写掉别的面板还没确认的内容）
+    try {
+      await this.context.flushResource(target.dataPath);
+      await this.context.flushResource(deriveSchemaPath(target.dataPath));
+    } catch {
+      this.publishError(columnIndex, '写入失败，请重试。');
+      return ContentSaveStatus.Failed;
+    }
 
     return ContentSaveStatus.Saved;
   }
 
   /**
-   * 唯一的脏判定：四个来源中任一为真即视为脏
+   * 唯一的脏判定：三个来源中任一为真即视为脏
    *
-   * 供保存、切走、换表、关栏与后续外部变化 / 关闭三态共用；**不要**再直接读某一个标志位，
-   * 否则「刚编辑过但面板状态刚变过」这类组合会漏判（D-04 / D-05 / D-11）。
+   * 三个来源是：① 面板侧未落盘标记（`unsaved` / `unsavedSchema`）；② 组件草稿脏（面板持有的交回脏标记，
+   * 或挂载中的组件自己判脏）；③ 该栏目标路径现在还有待写（`pendingWrite`，5 秒自动写盘完成后自动变假）。
+   * 第三来源不能省：自动保存之后草稿脏会被清零，只看草稿会把「已经确认、还没落盘」的改动判成干净，
+   * 关闭询问就会直接放行。
+   * 供保存、切走、换表、关栏与外部变化 / 关闭三态共用；**不要**再直接读某一个标志位（D-04 / D-05 / D-11）。
    * @param columnIndex 栏序号（0 基），省略为第 0 栏
    * @returns 该栏有未落盘改动时为 true
    */
   isColumnDirty(columnIndex: number = 0): boolean {
     const column = this.columnAt(columnIndex);
 
-    if (column.unsaved || column.unsavedSchema || column.draftDirty) return true;
+    if (column.unsaved || column.unsavedSchema || column.draftDirty || column.pendingWrite) return true;
 
     return this.columnRefs[columnIndex]?.current?.isDirty() ?? false;
   }
@@ -1787,10 +1899,35 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       title: target === null ? undefined : target.dataPath,
       message,
       error,
-      unsaved: column.unsaved,
+      // 「未保存」的展示面与 `TablePanel.isColumnDirty` 是同一件事：面板侧未落盘标记或本栏还有待写
+      unsaved: column.unsaved || column.pendingWrite,
       pendingConflict: column.pendingConflict,
       ...emptyState,
     });
+  }
+
+  /**
+   * 按「当前全部待写路径」刷新每栏的待写布尔并重发视图
+   *
+   * 订阅回调每次都会把当前全部待写路径送进来（订阅那一刻也会送一次），所以这里不必再查资源层；
+   * 该栏数据路径或由它推导出的 schema 路径任一条还在待写，就算该栏「还有待写」。
+   * 只改「有没有未保存」这一位，提示位原样带过去：自动保存不该顺手清掉「添加成功」这类文案。
+   * @param paths 当前全部待写路径
+   */
+  private refreshPendingWrites(paths: readonly string[] = []): void {
+    const count = this.columns.length;
+    const pending = new Set<string>(paths);
+
+    for (let index = 0; index < count; index += 1) {
+      const column = this.columns[index];
+      const target = column.target;
+      const next = target !== null && (pending.has(target.dataPath) || pending.has(deriveSchemaPath(target.dataPath)));
+
+      if (column.pendingWrite === next) continue;
+
+      column.pendingWrite = next;
+      this.publish(index, column.store.state.status, column.store.state.message, column.store.state.error);
+    }
   }
 
   /**
@@ -1808,7 +1945,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       schemaMode: target !== null && isSchemaPath(target.dataPath),
       title: target === null ? undefined : target.dataPath,
       commentStripPending: true,
-      unsaved: column.unsaved,
+      unsaved: column.unsaved || column.pendingWrite,
     });
   }
 
@@ -2208,6 +2345,14 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     }
 
     this.applyData(columnIndex, next);
+    // 撤销 / 重做也是一次内容变更：把刚算出的新内容写进缓冲，别让更早那一份快照留在缓冲里等着落盘。
+    // 这里必须传面板自己算出的文档：那一刻挂载中的组件还持着撤销前的草稿并自称脏，
+    // 走 `TablePanel.currentDocument` 会把撤销掉的内容又写回去。
+    void this.saveDocument(
+      columnIndex,
+      { data: column.data, schema: column.schema, schemaMode: this.isSchemaView(columnIndex) },
+      true,
+    );
   }
 
   /**
@@ -2277,7 +2422,25 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   }
 
   /**
+   * 记录「有可编辑字段正在输入」，并把待决冲突推迟到停手之后再弹
+   *
+   * 只做两件事：置标志；由真变假的那一刻调一次 `TablePanel.showNextConflict`（这是「停手就弹」的唯一出口）。
+   * 标志本来就是目标值时直接返回，不重复触发。
+   * @param editing 是否还有可编辑字段处于「已聚焦未失焦 / 未确认提交」的状态
+   */
+  private setFieldEditing(editing: boolean): void {
+    if (this.fieldEditing === editing) return;
+
+    this.fieldEditing = editing;
+
+    if (!editing) this.showNextConflict();
+  }
+
+  /**
    * 记录某栏的待决冲突并在面板根发布它；同栏同路径同原文只入队一次（D-17 / D-37）
+   *
+   * 有可编辑字段正在输入时**只记进栏状态、不写弹窗 store**：用户正在打字，弹窗抢焦点会打断输入；
+   * 一停手（失焦或一次确认提交）就由 `TablePanel.setFieldEditing` 弹出来。
    * @param columnIndex 栏序号（0 基）
    * @param path 变化路径
    * @param text 读到的外部原文
@@ -2295,6 +2458,8 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       this.conflictStore.setState(column.pendingConflict);
       return;
     }
+
+    if (this.fieldEditing) return;
 
     this.showNextConflict();
   }
@@ -2319,9 +2484,13 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   }
 
   /**
-   * 冲突弹窗选「放弃我的改动并刷新」：用外部原文替换内容、清掉脏标记并推进版本号（D-17）
+   * 冲突弹窗选「保存外部修改」：丢弃本栏待写（同时失效该路径内容缓存），再按外部原文重新载入
+   *
+   * 丢弃必须发生在换内容之前：待写条目留着的话，5 秒后会把被丢弃的那一份写回磁盘，等于用编辑器里
+   * 旧内容覆盖用户刚接受的外部内容。换内容只用收到变化时记下的原文快照，**不**重新读磁盘——磁盘可能
+   * 已被在途写盘覆盖，只有快照能保证「面板显示的就是外部那一份」（D-08 / D-16 / T-04.3-11）。
    */
-  private discardExternalConflict(): void {
+  private async discardExternalConflict(): Promise<void> {
     const columnIndex = this.visibleConflictColumn;
 
     if (columnIndex === undefined) return;
@@ -2347,6 +2516,8 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       return;
     }
 
+    await this.context.discardPendingResource(conflict.path);
+
     const mirroredSchema = !isSchemaPath(target.dataPath) && conflict.path === deriveSchemaPath(target.dataPath);
 
     column.unsaved = false;
@@ -2368,34 +2539,54 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   }
 
   /**
-   * 冲突弹窗选「保留我的改动，下次保存覆盖」：内容不动，只把基线推进到外部原文（D-17）
+   * 冲突弹窗选「保存编辑器的」：立刻用编辑器里的内容覆盖磁盘上的外部修改，点下去就生效
+   *
+   * 四步顺序不能变：① 先把该栏显式放回「未落盘」（`TablePanel.saveDocument` 在数据与 schema 都没标记时
+   * 提前返回，不先放回就是空转）；② 走同一条链把内容排进缓冲（`quiet` 必须显式传真，这不是用户点保存，
+   * 不能刷「已保存」）；③ 立刻把该路径待写写盘，缓冲条目与「外部已改」标记随之消失、右上角提示随之更新；
+   * ④ 清冲突与弹窗、重发视图、处理下一条。
+   *
+   * 两个失败分支都确定性结算、绝不抛给点击处理器（点击路径是 `(): void` 箭头）：待写保留、条目与
+   * 「外部已改」标记不清、弹窗不关、未保存标记仍在，只有既有的错误提示与日志（O2 / D-07）。
    */
-  private keepExternalConflict(): void {
+  private async keepExternalConflict(): Promise<void> {
     const columnIndex = this.visibleConflictColumn;
 
     if (columnIndex === undefined) return;
 
     const column = this.columnAt(columnIndex);
     const conflict = column.pendingConflict;
+    const target = column.target;
 
-    this.visibleConflictColumn = undefined;
-    column.pendingConflict = undefined;
-    this.conflictStore.setState(undefined);
-
-    if (conflict === undefined) {
+    if (conflict === undefined || target === null) {
+      this.visibleConflictColumn = undefined;
+      column.pendingConflict = undefined;
+      this.conflictStore.setState(undefined);
       this.showNextConflict();
       return;
     }
 
-    const target = column.target;
+    const mirroredSchema = !isSchemaPath(target.dataPath) && conflict.path === deriveSchemaPath(target.dataPath);
 
-    if (target !== null) {
-      const mirroredSchema = !isSchemaPath(target.dataPath) && conflict.path === deriveSchemaPath(target.dataPath);
+    if (mirroredSchema) column.unsavedSchema = true;
+    else column.unsaved = true;
 
-      if (mirroredSchema) column.baselineSchemaText = conflict.text;
-      else column.baselineText = conflict.text;
+    const status = await this.saveColumn(columnIndex, true);
+
+    // 排进缓冲就失败了：错误已由 `TablePanel.persist` 发布过，这里直接停手，弹窗留给用户再点一次
+    if (status === ContentSaveStatus.Failed) return;
+
+    try {
+      await this.context.flushResource(conflict.path);
+    } catch {
+      // 缓冲按 Plan 04 保留条目并已记 `resource.flushFailed`；这里复用既有文案提示一次，不新增失败界面
+      this.publishError(columnIndex, '写入失败，请重试。');
+      return;
     }
 
+    this.visibleConflictColumn = undefined;
+    column.pendingConflict = undefined;
+    this.conflictStore.setState(undefined);
     this.publish(columnIndex, column.store.state.status);
     this.showNextConflict();
   }

@@ -102,6 +102,15 @@ async function readDisk(fs: FakeFileSystem, path: string): Promise<unknown> {
   return JSON.parse(await fs.readFile(path));
 }
 
+// 等 50 毫秒合并通知及其处理跑完：它会重刷提示位，抢在断言之后就会盖掉剥离确认框
+async function settleNotify(): Promise<void> {
+  await act(async (): Promise<void> => {
+    await new Promise<void>((resolve): void => {
+      setTimeout(resolve, 60);
+    });
+  });
+}
+
 // 用能力 Provider 包裹外壳渲染根（打开列表实时同步用例可注入预设等能力）
 function renderWithCapabilities(system: EditorCore, capabilities: ITableEditorCapabilities): ReturnType<typeof render> {
   return render(
@@ -270,6 +279,8 @@ describe('注释剥离确认只提示一次（G-02.1-3）', () => {
     await act(async () => {
       await system.resourceSystem.writeContent('commented.jsonc', second);
     });
+    // 先让这次写入的合并通知结算，再切入：否则通知会在断言之后才把剥离确认框刷掉
+    await settleNotify();
     await act(async () => {
       await panel.onSwitchIn();
     });
