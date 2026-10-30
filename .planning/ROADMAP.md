@@ -696,7 +696,7 @@ Plans:
   5. 有 pending 时右上角显示「正在等待保存，请勿关闭页面或浏览器」；`beforeunload` 弹原生确认。
   6. 地图 / 素材保存时机不变；既有 04.2 面包屑修复与三包门禁不回归。
 
-**Plans:** 5/13 plans executed
+**Plans:** 6/13 plans executed
 **UI hint**: yes
 
 Plans:
@@ -716,7 +716,7 @@ Plans:
 **Wave 4** *(blocked on Wave 3 completion)*
 
 - [x] 04.3-05-PLAN.md — 写入后 50ms 合并通知，丢弃与释放时取消
-- [ ] 04.3-06-PLAN.md — 外壳落盘点（切标签 / 关标签 / 释放）与页面生命周期（关闭页面 / 页面卸载 / 窗口失焦）
+- [x] 04.3-06-PLAN.md — 外壳落盘点（切标签 / 关标签 / 释放）与页面生命周期（关闭页面 / 页面卸载 / 窗口失焦）
 - [ ] 04.3-08-PLAN.md — 表格字段确认即写缓冲、保存按钮立即写盘、未保存两来源
 - [ ] 04.3-09-PLAN.md — 数字输入与成对数字框改为失焦 / 回车提交
 
@@ -777,6 +777,6 @@ Phases execute in numeric order: 1 → 1.1 → 2 → 2.1 → 3 → 4 → 4.1 →
 | 4. 地图编辑 | 16/17 | In Progress|  |
 | 4.1. 地图渲染与布局重做 (INSERTED) | 40/40 | Complete | 2026-10-27 |
 | 4.2. 面板内容解耦与文件资源管理器 (INSERTED) | 20/21 | In Progress|  |
-| 4.3. 资源写入缓冲与表格自动保存 (INSERTED) | 5/13 | In Progress|  |
+| 4.3. 资源写入缓冲与表格自动保存 (INSERTED) | 6/13 | In Progress|  |
 | 5. 代码编辑 | 0/TBD | Not started | - |
 | 6. 事件编辑器 | 0/TBD | Not started | - |
