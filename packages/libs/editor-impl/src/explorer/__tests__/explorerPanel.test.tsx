@@ -29,6 +29,9 @@ const ROOT_ENTRIES: readonly IFileEntry[] = [
 
 /**
  * 造一个只提供目录读取的假面板上下文
+ *
+ * 写缓冲相关的三个成员一律空实现：立刻写盘直接成功、丢弃待写什么也不做、
+ * 订阅待写变化只按接口约定立刻回调一次空列表
  * @param entries 任何目录都返回的固定条目
  * @returns 假上下文
  */
@@ -39,6 +42,13 @@ function createContext(entries: readonly IFileEntry[]): IEditorPanelContext {
     deleteResource: async (): Promise<void> => {},
     moveResource: async (): Promise<void> => {},
     listDirectory: async (): Promise<readonly IFileEntry[]> => entries,
+    flushResource: async (): Promise<void> => {},
+    discardPendingResource: (): void => {},
+    watchPendingChange: (listener): (() => void) => {
+      listener([]);
+
+      return (): void => {};
+    },
     addUndoContext: (): void => {},
   };
 }
