@@ -92,4 +92,19 @@ describe('外壳右上角待写提示', () => {
     expect(text.includes(TARGET_PATH)).toBe(false);
     expect(text.includes('demo.json')).toBe(false);
   });
+
+  // 释放外壳后订阅已注销：资源系统上不再留有「待写有无变化」的钩子，释放后不会再因待写重渲染
+  it('释放外壳后注销待写变化订阅', async () => {
+    const core = await renderShell();
+
+    expect(
+      core.resourceSystem.forEachHook((hook) => hook.onPendingChange !== undefined).filter((present) => present),
+    ).toHaveLength(1);
+
+    await core.shellSystem.dispose();
+
+    expect(
+      core.resourceSystem.forEachHook((hook) => hook.onPendingChange !== undefined).filter((present) => present),
+    ).toHaveLength(0);
+  });
 });

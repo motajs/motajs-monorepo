@@ -176,7 +176,7 @@ function resolveUndoRedoShortcut(event: KeyboardEvent): UndoRedoShortcut {
 }
 
 /**
- * 渲染顶部菜单行：按注册顺序排列菜单项按钮；零菜单项时仍渲染空行
+ * 渲染顶部菜单行：按注册顺序排列菜单项按钮，有待写时在末尾追加一条固定文案的提示；零菜单项时仍渲染空行
  * @param props 菜单行 props
  * @returns 菜单行元素
  */
@@ -195,7 +195,16 @@ function MenuRow(props: IMenuRowProps): ReactElement {
     ),
   );
 
-  return createElement('nav', { className: 'editor-shell-menu', 'aria-label': '主菜单' }, buttons);
+  // 无待写时传 null 而不是空串：空串元素会一直占位，让「有待写」的断言永远成立
+  const pending = props.hasPendingWrite
+    ? createElement(
+        'span',
+        { className: 'editor-shell-pending', 'data-test-id': 'editor-shell-pending' },
+        '正在等待保存，请勿关闭页面或浏览器',
+      )
+    : null;
+
+  return createElement('nav', { className: 'editor-shell-menu', 'aria-label': '主菜单' }, buttons, pending);
 }
 
 /**
@@ -438,6 +447,8 @@ export class ShellSystem implements IShellSystem {
   private readonly undoSystem: IUndoSystem;
   /** 资源系统 */
   private readonly resourceSystem: IResourceSystemAccess;
+  /** 「有没有待写」变化的钩子控制器：待写出现 / 消失时刷新视图状态；未注册时为空 */
+  private pendingChangeHook: IHookController<IResourceSystemHooks> | null = null;
   /** 关闭页面时的 window 监听器：有待写就弹浏览器原生确认并尽力发起一次写盘；未注册时为空 */
   private beforeUnloadHandler: ((event: BeforeUnloadEvent) => void) | null = null;
   /** 页面即将卸载 / 进往返缓存时的 window 监听器：尽力发起一次写盘；未注册时为空 */
@@ -471,6 +482,15 @@ export class ShellSystem implements IShellSystem {
     if (this.initialized || this.disposed) return;
 
     this.initialized = true;
+
+    // 待写出现 / 消失不会经过 notify()：资源层只在这条钩子里报「有无变化」，外壳收到后重建视图状态，
+    // 否则右上角提示永远不出现。重复初始化时先注销再挂，保证只有一条订阅
+    this.pendingChangeHook?.unload();
+    this.pendingChangeHook = this.resourceSystem.addHook({
+      onPendingChange: async (): Promise<void> => {
+        this.notify();
+      },
+    });
 
     // 页面级事件只挂在 window 上（禁止 document）；重复初始化时先注销再注册，保证只有一条监听
     if (this.beforeUnloadHandler !== null) window.removeEventListener('beforeunload', this.beforeUnloadHandler);
@@ -763,7 +783,10 @@ export class ShellSystem implements IShellSystem {
   }
 
   async dispose(): Promise<void> {
-    // 先注销页面级监听：释放过程中不再响应页面事件，注册与注销逐条对称
+    // 先注销待写变化订阅与页面级监听：释放过程中与释放之后都不再因缓冲 / 页面事件重渲染
+    this.pendingChangeHook?.unload();
+    this.pendingChangeHook = null;
+
     if (this.beforeUnloadHandler !== null) window.removeEventListener('beforeunload', this.beforeUnloadHandler);
     if (this.pageHideHandler !== null) window.removeEventListener('pagehide', this.pageHideHandler);
     if (this.windowBlurHandler !== null) window.removeEventListener('blur', this.windowBlurHandler);
