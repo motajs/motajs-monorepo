@@ -2356,10 +2356,43 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   }
 
   /**
+   * 判断读到的原文是不是本面板另一栏刚写出去的那一份
+   *
+   * 判定依据只有既有的每栏基线原文：同一数据文件比 `baselineText`，镜像 schema 比 `baselineSchemaText`
+   * （按该路径是不是某一栏推导出的镜像 schema 选择），不比时间戳、也不新增「自写标记」一类的旁路状态。
+   * 内容与本面板其它栏的基线不同才是外部写入，仍按既有规则「脏则提示、不脏则正常载入」（D-15 / D-16 / D-25）。
+   * @param columnIndex 收到变化的栏序号（0 基），该栏自身不参与比较
+   * @param path 变化路径（数据文件路径或由它推导出的 schema 路径）
+   * @param text 从资源层读到的原文
+   * @returns 该原文与本面板其它栏在同一路径上的基线原文相同时为 true
+   */
+  private isSamePanelWrite(columnIndex: number, path: string, text: string): boolean {
+    const count = this.columns.length;
+
+    for (let index = 0; index < count; index += 1) {
+      if (index === columnIndex) continue;
+
+      const column = this.columns[index];
+      const target = column.target;
+
+      if (target === null) continue;
+
+      if (target.dataPath === path && column.baselineText === text) return true;
+
+      const mirroredSchema = !isSchemaPath(target.dataPath) && path === deriveSchemaPath(target.dataPath);
+
+      if (mirroredSchema && column.baselineSchemaText === text) return true;
+    }
+
+    return false;
+  }
+
+  /**
    * 处理某一栏的一次外部变化：读原文、比对基线，再按「忽略 / 自动刷新 / 冲突」分流
    *
    * 读原文走既有的两步资源读取（先拿句柄、再取内容）；读取失败与非法内容都降级为提示并保留内存内容。
    * 与基线相同即自写回声 / 空变化，什么都不做；基线不同且本栏不脏时替换内容并递增版本号。
+   * 本栏脏时先看这份原文是不是同面板另一栏刚写出去的：是就保留草稿、不记冲突（D-15 / D-16）。
    * @param columnIndex 栏序号（0 基）
    * @param path 变化路径（数据文件或该栏推导出的 schema 文件）
    * @param kind 变化种类
@@ -2400,6 +2433,9 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     }
 
     if (this.isColumnDirty(columnIndex)) {
+      // 本面板另一栏刚写出去的那一份不是外部变化：保留本栏草稿、不记冲突，两栏之间永不弹冲突框（D-15 / D-16）
+      if (this.isSamePanelWrite(columnIndex, path, text)) return;
+
       this.recordPendingConflict(columnIndex, path, text);
       return;
     }
