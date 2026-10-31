@@ -696,10 +696,15 @@ Plans:
   5. 有 pending 时右上角显示「正在等待保存，请勿关闭页面或浏览器」；`beforeunload` 弹原生确认。
   6. 地图 / 素材保存时机不变；既有 04.2 面包屑修复与三包门禁不回归。
 
-**Plans:** 15/15 plans executed
+**Plans:** 16/19 plans executed
 **UI hint**: yes
 
 Plans:
+
+- [x] 04.3-16-PLAN.md
+- [ ] 04.3-17-PLAN.md
+- [ ] 04.3-18-PLAN.md
+- [ ] 04.3-19-PLAN.md
 
 - [x] 04.3-14-PLAN.md
 - [x] 04.3-15-PLAN.md
@@ -781,6 +786,6 @@ Phases execute in numeric order: 1 → 1.1 → 2 → 2.1 → 3 → 4 → 4.1 →
 | 4. 地图编辑 | 16/17 | In Progress|  |
 | 4.1. 地图渲染与布局重做 (INSERTED) | 40/40 | Complete | 2026-10-27 |
 | 4.2. 面板内容解耦与文件资源管理器 (INSERTED) | 20/21 | In Progress|  |
-| 4.3. 资源写入缓冲与表格自动保存 (INSERTED) | 15/15 | In Progress|  |
+| 4.3. 资源写入缓冲与表格自动保存 (INSERTED) | 16/19 | In Progress|  |
 | 5. 代码编辑 | 0/TBD | Not started | - |
 | 6. 事件编辑器 | 0/TBD | Not started | - |
