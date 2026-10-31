@@ -85,6 +85,11 @@ export class WriteBuffer implements IWriteBuffer {
     let failed = false;
 
     for (const path of keys) {
+      const entry = this.entries.get(path);
+
+      // 冲突未表态的条目不能借全量写盘绕过：它们既不写盘也不抛错，继续留在待写里
+      if (entry !== undefined && entry.externallyChanged) continue;
+
       try {
         await this.flush(path);
       } catch (error: unknown) {
@@ -133,7 +138,11 @@ export class WriteBuffer implements IWriteBuffer {
     const last = this.lastWritten.get(path);
 
     if (last !== undefined && diskContent !== undefined && isSameResourceContent(last, diskContent)) {
-      // 自己写盘引起的宿主回声：不改内容与版本号，只重排一次防抖定时器
+      // 自己写盘引起的宿主回声：已被外部变化标记的条目直接返回，不清标记、也不重排定时器，
+      // 否则到点会走单路径写盘把冲突内容写出去，等于绕开「没表态就不写盘」
+      if (entry.externallyChanged) return;
+
+      // 未被标记时才重排一次防抖定时器：不改内容与版本号
       this.clearTimer(entry);
       this.armTimer(path, entry);
       return;

@@ -1065,6 +1065,8 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     column.baselineText = undefined;
     column.baselineSchemaText = undefined;
     column.pendingConflict = undefined;
+    // 「还有待写」的镜像是属于旧目标的：不复位会让刷新守卫把新表永远挡在 Loading
+    column.pendingWrite = false;
 
     if (this.visibleConflictColumn === columnIndex) {
       this.visibleConflictColumn = undefined;
@@ -1536,6 +1538,12 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     const prefix = column.prefix;
 
     if (target === null) return ContentSaveStatus.Saved;
+
+    // 冲突未表态时本栏一个字节都不写：这条守卫不看 `quiet`，所以切走 / 保存 / 保存并关闭与
+    // 撤销重做 / 字段确认自动保存都走同一条。必须早于 persist——persist 会经 `WriteBuffer.schedule`
+    // 把「外部已改」标记清掉并重排 5 秒定时器，只在最后不 flush 仍会到点写出草稿。
+    // 唯一豁免是 `TablePanel.keepExternalConflict`：它先取下标记再走这条保存链。
+    if (column.pendingConflict !== undefined) return ContentSaveStatus.Saved;
 
     const startVersion = column.contentVersion;
     const wroteData = column.unsaved;
@@ -2552,25 +2560,87 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       return;
     }
 
-    await this.context.discardPendingResource(conflict.path);
+    // 取一帧「当前真正有待写的路径」：订阅时立刻回调一次，读完立即退订，不新增常驻状态
+    let pendingPaths: readonly string[] = [];
+    const unwatch = this.context.watchPendingChange((next): void => {
+      pendingPaths = next;
+    });
 
-    const mirroredSchema = !isSchemaPath(target.dataPath) && conflict.path === deriveSchemaPath(target.dataPath);
+    unwatch();
+
+    const pending = new Set<string>(pendingPaths);
+    const dataPath = target.dataPath;
+    const schemaPath = deriveSchemaPath(dataPath);
+
+    // 只丢真正有待写的路径（冲突路径本身视为待写）；从未编辑过的兄弟路径既不清也不重读
+    if (pending.has(dataPath) || conflict.path === dataPath) this.context.discardPendingResource(dataPath);
+    if (pending.has(schemaPath) || conflict.path === schemaPath) this.context.discardPendingResource(schemaPath);
+
+    const mirroredSchema = !isSchemaPath(target.dataPath) && conflict.path === schemaPath;
 
     column.unsaved = false;
     column.unsavedSchema = false;
 
     if (mirroredSchema) {
+      // 头部冲突是 schema 路径：用收到变化时记下的外部原文快照；数据路径另有待写时才重读磁盘换回外部那一份
       column.baselineSchemaText = conflict.text;
-      this.applyLoaded(columnIndex, parsed.value, column.data);
-    } else if (this.isSchemaView(columnIndex)) {
-      column.baselineText = conflict.text;
-      this.applySchemaLoaded(columnIndex, parsed.value);
-    } else {
-      column.prefix = parsed.prefix;
-      column.baselineText = conflict.text;
-      this.applyLoaded(columnIndex, column.schema, parsed.value);
+
+      let dataValue = column.data;
+      let dataPrefix = column.prefix;
+      let dataBaseline = column.baselineText;
+
+      if (pending.has(dataPath)) {
+        const dataText = await this.readText(dataPath);
+        const dataRead = dataText === undefined ? undefined : parseTableText(dataText);
+
+        if (dataRead === undefined || dataRead.status !== TableTextParseStatus.Conforming) {
+          this.publishMessage(columnIndex, '读取外部改动失败，已保留你的改动。');
+          this.applyLoaded(columnIndex, parsed.value, column.data);
+          this.showNextConflict();
+          return;
+        }
+
+        dataValue = dataRead.value;
+        dataPrefix = dataRead.prefix;
+        dataBaseline = dataText;
+      }
+
+      column.prefix = dataPrefix;
+      column.baselineText = dataBaseline;
+      this.applyLoaded(columnIndex, parsed.value, dataValue);
+      this.showNextConflict();
+      return;
     }
 
+    if (this.isSchemaView(columnIndex)) {
+      column.baselineText = conflict.text;
+      this.applySchemaLoaded(columnIndex, parsed.value);
+      this.showNextConflict();
+      return;
+    }
+
+    // 头部是数据路径：快照换数据；镜像 schema 另有待写时同样重读磁盘
+    column.prefix = parsed.prefix;
+    column.baselineText = conflict.text;
+
+    let schemaValue = column.schema;
+
+    if (pending.has(schemaPath)) {
+      const schemaText = await this.readText(schemaPath);
+      const schemaRead = schemaText === undefined ? undefined : parseTableText(schemaText);
+
+      if (schemaRead === undefined || schemaRead.status !== TableTextParseStatus.Conforming) {
+        this.publishMessage(columnIndex, '读取外部改动失败，已保留你的改动。');
+        this.applyLoaded(columnIndex, column.schema, parsed.value);
+        this.showNextConflict();
+        return;
+      }
+
+      column.baselineSchemaText = schemaText;
+      schemaValue = schemaRead.value;
+    }
+
+    this.applyLoaded(columnIndex, schemaValue, parsed.value);
     this.showNextConflict();
   }
 
@@ -2602,20 +2672,44 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       return;
     }
 
-    const mirroredSchema = !isSchemaPath(target.dataPath) && conflict.path === deriveSchemaPath(target.dataPath);
+    // 取一帧「当前真正有待写的路径」：订阅时立刻回调一次，读完立即退订，不新增常驻状态
+    let pendingPaths: readonly string[] = [];
+    const unwatch = this.context.watchPendingChange((next): void => {
+      pendingPaths = next;
+    });
 
-    if (mirroredSchema) column.unsavedSchema = true;
-    else column.unsaved = true;
+    unwatch();
+
+    const pending = new Set<string>(pendingPaths);
+    const dataPath = target.dataPath;
+    const schemaPath = deriveSchemaPath(dataPath);
+
+    // 只把真正有待写（或被本次冲突覆盖）的路径放回未落盘：从未编辑过的兄弟路径既不 persist 也不 flush
+    const writeData = pending.has(dataPath) || conflict.path === dataPath || column.draftDirty || column.unsaved;
+    const writeSchema = pending.has(schemaPath) || conflict.path === schemaPath || column.unsavedSchema;
+
+    if (writeData) column.unsaved = true;
+    if (writeSchema) column.unsavedSchema = true;
+
+    // 入口守卫的唯一豁免：先把这条冲突取下，随后的保存链才不会被它挡住
+    column.pendingConflict = undefined;
 
     const status = await this.saveColumn(columnIndex, true);
 
-    // 排进缓冲就失败了：错误已由 `TablePanel.persist` 发布过，这里直接停手，弹窗留给用户再点一次
-    if (status === ContentSaveStatus.Failed) return;
+    // 排进缓冲就失败了：错误已由 `TablePanel.persist` 发布过，这里把冲突放回，弹窗留给用户再点一次
+    if (status === ContentSaveStatus.Failed) {
+      column.pendingConflict = conflict;
+      this.conflictStore.setState(conflict);
+      return;
+    }
 
     try {
-      await this.context.flushResource(conflict.path);
+      if (writeData) await this.context.flushResource(dataPath);
+      if (writeSchema) await this.context.flushResource(schemaPath);
     } catch {
       // 缓冲按 Plan 04 保留条目并已记 `resource.flushFailed`；这里复用既有文案提示一次，不新增失败界面
+      column.pendingConflict = conflict;
+      this.conflictStore.setState(conflict);
       this.publishError(columnIndex, '写入失败，请重试。');
       return;
     }
@@ -2643,6 +2737,10 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       this.publish(columnIndex, TablePanelStatus.NoTarget);
       return;
     }
+
+    // 冲突未表态、或本栏仍有待写时不重读磁盘：此刻磁盘上正是外部那一份，重读会把内存草稿换成它，
+    // 随后「保存编辑器的」写回去的也就成了外部内容。这条早退不发布任何状态，面板保持原样。
+    if (column.pendingConflict !== undefined || column.pendingWrite) return;
 
     // 该栏有未落盘改动时不重读覆盖内存，保住手动保存下的内存改动（T-02.1-20-01）
     if (column.unsaved || column.unsavedSchema || column.draftDirty) return;
