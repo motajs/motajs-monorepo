@@ -1,15 +1,18 @@
-import { act, cleanup, configure, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { EditorCore, EditorFileChangeKind, ShellSystem } from '@motajs/editor-core';
+import { act, cleanup, configure, fireEvent, render, screen } from '@testing-library/react';
+import { EditorCore, EditorFileChangeKind, IEditorTab, ShellSystem } from '@motajs/editor-core';
 import { CapabilityProvider } from '@motajs/editor-impl/react';
-import { TableEditKind, TablePanel, tablePanelType } from '@motajs/editor-impl/table';
+import { TablePanel, tablePanelType } from '@motajs/editor-impl/table';
 import { createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { MemoryBackend } from '../backend/memoryBackend';
 import { TABLE_DEMO_DATA, TABLE_DEMO_DATA_PATH, TABLE_DEMO_SCHEMA, TABLE_DEMO_SCHEMA_PATH } from '../demo/tableDemo';
 
-// 开发宿主文件变化流的集成用例：两个标签打开同一张表，验证「一边保存 → 另一边自动刷新」与「另一边脏时弹冲突框」。
-// 变化事件由 MemoryBackend.watch 真实投递，写盘经真实资源层；用例只在「A 保存」一步直接调用面板的 save，
-// 因为切标签会自动保存脏栏，无法在 B 仍为活动标签时让 A 经界面保存。
+// 开发宿主同路径重复打开与文件变化流的集成用例。
+// D-26 / D-27 之后，同一路径在同一页面最多只有一个可编辑标签：调用方把路径交给打开入口后，
+// 第二次打开同一路径只会聚焦已有标签，不会出现第二个写者，因此「两个标签打开同一张表」的
+// 跨标签冲突 / 静默覆盖在结构上已不存在，本文件据此改写；真正的「外部写入」冲突仍由 editor-impl 的
+// externalChange.test.tsx 与 twoColumnsSameTable.test.tsx 覆盖，这里不重复造同一场景。
+// 变化事件由 MemoryBackend.watch 真实投递，写盘经真实资源层；不 mock 资源层。
 
 configure({ testIdAttribute: 'data-test-id' });
 
@@ -43,7 +46,12 @@ async function createHost(): Promise<IDevHost> {
 }
 
 /**
- * 经真实外壳新开一个标签并打开同一张演示表
+ * 经真实外壳新开一个标签并打开演示表；**只用于第一次打开**
+ *
+ * 这里必须把路径一并交给打开入口，外壳才会登记「标签 → 路径」，第二次打开才能命中去重。
+ * 第二次打开不能先 `ShellSystem.openBlankTab` 再 `ShellSystem.openPanelInTab`：空白标签一建，
+ * 外壳就会让它成为活动标签、让原来的表格切出并把草稿写进缓冲、紧接着打盘，
+ * 「未提交草稿」这个前提当场消失，后面的断言就成了恒真。第二次打开请走 `focusTableTab`。
  * @param core 编辑器核心
  * @returns 表格标签的标识符
  */
@@ -51,11 +59,36 @@ async function openTableTab(core: EditorCore): Promise<string> {
   const tabId = core.shellSystem.openBlankTab();
 
   await act(async () => {
-    await core.shellSystem.openPanelInTab(tabId, tablePanelType.id, { target: { dataPath: TABLE_DEMO_DATA_PATH } });
+    await core.shellSystem.openPanelInTab(
+      tabId,
+      tablePanelType.id,
+      { target: { dataPath: TABLE_DEMO_DATA_PATH } },
+      TABLE_DEMO_DATA_PATH,
+    );
   });
   await act(async () => {});
 
   return tabId;
+}
+
+/**
+ * 模拟「用户再次打开同一条路径」：直接把路径交给已经开着这张表的那个标签
+ *
+ * 命中「本次 tabId 就是登记该路径的标签」这一支，只会 `ShellSystem.activateTab`；
+ * 同一实例的切出在 `ShellSystem.departActiveInstance` 处短路，因此不会落盘、也不会重建实例。
+ * @param core 编辑器核心
+ * @param tabId 已经开着这张表的标签标识符
+ */
+async function focusTableTab(core: EditorCore, tabId: string): Promise<void> {
+  await act(async () => {
+    await core.shellSystem.openPanelInTab(
+      tabId,
+      tablePanelType.id,
+      { target: { dataPath: TABLE_DEMO_DATA_PATH } },
+      TABLE_DEMO_DATA_PATH,
+    );
+  });
+  await act(async () => {});
 }
 
 /**
@@ -92,6 +125,36 @@ function panelOf(core: EditorCore, tabId: string): TablePanel {
   if (!(instance instanceof TablePanel)) throw new Error('表格面板实例缺失');
 
   return instance;
+}
+
+/**
+ * 取外壳里所有承载表格面板的标签
+ * @param core 编辑器核心
+ * @returns 表格标签列表
+ */
+function tableTabs(core: EditorCore): readonly IEditorTab[] {
+  return core.shellSystem.listTabs().filter((tab) => tab.typeId === tablePanelType.id);
+}
+
+/**
+ * 取某个标签当前承载的面板实例标识符
+ * @param core 编辑器核心
+ * @param tabId 标签标识符
+ * @returns 实例标识符；标签不存在或为空白标签时为 null
+ */
+function instanceIdOf(core: EditorCore, tabId: string): string | null {
+  const tab = core.shellSystem.listTabs().find((candidate) => candidate.id === tabId);
+
+  return tab === undefined ? null : tab.instanceId;
+}
+
+/**
+ * 取外壳当前活动标签的标识符
+ * @param core 编辑器核心
+ * @returns 活动标签标识符；没有活动标签时为 null
+ */
+function activeTabIdOf(core: EditorCore): string | null {
+  return (core.shellSystem as ShellSystem)['activeTabId'];
 }
 
 /**
@@ -145,20 +208,6 @@ async function clickSave(): Promise<void> {
 }
 
 /**
- * 在非活动面板上改标题并保存，模拟另一个标签的保存
- * @param panel 非活动的表格面板
- * @param title 新标题
- */
-async function saveFromBackground(panel: TablePanel, title: string): Promise<void> {
-  panel.applyEdit(0, { kind: TableEditKind.Change, key: "['title']", value: title }, panel['currentDocument'](0));
-
-  await act(async () => {
-    await panel.save(0);
-  });
-  await flushWatch();
-}
-
-/**
  * 读回表格文件里的标题
  * @param backend 内存后端
  * @returns 标题字段；文件内容不是对象时为 undefined
@@ -172,90 +221,83 @@ async function readTitle(backend: MemoryBackend): Promise<unknown> {
   return Reflect.get(parsed, 'title');
 }
 
-describe('开发宿主两标签同步', () => {
-  // A 保存后变化流到达 B，B 不脏时自动刷新且不弹冲突框；切到 B 能直接看到 A 的值
-  it('A 保存后 B 自动刷新且不弹框', async () => {
-    const { core } = await createHost();
-    const tabA = await openTableTab(core);
-    const tabB = await openTableTab(core);
+describe('开发宿主同路径重复打开', () => {
+  // 同一路径第二次打开只聚焦已有标签：标签数、实例 id 与活动标签都不变，随后保存照常落盘且不弹冲突框
+  it('同一路径第二次打开只聚焦已有标签，保存后磁盘是新值', async () => {
+    const { core, backend } = await createHost();
+    const tabId = await openTableTab(core);
+    const instanceIdBefore = instanceIdOf(core, tabId);
 
     renderShell(core);
-    await activateTab(core, tabA);
+    await activateTab(core, tabId);
 
-    const panelB = panelOf(core, tabB);
-    const versionBefore = panelB['columns'][0].contentVersion;
+    await focusTableTab(core, tabId);
 
-    await commitTitle('A 保存的值');
-    await clickSave();
-
-    await waitFor(() => {
-      expect(panelB['columns'][0].contentVersion).toBeGreaterThan(versionBefore);
-    });
-    expect(panelB['conflictStore'].state).toBeUndefined();
+    expect(tableTabs(core)).toHaveLength(1);
+    expect(tableTabs(core)[0].id).toBe(tabId);
+    expect(instanceIdOf(core, tabId)).toBe(instanceIdBefore);
+    expect(activeTabIdOf(core)).toBe(tabId);
     expect(screen.queryByTestId('panel-conflict-dialog')).toBeNull();
 
-    await activateTab(core, tabB);
-    await waitFor(() => {
-      expect(titleInput().value).toBe(JSON.stringify('A 保存的值'));
-    });
+    await commitTitle('重复打开后保存的值');
+    await clickSave();
+
+    expect(await readTitle(backend)).toBe('重复打开后保存的值');
     expect(screen.queryByTestId('panel-conflict-dialog')).toBeNull();
   }, 20000);
 
-  // B 有未保存改动时 A 保存 → 弹冲突框；选「放弃」后 B 换成 A 的值并清掉脏标记
-  it('B 脏时 A 保存弹冲突框，放弃后刷新为 A 的值', async () => {
+  // 唯一标签里有未提交草稿时再次打开同一路径：草稿仍在、磁盘仍是旧值、不弹冲突框；保存后磁盘等于草稿
+  it('同一路径重复打开不会冲掉未提交草稿，保存后磁盘等于草稿', async () => {
     const { core, backend } = await createHost();
-    const tabA = await openTableTab(core);
-    const tabB = await openTableTab(core);
+    const tabId = await openTableTab(core);
+    const instanceIdBefore = instanceIdOf(core, tabId);
 
     renderShell(core);
-    await activateTab(core, tabB);
-    await commitTitle('B 的草稿');
+    await activateTab(core, tabId);
 
-    await saveFromBackground(panelOf(core, tabA), 'A 第二次保存');
+    const diskBefore = await readTitle(backend);
 
-    await waitFor(() => {
-      expect(screen.getByTestId('panel-conflict-dialog')).not.toBeNull();
-    });
-    expect(titleInput().value).toBe(JSON.stringify('B 的草稿'));
+    await commitTitle('唯一标签里的草稿');
 
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('panel-conflict-discard'));
-    });
-    await act(async () => {});
+    expect(await readTitle(backend)).toBe(diskBefore);
+    expect(screen.getByTestId('table-unsaved')).not.toBeNull();
+    expect(titleInput().value).toBe(JSON.stringify('唯一标签里的草稿'));
 
+    await focusTableTab(core, tabId);
+
+    expect(tableTabs(core)).toHaveLength(1);
+    expect(instanceIdOf(core, tabId)).toBe(instanceIdBefore);
+    expect(screen.getByTestId('table-unsaved')).not.toBeNull();
+    expect(titleInput().value).toBe(JSON.stringify('唯一标签里的草稿'));
+    expect(panelOf(core, tabId)['conflictStore'].state).toBeUndefined();
     expect(screen.queryByTestId('panel-conflict-dialog')).toBeNull();
-    expect(titleInput().value).toBe(JSON.stringify('A 第二次保存'));
-    expect(screen.queryByTestId('table-unsaved')).toBeNull();
-    expect(await readTitle(backend)).toBe('A 第二次保存');
-  }, 20000);
-
-  // 选「保留」后 B 内容不变；下一次保存把草稿写回并覆盖外部内容
-  it('B 脏时 A 保存弹冲突框，保留后 B 的下一次保存覆盖外部内容', async () => {
-    const { core, backend } = await createHost();
-    const tabA = await openTableTab(core);
-    const tabB = await openTableTab(core);
-
-    renderShell(core);
-    await activateTab(core, tabB);
-    await commitTitle('B 保留的草稿');
-
-    await saveFromBackground(panelOf(core, tabA), 'A 第三次保存');
-
-    await waitFor(() => {
-      expect(screen.getByTestId('panel-conflict-dialog')).not.toBeNull();
-    });
-
-    await act(async () => {
-      fireEvent.click(screen.getByTestId('panel-conflict-keep'));
-    });
-    await act(async () => {});
-
-    expect(screen.queryByTestId('panel-conflict-dialog')).toBeNull();
-    expect(titleInput().value).toBe(JSON.stringify('B 保留的草稿'));
+    expect(await readTitle(backend)).toBe(diskBefore);
 
     await clickSave();
 
-    expect(await readTitle(backend)).toBe('B 保留的草稿');
+    expect(await readTitle(backend)).toBe('唯一标签里的草稿');
+  }, 20000);
+
+  // 重复打开同一路径不会静默覆盖磁盘：仍是同一个实例、磁盘仍是原值；随后编辑并保存才写盘
+  it('同一路径重复打开不会静默覆盖磁盘，随后保存才写盘', async () => {
+    const { core, backend } = await createHost();
+    const tabId = await openTableTab(core);
+    const instanceIdBefore = instanceIdOf(core, tabId);
+    const diskBefore = await readTitle(backend);
+
+    await focusTableTab(core, tabId);
+
+    expect(tableTabs(core)).toHaveLength(1);
+    expect(instanceIdOf(core, tabId)).toBe(instanceIdBefore);
+    expect(await readTitle(backend)).toBe(diskBefore);
+
+    renderShell(core);
+    await activateTab(core, tabId);
+
+    await commitTitle('重复打开后写回的值');
+    await clickSave();
+
+    expect(await readTitle(backend)).toBe('重复打开后写回的值');
   }, 20000);
 });
 
