@@ -11,10 +11,11 @@ import { createTableHarness, FakeFileSystem } from './fixtures';
 
 configure({ testIdAttribute: 'data-test-id' });
 
-// 每个用例结束后卸载已挂载的组件，避免 DOM 在用例之间累积
+// 每个用例结束后卸载已挂载的组件，避免 DOM 在用例之间累积；假定时器必须还原，不能漏到下一个用例
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 // 数据文件路径（`xxx.json`）
@@ -122,6 +123,33 @@ async function dispatchChange(
     await panel.onResourceChange(path, kind);
   });
   await act(async () => {});
+}
+
+// 推进假定时器并冲刷一次微任务链（与 tableAutoSave 用例的写法保持一致）
+async function advance(milliseconds: number): Promise<void> {
+  await vi.advanceTimersByTimeAsync(milliseconds);
+  await act(async () => {});
+}
+
+// 切到工具栏中的某编辑模式（按分段控件文案点击）
+async function switchMode(label: string): Promise<void> {
+  await act(async () => {
+    fireEvent.click(screen.getByText(label));
+  });
+}
+
+// 在「添加」模式下点某行 gutter 的「+」→ 输入新字段名 → 失焦提交（数据与 schema 两条路径同时变脏）
+async function addFieldByBlur(field: string, name: string): Promise<void> {
+  await act(async () => {
+    fireEvent.click(screen.getByTestId(`table-add-after-${field}`));
+  });
+
+  const input = screen.getByTestId(`table-add-input-${field}`);
+
+  await act(async () => {
+    fireEvent.change(input, { target: { value: name } });
+    fireEvent.blur(input);
+  });
 }
 
 // 装配一个打开了一张表并已渲染的表格面板（缺省是单字段 `name` 的表，可换用带数字字段的表）
@@ -477,5 +505,252 @@ describe('表格面板外部变化（D-15 / D-16 / D-17 / D-36 / D-37）', () =>
     expect(await readDisk(fs, tableDataPath('t'))).toEqual({ name: 'external' });
     expect(system.resourceSystem.hasAnyPendingContent()).toBe(true);
     expect(inColumn(container, 0, 'table-unsaved')).not.toBeNull();
+  });
+
+  // 冲突未表态时窗口失焦不写盘；末尾用「保存编辑器的」做反向对照，并证明未编辑的 schema 路径逐字未变
+  it('冲突未表态时窗口失焦不写盘，「保存编辑器的」才写出草稿', async () => {
+    const fs = new FakeFileSystem();
+    const { system, panel, container } = await openRenderedTable(fs);
+
+    const schemaSeedText = await fs.readFile(tableSchemaPath('t'));
+
+    await commitText(container, 'name', '"draft"');
+
+    fs.seed(tableDataPath('t'), JSON.stringify({ name: 'external' }));
+    await dispatchChange(system, panel, tableDataPath('t'));
+
+    expect(screen.queryByTestId('panel-conflict-dialog')).not.toBeNull();
+
+    // 窗口失焦会发起一次全量写盘；被标记的条目必须被跳过，等一个宏任务让写盘链结算
+    await act(async () => {
+      window.dispatchEvent(new Event('blur'));
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(await readDisk(fs, tableDataPath('t'))).toEqual({ name: 'external' });
+    expect(system.resourceSystem.hasAnyPendingContent()).toBe(true);
+    expect(panel['columns'][0].pendingConflict?.path).toBe(tableDataPath('t'));
+    expect(screen.queryByTestId('panel-conflict-dialog')).not.toBeNull();
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('panel-conflict-keep'));
+    });
+    await act(async () => {});
+
+    expect(await readDisk(fs, tableDataPath('t'))).toEqual({ name: 'draft' });
+    expect(system.resourceSystem.hasAnyPendingContent()).toBe(false);
+    expect(screen.queryByTestId('panel-conflict-dialog')).toBeNull();
+    // 这条路径从未被编辑：结算不得顺带 persist / flush 它
+    expect(await fs.readFile(tableSchemaPath('t'))).toBe(schemaSeedText);
+  });
+
+  // 冲突未表态时切标签往返：切回后草稿不变、弹窗还在，「保存编辑器的」写的是草稿；未编辑的 schema 路径逐字未变
+  it('冲突未表态时切标签往返不重读磁盘，草稿与弹窗都保留', async () => {
+    const fs = new FakeFileSystem();
+    const { system, panel, container } = await openRenderedTable(fs);
+
+    const schemaSeedText = await fs.readFile(tableSchemaPath('t'));
+
+    await commitText(container, 'name', '"draft"');
+
+    fs.seed(tableDataPath('t'), JSON.stringify({ name: 'external' }));
+    await dispatchChange(system, panel, tableDataPath('t'));
+
+    // 外壳只渲染活动面板：切到空白标签期间表格面板与其弹窗一起卸载，因此这时只断言磁盘、待写与栏状态
+    const originalTabId = system.shellSystem.listTabs()[0].id;
+    const blankTabId = system.shellSystem.openBlankTab();
+
+    await act(async () => {
+      await system.shellSystem.activateTab(blankTabId);
+    });
+
+    expect(await readDisk(fs, tableDataPath('t'))).toEqual({ name: 'external' });
+    expect(system.resourceSystem.hasAnyPendingContent()).toBe(true);
+    expect(panel['columns'][0].pendingConflict?.path).toBe(tableDataPath('t'));
+
+    // 切回原标签：刷新若不看待决冲突 / 待写，就会把磁盘上的外部内容重读进来，草稿被换掉
+    await act(async () => {
+      await system.shellSystem.activateTab(originalTabId);
+    });
+    await act(async () => {});
+
+    expect(screen.queryByTestId('panel-conflict-dialog')).not.toBeNull();
+    expect(panel['columns'][0].pendingConflict?.path).toBe(tableDataPath('t'));
+    expect(valueOf(container, 'name')).toBe('"draft"');
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('panel-conflict-keep'));
+    });
+    await act(async () => {});
+
+    expect(await readDisk(fs, tableDataPath('t'))).toEqual({ name: 'draft' });
+    expect(system.resourceSystem.hasAnyPendingContent()).toBe(false);
+    expect(screen.queryByTestId('panel-conflict-dialog')).toBeNull();
+    expect(await fs.readFile(tableSchemaPath('t'))).toBe(schemaSeedText);
+  });
+
+  // 冲突未表态时 pagehide 不写盘：磁盘、待写、pendingConflict、弹窗四项都不变
+  it('冲突未表态时 pagehide 不写盘', async () => {
+    const fs = new FakeFileSystem();
+    const { system, panel, container } = await openRenderedTable(fs);
+
+    await commitText(container, 'name', '"draft"');
+
+    fs.seed(tableDataPath('t'), JSON.stringify({ name: 'external' }));
+    await dispatchChange(system, panel, tableDataPath('t'));
+
+    await act(async () => {
+      window.dispatchEvent(new Event('pagehide'));
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(await readDisk(fs, tableDataPath('t'))).toEqual({ name: 'external' });
+    expect(system.resourceSystem.hasAnyPendingContent()).toBe(true);
+    expect(panel['columns'][0].pendingConflict?.path).toBe(tableDataPath('t'));
+    expect(screen.queryByTestId('panel-conflict-dialog')).not.toBeNull();
+  });
+
+  // 冲突未表态时确认编辑不会清掉标记：写缓冲不被重排，资源层仍读外部内容，弹窗照常出现
+  it('冲突未表态时确认编辑不会清掉标记', async () => {
+    const fs = new FakeFileSystem();
+    const { system, panel, container } = await openRenderedTable(
+      fs,
+      { name: 'a', level: 1 },
+      { type: 'object', properties: { name: { type: 'string' }, level: { type: 'number' } } },
+    );
+
+    const cell = container.querySelector('[data-test-id="table-input-level"]');
+    const input = cell === null ? null : cell.querySelector('input');
+
+    if (!(input instanceof HTMLInputElement)) throw new Error('数字输入框缺失');
+
+    // 一、回车确认一次，先让本栏有内容进缓冲
+    await act(async () => {
+      fireEvent.focusIn(input);
+      fireEvent.change(input, { target: { value: '2' } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+    });
+    await act(async () => {});
+
+    // 二、再聚焦并改值，这次只改不提交，焦点仍在输入框里
+    await act(async () => {
+      fireEvent.focusIn(input);
+      fireEvent.change(input, { target: { value: '3' } });
+    });
+
+    // 三、外部改文件：正在输入时只记录冲突、不弹窗
+    fs.seed(tableDataPath('t'), JSON.stringify({ name: 'external', level: 9 }));
+    await dispatchChange(system, panel, tableDataPath('t'));
+
+    expect(screen.queryByTestId('panel-conflict-dialog')).toBeNull();
+    expect(panel['columns'][0].pendingConflict?.path).toBe(tableDataPath('t'));
+
+    // 四、回车确认一次：必须被入口守卫挡住，不得经 `WriteBuffer.schedule` 清掉「外部已改」标记
+    await act(async () => {
+      fireEvent.keyDown(input, { key: 'Enter' });
+    });
+    await act(async () => {});
+
+    expect(await readData(system, tableDataPath('t'))).toEqual({ name: 'external', level: 9 });
+    expect(system.resourceSystem.hasAnyPendingContent()).toBe(true);
+    expect(screen.queryByTestId('panel-conflict-dialog')).not.toBeNull();
+  });
+
+  // 撤销不替用户结算冲突：推进 5 000 毫秒后磁盘仍是外部内容、该路径仍在待写
+  it('撤销不替用户结算冲突，推进 5 000 毫秒后磁盘仍是外部内容', async () => {
+    const fs = new FakeFileSystem();
+    const { system, panel, container } = await openRenderedTable(fs);
+
+    await commitText(container, 'name', '"draft"');
+
+    fs.seed(tableDataPath('t'), JSON.stringify({ name: 'external' }));
+    await dispatchChange(system, panel, tableDataPath('t'));
+
+    expect(screen.queryByTestId('panel-conflict-dialog')).not.toBeNull();
+
+    vi.useFakeTimers();
+
+    // 撤销走安静保存：入口守卫若只看非安静分支，这里会 persist 并重排 5 秒定时器，到点写出草稿
+    await act(async () => {
+      await system.undoSystem.undo();
+    });
+    await act(async () => {});
+
+    expect(await readDisk(fs, tableDataPath('t'))).toEqual({ name: 'external' });
+    expect(system.resourceSystem.listPendingPaths()).toContain(tableDataPath('t'));
+    expect(panel['columns'][0].pendingConflict?.path).toBe(tableDataPath('t'));
+    expect(screen.queryByTestId('panel-conflict-dialog')).not.toBeNull();
+
+    await advance(5000);
+
+    expect(await readDisk(fs, tableDataPath('t'))).toEqual({ name: 'external' });
+    expect(system.resourceSystem.listPendingPaths()).toContain(tableDataPath('t'));
+  });
+
+  // 一栏两条路径同时冲突：一次「保存编辑器的」把数据与 schema 都写盘、待写清空
+  it('两条路径同时冲突时一次「保存编辑器的」把两条都结算', async () => {
+    const fs = new FakeFileSystem();
+    const { system, panel } = await openRenderedTable(fs);
+
+    await switchMode('添加');
+    await addFieldByBlur('name', 'added');
+
+    // 新增字段会让数据与镜像 schema 同时进入待写（字段确认的自动保存随后把两个脏标志清零）
+    expect(system.resourceSystem.listPendingPaths()).toEqual(
+      expect.arrayContaining([tableDataPath('t'), tableSchemaPath('t')]),
+    );
+
+    const draft = panel['columns'][0].draft;
+    const editorData = draft === null ? undefined : draft.data;
+    const editorSchema = draft === null ? undefined : draft.schema;
+
+    fs.seed(tableDataPath('t'), JSON.stringify({ name: 'external' }));
+    fs.seed(tableSchemaPath('t'), JSON.stringify({ type: 'object', properties: { name: { type: 'string' } } }));
+
+    await dispatchChange(system, panel, tableDataPath('t'));
+    await dispatchChange(system, panel, tableSchemaPath('t'));
+
+    expect(screen.queryByTestId('panel-conflict-dialog')).not.toBeNull();
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('panel-conflict-keep'));
+    });
+    await act(async () => {});
+
+    expect(await readDisk(fs, tableDataPath('t'))).toEqual(editorData);
+    expect(await readDisk(fs, tableSchemaPath('t'))).toEqual(editorSchema);
+    expect(system.resourceSystem.hasAnyPendingContent()).toBe(false);
+    expect(screen.queryByTestId('panel-conflict-dialog')).toBeNull();
+  });
+
+  // 一栏两条路径同时冲突：一次「保存外部修改」把两条都丢弃，两条裸磁盘都没被改
+  it('两条路径同时冲突时一次「保存外部修改」把两条都丢弃', async () => {
+    const fs = new FakeFileSystem();
+    const { system, panel, container } = await openRenderedTable(fs);
+
+    await switchMode('添加');
+    await addFieldByBlur('name', 'added');
+
+    const externalDataText = JSON.stringify({ name: 'external' });
+    const externalSchemaText = JSON.stringify({ type: 'object', properties: { name: { type: 'string' } } });
+
+    fs.seed(tableDataPath('t'), externalDataText);
+    fs.seed(tableSchemaPath('t'), externalSchemaText);
+
+    await dispatchChange(system, panel, tableDataPath('t'));
+    await dispatchChange(system, panel, tableSchemaPath('t'));
+
+    expect(screen.queryByTestId('panel-conflict-dialog')).not.toBeNull();
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('panel-conflict-discard'));
+    });
+    await act(async () => {});
+
+    expect(await fs.readFile(tableDataPath('t'))).toBe(externalDataText);
+    expect(await fs.readFile(tableSchemaPath('t'))).toBe(externalSchemaText);
+    expect(system.resourceSystem.hasAnyPendingContent()).toBe(false);
+    expect(valueOf(container, 'name')).toBe('"external"');
+    expect(screen.queryByTestId('panel-conflict-dialog')).toBeNull();
   });
 });

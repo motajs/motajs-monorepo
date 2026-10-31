@@ -291,4 +291,63 @@ describe('资源写缓冲', () => {
     expect(written).toEqual([`${PATH}:second`]);
     expect(onChange).toHaveBeenCalled();
   });
+
+  // 全量写盘跳过被外部变化标记的条目、单路径仍可覆盖；同一轮里未被标记的路径照常写出
+  it('全量写盘跳过被外部变化标记的条目、单路径仍可覆盖', async () => {
+    const fs = new FakeFileSystem();
+
+    fs.seed(PATH, 'old');
+    fs.seed(OTHER_PATH, 'old-other');
+
+    const resourceSystem = new ResourceSystem();
+
+    system = resourceSystem;
+    await resourceSystem.initialize(fs);
+
+    await resourceSystem.writeContent(PATH, 'mine');
+    await resourceSystem.writeContent(OTHER_PATH, 'other-mine');
+
+    fs.seed(PATH, 'external');
+    await resourceSystem.updateResource(PATH);
+
+    await resourceSystem.flushAllContent();
+
+    expect(await fs.readFile(PATH)).toBe('external');
+    expect(resourceSystem.listPendingPaths()).toEqual([PATH]);
+    expect(await fs.readFile(OTHER_PATH)).toBe('other-mine');
+    expect(resourceSystem.listPendingPaths()).not.toContain(OTHER_PATH);
+
+    await resourceSystem.flushContent(PATH);
+
+    expect(await fs.readFile(PATH)).toBe('mine');
+    expect(resourceSystem.listPendingPaths()).toEqual([]);
+  });
+
+  // 宿主回声分支遇到已被标记的条目直接返回：不清标记、也不重排 5 秒定时器
+  // 直测缓冲而不经资源层：`ResourceSystem.noteExternalWrite` 对已标记条目在读待写那一步就早退，
+  // 资源层路径到不了这条分支，但缓冲自身的这条规则仍是「被标记路径没有自动落盘」的最后一道防线。
+  it('宿主回声分支不会把已被标记的条目重新装上定时器', async () => {
+    const written: string[] = [];
+    const buffer = new WriteBuffer(async (path: string, content): Promise<void> => {
+      written.push(`${path}:${typeof content === 'string' ? content : 'binary'}`);
+    }, vi.fn());
+
+    // 先写出一次让缓冲记住「自己写出去的原文」，再排入一份新的待写内容
+    buffer.schedule(PATH, 'written');
+    await buffer.flush(PATH);
+    buffer.schedule(PATH, 'pending');
+
+    // 先真外部变化（标记），再回送「与自己刚写出的原文相同」的宿主回声
+    buffer.noteExternalWrite(PATH, 'external');
+    buffer.noteExternalWrite(PATH, 'written');
+
+    expect(buffer.has(PATH)).toBe(true);
+
+    await vi.advanceTimersByTimeAsync(5000);
+
+    expect(buffer.has(PATH)).toBe(true);
+    expect(written).toEqual([`${PATH}:written`]);
+
+    buffer.dispose();
+  });
 });

@@ -14,6 +14,8 @@ const OTHER_PATH = 'tables/other.json';
 const OLD_CONTENT = '{"a":1}';
 /** 写进缓冲的新内容 */
 const NEW_CONTENT = '{"a":2}';
+/** 外部写进磁盘的内容：被标记的待写路径在用户表态前绝不能覆盖它 */
+const EXTERNAL_CONTENT = '{"a":9}';
 
 /** 当前用例装配出的编辑器内核，用例结束后统一释放 */
 let active: EditorCore | null = null;
@@ -108,6 +110,40 @@ describe('ShellSystem 页面生命周期', () => {
 
     expect(await system.fs.readFile(OTHER_PATH)).toBe(NEW_CONTENT);
     expect(system.core.resourceSystem.hasAnyPendingContent()).toBe(false);
+  });
+
+  // 冲突未表态时窗口失焦：全量写盘跳过被标记的条目，磁盘仍是外部内容、待写仍在
+  it('冲突未表态时窗口失焦不写盘', async () => {
+    const system = await createSystem();
+
+    await system.core.resourceSystem.writeContent(PATH, NEW_CONTENT);
+
+    system.fs.seed(PATH, EXTERNAL_CONTENT);
+    await system.core.resourceSystem.updateResource(PATH);
+
+    await dispatchWindowEvent('blur');
+
+    expect(await system.fs.readFile(PATH)).toBe(EXTERNAL_CONTENT);
+    expect(system.core.resourceSystem.listPendingPaths()).toContain(PATH);
+  });
+
+  // 冲突未表态时 pagehide：全量写盘跳过被标记的条目；待写没消失，beforeunload 继续阻止卸载
+  it('冲突未表态时 pagehide 不写盘且 beforeunload 仍被阻止', async () => {
+    const system = await createSystem();
+
+    await system.core.resourceSystem.writeContent(PATH, NEW_CONTENT);
+
+    system.fs.seed(PATH, EXTERNAL_CONTENT);
+    await system.core.resourceSystem.updateResource(PATH);
+
+    await dispatchWindowEvent('pagehide');
+
+    expect(await system.fs.readFile(PATH)).toBe(EXTERNAL_CONTENT);
+    expect(system.core.resourceSystem.listPendingPaths()).toContain(PATH);
+
+    const event = await dispatchWindowEvent('beforeunload');
+
+    expect(event.defaultPrevented).toBe(true);
   });
 
   // 释放外壳后再派发 pagehide：监听器已注销、磁盘保持旧值；随后手工写盘仍写得出，证明待写确实还在
