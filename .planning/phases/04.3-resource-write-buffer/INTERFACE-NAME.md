@@ -493,6 +493,8 @@
 
 **Plan 14 / 15 追加确认：2026-10-30** —— 按路径去重的形状与全部新名称已获用户第二次文字确认（原话「批准命名，可以执行计划」），详见本文末尾 `## 追加确认（Plan 14 / 15，2026-10-30）`。
 
+**Plan 16 缺口收口确认：2026-10-31** —— G1 的 `Promise<boolean>` 形状与 G2 的无新名字规则已获用户第三次文字确认（原话「同意，可以执行」），详见本文末尾 `## 追加确认（Plan 16，2026-10-31）`。
+
 ---
 
 ## Plan 14 — 同文件多标签去重的接口与命名
@@ -667,17 +669,17 @@
 
 | 形状 | 种类 | 文件位置 | 用途 | 状态 |
 |------|------|----------|------|------|
-| `ShellSystem.flushPendingContent` | 私有方法（返回形态改为 `Promise<boolean>`） | `packages/libs/editor-core/src/shell/shellSystem.ts` | 让关闭流程知道「缓冲是否已经空了、能不能丢标签」；真 = 缓冲已空可关，假 = 抛错或仍有待写不能丢标签。假值是全局判据，可见状态复用右上角既有提示 | 待确认 |
-| `ShellSystem.closeTab` | 既有私有方法（改造） | `packages/libs/editor-core/src/shell/shellSystem.ts` | `PanelCloseChoice.Save` 分支按上面的布尔决定是否走 `ShellSystem.discardTab`；`Discard` 分支不变 | 待确认 |
-| `WriteBuffer.flushAll` / `WriteBuffer.noteExternalWrite` | 既有方法（改造） | `packages/libs/editor-core/src/resource/writeBuffer.ts` | 全量写盘跳过 `externallyChanged === true` 的条目；宿主回声分支遇到已标记条目直接返回，不清标记、不重排 5 秒定时器；都不新增名字 | 待确认 |
-| `TablePanel.saveDocument` / `TablePanel.saveAfterEdit` | 既有私有方法（改造） | `packages/libs/editor-impl/src/table/tablePanel.ts` | `TablePanel.saveDocument` 入口对该栏 `pendingConflict` 一律停手（含 `quiet`），撤销 / 重做与自动保存因此都受同一条守卫；`TablePanel.saveAfterEdit` 不再排缓冲；不新增名字 | 待确认 |
-| `TablePanel.keepExternalConflict` / `TablePanel.discardExternalConflict` | 既有私有方法（改造） | `packages/libs/editor-impl/src/table/tablePanel.ts` | 两个冲突动作只结算真正有待写的路径（冲突路径视为待写），未编辑的兄弟路径不写盘；`TablePanel.keepExternalConflict` 是上述入口守卫的唯一豁免 | 待确认 |
-| `TablePanel.refresh` | 既有私有方法（改造） | `packages/libs/editor-impl/src/table/tablePanel.ts` | 该栏有 `pendingConflict` 或 `pendingWrite` 时提前返回、不重读磁盘，保住内存草稿；不新增名字 | 待确认 |
-| `AssetPanel.answerCloseDialog` / `AssetPanel.saveAll` | 既有私有方法（改造） | `packages/libs/editor-impl/src/asset/assetPanel.ts` | 保存后用 `IEditorPanelContext.flushResource` 逐条 flush，失败结算 `PanelCloseChoice.Cancel`、恢复被清掉的 `unsaved` 并复用既有文案「写入失败，请重试。」；不新增名字 | 待确认 |
+| `ShellSystem.flushPendingContent` | 私有方法（返回形态改为 `Promise<boolean>`） | `packages/libs/editor-core/src/shell/shellSystem.ts` | 让关闭流程知道「缓冲是否已经空了、能不能丢标签」；真 = 缓冲已空可关，假 = 抛错或仍有待写不能丢标签。假值是全局判据，可见状态复用右上角既有提示 | 已确认（2026-10-31） |
+| `ShellSystem.closeTab` | 既有私有方法（改造） | `packages/libs/editor-core/src/shell/shellSystem.ts` | `PanelCloseChoice.Save` 分支按上面的布尔决定是否走 `ShellSystem.discardTab`；`Discard` 分支不变 | 已确认（2026-10-31） |
+| `WriteBuffer.flushAll` / `WriteBuffer.noteExternalWrite` | 既有方法（改造） | `packages/libs/editor-core/src/resource/writeBuffer.ts` | 全量写盘跳过 `externallyChanged === true` 的条目；宿主回声分支遇到已标记条目直接返回，不清标记、不重排 5 秒定时器；都不新增名字 | 已确认（2026-10-31） |
+| `TablePanel.saveDocument` / `TablePanel.saveAfterEdit` | 既有私有方法（改造） | `packages/libs/editor-impl/src/table/tablePanel.ts` | `TablePanel.saveDocument` 入口对该栏 `pendingConflict` 一律停手（含 `quiet`），撤销 / 重做与自动保存因此都受同一条守卫；`TablePanel.saveAfterEdit` 不再排缓冲；不新增名字 | 已确认（2026-10-31） |
+| `TablePanel.keepExternalConflict` / `TablePanel.discardExternalConflict` | 既有私有方法（改造） | `packages/libs/editor-impl/src/table/tablePanel.ts` | 两个冲突动作只结算真正有待写的路径（冲突路径视为待写），未编辑的兄弟路径不写盘；`TablePanel.keepExternalConflict` 是上述入口守卫的唯一豁免 | 已确认（2026-10-31） |
+| `TablePanel.refresh` | 既有私有方法（改造） | `packages/libs/editor-impl/src/table/tablePanel.ts` | 该栏有 `pendingConflict` 或 `pendingWrite` 时提前返回、不重读磁盘，保住内存草稿；不新增名字 | 已确认（2026-10-31） |
+| `AssetPanel.answerCloseDialog` / `AssetPanel.saveAll` | 既有私有方法（改造） | `packages/libs/editor-impl/src/asset/assetPanel.ts` | 保存后用 `IEditorPanelContext.flushResource` 逐条 flush，失败结算 `PanelCloseChoice.Cancel`、恢复被清掉的 `unsaved` 并复用既有文案「写入失败，请重试。」；不新增名字 | 已确认（2026-10-31） |
 
 **G2 不新增任何名字；如果认为需要新增，只能在确认时另提，不在本提案里预造。**
 
-### 待确认清单
+### 确认清单（2026-10-31）
 
 1. **G1 用 `Promise<boolean>`**（而不是「带失败路径列表的结果对象」）：`ShellSystem.flushPendingContent` 返回布尔，`ShellSystem.closeTab` 用布尔决定丢不丢标签；假值保持全局判据，可见状态就是右上角既有的「正在等待保存」提示。
 2. **素材面板的关闭失败由面板自己 flush**，并复用表格那条既有文案「写入失败，请重试。」（排除素材自己那条「保存失败，改动仍未落盘，请重试。」：`PanelCloseDialog` 的「保存失败：」前缀会让后者渲染成重复标题）。
@@ -686,4 +688,26 @@
 
 **后续落地与收口：`04.3-17`（G2 实现）、`04.3-18`（G1 实现）、`04.3-19`（重新收口）。**
 
-状态：待确认
+状态：已确认（2026-10-31）
+
+---
+
+## 追加确认（Plan 16，2026-10-31）
+
+**状态：已确认（2026-10-31）**
+
+用户于 2026-10-31 以文字回复「同意，可以执行」，把 Plan 16 的四项提案全部按原样接受，未提出任何改名或改形状。`已确认：2026-10-31`。
+
+### 用户拍板的四件事（最终结论）
+
+1. **G1 的形状：** `ShellSystem.flushPendingContent(): Promise<boolean>`——真表示「这次尝试后缓冲已空、可以关标签」，假表示「有写盘抛错或仍有待写（含被冲突跳过的条目）、不能丢弃标签」。不采用「结果对象」这一替代形状。`ShellSystem.closeTab` 在 `PanelCloseChoice.Save` 分支用这个布尔决定是否走 `ShellSystem.discardTab`。
+2. **素材关闭失败的文案：** 复用表格既有的「写入失败，请重试。」（渲染为「保存失败：写入失败，请重试。」），**不采用**素材面板自己那条「保存失败，改动仍未落盘，请重试。」——后者会被弹窗的「保存失败：」前缀套成重复标题。
+3. **G2 不新增任何名字，只加规则：** `WriteBuffer.flushAll` 跳过 `externallyChanged` 的条目；`WriteBuffer.noteExternalWrite` 的宿主回声分支遇到已标记条目不重排定时器、不清标记；`TablePanel.saveDocument` 使用单一入口守卫（同时覆盖撤销 / 重做与自动保存）；`TablePanel.keepExternalConflict` 是唯一豁免。
+4. **一栏两条路径：** 数据文件与 schema 文件同时冲突时，由弹窗两个动作各自结算；关闭决定仍是全局判据，其可见状态就是右上角既有的「正在等待保存」提示。
+
+### 随附确认（同样按原样采用，无需额外拍板）
+
+- **切标签往返不得重读有未决冲突或待写的栏**：`TablePanel.refresh` 在该栏 `pendingConflict` 或 `pendingWrite` 存在时提前返回，草稿保留。
+- **撤销 / 重做不得绕过冲突守卫**：`TablePanel.applyUndoRedo` 走的安静保存同样受 `TablePanel.saveDocument` 入口守卫约束。
+
+**后续落地与收口顺序不变：`04.3-17`（G2 实现）、`04.3-18`（G1 实现）、`04.3-19`（重新收口）。**
