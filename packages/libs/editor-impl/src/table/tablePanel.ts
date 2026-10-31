@@ -2738,9 +2738,11 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       return;
     }
 
-    // 冲突未表态、或本栏仍有待写时不重读磁盘：此刻磁盘上正是外部那一份，重读会把内存草稿换成它，
+    // 冲突未表态且该栏仍有待写时不重读磁盘：此刻磁盘上正是外部那一份，重读会把内存草稿换成它，
     // 随后「保存编辑器的」写回去的也就成了外部内容。这条早退不发布任何状态，面板保持原样。
-    if (column.pendingConflict !== undefined || column.pendingWrite) return;
+    // 只判「有没有冲突」会把别的栏写同一路径留下的待写镜像误判成本栏的草稿（D-15 的联动刷新全靠
+    // 这一条转调 `TablePanel.refresh`），所以两个判据必须同时成立；真正未表态的冲突路径一定还在待写里。
+    if (column.pendingConflict !== undefined && column.pendingWrite) return;
 
     // 该栏有未落盘改动时不重读覆盖内存，保住手动保存下的内存改动（T-02.1-20-01）
     if (column.unsaved || column.unsavedSchema || column.draftDirty) return;
