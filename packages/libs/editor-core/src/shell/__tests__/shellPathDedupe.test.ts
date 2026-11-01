@@ -451,3 +451,71 @@ describe('同文件多标签去重', () => {
     expect(created).toHaveLength(1);
   });
 });
+
+describe('跨标签聚焦（ShellSystem.focusResourceTab）', () => {
+  // 别的标签持有这条路径：同步返回真，切换即发即忘，等一次微任务后活动标签变成持有者
+  it('别的标签持有该路径时返回真并切过去', async () => {
+    const core = await createCore();
+    const { type } = createCountingType('alpha', '面板 A', alphaOpenParam);
+
+    core.shellSystem.registerPanelType(type);
+
+    const firstTab = core.shellSystem.listTabs()[0].id;
+
+    await openInTab(core, firstTab, type, HERO_PATH);
+
+    const secondTab = core.shellSystem.openBlankTab();
+
+    await openInTab(core, secondTab, type);
+    await act(async () => {
+      await core.shellSystem.activateTab(secondTab);
+    });
+
+    const { container } = render(createElement(core.shellSystem.render()));
+
+    let focused = false;
+
+    await act(async () => {
+      focused = core.shellSystem['focusResourceTab'](HERO_PATH);
+      await new Promise<unknown>((resolve): void => {
+        setTimeout(resolve, 0);
+      });
+    });
+
+    expect(focused).toBe(true);
+
+    const activeTabs = container.querySelectorAll('.editor-shell-tab.is-active');
+
+    expect(activeTabs.length).toBe(1);
+    expect(activeTabs[0].querySelector('.editor-shell-tab-label')?.textContent).toBe('面板 A');
+    expect(container.querySelector('.editor-shell-content')?.textContent).toBe('instance-1');
+  });
+
+  // 没人持有这条路径：同步返回假，调用方可以继续换目标
+  it('没人持有该路径时返回假', async () => {
+    const core = await createCore();
+    const { type } = createCountingType('alpha', '面板 A', alphaOpenParam);
+
+    core.shellSystem.registerPanelType(type);
+
+    const firstTab = core.shellSystem.listTabs()[0].id;
+
+    await openInTab(core, firstTab, type, HERO_PATH);
+
+    expect(core.shellSystem['focusResourceTab'](ENEMY_PATH)).toBe(false);
+  });
+
+  // 当前活动标签自己登记了这条路径：返回假，关掉一栏后再打开同一文件仍然能开
+  it('当前活动标签自己持有该路径时返回假', async () => {
+    const core = await createCore();
+    const { type } = createCountingType('alpha', '面板 A', alphaOpenParam);
+
+    core.shellSystem.registerPanelType(type);
+
+    const firstTab = core.shellSystem.listTabs()[0].id;
+
+    await openInTab(core, firstTab, type, HERO_PATH);
+
+    expect(core.shellSystem['focusResourceTab'](HERO_PATH)).toBe(false);
+  });
+});
