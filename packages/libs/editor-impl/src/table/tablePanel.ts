@@ -1054,6 +1054,10 @@ export class TablePanel implements IEditorPanel, ITablePanel {
 
   setTable(target: ITablePanelTarget, columnIndex: number = 0): void {
     const column = this.columnAt(columnIndex);
+
+    // 这条路径已经开在别的标签里：本栏保持原目标，外壳负责切过去（切换即发即忘）
+    if (this.context.focusResourceTab(target.dataPath)) return;
+
     const previous = column.target;
 
     // 换目标前先把该栏未落盘改动同步快照后异步写回，避免切换后丢掉内存改动（T-02.1-20-01）

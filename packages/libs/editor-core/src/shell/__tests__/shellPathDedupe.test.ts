@@ -162,6 +162,16 @@ async function openInTab(core: EditorCore, tabId: string, type: IEditorPanelType
   return opened;
 }
 
+/**
+ * 调用外壳的私有跨标签聚焦方法：它只给面板上下文用，不在 `IShellSystem` 的公开面上
+ * @param core 编辑器核心
+ * @param identifier 资源标识（纯路径）
+ * @returns 有别的标签持有该路径并已发起切换时为 true
+ */
+function focusResourceTabOf(core: EditorCore, identifier: string): boolean {
+  return Reflect.apply(Reflect.get(core.shellSystem, 'focusResourceTab'), core.shellSystem, [identifier]);
+}
+
 describe('同文件多标签去重', () => {
   // 同一条路径先开在一个标签里，再用新空标签打开同一条路径：只剩一个标签、同一个实例，空标签被收掉
   it('同一路径第二次打开只激活已有标签，不新建实例、不遗留空标签', async () => {
@@ -476,7 +486,7 @@ describe('跨标签聚焦（ShellSystem.focusResourceTab）', () => {
     let focused = false;
 
     await act(async () => {
-      focused = core.shellSystem['focusResourceTab'](HERO_PATH);
+      focused = focusResourceTabOf(core, HERO_PATH);
       await new Promise<unknown>((resolve): void => {
         setTimeout(resolve, 0);
       });
@@ -502,7 +512,7 @@ describe('跨标签聚焦（ShellSystem.focusResourceTab）', () => {
 
     await openInTab(core, firstTab, type, HERO_PATH);
 
-    expect(core.shellSystem['focusResourceTab'](ENEMY_PATH)).toBe(false);
+    expect(focusResourceTabOf(core, ENEMY_PATH)).toBe(false);
   });
 
   // 当前活动标签自己登记了这条路径：返回假，关掉一栏后再打开同一文件仍然能开
@@ -516,6 +526,6 @@ describe('跨标签聚焦（ShellSystem.focusResourceTab）', () => {
 
     await openInTab(core, firstTab, type, HERO_PATH);
 
-    expect(core.shellSystem['focusResourceTab'](HERO_PATH)).toBe(false);
+    expect(focusResourceTabOf(core, HERO_PATH)).toBe(false);
   });
 });

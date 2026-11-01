@@ -7,17 +7,20 @@ import {
   ResourceContent,
 } from '../resource';
 import { IUndoContext, IUndoSystem } from '../undo';
-import { IEditorPanel, IEditorPanelContext } from './types';
+import { IEditorPanel, IEditorPanelContext, ResourceTabFocuser } from './types';
 
 export class PanelContext implements IEditorPanelContext {
   /** 面板侧资源读写口 */
   private readonly resourceAccess: IResourceAccess;
   /** 撤回系统 */
   private readonly undoSystem: IUndoSystem;
+  /** 外壳注入的「这条路径是否已开在别的标签里」查询函数 */
+  private readonly resourceTabFocuser: ResourceTabFocuser;
 
-  constructor(resourceAccess: IResourceAccess, undoSystem: IUndoSystem) {
+  constructor(resourceAccess: IResourceAccess, undoSystem: IUndoSystem, focusResourceTab: ResourceTabFocuser) {
     this.resourceAccess = resourceAccess;
     this.undoSystem = undoSystem;
+    this.resourceTabFocuser = focusResourceTab;
   }
 
   requestResource(id: IResourceIdentifier): Promise<IResource | null> {
@@ -50,6 +53,10 @@ export class PanelContext implements IEditorPanelContext {
 
   watchPendingChange(listener: PendingChangeListener): () => void {
     return this.resourceAccess.watchPendingChange(listener);
+  }
+
+  focusResourceTab(identifier: IResourceIdentifier): boolean {
+    return this.resourceTabFocuser(identifier);
   }
 
   addUndoContext(panel: IEditorPanel, context: IUndoContext<unknown>): void {

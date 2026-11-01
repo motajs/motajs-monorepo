@@ -35,6 +35,9 @@ export interface ITablePanelTarget {
 export interface ITablePanel {
   /**
    * 从外部设置此面板实例某一栏要编辑的目标表
+   *
+   * 同一个表格面板内不许两栏指向同一个数据文件；选到已被占用的文件时本栏保持原目标——
+   * 同面板另一栏持有则闪一下那一栏，另一个标签持有则切过去。空串路径不参与查重。
    * @param target 目标表的单一数据文件路径
    * @param columnIndex 目标栏的序号（0 基）；省略时默认为第 0 栏
    */

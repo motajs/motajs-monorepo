@@ -127,7 +127,7 @@ describe('另一个标签已持有该路径（D-28）', () => {
     const activeTabs = container.querySelectorAll('.editor-shell-tab.is-active');
 
     expect(activeTabs.length).toBe(1);
-    expect(container.querySelector('.editor-shell-content')?.textContent).toBe(created[0].id);
+    expect(container.querySelector('.editor-shell-content')?.textContent).toContain('value');
     expect(await fs.readFile(tableDataPath('a'))).toBe(seedText);
   });
 });

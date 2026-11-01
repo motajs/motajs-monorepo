@@ -12,6 +12,13 @@ export const enum PanelCloseChoice {
   Cancel,
 }
 
+/**
+ * 面板请求外壳把「已经把这条路径开在手里」的标签切成活动标签
+ *
+ * 同步返回：真表示有别的标签持有该路径、切换已经发起（不等待完成）；假表示没有别的标签持有它。
+ */
+export type ResourceTabFocuser = (identifier: IResourceIdentifier) => boolean;
+
 export interface IEditorPanelContext {
   /**
    * 请求指定资源
@@ -74,6 +81,17 @@ export interface IEditorPanelContext {
    * @returns 退订函数
    */
   watchPendingChange(listener: PendingChangeListener): () => void;
+
+  /**
+   * 询问外壳「这条路径是不是已经开在别的标签里」
+   *
+   * 同步返回，不等待切换完成：真表示有别的标签持有该路径、切换已经发起；假表示没有别的标签持有它，
+   * 包括「当前标签自己持有那条登记」的情形——关掉某一栏后再打开同一文件仍须能开。
+   * 调用方据此决定要不要改自己的目标。
+   * @param identifier 资源标识（纯路径）
+   * @returns 有别的标签持有该路径并已发起切换时为 true
+   */
+  focusResourceTab(identifier: IResourceIdentifier): boolean;
 
   /**
    * 添加某个面板的撤回操作

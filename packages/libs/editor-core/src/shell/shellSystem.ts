@@ -672,6 +672,27 @@ export class ShellSystem implements IShellSystem {
   }
 
   /**
+   * 面板请求切到「已经把这条路径开在手里」的那个标签
+   *
+   * 顺序写死：归一 → 空串返回假 → 反查 → 没找到或正是当前活动标签时返回假 → 否则发起切换并返回真。
+   * 返回值决定面板要不要改自己的目标，所以必须在切换任何东西之前就能答出来；切换本身即发即忘。
+   * @param identifier 资源标识（纯路径）
+   * @returns 有别的标签持有该路径并已发起切换时为 true
+   */
+  private focusResourceTab(identifier: IResourceIdentifier): boolean {
+    const key = normalizeResourcePath(identifier);
+
+    if (key === '') return false;
+
+    const ownerTabId = this.findTabByPath(key);
+
+    if (ownerTabId === undefined || ownerTabId === this.activeTabId) return false;
+
+    void this.activateTab(ownerTabId);
+    return true;
+  }
+
+  /**
    * 登记或改写某个标签的路径：同一标签换成另一条路径时覆盖旧登记，旧路径因此自然释放
    * @param tabId 标签 id
    * @param path 已归一的去重键
@@ -931,7 +952,9 @@ export class ShellSystem implements IShellSystem {
 
     this.instanceCounter += 1;
     const instanceId = `instance-${this.instanceCounter}`;
-    const context = new PanelContext(this.resourceSystem, this.undoSystem);
+    const context = new PanelContext(this.resourceSystem, this.undoSystem, (identifier): boolean =>
+      this.focusResourceTab(identifier),
+    );
     let instance: IEditorPanel;
 
     try {
