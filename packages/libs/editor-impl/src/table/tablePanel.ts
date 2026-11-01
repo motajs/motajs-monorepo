@@ -62,6 +62,9 @@ import { deriveSchemaPath, isSchemaPath } from './resourceType';
 /** 多栏布局中每栏的默认像素宽度 */
 const DEFAULT_COLUMN_WIDTH = 500;
 
+/** 一次重复打开提示的闪烁总时长（毫秒）：两次脉冲、每次 300 毫秒 */
+const DUPLICATE_FLASH_MS = 600;
+
 /** 新建表格数据文件的初始内容文本：空对象 */
 export const INITIAL_TABLE_DATA_TEXT = '{}';
 
@@ -183,8 +186,10 @@ interface ITablePanelColumn {
   pendingConflict: ITablePendingConflict | undefined;
   /** 该栏已确认「剥离注释后打开」的路径 → 确认时的原文；原文未变时不再重弹 */
   readonly stripConfirmed: Map<string, string>;
-  /** 该栏待确认剥离时暂存的原文，供 `TablePanel.confirmCommentStrip` 登记进 `stripConfirmed` */
+  /** 该栏待确认剥离注释时暂存的原文，供 `TablePanel.confirmCommentStrip` 登记进 `stripConfirmed` */
   pendingStripText: string;
+  /** 该栏刚被「有人想开它已经拿着的文件」提示过；为真时栏根带闪烁类名与测试标识 */
+  duplicateFlash: boolean;
   /** 该栏的视图状态订阅源 */
   readonly store: Store<ITablePanelViewState>;
 }
@@ -210,6 +215,8 @@ export interface ITablePanelViewState {
   readonly unsaved?: boolean;
   /** 该栏待决的外部改动冲突；缺省表示无冲突（弹窗只在有待决冲突时出现） */
   readonly pendingConflict?: ITablePendingConflict;
+  /** 该栏刚被「有人想开它已经拿着的文件」提示过；为真时栏根带闪烁类名与测试标识 */
+  readonly duplicateFlash?: boolean;
   /** 该栏空栏当前的内联视图；缺省视作 `TableEmptyMode.Buttons` */
   readonly emptyMode?: TableEmptyMode;
   /** 内联浏览区的初始目录路径；根目录为空串 */
@@ -557,7 +564,11 @@ function TableColumn(props: ITableColumnProps): ReactElement {
 
   return createElement(
     'div',
-    { className: 'etable-column', style: { flexGrow: 1, flexShrink: 1, flexBasis: 0 } },
+    {
+      className: view.duplicateFlash === true ? 'etable-column etable-column-duplicate-flash' : 'etable-column',
+      'data-test-id': view.duplicateFlash === true ? 'table-column-duplicate-flash' : undefined,
+      style: { flexGrow: 1, flexShrink: 1, flexBasis: 0 },
+    },
     createElement(EditableTable, editableProps),
     stripModal,
   );
@@ -689,6 +700,9 @@ export class TablePanel implements IEditorPanel, ITablePanel {
 
   /** 各栏的请求序号，用于丢弃过期请求的异步结果 */
   private readonly requestTokens: number[] = [];
+
+  /** 每栏一个重复打开提示的定时器句柄；换目标 / 关栏 / 释放时先清掉，避免定时器落在已复用的栏上 */
+  private readonly duplicateFlashTimers: Map<number, ReturnType<typeof setTimeout>> = new Map();
 
   /** 各栏可编辑组件的句柄归属；与 `columns` 在同一处同步增长，第 N 栏恰好对应第 N 个 ref */
   private readonly columnRefs: RefObject<IEditableContentHandle<ITableDocument> | null>[] = [];
@@ -826,6 +840,10 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   async dispose(): Promise<void> {
     this.pendingUnwatch?.();
     this.pendingUnwatch = undefined;
+
+    for (const timer of this.duplicateFlashTimers.values()) clearTimeout(timer);
+
+    this.duplicateFlashTimers.clear();
 
     await this.saveDirtyColumns();
   }
@@ -1055,6 +1073,14 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   setTable(target: ITablePanelTarget, columnIndex: number = 0): void {
     const column = this.columnAt(columnIndex);
 
+    // 同面板一栏一条路径：已有别的栏拿着它时本栏原地不动，只让拿着它的那一栏闪一下
+    const duplicate = this.findColumnByPath(target.dataPath, columnIndex);
+
+    if (duplicate !== -1) {
+      this.flashDuplicateColumn(duplicate);
+      return;
+    }
+
     // 这条路径已经开在别的标签里：本栏保持原目标，外壳负责切过去（切换即发即忘）
     if (this.context.focusResourceTab(target.dataPath)) return;
 
@@ -1071,6 +1097,15 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     column.pendingConflict = undefined;
     // 「还有待写」的镜像是属于旧目标的：不复位会让刷新守卫把新表永远挡在 Loading
     column.pendingWrite = false;
+
+    const staleFlash = this.duplicateFlashTimers.get(columnIndex);
+
+    if (staleFlash !== undefined) {
+      clearTimeout(staleFlash);
+      this.duplicateFlashTimers.delete(columnIndex);
+    }
+
+    column.duplicateFlash = false;
 
     if (this.visibleConflictColumn === columnIndex) {
       this.visibleConflictColumn = undefined;
@@ -1131,6 +1166,15 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     column.emptyMode = TableEmptyMode.Buttons;
     column.directory = '';
     column.pickerError = undefined;
+
+    const staleFlash = this.duplicateFlashTimers.get(columnIndex);
+
+    if (staleFlash !== undefined) {
+      clearTimeout(staleFlash);
+      this.duplicateFlashTimers.delete(columnIndex);
+    }
+
+    column.duplicateFlash = false;
 
     if (this.visibleConflictColumn === columnIndex) {
       this.visibleConflictColumn = undefined;
@@ -1252,6 +1296,52 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     }
 
     return -1;
+  }
+
+  /**
+   * 反查同面板里哪一栏已经把这条数据路径开在手里
+   *
+   * 只比 `ITablePanelTarget.dataPath`：schema 路径由数据路径推导，不单独查重；发起查重的栏自己跳过。
+   * @param path 要查重的数据文件路径
+   * @param exceptColumnIndex 发起查重的栏序号（0 基），跳过它自己
+   * @returns 第一个持有该路径的栏序号；没有时返回 -1
+   */
+  private findColumnByPath(path: string, exceptColumnIndex: number): number {
+    const count = this.columns.length;
+
+    for (let index = 0; index < count; index += 1) {
+      if (index === exceptColumnIndex) continue;
+
+      const target = this.columns[index].target;
+
+      if (target !== null && target.dataPath === path) return index;
+    }
+
+    return -1;
+  }
+
+  /**
+   * 让指定栏的边框闪两下：置真并发布一次，`DUPLICATE_FLASH_MS` 后置假再发布一次
+   *
+   * 每栏只保留一个定时器：重复触发先清后装，不叠加、不排队；发布时带上原有提示文案，避免抹掉它。
+   * @param columnIndex 要让其闪烁的栏序号（0 基）
+   */
+  private flashDuplicateColumn(columnIndex: number): void {
+    const column = this.columnAt(columnIndex);
+    const previous = this.duplicateFlashTimers.get(columnIndex);
+
+    if (previous !== undefined) clearTimeout(previous);
+
+    column.duplicateFlash = true;
+    this.publish(columnIndex, column.store.state.status, column.store.state.message, column.store.state.error);
+
+    const timer = setTimeout((): void => {
+      column.duplicateFlash = false;
+      this.duplicateFlashTimers.delete(columnIndex);
+      this.publish(columnIndex, column.store.state.status, column.store.state.message, column.store.state.error);
+    }, DUPLICATE_FLASH_MS);
+
+    this.duplicateFlashTimers.set(columnIndex, timer);
   }
 
   /**
@@ -1812,6 +1902,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       pendingConflict: undefined,
       stripConfirmed: new Map<string, string>(),
       pendingStripText: '',
+      duplicateFlash: false,
       store: new Store<ITablePanelViewState>({
         status: TablePanelStatus.NoTarget,
         content: { data: null, schema: null, schemaMode: false },
@@ -1914,6 +2005,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       // 「未保存」的展示面与 `TablePanel.isColumnDirty` 是同一件事：面板侧未落盘标记或本栏还有待写
       unsaved: column.unsaved || column.pendingWrite,
       pendingConflict: column.pendingConflict,
+      duplicateFlash: column.duplicateFlash,
       ...emptyState,
     });
   }
@@ -1958,6 +2050,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       title: target === null ? undefined : target.dataPath,
       commentStripPending: true,
       unsaved: column.unsaved || column.pendingWrite,
+      duplicateFlash: column.duplicateFlash,
     });
   }
 
@@ -2370,13 +2463,15 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   /**
    * 判断读到的原文是不是本面板另一栏刚写出去的那一份
    *
-   * 判定依据只有既有的每栏基线原文：同一数据文件比 `baselineText`，镜像 schema 比 `baselineSchemaText`
-   * （按该路径是不是某一栏推导出的镜像 schema 选择），不比时间戳、也不新增「自写标记」一类的旁路状态。
-   * 内容与本面板其它栏的基线不同才是外部写入，仍按既有规则「脏则提示、不脏则正常载入」（D-15 / D-16 / D-25）。
+   * 一栏一条路径之后，同一面板内不会出现两栏同路径；这里认的是兄弟 schema 栏刚写出的 `t.schema.json`：
+   * 它的 `target.dataPath` 就是这次变化的路径，写盘成功后 `baselineText` 等于收到的原文。
+   * 数据栏经「在代码编辑器中打开」确认写回后 `unsaved` 为真，`TablePanel.refresh` 会被挡回、基线不会推进，
+   * 此时这个判定是唯一能阻止假冲突框的抑制点。内容与另一栏的基线不同才是外部写入，仍按既有规则
+   * 「脏则提示、不脏则正常载入」（D-15 / D-16 / D-25）。
    * @param columnIndex 收到变化的栏序号（0 基），该栏自身不参与比较
    * @param path 变化路径（数据文件路径或由它推导出的 schema 路径）
    * @param text 从资源层读到的原文
-   * @returns 该原文与本面板其它栏在同一路径上的基线原文相同时为 true
+   * @returns 该原文与本面板另一栏在同一路径上的基线原文相同时为 true
    */
   private isSamePanelWrite(columnIndex: number, path: string, text: string): boolean {
     const count = this.columns.length;
@@ -2390,10 +2485,6 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       if (target === null) continue;
 
       if (target.dataPath === path && column.baselineText === text) return true;
-
-      const mirroredSchema = !isSchemaPath(target.dataPath) && path === deriveSchemaPath(target.dataPath);
-
-      if (mirroredSchema && column.baselineSchemaText === text) return true;
     }
 
     return false;
@@ -2445,7 +2536,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     }
 
     if (this.isColumnDirty(columnIndex)) {
-      // 本面板另一栏刚写出去的那一份不是外部变化：保留本栏草稿、不记冲突，两栏之间永不弹冲突框（D-15 / D-16）
+      // 一栏一条路径之后，同一面板内不会出现两栏同路径；这里认的是兄弟 schema 栏刚写出的 `t.schema.json`
       if (this.isSamePanelWrite(columnIndex, path, text)) return;
 
       this.recordPendingConflict(columnIndex, path, text);

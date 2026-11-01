@@ -41,6 +41,21 @@
   background: rgba(0, 0, 0, 0.12);
 }
 
+.etable-column-duplicate-flash {
+  animation: etable-duplicate-flash 300ms ease-in-out 2;
+}
+
+@keyframes etable-duplicate-flash {
+  0%,
+  100% {
+    box-shadow: none;
+  }
+
+  50% {
+    box-shadow: inset 0 0 0 2px rgba(22, 119, 255, 0.9);
+  }
+}
+
 .etable-header,
 .etable-row {
   display: grid;

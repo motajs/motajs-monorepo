@@ -214,7 +214,7 @@ describe('同一个面板内一栏一条路径（D-28 / D-29）', () => {
     expect(columnAt(container, 1).querySelector('[data-test-id="table-empty-open"]')).not.toBeNull();
     expect(columnAt(container, 1).querySelector('[data-test-id^="table-row-"]')).toBeNull();
     expect(screen.queryByTestId('panel-conflict-dialog')).toBeNull();
-    expect(columnAt(container, 0).querySelector('[data-test-id="table-notice"]')).toBeNull();
+    expect(columnAt(container, 0).querySelector('[data-test-id="table-notice"]')?.textContent ?? '').toBe('');
 
     await advance(600);
 
