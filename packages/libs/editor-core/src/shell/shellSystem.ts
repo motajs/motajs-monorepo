@@ -857,8 +857,13 @@ export class ShellSystem implements IShellSystem {
         if (choice === PanelCloseChoice.Discard) instance.onDiscard?.();
 
         // 「保存并关闭」：面板刚把草稿写进缓冲，外壳这时才把缓冲打到磁盘，写完才真正关标签；
-        // 「不保存关闭」不写盘——丢弃钩子已经把该路径待写丢掉，再写盘等于把丢弃变成一次写盘
-        if (choice === PanelCloseChoice.Save) await this.flushPendingContent();
+        // 「不保存关闭」不写盘——丢弃钩子已经把该路径待写丢掉，再写盘等于把丢弃变成一次写盘。
+        // 写盘失败或仍有待写（含被冲突规则跳过的条目）时直接返回：标签与面板保持打开，失败可见于既有提示
+        if (choice === PanelCloseChoice.Save) {
+          const flushed = await this.flushPendingContent();
+
+          if (!flushed) return;
+        }
 
         await this.discardTab(tabId, true);
         return;
@@ -1181,14 +1186,23 @@ export class ShellSystem implements IShellSystem {
   }
 
   /**
-   * 把缓冲里全部待写内容打到磁盘；写盘失败只记日志，绝不打断标签状态机或抛给点标签的人
+   * 把缓冲里全部待写内容打到磁盘，并回答「现在能不能丢弃标签」
+   *
+   * 真表示这次尝试之后缓冲已经空了、可以安全关闭；假表示写盘抛错或仍有待写（包括被冲突规则
+   * 跳过的条目），必须保持标签与面板。假值是全局判据——不区分待写属于哪个标签，因此一个自身
+   * 没有待写的标签，在别处有未决写入时同样会被挡住；这不是静默失败，待写还在时菜单行既有的
+   * 「正在等待保存」提示就在屏幕上，它就是假值的可见状态。
+   * @returns 缓冲已空时为 true；写盘抛错或仍有待写时为 false
    */
-  private async flushPendingContent(): Promise<void> {
+  private async flushPendingContent(): Promise<boolean> {
     try {
       await this.resourceSystem.flushAllContent();
     } catch (error: unknown) {
       logger.error('resource.flushFailed', String(error));
+      return false;
     }
+
+    return !this.resourceSystem.hasAnyPendingContent();
   }
 }
 

@@ -1711,26 +1711,40 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
 
   /**
    * 把所有脏分类写盘，成功与否交给调用方决定是否提示
-   * @returns 至少真正写入一份列表时为 true
+   *
+   * 成功判据是「快照里每个脏分类都不再 `unsaved`」：任一分类被守卫跳过、写失败或仍为脏，
+   * 整次都算失败——不再是「至少写成功一份就算成功」。
+   * @returns 快照里所有脏分类都真正写成功时为 true；快照为空时为 false
    */
   private async saveAll(): Promise<boolean> {
-    const ids = [...this.states.keys()];
-    let written = false;
+    const snapshot: IAssetCategory[] = [];
 
-    for (const categoryId of ids) {
-      const state = this.states.get(categoryId);
-
-      if (state === undefined || !state.unsaved) continue;
+    for (const [categoryId, state] of this.states) {
+      if (!state.unsaved) continue;
 
       const category = this.findCategory(categoryId);
 
       if (category === undefined) continue;
 
-      // 被守卫跳过与写盘失败都返回 false，因此「什么都没写却弹已保存」不可能出现
-      if (await this.writeCategory(categoryId, category, state)) written = true;
+      snapshot.push(category);
     }
 
-    return written;
+    for (const category of snapshot) {
+      const state = this.states.get(category.id);
+
+      if (state === undefined) continue;
+
+      await this.writeCategory(category.id, category, state);
+    }
+
+    // 一份被守卫跳过、一份写失败、或任何一份仍是脏，整次关闭都不得结算为保存
+    for (const category of snapshot) {
+      const state = this.states.get(category.id);
+
+      if (state !== undefined && state.unsaved) return false;
+    }
+
+    return snapshot.length > 0;
   }
 
   /**
@@ -1750,6 +1764,10 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
 
   /**
    * 响应关闭弹窗上的一个选择：保存分支先落盘，失败时留在弹窗里并结算为取消
+   *
+   * 失败有两层来源：`AssetPanel.saveAll` 里任一分类没写成功，或面板自己按快照逐条
+   * `IEditorPanelContext.flushResource` 时写盘抛错。两层都结算 `Cancel` 并恢复脏标记，
+   * 弹窗留在屏幕上、待写保留；外壳的布尔只是第二层保险，兜住任何「返回 Save 却仍有待写」的面板。
    * @param choice 用户的选择
    */
   private async answerCloseDialog(choice: PanelCloseChoice): Promise<void> {
@@ -1761,12 +1779,38 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
     this.closeDialogState = { open: true, saving: true };
     this.publish(this.store.state.status);
 
-    if (await this.saveAll()) {
-      this.settleCloseDialog(PanelCloseChoice.Save);
+    // 关闭前先拍下需要写盘的脏分类：保存成功后按这份快照逐条 flush，写盘失败时也按它恢复脏标记
+    const snapshot: IAssetCategory[] = [];
+
+    for (const [categoryId, state] of this.states) {
+      if (!state.unsaved) continue;
+
+      const category = this.findCategory(categoryId);
+
+      if (category === undefined) continue;
+
+      snapshot.push(category);
+    }
+
+    if (!(await this.saveAll())) {
+      this.settleCloseDialog(PanelCloseChoice.Cancel, this.store.state.error ?? '保存失败');
       return;
     }
 
-    this.settleCloseDialog(PanelCloseChoice.Cancel, this.store.state.error ?? '保存失败');
+    try {
+      for (const category of snapshot) await this.context.flushResource(category.listPath);
+    } catch {
+      for (const category of snapshot) {
+        const state = this.states.get(category.id);
+
+        if (state !== undefined) state.unsaved = true;
+      }
+
+      this.settleCloseDialog(PanelCloseChoice.Cancel, '写入失败，请重试。');
+      return;
+    }
+
+    this.settleCloseDialog(PanelCloseChoice.Save);
   }
 
   /**

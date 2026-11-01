@@ -290,9 +290,11 @@ describe('ShellSystem 外壳落盘点', () => {
       }),
     ).toBe(true);
     expect(system.core.resourceSystem.listPendingPaths()).toEqual([TARGET_PATH]);
-    expect(await system.fs.readFile(TARGET_PATH)).toBe(OLD_CONTENT);
 
+    // FakeFileSystem 的 failing 同时作用于读：先清掉故障才能读回磁盘，确认失败那次没有改动磁盘
     system.fs.failing.delete(TARGET_PATH);
+
+    expect(await system.fs.readFile(TARGET_PATH)).toBe(OLD_CONTENT);
 
     await system.core.shellSystem.closeTab(secondTab);
 
