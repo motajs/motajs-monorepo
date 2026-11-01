@@ -276,6 +276,39 @@ describe('同一个面板内一栏一条路径（D-28 / D-29）', () => {
     expect(container.querySelector('[data-test-id="table-column-duplicate-flash"]')).toBeNull();
   });
 
+  // 本栏有自己的待写内容时，另一栏改 schema 仍能让本栏在同一个合并窗口内换成新的输入控件
+  it('本栏待写时联动刷新仍然发生（ignorePendingWrite 放行口）', async () => {
+    const fs = new FakeFileSystem();
+
+    seed(fs, 't', { a: '1' }, { type: 'object', properties: { a: { type: 'string' } } });
+    const { system, created } = await createTableSystem(fs);
+    const panel = await openTablePanel(system, created);
+
+    panel.setTable(dataTarget('t'), 0);
+    panel.setTable(schemaTarget('t'), 1);
+    await panel.onSwitchIn();
+
+    const { container } = render(createElement(system.shellSystem.render()));
+
+    vi.useFakeTimers();
+
+    await act(async () => {
+      await panel.commitValue("['a']", 'x', 0);
+    });
+    await act(async () => {});
+
+    expect(system.resourceSystem.listPendingPaths()).toContain(tableDataPath('t'));
+    expect(columnAt(container, 0).querySelector('[data-test-id="table-input-a"] textarea')).not.toBeNull();
+
+    await act(async () => {
+      await panel.commitValue("['properties']['a']['type']", 'number', 1);
+    });
+    await advance(50);
+
+    expect(columnAt(container, 0).querySelector('[data-test-id="table-input-a"] .ant-input-number')).not.toBeNull();
+    expect(system.resourceSystem.listPendingPaths()).toContain(tableDataPath('t'));
+  });
+
   // 数据栏因代码编辑器写回而 unsaved 时，兄弟 schema 栏写盘不被记成外部冲突：不弹框、草稿保留、schema 写入被接受
   it('数据栏 unsaved 时兄弟 schema 栏写盘：不记外部冲突、草稿保留、schema 写入被接受', async () => {
     const fs = new FakeFileSystem();

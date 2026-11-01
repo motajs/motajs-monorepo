@@ -802,7 +802,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
         onLayout: (columnCount): void => {
           this.visibleColumnCount = columnCount;
         },
-        onRetry: (columnIndex): void => void this.refresh(columnIndex),
+        onRetry: (columnIndex): void => void this.refresh(columnIndex, true),
         getColumnRef: this.columnRefAt,
         applyEdit: (columnIndex, edit, document): ITableDocument | null => this.applyEdit(columnIndex, edit, document),
         saveDocument: (columnIndex, document): Promise<ContentSaveStatus> => this.saveDocument(columnIndex, document),
@@ -1018,7 +1018,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   async onSwitchIn(): Promise<void> {
     const count = this.columns.length;
 
-    for (let index = 0; index < count; index += 1) await this.refresh(index);
+    for (let index = 0; index < count; index += 1) await this.refresh(index, true);
 
     this.refreshAwaitingPickers();
   }
@@ -2822,9 +2822,13 @@ export class TablePanel implements IEditorPanel, ITablePanel {
    * 刷新原则上**原地更新**：该栏已就绪且已有行树时不再先切成加载态，避免整棵行树卸载后重挂
    * （P26）；仅首载（尚无就绪行树）与失败重试才发加载态。读到原文后按项目约定解析：合规即打开并
    * 记住系统前缀；非合规则暂存宽松解析值并请用户确认剥离注释；无效则落固定错误态。
+   *
+   * `ignorePendingWrite` 只跳过「本栏有待写」这一项，`pendingConflict` 永不放过；它是安全的，因为
+   * 这些入口重读的是资源层，而资源层读取优先命中缓冲，读到的是用户刚确认的那一份，不是磁盘上的旧内容。
    * @param columnIndex 栏序号（0 基）
+   * @param ignorePendingWrite 为真时只跳过「本栏有待写」这一项早退（联动刷新 / 切回 / 失败重试传它）
    */
-  private async refresh(columnIndex: number = 0): Promise<void> {
+  private async refresh(columnIndex: number = 0, ignorePendingWrite: boolean = false): Promise<void> {
     const column = this.columnAt(columnIndex);
     const target = column.target;
 
@@ -2833,11 +2837,9 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       return;
     }
 
-    // 冲突未表态且该栏仍有待写时不重读磁盘：此刻磁盘上正是外部那一份，重读会把内存草稿换成它，
-    // 随后「保存编辑器的」写回去的也就成了外部内容。这条早退不发布任何状态，面板保持原样。
-    // 只判「有没有冲突」会把别的栏写同一路径留下的待写镜像误判成本栏的草稿（D-15 的联动刷新全靠
-    // 这一条转调 `TablePanel.refresh`），所以两个判据必须同时成立；真正未表态的冲突路径一定还在待写里。
-    if (column.pendingConflict !== undefined && column.pendingWrite) return;
+    // 冲突未表态时磁盘上正是外部那一份，绝不重读：重读会把内存草稿换成它，「保存编辑器的」也就失去意义。
+    // 本栏有待写时默认不重读，但读取优先命中缓冲的入口（联动刷新 / 切回 / 失败重试）可以只跳过这一项。
+    if (column.pendingConflict !== undefined || (!ignorePendingWrite && column.pendingWrite)) return;
 
     // 该栏有未落盘改动时不重读覆盖内存，保住手动保存下的内存改动（T-02.1-20-01）
     if (column.unsaved || column.unsavedSchema || column.draftDirty) return;
@@ -2912,7 +2914,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       if (target === null) continue;
       if (target.dataPath !== changedPath && deriveSchemaPath(target.dataPath) !== changedPath) continue;
 
-      void this.refresh(index);
+      void this.refresh(index, true);
     }
   }
 }
