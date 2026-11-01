@@ -1,8 +1,9 @@
-import { act, cleanup, configure, render } from '@testing-library/react';
+import { act, cleanup, configure, render, screen } from '@testing-library/react';
 import { EditorCore, IEditorPanel, IEditorPanelFactoryParam } from '@motajs/editor-core';
 import { createElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ITablePanelTarget, tablePanelType, TablePanel } from '..';
+import { deriveSchemaPath, ITablePanelTarget, tablePanelType, TablePanel } from '..';
+import { ICodeEditorOpener } from '../../react';
 import { createTableHarness, FakeFileSystem } from './fixtures';
 
 configure({ testIdAttribute: 'data-test-id' });
@@ -37,15 +38,25 @@ function tableDataPath(name: string): string {
   return `${name}.json`;
 }
 
+// schema 文件路径（按 `xxx.schema.json` 约定推导）
+function tableSchemaPath(name: string): string {
+  return deriveSchemaPath(tableDataPath(name));
+}
+
 // 数据表目标：数据文件路径按 `xxx.json` 约定
 function dataTarget(name: string): ITablePanelTarget {
   return { dataPath: tableDataPath(name) };
 }
 
+// schema 表目标：数据路径指向 `xxx.schema.json` 的 schema 视图
+function schemaTarget(name: string): ITablePanelTarget {
+  return { dataPath: tableSchemaPath(name) };
+}
+
 // 以文本预置一张表的数据与 schema
 function seed(fs: FakeFileSystem, name: string, data: unknown, schema: unknown): void {
   fs.seed(tableDataPath(name), JSON.stringify(data));
-  fs.seed(`${name}.schema.json`, JSON.stringify(schema));
+  fs.seed(tableSchemaPath(name), JSON.stringify(schema));
 }
 
 /**
@@ -72,6 +83,22 @@ async function createTableSystem(fs: FakeFileSystem): Promise<{ system: EditorCo
   return { system, created };
 }
 
+/**
+ * 在首个标签页打开表格面板并返回其实例
+ * @param system 编辑器核心
+ * @param created 面板实例收集数组
+ * @returns 首个表格面板实例
+ */
+async function openTablePanel(system: EditorCore, created: TablePanel[]): Promise<TablePanel> {
+  const tabId = system.shellSystem.listTabs()[0].id;
+
+  await act(async (): Promise<void> => {
+    await system.shellSystem.openPanelInTab(tabId, tablePanelType.id);
+  });
+
+  return created[0];
+}
+
 // 让已排队的资源读取与外壳切换微任务全部落定，再冲刷 React 更新
 async function flush(): Promise<void> {
   await act(async (): Promise<void> => {
@@ -79,6 +106,36 @@ async function flush(): Promise<void> {
       setTimeout(resolve, 0);
     });
   });
+}
+
+// 推进假定时器并冲刷一次 React 更新：合并通知与闪烁消失都是定时器驱动的
+async function advance(milliseconds: number): Promise<void> {
+  await act(async (): Promise<void> => {
+    await vi.advanceTimersByTimeAsync(milliseconds);
+  });
+}
+
+// 按渲染顺序取第 index 栏的容器
+function columnAt(container: HTMLElement, index: number): HTMLElement {
+  const columns = container.querySelectorAll<HTMLElement>('.etable-column');
+  const column = columns[index];
+
+  if (column === undefined) throw new Error(`栏 ${index} 缺失`);
+
+  return column;
+}
+
+// 读取某栏内某下拉单元格当前选中的显示文本
+function selectText(column: HTMLElement, testId: string): string | null {
+  const cell = column.querySelector(`[data-test-id="${testId}"]`);
+  const value = cell === null ? null : cell.querySelector('.ant-select-content-value');
+
+  return value === null ? null : value.textContent;
+}
+
+// 读取某路径在裸磁盘上的解析值：不经缓冲，用来证明写盘确实发生
+async function readDisk(fs: FakeFileSystem, path: string): Promise<unknown> {
+  return JSON.parse(await fs.readFile(path));
 }
 
 describe('另一个标签已持有该路径（D-28）', () => {
@@ -94,12 +151,7 @@ describe('另一个标签已持有该路径（D-28）', () => {
     const firstTab = system.shellSystem.listTabs()[0].id;
 
     await act(async () => {
-      await system.shellSystem.openPanelInTab(
-        firstTab,
-        tablePanelType.id,
-        undefined,
-        tableDataPath('a'),
-      );
+      await system.shellSystem.openPanelInTab(firstTab, tablePanelType.id, undefined, tableDataPath('a'));
     });
 
     created[0].setTable(dataTarget('a'), 0);
@@ -129,5 +181,144 @@ describe('另一个标签已持有该路径（D-28）', () => {
     expect(activeTabs.length).toBe(1);
     expect(container.querySelector('.editor-shell-content')?.textContent).toContain('value');
     expect(await fs.readFile(tableDataPath('a'))).toBe(seedText);
+  });
+});
+
+describe('同一个面板内一栏一条路径（D-28 / D-29）', () => {
+  // 第 1 栏选到第 0 栏已持有的路径：第 1 栏仍是空栏，第 0 栏闪 600 毫秒后自动消失，无弹窗与提示
+  it('选到同面板另一栏持有的路径：本栏不改目标、持有栏闪 600 毫秒后消失', async () => {
+    const fs = new FakeFileSystem();
+
+    seed(fs, 't', { a: '1' }, { type: 'object', properties: { a: { type: 'string' } } });
+    const { system, created } = await createTableSystem(fs);
+    const panel = await openTablePanel(system, created);
+
+    panel.setTable(dataTarget('t'), 0);
+    await panel.onSwitchIn();
+
+    const { container } = render(createElement(system.shellSystem.render()));
+
+    vi.useFakeTimers();
+
+    await act(async () => {
+      panel.setTable(dataTarget('t'), 1);
+    });
+
+    expect(panel['columns'][1].target).toBeNull();
+    expect(panel['columns'][0].target?.dataPath).toBe(tableDataPath('t'));
+
+    const owner = columnAt(container, 0);
+
+    expect(owner.getAttribute('data-test-id')).toBe('table-column-duplicate-flash');
+    expect(owner.classList.contains('etable-column-duplicate-flash')).toBe(true);
+    expect(columnAt(container, 1).querySelector('[data-test-id="table-empty-open"]')).not.toBeNull();
+    expect(columnAt(container, 1).querySelector('[data-test-id^="table-row-"]')).toBeNull();
+    expect(screen.queryByTestId('panel-conflict-dialog')).toBeNull();
+    expect(columnAt(container, 0).querySelector('[data-test-id="table-notice"]')).toBeNull();
+
+    await advance(600);
+
+    expect(columnAt(container, 0).getAttribute('data-test-id')).not.toBe('table-column-duplicate-flash');
+    expect(columnAt(container, 0).classList.contains('etable-column-duplicate-flash')).toBe(false);
+  });
+
+  // 同一栏重新选自己已经拿着的路径：查重跳过本栏自己，照旧走换目标 / 刷新
+  it('同一栏重复选自己已持有的路径不被拒绝，照旧刷新', async () => {
+    const fs = new FakeFileSystem();
+
+    seed(fs, 't', { a: '1' }, { type: 'object', properties: { a: { type: 'string' } } });
+    const { system, created } = await createTableSystem(fs);
+    const panel = await openTablePanel(system, created);
+
+    panel.setTable(dataTarget('t'), 0);
+    await panel.onSwitchIn();
+
+    const { container } = render(createElement(system.shellSystem.render()));
+
+    await flush();
+
+    const readSpy = vi.spyOn(system.resourceSystem, 'readContent');
+
+    readSpy.mockClear();
+
+    await act(async () => {
+      panel.setTable(dataTarget('t'), 0);
+    });
+    await flush();
+
+    expect(panel['columns'][0].target?.dataPath).toBe(tableDataPath('t'));
+    expect(readSpy.mock.calls.some((call) => call[0] === tableDataPath('t'))).toBe(true);
+    expect(columnAt(container, 0).getAttribute('data-test-id')).not.toBe('table-column-duplicate-flash');
+    expect(columnAt(container, 0).querySelector('[data-test-id="table-row-a"]')).not.toBeNull();
+  });
+
+  // 两条不同路径照旧各占一栏；同一张表的 schema 路径与数据路径不是同一条，可以各自打开
+  it('没人持有的路径与 schema 路径照旧打开', async () => {
+    const fs = new FakeFileSystem();
+
+    seed(fs, 't', { a: '1' }, { type: 'object', properties: { a: { type: 'string' } } });
+    seed(fs, 'u', { b: 'x' }, { type: 'object', properties: { b: { type: 'string' } } });
+    const { system, created } = await createTableSystem(fs);
+    const panel = await openTablePanel(system, created);
+
+    panel.setTable(dataTarget('t'), 0);
+    panel.setTable(dataTarget('u'), 1);
+    panel.setTable(schemaTarget('t'), 2);
+    await panel.onSwitchIn();
+
+    setWindowWidth(1600);
+
+    const { container } = render(createElement(system.shellSystem.render()));
+
+    expect(columnAt(container, 0).querySelector('[data-test-id="table-row-a"]')).not.toBeNull();
+    expect(columnAt(container, 1).querySelector('[data-test-id="table-row-b"]')).not.toBeNull();
+    expect(columnAt(container, 2).querySelector('[data-test-id="schema-banner"]')).not.toBeNull();
+    expect(container.querySelector('[data-test-id="table-column-duplicate-flash"]')).toBeNull();
+  });
+
+  // 数据栏因代码编辑器写回而 unsaved 时，兄弟 schema 栏写盘不被记成外部冲突：不弹框、草稿保留、schema 写入被接受
+  it('数据栏 unsaved 时兄弟 schema 栏写盘：不记外部冲突、草稿保留、schema 写入被接受', async () => {
+    const fs = new FakeFileSystem();
+
+    seed(fs, 't', { a: '1' }, { type: 'object', properties: { a: { type: 'string' } } });
+    const { system, created } = await createTableSystem(fs);
+    const panel = await openTablePanel(system, created);
+
+    panel.setTable(dataTarget('t'), 0);
+    panel.setTable(schemaTarget('t'), 1);
+    await panel.onSwitchIn();
+
+    const { container } = render(createElement(system.shellSystem.render()));
+
+    const codeEditor: ICodeEditorOpener = {
+      open: vi.fn(async (): Promise<string | null> => JSON.stringify({ a: '1', b: '2' })),
+    };
+
+    await act(async () => {
+      await panel.openCurrentViewInCodeEditor(codeEditor, 0);
+    });
+
+    expect(panel['columns'][0].unsaved).toBe(true);
+    expect(panel['columns'][0].data).toEqual({ a: '1', b: '2' });
+
+    vi.useFakeTimers();
+
+    await act(async () => {
+      await panel.commitValue("['properties']['a']['type']", 'number', 1);
+    });
+    await act(async () => {
+      await panel.save(1);
+    });
+    await advance(50);
+
+    expect(panel['columns'][0].pendingConflict).toBeUndefined();
+    expect(panel['columns'][0].unsaved).toBe(true);
+    expect(panel['columns'][0].data).toEqual({ a: '1', b: '2' });
+    expect(screen.queryByTestId('panel-conflict-dialog')).toBeNull();
+    expect(selectText(columnAt(container, 1), 'table-input-properties-a-type')).toBe('number');
+    expect(await readDisk(fs, tableSchemaPath('t'))).toEqual({
+      type: 'object',
+      properties: { a: { type: 'number' } },
+    });
   });
 });

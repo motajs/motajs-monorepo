@@ -121,8 +121,8 @@ function selectText(column: HTMLElement, testId: string): string | null {
 }
 
 describe('同面板依赖栏即时同步（P18 / P20）', () => {
-  // 同一面板内改 schema 后，另一 schema 栏与主数据表在确认后的 50 毫秒内跟随，不再需要点保存或切入 / focus
-  it('改 schema 后同面板的其它 schema 栏与主数据表立即同步', async () => {
+  // 同一面板内改 schema 后，主数据表在确认后的 50 毫秒内跟随，不再需要点保存或切入 / focus
+  it('改 schema 后同面板的主数据表立即同步', async () => {
     const fs = new FakeFileSystem();
 
     seed(fs, 't', { a: '1' }, { type: 'object', properties: { a: { type: 'string' } } });
@@ -131,14 +131,13 @@ describe('同面板依赖栏即时同步（P18 / P20）', () => {
 
     panel.setTable(dataTarget('t'), 0);
     panel.setTable(schemaTarget('t'), 1);
-    panel.setTable(schemaTarget('t'), 2);
     await panel.onSwitchIn();
 
-    setWindowWidth(1500);
+    setWindowWidth(1000);
 
     const { container } = render(createElement(system.shellSystem.render()));
 
-    expect(selectText(columnAt(container, 2), 'table-input-properties-a-type')).toBe('string');
+    expect(selectText(columnAt(container, 1), 'table-input-properties-a-type')).toBe('string');
     expect(columnAt(container, 0).querySelector('[data-test-id="table-input-a"] textarea')).not.toBeNull();
 
     vi.useFakeTimers();
@@ -148,7 +147,7 @@ describe('同面板依赖栏即时同步（P18 / P20）', () => {
     });
     await advance(50);
 
-    expect(selectText(columnAt(container, 2), 'table-input-properties-a-type')).toBe('number');
+    expect(selectText(columnAt(container, 1), 'table-input-properties-a-type')).toBe('number');
     expect(columnAt(container, 0).querySelector('[data-test-id="table-input-a"] .ant-input-number')).not.toBeNull();
   });
 
@@ -190,8 +189,8 @@ describe('同面板依赖栏即时同步（P18 / P20）', () => {
 });
 
 describe('代码编辑器写回与撤销 / 重做也走同面板同步（P18 / P20）', () => {
-  // 代码编辑器整份写回 schema 后，同面板其它 schema 栏与主数据表立即同步
-  it('代码编辑器写回 schema 后同面板其它栏立即同步', async () => {
+  // 代码编辑器整份写回 schema 后，同面板主数据表立即同步
+  it('代码编辑器写回 schema 后同面板主数据表立即同步', async () => {
     const fs = new FakeFileSystem();
 
     seed(fs, 't', { a: '1' }, { type: 'object', properties: { a: { type: 'string' } } });
@@ -200,10 +199,9 @@ describe('代码编辑器写回与撤销 / 重做也走同面板同步（P18 / P
 
     panel.setTable(dataTarget('t'), 0);
     panel.setTable(schemaTarget('t'), 1);
-    panel.setTable(schemaTarget('t'), 2);
     await panel.onSwitchIn();
 
-    setWindowWidth(1500);
+    setWindowWidth(1000);
 
     const { container } = render(createElement(system.shellSystem.render()));
     const codeEditor: ICodeEditorOpener = {
@@ -218,7 +216,7 @@ describe('代码编辑器写回与撤销 / 重做也走同面板同步（P18 / P
     await panel.save(1);
     await flush();
 
-    expect(selectText(columnAt(container, 2), 'table-input-properties-a-type')).toBe('number');
+    expect(selectText(columnAt(container, 1), 'table-input-properties-a-type')).toBe('number');
     expect(columnAt(container, 0).querySelector('[data-test-id="table-input-a"] .ant-input-number')).not.toBeNull();
   });
 

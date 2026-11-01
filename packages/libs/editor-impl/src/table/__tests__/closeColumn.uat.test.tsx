@@ -193,11 +193,12 @@ describe('关闭后空栏可被「编辑 Schema」复用（P15）', () => {
     const fs = new FakeFileSystem();
 
     seed(fs, 'demo', { a: '1' }, { type: 'object', properties: { a: { type: 'string' } } });
+    seed(fs, 'other', { b: 'x' }, { type: 'object', properties: { b: { type: 'string' } } });
     const system = await createTableHarness(fs);
     const panel = await openPanel(system);
 
     panel.setTable(dataTarget('demo'), 0);
-    panel.setTable(dataTarget('demo'), 1);
+    panel.setTable(dataTarget('other'), 1);
     await panel.onSwitchIn();
     setWindowWidth(1000);
 
