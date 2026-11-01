@@ -711,3 +711,114 @@
 - **撤销 / 重做不得绕过冲突守卫**：`TablePanel.applyUndoRedo` 走的安静保存同样受 `TablePanel.saveDocument` 入口守卫约束。
 
 **后续落地与收口顺序不变：`04.3-17`（G2 实现）、`04.3-18`（G1 实现）、`04.3-19`（重新收口）。**
+
+---
+
+## Plan 20 — 一栏一条路径去重的接口与命名
+
+状态：待确认
+
+**要做什么：** 在把「一条路径最多只有一个编辑者」落实到表格面板内部之前，先把要写的名字、要改的行为口径、以及会牵动的既有测试摊开给用户确认。本节只写文档，**不改任何源码**；`04.3-21` 只按本节落地，不再二次拍板。
+
+### 三句话讲清这件事
+
+1. 一个文件在磁盘上只有一份，所以「一条路径同时被两个地方编辑」这件事本身就是矛盾的。10 月 30 日已经按路径去掉了「同一个文件开两个标签」（D-26），但**同一个表格面板的两栏**还留着这个口子。
+2. 两栏共享一份路径缓冲时，谁先按下确认谁就可能被另一个人的写入悄悄覆盖，还得靠「最后写盘者胜」这种结果去解释；用户选择从结构上关掉这个口子，而不是继续打补丁。
+3. 关掉之后，用户选到「已经有地方在编辑」的文件时不需要弹窗或报错：同面板另一栏拿着它，就让那一栏闪一下边框告诉用户「在这边」；别的标签拿着它，就切到那个标签去。两种情况**本栏都保持原来的目标不变**。
+
+### 取代关系（写死，21 不再二次拍板）
+
+- **D-28（新增）· 一条路径最多只有一个编辑者：** 一条路径任何时刻最多只有一个标签持有它（承接 D-26），并且**一个表格面板内最多只有一栏**持有它。去重键是数据文件路径；schema 路径由数据路径推导，**不单独查重**，因此「一栏看数据、一栏看 schema」仍然合法（`panelSync` 的联动同步正是建立在这个组合上）。
+- **D-29（新增）· 被取代的旧决策与旧产物：** `04.3-CONTEXT.md` 的 **D-12 作废**（不再允许同一张表在同一面板的两栏同时打开）、**D-13 作废**（两栏共享同一路径缓冲与「最后写盘者胜」这套前提不再成立）。随之作废的只有 `TablePanel.isSamePanelWrite` 里「另一栏数据目标推导出的镜像 schema」那一支与两栏同表的测试，**不是整个方法**——它的「另一栏直接持有这次变化路径」那一支必须保留（兄弟 schema 栏写 `t.schema.json` 走的就是它），否则数据栏为脏时兄弟 schema 栏写盘会被误判成外部冲突。这些属于用户明确接受的功能性调整，不是回归。
+- **保留不变（D-15 要收窄表述）：** D-15 的「同面板联动刷新」（另一栏改了 schema，本栏跟着刷新）、D-16 的外部写入冲突规则、D-11 的「有待写即未保存」、D-25 的「不得用字符串比较冒充来源」。D-15 前半句描述的「两栏同表后谁赢」场景已随 D-28 消失，`04.3-CONTEXT.md` 的 D-15 行末已追加这条取代说明；后半句「同面板不弹冲突」仍适用于「数据栏 + 它的兄弟 schema 栏」这一仍然合法的组合。`pendingWrite` 仍然是按路径的镜像，**不做**任何写入归属 / 来源标记方面的工作。
+
+### 行为写死（21 只照做）
+
+| 情形 | 行为 |
+|------|------|
+| 本栏重新选自己已经拿着的那条路径 | 允许，照旧走换目标 / 刷新（查重跳过本栏自己）。 |
+| 同面板另一栏拿着这条路径 | **不改本栏目标**；让拿着它的那一栏边框闪两下；不弹窗、不提示、不写任何文案；也不写盘。 |
+| 另一个标签拿着这条路径 | **切到那个标签**（复用 D-26 的切标签语义，切走时照常触发一次落盘）；本栏保持原目标。 |
+| 这条路径没人拿着 | 照旧换目标、刷新。 |
+| 空串 / 没有路径 | 查重不参与；照旧走原有分支。 |
+| schema 路径 | 按普通路径比对：`t.json` 与 `t.schema.json` 是两条路径，可以各占一栏；`t.schema.json` 与另一栏的 `t.schema.json` 才是重复。 |
+| 关掉某一栏 | 该栏目标归空，这条路径随之释放，可以重新打开（既有 `TablePanel.closeColumn` 语义不变）。 |
+
+### 查重跑在哪个入口（写死）
+
+查重写在 `TablePanel.setTable` 的**最前面**——在 `isColumnDirty` 的换目标写回、任何复位、任何 `publish` / `refresh` 之前。理由：`TablePanel.setTable` 是目标赋值的唯一入口，空栏选择器（`TablePanel.openIntoColumn`）、空栏新建（`TablePanel.createIntoColumn`）、「编辑 Schema」复用空栏（`TablePanel.openSchemaPanel`）、打开参数还原（`tablePanelType.create` 里的 `panel.setTable(target)`）全部经过它，把判据放在这里等于一次覆盖四条入口，不需要在四个调用点各写一遍。
+
+反查用私有方法 `TablePanel.findColumnByPath(path, exceptColumnIndex): number`：返回持有该数据路径的栏序号，没有则 `-1`；`exceptColumnIndex` 是发起查重的那一栏，跳过自己。
+
+**查重只比 `ITablePanelTarget.dataPath`。** schema 路径由数据路径推导，不单独查重：同一张表的「数据栏 + schema 栏」是两条不同路径，仍然允许并排（`panelSync` 的联动同步依赖它）。
+
+### 闪烁提示（已标 待确认）
+
+被拒绝的那一栏不能凭空消失，得让用户看见「文件在那边」，所以让拿着它的那一栏边框闪两下——只闪、不弹。
+
+| 名称 | 种类 | 文件位置 | 用途 |
+|------|------|----------|------|
+| `ITablePanelColumn.duplicateFlash` | 栏记录字段，`boolean` | `packages/libs/editor-impl/src/table/tablePanel.ts` | 表示这一栏刚被「有人想开它已经拿着的文件」提示过；由 `TablePanel.flashDuplicateColumn` 置真、定时器清假。 |
+| `ITablePanelViewState.duplicateFlash` | 视图状态字段，`boolean`（可选） | 同上 | 供栏根元素决定要不要带闪烁类名与测试标识。 |
+| `TablePanel.flashDuplicateColumn` | 方法，`(columnIndex: number) => void` | 同上 | 让指定栏闪两下；重复触发时重置定时器（不叠加、不排队）。 |
+| `DUPLICATE_FLASH_MS` | 模块级数字字面量常量，`600` | 同上 | 一次闪烁的总时长。 |
+| `TablePanel.duplicateFlashTimers` | 私有实例字段，`Map<number, ReturnType<typeof setTimeout>>` | 同上 | 每栏一个定时器句柄；换目标 / 关栏 / 释放时先清掉，避免定时器落在已复用的栏上。 |
+| `etable-column-duplicate-flash` | CSS 类名 | `packages/libs/editor-impl/src/shared/schemaForm/schemaForm.css` | 加在栏根 `div` 上；用内阴影画边框，不改布局、不影响 `flex` 尺寸。 |
+| `etable-duplicate-flash` | CSS 关键帧名 | 同上 | `animation: etable-duplicate-flash 300ms ease-in-out 2`——**两次脉冲、共约 600 毫秒**。 |
+| `table-column-duplicate-flash` | `data-test-id` | `packages/libs/editor-impl/src/table/tablePanel.ts` 的栏根 `div` | 只在 `duplicateFlash` 为真时挂上（不要常驻，常驻会让 `getByTestId` 恒命中）。 |
+
+闪烁只加在**有目标的那一栏**的根元素上（空栏不可能持有路径），不改空栏根元素。
+
+取舍：只闪边框、不加文案——加了文案就要新增用户可见字符串与 i18n 口径，而这件事的语义是「你看那边」，闪烁已经足够；同时不弹 toast，因为这不是失败。
+
+### 跨标签切过去（已标 待确认）
+
+表格面板自己只知道「本面板的栏」，不知道「别的标签开着什么」，而它又不该直接碰外壳。因此需要一个新能力：面板问外壳「这条路径是不是已经开在别的标签里」。
+
+| 名称 | 种类 | 文件位置 | 用途 |
+|------|------|----------|------|
+| `IEditorPanelContext.focusResourceTab` | 接口方法，`(identifier: IResourceIdentifier) => boolean` | `packages/libs/editor-core/src/panel/types.ts` | 面板问外壳「这条路径是不是已经开在别的标签里」；**真** = 有标签持有它、切换已经发起（不等待完成）；**假** = 没有别的标签持有它，调用方可以继续换目标。JSDoc 写在接口源头，必须写明「同步返回、切换即发即忘」与「当前标签自己持有那条登记时返回假」。 |
+| `ResourceTabFocuser` | type，`(identifier: IResourceIdentifier) => boolean` | 同上 | `PanelContext` 构造时注入的那个函数类型；单独开别名而不是内联，因为函数类型超过一行会触发换行。 |
+| `PanelContext` 的构造函数第三个参数 | `focusResourceTab: ResourceTabFocuser` | `packages/libs/editor-core/src/panel/panelContext.ts` | 把面板的请求原样转给注入的函数。**必填**，不给默认值——给默认值会让漏接线变成「永远返回假」的静默降级。写明它只有一个调用点（`ShellSystem.createInstance`），公开面变化值得在确认时点一下。 |
+| `ShellSystem.focusResourceTab` | 私有方法，`(identifier: IResourceIdentifier) => boolean` | `packages/libs/editor-core/src/shell/shellSystem.ts` | 实现顺序写死：先 `normalizeResourcePath` 归一 → 空串返回假 → `ShellSystem.findTabByPath` 反查 → **没找到、或找到的就是当前活动标签时返回假** → 否则 `void ShellSystem.activateTab(ownerTabId)` 后返回真。返回值决定面板要不要改目标，所以必须在切换任何东西之前就能答出来。 |
+
+**为什么「当前标签自己持有就返回假」：** 标签登记只记录「这个标签是被哪条路径打开的」，用户把某一栏关掉后，那条登记还在；如果这时还返回真，这个文件在同一个标签里就再也打不开了（每次都被自己挡回去）。返回假之后允许本栏接手，登记暂时不改写——这条边界写进文档，不在本期修。
+
+**为什么不是 `Promise<boolean>`：** `TablePanel.setTable` 是同步方法（`ITablePanel.setTable` 返回 `void`），目标改不改必须在这一帧里定；异步化会把「不改目标」变成「先改再回滚」，中间会读盘、会刷新、会改版本号。
+
+**明确不做：** 不在 `IShellSystem` 上新增公开成员（这个能力只给面板上下文用）；不改 `ShellSystem.openPanelInTab` 的既有去重；不在列里换目标时改写标签登记。
+
+### 刷新守卫恢复「或」（写死，含必须的放行口）
+
+- **这是对已确认规则的修订，不是新提案：** `INTERFACE-NAME.md` 第 663 行（`## Plan 16` 的「切回时不得把草稿换成外部那一份」）与第 710 行（`## 追加确认（Plan 16，2026-10-31）` 的「切标签往返不得重读有未决冲突或待写的栏」）写死「`TablePanel.refresh`（以及所有转调它的刷新入口）在 `pendingConflict` 或 `pendingWrite` 为真时必须提前返回」。本条把其中的「所有转调它的刷新入口」修订为「三处显式传真 `ignorePendingWrite` 的入口只跳过 `pendingWrite`，`pendingConflict` 仍一律早退」。Plan 16 那两节的原文**不改**（它们是当时的确认记录），取代说明只写在本节；`04.3-21` 的 `<context>` 因此仍可同时引用两处，并以本节为最终口径。
+- **恢复：** `TablePanel.refresh` 的早退条件改回 `column.pendingConflict !== undefined || column.pendingWrite`，并删掉 17 留下的「两个判据必须同时成立」那段注释。
+- **必须同时加一条放行：** `TablePanel.refresh(columnIndex, ignorePendingWrite = false)` 新增第二个参数；为真时只跳过 `pendingWrite` 这一项，`pendingConflict` **永不放过**。`TablePanel.refreshDependents`（同面板联动刷新）、`TablePanel.onSwitchIn`（切回时刷新）、`TablePanel.onRetry`（失败重试）三处传真；`TablePanel.setTable` 保持默认（它在刷新前已经把 `pendingWrite` 复位）。
+- **为什么非加不可（写清证据，不留给实现时猜）：** 清单一恢复「或」，任何「本栏自己有内容还没落盘」的栏都不能再刷新。而 `TablePanel.refreshDependents` 只会去刷新「目标路径或它推导出的 schema 正好是被写那条」的栏——被刷新那一栏的镜像必然为真（数据栏把 schema 也算进 `TablePanel.refreshPendingWrites`），于是联动刷新被完全挡住；`refreshIdentity.uat` 的「内容变更后刷新仍更新为新值」与 `panelSync.uat` 的几条也都会被挡住。这正是 17 偏离 2 观察到的现象，只是当时被归因成「两栏同表」。
+- **为什么放行是安全的：** 这些入口重读的是资源层，而资源层读取优先命中缓冲，读到的是用户刚确认的那一份，不是磁盘上的旧内容；真正「磁盘上是外部那一份、不能重读」的场景只发生在 `pendingConflict` 存在时，而那一项不放过。
+- 不新增其它守卫、不引入写入归属判定、不改 `TablePanel.refreshPendingWrites` 的镜像口径。
+
+### 测试处置（写死，21 照做）
+
+- **整份删除：** `packages/libs/editor-impl/src/table/__tests__/twoColumnsSameTable.test.tsx`——五条用例描述的状态已不存在。其中唯一不是两栏专用的「外部写入仍按既有规则提示冲突」由既有 `externalChange.test.tsx` 的冲突用例覆盖（「外部写入与脏草稿……」那一组），删前先确认它仍在，否则把这一条搬进新测试文件而不是丢。
+- **改写：** `packages/libs/editor-impl/src/table/__tests__/panelSync.uat.test.tsx` 里把 `schemaTarget('t')` 同时放进第 1、2 栏的两条用例，改成「第 0 栏数据 + 第 1 栏 schema」（第 2 栏改为另一张表或删掉这一栏），保留原意——改 schema 后数据栏在 50 毫秒内跟着变；断言口径不变。
+- **改写：** `packages/libs/editor-impl/src/table/__tests__/closeColumn.uat.test.tsx` 里「关闭出来的空栏被『编辑 Schema』复用而非新开面板」那条，第 1 栏改开 `other`（并预置 `other` 的数据与 schema），保住原意——两栏都占满、关掉一栏后空出来的那栏被 `TablePanel.openSchemaPanel` 直接占用。
+- **新增（先红后绿）：** `packages/libs/editor-impl/src/table/__tests__/duplicatePath.test.tsx`，五条用例：(a) 选同面板另一栏持有的路径 → 本栏目标不变、持有栏带闪烁标识、约 600 毫秒后闪烁标识消失；(b) 选另一个标签持有的路径 → 那个标签变成活动标签、本栏目标不变；(c) 选一条没人持有的路径 → 照旧打开并显示内容；(d) 恢复「或」之后，本栏镜像为真时联动刷新仍然发生（数据栏在有自己待写内容时，仍然跟着另一栏改的 schema 变）；(e) 数据栏因代码编辑器写回而 `unsaved`（未落盘）+ 兄弟 schema 栏改 schema 并写盘 → 不弹冲突框、草稿与 `unsaved` 保留、schema 仍同步（钉住 `TablePanel.isSamePanelWrite` 里「另一栏直接持有这次变化路径」那一支）。
+- **收窄符号（不删方法）：** `TablePanel.isSamePanelWrite` 只删掉「另一栏数据目标推导出的镜像 schema」那一支（`!isSchemaPath(target.dataPath) && path === deriveSchemaPath(target.dataPath)` 加 `column.baselineSchemaText === text`；D-28 之后没有第二栏共用同一个数据路径，这一支不可能命中）；`target.dataPath === path && column.baselineText === text` 那一支与它在 `TablePanel.handleResourceChange` 脏分支里的调用必须保留——兄弟 schema 栏（`target.dataPath` 就是 `t.schema.json`）写盘后基线原文等于收到的原文，数据栏正是靠这一支认出「是自己兄弟栏写的」。理由是数据栏经「在代码编辑器中打开」确认写回后 `unsaved` 为真，`TablePanel.refresh` 会被 `unsaved` 挡回、数据栏基线不会推进，此时该调用是唯一能阻止兄弟 schema 栏写盘被记成「外部已改」的抑制点。既有基线比较只挡「本栏刚写过的那一份」，挡不住这个场景。（对应新增用例 e。）
+- **新增（editor-core）：** 在既有 `packages/libs/editor-core/src/shell/__tests__/shellPathDedupe.test.ts` 里补一条 `ShellSystem.focusResourceTab` 的用例（别的标签持有 → 真且切过去；没人持有 → 假；当前标签自己持有 → 假），不新建测试文件。
+
+### 待确认清单
+
+逐条列出需要用户点头的六件事：
+
+1. **D-28 / D-29 两条取代记录：** D-12 / D-13 作废，两栏同表的功能与测试一起删；`04.3-CONTEXT.md` 已就地标注。
+2. **闪烁的全部名字与时长：** 类名 `etable-column-duplicate-flash`、关键帧 `etable-duplicate-flash`、测试标识 `table-column-duplicate-flash`、视图字段 `ITablePanelViewState.duplicateFlash`、栏记录字段 `ITablePanelColumn.duplicateFlash`、方法 `TablePanel.flashDuplicateColumn`、常量 `DUPLICATE_FLASH_MS = 600`（两次脉冲）。
+3. **跨标签能力的形状：** `IEditorPanelContext.focusResourceTab(identifier): boolean`（同步返回、切换即发即忘），由 `ResourceTabFocuser` 经 `PanelContext` 的**必填**第三参数注入，外壳侧 `ShellSystem.focusResourceTab` 复用 `ShellSystem.findTabByPath` 与 `ShellSystem.activateTab`。
+4. **查重的位置与名字：** `TablePanel.findColumnByPath` 与「查重写在 `TablePanel.setTable` 最前面」。
+5. **刷新守卫：** 恢复「或」并同时给 `TablePanel.refresh` 加 `ignorePendingWrite` 放行口（`TablePanel.refreshDependents` / `TablePanel.onSwitchIn` / `TablePanel.onRetry` 三处传真），以及为什么非加不可；**并确认这是对 `INTERFACE-NAME.md` 第 663 行 / 第 710 行已确认规则的修订**（三处放行只跳过 `pendingWrite`，`pendingConflict` 仍一律早退）。
+6. **测试的删除 / 改写 / 新增清单：** `twoColumnsSameTable.test.tsx` 删除、`panelSync.uat.test.tsx` 与 `closeColumn.uat.test.tsx` 改写、新增 `duplicatePath.test.tsx`（含用例 e）、`TablePanel.isSamePanelWrite` 只删「另一栏数据目标推导出的镜像 schema」那一支。
+
+**第 (3) 项的必填 vs 可选取舍（结论）：** **采用必填，不给默认值**——给默认值会让漏接线在运行期静默降级成「永远返回假」，而必填会让它在编译期就红。代价是仓库里每一个 `IEditorPanelContext` 实现都要同时补齐；全仓已确认只有 **1 处手写假上下文**：`packages/libs/editor-impl/src/explorer/__tests__/explorerPanel.test.tsx:38-54` 的 `createContext`，补一行 `focusResourceTab: (): boolean => false`（该用例不接外壳，没有标签可切）。其余实现要么是真实 `PanelContext`（`core.test.ts` / `tracer.test.ts` 收集的是工厂收到的实例，`shellFlush.test.ts` 用真实上下文），要么是生产面板类（`demoPanel.ts` / `tablePanel.ts` / `mapPanel.ts` / `assetPanel.ts` / `fileExplorerPanel.ts`），不需要改。该假上下文的更新归属 `04.3-21` 的 Task 1，并接受同一条 `pnpm --filter @motajs/editor-impl typecheck` 门禁。
+
+**后续落地：`04.3-21`（实现与测试）；收口由 `04.3-19` 在本计划与 21 之后重跑。**
+
+状态：待确认
