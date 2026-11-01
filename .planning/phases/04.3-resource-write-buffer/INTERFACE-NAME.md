@@ -495,6 +495,8 @@
 
 **Plan 16 缺口收口确认：2026-10-31** —— G1 的 `Promise<boolean>` 形状与 G2 的无新名字规则已获用户第三次文字确认（原话「同意，可以执行」），详见本文末尾 `## 追加确认（Plan 16，2026-10-31）`。
 
+**Plan 20 一栏一条路径确认：2026-10-31** —— D-28 / D-29 取代 D-12 / D-13 的记录、闪烁与查重与跨标签的全部名字、刷新守卫恢复「或」与 `ignorePendingWrite` 放行口（对 Plan 16 第 663 / 710 行规则的修订）、测试删除 / 改写 / 新增清单已获用户第四次文字确认（原话「同意，可以执行」），详见本文末尾 `## 追加确认（Plan 20，2026-10-31）`。`已确认：2026-10-31`。
+
 ---
 
 ## Plan 14 — 同文件多标签去重的接口与命名
@@ -716,7 +718,7 @@
 
 ## Plan 20 — 一栏一条路径去重的接口与命名
 
-状态：待确认
+状态：已确认（2026-10-31）
 
 **要做什么：** 在把「一条路径最多只有一个编辑者」落实到表格面板内部之前，先把要写的名字、要改的行为口径、以及会牵动的既有测试摊开给用户确认。本节只写文档，**不改任何源码**；`04.3-21` 只按本节落地，不再二次拍板。
 
@@ -752,7 +754,7 @@
 
 **查重只比 `ITablePanelTarget.dataPath`。** schema 路径由数据路径推导，不单独查重：同一张表的「数据栏 + schema 栏」是两条不同路径，仍然允许并排（`panelSync` 的联动同步依赖它）。
 
-### 闪烁提示（已标 待确认）
+### 闪烁提示（已确认）
 
 被拒绝的那一栏不能凭空消失，得让用户看见「文件在那边」，所以让拿着它的那一栏边框闪两下——只闪、不弹。
 
@@ -771,7 +773,7 @@
 
 取舍：只闪边框、不加文案——加了文案就要新增用户可见字符串与 i18n 口径，而这件事的语义是「你看那边」，闪烁已经足够；同时不弹 toast，因为这不是失败。
 
-### 跨标签切过去（已标 待确认）
+### 跨标签切过去（已确认）
 
 表格面板自己只知道「本面板的栏」，不知道「别的标签开着什么」，而它又不该直接碰外壳。因此需要一个新能力：面板问外壳「这条路径是不是已经开在别的标签里」。
 
@@ -806,9 +808,9 @@
 - **收窄符号（不删方法）：** `TablePanel.isSamePanelWrite` 只删掉「另一栏数据目标推导出的镜像 schema」那一支（`!isSchemaPath(target.dataPath) && path === deriveSchemaPath(target.dataPath)` 加 `column.baselineSchemaText === text`；D-28 之后没有第二栏共用同一个数据路径，这一支不可能命中）；`target.dataPath === path && column.baselineText === text` 那一支与它在 `TablePanel.handleResourceChange` 脏分支里的调用必须保留——兄弟 schema 栏（`target.dataPath` 就是 `t.schema.json`）写盘后基线原文等于收到的原文，数据栏正是靠这一支认出「是自己兄弟栏写的」。理由是数据栏经「在代码编辑器中打开」确认写回后 `unsaved` 为真，`TablePanel.refresh` 会被 `unsaved` 挡回、数据栏基线不会推进，此时该调用是唯一能阻止兄弟 schema 栏写盘被记成「外部已改」的抑制点。既有基线比较只挡「本栏刚写过的那一份」，挡不住这个场景。（对应新增用例 e。）
 - **新增（editor-core）：** 在既有 `packages/libs/editor-core/src/shell/__tests__/shellPathDedupe.test.ts` 里补一条 `ShellSystem.focusResourceTab` 的用例（别的标签持有 → 真且切过去；没人持有 → 假；当前标签自己持有 → 假），不新建测试文件。
 
-### 待确认清单
+### 确认清单（2026-10-31）
 
-逐条列出需要用户点头的六件事：
+以下六件事已于 2026-10-31 经用户文字确认，全部按本节采用：
 
 1. **D-28 / D-29 两条取代记录：** D-12 / D-13 作废，两栏同表的功能与测试一起删；`04.3-CONTEXT.md` 已就地标注。
 2. **闪烁的全部名字与时长：** 类名 `etable-column-duplicate-flash`、关键帧 `etable-duplicate-flash`、测试标识 `table-column-duplicate-flash`、视图字段 `ITablePanelViewState.duplicateFlash`、栏记录字段 `ITablePanelColumn.duplicateFlash`、方法 `TablePanel.flashDuplicateColumn`、常量 `DUPLICATE_FLASH_MS = 600`（两次脉冲）。
@@ -821,4 +823,43 @@
 
 **后续落地：`04.3-21`（实现与测试）；收口由 `04.3-19` 在本计划与 21 之后重跑。**
 
-状态：待确认
+状态：已确认（2026-10-31）
+
+---
+
+## 追加确认（Plan 20，2026-10-31）
+
+**状态：已确认（2026-10-31）**
+
+用户于 2026-10-31 以文字回复「同意，可以执行」，把 Plan 20 的全部名字与四项取舍按原样接受，未提出任何改名或改形状。`已确认：2026-10-31`。
+
+### 用户批准的十二个名字
+
+1. `duplicateFlash` —— 栏记录字段 `ITablePanelColumn.duplicateFlash` 与视图状态字段 `ITablePanelViewState.duplicateFlash`；表示该栏 / 该视图刚被「有人想开它已经拿着的文件」提示过。
+2. `etable-column-duplicate-flash` —— CSS 类名；加在持有该路径的栏根 `div` 上。
+3. `etable-duplicate-flash` —— CSS 关键帧名；两次脉冲、每次 300 毫秒。
+4. `table-column-duplicate-flash` —— `data-test-id`；只在 `duplicateFlash` 为真时挂上。
+5. `TablePanel.flashDuplicateColumn(columnIndex)` —— 面板方法；让指定栏闪两下。
+6. `DUPLICATE_FLASH_MS = 600` —— 模块级常量；一次闪烁的总时长（两次脉冲）。
+7. `TablePanel.duplicateFlashTimers` —— 私有实例字段；每栏一个定时器句柄，换目标 / 关栏 / 释放时先清掉。
+8. `TablePanel.findColumnByPath(path, exceptColumnIndex)` —— 私有方法；返回持有该数据路径的栏序号，没有则 `-1`。
+9. `IEditorPanelContext.focusResourceTab(identifier): boolean` —— 接口方法；同步返回、切换即发即忘。
+10. `ResourceTabFocuser` —— type，注入 `PanelContext` 的必填第三参数。
+11. `ShellSystem.focusResourceTab` —— 私有方法；复用 `ShellSystem.findTabByPath` 与 `ShellSystem.activateTab`。
+12. `TablePanel.refresh(columnIndex, ignorePendingWrite = false)` —— 刷新守卫的放行口；只跳过 `pendingWrite`，永不跳过 `pendingConflict`。
+
+### 用户批准的四项取舍
+
+1. `IEditorPanelContext.focusResourceTab` **必填**（不给默认值）；仓库里唯一手写假上下文 `explorerPanel.test.tsx` 由 `04.3-21` 补 `(): boolean => false`。
+2. 刷新守卫恢复「或」是对 Plan 16 规则的一处**已记录修订**（本节承担取代说明，Plan 16 原文不改）。
+3. `TablePanel.isSamePanelWrite` **保留**，只删掉「另一栏数据目标推导出的镜像 schema」那一支。
+4. `ignorePendingWrite` 只跳过 `pendingWrite`，永不跳过 `pendingConflict`。
+
+### 用户批准的行为
+
+- 同一个表格面板里，任何两栏都不得指向同一个数据文件。
+- 选到已被占用的文件时，同面板另一栏拿着就闪它 600 毫秒，无副本、无弹窗。
+- 另一标签拿着就切到那个标签，本栏保持原目标。
+- D-12 / D-13 由 D-28 / D-29 取代。
+
+**后续落地：`04.3-21`（实现与测试）；收口由 `04.3-19` 在本计划与 21 之后重跑。**
