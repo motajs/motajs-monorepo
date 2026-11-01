@@ -721,6 +721,9 @@ export class TablePanel implements IEditorPanel, ITablePanel {
   /** 待写路径变化的退订函数；未订阅时为空 */
   private pendingUnwatch: (() => void) | undefined = undefined;
 
+  /** 最近一次「全部待写路径」回调收到的路径；用于区分本栏自身待写与兄弟栏写盘的镜像 */
+  private latestPendingPaths: readonly string[] = [];
+
   /** 面板级关闭弹窗状态：整个面板只一份，与「哪一栏触发关闭」和栏数无关（D-38） */
   private readonly closeDialogStore: Store<ITableCloseDialogState> = new Store<ITableCloseDialogState>({
     open: false,
@@ -2022,6 +2025,8 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     const count = this.columns.length;
     const pending = new Set<string>(paths);
 
+    this.latestPendingPaths = paths;
+
     for (let index = 0; index < count; index += 1) {
       const column = this.columns[index];
       const target = column.target;
@@ -2495,7 +2500,8 @@ export class TablePanel implements IEditorPanel, ITablePanel {
    *
    * 读原文走既有的两步资源读取（先拿句柄、再取内容）；读取失败与非法内容都降级为提示并保留内存内容。
    * 与基线相同即自写回声 / 空变化，什么都不做；基线不同且本栏不脏时替换内容并递增版本号。
-   * 本栏脏时先看这份原文是不是同面板另一栏刚写出去的：是就保留草稿、不记冲突（D-15 / D-16）。
+   * 本栏确有本地草稿时先看这份原文是不是同面板另一栏刚写出去的：是就保留草稿、不记冲突（D-15 / D-16）；
+   * 镜像 schema 的变化在本栏只有待写镜像、没有本地草稿时直接接受，不记成外部冲突。
    * @param columnIndex 栏序号（0 基）
    * @param path 变化路径（数据文件或该栏推导出的 schema 文件）
    * @param kind 变化种类
@@ -2535,7 +2541,18 @@ export class TablePanel implements IEditorPanel, ITablePanel {
       return;
     }
 
-    if (this.isColumnDirty(columnIndex)) {
+    // 本栏是否真的有一份自己要保护的改动：本地草稿，或本栏自己的目标路径还在待写里。
+    // 只镜像了兄弟 schema 栏的写入时（pendingWrite 为真、但本栏目标路径不待写），没有要保护的改动。
+    const hasLocalDraft =
+      column.unsaved ||
+      column.unsavedSchema ||
+      column.draftDirty ||
+      (this.columnRefs[columnIndex]?.current?.isDirty() ?? false) ||
+      this.latestPendingPaths.includes(target.dataPath);
+
+    // 镜像 schema 的变化只在本栏确有自己要保护的改动时才算冲突：否则只是兄弟 schema 栏（可能在别的标签）
+    // 的写入，记成冲突会让恢复「或」之后的刷新守卫把切回时的重读永久挡回
+    if (this.isColumnDirty(columnIndex) && (!mirroredSchema || hasLocalDraft)) {
       // 一栏一条路径之后，同一面板内不会出现两栏同路径；这里认的是兄弟 schema 栏刚写出的 `t.schema.json`
       if (this.isSamePanelWrite(columnIndex, path, text)) return;
 
