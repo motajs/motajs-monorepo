@@ -1,3 +1,4 @@
+import { act, cleanup, configure, render, screen } from '@testing-library/react';
 import { createElement, FC } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createCoreHarness, FakeFileSystem } from '../../__tests__/fixtures';
@@ -7,19 +8,28 @@ import { IEditorPanel, IEditorPanelContext, IEditorPanelFactoryParam, PanelClose
 
 // 外壳落盘点的测试：切标签、关标签「保存并关闭」、释放编辑器三条路径都必须把面板刚写进缓冲的内容打到磁盘，
 // 「不保存关闭」不许写盘，写盘失败也不许打断标签状态机。顺序铁律是「面板 → 缓冲 → 磁盘」。
+// 关闭标签另有一条判据：写盘失败或仍有待写时标签与面板必须留在屏幕上。
+
+configure({ testIdAttribute: 'data-test-id' });
 
 /** 三个落盘点共用的目标路径 */
 const TARGET_PATH = 'tables/demo.json';
+/** 冲突用例里被关闭面板改写的另一条路径 */
+const OTHER_PATH = 'tables/other.json';
 /** 磁盘上预置的旧内容 */
 const OLD_CONTENT = '{"a":1}';
+/** 外部改动到达后磁盘上的内容 */
+const EXTERNAL_CONTENT = '{"a":3}';
 /** 面板往缓冲里写的新内容 */
 const NEW_CONTENT = '{"a":2}';
 
 /** 当前用例装配出的编辑器内核，用例结束后统一释放 */
 let active: EditorCore | null = null;
 
-// 每个用例结束后释放编辑器并恢复真定时器，避免 window 监听器与悬挂定时器在用例之间累积
+// 每个用例结束后卸载已挂载的组件、释放编辑器并恢复真定时器，避免 DOM、window 监听器与悬挂定时器累积
 afterEach(async () => {
+  cleanup();
+
   const core = active;
 
   active = null;
@@ -35,6 +45,8 @@ class FlushPanel implements IEditorPanel {
 
   /** 面板侧上下文：接的是真实资源系统，本用例不 mock 资源层 */
   readonly context: IEditorPanelContext;
+  /** 写入目标路径；冲突用例会把被关闭面板改到另一条路径，缺省为共用的目标路径 */
+  targetPath: string = TARGET_PATH;
   /** 切出钩子要塞进缓冲的内容；为空表示切出不写 */
   switchOutContent: string | null = null;
   /** 关闭询问要塞进缓冲的内容；为空表示询问时不写 */
@@ -115,7 +127,7 @@ class FlushPanel implements IEditorPanel {
    * @param content 要写进缓冲的内容
    */
   async write(content: string): Promise<void> {
-    const resource = await this.context.requestResource(TARGET_PATH);
+    const resource = await this.context.requestResource(this.targetPath);
 
     if (resource === null) return;
 
@@ -259,5 +271,87 @@ describe('ShellSystem 外壳落盘点', () => {
     await system.core.dispose();
 
     expect(await system.fs.readFile(TARGET_PATH)).toBe(NEW_CONTENT);
+  });
+
+  // 「保存并关闭」写盘失败：标签不被丢弃、待写保留、磁盘仍是旧值；清掉故障后重试才真正关闭
+  it('保存并关闭写盘失败时标签保持打开、重试成功后才关闭', async () => {
+    const system = await createSystem();
+    const [, secondTab] = await openTwoPanels(system);
+
+    system.panels[1].requestCloseContent = NEW_CONTENT;
+    system.panels[1].choice = PanelCloseChoice.Save;
+    system.fs.failing.add(TARGET_PATH);
+
+    await system.core.shellSystem.closeTab(secondTab);
+
+    expect(
+      system.core.shellSystem.listTabs().some((tab) => {
+        return tab.id === secondTab;
+      }),
+    ).toBe(true);
+    expect(system.core.resourceSystem.listPendingPaths()).toEqual([TARGET_PATH]);
+    expect(await system.fs.readFile(TARGET_PATH)).toBe(OLD_CONTENT);
+
+    system.fs.failing.delete(TARGET_PATH);
+
+    await system.core.shellSystem.closeTab(secondTab);
+
+    expect(
+      system.core.shellSystem.listTabs().some((tab) => {
+        return tab.id === secondTab;
+      }),
+    ).toBe(false);
+    expect(await system.fs.readFile(TARGET_PATH)).toBe(NEW_CONTENT);
+  });
+
+  // 冲突未表态的条目被全量写盘跳过、缓冲仍非空：标签不被丢弃，同一轮里别的路径照常写出
+  it('冲突被跳过时仍有待写、标签不被丢弃', async () => {
+    const system = await createSystem();
+    const [, secondTab] = await openTwoPanels(system);
+
+    await system.core.resourceSystem.writeContent(TARGET_PATH, NEW_CONTENT);
+    system.fs.seed(TARGET_PATH, EXTERNAL_CONTENT);
+    await system.core.resourceSystem.updateResource(TARGET_PATH);
+
+    system.panels[1].targetPath = OTHER_PATH;
+    system.panels[1].requestCloseContent = NEW_CONTENT;
+    system.panels[1].choice = PanelCloseChoice.Save;
+
+    await system.core.shellSystem.closeTab(secondTab);
+
+    expect(
+      system.core.shellSystem.listTabs().some((tab) => {
+        return tab.id === secondTab;
+      }),
+    ).toBe(true);
+    expect(system.core.resourceSystem.listPendingPaths()).toEqual([TARGET_PATH]);
+    expect(await system.fs.readFile(TARGET_PATH)).toBe(EXTERNAL_CONTENT);
+    expect(await system.fs.readFile(OTHER_PATH)).toBe(NEW_CONTENT);
+  });
+
+  // 自身没有待写的标签，在别处有未决写入时也保持打开；可见状态就是右上角既有的待写提示
+  it('干净标签在别处有未决写入时保持打开且既有提示可见', async () => {
+    const system = await createSystem();
+    const [, secondTab] = await openTwoPanels(system);
+
+    await system.core.resourceSystem.writeContent(TARGET_PATH, NEW_CONTENT);
+    system.fs.seed(TARGET_PATH, EXTERNAL_CONTENT);
+    await system.core.resourceSystem.updateResource(TARGET_PATH);
+
+    system.panels[1].requestCloseContent = null;
+    system.panels[1].choice = PanelCloseChoice.Save;
+
+    render(createElement(system.core.shellSystem.render()));
+
+    await act(async () => {
+      await system.core.shellSystem.closeTab(secondTab);
+    });
+
+    expect(
+      system.core.shellSystem.listTabs().some((tab) => {
+        return tab.id === secondTab;
+      }),
+    ).toBe(true);
+    expect(screen.getByTestId('editor-shell-pending').textContent).toContain('正在等待保存');
   });
 });

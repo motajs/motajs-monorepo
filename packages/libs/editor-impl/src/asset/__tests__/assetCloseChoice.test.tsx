@@ -212,8 +212,9 @@ describe('素材面板：关闭三态', () => {
     expect(harness.system.shellSystem.listTabs().some((tab) => tab.id === harness.tabId)).toBe(false);
   });
 
-  // 写盘失败：面板这一层只把改动排进缓冲（因此结算为保存），但待写必须保留，清掉故障后仍能落盘
-  it('保存失败时改动不丢且重试可落盘', async () => {
+  // 保存并关闭写盘失败：标签与弹窗留在屏幕上、错误文案可见、待写与脏标记都保留；
+  // 清掉故障后重试成功，标签才关闭且磁盘是新内容
+  it('保存并关闭写盘失败时标签保持打开且重试可关闭', async () => {
     const fs = createTextureFileSystem();
     const harness = await openTexturePanel(fs);
 
@@ -222,32 +223,82 @@ describe('素材面板：关闭三态', () => {
 
     fs.failing.add(TEXTURE_LIST_PATH);
 
-    let choice: PanelCloseChoice = PanelCloseChoice.Cancel;
-    let closing: Promise<PanelCloseChoice> = Promise.resolve(PanelCloseChoice.Save);
+    let closing: Promise<void> = Promise.resolve();
 
     await act(async () => {
-      closing = harness.panel.onRequestClose();
+      closing = harness.system.shellSystem.closeTab(harness.tabId);
+      await Promise.resolve();
     });
 
     await act(async () => {
       fireEvent.click(screen.getByTestId('panel-close-save'));
     });
     await act(async () => {
-      choice = await closing;
+      await closing;
     });
 
-    // 保存只写缓冲，面板层必然结算为「保存」；真正的磁盘失败由外壳 flush 承担
-    expect(choice).toBe(PanelCloseChoice.Save);
-    expect(screen.queryByTestId('panel-close-dialog')).toBeNull();
+    expect(harness.system.shellSystem.listTabs().some((tab) => tab.id === harness.tabId)).toBe(true);
+    expect(screen.queryByTestId('panel-close-dialog')).not.toBeNull();
+    expect(screen.getByTestId('panel-close-error').textContent).toContain('写入失败');
     expect(harness.system.resourceSystem.hasAnyPendingContent()).toBe(true);
+    expect(harness.panel['states'].get('texture')?.unsaved).toBe(true);
 
     fs.failing.delete(TEXTURE_LIST_PATH);
 
     await act(async () => {
-      await harness.system.resourceSystem.flushAllContent();
+      closing = harness.system.shellSystem.closeTab(harness.tabId);
+      await Promise.resolve();
     });
 
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('panel-close-save'));
+    });
+    await act(async () => {
+      await closing;
+    });
+
+    expect(harness.system.shellSystem.listTabs().some((tab) => tab.id === harness.tabId)).toBe(false);
+    expect(screen.queryByTestId('panel-close-dialog')).toBeNull();
     expect(harness.system.resourceSystem.hasAnyPendingContent()).toBe(false);
     expect(await fs.readFile(TEXTURE_LIST_PATH)).not.toContain('hero.png');
+  });
+
+  // 两个分类都脏、只有音频写失败：整次关闭不结算保存，标签与弹窗留下，失败分类仍是未保存
+  it('部分分类写失败时不结算保存且标签保持打开', async () => {
+    const fs = createTextureFileSystem();
+
+    fs.seed('content/audio/.list.jsonc', listText({ audios: [{ source: 'voice.mp3' }] }));
+    fs.seed('content/audio/voice.mp3', new Uint8Array([1]));
+
+    const harness = await openTexturePanel(fs);
+
+    render(createElement(harness.panel.render()));
+    await makeDirty(harness.panel);
+
+    await harness.panel.selectCategory('audio');
+    await harness.panel.unregisterAsset('voice.mp3');
+
+    expect(harness.panel['states'].get('texture')?.unsaved).toBe(true);
+    expect(harness.panel['states'].get('audio')?.unsaved).toBe(true);
+
+    fs.failing.add('content/audio/.list.jsonc');
+
+    let closing: Promise<void> = Promise.resolve();
+
+    await act(async () => {
+      closing = harness.system.shellSystem.closeTab(harness.tabId);
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('panel-close-save'));
+    });
+    await act(async () => {
+      await closing;
+    });
+
+    expect(harness.system.shellSystem.listTabs().some((tab) => tab.id === harness.tabId)).toBe(true);
+    expect(screen.getByTestId('panel-close-error').textContent).toContain('写入失败');
+    expect(harness.panel['states'].get('audio')?.unsaved).toBe(true);
   });
 });
