@@ -497,6 +497,8 @@
 
 **Plan 20 一栏一条路径确认：2026-10-31** —— D-28 / D-29 取代 D-12 / D-13 的记录、闪烁与查重与跨标签的全部名字、刷新守卫恢复「或」与 `ignorePendingWrite` 放行口（对 Plan 16 第 663 / 710 行规则的修订）、测试删除 / 改写 / 新增清单已获用户第四次文字确认（原话「同意，可以执行」），详见本文末尾 `## 追加确认（Plan 20，2026-10-31）`。`已确认：2026-10-31`。
 
+**Plan 22 面板自报路径与面板复用确认：2026-11-02** —— Gap A 的集合语义与五个名字、三处上报点，Gap B 的按类型复用 / 同标签 + 先 flush 再重建实例 / 冲突规则 / 保存失败规则与八个名字已获用户第五次文字确认（原话「同意，可以执行，连续执行」），详见本文末尾 `## 追加确认（Plan 22，2026-11-02）`。`已确认：2026-11-02`。
+
 ---
 
 ## Plan 14 — 同文件多标签去重的接口与命名
@@ -868,7 +870,7 @@
 
 ## Plan 22 — 面板自报路径与面板复用（Gap A / Gap B）的接口与命名
 
-状态：待确认
+状态：已确认（2026-11-02）
 
 **要做什么：** 在写 Gap A / Gap B 的代码之前，先把要加的名字、要改的行为口径、复用到底怎么复用、以及「正在问外部冲突怎么办」摊开给用户确认。本节只写文档，**不改任何源码**；`04.3-23` / `04.3-24` 只按本节落地，不再二次拍板。本节与 `04.3-CONTEXT.md` 的 **D-30**（面板自报路径集合）/ **D-31**（按类型复用标签）/ **D-32**（复用 = 同标签 + 先 flush 再重建实例）/ **D-33**（冲突未表态不复用）一一对应。
 
@@ -895,7 +897,7 @@
 
 **为什么是集合而不是单条：** 一个表格面板可以同时显示「数据栏 + 它的 schema 栏」两条路径（`TablePanel.openSchemaPanel` 会把 schema 作为独立 `dataPath` 放进空栏；D-28 / D-29 仍允许），只记一条会让另一条在资源管理器里再开一个标签，等于把 D-28 重新破掉；多栏不同表同理。因此外壳按标签保存一个路径集合，`ShellSystem.findTabByPath` 逐个集合查。
 
-### Gap A 的名字（全部标 待确认）
+### Gap A 的名字（全部已确认）
 
 | 名称 | 种类 | 文件位置 | 用途 |
 |------|------|----------|------|
@@ -931,7 +933,7 @@
 - **`IEditorPanel.hasPendingConflict` 由面板回答：** 素材看 `AssetPanel.pendingConflict !== undefined`，地图看 `IMapPanelViewState.pendingConflict !== undefined`；没有这个能力的面板由外壳按「没有冲突」处理（可选方法）。
 - **返回成功而不是失败：** 外壳已经把这个请求处理成「把冲突标签切到前台」，资源管理器不应再弹「打开失败」；用户看到的是那个标签里的冲突弹窗。本次目标文件不会打开，用户处理完冲突后再点一次即可。
 
-### Gap B 的名字（全部标 待确认）
+### Gap B 的名字（全部已确认）
 
 | 名称 | 种类 | 文件位置 | 用途 |
 |------|------|----------|------|
@@ -952,7 +954,7 @@
 - **Gap B（`04.3-24`）：** 新增 `packages/libs/editor-core/src/shell/__tests__/shellTabReuse.test.ts`（复用类型的两次打开只留一个标签、实例被重建、`IEditorPanel.onSwitchOut` 只发生一次且排在 `IEditorPanel.dispose` 与新建之前；非活动标签也先保存且同样只有一次；`IEditorPanel.hasPendingConflict` 为真时不保存、不重建、不释放，只激活持有者标签；保存未结算（`IEditorPanel.hasUnsavedChanges` 为真 / 全量 flush 为假）时不释放、不重建并返回假；未声明 `reuseTab` 的类型照旧两个标签；没人领走的空白标签仍会被激活）。在素材 / 地图各自的用例里钉住「打开 A 再打开 B → 一个标签、内容为 B、A 的改动已写盘、保存失败时保留 A」，并断言 `createAssetPanelType(...).reuseTab` / `createMapPanelType(...).reuseTab` 为真、`tablePanelType.reuseTab` 未声明。
 - **收口（`04.3-25`）：** 三包全量 + 四条结构门禁 + lint + format，回填 `04.3-VALIDATION.md`。
 
-### 待确认清单（2026-11-02）
+### 确认清单（2026-11-02）
 
 1. **Gap A 的集合语义：** 面板上报「当前全部路径」，外壳**整份替换**标签登记（不合并）。
 2. **Gap A 的五个名字：** `IEditorPanelContext.reportResourcePaths` / `ResourcePathReporter` / `PanelContext` 必填第四参 / `ShellSystem.registerTabResourcePaths` / `TablePanel.reportVisiblePaths`。
@@ -965,4 +967,41 @@
 
 **后续落地：`04.3-23`（Gap A 实现与测试）→ `04.3-24`（Gap B 实现与测试）→ `04.3-25`（重新收口）。**
 
-状态：待确认
+状态：已确认（2026-11-02）
+
+---
+
+## 追加确认（Plan 22，2026-11-02）
+
+**状态：已确认（2026-11-02）**
+
+用户于 2026-11-02 以文字回复「同意，可以执行，连续执行」，把 Plan 22 的八件事全部按原样接受，未提出任何改名或改形状。`已确认：2026-11-02`。
+
+### 用户拍板的八件事（最终结论）
+
+1. **Gap A 的集合语义：** 面板上报「当前全部路径」；外壳**整份替换**该标签的登记（不合并），新集合里没有的路径自动释放。用集合而不是单条，因为一个表格标签可以同时显示数据文件与它的 schema 文件。
+2. **Gap A 的名字：** `IEditorPanelContext.reportResourcePaths`、`ResourcePathReporter`、`PanelContext` 的**必填**第四个构造参数、`ShellSystem.registerTabResourcePaths`、`TablePanel.reportVisiblePaths`；`ShellSystem.tabPaths` 改为按标签保存路径集合（`Map<string, ReadonlySet<string>>`），`ShellSystem.findTabByPath` 逐个集合查，`ShellSystem.rememberTabPaths` 整份替换。
+3. **Gap A 的三处上报点：** `TablePanel.setTable`、`TablePanel.closeColumn`、`TablePanel.cancelCommentStrip`——这三处就是 `tablePanel.ts` 里全部三处 `column.target =` 赋值；取消「剥离注释后打开」也把目标清空，所以同样必须上报。`TablePanel.setTable` 的两条早退分支不改目标，因此不上报；`create` 里的上报是空操作，首次登记仍由 `ShellSystem.openPanelInTab` 的 `path` 参数负责。
+4. **Gap B 的复用规则：** `IEditorPanelType.reuseTab` 是**按类型选择加入**的能力；`assetPanelType` 与 `mapPanelType` 为真，`tablePanelType` 不声明；同一类型已有标签时复用打开顺序最早的那个；路径去重仍先于复用执行。
+5. **Gap B 的机制：** 复用 = **同一个标签 + 先 flush 再重建实例**——先 `await` 旧实例的 `IEditorPanel.onSwitchOut` 与全量 flush，再释放旧实例、按新打开参数创建新实例，最后把标签登记换成新路径。活动标签走既有 `ShellSystem.leaveActiveInstance`，非活动标签补 `ShellSystem.enqueueSwitchOut`；**一次复用只保存一次**，不得出现两次切出 / 两次全量 flush。不采用「旧实例直接换目标」，因为打开参数只在工厂 `create` 里解释，重建还能清掉上一份目标的实例状态。
+6. **Gap B 的冲突规则：** `IEditorPanel.hasPendingConflict()` 为真时**不写盘、不释放、不新建实例**，只把该标签激活到前台，本次打开**返回成功但不打开目标文件**；判定必须靠「暂存空白标签」抢在任何落盘之前（`ShellSystem.stagedBlankTabId` / `ShellSystem.activateStagedBlankTab` / `ShellSystem.claimStagedBlankTab`）。
+7. **Gap B 的保存失败规则：** 新增 `IEditorPanel.hasUnsavedChanges`；切出保存没有真正结算（全量 flush 返回假，或 `hasUnsavedChanges()` 为真）时**不释放、不重建**，保留原标签与原实例并重新切入（`ShellSystem.restoreActiveInstance`），本次打开返回 `false`。
+8. **内部名字：** `ShellSystem.findTabByType`、`ShellSystem.stagedBlankTabId`、`ShellSystem.activateStagedBlankTab`、`ShellSystem.claimStagedBlankTab`、`ShellSystem.restoreActiveInstance`；不新增任何 `IShellSystem` 公开成员。
+
+### 与已落地代码的对齐（04.3-23 已执行）
+
+本节写的是**代码的既有事实**，不是重新提案。逐条核对结果如下：
+
+- **名字逐字一致：** 源文件里就是 `ResourcePathReporter`（`packages/libs/editor-core/src/panel/types.ts:27`）、`IEditorPanelContext.reportResourcePaths`（`:113`）、`PanelContext` 的第四个必填构造参数（`panelContext.ts:26`）、`ShellSystem.registerTabResourcePaths`（`shellSystem.ts:720`）、`ShellSystem.tabPaths: Map<string, ReadonlySet<string>>`（`:437`）、`ShellSystem.findTabByPath`（`:666`）、`ShellSystem.rememberTabPaths`（`:700`，复数、整份 `new Set(paths)`）、`TablePanel.reportVisiblePaths`（`tablePanel.ts:1082`）。没有改名。
+- **上报点逐字一致：** `tablePanel.ts` 里仅有的三处 `column.target =` 赋值分别位于 `TablePanel.setTable`（当前 `:1115`）、`TablePanel.closeColumn`（当前 `:1179`）、`TablePanel.cancelCommentStrip`（当前 `:1879`），三处之后各调用一次 `TablePanel.reportVisiblePaths()`（`:1149` / `:1212` / `:1886`）；没有第四处赋值。
+- **`create` 空操作一致：** `ShellSystem.registerTabResourcePaths` 按 `instanceId` 在 `this.tabs` 里找标签，找不到直接 `return`（`shellSystem.ts:721-723`）；`ShellSystem.createInstance` 在工厂返回之后才登记实例，因此工厂 `create` 阶段的上报确实是空操作。
+
+### 记录下来的三处差异（以代码为准，不改旧节原文）
+
+1. **行号漂移。** Plan 22 提案与 `04.3-CONTEXT.md` 的 D-30 原文引用 `tablePanel.ts:1095 / 1158 / 1857`；`04.3-23` 落地 `TablePanel.reportVisiblePaths` 后三处赋值下移到 `1115 / 1179 / 1879`。不变的是「只有三处」这条事实。D-30 已按当前行号记录并注明提案原值。
+2. **`ShellSystem.rememberTabPath` 的单数写法已被取代。** `## Plan 14` 小节（本文件第 574 行）登记的是单数 `ShellSystem.rememberTabPath`；`04.3-23` 落地的是复数的 `ShellSystem.rememberTabPaths`（整份替换一个路径集合）。本节与 D-30 使用复数名；Plan 14 的原文按「不改写已有小节」保留，回看时以本节为准。
+3. **`ShellSystem.openBlankTab` 的 JSDoc 措辞。** 本文件 Plan 22 正文原写「`ShellSystem.openBlankTab` / `ShellSystem.openPanelInTab` 的签名与 JSDoc 语义不变」；接口 JSDoc（`shell/types.ts:87-91`）仍写「打开一个新的空白标签页并激活它」。按 D-33 的暂存机制，有挂载面板时激活会**延后一个微任务**（由 `ShellSystem.claimStagedBlankTab` 领走则不再激活）。因此准确的表述是「签名不变；激活时机延后」，本节以此为准，不改接口 JSDoc 的历史文字。
+
+### 落地顺序
+
+**后续落地：`04.3-23`（Gap A 实现与测试，已完成）→ `04.3-24`（Gap B 实现与测试）→ `04.3-25`（重新收口：三包全量 + 四条结构门禁 + lint + format，回填 `04.3-VALIDATION.md`）。**
