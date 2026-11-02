@@ -18,6 +18,7 @@ export default defineConfig({
     },
   },
   test: {
+    maxWorkers: '50%',
     environment: 'jsdom',
     include: ['src/**/*.test.{ts,tsx}'],
     setupFiles: ['src/__tests__/mapPolyfill.ts'],

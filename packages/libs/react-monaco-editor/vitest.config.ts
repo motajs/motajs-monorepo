@@ -16,6 +16,7 @@ export default defineConfig({
     },
   ],
   test: {
+    maxWorkers: '50%',
     environment: 'jsdom',
     setupFiles: ['./vitest.setup.ts'],
   },

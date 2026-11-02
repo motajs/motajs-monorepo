@@ -6,6 +6,7 @@ export default defineConfig({
     alias: { '@': path.resolve(import.meta.dirname, 'src') },
   },
   test: {
+    maxWorkers: '50%',
     environment: 'node',
     include: ['src/**/*.test.ts'],
     restoreMocks: true,

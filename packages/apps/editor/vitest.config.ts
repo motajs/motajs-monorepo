@@ -21,6 +21,7 @@ export default defineConfig({
     },
   },
   test: {
+    maxWorkers: '50%',
     environment: 'jsdom',
     globals: true,
     exclude: [...configDefaults.exclude, 'e2e/**'],
