@@ -539,6 +539,14 @@ export class AssetPanel implements IEditorPanel, IAssetPanel {
     this.publish(this.store.state.status);
   }
 
+  hasPendingConflict(): boolean {
+    return this.pendingConflict !== undefined;
+  }
+
+  hasUnsavedChanges(): boolean {
+    return this.hasUnsaved();
+  }
+
   async undo(context: IUndoContext<unknown>): Promise<void> {
     if (context.type !== AssetUndoType.Config) return;
 

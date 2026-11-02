@@ -135,6 +135,7 @@ export function createAssetPanelType(capabilities: IAssetEditorCapabilities): IE
 
       return panel;
     },
+    reuseTab: true,
     canOpen: (path: string): boolean => categories.some((category) => categoryClaims(category, path)),
     createOpenParam: (path: string): Record<string, unknown> => {
       const category = categories.find((candidate) => categoryClaims(candidate, path));
