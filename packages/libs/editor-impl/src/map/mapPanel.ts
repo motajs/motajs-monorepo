@@ -813,6 +813,14 @@ export class MapPanel implements IEditorPanel, IMapPanel {
     this.refreshUnsaved();
   }
 
+  hasPendingConflict(): boolean {
+    return this.store.state.pendingConflict !== undefined;
+  }
+
+  hasUnsavedChanges(): boolean {
+    return this.isDirty();
+  }
+
   /**
    * 结算一次关闭询问：三个分支都把关闭弹窗收回，并唤醒等待中的 `onRequestClose`
    * @param choice 用户的选择

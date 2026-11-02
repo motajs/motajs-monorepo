@@ -67,6 +67,7 @@ export function createMapPanelType(capabilities: IMapEditorCapabilities): IEdito
 
       return panel;
     },
+    reuseTab: true,
     canOpen: (path: string): boolean => {
       // 未注入解析的宿主不认领任何路径：地图因此不会进资源管理器的候选（D-33）
       if (capabilities.resolveMapPath === undefined) return false;
