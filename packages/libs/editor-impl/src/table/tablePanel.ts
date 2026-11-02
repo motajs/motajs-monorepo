@@ -1073,6 +1073,26 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     await this.applyUndoRedo(context, false);
   }
 
+  /**
+   * 把当前全部可见目标的路径整份上报给外壳：按栏顺序、跳过空栏与空串、重复路径只报一次
+   *
+   * 外壳据此整份替换该标签的路径登记，因此换目标 / 关栏后旧路径会自动释放。
+   * 空栏（无目标或路径为空串）不参与上报；没有可见目标时上报空数组，等于清空登记。
+   */
+  private reportVisiblePaths(): void {
+    const paths: string[] = [];
+
+    for (const column of this.columns) {
+      const target = column.target;
+
+      if (target === null || target.dataPath === '' || paths.includes(target.dataPath)) continue;
+
+      paths.push(target.dataPath);
+    }
+
+    this.context.reportResourcePaths(paths);
+  }
+
   setTable(target: ITablePanelTarget, columnIndex: number = 0): void {
     const column = this.columnAt(columnIndex);
 
@@ -1126,6 +1146,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
 
     this.showNextConflict();
     void this.refresh(columnIndex);
+    this.reportVisiblePaths();
   }
 
   /**
@@ -1188,6 +1209,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     this.nextToken(columnIndex);
     this.publish(columnIndex, TablePanelStatus.NoTarget);
     this.showNextConflict();
+    this.reportVisiblePaths();
   }
 
   /**
@@ -1861,6 +1883,7 @@ export class TablePanel implements IEditorPanel, ITablePanel {
     column.baselineSchemaText = undefined;
     this.nextToken(columnIndex);
     this.publish(columnIndex, TablePanelStatus.NoTarget);
+    this.reportVisiblePaths();
   }
 
   /**

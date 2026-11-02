@@ -99,6 +99,17 @@ async function openTablePanel(system: EditorCore, created: TablePanel[]): Promis
   return created[0];
 }
 
+/**
+ * 在指定标签里按路径打开表格面板：打开参数由类型自带，路径同时交给外壳去重
+ * @param system 编辑器核心
+ * @param tabId 目标标签 id
+ * @param path 要打开的数据文件路径
+ * @returns 外壳的打开结果
+ */
+async function openTableInTab(system: EditorCore, tabId: string, path: string): Promise<boolean> {
+  return system.shellSystem.openPanelInTab(tabId, tablePanelType.id, tablePanelType.createOpenParam!(path), path);
+}
+
 // 让已排队的资源读取与外壳切换微任务全部落定，再冲刷 React 更新
 async function flush(): Promise<void> {
   await act(async (): Promise<void> => {
@@ -353,5 +364,215 @@ describe('同一个面板内一栏一条路径（D-28 / D-29）', () => {
       type: 'object',
       properties: { a: { type: 'number' } },
     });
+  });
+});
+
+describe('面板自报路径（Gap A）', () => {
+  // 表格面板自己换目标后自报路径：资源管理器再打开同一文件只聚焦这个标签，不新建第二个
+  it('自报路径后新空标签打开同一路径只聚焦原标签', async () => {
+    const fs = new FakeFileSystem();
+
+    seed(fs, 'a', { value: '1' }, { type: 'object', properties: { value: { type: 'string' } } });
+
+    const { system, created } = await createTableSystem(fs);
+    const panel = await openTablePanel(system, created);
+
+    panel.setTable(dataTarget('a'), 0);
+    await flush();
+
+    const firstTab = system.shellSystem.listTabs()[0].id;
+    const { container } = render(createElement(system.shellSystem.render()));
+    const blankTab = system.shellSystem.openBlankTab();
+
+    await act(async () => {
+      await openTableInTab(system, blankTab, tableDataPath('a'));
+    });
+
+    expect(system.shellSystem.listTabs().map((tab) => tab.id)).toEqual([firstTab]);
+    expect(created).toHaveLength(1);
+
+    const activeTabs = container.querySelectorAll('.editor-shell-tab.is-active');
+
+    expect(activeTabs.length).toBe(1);
+    expect(activeTabs[0].querySelector('.editor-shell-tab-label')?.textContent).toBe(`表格 ${tableDataPath('a')}`);
+  });
+
+  // 两栏各一条路径：集合里两条路径分别从新空标签打开都只聚焦同一个标签
+  it('两栏两条路径都能被资源管理器命中', async () => {
+    const fs = new FakeFileSystem();
+
+    seed(fs, 'a', { value: '1' }, { type: 'object', properties: { value: { type: 'string' } } });
+    seed(fs, 'b', { value: '2' }, { type: 'object', properties: { value: { type: 'string' } } });
+
+    const { system, created } = await createTableSystem(fs);
+    const panel = await openTablePanel(system, created);
+
+    panel.setTable(dataTarget('a'), 0);
+    panel.setTable(dataTarget('b'), 1);
+    await flush();
+
+    const firstTab = system.shellSystem.listTabs()[0].id;
+    const blankA = system.shellSystem.openBlankTab();
+
+    await act(async () => {
+      await openTableInTab(system, blankA, tableDataPath('a'));
+    });
+
+    const blankB = system.shellSystem.openBlankTab();
+
+    await act(async () => {
+      await openTableInTab(system, blankB, tableDataPath('b'));
+    });
+
+    expect(system.shellSystem.listTabs().map((tab) => tab.id)).toEqual([firstTab]);
+    expect(created).toHaveLength(1);
+  });
+
+  // 同一栏换到另一条路径后整份替换：旧路径已释放，新路径仍只聚焦原标签
+  it('换目标后旧路径释放、新路径聚焦原标签', async () => {
+    const fs = new FakeFileSystem();
+
+    seed(fs, 'a', { value: '1' }, { type: 'object', properties: { value: { type: 'string' } } });
+    seed(fs, 'b', { value: '2' }, { type: 'object', properties: { value: { type: 'string' } } });
+
+    const { system, created } = await createTableSystem(fs);
+    const panel = await openTablePanel(system, created);
+
+    panel.setTable(dataTarget('a'), 0);
+    panel.setTable(dataTarget('b'), 0);
+    await flush();
+
+    const firstTab = system.shellSystem.listTabs()[0].id;
+    const blankOld = system.shellSystem.openBlankTab();
+
+    await act(async () => {
+      await openTableInTab(system, blankOld, tableDataPath('a'));
+    });
+
+    expect(system.shellSystem.listTabs()).toHaveLength(2);
+    expect(created).toHaveLength(2);
+
+    const blankNew = system.shellSystem.openBlankTab();
+
+    await act(async () => {
+      await openTableInTab(system, blankNew, tableDataPath('b'));
+    });
+
+    expect(system.shellSystem.listTabs().map((tab) => tab.id)).toEqual([firstTab, blankOld]);
+    expect(created).toHaveLength(2);
+  });
+
+  // 关标签释放路径：先证明登记存在（自报后被去重命中），再关标签，外壳自动补出的空标签里重开要新建实例
+  it('关标签后路径释放', async () => {
+    const fs = new FakeFileSystem();
+
+    seed(fs, 'a', { value: '1' }, { type: 'object', properties: { value: { type: 'string' } } });
+
+    const { system, created } = await createTableSystem(fs);
+    const panel = await openTablePanel(system, created);
+
+    panel.setTable(dataTarget('a'), 0);
+    await flush();
+
+    const firstTab = system.shellSystem.listTabs()[0].id;
+    const dedupeTab = system.shellSystem.openBlankTab();
+
+    await act(async () => {
+      await openTableInTab(system, dedupeTab, tableDataPath('a'));
+    });
+
+    expect(system.shellSystem.listTabs().map((tab) => tab.id)).toEqual([firstTab]);
+
+    await act(async () => {
+      await system.shellSystem.closeTab(firstTab);
+    });
+
+    const blankTab = system.shellSystem.listTabs()[0].id;
+
+    await act(async () => {
+      await openTableInTab(system, blankTab, tableDataPath('a'));
+    });
+
+    expect(system.shellSystem.listTabs().map((tab) => tab.id)).toEqual([blankTab]);
+    expect(created).toHaveLength(2);
+  });
+
+  // 关掉一栏只释放那一条：被关掉的路径要新建标签，另一栏的路径仍只聚焦原标签
+  it('关掉一栏只释放那一条路径', async () => {
+    const fs = new FakeFileSystem();
+
+    seed(fs, 'a', { value: '1' }, { type: 'object', properties: { value: { type: 'string' } } });
+    seed(fs, 'b', { value: '2' }, { type: 'object', properties: { value: { type: 'string' } } });
+
+    const { system, created } = await createTableSystem(fs);
+    const panel = await openTablePanel(system, created);
+
+    panel.setTable(dataTarget('a'), 0);
+    panel.setTable(dataTarget('b'), 1);
+    await flush();
+
+    panel['closeColumn'](1);
+
+    const firstTab = system.shellSystem.listTabs()[0].id;
+    const blankB = system.shellSystem.openBlankTab();
+
+    await act(async () => {
+      await openTableInTab(system, blankB, tableDataPath('b'));
+    });
+
+    expect(system.shellSystem.listTabs()).toHaveLength(2);
+    expect(created).toHaveLength(2);
+
+    const blankA = system.shellSystem.openBlankTab();
+
+    await act(async () => {
+      await openTableInTab(system, blankA, tableDataPath('a'));
+    });
+
+    expect(system.shellSystem.listTabs().map((tab) => tab.id)).toEqual([firstTab, blankB]);
+    expect(created).toHaveLength(2);
+  });
+
+  // 取消「剥离注释后打开」把目标置空，也必须释放这条路径，否则资源管理器会切到一个空标签
+  it('取消剥离注释后原路径登记被释放', async () => {
+    const fs = new FakeFileSystem();
+    const commented = '// 顶部注释\n{\n  "title": "hello",\n}\n';
+    const schema = { type: 'object', properties: { title: { type: 'string', description: '标题' } } };
+
+    fs.seed('commented.jsonc', commented);
+    fs.seed(deriveSchemaPath('commented.jsonc'), JSON.stringify(schema));
+
+    const { system, created } = await createTableSystem(fs);
+    const panel = await openTablePanel(system, created);
+
+    panel.setTable({ dataPath: 'commented.jsonc' }, 0);
+
+    await act(async () => {
+      await panel.onSwitchIn();
+    });
+    await flush();
+
+    expect(panel['columns'][0].pendingStrip).not.toBeUndefined();
+
+    const firstTab = system.shellSystem.listTabs()[0].id;
+    const dedupeTab = system.shellSystem.openBlankTab();
+
+    await act(async () => {
+      await openTableInTab(system, dedupeTab, 'commented.jsonc');
+    });
+
+    expect(system.shellSystem.listTabs().map((tab) => tab.id)).toEqual([firstTab]);
+    expect(panel['columns'][0].pendingStrip).not.toBeUndefined();
+
+    panel.cancelCommentStrip(0);
+
+    const blankTab = system.shellSystem.openBlankTab();
+
+    await act(async () => {
+      await openTableInTab(system, blankTab, 'commented.jsonc');
+    });
+
+    expect(system.shellSystem.listTabs().map((tab) => tab.id)).toEqual([firstTab, blankTab]);
+    expect(created).toHaveLength(2);
   });
 });
