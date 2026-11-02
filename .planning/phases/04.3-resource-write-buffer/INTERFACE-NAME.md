@@ -863,3 +863,106 @@
 - D-12 / D-13 由 D-28 / D-29 取代。
 
 **后续落地：`04.3-21`（实现与测试）；收口由 `04.3-19` 在本计划与 21 之后重跑。**
+
+---
+
+## Plan 22 — 面板自报路径与面板复用（Gap A / Gap B）的接口与命名
+
+状态：待确认
+
+**要做什么：** 在写 Gap A / Gap B 的代码之前，先把要加的名字、要改的行为口径、复用到底怎么复用、以及「正在问外部冲突怎么办」摊开给用户确认。本节只写文档，**不改任何源码**；`04.3-23` / `04.3-24` 只按本节落地，不再二次拍板。本节与 `04.3-CONTEXT.md` 的 **D-30**（面板自报路径集合）/ **D-31**（按类型复用标签）/ **D-32**（复用 = 同标签 + 先 flush 再重建实例）/ **D-33**（冲突未表态不复用）一一对应。
+
+### 三句话讲清这件事
+
+1. **Gap A：** 表格面板自己换了一张表，外壳却不知道它现在显示哪个文件，于是从资源管理器再点同一个文件会开出第二个标签——解决办法是让面板换目标时主动告诉外壳「我现在显示这些」。
+2. **Gap B：** 素材管理器和地图编辑器现在每打开一个文件就新开一个标签，用户希望这两种面板始终只占一个标签，再次打开时沿用那一个；换内容前先把上一个目标的改动存好。
+3. **冲突：** 复用的时候如果面板正在问「外部改了，听谁的」，不能替用户决定，也不能把弹窗连同「还没表态」的状态一起扔掉：这时不换，只把那个标签切到前台，让用户先处理冲突——而且这个判断必须发生在「为打开而切走旧面板」之前，否则旧面板已经被自动存过一次了。
+
+### Gap A：面板自报路径（写死，23 只照做）
+
+| 情形 | 行为 |
+|------|------|
+| 面板换目标（`TablePanel.setTable` 成功应用新目标之后） | 把**当前全部目标路径**（按栏顺序、非空、去重）上报给外壳；外壳**整份替换、不合并**那个标签的登记 |
+| 关掉一栏（`TablePanel.closeColumn` 之后） | 重新上报剩下的目标路径；被关掉的那条路径因此自动释放 |
+| 取消「剥离注释后打开」（`TablePanel.cancelCommentStrip` 把该栏目标置空之后） | 同样上报一次；**取消剥离也要上报**，否则标签还登记着一条它已经不显示的路径，资源管理器会切到一个空标签 |
+| 面板在工厂 `create` 里换目标 | 上报是空操作（标签记录还没写入）；首次登记由 `ShellSystem.openPanelInTab` 的 `path` 参数负责 |
+| 面板类型不换目标（素材 / 地图 / 资源管理器 / 演示面板） | 不需要实现上报；打开入口传的 `path` 照旧登记 |
+| 同一标签换成另一条路径 | 外壳整份替换，不合并：新集合里没有的路径自动释放 |
+| 上报空数组 / 空串 | 归一后丢弃；全空则清空该标签的登记 |
+| 关标签 | 既有 `ShellSystem.discardTab` 清空该标签的登记（`ShellSystem.forgetTabPath` 行为不变） |
+
+**目标赋值的全部入口就这三处：** `tablePanel.ts` 里只有 `column.target = …` 三处赋值——`TablePanel.setTable`（当前 `tablePanel.ts:1115`，主入口）、`TablePanel.closeColumn`（当前 `1179`）、`TablePanel.cancelCommentStrip`（当前 `1879`）；`TablePanel.setTable` 的两条早退分支（同面板另一栏已持有、别的标签已持有）不改目标，因此不上报。不要把 `TablePanel.setTable` 说成「唯一入口」，否则会漏掉取消剥离那条真实可达的路径。
+
+**为什么是集合而不是单条：** 一个表格面板可以同时显示「数据栏 + 它的 schema 栏」两条路径（`TablePanel.openSchemaPanel` 会把 schema 作为独立 `dataPath` 放进空栏；D-28 / D-29 仍允许），只记一条会让另一条在资源管理器里再开一个标签，等于把 D-28 重新破掉；多栏不同表同理。因此外壳按标签保存一个路径集合，`ShellSystem.findTabByPath` 逐个集合查。
+
+### Gap A 的名字（全部标 待确认）
+
+| 名称 | 种类 | 文件位置 | 用途 |
+|------|------|----------|------|
+| `IEditorPanelContext.reportResourcePaths` | 接口方法，`(identifiers: readonly IResourceIdentifier[]) => void` | `packages/libs/editor-core/src/panel/types.ts` | 面板告诉外壳「这个标签现在显示这些资源」；空数组表示什么都不显示。JSDoc 写在接口源头，写明「整份替换、不合并」「实例已经不再拥有标签时是空操作」「`create` 里的上报是空操作」。 |
+| `ResourcePathReporter` | type，`(identifiers: readonly IResourceIdentifier[]) => void` | 同上 | `PanelContext` 构造时注入的函数类型；单独开别名而不是内联。 |
+| `PanelContext` 的构造函数第四个参数 | `reportResourcePaths: ResourcePathReporter` | `packages/libs/editor-core/src/panel/panelContext.ts` | 把面板的上报原样转给注入的函数；**必填**，不给默认值——给默认值会让漏接线变成静默降级。 |
+| `ShellSystem.registerTabResourcePaths` | 私有方法，`(instanceId: string, identifiers: readonly IResourceIdentifier[]) => void` | `packages/libs/editor-core/src/shell/shellSystem.ts` | 按实例找到它所在的标签；找不到（实例已被替换 / 没有标签）直接返回；否则归一、去重、丢掉空串，整份写入登记；全空则删除该标签登记。 |
+| `ShellSystem.tabPaths` | 私有实例字段，`Map<string, ReadonlySet<string>>` | 同上 | 由「标签 → 一条路径」改成「标签 → 路径集合」；`ShellSystem.findTabByPath` 逐个集合查，`ShellSystem.rememberTabPaths` 整份替换，`ShellSystem.forgetTabPath` 删除。 |
+| `TablePanel.reportVisiblePaths` | 私有方法，`() => void` | `packages/libs/editor-impl/src/table/tablePanel.ts` | 按栏顺序收集 `ITablePanelTarget.dataPath`（跳过空栏与空串、去重），调用 `IEditorPanelContext.reportResourcePaths`；在 `TablePanel.setTable` 末尾、`TablePanel.closeColumn` 末尾与 `TablePanel.cancelCommentStrip` 末尾各调用一次。 |
+
+### Gap B：复用标签（写死，24 只照做）
+
+| 情形 | 行为 |
+|------|------|
+| 打开一个声明了 `reuseTab` 的类型（本期只有素材 / 地图） | 若已有该类型的标签，复用**打开顺序最早**的那个；没有则照旧新开 |
+| 被复用的标签是活动标签 | 走既有 `ShellSystem.leaveActiveInstance`：一次 `IEditorPanel.onSwitchOut` + 一次全量 flush，再释放实例、按新参数创建 |
+| 被复用的标签不是活动标签 | 复用分支补一次 `ShellSystem.enqueueSwitchOut`（`IEditorPanel.onSwitchOut` + 全量 flush），再释放实例、按新参数创建；不得跳过保存，也不得因此变成两次保存 |
+| 被复用的面板 `hasPendingConflict()` 返回真 | **不写盘、不释放、不新建实例**；**只切前台**把该标签激活到前台，本次**返回成功但不打开目标文件**；用户处理完冲突后再点一次。判定必须发生在任何切出 / flush / 释放之前 |
+| 被复用的面板 `hasPendingConflict()` 未实现或返回假 | 照常复用 |
+| 切出保存没有真正结算（全量 flush 为假，或 `hasUnsavedChanges()` 为真） | **保存未结算不释放、不重建**：保留原标签与原实例、重新切入，本次打开返回 `false`（资源管理器提示「打开失败，请稍后重试」），不得静默丢掉未保存内容 |
+| 打开一个没有声明 `reuseTab` 的类型（表格 / 资源管理器 / 演示面板） | 照旧每次新开标签；**按类型选择加入 / 表格不声明**，表格仍是多栏 + 一栏一条路径 |
+| 同一个文件已经开在某个标签里 | 路径去重先于复用执行：切到那个标签，不复用、不重建 |
+| 被复用的标签已经显示用户要打开的那条路径 | 也走路径去重：切到它，不重建实例 |
+
+**机制选择与理由：复用 = 同一个标签 + 先 flush 再重建实例。** 理由有三条：打开参数只在工厂 `create` 里解释（`assetPanelType.create` 调 `AssetPanel.setTarget`、`mapPanelType.create` 调 `MapPanel.setMap`），让旧实例换目标要另造一套「打开参数 → 目标」的异步入口；重建能保证先存后换（活动标签复用既有 `leaveActiveInstance`，非活动标签由本计划补 `enqueueSwitchOut`）；重建还能清掉上一份目标的实例状态（选中项、弹窗、草稿、资源钩子）。用户看到的仍是同一个标签、同一个位置，不出现第二个标签——这正是「不要反复创建新面板」要的效果。**一次复用只保存一次**：活动标签走 `leaveActiveInstance`，非活动标签补 `enqueueSwitchOut`，不得两次切出 / 两次全量 flush。
+
+**判定为什么能抢在任何落盘之前：** 资源管理器的打开方式是 `ShellSystem.openBlankTab()` 然后 `ShellSystem.openPanelInTab(...)`。`ShellSystem.openBlankTab` 在有挂载面板时会 `void ShellSystem.activateTab(空白标签)`，而 `ShellSystem.activateTab` 先 `await ShellSystem.departActiveInstance(null)`——这一步就会把旧活动面板切出落盘。若沿用现在的写法，冲突还没被问就已经写盘了。修法是**暂存空白标签**：`ShellSystem.openBlankTab` 只登记 `ShellSystem.stagedBlankTabId` 并排一个微任务；`ShellSystem.openPanelInTab` 的第一条同步语句调用 `ShellSystem.claimStagedBlankTab` 把它领走（清空暂存，微任务随后变成空操作），因此路径去重、复用判定与 `IEditorPanel.hasPendingConflict` 的询问全部排在落盘之前；没人领走的空白标签（用户点「+」）仍在微任务后照常激活，行为不变。**判定抢在任何落盘之前**是这条机制的硬约束，不是措辞。
+
+### Gap B 的冲突规则（写死）
+
+- **为什么不能照常复用：** 复用要释放旧实例，会把冲突弹窗连同「还没表态」的状态一起销毁；而任何写盘都会覆盖外部修改（Plan 17 的规则）。所以必须先问 `IEditorPanel.hasPendingConflict()`。
+- **判定放在哪里：** `ShellSystem.openPanelInTab` 在**领走暂存空白标签之后、任何 `await` 之前**完成路径去重与复用判定；冲突分支只做 `ShellSystem.dropBlankTab(空白标签)` 与（必要时）`ShellSystem.activateTab(持有者标签)`，不碰持有者实例。这样「不写盘」是机制保证，不是断言措辞：持有者本来就是活动标签时一次 flush 都不会发生；持有者不是活动标签时，`ShellSystem.activateTab` 只会触发**当前活动面板自己的**既有切出，被复用面板的待写内容与路径一条都不动。
+- **`IEditorPanel.hasPendingConflict` 由面板回答：** 素材看 `AssetPanel.pendingConflict !== undefined`，地图看 `IMapPanelViewState.pendingConflict !== undefined`；没有这个能力的面板由外壳按「没有冲突」处理（可选方法）。
+- **返回成功而不是失败：** 外壳已经把这个请求处理成「把冲突标签切到前台」，资源管理器不应再弹「打开失败」；用户看到的是那个标签里的冲突弹窗。本次目标文件不会打开，用户处理完冲突后再点一次即可。
+
+### Gap B 的名字（全部标 待确认）
+
+| 名称 | 种类 | 文件位置 | 用途 |
+|------|------|----------|------|
+| `IEditorPanelType.reuseTab` | 可选只读布尔字段，`reuseTab?: boolean` | `packages/libs/editor-core/src/panel/types.ts` | 声明「这个类型再次打开时复用已有的那个标签」；默认不声明 = 每次新开。JSDoc 写明复用是「同一个标签 + 先 flush 再重建实例」。 |
+| `IEditorPanel.hasPendingConflict` | 可选方法，`() => boolean` | 同上 | 外壳在复用前询问「这个面板是否正卡在一个还没表态的外部冲突里」；真表示不得复用、不得写盘。JSDoc 写明只有复用路径会调用它，且调用发生在任何切出落盘之前。 |
+| `IEditorPanel.hasUnsavedChanges` | 可选方法，`() => boolean` | 同上 | 外壳在复用前的切出落盘之后询问「是否仍有没写成功的改动」；真表示保存没结算，不得释放实例、不得重建，本次打开返回假。没有这个能力的面板由外壳只按全量 flush 的布尔判断。 |
+| `ShellSystem.findTabByType` | 私有方法，`(typeId: string) => string \| undefined` | `packages/libs/editor-core/src/shell/shellSystem.ts` | 返回打开顺序最早、`typeId` 相同的标签 id；没有则 `undefined`。 |
+| `ShellSystem.stagedBlankTabId` | 私有实例字段，`string \| null` | 同上 | 「刚建出来、还没被 `ShellSystem.openPanelInTab` 领走」的空白标签 id；有它时 `ShellSystem.activateStagedBlankTab` 只在没人领走时补激活。 |
+| `ShellSystem.activateStagedBlankTab` | 私有方法，`(tabId: string) => void` | 同上 | 微任务里的补激活：暂存仍是这个标签时才 `void ShellSystem.activateTab(tabId)`；已被领走则空操作。 |
+| `ShellSystem.claimStagedBlankTab` | 私有方法，`(tabId: string) => void` | 同上 | `ShellSystem.openPanelInTab` 的第一条同步语句：暂存正好是这个标签时清空，使随后的激活变成空操作；不是暂存标签时不动。 |
+| `ShellSystem.restoreActiveInstance` | 私有方法，`(instanceId: string) => Promise<void>` | 同上 | 保存失败放弃复用时恢复「该实例仍是活动实例」并重新投递 `IEditorPanel.onSwitchIn`；只在被复用的标签本来就是活动标签时调用。 |
+
+**明确不做：** 不新增任何 `IShellSystem` 公开成员（`ShellSystem.openBlankTab` / `ShellSystem.openPanelInTab` 的签名不变；`ShellSystem.openBlankTab` 的激活时机在有挂载面板时延后一个微任务，见 `## 追加确认（Plan 22，2026-11-02）`）；不改既有路径去重；不改表格面板类型（`tablePanelType` 不声明 `reuseTab`）；不改资源管理器的打开回调形状。
+
+### 测试清单（23 / 24 照做）
+
+- **Gap A（`04.3-23`）：** 在既有 `packages/libs/editor-core/src/shell/__tests__/shellPathDedupe.test.ts` 里补「面板自报路径」用例（自报后从新空标签打开同一路径 → 只聚焦、不新建实例；改报另一条路径 → 旧路径释放、新路径聚焦；自报空数组 → 登记清空；被替换的旧实例再上报 → 不影响标签；`ProbePanel` 在工厂 `create` 阶段上报 → 是空操作，之后再打开同一路径仍新建第二个标签）。在既有 `packages/libs/editor-impl/src/table/__tests__/duplicatePath.test.tsx` 里补「表格面板自己 `setTable` 后资源管理器去重」用例（自报路径后从资源管理器打开同一文件只聚焦；两栏两条路径都能被找到；换目标后旧路径释放；关标签后路径释放；关掉一栏只释放那一条；打开带注释的表格后取消「剥离注释」→ 目标置空且原路径的登记被释放）。
+- **Gap B（`04.3-24`）：** 新增 `packages/libs/editor-core/src/shell/__tests__/shellTabReuse.test.ts`（复用类型的两次打开只留一个标签、实例被重建、`IEditorPanel.onSwitchOut` 只发生一次且排在 `IEditorPanel.dispose` 与新建之前；非活动标签也先保存且同样只有一次；`IEditorPanel.hasPendingConflict` 为真时不保存、不重建、不释放，只激活持有者标签；保存未结算（`IEditorPanel.hasUnsavedChanges` 为真 / 全量 flush 为假）时不释放、不重建并返回假；未声明 `reuseTab` 的类型照旧两个标签；没人领走的空白标签仍会被激活）。在素材 / 地图各自的用例里钉住「打开 A 再打开 B → 一个标签、内容为 B、A 的改动已写盘、保存失败时保留 A」，并断言 `createAssetPanelType(...).reuseTab` / `createMapPanelType(...).reuseTab` 为真、`tablePanelType.reuseTab` 未声明。
+- **收口（`04.3-25`）：** 三包全量 + 四条结构门禁 + lint + format，回填 `04.3-VALIDATION.md`。
+
+### 待确认清单（2026-11-02）
+
+1. **Gap A 的集合语义：** 面板上报「当前全部路径」，外壳**整份替换**标签登记（不合并）。
+2. **Gap A 的五个名字：** `IEditorPanelContext.reportResourcePaths` / `ResourcePathReporter` / `PanelContext` 必填第四参 / `ShellSystem.registerTabResourcePaths` / `TablePanel.reportVisiblePaths`。
+3. **Gap A 的上报点：** `TablePanel.setTable` / `TablePanel.closeColumn` / `TablePanel.cancelCommentStrip` 三处（`tablePanel.ts` 里仅有的三处目标赋值），取消剥离也要上报。
+4. **Gap B 的复用规则：** `IEditorPanelType.reuseTab` 按类型选择加入，素材 / 地图为真，表格不声明。
+5. **Gap B 的机制：** 同一个标签 + 先 `await` 旧实例 `IEditorPanel.onSwitchOut` 与全量 flush 再重建实例（不是旧实例换目标），且一次复用只保存一次（活动标签走 `leaveActiveInstance`，非活动标签补 `enqueueSwitchOut`）。
+6. **冲突规则：** `IEditorPanel.hasPendingConflict()` 为真时不复用、不写盘、只把标签切到前台，本次返回成功但不打开目标文件，且判定必须靠「暂存空白标签」抢在任何落盘之前。
+7. **保存失败规则：** 新增 `IEditorPanel.hasUnsavedChanges`，保存没结算时保留原实例、重新切入并返回假。
+8. **内部名字：** `ShellSystem.findTabByType` 取打开顺序最早的标签、`ShellSystem.stagedBlankTabId` / `ShellSystem.activateStagedBlankTab` / `ShellSystem.claimStagedBlankTab` / `ShellSystem.restoreActiveInstance` 四个内部名字，不新增 `IShellSystem` 公开成员。
+
+**后续落地：`04.3-23`（Gap A 实现与测试）→ `04.3-24`（Gap B 实现与测试）→ `04.3-25`（重新收口）。**
+
+状态：待确认
