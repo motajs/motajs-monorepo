@@ -7,7 +7,7 @@ import {
   ResourceContent,
 } from '../resource';
 import { IUndoContext, IUndoSystem } from '../undo';
-import { IEditorPanel, IEditorPanelContext, ResourceTabFocuser } from './types';
+import { IEditorPanel, IEditorPanelContext, ResourcePathReporter, ResourceTabFocuser } from './types';
 
 export class PanelContext implements IEditorPanelContext {
   /** 面板侧资源读写口 */
@@ -16,11 +16,19 @@ export class PanelContext implements IEditorPanelContext {
   private readonly undoSystem: IUndoSystem;
   /** 外壳注入的「这条路径是否已开在别的标签里」查询函数 */
   private readonly resourceTabFocuser: ResourceTabFocuser;
+  /** 外壳注入的「把当前显示的路径集合登记到本标签」上报函数 */
+  private readonly resourcePathReporter: ResourcePathReporter;
 
-  constructor(resourceAccess: IResourceAccess, undoSystem: IUndoSystem, focusResourceTab: ResourceTabFocuser) {
+  constructor(
+    resourceAccess: IResourceAccess,
+    undoSystem: IUndoSystem,
+    focusResourceTab: ResourceTabFocuser,
+    reportResourcePaths: ResourcePathReporter,
+  ) {
     this.resourceAccess = resourceAccess;
     this.undoSystem = undoSystem;
     this.resourceTabFocuser = focusResourceTab;
+    this.resourcePathReporter = reportResourcePaths;
   }
 
   requestResource(id: IResourceIdentifier): Promise<IResource | null> {
@@ -57,6 +65,10 @@ export class PanelContext implements IEditorPanelContext {
 
   focusResourceTab(identifier: IResourceIdentifier): boolean {
     return this.resourceTabFocuser(identifier);
+  }
+
+  reportResourcePaths(identifiers: readonly IResourceIdentifier[]): void {
+    this.resourcePathReporter(identifiers);
   }
 
   addUndoContext(panel: IEditorPanel, context: IUndoContext<unknown>): void {

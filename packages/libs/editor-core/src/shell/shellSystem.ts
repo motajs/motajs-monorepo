@@ -433,8 +433,8 @@ export class ShellSystem implements IShellSystem {
   private tabs: IEditorTab[] = [];
   /** 当前活动标签 id */
   private activeTabId: string | null = null;
-  /** 标签 id 到它正在打开的文件路径（已归一）的登记表：按路径去重的唯一数据来源 */
-  private readonly tabPaths: Map<string, string> = new Map();
+  /** 标签 id 到它当前显示的全部文件路径（已归一）的登记表：按路径去重的唯一数据来源 */
+  private readonly tabPaths: Map<string, ReadonlySet<string>> = new Map();
   /** 最近一次投递过切入通知的面板实例 id，用于判定活动面板是否真正变化 */
   private lastActiveInstanceId: string | null = null;
   /** 串行切换链：切出与切入按投递顺序依次结算，链本身永不 reject */
@@ -665,7 +665,7 @@ export class ShellSystem implements IShellSystem {
    */
   private findTabByPath(path: string): string | undefined {
     for (const [tabId, registered] of this.tabPaths) {
-      if (registered === path) return tabId;
+      if (registered.has(path)) return tabId;
     }
 
     return undefined;
@@ -693,12 +693,12 @@ export class ShellSystem implements IShellSystem {
   }
 
   /**
-   * 登记或改写某个标签的路径：同一标签换成另一条路径时覆盖旧登记，旧路径因此自然释放
+   * 登记或改写某个标签的路径集合：整份替换、不合并，新集合里没有的旧路径因此自然释放
    * @param tabId 标签 id
-   * @param path 已归一的去重键
+   * @param paths 已归一的去重键列表
    */
-  private rememberTabPath(tabId: string, path: string): void {
-    this.tabPaths.set(tabId, path);
+  private rememberTabPaths(tabId: string, paths: readonly string[]): void {
+    this.tabPaths.set(tabId, new Set(paths));
   }
 
   /**
@@ -707,6 +707,31 @@ export class ShellSystem implements IShellSystem {
    */
   private forgetTabPath(tabId: string): void {
     this.tabPaths.delete(tabId);
+  }
+
+  /**
+   * 接收面板自报的路径集合：只认该实例自己所在的标签，找不到标签时是空操作
+   *
+   * 每条路径先归一、丢掉空串、去重；结果为空时清掉该标签的登记，否则整份替换。
+   * 实例已被替换（不再挂在任何标签里）时，面板的上报不会影响任何别的标签。
+   * @param instanceId 上报的面板实例 id
+   * @param identifiers 面板当前显示的资源标识列表
+   */
+  private registerTabResourcePaths(instanceId: string, identifiers: readonly IResourceIdentifier[]): void {
+    const tab = this.tabs.find((candidate) => candidate.instanceId === instanceId);
+
+    if (tab === undefined) return;
+
+    const keys: Set<string> = new Set();
+
+    for (const identifier of identifiers) {
+      const key = normalizeResourcePath(identifier);
+
+      if (key !== '') keys.add(key);
+    }
+
+    if (keys.size === 0) this.forgetTabPath(tab.id);
+    else this.rememberTabPaths(tab.id, [...keys]);
   }
 
   /**
@@ -807,7 +832,7 @@ export class ShellSystem implements IShellSystem {
     // 登记写在标签记录之后、初始化之前：初始化失败时这条路径仍被这个标签占着，重开只会聚焦它。
     // 换成不带路径的面板则清掉登记，避免旧路径继续指向这个标签
     if (key === '') this.forgetTabPath(current.id);
-    else this.rememberTabPath(current.id, key);
+    else this.rememberTabPaths(current.id, [key]);
 
     // 先等旧面板的切出保存结算，再改活动标签与通知 React（B1）
     await this.departActiveInstance(created.instanceId);
@@ -957,8 +982,11 @@ export class ShellSystem implements IShellSystem {
 
     this.instanceCounter += 1;
     const instanceId = `instance-${this.instanceCounter}`;
-    const context = new PanelContext(this.resourceSystem, this.undoSystem, (identifier): boolean =>
-      this.focusResourceTab(identifier),
+    const context = new PanelContext(
+      this.resourceSystem,
+      this.undoSystem,
+      (identifier): boolean => this.focusResourceTab(identifier),
+      (identifiers): void => this.registerTabResourcePaths(instanceId, identifiers),
     );
     let instance: IEditorPanel;
 

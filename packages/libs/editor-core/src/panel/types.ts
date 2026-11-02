@@ -19,6 +19,13 @@ export const enum PanelCloseChoice {
  */
 export type ResourceTabFocuser = (identifier: IResourceIdentifier) => boolean;
 
+/**
+ * 面板把「这个标签当前显示的全部路径」上报给外壳的函数类型
+ *
+ * 外壳把它当作该标签的去重登记：整份替换、不合并；空数组表示不再显示任何资源。
+ */
+export type ResourcePathReporter = (identifiers: readonly IResourceIdentifier[]) => void;
+
 export interface IEditorPanelContext {
   /**
    * 请求指定资源
@@ -92,6 +99,18 @@ export interface IEditorPanelContext {
    * @returns 有别的标签持有该路径并已发起切换时为 true
    */
   focusResourceTab(identifier: IResourceIdentifier): boolean;
+
+  /**
+   * 面板换目标后，把「这个标签当前显示的全部路径」上报给外壳
+   *
+   * 外壳把它当作该标签的去重登记：**整份替换、不合并**——新集合里没有的路径自动释放；
+   * 空数组表示这个标签不再显示任何资源（登记随之清空）。
+   * 每条路径都会先归一，归一后为空串的条目被丢弃，重复路径只保留一次。
+   * 实例已经不再拥有标签（已被替换、没有挂在任何标签里）时是空操作；
+   * 在工厂 `create` 阶段调用同样是空操作，因为标签记录还没写入，首次登记由打开入口的 `path` 参数负责。
+   * @param identifiers 当前显示的资源标识列表
+   */
+  reportResourcePaths(identifiers: readonly IResourceIdentifier[]): void;
 
   /**
    * 添加某个面板的撤回操作

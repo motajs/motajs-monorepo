@@ -50,6 +50,7 @@ function createContext(entries: readonly IFileEntry[]): IEditorPanelContext {
       return (): void => {};
     },
     focusResourceTab: (): boolean => false,
+    reportResourcePaths: (): void => {},
     addUndoContext: (): void => {},
   };
 }

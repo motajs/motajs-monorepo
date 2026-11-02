@@ -3,7 +3,7 @@ import { createElement, FC } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createCoreHarness, FakeFileSystem } from '../../__tests__/fixtures';
 import { EditorCore } from '../../core';
-import { IEditorPanel, IEditorPanelFactoryParam, IEditorPanelType } from '../../panel/types';
+import { IEditorPanel, IEditorPanelContext, IEditorPanelFactoryParam, IEditorPanelType } from '../../panel/types';
 
 // 按路径去重的测试：同一条文件路径任何时刻最多只开在一个标签里。这条测试钉住「命中即激活、不新建实例、
 // 不遗留空标签」，以及不同路径各自成标签、关标签释放路径、路径归一、空串与不传路径按没有路径处理、
@@ -23,12 +23,14 @@ interface ICreateFailure {
   fail: boolean;
 }
 
-/** 一个可计数的面板类型：注册用的类型本体与它每次成功创建时收到的工厂入参 */
+/** 一个可计数的面板类型：注册用的类型本体、工厂入参与创建出的探针实例 */
 interface ICountingType {
   /** 注册进外壳的面板类型 */
   readonly type: IEditorPanelType;
   /** 工厂每成功创建一次就追加一条，长度即创建过的实例数 */
   readonly created: IEditorPanelFactoryParam[];
+  /** 工厂按创建顺序收集的探针实例，用于模拟面板自报路径 */
+  readonly panels: ProbePanel[];
 }
 
 // 每个用例结束后卸载已挂载的组件，避免 DOM 在用例之间累积
@@ -41,9 +43,20 @@ class ProbePanel implements IEditorPanel {
 
   private readonly component: FC;
 
-  constructor(id: string) {
+  private readonly context: IEditorPanelContext | undefined;
+
+  constructor(id: string, context?: IEditorPanelContext) {
     this.id = id;
+    this.context = context;
     this.component = () => createElement('div', null, this.id);
+  }
+
+  /**
+   * 模拟面板换目标后把当前显示的路径集合上报给外壳
+   * @param identifiers 当前显示的资源标识列表
+   */
+  report(identifiers: readonly string[]): void {
+    this.context?.reportResourcePaths(identifiers);
   }
 
   async initialize(): Promise<void> {}
@@ -93,7 +106,7 @@ function betaOpenParam(path: string): Record<string, unknown> {
  * @param name 面板类型显示名，作为标签显示名的回退
  * @param buildParam 打开参数生成器，用来让两种面板类型交出不同形状的参数
  * @param failure 可选的工厂抛错开关
- * @returns 类型本体与工厂创建记录
+ * @returns 类型本体、工厂创建记录与创建出的探针实例
  */
 function createCountingType(
   id: string,
@@ -102,6 +115,7 @@ function createCountingType(
   failure?: ICreateFailure,
 ): ICountingType {
   const created: IEditorPanelFactoryParam[] = [];
+  const panels: ProbePanel[] = [];
   const type: IEditorPanelType = {
     id,
     name,
@@ -112,11 +126,39 @@ function createCountingType(
       if (failure !== undefined && failure.fail) throw new Error('create boom');
 
       created.push(param);
-      return new ProbePanel(param.instanceId);
+      const panel = new ProbePanel(param.instanceId, param.context);
+
+      panels.push(panel);
+      return panel;
     },
   };
 
-  return { type, created };
+  return { type, created, panels };
+}
+
+/**
+ * 造一个在工厂 `create` 阶段就上报路径的探针类型：标签记录尚未写入，此时的上报必须是空操作
+ * @param id 面板类型标识
+ * @returns 类型本体、工厂创建记录与创建出的探针实例
+ */
+function createCreateTimeReportingType(id: string): ICountingType {
+  const created: IEditorPanelFactoryParam[] = [];
+  const panels: ProbePanel[] = [];
+  const type: IEditorPanelType = {
+    id,
+    name: '创建期上报面板',
+    icon: null,
+    create: (param: IEditorPanelFactoryParam): IEditorPanel => {
+      param.context.reportResourcePaths([HERO_PATH]);
+      created.push(param);
+      const panel = new ProbePanel(param.instanceId, param.context);
+
+      panels.push(panel);
+      return panel;
+    },
+  };
+
+  return { type, created, panels };
 }
 
 /**
@@ -527,5 +569,162 @@ describe('跨标签聚焦（ShellSystem.focusResourceTab）', () => {
     await openInTab(core, firstTab, type, HERO_PATH);
 
     expect(focusResourceTabOf(core, HERO_PATH)).toBe(false);
+  });
+});
+
+describe('面板自报路径（reportResourcePaths）', () => {
+  // 面板自报一条路径后，新空标签打开同一条路径只聚焦原标签，不新建实例、不遗留空标签
+  it('自报路径后新空标签打开同一路径只聚焦原标签', async () => {
+    const core = await createCore();
+    const { type, created, panels } = createCountingType('alpha', '面板 A', alphaOpenParam);
+
+    core.shellSystem.registerPanelType(type);
+
+    const firstTab = core.shellSystem.listTabs()[0].id;
+
+    await openInTab(core, firstTab, type);
+
+    panels[0].report([HERO_PATH]);
+
+    const { container } = render(createElement(core.shellSystem.render()));
+    const secondTab = core.shellSystem.openBlankTab();
+
+    const opened = await openInTab(core, secondTab, type, HERO_PATH);
+
+    expect(opened).toBe(true);
+    expect(core.shellSystem.listTabs().map((tab) => tab.id)).toEqual([firstTab]);
+    expect(created).toHaveLength(1);
+
+    const activeTabs = container.querySelectorAll('.editor-shell-tab.is-active');
+
+    expect(activeTabs.length).toBe(1);
+    expect(activeTabs[0].querySelector('.editor-shell-tab-label')?.textContent).toBe('面板 A');
+  });
+
+  // 改报另一条路径是整份替换：新路径只聚焦原标签，旧路径已释放，必须新建第二个标签
+  it('改报另一条路径后旧路径释放、新路径聚焦原标签', async () => {
+    const core = await createCore();
+    const { type, created, panels } = createCountingType('alpha', '面板 A', alphaOpenParam);
+
+    core.shellSystem.registerPanelType(type);
+
+    const firstTab = core.shellSystem.listTabs()[0].id;
+
+    await openInTab(core, firstTab, type);
+
+    panels[0].report([HERO_PATH]);
+    panels[0].report([ENEMY_PATH]);
+
+    const secondTab = core.shellSystem.openBlankTab();
+
+    await openInTab(core, secondTab, type, ENEMY_PATH);
+
+    expect(core.shellSystem.listTabs().map((tab) => tab.id)).toEqual([firstTab]);
+    expect(created).toHaveLength(1);
+
+    const thirdTab = core.shellSystem.openBlankTab();
+
+    await openInTab(core, thirdTab, type, HERO_PATH);
+
+    expect(core.shellSystem.listTabs().map((tab) => tab.id)).toEqual([firstTab, thirdTab]);
+    expect(created).toHaveLength(2);
+  });
+
+  // 上报空数组清空登记：随后同一条路径在新标签里打开要真的新建实例
+  it('上报空数组后登记被清空', async () => {
+    const core = await createCore();
+    const { type, created, panels } = createCountingType('alpha', '面板 A', alphaOpenParam);
+
+    core.shellSystem.registerPanelType(type);
+
+    const firstTab = core.shellSystem.listTabs()[0].id;
+
+    await openInTab(core, firstTab, type);
+
+    panels[0].report([HERO_PATH]);
+    panels[0].report([]);
+
+    const secondTab = core.shellSystem.openBlankTab();
+
+    await openInTab(core, secondTab, type, HERO_PATH);
+
+    expect(core.shellSystem.listTabs().map((tab) => tab.id)).toEqual([firstTab, secondTab]);
+    expect(created).toHaveLength(2);
+  });
+
+  // 一次上报两条路径：两条路径分别从新空标签打开都只聚焦同一个标签（集合而不是单条）
+  it('同时上报两条路径时两条都能命中同一个标签', async () => {
+    const core = await createCore();
+    const { type, created, panels } = createCountingType('alpha', '面板 A', alphaOpenParam);
+
+    core.shellSystem.registerPanelType(type);
+
+    const firstTab = core.shellSystem.listTabs()[0].id;
+
+    await openInTab(core, firstTab, type);
+
+    panels[0].report([HERO_PATH, ENEMY_PATH]);
+
+    const secondTab = core.shellSystem.openBlankTab();
+
+    await openInTab(core, secondTab, type, HERO_PATH);
+
+    const thirdTab = core.shellSystem.openBlankTab();
+
+    await openInTab(core, thirdTab, type, ENEMY_PATH);
+
+    expect(core.shellSystem.listTabs().map((tab) => tab.id)).toEqual([firstTab]);
+    expect(created).toHaveLength(1);
+  });
+
+  // 标签里的实例被另一条路径替换后，旧实例再上报不影响新登记
+  it('被替换的旧实例再上报不影响标签登记', async () => {
+    const core = await createCore();
+    const { type, created, panels } = createCountingType('alpha', '面板 A', alphaOpenParam);
+
+    core.shellSystem.registerPanelType(type);
+
+    const firstTab = core.shellSystem.listTabs()[0].id;
+
+    await openInTab(core, firstTab, type);
+
+    panels[0].report([HERO_PATH]);
+
+    const replaced = await openInTab(core, firstTab, type, ENEMY_PATH);
+
+    expect(replaced).toBe(true);
+    expect(created).toHaveLength(2);
+
+    panels[0].report([HERO_PATH]);
+
+    const secondTab = core.shellSystem.openBlankTab();
+
+    await openInTab(core, secondTab, type, HERO_PATH);
+
+    expect(core.shellSystem.listTabs().map((tab) => tab.id)).toEqual([firstTab, secondTab]);
+    expect(created).toHaveLength(3);
+  });
+
+  // 工厂 create 阶段就上报是空操作：标签记录还没写入，首次登记仍由打开入口的 path 负责
+  it('工厂 create 阶段的上报是空操作', async () => {
+    const core = await createCore();
+    const reporting = createCreateTimeReportingType('reporting');
+    const { type, created } = createCountingType('alpha', '面板 A', alphaOpenParam);
+
+    core.shellSystem.registerPanelType(reporting.type);
+    core.shellSystem.registerPanelType(type);
+
+    const firstTab = core.shellSystem.listTabs()[0].id;
+
+    await openInTab(core, firstTab, reporting.type);
+
+    expect(reporting.created).toHaveLength(1);
+
+    const secondTab = core.shellSystem.openBlankTab();
+
+    await openInTab(core, secondTab, type, HERO_PATH);
+
+    expect(core.shellSystem.listTabs().map((tab) => tab.id)).toEqual([firstTab, secondTab]);
+    expect(created).toHaveLength(1);
   });
 });
