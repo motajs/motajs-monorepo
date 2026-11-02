@@ -86,6 +86,10 @@ export interface IShellSystem {
 
   /**
    * 打开一个新的空白标签页并激活它
+   *
+   * 签名不变。已有面板挂载时，「激活」会延后一个微任务：标签立刻进入列表并可被填充，但真正的切换
+   * 要等紧随其后的 `IShellSystem.openPanelInTab` 有机会先领走它——领走之后不再补激活，因此不会
+   * 为切到空白标签而先保存一次旧面板；没人领走时（用户点「+」）微任务结束后仍会正常激活。
    * @returns 新标签页的标识符
    */
   openBlankTab(): string;
@@ -96,6 +100,11 @@ export interface IShellSystem {
    * 调用方可以再交一条文件路径用于去重：外壳把路径归一后当键，同一路径已经开在另一个标签里时，
    * 外壳切到那个标签并返回成功，不创建新实例、也不保留调用方刚建出来的空白标签。
    * 路径只用来去重，外壳**不解释** `openParam` 的形状。
+   *
+   * 若目标类型声明了 `IEditorPanelType.reuseTab` 且调用方传入的是空白标签，外壳会复用该类型打开顺序
+   * 最早的标签，而不是再开一个：复用前先等旧实例切出落盘；若旧实例 `IEditorPanel.hasPendingConflict()`
+   * 为真，则只把那个标签切到前台并返回成功，不打开本次的目标文件；若切出保存没有结算（全量 flush 为假
+   * 或 `IEditorPanel.hasUnsavedChanges()` 为真），保留原标签与原实例并返回假。
    * @param tabId 标签标识符
    * @param typeId 面板类型标识符
    * @param openParam 打开面板时顺带携带的可选参数；内核只透传，不解释其内容
