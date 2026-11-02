@@ -169,12 +169,7 @@ describe('素材面板复用标签', () => {
     const panelA = await openDirtyHero(system, type, created);
     const switchOut = vi.spyOn(panelA, 'onSwitchOut');
 
-    const opened = await openAssetInBlankTab(
-      system,
-      type,
-      { categoryId: 'texture', assetName: 'foe.png' },
-      FOE_PATH,
-    );
+    const opened = await openAssetInBlankTab(system, type, { categoryId: 'texture', assetName: 'foe.png' }, FOE_PATH);
 
     expect(opened).toBe(true);
     expect(assetTabs(system)).toHaveLength(1);
@@ -207,12 +202,7 @@ describe('素材面板复用标签', () => {
 
     const switchOut = vi.spyOn(panelA, 'onSwitchOut');
 
-    const opened = await openAssetInBlankTab(
-      system,
-      type,
-      { categoryId: 'texture', assetName: 'foe.png' },
-      FOE_PATH,
-    );
+    const opened = await openAssetInBlankTab(system, type, { categoryId: 'texture', assetName: 'foe.png' }, FOE_PATH);
 
     expect(opened).toBe(true);
     expect(assetTabs(system)).toHaveLength(1);
@@ -244,12 +234,7 @@ describe('素材面板复用标签', () => {
     fs.failing.add(TEXTURE_LIST_PATH);
     vi.spyOn(system.resourceSystem, 'writeContent').mockRejectedValue(new Error('write failed'));
 
-    const opened = await openAssetInBlankTab(
-      system,
-      type,
-      { categoryId: 'texture', assetName: 'foe.png' },
-      FOE_PATH,
-    );
+    const opened = await openAssetInBlankTab(system, type, { categoryId: 'texture', assetName: 'foe.png' }, FOE_PATH);
 
     expect(opened).toBe(false);
     expect(assetTabs(system)).toHaveLength(1);

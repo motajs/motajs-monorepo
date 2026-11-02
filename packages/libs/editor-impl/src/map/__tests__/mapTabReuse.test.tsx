@@ -2,7 +2,7 @@ import { act, cleanup, configure, waitFor } from '@testing-library/react';
 import { EditorCore, IEditorPanel, IEditorPanelFactoryParam, IEditorPanelType } from '@motajs/editor-core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createMapPanelType, MAP_PANEL_TYPE_ID, MapPanel } from '..';
-import { tablePanelType } from '../../table';
+import { tablePanelType } from '@motajs/editor-impl';
 import { IMapDataSection, IMapDocument, IMapEditorCapabilities, IMapSummary } from '../types';
 import { createMapDocument, createMapHarness, FakeFileSystem } from './fixtures';
 
